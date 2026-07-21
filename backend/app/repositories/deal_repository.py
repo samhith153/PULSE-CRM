@@ -20,7 +20,7 @@ class DealRepository(BaseRepository[Deal]):
     def _base_query(self, organization_id: UUID):
         return select(Deal).where(
             Deal.organization_id == organization_id,
-            Deal.is_deleted == False,
+            Deal.is_deleted.is_(False),
         )
 
     async def get_active_by_id(self, deal_id: UUID, organization_id: UUID) -> Optional[Deal]:
@@ -42,6 +42,7 @@ class DealRepository(BaseRepository[Deal]):
         company_id: Optional[UUID],
         contact_id: Optional[UUID],
         lead_id: Optional[UUID],
+        pipeline_stage_id: Optional[UUID],
         min_amount: Optional[Decimal],
         max_amount: Optional[Decimal],
         sort_by: Optional[DealSortField],
@@ -61,6 +62,8 @@ class DealRepository(BaseRepository[Deal]):
             stmt = stmt.where(Deal.contact_id == contact_id)
         if lead_id:
             stmt = stmt.where(Deal.lead_id == lead_id)
+        if pipeline_stage_id:
+            stmt = stmt.where(Deal.pipeline_stage_id == pipeline_stage_id)
         if min_amount is not None:
             stmt = stmt.where(Deal.amount >= min_amount)
         if max_amount is not None:
@@ -86,4 +89,25 @@ class DealRepository(BaseRepository[Deal]):
         }
         sort_column = sort_column_map.get(sort_by or DealSortField.CREATED_AT, Deal.created_at)
         stmt = stmt.order_by(asc(sort_column) if sort_order == SortOrder.ASC else desc(sort_column))
+        return await self.get_paginated(stmt, page, page_size)
+
+    async def list_by_stage(
+        self,
+        organization_id: UUID,
+        stage_id: UUID,
+        page: int,
+        page_size: int,
+        search: Optional[str] = None,
+    ) -> Tuple[List[Deal], int]:
+        stmt = self._base_query(organization_id).where(Deal.pipeline_stage_id == stage_id)
+        if search:
+            term = f"%{search.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    Deal.name.ilike(term),
+                    Deal.description.ilike(term),
+                    Deal.notes.ilike(term),
+                )
+            )
+        stmt = stmt.order_by(desc(Deal.created_at))
         return await self.get_paginated(stmt, page, page_size)

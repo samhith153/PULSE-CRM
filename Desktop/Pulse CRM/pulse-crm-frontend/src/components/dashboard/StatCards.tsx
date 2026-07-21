@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DollarSign, Award, Target, UserCheck, Clock } from 'lucide-react';
+import { IndianRupee, Award, Target, UserCheck, Clock } from 'lucide-react';
 
 interface Stat {
   title: string;
@@ -39,11 +39,11 @@ export default function StatCards({ timeFilter, loading = false }: StatCardsProp
     return [
       {
         title: "Total revenue",
-        value: timeFilter === 'sales' ? "$1.20M" : "$3.85M",
+        value: timeFilter === 'sales' ? "₹1.20M" : "₹3.85M",
         change: "+26%",
         isPositive: true,
         dateRange: prefix,
-        icon: DollarSign,
+        icon: IndianRupee,
         points: [30, 35, 32, 45, 42, 50, 48, 55, 60, 68]
       },
       {
@@ -66,7 +66,7 @@ export default function StatCards({ timeFilter, loading = false }: StatCardsProp
       },
       {
         title: "Avg. deal size",
-        value: "$32.2K",
+        value: "₹32.2K",
         change: "+14%",
         isPositive: true,
         dateRange: prefix,

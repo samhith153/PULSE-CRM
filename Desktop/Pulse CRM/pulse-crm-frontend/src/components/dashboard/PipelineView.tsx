@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getDeals, updateDealStage } from '@/utils/api';
 import { 
   Plus, 
-  DollarSign, 
+  IndianRupee, 
   TrendingUp, 
   Sparkles, 
   X, 
@@ -16,32 +17,31 @@ import {
 } from 'lucide-react';
 
 interface Deal {
-  id: number;
+  id: number | string;
   title: string;
   company: string;
   value: number;
-  stage: 'Lead' | 'Contacted' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+  stage: 'Qualified' | 'Proposal' | 'Under Review' | 'Won' | 'Lost';
   priority: 'High' | 'Medium' | 'Low';
   owner: string;
   closeDate: string;
 }
 
 export default function PipelineView() {
-  const [deals, setDeals] = useState<Deal[]>([
-    { id: 1, title: "Database Cloud Migration", company: "TechCorp Inc.", value: 120000, stage: "Proposal", priority: "High", owner: "Sarah Johnson", closeDate: "2025-06-30" },
-    { id: 2, title: "SSO Integration Scope", company: "Sparta Creative", value: 45000, stage: "Lead", priority: "Medium", owner: "Sarah Johnson", closeDate: "2025-07-15" },
-    { id: 3, title: "Compliance Suite Expansion", company: "MedSaaS Solutions", value: 85000, stage: "Contacted", priority: "High", owner: "Alex Johnson", closeDate: "2025-05-25" },
-    { id: 4, title: "Global Logistics API", company: "Empiric Logistics", value: 380000, stage: "Negotiation", priority: "High", owner: "David Wilson", closeDate: "2025-08-01" },
-    { id: 5, title: "Analytics Custom Tier", company: "ByteSized Co.", value: 18000, stage: "Won", priority: "Low", owner: "Alex Johnson", closeDate: "2025-05-10" }
-  ]);
+  const [deals, setDeals] = useState<Deal[]>([]);
 
-  const stages: Deal['stage'][] = ['Lead', 'Contacted', 'Proposal', 'Negotiation', 'Won', 'Lost'];
+  useEffect(() => {
+    getDeals().then(data => {
+      setDeals(data as any);
+    });
+  }, []);
+
+  const stages: Deal['stage'][] = ['Qualified', 'Proposal', 'Under Review', 'Won', 'Lost'];
 
   const stageProbabilities: Record<Deal['stage'], number> = {
-    'Lead': 0.1,
-    'Contacted': 0.25,
-    'Proposal': 0.5,
-    'Negotiation': 0.75,
+    'Qualified': 0.1,
+    'Proposal': 0.4,
+    'Under Review': 0.7,
     'Won': 1.0,
     'Lost': 0.0
   };
@@ -53,11 +53,11 @@ export default function PipelineView() {
 
   // Form state
   const [form, setForm] = useState({
-    title: '', company: '', value: 0, stage: 'Lead' as Deal['stage'], priority: 'Medium' as Deal['priority'], owner: 'Sarah Johnson', closeDate: ''
+    title: '', company: '', value: 0, stage: 'Qualified' as Deal['stage'], priority: 'Medium' as Deal['priority'], owner: 'Sarah Johnson', closeDate: ''
   });
 
   // Drag and drop states
-  const [draggedId, setDraggedId] = useState<number | null>(null);
+  const [draggedId, setDraggedId] = useState<number | string | null>(null);
 
   // Calculating pipeline statistics
   const totalValue = deals.reduce((acc, d) => d.stage !== 'Lost' ? acc + d.value : acc, 0);
@@ -67,17 +67,17 @@ export default function PipelineView() {
     if (deal.stage === 'Proposal' && deal.priority === 'High') {
       return "Critical Deal: Proposal sent 3 days ago. Schedule a proposal review session immediately.";
     }
-    if (deal.stage === 'Negotiation') {
+    if (deal.stage === 'Under Review') {
       return "Close Date approaching. Send the contract agreement link to confirm legal alignment.";
     }
-    if (deal.priority === 'Low' && deal.stage === 'Lead') {
+    if (deal.priority === 'Low' && deal.stage === 'Qualified') {
       return "Nurture track: Send standard developer sandboxing API resources.";
     }
     return "Check in with stakeholders to maintain deal velocity.";
   };
 
   // HTML5 Drag handlers
-  const handleDragStart = (id: number) => {
+  const handleDragStart = (id: number | string) => {
     setDraggedId(id);
   };
 
@@ -88,6 +88,20 @@ export default function PipelineView() {
   const handleDrop = (stage: Deal['stage']) => {
     if (draggedId === null) return;
     setDeals(deals.map(d => d.id === draggedId ? { ...d, stage } : d));
+    
+    // Commit update to backend if stage maps to seeded UUIDs
+    const stageIds: Record<string, string> = {
+      'Qualified': 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918',
+      'Proposal': 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919',
+      'Under Review': 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920',
+      'Won': 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921',
+      'Lost': 'b5f20c42-b0c6-4767-88ea-d4b68e9f2922'
+    };
+    const stageId = stageIds[stage];
+    if (stageId) {
+      updateDealStage(draggedId, stageId).catch(err => console.warn("Failed to update deal stage in backend", err));
+    }
+    
     setDraggedId(null);
   };
 
@@ -124,7 +138,7 @@ export default function PipelineView() {
     setSelectedDeal(null);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: number | string) => {
     setDeals(deals.filter(d => d.id !== id));
   };
 
@@ -134,12 +148,12 @@ export default function PipelineView() {
       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h2 className="font-serif text-2xl text-brand-heading font-normal">Deals Kanban Pipeline</h2>
+            <h2 className="font-sans text-2xl text-brand-heading font-bold">Deals Kanban Pipeline</h2>
             <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Drag and drop cards to update pipeline stages, track forecasts, and monitor deal velocity.</p>
           </div>
           <button 
             onClick={() => {
-              setForm({ title: '', company: '', value: 10000, stage: 'Lead', priority: 'Medium', owner: 'Sarah Johnson', closeDate: '' });
+              setForm({ title: '', company: '', value: 10000, stage: 'Qualified', priority: 'Medium', owner: 'Sarah Johnson', closeDate: '' });
               setIsAddModalOpen(true);
             }}
             className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
@@ -153,7 +167,7 @@ export default function PipelineView() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 pt-4 border-t border-brand-border-purple/15">
           <div className="flex items-center space-x-3 bg-slate-50/50 p-3 rounded-lg border border-brand-border-purple/15">
             <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/10 flex items-center justify-center text-brand-accent border border-brand-border-purple/20">
-              <DollarSign className="h-4.5 w-4.5" />
+              <IndianRupee className="h-4.5 w-4.5" />
             </div>
             <div>
               <p className="text-[9px] font-extrabold text-brand-text/60 uppercase">Total Pipeline Value</p>

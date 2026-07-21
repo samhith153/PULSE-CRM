@@ -13,14 +13,22 @@ import {
 
 interface WidgetsProps {
   loading?: boolean;
+  showLeaderboard?: boolean;
+  showProductivity?: boolean;
+  onTabChange?: (tab: string) => void;
 }
 
-export default function Widgets({ loading = false }: WidgetsProps) {
+export default function Widgets({ 
+  loading = false,
+  showLeaderboard = true,
+  showProductivity = true,
+  onTabChange
+}: WidgetsProps) {
   const teamMembers = [
     {
       name: "Alex Johnson",
       deals: 8,
-      revenue: "$1.25M",
+      revenue: "₹1.25M",
       revenueRaw: 1250000,
       winRate: "40.0%",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
@@ -28,7 +36,7 @@ export default function Widgets({ loading = false }: WidgetsProps) {
     {
       name: "Sarah Johnson",
       deals: 6,
-      revenue: "$980K",
+      revenue: "₹980K",
       revenueRaw: 980000,
       winRate: "33.0%",
       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
@@ -36,7 +44,7 @@ export default function Widgets({ loading = false }: WidgetsProps) {
     {
       name: "David Wilson",
       deals: 5,
-      revenue: "$750K",
+      revenue: "₹750K",
       revenueRaw: 750000,
       winRate: "29.0%",
       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&q=80"
@@ -44,7 +52,7 @@ export default function Widgets({ loading = false }: WidgetsProps) {
     {
       name: "Lisa Martinez",
       deals: 3,
-      revenue: "$480K",
+      revenue: "₹480K",
       revenueRaw: 480000,
       winRate: "25.0%",
       avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&fit=crop&q=80"
@@ -52,7 +60,7 @@ export default function Widgets({ loading = false }: WidgetsProps) {
     {
       name: "Michael Brown",
       deals: 2,
-      revenue: "$360K",
+      revenue: "₹360K",
       revenueRaw: 360000,
       winRate: "20.0%",
       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
@@ -78,11 +86,14 @@ export default function Widgets({ loading = false }: WidgetsProps) {
     );
   }
 
+  if (!showLeaderboard && !showProductivity) return null;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       
       {/* Team Performance Leaderboard */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 lg:col-span-2 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300">
+      {showLeaderboard && (
+        <div className={`bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 ${showProductivity ? 'lg:col-span-2' : 'lg:col-span-3'} flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300`}>
         <div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-brand-heading text-sm">Team performance</h3>
@@ -144,18 +155,20 @@ export default function Widgets({ loading = false }: WidgetsProps) {
 
         {/* Action Link */}
         <div className="mt-4 pt-3 border-t border-brand-border-purple/15 text-center">
-          <a 
-            href="#" 
-            className="inline-flex items-center space-x-1 text-xs font-bold text-brand-accent hover:text-brand-accent-hover transition-colors"
+          <button 
+            onClick={() => onTabChange?.('reports')}
+            className="inline-flex items-center space-x-1 text-xs font-bold text-brand-accent hover:text-brand-accent-hover transition-colors bg-transparent border-0 cursor-pointer"
           >
             <span>View full leaderboard</span>
             <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
-          </a>
+          </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Activity Overview */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300">
+      {showProductivity && (
+        <div className={`bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 ${showLeaderboard ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300`}>
         <div>
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-bold text-brand-heading text-sm">Activity overview</h3>
@@ -195,15 +208,16 @@ export default function Widgets({ loading = false }: WidgetsProps) {
 
         {/* Action Link */}
         <div className="mt-4 pt-3 border-t border-brand-border-purple/15 text-center">
-          <a 
-            href="#" 
-            className="inline-flex items-center space-x-1 text-xs font-bold text-brand-accent hover:text-brand-accent-hover transition-colors"
+          <button 
+            onClick={() => onTabChange?.('reports')}
+            className="inline-flex items-center space-x-1 text-xs font-bold text-brand-accent hover:text-brand-accent-hover transition-colors bg-transparent border-0 cursor-pointer"
           >
-            <span>View activity report</span>
+            <span>View all reports</span>
             <ArrowUpRight className="h-3 w-3" strokeWidth={2} />
-          </a>
+          </button>
         </div>
-      </div>
+        </div>
+      )}
 
     </div>
   );

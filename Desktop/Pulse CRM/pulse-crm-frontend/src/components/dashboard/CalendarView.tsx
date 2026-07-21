@@ -71,7 +71,7 @@ export default function CalendarView() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div>
-              <h2 className="font-serif text-2xl text-brand-heading font-normal">Calendar Schedule</h2>
+              <h2 className="font-sans text-2xl text-brand-heading font-bold">Calendar Schedule</h2>
               <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Coordinate outbound calls, video demos, priority tasks, and team follow-ups.</p>
             </div>
             

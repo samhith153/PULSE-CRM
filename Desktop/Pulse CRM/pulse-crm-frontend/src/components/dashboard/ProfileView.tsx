@@ -45,7 +45,7 @@ export default function ProfileView() {
           </div>
           
           <div className="flex-1 text-center sm:text-left min-w-0">
-            <h2 className="font-serif text-2xl text-brand-heading font-normal">{profile.name}</h2>
+            <h2 className="font-sans text-2xl text-brand-heading font-bold">{profile.name}</h2>
             <p className="text-xs text-brand-accent font-extrabold mt-0.5">{profile.role} — {profile.department}</p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-[11px] font-semibold text-brand-text/75">
@@ -99,7 +99,7 @@ export default function ProfileView() {
           <div className="mt-4 p-3.5 bg-brand-sidebar-hover/15 border border-brand-border-purple/25 rounded-xl text-[10px] font-bold text-brand-heading flex items-start space-x-2">
             <Award className="h-4.5 w-4.5 text-brand-accent shrink-0 mt-0.5" />
             <div>
-              <span>Top performance status active. You are on track to exceed Q3 target parameters by $45,000.</span>
+              <span>Top performance status active. You are on track to exceed Q3 target parameters by ₹45,000.</span>
             </div>
           </div>
         </div>

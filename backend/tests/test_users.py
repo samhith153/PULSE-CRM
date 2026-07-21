@@ -152,3 +152,29 @@ async def test_delete_user(client: AsyncClient, auth_headers, seed_roles):
 
     get_resp = await client.get(f"/api/v1/users/{user_id}", headers=auth_headers)
     assert get_resp.status_code == 404
+
+
+async def test_create_user_invalid_role_id_rejected(client: AsyncClient, auth_headers, seed_roles):
+    resp = await client.post("/api/v1/users", headers=auth_headers, json={
+        "full_name": "Bad Role",
+        "email": "bad.role@company.com",
+        "password": "BadR0le@Pass",
+        "role_ids": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"],
+    })
+    assert resp.status_code == 404
+
+
+async def test_assign_roles_invalid_role_id_rejected(client: AsyncClient, auth_headers, seed_roles):
+    create_resp = await client.post("/api/v1/users", headers=auth_headers, json={
+        "full_name": "Role Target",
+        "email": "role.target@company.com",
+        "password": "R0leTarg@t1",
+    })
+    user_id = create_resp.json()["data"]["id"]
+
+    resp = await client.post(
+        f"/api/v1/users/{user_id}/roles",
+        headers=auth_headers,
+        json={"role_ids": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]},
+    )
+    assert resp.status_code == 404

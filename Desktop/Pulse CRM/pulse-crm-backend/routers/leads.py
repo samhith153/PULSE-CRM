@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
 from uuid import UUID
 from datetime import datetime
 from database import get_db
@@ -81,3 +82,10 @@ def convert_lead(lead_id: UUID, payload: LeadConvertRequest, db: Session = Depen
         "status": deal.status,
         "stage_id": deal.stage_id
     }
+
+@router.get("", response_model=List[LeadResponse])
+def get_leads(db: Session = Depends(get_db)):
+    """
+    Retrieves all leads.
+    """
+    return db.query(Lead).all()

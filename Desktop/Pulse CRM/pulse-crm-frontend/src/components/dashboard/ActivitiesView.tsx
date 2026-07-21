@@ -105,7 +105,7 @@ export default function ActivitiesView() {
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div>
-              <h2 className="font-serif text-2xl text-brand-heading font-normal">Audit Activities Log</h2>
+              <h2 className="font-sans text-2xl text-brand-heading font-bold">Audit Activities Log</h2>
               <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Monitor a chronological timeline of calls, emails, notes, stage adjustments, and lead actions.</p>
             </div>
             

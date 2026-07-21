@@ -1,4 +1,4 @@
-"""
+﻿"""
 Organization Management Service
 """
 import re
@@ -16,6 +16,7 @@ from app.core.logging import get_logger
 from app.models.organization import Organization
 from app.repositories.organization_repository import OrganizationRepository
 from app.schemas.organization import OrganizationCreateRequest, OrganizationUpdateRequest
+from app.services.event_service import EventService
 
 logger = get_logger(__name__)
 
@@ -31,6 +32,7 @@ class OrganizationService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.org_repo = OrganizationRepository(db)
+        self.events = EventService(db)
 
     async def create(
         self, payload: OrganizationCreateRequest, created_by: UUID
@@ -54,6 +56,15 @@ class OrganizationService:
             plan=payload.plan,
         )
         logger.info("Organization created", extra={"org_id": str(org.id)})
+        await self.events.record_event(
+            "ORGANIZATION_CREATED",
+            organization_id=org.id,
+            actor_id=created_by,
+            aggregate_type="organization",
+            aggregate_id=str(org.id),
+            source="organization_service",
+            payload={"organization_id": str(org.id), "name": org.name, "slug": org.slug},
+        )
         return org
 
     async def get(self, org_id: UUID) -> Organization:
@@ -77,6 +88,16 @@ class OrganizationService:
             update_data["slug"] = _slugify(update_data["name"])
 
         await self.org_repo.update(org, **update_data)
+        if update_data:
+            await self.events.record_event(
+                "ORGANIZATION_UPDATED",
+                organization_id=org.id,
+                actor_id=requestor_org_id,
+                aggregate_type="organization",
+                aggregate_id=str(org.id),
+                source="organization_service",
+                payload={"organization_id": str(org.id), "changes": list(update_data.keys())},
+            )
         return org
 
     async def delete(self, org_id: UUID, requestor_org_id: UUID) -> None:
@@ -85,3 +106,12 @@ class OrganizationService:
         org = await self.get(org_id)
         await self.org_repo.soft_delete(org)
         logger.info("Organization deleted", extra={"org_id": str(org_id)})
+        await self.events.record_event(
+            "ORGANIZATION_DELETED",
+            organization_id=org.id,
+            actor_id=requestor_org_id,
+            aggregate_type="organization",
+            aggregate_id=str(org.id),
+            source="organization_service",
+            payload={"organization_id": str(org.id), "requestor_id": str(requestor_org_id)},
+        )

@@ -26,6 +26,7 @@ from app.core.exceptions import (
 from app.core.logging import get_logger, request_id_var
 from app.schemas.common import ErrorResponse, ErrorDetail
 
+
 logger = get_logger("exception_handler")
 
 
@@ -36,6 +37,7 @@ def _error_body(code: str, message: str, details: list = None) -> dict:
         details=details or [],
         request_id=request_id_var.get("system"),
     ).model_dump()
+
 
 
 async def pulse_exception_handler(request: Request, exc: PulseCRMException) -> JSONResponse:

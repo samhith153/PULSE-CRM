@@ -21,6 +21,7 @@ class DealCreateRequest(BaseModel):
     probability: int = Field(default=50, ge=0, le=100)
     notes: Optional[str] = None
     owner_id: Optional[UUID] = None
+    pipeline_stage_id: Optional[UUID] = None
     company_id: Optional[UUID] = None
     contact_id: Optional[UUID] = None
     lead_id: Optional[UUID] = None
@@ -36,6 +37,7 @@ class DealUpdateRequest(BaseModel):
     probability: Optional[int] = Field(default=None, ge=0, le=100)
     notes: Optional[str] = None
     owner_id: Optional[UUID] = None
+    pipeline_stage_id: Optional[UUID] = None
     company_id: Optional[UUID] = None
     contact_id: Optional[UUID] = None
     lead_id: Optional[UUID] = None
@@ -51,7 +53,10 @@ class DealResponse(BaseModel):
     expected_close_date: Optional[date]
     probability: int
     notes: Optional[str]
+    close_reason: Optional[str]
+    closed_at: Optional[datetime]
     owner_id: Optional[UUID]
+    pipeline_stage_id: Optional[UUID]
     company_id: Optional[UUID]
     contact_id: Optional[UUID]
     lead_id: Optional[UUID]

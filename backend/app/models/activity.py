@@ -3,13 +3,21 @@ Activity Timeline Model
 Stores auditable business events that should appear in the CRM timeline.
 """
 import uuid
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, ForeignKey, JSON, String, Text
+from sqlalchemy import ForeignKey, JSON, String, Text
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TenantMixin
+
+if TYPE_CHECKING:
+    from app.models.company import Company
+    from app.models.contact import Contact
+    from app.models.deal import Deal
+    from app.models.lead import Lead
+    from app.models.organization import Organization
+    from app.models.user import User
 
 
 class ActivityTimeline(Base, TenantMixin):

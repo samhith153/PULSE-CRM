@@ -63,7 +63,7 @@ export default function DocumentsView() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
           <div>
-            <h2 className="font-serif text-2xl text-brand-heading font-normal">Documents Library</h2>
+            <h2 className="font-sans text-2xl text-brand-heading font-bold">Documents Library</h2>
             <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Upload proposal attachments, manage signed NDAs, SLA drafts, and legal contracts linked to active deals.</p>
           </div>
           <button 

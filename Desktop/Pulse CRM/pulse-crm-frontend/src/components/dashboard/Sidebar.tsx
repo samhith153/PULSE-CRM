@@ -15,7 +15,14 @@ import {
   BarChart3,
   FileText,
   Settings,
-  ChevronDown
+  ChevronDown,
+  Calendar,
+  Award,
+  TrendingUp,
+  Shield,
+  Bell,
+  Link2,
+  Cpu
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -23,49 +30,158 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
+  userRole: 'representative' | 'manager' | 'admin';
 }
 
-export default function Sidebar({ activeTab, setActiveTab, collapsed }: SidebarProps) {
-  // Nested structure matching the requested sidebar layout
-  const sections = [
-    {
-      name: 'Sales',
-      items: [
-        { name: 'Leads', icon: Users, tab: 'leads' },
-        { name: 'Contacts', icon: Contact, tab: 'contacts' },
-        { name: 'Companies', icon: Building2, tab: 'companies' },
-        { name: 'Deals', icon: Layers, tab: 'deals' }, // Merged with Pipeline
-        { name: 'Products', icon: Package, tab: 'products' }, // New
-      ]
-    },
-    {
-      name: 'Productivity',
-      items: [
-        { name: 'Activities', icon: Activity, tab: 'activities' }, // Includes Tasks & Calendar
-        { name: 'Emails', icon: Mail, tab: 'emails' },
-      ]
-    },
-    {
-      name: 'Automations & Intelligence',
-      items: [
-        { name: 'Workflows', icon: GitBranch, tab: 'workflows' },
-        { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
-      ]
-    },
-    {
-      name: 'Data & Analytics',
-      items: [
-        { name: 'Reports', icon: BarChart3, tab: 'reports' },
-        { name: 'Documents', icon: FileText, tab: 'documents' }, // New
-      ]
-    },
-    {
-      name: 'Admin',
-      items: [
-        { name: 'Settings', icon: Settings, tab: 'settings' }, // Includes Integrations
-      ]
+export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }: SidebarProps) {
+  // Dynamic sidebar sections based on user role
+  const getSections = () => {
+    switch (userRole) {
+      case 'manager':
+        return [
+          {
+            name: 'Sales Management',
+            items: [
+              { name: 'Team Pipeline', icon: Layers, tab: 'team pipeline' },
+              { name: 'Leads', icon: Users, tab: 'leads' },
+              { name: 'Companies', icon: Building2, tab: 'companies' },
+              { name: 'Contacts', icon: Contact, tab: 'contacts' },
+            ]
+          },
+          {
+            name: 'Manager Forecasting',
+            items: [
+              { name: 'Reports', icon: BarChart3, tab: 'reports' },
+              { name: 'Forecast', icon: TrendingUp, tab: 'forecast' },
+              { name: 'Team Performance', icon: Award, tab: 'team performance' },
+            ]
+          },
+          {
+            name: 'Productivity & AI',
+            items: [
+              { name: 'Activities', icon: Activity, tab: 'activities' },
+              { name: 'Calendar', icon: Calendar, tab: 'calendar' },
+              { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
+            ]
+          },
+          {
+            name: 'Notifications & Settings',
+            items: [
+              { name: 'Notifications', icon: Bell, tab: 'notifications' },
+              { name: 'Settings', icon: Settings, tab: 'settings' },
+            ]
+          }
+        ];
+      case 'admin':
+        return [
+          {
+            name: 'User Directory',
+            items: [
+              { name: 'Users', icon: Users, tab: 'users' },
+              { name: 'Roles & Permissions', icon: Shield, tab: 'roles & permissions' },
+            ]
+          },
+          {
+            name: 'Core Entities',
+            items: [
+              { name: 'Companies', icon: Building2, tab: 'companies' },
+              { name: 'Contacts', icon: Contact, tab: 'contacts' },
+              { name: 'Products', icon: Package, tab: 'products' },
+            ]
+          },
+          {
+            name: 'Integrations & Automation',
+            items: [
+              { name: 'Integrations', icon: Link2, tab: 'integrations' },
+              { name: 'Automation', icon: GitBranch, tab: 'automation' },
+            ]
+          },
+          {
+            name: 'System Intelligence',
+            items: [
+              { name: 'Reports', icon: BarChart3, tab: 'reports' },
+              { name: 'AI Models', icon: Cpu, tab: 'ai models' },
+              { name: 'Audit Logs', icon: Activity, tab: 'audit logs' },
+            ]
+          },
+          {
+            name: 'Administration',
+            items: [
+              { name: 'Settings', icon: Settings, tab: 'settings' },
+            ]
+          }
+        ];
+      case 'representative':
+      default:
+        return [
+          {
+            name: 'Sales',
+            items: [
+              { name: 'Leads', icon: Users, tab: 'leads' },
+              { name: 'Contacts', icon: Contact, tab: 'contacts' },
+              { name: 'Companies', icon: Building2, tab: 'companies' },
+              { name: 'Deals', icon: Layers, tab: 'deals' },
+              { name: 'Products', icon: Package, tab: 'products' },
+            ]
+          },
+          {
+            name: 'Productivity',
+            items: [
+              { name: 'Activities', icon: Activity, tab: 'activities' },
+              { name: 'Emails', icon: Mail, tab: 'emails' },
+            ]
+          },
+          {
+            name: 'Automations & Intelligence',
+            items: [
+              { name: 'Workflows', icon: GitBranch, tab: 'workflows' },
+              { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
+            ]
+          },
+          {
+            name: 'Data & Analytics',
+            items: [
+              { name: 'Reports', icon: BarChart3, tab: 'reports' },
+              { name: 'Documents', icon: FileText, tab: 'documents' },
+            ]
+          },
+          {
+            name: 'Configuration',
+            items: [
+              { name: 'Settings', icon: Settings, tab: 'settings' },
+            ]
+          }
+        ];
     }
-  ];
+  };
+
+  // Dynamic user profile footer details based on active role
+  const getUserProfile = () => {
+    switch (userRole) {
+      case 'admin':
+        return {
+          name: "System Admin",
+          role: "Administrator",
+          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80"
+        };
+      case 'manager':
+        return {
+          name: "Alex Johnson",
+          role: "Sales Manager",
+          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+        };
+      case 'representative':
+      default:
+        return {
+          name: "Sarah Johnson",
+          role: "Sales Representative",
+          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
+        };
+    }
+  };
+
+  const profile = getUserProfile();
+  const sections = getSections();
 
   const handleTabClick = (tabName: string) => {
     setActiveTab(tabName.toLowerCase());
@@ -105,7 +221,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed }: SidebarP
             <button
               onClick={() => handleTabClick('dashboard')}
               className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group border-l-4 relative ${
-                isTabActive('dashboard') || isTabActive('reports') && !collapsed
+                isTabActive('dashboard')
                   ? 'bg-brand-secondary-accent/15 text-brand-accent border-brand-secondary-accent shadow-sm/5 font-extrabold' 
                   : 'hover:bg-slate-50 text-brand-text/80 hover:text-brand-text border-l-4 border-transparent'
               }`}
@@ -188,15 +304,15 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed }: SidebarP
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
               <img 
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80" 
-                alt="Alex Johnson Profile" 
+                src={profile.avatar} 
+                alt={`${profile.name} Profile`} 
                 className="h-full w-full object-cover"
               />
             </div>
             {!collapsed && (
               <div className="text-left overflow-hidden">
-                <p className="text-xs font-extrabold text-brand-text truncate leading-tight">Alex Johnson</p>
-                <p className="text-[10px] text-brand-text/75 truncate mt-0.5 font-bold">Sales Manager</p>
+                <p className="text-xs font-extrabold text-brand-text truncate leading-tight">{profile.name}</p>
+                <p className="text-[10px] text-brand-text/75 truncate mt-0.5 font-bold">{profile.role}</p>
               </div>
             )}
           </div>
@@ -210,3 +326,4 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed }: SidebarP
     </aside>
   );
 }
+

@@ -8,35 +8,26 @@ Provides reusable dependencies for:
 from typing import Annotated, Callable
 from uuid import UUID
 
-from fastapi import Depends, Header, HTTPException, Security
+from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
-from app.core.exceptions import (
-    ForbiddenException,
-    UnauthorizedException,
-    NotFoundException,
-)
+from app.core.exceptions import ForbiddenException, UnauthorizedException
+from app.core.permissions import resolve_permissions_for_user
 from app.core.security import decode_access_token
 from app.database.connection import get_db
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 
-# ── OAuth2 / Bearer extractor ─────────────────────────────────────────────────
+# OAuth2 / Bearer extractor
 security = HTTPBearer(auto_error=False)
 
-
-# ── Current User ──────────────────────────────────────────────────────────────
 
 async def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """
-    Validate JWT access token and return the authenticated User.
-    Raises UnauthorizedException if token is missing/invalid.
-    """
+    """Validate JWT access token and return the authenticated User."""
     if not credentials:
         raise UnauthorizedException("Missing Bearer token.")
 
@@ -57,37 +48,21 @@ async def get_current_user(
 async def get_current_active_user(
     current_user: Annotated[User, Depends(get_current_user)],
 ) -> User:
-    """Alias that also asserts the user is active (for clarity in routes)."""
     return current_user
 
-
-# ── Organisation-scoped current user ─────────────────────────────────────────
 
 CurrentUser = Annotated[User, Depends(get_current_active_user)]
 DBSession = Annotated[AsyncSession, Depends(get_db)]
 
 
-# ── RBAC Permission Dependency Factory ────────────────────────────────────────
-
 def require_permission(permission: str) -> Callable:
-    """
-    Dependency factory.
-    Usage:
-        @router.post("/", dependencies=[Depends(require_permission("company:create"))])
-    """
-    async def _check(
-        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
-    ) -> None:
-        if not credentials:
-            raise UnauthorizedException("Missing Bearer token.")
+    """Dependency factory for a required permission."""
 
-        payload = decode_access_token(credentials.credentials)
-        permissions: list[str] = payload.get("permissions", [])
-
-        # Superusers bypass permission checks
-        if payload.get("role") == "admin":
+    async def _check(current_user: CurrentUser) -> None:
+        if current_user.is_superuser:
             return
 
+        permissions = resolve_permissions_for_user(current_user)
         if permission not in permissions:
             raise ForbiddenException(permission)
 
@@ -95,19 +70,13 @@ def require_permission(permission: str) -> Callable:
 
 
 def require_any_permission(*permissions: str) -> Callable:
-    """Pass if the user has AT LEAST ONE of the given permissions."""
-    async def _check(
-        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
-    ) -> None:
-        if not credentials:
-            raise UnauthorizedException("Missing Bearer token.")
+    """Pass if the user has at least one of the given permissions."""
 
-        payload = decode_access_token(credentials.credentials)
-        user_permissions: list[str] = payload.get("permissions", [])
-
-        if payload.get("role") == "admin":
+    async def _check(current_user: CurrentUser) -> None:
+        if current_user.is_superuser:
             return
 
+        user_permissions = resolve_permissions_for_user(current_user)
         if not any(p in user_permissions for p in permissions):
             raise ForbiddenException(permissions[0])
 
@@ -116,16 +85,17 @@ def require_any_permission(*permissions: str) -> Callable:
 
 def require_role(*roles: str) -> Callable:
     """Pass if the user has any of the listed roles."""
-    async def _check(
-        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
-    ) -> None:
-        if not credentials:
-            raise UnauthorizedException("Missing Bearer token.")
 
-        payload = decode_access_token(credentials.credentials)
-        user_role = payload.get("role", "")
+    async def _check(current_user: CurrentUser) -> None:
+        if current_user.is_superuser:
+            return
 
-        if user_role not in roles:
+        user_roles = {
+            ur.role.name
+            for ur in current_user.user_roles
+            if ur.role and ur.role.name
+        }
+        if not any(role in user_roles for role in roles):
             raise ForbiddenException(f"Required role: {', '.join(roles)}")
 
     return _check

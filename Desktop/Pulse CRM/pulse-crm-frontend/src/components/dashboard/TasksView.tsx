@@ -89,7 +89,7 @@ export default function TasksView() {
       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h2 className="font-serif text-2xl text-brand-heading font-normal">CRM Tasks Workspace</h2>
+            <h2 className="font-sans text-2xl text-brand-heading font-bold">CRM Tasks Workspace</h2>
             <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Track operational duties, set deadlines, and manage completion states.</p>
           </div>
           <button 

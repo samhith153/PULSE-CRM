@@ -1,5 +1,5 @@
-"""
-KALNET PULSE CRM — FastAPI Application Factory
+﻿"""
+KALNET PULSE CRM - FastAPI Application Factory
 """
 from contextlib import asynccontextmanager
 
@@ -8,9 +8,10 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
+from app.api.v1.router import api_router
 from app.core.config import settings
-from app.core.logging import setup_logging, get_logger
 from app.core.exceptions import PulseCRMException
+from app.core.logging import get_logger, setup_logging
 from app.middlewares.exception_handler import (
     generic_exception_handler,
     pulse_exception_handler,
@@ -18,16 +19,15 @@ from app.middlewares.exception_handler import (
 )
 from app.middlewares.logging import RequestLoggingMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
-from app.api.v1.router import api_router
+from app.services.event_bus import register_default_consumers
 
-# ── Bootstrap logging before anything else ───────────────────────────────────
 setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
 logger = get_logger(__name__)
 
 
-# ── Lifespan (startup / shutdown hooks) ──────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    register_default_consumers()
     logger.info(
         "Starting %s v%s [%s]",
         settings.APP_NAME,
@@ -38,7 +38,6 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutdown complete.")
 
 
-# ── Application factory ───────────────────────────────────────────────────────
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
@@ -50,7 +49,6 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # ── Middleware (order matters — first registered = outermost) ─────────────
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -62,15 +60,12 @@ def create_app() -> FastAPI:
         allow_headers=settings.cors_headers_list,
     )
 
-    # ── Exception Handlers ────────────────────────────────────────────────────
     app.add_exception_handler(PulseCRMException, pulse_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
-    # ── Routes ────────────────────────────────────────────────────────────────
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
 
-    # ── Root redirect ─────────────────────────────────────────────────────────
     @app.get("/", include_in_schema=False)
     async def root():
         return {

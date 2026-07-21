@@ -1,4 +1,4 @@
-"""
+﻿"""
 Activity Timeline Routes
 GET /api/v1/activity
 """
@@ -20,7 +20,7 @@ router = APIRouter()
     response_model=StandardResponse[PaginatedResponse[ActivityTimelineResponse]],
     summary="List activity timeline events",
     description="Returns audit/activity events for the current organization, with filters and pagination.",
-    dependencies=[Depends(require_permission("deal:read"))],
+    dependencies=[Depends(require_permission("activity:read"))],
 )
 async def list_activity(
     current_user: CurrentUser,

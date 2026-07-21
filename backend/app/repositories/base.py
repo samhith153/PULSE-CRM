@@ -25,16 +25,23 @@ class BaseRepository(Generic[ModelT]):
         self.model = model
         self.db = db
 
-    # ── Create ────────────────────────────────────────────────────────────────
+    # -- Create ---------------------------------------------------------------
 
     async def create(self, **data: Any) -> ModelT:
+        print(f"Creating {self.model.__name__}: {data}")
+
         instance = self.model(**data)
         self.db.add(instance)
-        await self.db.flush()  # Get DB-generated values (id, created_at) without commit
+
+        await self.db.flush()
+        print(f"Flushed {self.model.__name__}, id={instance.id}")
+
         await self.db.refresh(instance)
+        print(f"Refreshed {self.model.__name__}")
+
         return instance
 
-    # ── Read ──────────────────────────────────────────────────────────────────
+    # -- Read ----------------------------------------------------------------
 
     async def get_by_id(self, record_id: UUID) -> Optional[ModelT]:
         result = await self.db.get(self.model, record_id)
@@ -66,7 +73,7 @@ class BaseRepository(Generic[ModelT]):
     ) -> Tuple[List[ModelT], int]:
         return await paginate(self.db, query, page, page_size)
 
-    # ── Update ────────────────────────────────────────────────────────────────
+    # -- Update ---------------------------------------------------------------
 
     async def update(self, instance: ModelT, **data: Any) -> ModelT:
         for key, value in data.items():
@@ -77,13 +84,13 @@ class BaseRepository(Generic[ModelT]):
         await self.db.refresh(instance)
         return instance
 
-    # ── Delete (hard) ─────────────────────────────────────────────────────────
+    # -- Delete (hard) --------------------------------------------------------
 
     async def delete(self, instance: ModelT) -> None:
         await self.db.delete(instance)
         await self.db.flush()
 
-    # ── Soft Delete ───────────────────────────────────────────────────────────
+    # -- Soft Delete ----------------------------------------------------------
 
     async def soft_delete(self, instance: ModelT) -> ModelT:
         instance.is_deleted = True  # type: ignore[attr-defined]
@@ -92,7 +99,7 @@ class BaseRepository(Generic[ModelT]):
         await self.db.flush()
         return instance
 
-    # ── Existence check ───────────────────────────────────────────────────────
+    # -- Existence check ------------------------------------------------------
 
     async def exists(self, **kwargs: Any) -> bool:
         stmt = select(func.count()).select_from(self.model)

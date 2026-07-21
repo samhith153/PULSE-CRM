@@ -43,9 +43,9 @@ export default function AIInsightsView() {
   ]);
 
   const [priorities, setPriorities] = useState<ActionItem[]>([
-    { id: 1, title: "Review TechCorp Contract", desc: "Liability SLA terms require legal approval review.", dealValue: "$120,000", priority: "High" },
-    { id: 2, title: "Call Marcus Aurelius", desc: "Follow up on compliance audit files download feedback.", dealValue: "$85,000", priority: "High" },
-    { id: 3, title: "Email Helena Troy", desc: "Send volumetric team discounts sheet for 40 seats.", dealValue: "$45,000", priority: "Medium" }
+    { id: 1, title: "Review TechCorp Contract", desc: "Liability SLA terms require legal approval review.", dealValue: "₹120,000", priority: "High" },
+    { id: 2, title: "Call Marcus Aurelius", desc: "Follow up on compliance audit files download feedback.", dealValue: "₹85,000", priority: "High" },
+    { id: 3, title: "Email Helena Troy", desc: "Send volumetric team discounts sheet for 40 seats.", dealValue: "₹45,000", priority: "Medium" }
   ]);
 
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
@@ -66,7 +66,7 @@ export default function AIInsightsView() {
           <Sparkles className="h-5 w-5" />
         </div>
         <div>
-          <h2 className="font-serif text-2xl text-brand-heading font-normal">AI Copilot Insights</h2>
+          <h2 className="font-sans text-2xl text-brand-heading font-bold">AI Copilot Insights</h2>
           <p className="text-xs text-brand-text/80 mt-1 leading-relaxed font-bold max-w-2xl">
             Real-time recommendations generated using predictive lead scoring, compliance mapping status, and contact velocity.
           </p>

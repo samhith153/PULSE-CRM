@@ -6,11 +6,12 @@ from typing import List, Optional, Tuple
 from uuid import UUID
 
 from sqlalchemy import or_, select
-from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.models.user import User, UserRole
+from app.core.exceptions import NotFoundException
 from app.models.role import Role
+from app.models.user import User, UserRole
 from app.repositories.base import BaseRepository
 
 
@@ -72,6 +73,16 @@ class UserRepository(BaseRepository[User]):
         assigned_by: UUID,
     ) -> User:
         from datetime import datetime, timezone
+
+        if role_ids:
+            stmt = select(Role.id).where(Role.id.in_(role_ids))
+            result = await self.db.execute(stmt)
+            existing_role_ids = {row[0] for row in result.all()}
+            missing_role_ids = [
+                str(role_id) for role_id in role_ids if role_id not in existing_role_ids
+            ]
+            if missing_role_ids:
+                raise NotFoundException("Role", missing_role_ids[0])
 
         # Remove existing roles
         stmt = select(UserRole).where(UserRole.user_id == user.id)

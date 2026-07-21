@@ -17,6 +17,8 @@ if TYPE_CHECKING:
     from app.models.contact import Contact
     from app.models.lead import Lead
     from app.models.deal import Deal
+    from app.models.pipeline import PipelineStage
+    from app.models.email import Email, GmailConnection
 
 
 class Organization(Base, AuditMixin):
@@ -64,6 +66,12 @@ class Organization(Base, AuditMixin):
     )
     deals: Mapped[List["Deal"]] = relationship(
         "Deal", back_populates="organization", lazy="select"
+    )
+    pipeline_stages: Mapped[List["PipelineStage"]] = relationship(
+        "PipelineStage", back_populates="organization", lazy="select"
+    )
+    emails: Mapped[List["Email"]] = relationship(
+        "Email", back_populates="organization", lazy="select"
     )
 
     def __repr__(self) -> str:

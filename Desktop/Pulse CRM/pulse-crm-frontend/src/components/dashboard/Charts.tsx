@@ -13,7 +13,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
     x: 350,
     y: 90,
     label: "May 13, 2025",
-    value: "$2.45M"
+    value: "₹2.45M"
   });
 
   const [hoveredSourceIdx, setHoveredSourceIdx] = useState<number | null>(null);
@@ -21,13 +21,13 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
 
   // Revenue Over Time Line Chart coordinates
   const revenuePoints = [
-    { name: "May 1", value: "$0.8M", raw: 0.8, x: 50, y: 170 },
-    { name: "May 4", value: "$1.2M", raw: 1.2, x: 125, y: 150 },
-    { name: "May 7", value: "$1.5M", raw: 1.5, x: 200, y: 135 },
-    { name: "May 10", value: "$1.8M", raw: 1.8, x: 275, y: 120 },
-    { name: "May 13", value: "$2.45M", raw: 2.45, x: 350, y: 90 },
-    { name: "May 16", value: "$2.9M", raw: 2.9, x: 425, y: 70 },
-    { name: "May 18", value: "$3.85M", raw: 3.85, x: 500, y: 30 }
+    { name: "May 1", value: "₹0.8M", raw: 0.8, x: 50, y: 170 },
+    { name: "May 4", value: "₹1.2M", raw: 1.2, x: 125, y: 150 },
+    { name: "May 7", value: "₹1.5M", raw: 1.5, x: 200, y: 135 },
+    { name: "May 10", value: "₹1.8M", raw: 1.8, x: 275, y: 120 },
+    { name: "May 13", value: "₹2.45M", raw: 2.45, x: 350, y: 90 },
+    { name: "May 16", value: "₹2.9M", raw: 2.9, x: 425, y: 70 },
+    { name: "May 18", value: "₹3.85M", raw: 3.85, x: 500, y: 30 }
   ];
 
   // Pipeline stages data: Styled using Medium Blue, Light Blue and Medium Purple for Won stage
@@ -42,11 +42,11 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
 
   // Source chart percentages using new accents
   const sources = [
-    { name: "Website", pct: 45, color: "#7957fb", offset: 0, val: "$1.73M" }, // Medium Purple
-    { name: "Referral", pct: 25, color: "#7e71f9", offset: 45, val: "$0.96M" }, // Soft Purple
-    { name: "Email", pct: 15, color: "#7e8cf1", offset: 70, val: "$0.58M" }, // Periwinkle
-    { name: "Social Media", pct: 10, color: "#79a7e8", offset: 85, val: "$0.39M" }, // Medium Blue
-    { name: "Other", pct: 5, color: "#6ec2de", offset: 95, val: "$0.19M" } // Light Blue
+    { name: "Website", pct: 45, color: "#7957fb", offset: 0, val: "₹1.73M" }, // Medium Purple
+    { name: "Referral", pct: 25, color: "#7e71f9", offset: 45, val: "₹0.96M" }, // Soft Purple
+    { name: "Email", pct: 15, color: "#7e8cf1", offset: 70, val: "₹0.58M" }, // Periwinkle
+    { name: "Social Media", pct: 10, color: "#79a7e8", offset: 85, val: "₹0.39M" }, // Medium Blue
+    { name: "Other", pct: 5, color: "#6ec2de", offset: 95, val: "₹0.19M" } // Light Blue
   ];
 
   // Company size percentages using new accents
@@ -162,11 +162,11 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                 <line x1="40" y1="150" x2="520" y2="150" stroke="#7e8cf1" strokeOpacity="0.15" strokeWidth="1" />
                 
                 {/* Axis labels y-axis */}
-                <text x="15" y="34" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">$4M</text>
-                <text x="15" y="74" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">$3M</text>
-                <text x="15" y="114" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">$2M</text>
-                <text x="15" y="154" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">$1M</text>
-                <text x="25" y="190" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">$0</text>
+                <text x="15" y="34" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">₹4M</text>
+                <text x="15" y="74" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">₹3M</text>
+                <text x="15" y="114" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">₹2M</text>
+                <text x="15" y="154" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">₹1M</text>
+                <text x="25" y="190" className="text-[9px] font-bold fill-slate-400 font-sans tabular-nums">₹0</text>
 
                 {/* Filled gradient area underneath path */}
                 <path
@@ -329,7 +329,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="text-lg font-extrabold text-brand-text leading-none font-sans tabular-nums">
-                  {hoveredSourceIdx !== null ? sources[hoveredSourceIdx].val : "$3.85M"}
+                  {hoveredSourceIdx !== null ? sources[hoveredSourceIdx].val : "₹3.85M"}
                 </span>
                 <span className="text-[9px] text-brand-text/65 font-bold tracking-wider uppercase mt-1 leading-none">
                   {hoveredSourceIdx !== null ? sources[hoveredSourceIdx].name : "Total"}
@@ -391,7 +391,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                 <span className="text-lg font-extrabold text-brand-text leading-none font-sans tabular-nums">
-                  {hoveredSizeIdx !== null ? `${companySizes[hoveredSizeIdx].pct}%` : "$3.85M"}
+                  {hoveredSizeIdx !== null ? `${companySizes[hoveredSizeIdx].pct}%` : "₹3.85M"}
                 </span>
                 <span className="text-[9px] text-brand-text/65 font-bold tracking-wider uppercase mt-1 leading-none">
                   {hoveredSizeIdx !== null ? companySizes[hoveredSizeIdx].name.split(' ')[0] : "Total"}

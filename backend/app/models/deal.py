@@ -3,21 +3,23 @@ Deal Model
 Represents an active sales opportunity derived from a lead or created directly.
 """
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base, TenantMixin
 
 if TYPE_CHECKING:
-    from app.models.organization import Organization
     from app.models.company import Company
     from app.models.contact import Contact
     from app.models.lead import Lead
+    from app.models.organization import Organization
+    from app.models.pipeline import PipelineStage
     from app.models.user import User
 
 
@@ -25,9 +27,7 @@ class Deal(Base, TenantMixin):
     """Sales deal / opportunity record."""
 
     __tablename__ = "deals"
-    __table_args__ = (
-        UniqueConstraint("lead_id", name="uq_deal_lead_id"),
-    )
+    __table_args__ = (UniqueConstraint("lead_id", name="uq_deal_lead_id"),)
 
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -37,6 +37,8 @@ class Deal(Base, TenantMixin):
     expected_close_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
     probability: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    close_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -49,7 +51,6 @@ class Deal(Base, TenantMixin):
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
     )
-
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id", ondelete="SET NULL"),
@@ -62,6 +63,7 @@ class Deal(Base, TenantMixin):
         nullable=True,
         index=True,
     )
+
     company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("companies.id", ondelete="SET NULL"),
@@ -71,6 +73,12 @@ class Deal(Base, TenantMixin):
     contact_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("contacts.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    pipeline_stage_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("pipeline_stages.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
     )
@@ -88,6 +96,12 @@ class Deal(Base, TenantMixin):
     contact: Mapped[Optional["Contact"]] = relationship("Contact", lazy="select")
     lead: Mapped[Optional["Lead"]] = relationship(
         "Lead", back_populates="deal", lazy="select"
+    )
+    pipeline_stage: Mapped[Optional["PipelineStage"]] = relationship(
+        "PipelineStage",
+        back_populates="deals",
+        foreign_keys=[pipeline_stage_id],
+        lazy="select",
     )
 
     def __repr__(self) -> str:

@@ -12,6 +12,7 @@ GET  /api/v1/auth/me
 from fastapi import APIRouter, Depends, Request, status
 
 from app.api.deps import CurrentUser, DBSession
+from app.core.permissions import resolve_permissions_for_user
 from app.schemas.auth import (
     ChangePasswordRequest,
     CurrentUserResponse,
@@ -76,7 +77,6 @@ async def login(
     ),
 )
 async def logout(current_user: CurrentUser) -> None:
-    # TODO: Add token to Redis blacklist for proper revocation
     return None
 
 
@@ -109,9 +109,7 @@ async def forgot_password(
     db: DBSession,
 ) -> dict:
     svc = AuthService(db)
-    token = await svc.forgot_password(payload.email)
-    # In production: send token via email service
-    # For now we surface it in the response body for development convenience
+    await svc.forgot_password(payload.email)
     return {
         "success": True,
         "message": "If that email is registered, a reset link has been sent.",
@@ -157,14 +155,7 @@ async def change_password(
     description="Returns the profile and permissions of the currently logged-in user.",
 )
 async def get_me(current_user: CurrentUser) -> dict:
-    # Collect permissions from all roles
-    permissions: list[str] = []
-    for ur in current_user.user_roles:
-        if ur.role:
-            for rp in ur.role.role_permissions:
-                if rp.permission:
-                    permissions.append(rp.permission.codename)
-    permissions = list(set(permissions))
+    permissions = resolve_permissions_for_user(current_user)
 
     response = CurrentUserResponse(
         id=current_user.id,

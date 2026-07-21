@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deal Routes
 GET    /api/v1/deals
 POST   /api/v1/deals
@@ -38,6 +38,7 @@ async def list_deals(
     company_id: Optional[UUID] = Query(default=None),
     contact_id: Optional[UUID] = Query(default=None),
     lead_id: Optional[UUID] = Query(default=None),
+    pipeline_stage_id: Optional[UUID] = Query(default=None),
     min_amount: Optional[Decimal] = Query(default=None, ge=0),
     max_amount: Optional[Decimal] = Query(default=None, ge=0),
     sort_by: Optional[DealSortField] = Query(default=DealSortField.CREATED_AT),
@@ -52,6 +53,7 @@ async def list_deals(
         company_id,
         contact_id,
         lead_id,
+        pipeline_stage_id,
         min_amount,
         max_amount,
         sort_by,

@@ -1,0 +1,7 @@
+email_id,lead_id,replied,response_hours
+
+E001,L001,Yes,3
+E002,L001,Yes,5
+E003,L002,Yes,24
+E004,L003,No,
+E005,L005,Yes,48

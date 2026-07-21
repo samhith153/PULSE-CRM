@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getLeads } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -67,6 +68,7 @@ interface Lead {
   owner: string;
   ownerAvatar: string;
   notes: string;
+  source?: string;
   timeline: ActivityItem[];
   emails: EmailItem[];
   calls: CallItem[];
@@ -87,7 +89,8 @@ export default function LeadsView() {
       priority: "High",
       owner: "Sarah Johnson",
       ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-      notes: "Met at TechEx 2025. Interested in migrating their legacy database to our unified SaaS solution. Has a budget of $120K. Ready for proposal stage next week.",
+      notes: "Met at TechEx 2025. Interested in migrating their legacy database to our unified SaaS solution. Has a budget of ₹120K. Ready for proposal stage next week.",
+      source: "Referral",
       timeline: [
         { id: 1, type: "creation", title: "Lead Ingestion", desc: "Lead created from TechEx 2025 conference scan.", time: "4 days ago" },
         { id: 2, type: "call", title: "Discovery Call Logged", desc: "Spoke to Alex. Confirmed decision matrix and budget availability.", time: "2 days ago" }
@@ -112,6 +115,7 @@ export default function LeadsView() {
       owner: "Alex Johnson",
       ownerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
       notes: "Currently evaluating competitor pricing. Emphasized compliance standards (HIPAA/GDPR) as critical factors. Scheduled a follow-up demo.",
+      source: "Website",
       timeline: [
         { id: 1, type: "creation", title: "Lead Form Submission", desc: "Lead created from inbound marketing landing page.", time: "6 days ago" },
         { id: 2, type: "email", title: "Introduction Email Sent", desc: "Shared introduction and pricing tiers overview.", time: "5 days ago" }
@@ -134,6 +138,7 @@ export default function LeadsView() {
       owner: "Sarah Johnson",
       ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
       notes: "Inbound contact request. Enterprise customer asking about custom SSO support and priority SLA details. Immediate response required.",
+      source: "LinkedIn",
       timeline: [
         { id: 1, type: "creation", title: "Inbound Request Recieved", desc: "Submitted custom enterprise contact form.", time: "2 hours ago" }
       ],
@@ -153,6 +158,7 @@ export default function LeadsView() {
       owner: "David Wilson",
       ownerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&q=80",
       notes: "Small business prospect. Rejected pricing packages as out of scope for budget limit. Keep in cold nurturing list for low-tier launch.",
+      source: "Cold Email",
       timeline: [
         { id: 1, type: "creation", title: "API Ingestion", desc: "Lead created through automated developer partner API.", time: "10 days ago" },
         { id: 2, type: "call", title: "Call Outcome: Busy", desc: "Tried logging call, prospect rejected due to resource limits.", time: "8 days ago" }
@@ -166,7 +172,7 @@ export default function LeadsView() {
   ]);
 
   // Selections & Filters State
-  const [selectedLeadId, setSelectedLeadId] = useState<number>(1);
+  const [selectedLeadId, setSelectedLeadId] = useState<number | string>(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
@@ -187,6 +193,15 @@ export default function LeadsView() {
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
   const [meetingForm, setMeetingForm] = useState({ title: '', date: '', time: '', desc: '' });
 
+  useEffect(() => {
+    getLeads().then(data => {
+      setLeads(data as any);
+      if (data.length > 0) {
+        setSelectedLeadId(data[0].id as any);
+      }
+    });
+  }, []);
+
   // Get currently active lead object
   const activeLead = leads.find(l => l.id === selectedLeadId) || leads[0];
 
@@ -201,10 +216,87 @@ export default function LeadsView() {
     if (lead.status === 'Qualified') {
       return `Migration budget is set. Draft and send the custom enterprise SLA pricing proposal. Next touchpoint deadline: 24 hours.`;
     }
-    if (lead.status === 'Lost') {
-      return `Prospect moved to lost. Add them to the cold-nurturing newsletter stack. No immediate tasks.`;
-    }
     return `Monitor lead activity. Log notes on their technical requirements stack when they open the next pricing link.`;
+  };
+
+  // ML Pipeline Feature Engineering Helpers
+  const getSourceQuality = (source?: string) => {
+    if (!source) return 50;
+    const mapping: Record<string, number> = {
+      "Referral": 100,
+      "Website": 85,
+      "LinkedIn": 70,
+      "Webinar": 75,
+      "Event": 65,
+      "Cold Email": 40
+    };
+    return mapping[source] || 50;
+  };
+
+  const getEngagementDetails = (emails: any[]) => {
+    let score = 0;
+    if (!emails) return { score, level: "LOW" };
+    emails.forEach(email => {
+      score += 5; // email exists
+      if (email.subject?.toLowerCase().includes("re:") || email.replied === "Yes") {
+        score += 15;
+      }
+    });
+    
+    let level = "LOW";
+    if (score >= 50) level = "HIGH";
+    else if (score >= 25) level = "MEDIUM";
+    
+    return { score, level };
+  };
+
+  const getReplyDetails = (emails: any[]) => {
+    if (!emails || emails.length === 0) return { rate: 0, level: "NO RESPONSE" };
+    let totalSent = emails.length;
+    let totalReplied = emails.filter(email => 
+      email.subject?.toLowerCase().includes("re:") || 
+      email.replied === "Yes"
+    ).length;
+    
+    const rate = Math.round((totalReplied / totalSent) * 100);
+    let level = "NO RESPONSE";
+    if (rate >= 70) level = "FAST";
+    else if (rate >= 40) level = "MEDIUM";
+    else if (rate > 0) level = "SLOW";
+    
+    return { rate, level };
+  };
+
+  const getRecencyDays = (timeline: any[]) => {
+    if (!timeline || timeline.length === 0) return 999;
+    let minDays = 999;
+    timeline.forEach(item => {
+      const timeStr = item.time?.toLowerCase() || '';
+      if (timeStr.includes("today")) {
+        minDays = Math.min(minDays, 0);
+      } else if (timeStr.includes("yesterday")) {
+        minDays = Math.min(minDays, 1);
+      } else {
+        const match = timeStr.match(/(\d+)\s+day/);
+        if (match) {
+          minDays = Math.min(minDays, parseInt(match[1]));
+        }
+      }
+    });
+    return minDays;
+  };
+
+  const getCompanyBand = (companyName: string) => {
+    const sizeMap: Record<string, string> = {
+      "TechCorp Inc.": "Enterprise",
+      "MedSaaS Solutions": "Large",
+      "Empiric Logistics": "Medium",
+      "AeroSpace Labs": "Large",
+      "CloudSync Co.": "Medium",
+      "Fintech Global": "Enterprise",
+      "Apex Dynamics": "Large"
+    };
+    return sizeMap[companyName] || "Medium";
   };
 
   // Filtered Leads list
@@ -404,7 +496,7 @@ export default function LeadsView() {
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
-              <h2 className="font-serif text-2xl text-brand-heading font-normal">Sales Leads</h2>
+              <h2 className="font-sans text-2xl text-brand-heading font-bold">Sales Leads</h2>
               <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Manage prospects, monitor qualification scores, and trigger follow-ups.</p>
             </div>
             <button 
@@ -636,6 +728,78 @@ export default function LeadsView() {
               <div className="flex items-center space-x-1">
                 <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-slate-200" />
                 <span className="text-brand-text">{activeLead.owner}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Engineered AI Features (ML Pipeline Integration) */}
+          <div className="py-3.5 border-b border-brand-border-purple/15 space-y-3">
+            <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider flex items-center space-x-1">
+              <Award className="h-4 w-4 text-brand-accent" />
+              <span>AI Pipeline Features</span>
+            </h4>
+            
+            <div className="grid grid-cols-2 gap-2.5 text-[10px] font-bold">
+              {/* Engagement Level */}
+              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
+                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Engagement Level</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-brand-heading font-extrabold">{getEngagementDetails(activeLead.emails).score} pts</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide ${
+                    getEngagementDetails(activeLead.emails).level === 'HIGH' 
+                      ? 'bg-emerald-50 text-emerald-700' 
+                      : getEngagementDetails(activeLead.emails).level === 'MEDIUM'
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-rose-50 text-rose-700'
+                  }`}>
+                    {getEngagementDetails(activeLead.emails).level}
+                  </span>
+                </div>
+              </div>
+
+              {/* Reply Rate */}
+              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
+                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Reply Velocity</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-brand-heading font-extrabold">{getReplyDetails(activeLead.emails).rate}%</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide ${
+                    getReplyDetails(activeLead.emails).level === 'FAST' 
+                      ? 'bg-emerald-50 text-emerald-700' 
+                      : getReplyDetails(activeLead.emails).level === 'MEDIUM'
+                      ? 'bg-amber-50 text-amber-700'
+                      : getReplyDetails(activeLead.emails).level === 'SLOW'
+                      ? 'bg-rose-50 text-rose-700'
+                      : 'bg-slate-100 text-slate-600'
+                  }`}>
+                    {getReplyDetails(activeLead.emails).level}
+                  </span>
+                </div>
+              </div>
+
+              {/* Recency */}
+              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
+                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Touchpoint Recency</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-brand-heading font-extrabold">
+                    {getRecencyDays(activeLead.timeline) === 999 ? 'No touch' : `${getRecencyDays(activeLead.timeline)} days`}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-blue-50 text-blue-700">
+                    {getRecencyDays(activeLead.timeline) <= 3 ? 'Active' : getRecencyDays(activeLead.timeline) <= 7 ? 'Warm' : 'Cold'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Company Band & Source */}
+              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
+                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Firmographic Band</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-brand-heading font-extrabold truncate max-w-[55px]" title={activeLead.company}>
+                    {getCompanyBand(activeLead.company)}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-purple-50 text-purple-700">
+                    Q: {getSourceQuality(activeLead.source)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

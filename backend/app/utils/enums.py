@@ -67,6 +67,57 @@ class DealSortField(str, Enum):
     PROBABILITY = "probability"
 
 
+class PipelineStageSlug(str, Enum):
+    NEW = "new"
+    QUALIFIED = "qualified"
+    PROPOSAL = "proposal"
+    NEGOTIATION = "negotiation"
+    WON = "won"
+    LOST = "lost"
+
+
+class ActivityType(str, Enum):
+    NOTE = "note"
+    CALL = "call"
+    MEETING = "meeting"
+    EMAIL = "email"
+    PROPOSAL_SENT = "proposal_sent"
+    STAGE_CHANGED = "stage_changed"
+    DEAL_WON = "deal_won"
+    DEAL_LOST = "deal_lost"
+    LEAD_CONVERTED = "lead_converted"
+    COMPANY_CREATED = "company_created"
+    CONTACT_CREATED = "contact_created"
+    LEAD_CREATED = "lead_created"
+    LEAD_ASSIGNED = "lead_assigned"
+    LEAD_UPDATED = "lead_updated"
+    DEAL_CREATED = "deal_created"
+    DEAL_UPDATED = "deal_updated"
+    EMAIL_RECEIVED = "email_received"
+    EMAIL_SENT = "email_sent"
+
+
+class ActivityEntityType(str, Enum):
+    LEAD = "lead"
+    DEAL = "deal"
+    CONTACT = "contact"
+    COMPANY = "company"
+    EMAIL = "email"
+    SYSTEM = "system"
+
+
+class EmailDirection(str, Enum):
+    INBOUND = "inbound"
+    OUTBOUND = "outbound"
+
+
+class EmailSyncStatus(str, Enum):
+    CONNECTED = "connected"
+    SYNCING = "syncing"
+    ACTIVE = "active"
+    ERROR = "error"
+
+
 class OrgPlan(str, Enum):
     FREE = "free"
     STARTER = "starter"

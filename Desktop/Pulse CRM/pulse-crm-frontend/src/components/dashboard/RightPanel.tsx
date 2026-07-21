@@ -4,7 +4,7 @@ import React from 'react';
 import { 
   Plus, 
   FolderOpen, 
-  DollarSign, 
+  IndianRupee, 
   PlusCircle, 
   MinusCircle, 
   Activity, 
@@ -25,18 +25,18 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
     {
       title: "Open deals",
       count: 68,
-      desc: "Value: $2.12M",
+      desc: "Value: ₹2.12M",
       icon: FolderOpen,
       color: "text-brand-accent",
       bg: "bg-brand-accent/10 border border-brand-accent/20"
     },
     {
       title: "Total pipeline value",
-      count: "$5.67M",
+      count: "₹5.67M",
       desc: "vs last month",
       change: "+22%",
       isPositive: true,
-      icon: DollarSign,
+      icon: IndianRupee,
       color: "text-brand-accent",
       bg: "bg-brand-accent/10 border border-brand-accent/20"
     },

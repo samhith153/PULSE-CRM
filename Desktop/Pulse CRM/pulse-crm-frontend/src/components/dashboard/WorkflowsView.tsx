@@ -83,7 +83,7 @@ export default function WorkflowsView() {
       trigger: "Time Delay & Activity Tracker",
       nodes: [
         { id: "1", type: "trigger" as const, category: "Time-Based Events", label: "10 Days Inactive", desc: "No touchpoints logged in 10 days", config: "Stage == Proposal" },
-        { id: "2", type: "condition" as const, category: "Property Filters", label: "Deal Size > $50K", desc: "Focuses on high-value pipeline", config: "Value >= 50000" },
+        { id: "2", type: "condition" as const, category: "Property Filters", label: "Deal Size > ₹50K", desc: "Focuses on high-value pipeline", config: "Value >= 50000" },
         { id: "3", type: "action" as const, category: "Internal Actions", label: "Ping Slack Owner", desc: "Send urgent warning channel message", config: "Slack AE Channel" }
       ]
     },
@@ -191,7 +191,7 @@ export default function WorkflowsView() {
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
               <div>
-                <h2 className="font-serif text-2xl text-brand-heading font-normal">Automated Workflows</h2>
+                <h2 className="font-sans text-2xl text-brand-heading font-bold">Automated Workflows</h2>
                 <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Deploy automated rules, drip email schedules, Slack alerts, and lead assignment scripts.</p>
               </div>
               <button 
@@ -296,7 +296,7 @@ export default function WorkflowsView() {
 
           {/* Pre-Built Templates Library */}
           <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
-            <h3 className="font-serif text-lg text-brand-heading font-normal mb-3 flex items-center gap-1.5">
+            <h3 className="font-sans text-lg text-brand-heading font-semibold mb-3 flex items-center gap-1.5">
               <FolderOpen className="h-4.5 w-4.5 text-slate-400" />
               <span>Pre-Built Automation Templates</span>
             </h3>
@@ -349,7 +349,7 @@ export default function WorkflowsView() {
                   type="text" 
                   value={newWorkflowName}
                   onChange={e => setNewWorkflowName(e.target.value)}
-                  className="font-serif text-lg text-brand-heading focus:outline-none border-b border-transparent hover:border-slate-300 focus:border-brand-accent font-normal bg-transparent"
+                  className="font-sans text-lg text-brand-heading focus:outline-none border-b border-transparent hover:border-slate-300 focus:border-brand-accent font-semibold bg-transparent"
                   placeholder="Untitled Automation Workflow"
                 />
                 <input 

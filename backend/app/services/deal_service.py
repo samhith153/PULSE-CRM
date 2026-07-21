@@ -1,6 +1,7 @@
-"""
+﻿"""
 Deal Management Service
 """
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional, Tuple
 from uuid import UUID
@@ -10,14 +11,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import BusinessRuleException, ConflictException, NotFoundException
 from app.core.logging import get_logger
 from app.models.deal import Deal
-from app.repositories.activity_repository import ActivityTimelineRepository
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.contact_repository import ContactRepository
 from app.repositories.deal_repository import DealRepository
 from app.repositories.lead_repository import LeadRepository
+from app.repositories.pipeline_repository import PipelineRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.deal import DealCreateRequest, DealUpdateRequest
-from app.utils.enums import DealSortField, DealStatus, LeadStatus, SortOrder
+from app.services.timeline_engine_service import TimelineEngineService
+from app.utils.enums import (
+    ActivityEntityType,
+    ActivityType,
+    DealSortField,
+    DealStatus,
+    PipelineStageSlug,
+    SortOrder,
+)
 
 logger = get_logger(__name__)
 
@@ -26,7 +35,8 @@ class DealService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
         self.repo = DealRepository(db)
-        self.activity_repo = ActivityTimelineRepository(db)
+        self.pipeline_repo = PipelineRepository(db)
+        self.timeline = TimelineEngineService(db)
         self.company_repo = CompanyRepository(db)
         self.contact_repo = ContactRepository(db)
         self.lead_repo = LeadRepository(db)
@@ -39,6 +49,7 @@ class DealService:
             payload.contact_id,
             payload.lead_id,
             payload.owner_id,
+            payload.pipeline_stage_id,
         )
 
         if payload.lead_id:
@@ -46,10 +57,36 @@ class DealService:
             if existing:
                 raise ConflictException("A deal already exists for this lead.")
 
+        stage = await self._resolve_stage(organization_id=organization_id, stage_id=payload.pipeline_stage_id, created_by=created_by)
+
+        create_data = payload.model_dump(exclude_none=True)
+        create_data.pop("pipeline_stage_id", None)
+        create_data.pop("status", None)
+        create_data.pop("probability", None)
+
+        status_value = self._status_for_stage(stage, payload.status)
+        probability = stage.probability if payload.pipeline_stage_id else payload.probability
+        closed_at = datetime.now(timezone.utc) if status_value in {DealStatus.WON.value, DealStatus.LOST.value} else None
+
         deal = await self.repo.create(
-            **payload.model_dump(exclude_none=True),
+            **create_data,
+            status=status_value,
+            probability=probability,
+            closed_at=closed_at,
+            pipeline_stage_id=stage.id if stage else None,
             organization_id=organization_id,
             created_by=created_by,
+        )
+        await self.timeline.record_activity(
+            organization_id=organization_id,
+            created_by=created_by,
+            entity_type=ActivityEntityType.DEAL.value,
+            entity_id=deal.id,
+            action=ActivityType.DEAL_CREATED.value,
+            title="Deal created",
+            description=f"Deal '{deal.name}' was created.",
+            payload={"deal_id": str(deal.id), "pipeline_stage_id": str(stage.id) if stage else None},
+            topic="deal",
         )
         logger.info("Deal created", extra={"deal_id": str(deal.id)})
         return deal
@@ -63,6 +100,7 @@ class DealService:
         company_id: Optional[UUID],
         contact_id: Optional[UUID],
         lead_id: Optional[UUID],
+        pipeline_stage_id: Optional[UUID],
         min_amount: Optional[Decimal],
         max_amount: Optional[Decimal],
         sort_by: Optional[DealSortField],
@@ -78,6 +116,7 @@ class DealService:
             company_id,
             contact_id,
             lead_id,
+            pipeline_stage_id,
             min_amount,
             max_amount,
             sort_by,
@@ -102,6 +141,7 @@ class DealService:
             update_data.get("contact_id"),
             update_data.get("lead_id"),
             update_data.get("owner_id"),
+            update_data.get("pipeline_stage_id"),
         )
 
         lead_id = update_data.get("lead_id")
@@ -110,63 +150,73 @@ class DealService:
             if existing and existing.id != deal_id:
                 raise ConflictException("A deal already exists for this lead.")
 
+        stage = None
+        if "pipeline_stage_id" in update_data:
+            stage = await self._resolve_stage(
+                organization_id=organization_id,
+                stage_id=update_data.get("pipeline_stage_id"),
+                created_by=deal.created_by,
+            )
+            update_data["pipeline_stage_id"] = stage.id if stage else None
+            if stage:
+                update_data["probability"] = stage.probability
+                update_data["status"] = self._status_for_stage(stage, DealStatus.OPEN)
+                if stage.slug in {PipelineStageSlug.WON.value, PipelineStageSlug.LOST.value}:
+                    update_data["closed_at"] = datetime.now(timezone.utc)
+                    if not update_data.get("close_reason") and not deal.close_reason:
+                        raise BusinessRuleException("A close_reason is required when moving a deal to Won or Lost.")
+                else:
+                    update_data["closed_at"] = None
+                    if "close_reason" not in update_data and deal.close_reason:
+                        update_data["close_reason"] = deal.close_reason
+
+        if "status" in update_data:
+            status_value = self._to_status_value(update_data["status"])
+            if status_value in {DealStatus.WON.value, DealStatus.LOST.value}:
+                if not update_data.get("close_reason") and not deal.close_reason:
+                    raise BusinessRuleException("A close_reason is required when marking a deal as Won or Lost.")
+                update_data["closed_at"] = datetime.now(timezone.utc)
+            else:
+                update_data["closed_at"] = None
+            update_data["status"] = status_value
+
         await self.repo.update(deal, **update_data)
+
+        activity_action = self._deal_activity_action(stage, update_data)
+        if activity_action:
+            await self.timeline.record_activity(
+                organization_id=organization_id,
+                created_by=deal.created_by,
+                entity_type=ActivityEntityType.DEAL.value,
+                entity_id=deal.id,
+                action=activity_action,
+                title=self._activity_title(activity_action),
+                description=f"Deal '{deal.name}' was updated.",
+                payload={"deal_id": str(deal.id), "changes": list(update_data.keys())},
+                topic="deal",
+            )
         return deal
 
     async def delete(self, deal_id: UUID, organization_id: UUID) -> None:
         deal = await self.get(deal_id, organization_id)
         await self.repo.soft_delete(deal)
+        await self.timeline.record_activity(
+            organization_id=organization_id,
+            created_by=deal.created_by,
+            entity_type=ActivityEntityType.DEAL.value,
+            entity_id=deal.id,
+            action="deal_deleted",
+            title="Deal deleted",
+            description=f"Deal '{deal.name}' was deleted.",
+            payload={"deal_id": str(deal.id)},
+            topic="deal",
+        )
         logger.info("Deal deleted", extra={"deal_id": str(deal_id)})
 
     async def convert_from_lead(self, lead_id: UUID, organization_id: UUID, created_by: UUID) -> Deal:
-        tx_context = self.db.begin_nested() if self.db.in_transaction() else self.db.begin()
-        async with tx_context:
-            lead = await self.lead_repo.get_active_by_id(lead_id, organization_id)
-            if not lead:
-                raise NotFoundException("Lead", lead_id)
+        from app.services.lead_service import LeadService
 
-            if lead.status == LeadStatus.CONVERTED.value:
-                raise ConflictException("Lead has already been converted into a deal.")
-
-            existing = await self.repo.get_by_lead_id_in_org(lead_id, organization_id)
-            if existing:
-                raise ConflictException("Lead has already been converted into a deal.")
-
-            deal = await self.repo.create(
-                name=lead.title,
-                description=lead.description,
-                status=DealStatus.OPEN.value,
-                amount=lead.estimated_value,
-                currency=lead.currency,
-                probability=min(max((lead.score or 50), 0), 100),
-                notes=lead.notes,
-                owner_id=lead.owner_id,
-                company_id=lead.company_id,
-                contact_id=lead.contact_id,
-                lead_id=lead.id,
-                organization_id=organization_id,
-                created_by=created_by,
-            )
-
-            await self.lead_repo.update(lead, status=LeadStatus.CONVERTED.value)
-
-            await self.activity_repo.create(
-                entity_type="deal",
-                entity_id=deal.id,
-                action="created_from_lead",
-                title="Lead converted to deal",
-                description=f"Lead '{lead.title}' was converted into deal '{deal.name}'.",
-                payload={
-                    "lead_id": str(lead.id),
-                    "deal_id": str(deal.id),
-                    "lead_title": lead.title,
-                },
-                organization_id=organization_id,
-                created_by=created_by,
-            )
-
-            logger.info("Lead converted to deal", extra={"lead_id": str(lead.id), "deal_id": str(deal.id)})
-            return deal
+        return await LeadService(self.db).convert_to_deal(lead_id, organization_id, created_by)
 
     async def _validate_relations(
         self,
@@ -175,6 +225,7 @@ class DealService:
         contact_id: Optional[UUID],
         lead_id: Optional[UUID],
         owner_id: Optional[UUID],
+        pipeline_stage_id: Optional[UUID] = None,
     ) -> None:
         if company_id:
             company = await self.company_repo.get_active_by_id(company_id, organization_id)
@@ -195,3 +246,66 @@ class DealService:
             owner = await self.user_repo.get_by_id_with_roles(owner_id)
             if not owner or owner.organization_id != organization_id:
                 raise BusinessRuleException(f"Owner (user) '{owner_id}' not found.")
+
+        if pipeline_stage_id:
+            stage = await self.pipeline_repo.get_active_by_id(pipeline_stage_id, organization_id)
+            if not stage:
+                raise BusinessRuleException(f"Pipeline stage '{pipeline_stage_id}' not found.")
+
+    async def _resolve_stage(
+        self,
+        organization_id: UUID,
+        stage_id: Optional[UUID],
+        created_by: Optional[UUID],
+    ):
+        if stage_id:
+            stage = await self.pipeline_repo.get_active_by_id(stage_id, organization_id)
+            if not stage:
+                raise BusinessRuleException(f"Pipeline stage '{stage_id}' not found.")
+            return stage
+
+        stage = await self.pipeline_repo.get_by_slug(PipelineStageSlug.NEW.value, organization_id)
+        if stage:
+            return stage
+
+        from app.services.pipeline_service import PipelineService
+
+        stages = await PipelineService(self.db).ensure_default_stages(organization_id, created_by)
+        return stages[0] if stages else None
+
+    def _status_for_stage(self, stage, fallback: DealStatus | str) -> str:
+        if not stage:
+            return self._to_status_value(fallback)
+        if stage.slug == PipelineStageSlug.WON.value:
+            return DealStatus.WON.value
+        if stage.slug == PipelineStageSlug.LOST.value:
+            return DealStatus.LOST.value
+        return DealStatus.OPEN.value
+
+    def _to_status_value(self, value: DealStatus | str) -> str:
+        return value.value if isinstance(value, DealStatus) else str(value)
+
+    def _deal_activity_action(self, stage, update_data: dict[str, object]) -> str:
+        if stage and getattr(stage, "slug", None) == PipelineStageSlug.WON.value:
+            return ActivityType.DEAL_WON.value
+        if stage and getattr(stage, "slug", None) == PipelineStageSlug.LOST.value:
+            return ActivityType.DEAL_LOST.value
+        status_value = update_data.get("status")
+        if status_value in {DealStatus.WON.value, DealStatus.WON}:
+            return ActivityType.DEAL_WON.value
+        if status_value in {DealStatus.LOST.value, DealStatus.LOST}:
+            return ActivityType.DEAL_LOST.value
+        if "pipeline_stage_id" in update_data:
+            return ActivityType.STAGE_CHANGED.value
+        return ActivityType.DEAL_UPDATED.value
+
+    def _activity_title(self, action: str) -> str:
+        titles = {
+            ActivityType.DEAL_CREATED.value: "Deal created",
+            ActivityType.DEAL_UPDATED.value: "Deal updated",
+            ActivityType.STAGE_CHANGED.value: "Deal stage changed",
+            ActivityType.DEAL_WON.value: "Deal won",
+            ActivityType.DEAL_LOST.value: "Deal lost",
+        }
+        return titles.get(action, "Deal updated")
+
