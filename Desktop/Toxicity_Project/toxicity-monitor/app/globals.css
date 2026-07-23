@@ -1,0 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root, [data-theme="dark"] {
+  --bg-primary: #09090b;
+  --bg-secondary: #18181b;
+  --bg-elevated: #27272a;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-focus: rgba(255, 255, 255, 0.3);
+
+  --accent-safe: #10b981;
+  --accent-toxic: #ef4444;
+  --accent-primary: #fafafa; 
+  --btn-text: #09090b;
+
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] {
+  --bg-primary: #fafafa;
+  --bg-secondary: #ffffff;
+  --bg-elevated: #f4f4f5;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+  
+  --border-subtle: rgba(0, 0, 0, 0.1);
+  --border-focus: rgba(0, 0, 0, 0.3);
+
+  --accent-safe: #059669;
+  --accent-toxic: #dc2626;
+  
+  /* Black button setup inside light mode */
+  --accent-primary: #09090b;
+  --btn-text: #fafafa;
+  
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.enterprise-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.input-minimal {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  font-size: 0.95rem;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.2s ease;
+}
+.input-minimal:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--border-subtle);
+}
+
+/* Pure Black/White Monochrome Buttons */
+.btn-core {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.5rem;
+  background: var(--accent-primary);
+  color: var(--btn-text);
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+.btn-core:hover:not(:disabled) {
+  opacity: 0.85;
+  transform: translateY(-1px);
+}
+.btn-core:active:not(:disabled) {
+  transform: translateY(0);
+}
+.btn-core:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-secondary.active {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+  border-color: var(--text-primary);
+}
+.btn-secondary:hover:not(.active) {
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+.badge-toxic {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-toxic);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+.badge-safe {
+  background: rgba(16, 185, 129, 0.1);
+  color: var(--accent-safe);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.comment-card {
+  padding: 1.25rem;
+  border-radius: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid transparent;
+  transition: all 0.3s ease;
+}
+.comment-card.toxic {
+  border-color: rgba(239, 68, 68, 0.2);
+  border-left-color: var(--accent-toxic);
+}
+.comment-card.safe {
+  border-left-color: var(--accent-safe);
+}

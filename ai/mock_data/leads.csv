@@ -1,0 +1,7 @@
+lead_id,company_id,source,status,created_at
+
+L001,C001,LinkedIn,Active,2026-07-01
+L002,C002,Website,Active,2026-07-02
+L003,C003,Cold Email,Cold,2026-07-03
+L004,C004,Referral,Negotiation,2026-07-04
+L005,C005,Webinar,Active,2026-07-05

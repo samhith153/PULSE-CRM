@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: pulse-crm-db
+    environment:
+      POSTGRES_DB: pulse-crm
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./pulse-crm-backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pulse-crm"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./pulse-crm-backend
+      dockerfile: Dockerfile
+    container_name: pulse-crm-backend
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pulse-crm
+      - JWT_SECRET_KEY=your-jwt-supabase-secret-hash-super-secure-default-key-for-development
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  frontend:
+    build:
+      context: ./pulse-crm-frontend
+      dockerfile: Dockerfile
+    container_name: pulse-crm-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  postgres_data:
