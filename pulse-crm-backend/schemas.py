@@ -56,6 +56,8 @@ class CompanyBase(BaseModel):
     name: str
     domain: Optional[str] = None
     industry: Optional[str] = None
+    current_crm: Optional[str] = None
+    operational_system: Optional[str] = None
 
 class CompanyCreate(CompanyBase):
     pass
@@ -64,6 +66,8 @@ class CompanyUpdate(BaseModel):
     name: Optional[str] = None
     domain: Optional[str] = None
     industry: Optional[str] = None
+    current_crm: Optional[str] = None
+    operational_system: Optional[str] = None
 
 class CompanyResponse(CompanyBase):
     id: UUID
@@ -100,7 +104,9 @@ class LeadBase(BaseModel):
     source: Optional[str] = None
     industry: Optional[str] = None
     current_crm: Optional[str] = None
+    location: Optional[str] = None
     operational_system: Optional[str] = None
+    operational_systems: Optional[str] = None
 
 class LeadCreate(LeadBase):
     contact_id: UUID
