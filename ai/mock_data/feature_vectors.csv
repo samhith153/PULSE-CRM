@@ -1,4 +1,9 @@
 lead_id,feature_version,generated_at,company,company_band,source,source_score,engagement_score,engagement_level,reply_rate,reply_level,recency_days
-6df012fe-0949-4919-af65-fbc1b0b2adb3,v1,2026-07-22 14:29:17.724587,TechNova. Solutions,Medium,website,50,0,LOW,0,NO RESPONSE,5
-558d3def-efb7-43af-9e1a-07315f9809c6,v1,2026-07-22 14:29:17.727277,TechNova44 Solutions,Medium,website,50,0,LOW,0,NO RESPONSE,5
-733762d3-e4bd-48b7-ae10-4c403db7c4cb,v1,2026-07-22 14:29:17.729379,TechNova44 Solutions,Medium,website,50,0,LOW,0,NO RESPONSE,5
+L001,v1,2026-07-23 18:54:08.821285,Bright Future University,Large,LinkedIn,70,60,HIGH,100.0,FAST,1
+L002,v1,2026-07-23 18:54:08.823768,TechNova Solutions,Medium,Website,85,40,MEDIUM,100.0,FAST,0
+L003,v1,2026-07-23 18:54:08.826108,GreenLeaf Hospitality,Small,Cold Email,40,5,LOW,0.0,NO RESPONSE,13
+L004,v1,2026-07-23 18:54:08.828093,Apex Manufacturing,Enterprise,Referral,100,5,LOW,0.0,NO RESPONSE,5
+L005,v1,2026-07-23 18:54:08.829736,CloudEdge Health,Small,Webinar,75,40,MEDIUM,100.0,FAST,2
+L006,v1,2026-07-23 18:54:08.831316,Royal Finance Ltd,Large,Event,65,40,MEDIUM,100.0,FAST,0
+L007,v1,2026-07-23 18:54:08.832940,Urban Homes,Medium,Referral,100,5,LOW,0.0,NO RESPONSE,7
+L008,v1,2026-07-23 18:54:08.836234,Smart Retail Mart,Large,Website,85,40,MEDIUM,100.0,FAST,0

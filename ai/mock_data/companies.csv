@@ -1,7 +1,9 @@
-company_id,name,size,industry
-
-C001,Bright Future University,1200,Education
-C002,TechNova Solutions,250,Technology
-C003,GreenLeaf Hospitality,45,Hospitality
-C004,Apex Manufacturing,3000,Manufacturing
-C005,CloudEdge Startup,25,Technology
+company_id,name,size,industry,current_crm,operational_system
+C001,Bright Future University,1800,Education,Salesforce,Structured Business Software
+C002,TechNova Solutions,450,IT,HubSpot,Structured Business Software
+C003,GreenLeaf Hospitality,35,Hospitality,Excel,Spreadsheets
+C004,Apex Manufacturing,6500,Manufacturing,Custom Software,Custom Internal Software
+C005,CloudEdge Health,25,Healthcare,No CRM,No Structured System
+C006,Royal Finance Ltd,1200,Finance,Salesforce,Structured Business Software
+C007,Urban Homes,300,Real Estate,HubSpot,Structured Business Software
+C008,Smart Retail Mart,900,Retail,Excel,Spreadsheets
