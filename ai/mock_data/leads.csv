@@ -1,0 +1,9 @@
+lead_id,company_id,source,stage
+L001,C001,LinkedIn,Awareness
+L002,C002,Website,Consideration
+L003,C003,Cold Email,Qualified
+L004,C004,Referral,Negotiation
+L005,C005,Webinar,Proposal
+L006,C006,Event,Qualified
+L007,C007,Referral,Consideration
+L008,C008,Website,Proposal

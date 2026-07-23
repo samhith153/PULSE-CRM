@@ -68,6 +68,8 @@ class Company(Base):
     name = Column(String(150), nullable=False)
     domain = Column(String(100), nullable=True)
     industry = Column(String(100), nullable=True)
+    current_crm = Column(String(100), nullable=True)
+    operational_system = Column(String(100), nullable=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -106,6 +108,11 @@ class Lead(Base):
     value = Column(Numeric(12, 2), nullable=True)
     status = Column(String(50), default='New')  # New, Contacted, Qualified, Lost
     source = Column(String(50), nullable=True)  # Website, Cold Call, Referral, etc.
+    industry = Column(String(100), nullable=True)
+    current_crm = Column(String(100), nullable=True)
+    location = Column(String(150), nullable=True)
+    operational_system = Column(String(100), nullable=True)
+    operational_systems = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -177,14 +184,39 @@ class Email(Base):
     deal_id = Column(UUID(as_uuid=True), ForeignKey('deals.id', ondelete='SET NULL'), nullable=True)
     contact_id = Column(UUID(as_uuid=True), ForeignKey('contacts.id', ondelete='CASCADE'), nullable=False)
     message_id = Column(String(255), unique=True, nullable=False, index=True)
+    brevo_message_id = Column(String(255), unique=True, nullable=True, index=True)
     subject = Column(String(255), nullable=True)
     body = Column(Text, nullable=True)
     sender = Column(String(255), nullable=False)
     recipient = Column(String(255), nullable=False)
+    status = Column(String(50), default='sent', nullable=False, index=True)
     sent_at = Column(DateTime, nullable=False)
+    delivered_at = Column(DateTime, nullable=True)
+    opened_at = Column(DateTime, nullable=True)
+    clicked_at = Column(DateTime, nullable=True)
+    bounced_at = Column(DateTime, nullable=True)
+    deferred_at = Column(DateTime, nullable=True)
+    spam_at = Column(DateTime, nullable=True)
+    unsubscribed_at = Column(DateTime, nullable=True)
+    last_event_at = Column(DateTime, nullable=True)
     is_incoming = Column(Boolean, default=True)
     synced_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     deal = relationship('Deal', back_populates='emails')
     contact = relationship('Contact', back_populates='emails')
+    events = relationship('EmailEvent', back_populates='email', cascade='all, delete-orphan')
+
+
+class EmailEvent(Base):
+    __tablename__ = 'email_events'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email_id = Column(UUID(as_uuid=True), ForeignKey('emails.id', ondelete='CASCADE'), nullable=False, index=True)
+    event_key = Column(String(500), unique=True, nullable=False, index=True)
+    event_type = Column(String(50), nullable=False, index=True)
+    event_at = Column(DateTime, nullable=False)
+    payload = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    email = relationship('Email', back_populates='events')

@@ -16,7 +16,9 @@ def create_company(payload: CompanyCreate, db: Session = Depends(get_db)):
     company = Company(
         name=payload.name,
         domain=payload.domain,
-        industry=payload.industry
+        industry=payload.industry,
+        current_crm=payload.current_crm,
+        operational_system=payload.operational_system
     )
     db.add(company)
     db.commit()
@@ -45,6 +47,10 @@ def update_company(company_id: UUID, payload: CompanyUpdate, db: Session = Depen
         company.domain = payload.domain
     if payload.industry is not None:
         company.industry = payload.industry
+    if payload.current_crm is not None:
+        company.current_crm = payload.current_crm
+    if payload.operational_system is not None:
+        company.operational_system = payload.operational_system
         
     db.commit()
     db.refresh(company)
