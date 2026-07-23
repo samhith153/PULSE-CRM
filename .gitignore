@@ -220,9 +220,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-# ==========================================
-# NODE.JS TEMPLATE (Added manually)
-# ==========================================
+# Node & Web
 node_modules/
 .pnp
 .pnp.*
@@ -232,7 +230,7 @@ node_modules/
 !.yarn/releases
 !.yarn/versions
 
-# Python Virtual Sandbox Environment
+# Python Virtual Sandbox & Cache
 venv/
 .venv/
 ENV/
@@ -244,6 +242,8 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+test_companies_mock.json
+*.py[codz]
 
 # Testing
 coverage/
@@ -284,4 +284,3 @@ yarn-error.log*
 walkthrough.md
 implementation_plan.md
 task.md
-
