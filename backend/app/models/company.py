@@ -53,6 +53,8 @@ class Company(Base, TenantMixin):
 
     # ── Business metadata ─────────────────────────────────────────────────────
     industry: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    current_crm: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    operational_system: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     company_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     employee_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     annual_revenue: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
