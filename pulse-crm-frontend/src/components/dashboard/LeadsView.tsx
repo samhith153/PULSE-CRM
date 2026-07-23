@@ -1095,7 +1095,7 @@ export default function LeadsView() {
       )}
 
       {/* SEND EMAIL DIALOG MODAL */}
-      {isEmailModalOpen && (
+      {isEmailModalOpen && activeLead && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
