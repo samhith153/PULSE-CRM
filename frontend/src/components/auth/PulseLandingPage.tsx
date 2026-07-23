@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Activity, ArrowRight, CheckCircle2, ChevronDown, ChevronRight,
+  Activity, ArrowRight, CheckCircle2, ChevronRight,
   Loader2, Mail, Sparkles, Users, Zap, Award, Shield,
   BarChart2, RefreshCw, Headphones, TrendingUp, Settings,
-  X, LayoutDashboard, Star, Play, Menu,
+  X, LayoutDashboard, Star, Play,
   Target, Lock
 } from 'lucide-react';
+import Navbar from '@/components/navigation/Navbar';
 
 interface PulseLandingPageProps {
   onLogin: (role: 'representative' | 'manager' | 'admin') => void;
@@ -47,22 +48,10 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   const [password, setPassword] = useState('');
   const [newsEmail, setNewsEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<Role>('manager');
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [orbitAngle, setOrbitAngle] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeOrbitNode, setActiveOrbitNode] = useState<string | null>(null);
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
-  const navRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (!target.closest('[data-nav-menu]')) setOpenDropdown(null);
-    };
-    document.addEventListener('click', handler);
-    return () => document.removeEventListener('click', handler);
-  }, []);
 
   useEffect(() => {
     const t = setInterval(() => setOrbitAngle(a => (a + 0.25) % 360), 50);
@@ -112,35 +101,6 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     }
     addToast("You've been subscribed! Welcome to Pulse updates.", 'success');
     setNewsEmail('');
-  };
-
-  const navMenus: Record<string, { icon: React.ElementType; label: string; desc: string }[]> = {
-    Product: [
-      { icon: LayoutDashboard, label: 'Dashboard', desc: 'Real-time sales overview & KPIs' },
-      { icon: TrendingUp, label: 'Pipeline', desc: 'Visual deal pipeline management' },
-      { icon: Sparkles, label: 'AI Copilot', desc: 'AI-powered deal insights & scoring' },
-      { icon: Mail, label: 'Email Sync', desc: 'Gmail & Outlook integration' },
-      { icon: BarChart2, label: 'Analytics', desc: 'Custom reports & forecasting' },
-      { icon: Users, label: 'Contacts', desc: 'Manage leads, contacts & companies' },
-    ],
-    Solutions: [
-      { icon: Shield, label: 'Enterprise', desc: 'Scalable CRM for large orgs' },
-      { icon: Zap, label: 'Startups', desc: 'Fast setup for high-growth teams' },
-      { icon: Target, label: 'Sales Teams', desc: 'Tools built for every rep' },
-      { icon: BarChart2, label: 'RevOps', desc: 'Revenue operations suite' },
-    ],
-    Pricing: [
-      { icon: Star, label: 'Free Trial', desc: '14 days, no credit card needed' },
-      { icon: Zap, label: 'Starter ₹29', desc: 'Small teams, core CRM features' },
-      { icon: Award, label: 'Growth ₹79', desc: 'Scaling teams + AI features' },
-      { icon: Shield, label: 'Enterprise', desc: 'Custom pricing, unlimited users' },
-    ],
-    Resources: [
-      { icon: LayoutDashboard, label: 'Documentation', desc: 'API docs & integration guides' },
-      { icon: BarChart2, label: 'Blog', desc: 'Sales tips & CRM insights' },
-      { icon: Users, label: 'Community', desc: 'Connect with other Pulse users' },
-      { icon: Headphones, label: 'Support', desc: '24/7 expert help & live chat' },
-    ],
   };
 
   const stats = [
@@ -284,74 +244,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       )}
 
-      {/* ══════════ 1. STICKY NAVBAR ══════════ */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(12px)', borderBottom: `1px solid ${C.border}`, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 48px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
-            <div style={{ height: 36, width: 36, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${C.violet}55` }}>
-              <Activity size={17} color={C.white} strokeWidth={2.5} />
-            </div>
-            <span style={{ fontSize: 19, fontWeight: 900, color: C.black, letterSpacing: '-0.03em' }}>Pulse</span>
-            <span style={{ fontSize: 19, fontWeight: 900, color: C.violet, letterSpacing: '-0.03em', marginLeft: -4 }}>CRM</span>
-            <span style={{ fontSize: 9, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.14em', marginLeft: 6 }}>AI REVENUE ENGINE</span>
-          </div>
-          <nav ref={navRef} style={{ display: 'flex', alignItems: 'center', gap: 2 }} data-nav-menu="true">
-            {(['Product', 'Solutions', 'Pricing', 'Resources'] as const).map(item => (
-              <div key={item} style={{ position: 'relative' }} data-nav-menu="true">
-                <button
-                  onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === item ? null : item); }}
-                  data-nav-menu="true"
-                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '7px 14px', borderRadius: 8, border: 'none', background: openDropdown === item ? C.violetLighter : 'transparent', fontSize: 14, fontWeight: 600, color: openDropdown === item ? C.violet : C.textGray, cursor: 'pointer', transition: 'all 0.15s', fontFamily: 'inherit' }}>
-                  {item}
-                  <ChevronDown size={12} color={openDropdown === item ? C.violet : C.textMuted}
-                    style={{ transform: openDropdown === item ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }} />
-                </button>
-                {openDropdown === item && (
-                  <div data-nav-menu="true" onClick={e => e.stopPropagation()}
-                    style={{ position: 'absolute', top: 'calc(100% + 10px)', left: '50%', transform: 'translateX(-50%)', background: C.white, border: `1px solid ${C.border}`, borderRadius: 16, boxShadow: '0 16px 48px rgba(0,0,0,0.14)', padding: 8, minWidth: item === 'Product' ? 560 : 320, zIndex: 200, display: 'grid', gridTemplateColumns: item === 'Product' ? '1fr 1fr' : '1fr', gap: 4 }}>
-                    {navMenus[item].map(({ icon: Icon, label, desc }) => (
-                      <button key={label} onClick={() => { setOpenDropdown(null); setIsModalOpen(true); }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 14px', borderRadius: 11, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: 'inherit', transition: 'background 0.12s' }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = C.violetLighter; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
-                        <div style={{ height: 36, width: 36, borderRadius: 10, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <Icon size={16} color={C.violet} />
-                        </div>
-                        <div>
-                          <p style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 2px' }}>{label}</p>
-                          <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: 0 }}>{desc}</p>
-                        </div>
-                      </button>
-                    ))}
-                    <div style={{ gridColumn: item === 'Product' ? '1 / -1' : '1', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px 4px', marginTop: 4 }}>
-                      <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500 }}>
-                        {item === 'Pricing' ? 'All plans include 14-day free trial' : `Explore all ${item.toLowerCase()} features`}
-                      </span>
-                      <button onClick={() => { setOpenDropdown(null); setIsModalOpen(true); }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                        {item === 'Pricing' ? 'Start free trial' : 'See all'} <ArrowRight size={12} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </nav>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button onClick={() => setIsModalOpen(true)} style={{ fontSize: 14, fontWeight: 600, color: C.textGray, background: 'none', border: 'none', cursor: 'pointer', padding: '7px 14px', borderRadius: 8, fontFamily: 'inherit' }}>Log In</button>
-            <button onClick={() => setIsModalOpen(true)}
-              style={{ padding: '9px 22px', background: C.violet, color: C.white, fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 4px 14px ${C.violet}44`, fontFamily: 'inherit' }}>
-              Get Started
-            </button>
-            <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 6 }}>
-              <Menu size={22} color={C.black} />
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* ══════════ 1. NAVBAR (AWS-style mega drawer) ══════════ */}
+      <Navbar onOpenModal={() => setIsModalOpen(true)} />
 
       {/* ══════════ 2. ANNOUNCEMENT BAR ══════════ */}
-      <div className="announce-bar" style={{ borderBottom: `1px solid ${C.violetLight}`, padding: '10px 48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+      <div className="announce-bar" style={{ marginTop: 64, borderBottom: `1px solid ${C.violetLight}`, padding: '10px 48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
         <span style={{ height: 7, width: 7, borderRadius: '50%', background: C.violet, display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
         <span style={{ fontSize: 13, fontWeight: 600, color: '#5b21b6' }}>✦ Pulse CRM v1.0 launched — JWT auth, RBAC, AI scoring, Gmail sync &amp; 40+ REST endpoints.</span>
         <button onClick={() => setIsModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700, color: C.violet, textDecoration: 'underline', textUnderlineOffset: 2, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -360,118 +257,145 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </div>
 
       {/* ══════════ 3. HERO SECTION ══════════ */}
-      <section style={{ position: 'relative', overflow: 'hidden', background: C.white, padding: '88px 48px 80px' }}>
-        <div style={{ position: 'absolute', top: 0, right: 0, width: 600, height: 600, background: 'radial-gradient(circle at top right, rgba(124,58,237,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: 0, left: 0, width: 400, height: 400, background: 'radial-gradient(circle at bottom left, rgba(124,58,237,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'center' }}>
-          <div className="hero-left" style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
-            <div className="hero-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: C.violetLighter, border: `1px solid ${C.violetLight}`, borderRadius: 100, width: 'fit-content' }}>
-              <Sparkles size={13} color={C.violet} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#5b21b6' }}>Now powered by GPT-4o — Try it free</span>
-              <ChevronRight size={12} color={C.violet} />
-            </div>
-            <h1 style={{ fontSize: 62, fontWeight: 900, color: C.black, lineHeight: 1.06, letterSpacing: '-0.035em', margin: 0 }}>
-              The CRM your <span style={{ color: C.violet }}>sales team</span><br />will actually use.
+      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, #f5f3ff 0%, #faf9ff 40%, #ffffff 100%)', padding: '72px 48px 80px' }}>
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 560, height: 560, background: 'radial-gradient(circle at center, rgba(124,58,237,0.09) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+
+          {/* Left — hero copy */}
+          <div className="hero-left" style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+
+            {/* Headline */}
+            <h1 style={{ fontSize: 64, fontWeight: 900, color: C.black, lineHeight: 1.04, letterSpacing: '-0.04em', margin: 0, fontFamily: "'Inter', system-ui, sans-serif" }}>
+              The CRM your{' '}
+              <span style={{ color: C.violet }}>sales<br />team</span>
+              <br />will actually use.
             </h1>
-            <p style={{ fontSize: 18, color: C.textGray, fontWeight: 500, lineHeight: 1.75, maxWidth: 500, margin: 0 }}>
-              Pulse CRM unifies contacts, leads, deals, and email — powered by AI scoring and a clean REST API. Built for real sales teams.
+
+            {/* Subtext */}
+            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 400, lineHeight: 1.8, maxWidth: 480, margin: 0 }}>
+              Pulse CRM unifies contacts, leads, deals, and email —{' '}
+              powered by AI scoring and a clean REST API. Built for real sales teams.
             </p>
-            <div className="hero-btns" style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+
+            {/* CTAs */}
+            <div className="hero-btns" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
               <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '15px 30px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit', letterSpacing: '-0.01em' }}>
                 Start Free Trial <ArrowRight size={16} />
               </button>
               <button onClick={() => setIsModalOpen(true)} className="cta-btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '15px 30px', background: C.white, color: C.textGray, fontSize: 15, fontWeight: 700, borderRadius: 100, border: `1.5px solid ${C.border}`, cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', fontFamily: 'inherit' }}>
-                <Play size={15} color={C.violet} fill={C.violet} /> Watch Demo
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 24px', background: 'transparent', color: C.black, fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <div style={{ height: 28, width: 28, borderRadius: '50%', background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Play size={11} color={C.violet} fill={C.violet} />
+                </div>
+                Watch Demo
               </button>
             </div>
-            <div className="hero-trust" style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+
+            {/* Trust badges */}
+            <div className="hero-trust" style={{ display: 'flex', gap: 22, flexWrap: 'wrap', paddingTop: 4 }}>
               {['14-day free trial', 'No credit card required', '2-minute setup'].map(t => (
-                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: C.textGray }}>
-                  <CheckCircle2 size={15} color={C.violet} /> {t}
+                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, color: C.textMuted }}>
+                  <CheckCircle2 size={14} color={C.violet} /> {t}
                 </span>
               ))}
             </div>
           </div>
-          {/* Right — Dashboard Mockup */}
-          <div className="hero-right" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div className="mockup-float" style={{ width: '100%', maxWidth: 440, background: C.white, borderRadius: 20, boxShadow: '0 24px 72px rgba(0,0,0,0.14)', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${C.border}`, background: '#fafafa' }}>
+
+          {/* Right — Dashboard Mockup (Real project data) */}
+          <div className="hero-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            <div className="mockup-float" style={{ width: '100%', maxWidth: 460, background: C.white, borderRadius: 16, boxShadow: '0 32px 80px rgba(124,58,237,0.15), 0 8px 32px rgba(0,0,0,0.08)', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+
+              {/* Browser chrome */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${C.border}`, background: '#f8f8f8' }}>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#fc625d' }} />
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#fdbc40' }} />
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#35cd4b' }} />
+                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#ff5f57' }} />
+                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#ffbd2e' }} />
+                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#28c941' }} />
                 </div>
-                <div style={{ flex: 1, margin: '0 14px', height: 22, background: C.border, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 9, color: C.textMuted, fontWeight: 600 }}>app.pulsecrm.io/dashboard</span>
+                <div style={{ flex: 1, margin: '0 16px', height: 20, background: '#ececec', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 9, color: '#999', fontWeight: 500 }}>app.pulsecrm.io/dashboard</span>
                 </div>
-                <div style={{ height: 22, width: 22, borderRadius: 6, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Activity size={11} color={C.violet} strokeWidth={2.5} />
+                <div style={{ height: 20, width: 20, borderRadius: 5, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Activity size={10} color={C.violet} strokeWidth={2.5} />
                 </div>
               </div>
-              <div style={{ display: 'flex' }}>
-                <div style={{ width: 110, background: '#fafafa', borderRight: `1px solid ${C.border}`, padding: '14px 8px', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <div style={{ padding: '4px 8px', marginBottom: 8 }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
+
+              {/* App layout */}
+              <div style={{ display: 'flex', height: 320 }}>
+
+                {/* Sidebar — real project modules */}
+                <div style={{ width: 100, background: '#fafafa', borderRight: `1px solid ${C.border}`, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <div style={{ padding: '3px 7px', marginBottom: 6 }}>
+                    <span style={{ fontSize: 9, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
                   </div>
                   {[
                     { icon: LayoutDashboard, label: 'Dashboard', active: true },
-                    { icon: Target, label: 'Leads', active: false },
-                    { icon: Users, label: 'Contacts', active: false },
-                    { icon: TrendingUp, label: 'Pipeline', active: false },
-                    { icon: BarChart2, label: 'Analytics', active: false },
-                    { icon: Sparkles, label: 'AI Copilot', active: false },
-                    { icon: Settings, label: 'Settings', active: false },
+                    { icon: Target, label: 'Leads' },
+                    { icon: Users, label: 'Contacts' },
+                    { icon: TrendingUp, label: 'Pipeline' },
+                    { icon: BarChart2, label: 'Analytics' },
+                    { icon: Sparkles, label: 'AI Copilot' },
+                    { icon: Settings, label: 'Settings' },
                   ].map(({ icon: Icon, label, active }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 9px', borderRadius: 8, background: active ? C.violet : 'transparent', cursor: 'pointer' }}>
-                      <Icon size={11} color={active ? C.white : C.textMuted} />
-                      <span style={{ fontSize: 10, fontWeight: 600, color: active ? C.white : C.textMuted }}>{label}</span>
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 7px', borderRadius: 7, background: active ? C.violet : 'transparent', cursor: 'pointer', transition: 'background 0.15s' }}>
+                      <Icon size={10} color={active ? C.white : '#adb5bd'} />
+                      <span style={{ fontSize: 9.5, fontWeight: active ? 700 : 500, color: active ? C.white : '#adb5bd' }}>{label}</span>
                     </div>
                   ))}
                 </div>
-                <div style={{ flex: 1, padding: 14, background: C.white }}>
-                  <p style={{ fontSize: 11, fontWeight: 800, color: C.black, margin: '0 0 2px' }}>Good morning, Team 👋</p>
-                  <p style={{ fontSize: 9, color: C.textMuted, margin: '0 0 13px' }}>Here's your pipeline snapshot for today.</p>
+
+                {/* Main content — real project metrics */}
+                <div style={{ flex: 1, padding: 14, background: C.white, overflowY: 'auto' }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: C.black, margin: '0 0 1px' }}>Good morning, Team 👋</p>
+                  <p style={{ fontSize: 8.5, color: C.textMuted, margin: '0 0 14px' }}>Here's your pipeline snapshot for today.</p>
+
+                  {/* Real project stat cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7, marginBottom: 12 }}>
                     {[
-                      { l: 'New Deals', v: '128', s: '+24%', c: C.emerald },
-                      { l: 'Emails Sent', v: '842', s: '+14%', c: C.blue },
-                      { l: 'Revenue', v: '₹98K', s: '+31%', c: C.violet },
+                      { l: 'New Deals', v: '128', s: '+24% this week', c: '#16a34a' },
+                      { l: 'Emails Sent', v: '842', s: '+14% this week', c: '#2563eb' },
+                      { l: 'Revenue', v: '₹98K', s: '+31% this week', c: C.violet },
                     ].map(s => (
-                      <div key={s.l} style={{ background: C.sectionAlt, borderRadius: 9, padding: '8px 9px', border: `1px solid ${C.border}` }}>
-                        <p style={{ fontSize: 8, color: C.textMuted, fontWeight: 600, margin: '0 0 3px' }}>{s.l}</p>
-                        <p style={{ fontSize: 15, fontWeight: 900, color: C.black, margin: '0 0 2px' }}>{s.v}</p>
-                        <p style={{ fontSize: 8.5, fontWeight: 700, color: s.c, margin: 0 }}>{s.s} this week</p>
+                      <div key={s.l} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 8px', border: `1px solid #f0f0f0` }}>
+                        <p style={{ fontSize: 7.5, color: '#94a3b8', fontWeight: 600, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{s.l}</p>
+                        <p style={{ fontSize: 16, fontWeight: 900, color: C.black, margin: '0 0 2px', letterSpacing: '-0.03em' }}>{s.v}</p>
+                        <p style={{ fontSize: 7.5, fontWeight: 700, color: s.c, margin: 0 }}>{s.s}</p>
                       </div>
                     ))}
                   </div>
-                  <div style={{ background: C.sectionAlt, borderRadius: 10, padding: '10px 10px 8px', border: `1px solid ${C.border}`, marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+
+                  {/* Pipeline chart */}
+                  <div style={{ background: '#fafafa', borderRadius: 9, padding: '9px 10px 8px', border: `1px solid #f0f0f0`, marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
                       <p style={{ fontSize: 8.5, fontWeight: 700, color: C.textGray, margin: 0 }}>Pipeline Overview</p>
-                      <span style={{ fontSize: 7.5, fontWeight: 600, color: C.emerald, background: '#dcfce7', padding: '2px 6px', borderRadius: 100 }}>↑ 31% MoM</span>
+                      <span style={{ fontSize: 7.5, fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 7px', borderRadius: 20 }}>↑ 31% MoM</span>
                     </div>
-                    <svg viewBox="0 0 200 50" style={{ width: '100%', height: 40 }}>
+                    <svg viewBox="0 0 200 44" style={{ width: '100%', height: 38 }}>
                       <defs>
-                        <linearGradient id="heroGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={C.violet} stopOpacity="0.25" />
-                          <stop offset="100%" stopColor={C.violet} stopOpacity="0" />
+                        <linearGradient id="heroGrad2" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={C.violet} stopOpacity="0.2" />
+                          <stop offset="100%" stopColor={C.violet} stopOpacity="0.01" />
                         </linearGradient>
                       </defs>
-                      <path d="M0,42 C25,36 50,28 75,20 C100,12 125,22 150,12 C165,7 180,5 200,3 L200,50 L0,50Z" fill="url(#heroGrad)" />
-                      <path d="M0,42 C25,36 50,28 75,20 C100,12 125,22 150,12 C165,7 180,5 200,3" fill="none" stroke={C.violet} strokeWidth="2" strokeLinecap="round" />
-                      {[[0, 42], [75, 20], [150, 12], [200, 3]].map(([x, y], i) => (
-                        <circle key={i} cx={x} cy={y} r="2.5" fill={C.violet} />
+                      <path d="M0,40 C30,34 55,26 80,18 C105,10 130,20 155,10 C170,5 185,4 200,2 L200,44 L0,44Z" fill="url(#heroGrad2)" />
+                      <path d="M0,40 C30,34 55,26 80,18 C105,10 130,20 155,10 C170,5 185,4 200,2" fill="none" stroke={C.violet} strokeWidth="1.8" strokeLinecap="round" />
+                      {[[0,40],[80,18],[155,10],[200,2]].map(([x,y],i) => (
+                        <circle key={i} cx={x} cy={y} r="2.2" fill={C.violet} />
                       ))}
                     </svg>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: C.violetLighter, borderRadius: 9, padding: '8px 10px', border: `1px solid ${C.violetLight}` }}>
-                    <Sparkles size={12} color={C.violet} />
-                    <div>
+
+                  {/* AI Copilot insight */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f3ff', borderRadius: 8, padding: '8px 10px', border: '1px solid #ede9fe', cursor: 'pointer' }}>
+                    <div style={{ height: 24, width: 24, borderRadius: 7, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Sparkles size={11} color={C.white} />
+                    </div>
+                    <div style={{ flex: 1 }}>
                       <p style={{ fontSize: 9, fontWeight: 700, color: '#5b21b6', margin: '0 0 1px' }}>AI Copilot Insight</p>
                       <p style={{ fontSize: 8, color: C.violet, margin: 0 }}>3 deals likely to close this week</p>
                     </div>
-                    <ChevronRight size={11} color={C.violet} style={{ marginLeft: 'auto' }} />
+                    <ChevronRight size={10} color={C.violet} />
                   </div>
                 </div>
               </div>
