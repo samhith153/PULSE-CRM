@@ -18,3 +18,10 @@ GOOGLE_REDIRECT_URI = os.getenv(
     "GOOGLE_REDIRECT_URI", 
     "http://localhost:8000/gmail/oauth/callback"
 )
+
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
+BREVO_API_URL = os.getenv("BREVO_API_URL", "https://api.brevo.com/v3/smtp/email")
+BREVO_WEBHOOK_SECRET = os.getenv("BREVO_WEBHOOK_SECRET", "")
+
+FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@kalnet.com")
+FROM_NAME = os.getenv("FROM_NAME", "Kalnet CRM")

@@ -1,11 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  Activity, ArrowRight, CheckCircle2, ChevronDown, ChevronRight,
-  Loader2, Mail, Sparkles, Users, Zap, Award, Shield,
-  BarChart2, RefreshCw, Headphones, TrendingUp, Settings,
-  Globe, X, LayoutDashboard
+import { 
+  Mail, 
+  ArrowRight, 
+  ShieldCheck, 
+  Sparkles, 
+  Layers, 
+  Activity, 
+  Loader2,
+  X,
+  LayoutDashboard,
+  CheckCircle2,
+  Lock,
+  ChevronRight,
+  TrendingUp,
+  Award,
+  Zap,
+  Users
 } from 'lucide-react';
 
 interface PulseLandingPageProps {
@@ -13,13 +25,29 @@ interface PulseLandingPageProps {
 }
 
 export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Interactive Product Suite Tab State
+  const [activeTab, setActiveTab] = useState(0);
+  
+  // Login Role Selection State
   const [selectedRole, setSelectedRole] = useState<'representative' | 'manager' | 'admin'>('manager');
 
-  const handleLogin = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    
+    setIsLoading(true);
+    setTimeout(() => {
+      setIsLoading(false);
+      setIsModalOpen(false);
+      onLogin(selectedRole);
+    }, 1200); // Simulated loading
+  };
+
+  const handleGoogleLogin = () => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
@@ -28,511 +56,824 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     }, 1200);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleLogin();
-  };
-
-  const stats = [
-    { label: 'Active Business Seats', value: '14,820+', sub: '+10.4% quarterly growth', icon: Users },
-    { label: 'Deals Closed Natively', value: '432,050+', sub: '$124M total pipeline value', icon: Award },
-    { label: 'AI Prediction Accuracy', value: '98.4%', sub: '1.2s avg response latency', icon: Sparkles },
-    { label: 'Pipeline Velocity Boost', value: '3.4x', sub: 'Saves 8.2 hrs / rep / week', icon: Zap },
+  // Premium product suites definitions with light-mode software mockups
+  const productSuites = [
+    {
+      title: 'Sales & Pipeline',
+      icon: LayoutDashboard,
+      badge: 'Revenue Acceleration',
+      heading: 'Manage deals & automate sales stages',
+      desc: 'Move deals through customizable funnel columns, coordinate sales reps on a live revenue leaderboard, and instantly log updates.',
+      features: [
+        'Interactive kanban deal pipeline boards',
+        'Sales rep revenue leaderboards',
+        'Win/loss analysis reason codes'
+      ],
+      color: 'from-purple-600 to-indigo-600',
+      mockup: (
+        <div className="w-full h-full p-4 flex flex-col justify-between bg-white text-slate-900 rounded-xl shadow-md border border-slate-200/90">
+          <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
+            <div className="flex items-center space-x-2">
+              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Active Deals Board</span>
+            </div>
+            <span className="text-[9px] text-slate-400 font-semibold">Updated just now</span>
+          </div>
+          {/* Light Kanban Board */}
+          <div className="grid grid-cols-3 gap-2 flex-1 mt-3">
+            {[
+              { col: 'Qualified', name: 'Acme Corp', val: '$120,000', tag: 'High Priority' },
+              { col: 'Proposal', name: 'Initech Inc', val: '$85,000', tag: 'Under Review' },
+              { col: 'Negotiation', name: 'Stark Ind.', val: '$230,000', tag: 'Closing Soon' }
+            ].map((card, i) => (
+              <div key={i} className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/70 flex flex-col justify-between hover:border-slate-300 transition-colors">
+                <div>
+                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">{card.col}</span>
+                  <span className="text-[10.5px] font-bold text-slate-800 mt-1 block truncate">{card.name}</span>
+                </div>
+                <div className="mt-2">
+                  <span className="text-[10px] text-indigo-600 font-extrabold block">{card.val}</span>
+                  <span className="text-[7.5px] font-semibold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200 mt-1 inline-block">{card.tag}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Smart Emails',
+      icon: Mail,
+      badge: 'Unified Communications',
+      heading: 'Integrated inbox syncing & timeline logs',
+      desc: 'Keep client communications linked natively to deals. Sync thread timelines automatically and utilize templates to reach contacts faster.',
+      features: [
+        'Real-time background Gmail syncing',
+        'Thread timeline logging by deal and contact',
+        'Templates and rapid-fire replies'
+      ],
+      color: 'from-blue-600 to-cyan-600',
+      mockup: (
+        <div className="w-full h-full p-4 flex flex-col justify-between bg-white text-slate-900 rounded-xl shadow-md border border-slate-200/90">
+          <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
+            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Communication Timeline</span>
+            <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">Live Sync</span>
+          </div>
+          <div className="space-y-2 mt-3 flex-1 overflow-hidden">
+            {[
+              { from: 'Alex Rivera', sub: 'Proposal revisions finalized & SLA approved', time: '10m ago' },
+              { from: 'Helena Troy', sub: 'Inquiry regarding custom enterprise tier', time: '1h ago' },
+              { from: 'Marcus Vance', sub: 'Contract signed & dispatched to team', time: '3h ago' }
+            ].map((mail, i) => (
+              <div key={i} className="bg-slate-50/70 p-2.5 rounded-lg border border-slate-200/60 flex justify-between items-center text-[10px]">
+                <div className="min-w-0 flex-1 pr-2">
+                  <span className="font-bold text-slate-800 truncate block">{mail.from}</span>
+                  <span className="text-[9px] text-slate-500 truncate block mt-0.5">{mail.sub}</span>
+                </div>
+                <span className="text-[8px] text-slate-400 shrink-0 font-medium">{mail.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'AI Co-pilot',
+      icon: Sparkles,
+      badge: 'Sales Intelligence',
+      heading: 'Automated deal forecasts & priority insights',
+      desc: 'Get smart suggestions, draft custom client responses, look up deal progress, and compute forecasting models with a floating Copilot.',
+      features: [
+        'Interactive AI chat prompt actions',
+        'Automated priority rankings for leads',
+        'Live summary generators for deals timeline'
+      ],
+      color: 'from-violet-600 to-purple-600',
+      mockup: (
+        <div className="w-full h-full p-4 flex flex-col justify-between bg-white text-slate-900 rounded-xl shadow-md border border-slate-200/90">
+          <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
+            <div className="flex items-center space-x-1.5">
+              <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
+              <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">PulseAI Assistant</span>
+            </div>
+            <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">GPT-4o Ready</span>
+          </div>
+          <div className="space-y-2 mt-3 flex-1 text-[9.5px]">
+            <div className="bg-slate-100/70 p-2.5 rounded-lg border border-slate-200/60 text-slate-600 font-medium">
+              Summarize the status of Acme Corp deal.
+            </div>
+            <div className="bg-indigo-50/70 p-2.5 rounded-lg border border-indigo-100 text-slate-800 font-medium leading-relaxed">
+              ✨ <span className="font-bold text-indigo-950">Acme Corp ($120k):</span> Security review passed. Next step: Final sign-off meeting scheduled for Thursday.
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Advanced Analytics',
+      icon: Activity,
+      badge: 'Real-time Telemetry',
+      heading: 'Pipeline telemetry & conversion tracking',
+      desc: 'Visualize team contributions with activity heatmaps. Trace conversion metrics across your pipeline step-by-step.',
+      features: [
+        'Sales rep activity heatmap widget',
+        'Stepped radial progress rings chart',
+        'Custom report builder dashboard grids'
+      ],
+      color: 'from-emerald-600 to-teal-600',
+      mockup: (
+        <div className="w-full h-full p-4 flex flex-col justify-between bg-white text-slate-900 rounded-xl shadow-md border border-slate-200/90">
+          <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
+            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Conversion Analytics</span>
+            <Activity className="h-3.5 w-3.5 text-emerald-600" />
+          </div>
+          <div className="mt-3 flex-1 flex flex-col justify-between">
+            <div className="text-[9.5px] text-slate-500 font-medium">Funnel Conversion Rate:</div>
+            <div className="flex items-center space-x-6 mt-1">
+              <svg className="h-16 w-16 transform -rotate-90 select-none shrink-0" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                <circle cx="18" cy="18" r="10.5" fill="none" stroke="#f1f5f9" strokeWidth="3" />
+                <circle cx="18" cy="18" r="14" fill="none" stroke="#6366f1" strokeWidth="3" strokeDasharray="87.9" strokeDashoffset="25.5" strokeLinecap="round" />
+                <circle cx="18" cy="18" r="10.5" fill="none" stroke="#10b981" strokeWidth="3" strokeDasharray="65.9" strokeDashoffset="34.3" strokeLinecap="round" />
+              </svg>
+              <div className="space-y-1.5 text-[9.5px] text-left">
+                <div className="flex items-center space-x-1.5">
+                  <span className="h-2 w-2 rounded-full bg-indigo-600 shrink-0"></span>
+                  <span className="text-slate-700 font-bold">Qualified → Proposal: 71%</span>
+                </div>
+                <div className="flex items-center space-x-1.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+                  <span className="text-slate-700 font-bold">Proposal → Closed Won: 48%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
   ];
-
-  const platformFeatures = [
-    { icon: Shield, title: 'Secure & Reliable', desc: 'Enterprise-grade security you can trust.', bg: 'bg-violet-50', color: 'text-violet-600' },
-    { icon: RefreshCw, title: 'Easy Integration', desc: 'Integrates seamlessly with your favourite tools.', bg: 'bg-blue-50', color: 'text-blue-600' },
-    { icon: Headphones, title: 'Dedicated Support', desc: '24/7 expert support when you need it.', bg: 'bg-emerald-50', color: 'text-emerald-600' },
-    { icon: TrendingUp, title: 'Always Improving', desc: 'Regular updates with new features.', bg: 'bg-orange-50', color: 'text-orange-600' },
-  ];
-
-  const orbitItems = [
-    { label: 'Email Sync', icon: Mail, angle: 0 },
-    { label: 'AI Copilot', icon: Sparkles, angle: 72 },
-    { label: 'Reports', icon: BarChart2, angle: 144 },
-    { label: 'Pipeline', icon: TrendingUp, angle: 216 },
-    { label: 'Contacts', icon: Users, angle: 288 },
-  ];
-
-  const footerLinks = {
-    Product: ['Features', 'Pricing', 'Integrations', 'Changelog'],
-    Company: ['About Us', 'Careers', 'Blog', 'Contact'],
-    Resources: ['Help Center', 'Guides', 'Webinars', 'API Docs'],
-  };
 
   return (
-    <div style={{ all: 'initial', display: 'block', fontFamily: 'Inter, system-ui, sans-serif' }}>
-    <div className="min-h-screen w-full bg-white text-slate-900 overflow-x-hidden" style={{ backgroundColor: '#ffffff', color: '#0f172a' }}>
-
-      {/* ── NAVBAR ─────────────────────────────────────── */}
-      <header style={{ position: 'sticky', top: 0, zIndex: 50, backgroundColor: 'rgba(255,255,255,0.97)', borderBottom: '1px solid #f1f5f9', backdropFilter: 'blur(12px)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 40px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Logo */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-            <div style={{ height: 34, width: 34, borderRadius: 10, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(124,58,237,0.35)' }}>
-              <Activity size={16} color="#fff" strokeWidth={2.5} />
+    <div className="min-h-screen w-full bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 flex flex-col overflow-x-hidden text-white font-sans relative">
+      
+      {/* Soft Decorative Ambient Lighting */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-purple-400/30 blur-[140px] rounded-full pointer-events-none z-0" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-cyan-300/30 blur-[130px] rounded-full pointer-events-none z-0" />
+      
+      {/* 1. Top Navigation Bar with Pulse Brand Logo & Details */}
+      <header className="sticky top-0 bg-slate-900/20 backdrop-blur-xl z-40 h-20 w-full flex items-center justify-between px-6 md:px-12 select-none border-b border-white/10">
+        
+        {/* Left: Pulse CRM Brand Logo & Navigation Links */}
+        <div className="flex items-center space-x-8 md:space-x-12">
+          
+          {/* 3D Pulse Logo Mark & Name */}
+          <div className="flex items-center space-x-3 cursor-pointer group select-none">
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-cyan-400 p-0.5 shadow-lg shadow-pink-500/30 group-hover:scale-105 transition-transform flex items-center justify-center">
+              <div className="h-full w-full bg-slate-950/80 backdrop-blur-md rounded-[14px] flex items-center justify-center">
+                <Activity className="h-5 w-5 text-pink-400 group-hover:rotate-12 transition-transform" strokeWidth={2.5} />
+              </div>
             </div>
-            <span style={{ fontSize: 18, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>Pulse</span>
-            <span style={{ fontSize: 18, fontWeight: 900, color: '#7c3aed', letterSpacing: '-0.02em' }}>CRM</span>
-            <span style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', marginLeft: 4 }}>AI Revenue Engine</span>
+            <div className="flex flex-col">
+              <div className="flex items-center space-x-1">
+                <span className="text-xl font-black text-white tracking-tight font-sans">Pulse</span>
+                <span className="text-xl font-black text-pink-300 font-sans">CRM</span>
+              </div>
+              <span className="text-[9px] font-extrabold text-cyan-300 uppercase tracking-widest leading-none">
+                AI Revenue Engine
+              </span>
+            </div>
           </div>
 
-          {/* Nav */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            {['Product', 'Solutions', 'Pricing', 'Resources'].map((item) => (
-              <button key={item} style={{ display: 'flex', alignItems: 'center', gap: 3, padding: '6px 12px', borderRadius: 8, border: 'none', background: 'transparent', fontSize: 14, fontWeight: 600, color: '#475569', cursor: 'pointer' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; (e.currentTarget as HTMLButtonElement).style.color = '#0f172a'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#475569'; }}>
-                {item}
-                <ChevronDown size={12} color="#94a3b8" />
-              </button>
-            ))}
-          </nav>
-
-          {/* Auth */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={() => setIsModalOpen(true)} style={{ fontSize: 14, fontWeight: 600, color: '#475569', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 12px' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = '#7c3aed'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = '#475569'; }}>
-              Log In
-            </button>
-            <button onClick={() => setIsModalOpen(true)} style={{ padding: '8px 22px', background: '#7c3aed', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(124,58,237,0.3)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#6d28d9'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#7c3aed'; }}>
-              Register
-            </button>
+          {/* Navigation Links */}
+          <div className="hidden lg:flex items-center space-x-7 text-xs font-bold tracking-wide">
+            <a href="#" className="text-pink-300 hover:text-white transition-colors font-extrabold">Home</a>
+            <a href="#suite" className="text-white/85 hover:text-white transition-colors">Read More</a>
+            <a href="#features" className="text-white/85 hover:text-white transition-colors">Contact</a>
+            <a href="#" onClick={() => setIsModalOpen(true)} className="text-white/85 hover:text-white transition-colors">Sign Up</a>
           </div>
+        </div>
+
+        {/* Right Auth Action Pill Buttons */}
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-2 bg-white text-indigo-700 hover:bg-slate-100 rounded-full text-xs font-extrabold shadow-md hover:shadow-lg hover:scale-105 transition-all cursor-pointer"
+          >
+            Log in
+          </button>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="px-6 py-2 bg-pink-500/30 border border-pink-400/50 hover:bg-pink-500/50 text-white rounded-full text-xs font-extrabold transition-all cursor-pointer shadow-xs"
+          >
+            Register
+          </button>
         </div>
       </header>
 
-      {/* ── ANNOUNCEMENT ───────────────────────────────── */}
-      <div style={{ background: '#f5f3ff', borderBottom: '1px solid #ede9fe', padding: '8px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-        <span style={{ height: 6, width: 6, borderRadius: '50%', background: '#7c3aed', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#5b21b6' }}>✦ Pulse CRM 2.0 is now live</span>
-        <a href="#" onClick={() => setIsModalOpen(true)} style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: 3 }}>
-          Learn more <ArrowRight size={11} />
-        </a>
-      </div>
-
-
-      {/* ── HERO ───────────────────────────────────────── */}
-      <section style={{ background: 'linear-gradient(135deg, #faf5ff 0%, #ffffff 50%, #ffffff 100%)', padding: '80px 40px 64px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: 0, right: 0, width: 400, height: 400, background: 'radial-gradient(circle, rgba(124,58,237,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
-
-          {/* Left */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '5px 14px', background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 100, width: 'fit-content' }}>
-              <span style={{ height: 6, width: 6, borderRadius: '50%', background: '#7c3aed', display: 'inline-block' }} />
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#5b21b6' }}>Pulse CRM 2.0 is now live</span>
-              <ChevronRight size={12} color="#7c3aed" />
+      {/* 2. Main Hero Section (Matching image composition with 3D Figures) */}
+      <section className="relative w-full py-12 md:py-20 bg-transparent flex items-center justify-center px-8 md:px-16 z-10 flex-1">
+        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+          
+          {/* Left Column: Core Value Pitch (Restored Original Text & CTAs) */}
+          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
+            
+            {/* Sleek Live Announcement Badge */}
+            <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-xs font-semibold shadow-xs">
+              <span className="h-2 w-2 rounded-full bg-pink-400 animate-pulse"></span>
+              <span>Pulse CRM 2.0 is now live</span>
+              <ChevronRight className="h-3.5 w-3.5 text-white/80" />
             </div>
 
-            <h1 style={{ fontSize: 60, fontWeight: 900, color: '#0f172a', lineHeight: 1.06, letterSpacing: '-0.03em', margin: 0 }}>
-              The intelligent CRM<br />
-              built for{' '}
-              <span style={{ color: '#7c3aed' }}>high-growth</span>
-              <br />teams.
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12] drop-shadow-md font-sans">
+              The intelligent CRM built for{' '}
+              <span className="text-pink-300 drop-shadow-sm font-black">
+                high-growth teams.
+              </span>
             </h1>
 
-            <p style={{ fontSize: 18, color: '#64748b', fontWeight: 500, lineHeight: 1.7, maxWidth: 480, margin: 0 }}>
+            <p className="text-base sm:text-lg text-white/90 font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
               Pulse unifies deal pipelines, automated email syncing, rep leaderboards, and real-time AI copilot assistance into one intuitive, high-performance workspace.
             </p>
 
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.35)' }}>
-                Start 14-Day Free Trial <ArrowRight size={16} />
+            {/* Restored CTA Action Buttons */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 pt-2 justify-center lg:justify-start">
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="px-7 py-3.5 bg-pink-500 hover:bg-pink-600 text-white rounded-full text-xs font-extrabold shadow-lg shadow-pink-500/40 hover:shadow-pink-500/60 hover:scale-105 transition-all flex items-center justify-center space-x-2 cursor-pointer"
+              >
+                <span>Start 14-Day Free Trial</span>
+                <ArrowRight className="h-4 w-4" />
               </button>
-              <button onClick={() => setIsModalOpen(true)} style={{ padding: '14px 28px', background: '#fff', color: '#374151', fontSize: 14, fontWeight: 700, borderRadius: 100, border: '1.5px solid #e2e8f0', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                Book Live Demo
+              <button 
+                onClick={() => setIsModalOpen(true)}
+                className="px-7 py-3.5 bg-white/15 backdrop-blur-md border border-white/40 hover:bg-white/25 text-white rounded-full text-xs font-extrabold shadow-sm hover:scale-105 transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
+              >
+                <span>Book Live Demo</span>
               </button>
             </div>
 
-            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
-              {['14-day free trial', 'No credit card required', '2-minute setup'].map((t) => (
-                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: '#64748b' }}>
-                  <CheckCircle2 size={15} color="#7c3aed" />
-                  {t}
-                </span>
-              ))}
+            {/* Restored Trust Bullets */}
+            <ul className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-xs font-semibold text-white/90 select-none pt-2">
+              <li className="flex items-center space-x-1.5">
+                <CheckCircle2 className="h-4 w-4 text-cyan-300" />
+                <span>14-day free trial</span>
+              </li>
+              <li className="flex items-center space-x-1.5">
+                <CheckCircle2 className="h-4 w-4 text-cyan-300" />
+                <span>No credit card required</span>
+              </li>
+              <li className="flex items-center space-x-1.5">
+                <CheckCircle2 className="h-4 w-4 text-cyan-300" />
+                <span>2-minute setup</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Right Column: Dynamic 3D Figure Scene (No static images) */}
+          <div className="lg:col-span-6 flex justify-center items-center">
+            <div className="relative w-full max-w-lg h-[400px] flex items-center justify-center select-none perspective-[1000px]">
+              
+              {/* Ambient Glow behind 3D figures */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-cyan-300/30 via-pink-400/20 to-purple-500/30 blur-3xl rounded-full transform -translate-y-4 pointer-events-none" />
+
+              {/* 3D Scene Assembly */}
+              <div className="relative w-full h-full flex items-center justify-center transform-style-3d group">
+
+                {/* 1. Dual 3D Rotating Pink Gears (Left / Behind) */}
+                <div className="absolute left-6 bottom-20 z-10 transform -rotate-12 group-hover:rotate-0 transition-transform duration-700 ease-out">
+                  {/* Main Large 3D Pink Gear */}
+                  <div className="relative w-28 h-28 animate-[spin_25s_linear_infinite]">
+                    <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow-[0_15px_25px_rgba(225,29,72,0.4)]">
+                      <defs>
+                        <linearGradient id="pinkGearGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#fb7185" />
+                          <stop offset="50%" stopColor="#f43f5e" />
+                          <stop offset="100%" stopColor="#be123c" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        fill="url(#pinkGearGrad)"
+                        d="M50,30 A20,20 0 1,0 50,70 A20,20 0 1,0 50,30 Z M50,0 L56,10 L68,6 L70,18 L82,18 L80,30 L90,36 L84,46 L92,54 L84,62 L90,72 L80,78 L82,90 L70,90 L68,102 L56,98 L50,108 L44,98 L32,102 L30,90 L18,90 L20,78 L10,72 L16,62 L8,54 L16,46 L6,36 L16,30 L14,18 L26,18 L28,6 L40,10 Z"
+                      />
+                      <circle cx="50" cy="50" r="14" fill="#67e8f9" opacity="0.9" />
+                    </svg>
+                  </div>
+                  
+                  {/* Secondary Pink Gear */}
+                  <div className="absolute -top-10 -left-6 w-18 h-18 animate-[spin_18s_linear_infinite_reverse]">
+                    <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow-[0_10px_20px_rgba(244,63,94,0.35)]">
+                      <path
+                        fill="url(#pinkGearGrad)"
+                        d="M50,30 A20,20 0 1,0 50,70 A20,20 0 1,0 50,30 Z M50,0 L56,10 L68,6 L70,18 L82,18 L80,30 L90,36 L84,46 L92,54 L84,62 L90,72 L80,78 L82,90 L70,90 L68,102 L56,98 L50,108 L44,98 L32,102 L30,90 L18,90 L20,78 L10,72 L16,62 L8,54 L16,46 L6,36 L16,30 L14,18 L26,18 L28,6 L40,10 Z"
+                      />
+                      <circle cx="50" cy="50" r="14" fill="#38bdf8" opacity="0.9" />
+                    </svg>
+                  </div>
+                </div>
+
+                {/* 2. 3D Floating Profile Contact Badge (Top Left) */}
+                <div className="absolute top-10 left-16 z-30 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] border border-white/80 flex items-center space-x-3 animate-[bounce_4s_easeInOut_infinite] transform hover:scale-105 transition-transform">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="h-2 w-14 bg-slate-300 rounded-full" />
+                    <div className="h-1.5 w-9 bg-cyan-500 rounded-full mt-1.5" />
+                  </div>
+                </div>
+
+                {/* 3. 3D SaaS Cloud Base (Center Bottom) */}
+                <div className="absolute bottom-4 z-20 w-80 sm:w-96 flex flex-col items-center justify-center filter drop-shadow-[0_25px_40px_rgba(30,58,138,0.4)] animate-[pulse_6s_easeInOut_infinite]">
+                  <div className="relative w-full h-32 bg-gradient-to-r from-sky-300 via-cyan-400 to-blue-500 rounded-[50px] flex items-center justify-center shadow-inner border border-white/50">
+                    
+                    {/* Volumetric Cloud Bubbles for 3D depth */}
+                    <div className="absolute -top-12 left-8 w-24 h-24 bg-gradient-to-tr from-sky-200 to-cyan-300 rounded-full border-t-2 border-white/80" />
+                    <div className="absolute -top-16 left-22 w-32 h-32 bg-gradient-to-tr from-cyan-300 to-blue-400 rounded-full border-t-2 border-white/80" />
+                    <div className="absolute -top-10 right-10 w-28 h-28 bg-gradient-to-tr from-blue-300 to-indigo-500 rounded-full border-t-2 border-white/70" />
+                    
+                    {/* Extruded White "SaaS" 3D Text */}
+                    <span className="relative z-10 text-5xl font-black text-white tracking-widest font-sans filter drop-shadow-[0_8px_16px_rgba(30,58,138,0.6)]">
+                      SaaS
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. 3D Character Sitting on SaaS Cloud with Laptop */}
+                <div className="absolute top-12 right-14 z-30 flex flex-col items-center select-none pointer-events-none transform group-hover:translate-y-[-4px] transition-transform duration-500">
+                  <svg viewBox="0 0 200 220" className="w-48 h-52 filter drop-shadow-[0_20px_30px_rgba(0,0,0,0.3)]">
+                    {/* Hair & Head */}
+                    <path d="M100 30 C 85 30 80 50 85 65 C 90 75 110 75 115 65 C 120 50 115 30 100 30 Z" fill="#7c2d12" />
+                    <circle cx="100" cy="50" r="16" fill="#fde047" opacity="0.95" />
+                    <circle cx="100" cy="50" r="14" fill="#fed7aa" />
+                    <path d="M92 40 C 95 32 105 32 108 40" fill="#7c2d12" />
+
+                    {/* White Shirt Torso */}
+                    <path d="M84 66 L116 66 L124 120 L76 120 Z" fill="#ffffff" />
+                    {/* Black Tie */}
+                    <polygon points="98,66 102,66 103,95 100,100 97,95" fill="#0f172a" />
+
+                    {/* Dark Trousers / Legs in sitting posture */}
+                    <path d="M76 120 L124 120 L135 155 L108 175 L98 140 L88 175 L65 155 Z" fill="#0f172a" />
+                    {/* Shoes */}
+                    <ellipse cx="60" cy="158" rx="8" ry="4" fill="#1e293b" />
+                    <ellipse cx="140" cy="158" rx="8" ry="4" fill="#1e293b" />
+
+                    {/* Laptop held on lap */}
+                    <rect x="78" y="105" width="44" height="26" rx="4" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
+                    <polygon points="72,131 128,131 122,137 78,137" fill="#475569" />
+                    <text x="100" y="122" textAnchor="middle" fill="#38bdf8" fontSize="7" fontWeight="bold" fontFamily="sans-serif">CRM</text>
+
+                    {/* Active Wi-Fi Signal Waves */}
+                    <path d="M126 98 A 10 10 0 0 1 136 108" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" className="animate-pulse" />
+                    <path d="M129 93 A 15 15 0 0 1 143 108" fill="none" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" strokeLinecap="round" className="animate-pulse" />
+                  </svg>
+                </div>
+
+              </div>
             </div>
           </div>
 
-          {/* Right – Dashboard Mockup */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ width: '100%', maxWidth: 420, background: '#fff', borderRadius: 20, boxShadow: '0 24px 64px rgba(0,0,0,0.12)', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
-              {/* top bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ height: 24, width: 24, borderRadius: 7, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Activity size={12} color="#fff" strokeWidth={2.5} />
+        </div>
+      </section>
+
+      {/* Brand Social Trust Bar */}
+      <section className="py-10 bg-white/10 backdrop-blur-md border-y border-white/20 select-none z-10">
+        <div className="w-full max-w-6xl mx-auto px-6 md:px-12 text-center">
+          <p className="text-xs font-bold text-white/80 uppercase tracking-wider mb-6">
+            Trusted by fast-growing sales teams & enterprise organizations
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16 opacity-90 transition-all duration-300">
+            {['TechCorp', 'Sparta Creative', 'Empiric Logistics', 'Acme Systems', 'Initech Global'].map((company, idx) => (
+              <span key={idx} className="font-black text-base text-white tracking-tight drop-shadow-sm hover:scale-105 transition-transform cursor-default">
+                {company}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Metrics Statistics Band */}
+      <section id="metrics" className="py-20 bg-transparent relative overflow-hidden select-none z-10">
+        <div className="w-full max-w-6xl mx-auto px-6 md:px-12 grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            { label: 'Active Business Seats', val: '14,820+', desc: '+18.4% quarterly growth', color: 'text-indigo-600', icon: Users },
+            { label: 'Deals Closed Natively', val: '432,050+', desc: '$124M total pipeline value', color: 'text-indigo-600', icon: Award },
+            { label: 'AI Prediction Accuracy', val: '98.4%', desc: '1.2s avg response latency', color: 'text-indigo-600', icon: Sparkles },
+            { label: 'Pipeline Velocity Boost', val: '3.4x', desc: 'Saves 8.2 hrs / rep / week', color: 'text-indigo-600', icon: Zap }
+          ].map((stat, idx) => {
+            const Icon = stat.icon;
+            return (
+              <div key={idx} className="p-6 bg-white/15 backdrop-blur-lg border border-white/30 rounded-2xl relative group overflow-hidden shadow-xl hover:bg-white/20 hover:border-white/50 hover:scale-[1.02] transition-all duration-300">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[11px] text-white/80 font-bold uppercase tracking-wider">{stat.label}</span>
+                  <div className="h-9 w-9 rounded-xl bg-pink-500/20 border border-pink-400/40 flex items-center justify-center text-pink-200">
+                    <Icon className="h-4.5 w-4.5" />
                   </div>
-                  <span style={{ fontSize: 12, fontWeight: 800, color: '#1e293b' }}>Pulse CRM</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ height: 14, width: 14, borderRadius: '50%', background: '#e2e8f0' }} />
-                  <div style={{ height: 14, width: 14, borderRadius: '50%', background: '#e2e8f0' }} />
-                  <div style={{ height: 24, width: 24, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Users size={11} color="#7c3aed" />
-                  </div>
-                </div>
+                <span className="text-3xl sm:text-4xl font-black text-white block tracking-tight drop-shadow-sm">{stat.val}</span>
+                <span className="text-xs text-white/80 font-medium block mt-1.5">{stat.desc}</span>
               </div>
-              <div style={{ display: 'flex' }}>
-                {/* sidebar */}
-                <div style={{ width: 110, background: '#f8fafc', borderRight: '1px solid #f1f5f9', padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {[
-                    { icon: LayoutDashboard, label: 'Dashboard', active: true },
-                    { icon: Zap, label: 'Leads' },
-                    { icon: Users, label: 'Contacts' },
-                    { icon: Activity, label: 'Activities' },
-                    { icon: BarChart2, label: 'Reports' },
-                    { icon: Sparkles, label: 'AI Copilot' },
-                    { icon: Settings, label: 'Settings' },
-                  ].map(({ icon: Icon, label, active }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 8px', borderRadius: 8, background: active ? '#7c3aed' : 'transparent', cursor: 'pointer' }}>
-                      <Icon size={11} color={active ? '#fff' : '#94a3b8'} />
-                      <span style={{ fontSize: 9.5, fontWeight: 600, color: active ? '#fff' : '#94a3b8' }}>{label}</span>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 4. Interactive Product Suite Grid */}
+      <section id="suite" className="py-24 bg-transparent border-t border-white/20 flex flex-col items-center justify-center px-6 md:px-12 z-10">
+        <div className="w-full max-w-6xl space-y-12">
+          
+          {/* Header Title */}
+          <div className="text-center space-y-3">
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-sm font-sans">
+              A complete platform to power your revenue engine
+            </h2>
+            <p className="text-base sm:text-lg text-white/85 font-medium max-w-xl mx-auto leading-relaxed">
+              Consolidate your tools into one cohesive solution. Pulse connects every stage of your customer journey from lead intake to deal closing.
+            </p>
+          </div>
+
+          {/* Interactive Tabs Navigation */}
+          <div className="flex flex-wrap justify-center gap-2.5 p-2 bg-black/20 backdrop-blur-md border border-white/25 rounded-2xl max-w-2xl mx-auto select-none">
+            {productSuites.map((suite, idx) => {
+              const Icon = suite.icon;
+              const isActive = activeTab === idx;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => setActiveTab(idx)}
+                  className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isActive 
+                      ? 'bg-white text-indigo-900 shadow-lg scale-105' 
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-indigo-600' : 'text-white/70'}`} />
+                  <span>{suite.title}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active Tab Preview Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center pt-4">
+            
+            {/* Left Column: Selected Feature Copy */}
+            <div className="lg:col-span-6 space-y-6 text-left animate-in fade-in slide-in-from-left-2 duration-300">
+              <span className="inline-block px-3.5 py-1 rounded-full text-xs font-extrabold bg-pink-500/30 text-pink-200 border border-pink-400/50">
+                {productSuites[activeTab].badge}
+              </span>
+              <h3 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-sm">
+                {productSuites[activeTab].heading}
+              </h3>
+              <p className="text-base text-white/90 font-medium leading-relaxed">
+                {productSuites[activeTab].desc}
+              </p>
+              
+              {/* Feature Bullet List */}
+              <ul className="space-y-3 pt-1 text-sm font-semibold text-white/95">
+                {productSuites[activeTab].features.map((feature, i) => (
+                  <li key={i} className="flex items-center space-x-3">
+                    <CheckCircle2 className="h-5 w-5 text-cyan-300 shrink-0" />
+                    <span>{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Activate Button */}
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="mt-4 px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white text-xs font-extrabold rounded-full flex items-center space-x-2 cursor-pointer shadow-lg shadow-pink-500/30 hover:scale-105 transition-all"
+              >
+                <span>Explore {productSuites[activeTab].title}</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Right Column: Selected Dynamic Preview Mockup */}
+            <div className="lg:col-span-6 flex justify-center lg:justify-end animate-in fade-in slide-in-from-right-2 duration-300">
+              <div className="w-full max-w-md h-72 relative flex items-center justify-center p-1.5 bg-white/15 backdrop-blur-xl border border-white/30 rounded-3xl shadow-2xl">
+                {productSuites[activeTab].mockup}
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </section>
+
+      {/* 5. Visual Features Showcase Grid (Bento Style) */}
+      <section id="features" className="py-24 bg-transparent border-t border-white/20 flex flex-col items-center justify-center px-6 md:px-12 relative overflow-hidden z-10">
+        
+        <div className="w-full max-w-6xl space-y-12 relative z-10">
+          <div className="text-center space-y-3">
+            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-sm font-sans">
+              Designed for modern sales execution
+            </h2>
+            <p className="text-base sm:text-lg text-white/85 font-medium max-w-xl mx-auto leading-relaxed">
+              Every detail is crafted to increase rep efficiency, improve deal velocity, and provide clear management visibility.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              {
+                title: 'Visual Revenue Growth',
+                desc: 'Live financial forecasting and deal pacing charts dynamically updated from touchpoints.',
+                badge: 'Analytics',
+                chart: (
+                  <svg className="w-full h-24 mt-4 select-none" viewBox="0 0 120 40">
+                    <defs>
+                      <linearGradient id="barGradA" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#ec4899" /><stop offset="100%" stopColor="#f472b6" /></linearGradient>
+                      <linearGradient id="barGradB" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#38bdf8" /><stop offset="100%" stopColor="#7dd3fc" /></linearGradient>
+                      <linearGradient id="barGradC" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#34d399" /><stop offset="100%" stopColor="#6ee7b7" /></linearGradient>
+                    </defs>
+                    <rect x="15" y="20" width="10" height="20" rx="2" fill="url(#barGradA)" />
+                    <rect x="35" y="12" width="10" height="28" rx="2" fill="url(#barGradB)" />
+                    <rect x="55" y="6" width="10" height="34" rx="2" fill="url(#barGradC)" />
+                    <rect x="75" y="16" width="10" height="24" rx="2" fill="url(#barGradA)" />
+                    <rect x="95" y="2" width="10" height="38" rx="2" fill="url(#barGradC)" />
+                  </svg>
+                )
+              },
+              {
+                title: 'Predictive Lead Scoring',
+                desc: 'AI algorithms score leads and deals based on buyer engagement signals and velocity.',
+                badge: 'AI Scoring',
+                chart: (
+                  <div className="flex items-center justify-center space-x-6 mt-4 h-24 select-none">
+                    <div className="relative h-20 w-20 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 40 40">
+                        <circle cx="20" cy="20" r="16" fill="transparent" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
+                        <circle cx="20" cy="20" r="16" fill="transparent" stroke="#ec4899" strokeWidth="3" strokeDasharray="100.5" strokeDashoffset="14" strokeLinecap="round" />
+                      </svg>
+                      <span className="absolute text-xs font-black text-white">86%</span>
                     </div>
-                  ))}
-                </div>
-                {/* content */}
-                <div style={{ flex: 1, padding: 12, background: '#fff' }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: '#1e293b', margin: '0 0 2px' }}>Welcome back, Team! 👋</p>
-                  <p style={{ fontSize: 9, color: '#94a3b8', margin: '0 0 12px' }}>Here's what's happening with your pipeline today.</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 12 }}>
+                    <div className="space-y-1.5 text-xs font-bold text-white/90 text-left">
+                      <div className="flex items-center space-x-1.5">
+                        <span className="h-2 w-2 rounded-full bg-pink-400 shrink-0"></span>
+                        <span>Priority A: 86%</span>
+                      </div>
+                      <div className="flex items-center space-x-1.5">
+                        <span className="h-2 w-2 rounded-full bg-cyan-300 shrink-0"></span>
+                        <span>Priority B: 52%</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              },
+              {
+                title: 'Leaderboards & Milestones',
+                desc: 'Track sales rep milestones and activity logs in real time to drive sales productivity.',
+                badge: 'Motivation',
+                chart: (
+                  <div className="space-y-2 mt-4 h-24 flex flex-col justify-center select-none text-xs font-bold text-white/90">
                     {[
-                      { label: 'New Deals', val: '128', sub: '+24%', c: '#059669' },
-                      { label: 'Emails Sent', val: '842', sub: '+14%', c: '#2563eb' },
-                      { label: 'Deals Closed', val: '$98.4K', sub: '+31%', c: '#7c3aed' },
-                    ].map((s) => (
-                      <div key={s.label} style={{ background: '#f8fafc', borderRadius: 10, padding: 8, border: '1px solid #f1f5f9' }}>
-                        <p style={{ fontSize: 7.5, color: '#94a3b8', fontWeight: 600, margin: '0 0 3px' }}>{s.label}</p>
-                        <p style={{ fontSize: 14, fontWeight: 900, color: '#1e293b', margin: '0 0 2px' }}>{s.val}</p>
-                        <p style={{ fontSize: 8, fontWeight: 700, color: s.c, margin: 0 }}>{s.sub} this week</p>
+                      { name: 'Alex R.', val: 'w-[90%]', rev: '$120K' },
+                      { name: 'Helena T.', val: 'w-[75%]', rev: '$98K' },
+                      { name: 'Marcus V.', val: 'w-[55%]', rev: '$75K' }
+                    ].map((rep, i) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="w-16 truncate text-left">{rep.name}</span>
+                        <div className="flex-1 mx-2.5 bg-white/20 h-2 rounded-full overflow-hidden">
+                          <div className={`h-full ${rep.val} bg-pink-400 rounded-full`}></div>
+                        </div>
+                        <span className="w-10 text-right font-black text-white">{rep.rev}</span>
                       </div>
                     ))}
                   </div>
-                  {/* chart */}
-                  <div style={{ background: '#f8fafc', borderRadius: 10, padding: 10, border: '1px solid #f1f5f9', marginBottom: 8 }}>
-                    <p style={{ fontSize: 8, fontWeight: 700, color: '#64748b', margin: '0 0 8px' }}>Pipeline Overview</p>
-                    <svg viewBox="0 0 200 50" style={{ width: '100%', height: 40 }}>
-                      <defs>
-                        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="#7c3aed" stopOpacity="0" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M0,45 C30,38 60,28 90,20 C120,12 150,18 180,8 L200,5 L200,50 L0,50Z" fill="url(#cg)" />
-                      <path d="M0,45 C30,38 60,28 90,20 C120,12 150,18 180,8 L200,5" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
+                )
+              },
+              {
+                title: 'Role-Based Access Control',
+                desc: 'Tailored permissions and custom workspace views for Reps, Managers, and System Admins.',
+                badge: 'Security',
+                chart: (
+                  <div className="flex items-center justify-center space-x-2 mt-6 h-24 select-none">
+                    <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/20 text-white border border-white/30">System Admin</span>
+                    <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-pink-500/30 text-pink-200 border border-pink-400/50">Sales Manager</span>
                   </div>
-                  {/* AI badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f3ff', borderRadius: 10, padding: '8px 10px', border: '1px solid #ede9fe' }}>
-                    <Sparkles size={12} color="#7c3aed" />
-                    <div>
-                      <p style={{ fontSize: 9, fontWeight: 700, color: '#5b21b6', margin: '0 0 1px' }}>AI Copilot</p>
-                      <p style={{ fontSize: 8, color: '#7c3aed', margin: 0 }}>Deal insights ready</p>
+                )
+              },
+              {
+                title: 'No-Code Automation Builder',
+                desc: 'Construct automated lead routing, follow-up tasks, and webhook notifications visually.',
+                badge: 'Automation',
+                chart: (
+                  <div className="flex items-center justify-center space-x-2 mt-6 h-24 select-none">
+                    <div className="bg-white/20 border border-white/30 p-2.5 rounded-lg text-[9px] font-bold text-white shadow-2xs flex items-center space-x-1.5">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400"/>
+                      <span>Lead Form Event</span>
+                    </div>
+                    <div className="h-0.5 w-6 bg-white/40 relative">
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 border-y-3 border-l-3 border-y-transparent border-l-white/70"/>
+                    </div>
+                    <div className="bg-white/20 border border-white/30 p-2.5 rounded-lg text-[9px] font-bold text-white shadow-2xs flex items-center space-x-1.5">
+                      <span className="h-2 w-2 rounded-full bg-pink-400"/>
+                      <span>Assign Sales Rep</span>
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-      {/* ── TRUSTED BY ─────────────────────────────────── */}
-      <section style={{ background: '#f8fafc', borderTop: '1px solid #f1f5f9', borderBottom: '1px solid #f1f5f9', padding: '40px 40px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 24 }}>
-            Trusted by fast-growing sales teams &amp; enterprise organizations
-          </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 48 }}>
-            {['TechCorp', 'Sparta Creative', 'Empirio Logistics', 'Acme Systems', 'Initech Global'].map((c) => (
-              <span key={c} style={{ fontSize: 15, fontWeight: 800, color: '#94a3b8', letterSpacing: '-0.01em', cursor: 'default' }}>{c}</span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── STATS ──────────────────────────────────────── */}
-      <section style={{ background: '#fff', padding: '64px 40px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-          {stats.map((s) => {
-            const Icon = s.icon;
-            return (
-              <div key={s.label} style={{ padding: 24, borderRadius: 20, border: '1px solid #f1f5f9', background: '#fff', boxShadow: '0 2px 16px rgba(0,0,0,0.04)' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', maxWidth: 100, margin: 0, lineHeight: 1.4 }}>{s.label}</p>
-                  <div style={{ height: 36, width: 36, borderRadius: 12, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon size={16} color="#7c3aed" />
+                )
+              },
+              {
+                title: 'Engagement Telemetry',
+                desc: 'Analyze reply velocities, touchpoint recency, and customer engagement metrics dynamically.',
+                badge: 'Insights',
+                chart: (
+                  <div className="space-y-2 mt-4 h-24 flex flex-col justify-center select-none text-xs font-semibold text-white/90 px-1">
+                    <div className="flex justify-between border-b border-white/15 pb-1"><span>Buyer Engagement</span><span className="text-emerald-300 font-extrabold">High (85/100)</span></div>
+                    <div className="flex justify-between border-b border-white/15 pb-1"><span>Reply Velocity</span><span className="text-cyan-300 font-extrabold">12 mins avg</span></div>
+                    <div className="flex justify-between border-b border-white/15 pb-1"><span>Touchpoint Recency</span><span className="text-white font-extrabold">Today</span></div>
                   </div>
-                </div>
-                <p style={{ fontSize: 38, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em', margin: '0 0 4px' }}>{s.value}</p>
-                <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, margin: 0 }}>{s.sub}</p>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── PLATFORM ───────────────────────────────────── */}
-      <section style={{ background: '#fafafa', padding: '96px 40px', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
-          {/* left */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>All-in-one platform</p>
-            <h2 style={{ fontSize: 48, fontWeight: 900, color: '#0f172a', lineHeight: 1.1, letterSpacing: '-0.02em', margin: 0 }}>
-              A complete platform<br />to power your<br />
-              <span style={{ color: '#7c3aed' }}>revenue engine</span>
-            </h2>
-            <p style={{ fontSize: 16, color: '#64748b', fontWeight: 500, lineHeight: 1.7, maxWidth: 420, margin: 0 }}>
-              Consolidate your tools into one cohesive solution. Pulse connects every stage of your customer journey from lead intake to deal closing.
-            </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {['Unify your sales tools', 'Automate repetitive tasks', 'Get real-time insights', 'Close more deals, faster'].map((item) => (
-                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600, color: '#374151' }}>
-                  <CheckCircle2 size={16} color="#7c3aed" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 100, fontSize: 14, fontWeight: 700, color: '#374151', cursor: 'pointer', width: 'fit-content', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              Explore all features <ArrowRight size={15} color="#7c3aed" />
-            </button>
-          </div>
-
-          {/* right – orbit */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ position: 'relative', width: 320, height: 320 }}>
-              {/* ring */}
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px dashed #ddd6fe' }} />
-              {/* center */}
-              <div style={{ position: 'absolute', top: '30%', left: '30%', right: '30%', bottom: '30%', borderRadius: '50%', background: '#7c3aed', boxShadow: '0 16px 40px rgba(124,58,237,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Activity size={40} color="#fff" strokeWidth={1.8} />
-              </div>
-              {/* orbit nodes */}
-              {orbitItems.map(({ label, icon: Icon, angle }) => {
-                const rad = (angle - 90) * (Math.PI / 180);
-                const r = 138;
-                const cx = 160, cy = 160;
-                const x = cx + r * Math.cos(rad) - 28;
-                const y = cy + r * Math.sin(rad) - 28;
-                return (
-                  <div key={label} style={{ position: 'absolute', left: x, top: y, width: 56, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                    <div style={{ height: 48, width: 48, borderRadius: 16, background: '#fff', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Icon size={20} color="#7c3aed" />
-                    </div>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', whiteSpace: 'nowrap' }}>{label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-      {/* ── CTA BANNER ─────────────────────────────────── */}
-      <section style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)', padding: '64px 40px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: -80, left: -80, width: 300, height: 300, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -60, right: -60, width: 260, height: 260, borderRadius: '50%', background: 'rgba(0,0,0,0.1)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 40, flexWrap: 'wrap', position: 'relative' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-            <div style={{ height: 56, width: 56, borderRadius: 18, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Zap size={28} color="#fff" />
-            </div>
-            <div>
-              <h3 style={{ fontSize: 24, fontWeight: 900, color: '#fff', margin: '0 0 4px' }}>Ready to transform your sales?</h3>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.75)', fontWeight: 500, margin: 0 }}>Join thousands of teams already growing with Pulse CRM.</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-            <button onClick={() => setIsModalOpen(true)} style={{ padding: '13px 28px', background: '#fff', color: '#6d28d9', fontSize: 14, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
-              Start Free Trial
-            </button>
-            <button onClick={() => setIsModalOpen(true)} style={{ padding: '13px 28px', background: 'rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: '1.5px solid rgba(255,255,255,0.35)', cursor: 'pointer' }}>
-              Book Demo
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FEATURES BAR ───────────────────────────────── */}
-      <section style={{ background: '#fff', borderTop: '1px solid #f1f5f9', padding: '48px 40px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
-          {platformFeatures.map((f) => {
-            const Icon = f.icon;
-            return (
-              <div key={f.title} style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-                <div style={{ height: 38, width: 38, borderRadius: 12, background: f.bg === 'bg-violet-50' ? '#f5f3ff' : f.bg === 'bg-blue-50' ? '#eff6ff' : f.bg === 'bg-emerald-50' ? '#ecfdf5' : '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <Icon size={16} color={f.color === 'text-violet-600' ? '#7c3aed' : f.color === 'text-blue-600' ? '#2563eb' : f.color === 'text-emerald-600' ? '#059669' : '#ea580c'} />
-                </div>
+                )
+              }
+            ].map((feature, idx) => (
+              <div key={idx} className="bg-white/15 backdrop-blur-lg border border-white/30 rounded-3xl p-6 shadow-xl hover:bg-white/25 hover:border-white/50 hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between h-[300px]">
                 <div>
-                  <p style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', margin: '0 0 4px' }}>{f.title}</p>
-                  <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, margin: 0, lineHeight: 1.5 }}>{f.desc}</p>
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-pink-200 px-3 py-1 rounded-full bg-pink-500/30 border border-pink-400/50 inline-block mb-3">
+                    {feature.badge}
+                  </span>
+                  <h3 className="text-lg font-bold text-white text-left">{feature.title}</h3>
+                  <p className="text-xs text-white/85 font-medium leading-relaxed mt-1.5 text-left">{feature.desc}</p>
+                </div>
+                <div className="w-full shrink-0">
+                  {feature.chart}
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </section>
 
-
-      {/* ── FOOTER ─────────────────────────────────────── */}
-      <footer style={{ background: '#fff', borderTop: '1px solid #f1f5f9', padding: '56px 40px 32px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.5fr', gap: 40, marginBottom: 40 }}>
-            {/* brand */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ height: 32, width: 32, borderRadius: 10, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Activity size={15} color="#fff" strokeWidth={2.5} />
+      {/* Footer with Pulse Logo & Details */}
+      <footer className="bg-slate-950/80 backdrop-blur-xl text-white/80 py-12 px-6 md:px-12 select-none border-t border-white/20 z-10">
+        <div className="w-full max-w-6xl mx-auto space-y-8">
+          
+          {/* Top Footer Row: Logo, Title & Brand Details */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/10">
+            <div className="flex items-center space-x-3">
+              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-pink-500 to-indigo-600 p-0.5 shadow-md flex items-center justify-center">
+                <div className="h-full w-full bg-slate-950/80 rounded-[10px] flex items-center justify-center">
+                  <Activity className="h-4 w-4 text-pink-400" strokeWidth={2.5} />
                 </div>
-                <span style={{ fontSize: 16, fontWeight: 900, color: '#0f172a' }}>Pulse <span style={{ color: '#7c3aed' }}>CRM</span></span>
               </div>
-              <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, lineHeight: 1.6, maxWidth: 220, margin: 0 }}>The intelligent CRM built for high-growth teams.</p>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {[
-                  <path key="fb" d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />,
-                  <path key="tw" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />,
-                  <><path key="li1" d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z" /><rect key="li2" x="2" y="9" width="4" height="12" /><circle key="li3" cx="4" cy="4" r="2" /></>,
-                ].map((icon, i) => (
-                  <a key={i} href="#" style={{ height: 32, width: 32, borderRadius: 9, background: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#94a3b8', textDecoration: 'none' }}>
-                    <svg viewBox="0 0 24 24" fill="currentColor" style={{ width: 14, height: 14 }}>{icon}</svg>
-                  </a>
-                ))}
+              <div>
+                <div className="flex items-center space-x-1">
+                  <span className="text-lg font-black text-white tracking-tight font-sans">Pulse</span>
+                  <span className="text-lg font-black text-pink-300 font-sans">CRM</span>
+                </div>
+                <p className="text-[11px] text-white/70 font-medium">
+                  Next-Generation AI Revenue Copilot &amp; Enterprise Deal Telemetry.
+                </p>
               </div>
             </div>
 
-            {/* link cols */}
-            {Object.entries(footerLinks).map(([section, links]) => (
-              <div key={section} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <p style={{ fontSize: 11, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>{section}</p>
-                {links.map((link) => (
-                  <a key={link} href="#" style={{ fontSize: 13, color: '#64748b', fontWeight: 500, textDecoration: 'none' }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#0f172a'; }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#64748b'; }}>
-                    {link}
-                  </a>
-                ))}
-              </div>
-            ))}
-
-            {/* newsletter */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <p style={{ fontSize: 11, fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Stay updated</p>
-              <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, lineHeight: 1.6, margin: 0 }}>Get the latest updates and insights delivered to your inbox.</p>
-              <div style={{ display: 'flex' }}>
-                <input type="email" placeholder="Enter your email" style={{ flex: 1, fontSize: 12, padding: '9px 14px', border: '1.5px solid #e2e8f0', borderRight: 'none', borderRadius: '10px 0 0 10px', outline: 'none', color: '#374151', background: '#fff' }} />
-                <button onClick={() => setIsModalOpen(true)} style={{ padding: '9px 14px', background: '#7c3aed', border: 'none', borderRadius: '0 10px 10px 0', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                  <ArrowRight size={14} color="#fff" />
-                </button>
-              </div>
+            <div className="flex flex-wrap gap-6 text-xs font-semibold text-white/80">
+              <a href="#" className="hover:text-pink-300 transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-pink-300 transition-colors">Terms of Service</a>
+              <a href="#" className="hover:text-pink-300 transition-colors">Security Standards</a>
             </div>
           </div>
 
-          {/* bottom bar */}
-          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, margin: 0 }}>© 2024 Pulse CRM. All rights reserved.</p>
-            <div style={{ display: 'flex', gap: 24 }}>
-              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((t) => (
-                <a key={t} href="#" style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600, textDecoration: 'none' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#374151'; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#94a3b8'; }}>
-                  {t}
-                </a>
-              ))}
-            </div>
+          {/* Bottom Copyright Bar */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-white/60">
+            <span>&copy; {new Date().getFullYear()} Pulse CRM Inc. All rights reserved.</span>
+            <span>Powered by <span className="text-white font-extrabold">Kalnet</span></span>
           </div>
+
         </div>
       </footer>
 
-
-      {/* ── LOGIN MODAL ─────────────────────────────────── */}
+      {/* 8. Light-Mode Auth Login Modal Dialog */}
       {isModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(6px)' }} onClick={() => setIsModalOpen(false)} />
-          <div style={{ position: 'relative', width: '100%', maxWidth: 440, background: '#fff', borderRadius: 24, boxShadow: '0 32px 80px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
-            {/* header */}
-            <div style={{ padding: '24px 24px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ height: 36, width: 36, borderRadius: 11, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Activity size={16} color="#fff" strokeWidth={2.5} />
-                </div>
-                <div>
-                  <p style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: '0 0 2px' }}>Welcome to Pulse CRM</p>
-                  <p style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, margin: 0 }}>Sign in to your workspace</p>
-                </div>
-              </div>
-              <button onClick={() => setIsModalOpen(false)} style={{ height: 32, width: 32, borderRadius: 8, background: 'transparent', border: '1px solid #f1f5f9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f8fafc'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
-                <X size={15} />
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop blur overlay */}
+          <div 
+            onClick={() => setIsModalOpen(false)}
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs cursor-pointer"
+          />
+          
+          {/* Modal Container Card */}
+          <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-2xl p-8 shadow-2xl flex flex-col justify-between text-slate-900 relative z-10 animate-in zoom-in-95 duration-150">
+            {/* Close trigger */}
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer border-0 bg-transparent"
+              aria-label="Close modal"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Header titles */}
+            <div className="text-left mb-6">
+              <h2 className="font-sans text-2xl font-extrabold text-slate-900 tracking-tight">Welcome back</h2>
+              <p className="text-xs text-slate-500 mt-1 font-medium">Log in to access your Pulse workspace</p>
             </div>
 
-            <div style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
-              {/* role */}
+            {/* Email form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>Select your role</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-                  {([
-                    { value: 'admin' as const, label: 'Admin', icon: Shield, desc: 'Full access' },
-                    { value: 'manager' as const, label: 'Manager', icon: BarChart2, desc: 'Team view' },
-                    { value: 'representative' as const, label: 'Sales Rep', icon: TrendingUp, desc: 'My pipeline' },
-                  ]).map(({ value, label, icon: Icon, desc }) => (
-                    <button key={value} onClick={() => setSelectedRole(value)} style={{ padding: '12px 8px', borderRadius: 14, border: `2px solid ${selectedRole === value ? '#7c3aed' : '#e2e8f0'}`, background: selectedRole === value ? '#f5f3ff' : '#fff', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                      <Icon size={18} color={selectedRole === value ? '#7c3aed' : '#94a3b8'} />
-                      <span style={{ fontSize: 12, fontWeight: 700, color: selectedRole === value ? '#5b21b6' : '#374151' }}>{label}</span>
-                      <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500 }}>{desc}</span>
-                    </button>
-                  ))}
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Email address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
+                    <Mail className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                  <input
+                    type="email"
+                    required
+                    disabled={isLoading}
+                    placeholder="name@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-900 bg-slate-50/50 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors shadow-2xs"
+                  />
                 </div>
               </div>
 
-              {/* form */}
-              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>Email address</label>
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com"
-                    style={{ width: '100%', padding: '11px 16px', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 14, color: '#374151', outline: 'none', boxSizing: 'border-box', background: '#fff' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>Password</label>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-                    style={{ width: '100%', padding: '11px 16px', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 14, color: '#374151', outline: 'none', boxSizing: 'border-box', background: '#fff' }} />
-                </div>
-                <button type="submit" disabled={isLoading} style={{ width: '100%', padding: '13px', background: '#7c3aed', color: '#fff', fontSize: 14, fontWeight: 800, borderRadius: 12, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 6px 20px rgba(124,58,237,0.35)' }}>
-                  {isLoading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Signing in...</span></> : <><span>Sign In</span><ArrowRight size={15} /></>}
-                </button>
-              </form>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1, height: 1, background: '#f1f5f9' }} />
-                <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600 }}>or continue with</span>
-                <div style={{ flex: 1, height: 1, background: '#f1f5f9' }} />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
+                  Workspace Access Role
+                </label>
+                <select
+                  disabled={isLoading}
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value as any)}
+                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-900 bg-slate-50/50 focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors shadow-2xs font-semibold cursor-pointer"
+                >
+                  <option value="representative">Sales Representative</option>
+                  <option value="manager">Sales Manager</option>
+                  <option value="admin">System Administrator</option>
+                </select>
               </div>
 
-              <button onClick={handleLogin} disabled={isLoading} style={{ width: '100%', padding: '12px', background: '#fff', color: '#374151', fontSize: 14, fontWeight: 700, borderRadius: 12, border: '1.5px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                <Globe size={15} color="#94a3b8" />
-                Continue with Google
+              {/* Login Submit Button */}
+              <button
+                type="submit"
+                disabled={isLoading || !email.trim()}
+                className="w-full flex items-center justify-center space-x-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Continue to Workspace</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </button>
+            </form>
 
-              <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b8', fontWeight: 500, margin: 0 }}>
-                Don't have an account?{' '}
-                <button onClick={handleLogin} style={{ color: '#7c3aed', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>
-                  Start free trial
-                </button>
-              </p>
+            {/* Divider line */}
+            <div className="relative flex items-center my-5">
+              <div className="flex-grow border-t border-slate-200"></div>
+              <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">or</span>
+              <div className="flex-grow border-t border-slate-200"></div>
             </div>
+
+            {/* Continue with Google */}
+            <button
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-2.5 py-2.5 border border-slate-200/90 hover:border-slate-300 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer shadow-2xs bg-white"
+            >
+              {/* Google SVG Logo */}
+              <svg className="h-4 w-4" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Continue with Google</span>
+            </button>
+
+            {/* Security shield badge */}
+            <div className="flex items-center justify-center space-x-1.5 mt-5 text-xs font-medium text-slate-500">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>SOC2 compliant & 256-bit encrypted</span>
+            </div>
+
           </div>
         </div>
       )}
 
-    </div>
     </div>
   );
 }
