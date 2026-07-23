@@ -200,7 +200,7 @@ export default function LeadsView() {
   }, []);
 
   // Get currently active lead object
-  const activeLead = leads.find(l => l.id === selectedLeadId);
+  const activeLead = selectedLeadId !== null ? leads.find(l => l.id === selectedLeadId) : null;
 
   // AI Recommendation engine
   const getAIRecommendation = (lead: Lead) => {
@@ -690,6 +690,8 @@ export default function LeadsView() {
       {selectedLeadId !== null && activeLead && (
         <div className="col-span-12 lg:col-span-4 space-y-5 animate-in slide-in-from-right-5 duration-300">
           <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
+            <h3 className="font-extrabold text-brand-heading text-sm">{activeLead.name}</h3>
+            <p className="text-[10px] text-brand-text/60 font-bold">{activeLead.company}</p>
             {/* Card Title Header */}
             <div className="flex items-start justify-between border-b border-brand-border-purple/15 pb-3">
               <div>
@@ -1099,7 +1101,7 @@ export default function LeadsView() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead.name}</h3>
+              <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead?.name || 'Lead'}</h3>
               <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">
