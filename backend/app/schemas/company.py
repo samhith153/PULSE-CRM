@@ -23,6 +23,8 @@ class CompanyCreateRequest(BaseModel):
     country: Optional[str] = Field(default=None, max_length=100)
     zip_code: Optional[str] = Field(default=None, max_length=20)
     industry: Optional[str] = Field(default=None, max_length=100)
+    current_crm: Optional[str] = Field(default=None, max_length=100)
+    operational_system: Optional[str] = Field(default=None, max_length=100)
     company_type: Optional[str] = Field(default=None, max_length=50)
     employee_count: Optional[int] = Field(default=None, ge=0)
     annual_revenue: Optional[str] = None
@@ -53,6 +55,8 @@ class CompanyUpdateRequest(BaseModel):
     country: Optional[str] = None
     zip_code: Optional[str] = None
     industry: Optional[str] = None
+    current_crm: Optional[str] = Field(default=None, max_length=100)
+    operational_system: Optional[str] = Field(default=None, max_length=100)
     company_type: Optional[str] = None
     employee_count: Optional[int] = Field(default=None, ge=0)
     annual_revenue: Optional[str] = None
@@ -84,6 +88,8 @@ class CompanyResponse(BaseModel):
     country: Optional[str]
     zip_code: Optional[str]
     industry: Optional[str]
+    current_crm: Optional[str]
+    operational_system: Optional[str]
     company_type: Optional[str]
     employee_count: Optional[int]
     annual_revenue: Optional[str]
