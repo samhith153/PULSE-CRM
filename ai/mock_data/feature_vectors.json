@@ -1,0 +1,44 @@
+[
+    {
+        "lead_id":"6df012fe-0949-4919-af65-fbc1b0b2adb3",
+        "feature_version":"v1",
+        "generated_at":"2026-07-19 11:27:11.761636",
+        "company":"TechNova. Solutions",
+        "company_band":"Medium",
+        "source":"website",
+        "source_score":50,
+        "engagement_score":0,
+        "engagement_level":"LOW",
+        "reply_rate":0,
+        "reply_level":"NO RESPONSE",
+        "recency_days":2
+    },
+    {
+        "lead_id":"558d3def-efb7-43af-9e1a-07315f9809c6",
+        "feature_version":"v1",
+        "generated_at":"2026-07-19 11:27:11.764338",
+        "company":"TechNova44 Solutions",
+        "company_band":"Medium",
+        "source":"website",
+        "source_score":50,
+        "engagement_score":0,
+        "engagement_level":"LOW",
+        "reply_rate":0,
+        "reply_level":"NO RESPONSE",
+        "recency_days":2
+    },
+    {
+        "lead_id":"733762d3-e4bd-48b7-ae10-4c403db7c4cb",
+        "feature_version":"v1",
+        "generated_at":"2026-07-19 11:27:11.766088",
+        "company":"TechNova44 Solutions",
+        "company_band":"Medium",
+        "source":"website",
+        "source_score":50,
+        "engagement_score":0,
+        "engagement_level":"LOW",
+        "reply_rate":0,
+        "reply_level":"NO RESPONSE",
+        "recency_days":2
+    }
+]

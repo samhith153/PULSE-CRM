@@ -1,0 +1,7 @@
+activity_id,lead_id,type,status,created_at
+A001,L001,email,sent,2026-07-01
+A002,L001,email,replied,2026-07-03
+A003,L001,meeting,completed,2026-07-05
+A004,L002,email,sent,2026-07-04
+A005,L002,call,completed,2026-07-06
+A006,L003,email,sent,2026-07-02
