@@ -25,6 +25,7 @@ print(engine)
 print(engine.url)
 
 
+
 async def main():
     async with engine.connect() as conn:
         print(await conn.scalar(text("SELECT current_user")))

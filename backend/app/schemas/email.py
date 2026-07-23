@@ -24,6 +24,14 @@ class GmailConnectRequest(BaseModel):
     sync_cursor: Optional[str] = None
     scopes_json: Optional[list[str]] = None
 
+class EmailSendRequest(BaseModel):
+    gmail_connection_id: UUID
+    receiver: EmailStr
+    subject: str = Field(min_length=1, max_length=500)
+    html_body: str
+    external_entity_type: Optional[str] = None
+    external_entity_id: Optional[UUID] = None
+
 
 class GmailOAuthLoginResponse(BaseModel):
     authorization_url: str
@@ -134,3 +142,14 @@ class EmailHistoryResponse(BaseModel):
     page: int
     page_size: int
     records: list[EmailResponse] = Field(default_factory=list)
+
+from pydantic import BaseModel, EmailStr
+from uuid import UUID
+
+
+class SMTPSendRequest(BaseModel):
+    receiver: EmailStr
+    subject: str
+    html_body: str
+    external_entity_type: str | None = None
+    external_entity_id: UUID | None = None
