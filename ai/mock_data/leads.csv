@@ -1,7 +1,9 @@
-lead_id,company_id,source,status,created_at
-
-L001,C001,LinkedIn,Active,2026-07-01
-L002,C002,Website,Active,2026-07-02
-L003,C003,Cold Email,Cold,2026-07-03
-L004,C004,Referral,Negotiation,2026-07-04
-L005,C005,Webinar,Active,2026-07-05
+lead_id,company_id,source,stage
+L001,C001,LinkedIn,Awareness
+L002,C002,Website,Consideration
+L003,C003,Cold Email,Qualified
+L004,C004,Referral,Negotiation
+L005,C005,Webinar,Proposal
+L006,C006,Event,Qualified
+L007,C007,Referral,Consideration
+L008,C008,Website,Proposal
