@@ -66,7 +66,8 @@ from app.api.v1.organizations import router as orgs_router
 from app.api.v1.pipeline import router as pipeline_router
 from app.api.v1.timeline import router as timeline_router
 from app.api.v1.users import router as users_router
-
+from app.api.v1.smtp import router as smtp_router
+from app.api.v1.brevo import router as brevo_router
 api_router = APIRouter()
 
 api_router.include_router(health_router, prefix="/health", tags=["Health"])
@@ -82,7 +83,13 @@ api_router.include_router(activities_router, prefix="/activities", tags=["Activi
 api_router.include_router(timeline_router, prefix="/timeline", tags=["Timeline"])
 api_router.include_router(pipeline_router, prefix="/pipeline", tags=["Pipeline"])
 api_router.include_router(gmail_router, prefix="/gmail", tags=["Gmail"])
+api_router.include_router(smtp_router, prefix="/smtp", tags=["SMTP"])
 api_router.include_router(emails_router, prefix="/emails", tags=["Emails"])
 api_router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(ai_router, prefix="/ai", tags=["AI"])
 api_router.include_router(events_router, prefix="/events", tags=["Events"])
+api_router.include_router(
+    brevo_router,
+    prefix="/brevo",
+    tags=["Brevo"],
+)

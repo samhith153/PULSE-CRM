@@ -15,7 +15,8 @@ from features import (
     reply_level,
     recency_days,
 )
-
+from build_fit_features import build_fit_features
+from build_engagement_features import build_engagement_features
 import pandas as pd
 
 SOURCE = "database"  # Change to "mock" for mock data
@@ -115,20 +116,73 @@ def build_feature_vectors(source=SOURCE):
 
 if __name__ == "__main__":
 
+    # Load data
+    leads = get_leads(SOURCE)
+    companies = get_companies(SOURCE)
+    activities = get_activities(SOURCE)
+
+    if SOURCE == "mock":
+        emails = get_emails("mock")
+    else:
+        emails = get_emails("database")
+
+    # -----------------------------------
+    # Build Original Feature Vectors
+    # -----------------------------------
+
     features_df = build_feature_vectors(source=SOURCE)
 
     print("\n===== FEATURE VECTORS =====\n")
     print(features_df.to_string(index=False))
 
-    features_df.to_csv(
-        "ai/mock_data/feature_vectors.csv",
+    save_feature_vectors(features_df)
+
+    # -----------------------------------
+    # Build Fit Features
+    # -----------------------------------
+
+    fit_df = build_fit_features(
+        leads,
+        companies
+    )
+
+    print("\n===== FIT FEATURES =====\n")
+    print(fit_df.to_string(index=False))
+
+    fit_df.to_csv(
+        "ai/mock_data/fit_features.csv",
         index=False
     )
 
-    features_df.to_json(
-        "ai/mock_data/feature_vectors.json",
+    fit_df.to_json(
+        "ai/mock_data/fit_features.json",
         orient="records",
-        indent=4
+        indent=4,
+        date_format="iso"
     )
 
-    print("\nFeature vectors saved successfully.")
+    # -----------------------------------
+    # Build Engagement Features
+    # -----------------------------------
+
+    engagement_df = build_engagement_features(
+        leads,
+        emails
+    )
+
+    print("\n===== ENGAGEMENT FEATURES =====\n")
+    print(engagement_df.to_string(index=False))
+
+    engagement_df.to_csv(
+        "ai/mock_data/engagement_features.csv",
+        index=False
+    )
+
+    engagement_df.to_json(
+        "ai/mock_data/engagement_features.json",
+        orient="records",
+        indent=4,
+        date_format="iso"
+    )
+
+    print("\nAll feature pipelines executed successfully.")

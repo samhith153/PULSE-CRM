@@ -140,3 +140,23 @@ class EmailRepository(BaseRepository[Email]):
         sort_clause = asc(Email.sent_at) if sort_order == SortOrder.ASC else desc(Email.sent_at)
         stmt = stmt.order_by(sort_clause, asc(Email.created_at) if sort_order == SortOrder.ASC else desc(Email.created_at))
         return await self.get_paginated(stmt, page, page_size)
+
+    async def get_latest_by_receiver(
+        self,
+        organization_id: UUID,
+        receiver: str,
+    ) -> Optional[Email]:
+
+        stmt = (
+            self._base_query(organization_id)
+            .where(Email.receiver == receiver)
+            .order_by(desc(Email.sent_at))
+        )
+
+        result = await self.db.execute(stmt)
+
+        return result.scalar_one_or_none()
+
+    async def save(self):
+
+        await self.db.commit()
