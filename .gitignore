@@ -209,6 +209,10 @@ tempCodeRunnerFile.py
 # PyPI configuration file
 .pypirc
 
+# Test data scripts
+*.bat
+test_companies_mock.json
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
