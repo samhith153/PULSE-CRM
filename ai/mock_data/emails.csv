@@ -1,0 +1,22 @@
+lead_id,sender,receiver,sent_at,replied
+L001,customer@bfu.com,sales@pulse.ai,2026-07-20 09:00:00,Yes
+L001,sales@pulse.ai,customer@bfu.com,2026-07-20 10:00:00,Yes
+L001,customer@bfu.com,sales@pulse.ai,2026-07-21 09:30:00,Yes
+
+L002,customer@technova.com,sales@pulse.ai,2026-07-22 10:00:00,Yes
+L002,sales@pulse.ai,customer@technova.com,2026-07-22 11:15:00,Yes
+
+L003,sales@pulse.ai,greenleaf.com,2026-07-10 09:00:00,No
+
+L004,sales@pulse.ai,apex.com,2026-07-18 10:00:00,No
+
+L005,customer@cloudedge.com,sales@pulse.ai,2026-07-21 14:00:00,Yes
+L005,sales@pulse.ai,customer@cloudedge.com,2026-07-21 15:00:00,Yes
+
+L006,customer@royalfinance.com,sales@pulse.ai,2026-07-23 08:00:00,Yes
+L006,sales@pulse.ai,customer@royalfinance.com,2026-07-23 09:00:00,Yes
+
+L007,sales@pulse.ai,urbanhomes.com,2026-07-16 10:00:00,No
+
+L008,customer@retail.com,sales@pulse.ai,2026-07-23 11:00:00,Yes
+L008,sales@pulse.ai,customer@retail.com,2026-07-23 12:00:00,Yes

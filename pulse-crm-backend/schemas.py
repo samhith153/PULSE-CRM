@@ -98,6 +98,9 @@ class LeadBase(BaseModel):
     description: Optional[str] = None
     value: Optional[float] = None
     source: Optional[str] = None
+    industry: Optional[str] = None
+    current_crm: Optional[str] = None
+    operational_system: Optional[str] = None
 
 class LeadCreate(LeadBase):
     contact_id: UUID
@@ -152,3 +155,30 @@ class SyncJobResponse(BaseModel):
     status: str
     sync_job_id: str
     message: str
+
+# --- Email ---
+class EmailSendRequest(BaseModel):
+    contact_id: UUID
+    deal_id: Optional[UUID] = None
+    subject: str = Field(..., min_length=1, max_length=255)
+    body: str = Field(..., min_length=1)
+
+class EmailSendResponse(BaseModel):
+    id: UUID
+    message_id: str
+    brevo_message_id: Optional[str] = None
+    status: str
+    sender: EmailStr
+    recipient: EmailStr
+    sent_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BrevoWebhookEvent(BaseModel):
+    event: str
+    email: str
+    message_id: Optional[str] = None
+    date: Optional[datetime] = None
+
