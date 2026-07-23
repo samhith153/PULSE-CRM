@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+from multiprocessing import connection
 import secrets
 import smtplib
 import ssl
@@ -39,6 +40,16 @@ from app.schemas.event_outbox import EventType
 from app.services.event_service import EventService
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import EmailDirection, EmailSyncStatus, SortOrder
+
+import base64
+
+from email.mime.text import MIMEText
+
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+
+from app.core.config import settings
 
 logger = get_logger(__name__)
 
@@ -365,10 +376,19 @@ class EmailService:
         external_entity_id: Optional[UUID] = None,
         is_read: bool = False,
     ) -> tuple[Email, bool]:
-        connection = await self.connection_repo.get_by_id_in_org(organization_id, gmail_connection_id)
-        if not connection:
-            raise NotFoundException("GmailConnection", gmail_connection_id)
+        connection = None
 
+        if gmail_connection_id:
+            connection = await self.connection_repo.get_by_id_in_org(
+                organization_id,
+                gmail_connection_id,
+            )
+
+            if not connection:
+                raise NotFoundException(
+                    "GmailConnection",
+                    gmail_connection_id,
+                )
         existing = await self.email_repo.get_by_message_id(organization_id, gmail_message_id)
         if existing:
             return existing, False
@@ -405,7 +425,7 @@ class EmailService:
                 "external_entity_type": external_entity_type,
                 "external_entity_id": str(external_entity_id) if external_entity_id else None,
             },
-            topic="gmail",
+            topic = "gmail" if gmail_connection_id else "smtp",
         )
         if is_read:
             await self.events.record_event(
@@ -423,6 +443,75 @@ class EmailService:
                 },
             )
         return email, True
+    
+
+    async def send_email(
+        self,
+        organization_id: UUID,
+        created_by: UUID,
+        gmail_connection_id: UUID,
+        receiver: str,
+        subject: str,
+        html_body: str,
+        external_entity_type: str | None = None,
+        external_entity_id: UUID | None = None,
+    ):
+        """
+        Send an email through Gmail and persist it in the CRM.
+        """
+
+        connection = await self.connection_repo.get_by_id_in_org(
+        organization_id,
+        gmail_connection_id,
+        )
+
+        if not connection:
+            raise NotFoundException(
+                "GmailConnection",
+                gmail_connection_id,
+            )
+
+        message = self._build_message(
+            subject=subject,
+            to_email=receiver,
+            html_body=html_body,
+            text_body=html_body,
+        )
+
+        await self._send_smtp_message(message)
+        message_id = str(uuid4())
+        thread_id = message_id
+    
+
+        email, _ = await self.ingest_email(
+            organization_id=organization_id,
+            created_by=created_by,
+            gmail_connection_id=gmail_connection_id,
+            gmail_message_id=message_id,
+            thread_id=thread_id,
+            direction=EmailDirection.OUTBOUND,
+            sender=settings.SMTP_FROM_EMAIL,
+            receiver=receiver,
+            subject=subject,
+            body_preview=html_body[:500],
+            sent_at=datetime.now(timezone.utc),
+            attachment_metadata=[],
+            raw_payload={
+                "provider": "brevo_smtp",
+                "status": "sent",
+                "events": [
+                    {
+                        "event": "sent",
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    }
+                ]
+            },
+            external_entity_type=external_entity_type,
+            external_entity_id=external_entity_id,
+            is_read=True,
+        )
+
+        return EmailResponse.model_validate(email)
 
     async def fetch_from_gmail(self, organization_id: UUID, connection_id: UUID, created_by: Optional[UUID]) -> EmailSyncResultResponse:
         connection = await self.connection_repo.get_by_id_in_org(organization_id, connection_id)
