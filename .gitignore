@@ -119,7 +119,7 @@ ipython_config.py
 
 # pixi
 #   Similar to Pipfile.lock, it is generally recommended to include pixi.lock in version control.
-# pixi.lock
+#   pixi.lock
 #   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
 #   in the .venv directory. It is recommended not to include this directory in version control.
 .pixi
@@ -220,17 +220,67 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-# ==========================================
-# NODE.JS TEMPLATE (Added manually)
-# ==========================================
+# Node & Web
 node_modules/
-logs
-*.log
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Python Virtual Sandbox & Cache
+venv/
+.venv/
+ENV/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+test_companies_mock.json
+*.py[codz]
+
+# Testing
+coverage/
+
+# Next.js Build Artifacts & Vercel
+.next/
+out/
+build/
+.vercel
+
+# Environment Configs
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Misc & OS files
+.DS_Store
+*.pem
+*.tsbuildinfo
+
+# Debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-dist/
-build/
-.env
-.env.local
+.pnpm-debug.log*
 
+# Databases
+*.db
+*.db-journal
+*.sqlite
+
+# Agent temporary and workspace config files
+.gemini/
+.agents/
+walkthrough.md
+implementation_plan.md
+task.md
