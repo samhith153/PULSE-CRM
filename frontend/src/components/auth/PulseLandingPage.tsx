@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import {
   Activity, ArrowRight, CheckCircle2, ChevronRight,
   Loader2, Mail, Sparkles, Users, Zap, Award, Shield,
   BarChart2, RefreshCw, Headphones, TrendingUp, Settings,
-  X, LayoutDashboard, Star,
+  X, LayoutDashboard, Star, Filter, Trophy,
   Target, Lock
 } from 'lucide-react';
 import Navbar from '@/components/navigation/Navbar';
@@ -52,7 +53,15 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [activeOrbitNode, setActiveOrbitNode] = useState<string | null>(null);
   const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
+  const [statCounts, setStatCounts] = useState<Record<string, number>>({
+    'users': 4,
+    'tables': 11,
+    'permissions': 33,
+    'tests': 89
+  });
+  const [hasAnimated, setHasAnimated] = useState(false);
 
+  // Orbit rotation animation
   useEffect(() => {
     const t = setInterval(() => setOrbitAngle(a => (a + 0.25) % 360), 50);
     return () => clearInterval(t);
@@ -64,14 +73,43 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       entries => entries.forEach(entry => {
         if (entry.isIntersecting) {
           const id = (entry.target as HTMLElement).dataset.reveal;
-          if (id) setVisibleSections(prev => new Set([...prev, id]));
+          if (id) {
+            setVisibleSections(prev => new Set([...prev, id]));
+            // Trigger count-up animation when stats section is visible
+            if (id === 'stats' && !hasAnimated) {
+              setHasAnimated(true);
+              // Reset counts to 0 first
+              setStatCounts({ users: 0, tables: 0, permissions: 0, tests: 0 });
+              
+              // Animate each stat with different durations
+              const animateCount = (key: string, target: number, duration: number) => {
+                const steps = 60;
+                const increment = target / steps;
+                let current = 0;
+                const timer = setInterval(() => {
+                  current += increment;
+                  if (current >= target) {
+                    setStatCounts(prev => ({ ...prev, [key]: target }));
+                    clearInterval(timer);
+                  } else {
+                    setStatCounts(prev => ({ ...prev, [key]: Math.floor(current) }));
+                  }
+                }, duration / steps);
+              };
+              
+              setTimeout(() => animateCount('users', 4, 1000), 200);
+              setTimeout(() => animateCount('tables', 11, 1200), 300);
+              setTimeout(() => animateCount('permissions', 33, 1400), 400);
+              setTimeout(() => animateCount('tests', 89, 1600), 500);
+            }
+          }
         }
       }),
       { threshold: 0.1 }
     );
     document.querySelectorAll('[data-reveal]').forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, []);
+  }, [hasAnimated]);
 
   const addToast = (message: string, type: 'success' | 'error') => {
     const id = Date.now();
@@ -104,27 +142,20 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   };
 
   const stats = [
-    { label: '4 Users Seeded', value: '4', sub: 'Admin, Manager, 2 Sales Reps', icon: Users },
-    { label: '11 Tables', value: '11', sub: 'Full relational schema with FK constraints', icon: Award },
-    { label: '33 Permissions', value: '33', sub: 'Across all CRM resources', icon: Sparkles },
-    { label: '89 Tests', value: '89', sub: 'All passing — pytest suite', icon: Zap },
+    { label: '4 Users Seeded', value: 4, key: 'users', sub: 'Admin, Manager, 2 Sales Reps', icon: Users },
+    { label: '11 Tables', value: 11, key: 'tables', sub: 'Full relational schema with FK constraints', icon: Award },
+    { label: '33 Permissions', value: 33, key: 'permissions', sub: 'Across all CRM resources', icon: Sparkles },
+    { label: '89 Tests', value: 89, key: 'tests', sub: 'All passing — pytest suite', icon: Zap },
   ];
 
   const orbitNodes = [
-    { label: 'Email Sync', icon: Mail },
-    { label: 'AI Copilot', icon: Sparkles },
-    { label: 'Reports', icon: BarChart2 },
-    { label: 'Pipeline', icon: TrendingUp },
-    { label: 'Contacts', icon: Users },
+    { label: 'Email Sync', icon: Mail, color: '#7c3aed', description: 'Sync Gmail and Outlook emails automatically. Track opens, clicks, and reply rates in real-time.' },
+    { label: 'AI Copilot', icon: Sparkles, color: '#7c3aed', description: 'Get AI-powered lead scoring and recommendations. Automate email drafts and deal summaries.' },
+    { label: 'Reports', icon: BarChart2, color: '#2563eb', description: 'Real-time dashboards with pipeline analytics. Track team performance and forecast revenue.' },
+    { label: 'Pipeline', icon: Filter, color: '#16a34a', description: 'Visual deal stages with drag-and-drop. Move deals from lead to close with clear workflows.' },
+    { label: 'Leaderboard', icon: Trophy, color: '#ea580c', description: 'Track top performers and celebrate wins. Motivate your team with gamified sales metrics.' },
+    { label: 'Contacts', icon: Users, color: '#0d9488', description: 'Centralize all customer data in one place. Track interactions, notes, and relationship history.' },
   ];
-
-  const orbitNodeInfo: Record<string, string> = {
-    'Contacts': '5 contacts seeded | Fields: first_name, last_name, email, phone, job_title, company | Linked to Companies & Leads',
-    'Pipeline': 'Deal stages: New → Discovery → Proposal → Negotiation → Closed Won | FSM-based transitions | Linked to Deals table',
-    'AI Copilot': 'Lead scoring (0-100) | Deal insights via GPT-4o | Recommendations API at /api/v1/ai | Permission: ai:access',
-    'Reports': 'Dashboard: /api/v1/dashboard | Metrics: leads by status, pipeline value, activity count | Role: manager+',
-    'Email Sync': 'Gmail OAuth integration | Endpoints: /api/v1/gmail, /api/v1/emails | Sync status tracking | Per-user connection',
-  };
 
   const features = [
     { icon: LayoutDashboard, title: 'Live Dashboards', desc: 'Real-time KPIs at /api/v1/dashboard — leads by status, pipeline value, and activity feed.', bg: C.violetLighter, fg: C.violet },
@@ -244,20 +275,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       )}
 
-      {/* ══════════ 1. NAVBAR (AWS-style mega drawer) ══════════ */}
+      {/* ══════════ NAVBAR ══════════ */}
       <Navbar onOpenModal={() => setIsModalOpen(true)} />
 
-      {/* ══════════ 2. ANNOUNCEMENT BAR ══════════ */}
-      <div className="announce-bar" style={{ marginTop: 64, borderBottom: `1px solid ${C.violetLight}`, padding: '10px 48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-        <span style={{ height: 7, width: 7, borderRadius: '50%', background: C.violet, display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#5b21b6' }}>✦ Pulse CRM v1.0 launched — JWT auth, RBAC, AI scoring, Gmail sync &amp; 40+ REST endpoints.</span>
-        <button onClick={() => setIsModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700, color: C.violet, textDecoration: 'underline', textUnderlineOffset: 2, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-          Learn more <ArrowRight size={12} />
-        </button>
-      </div>
-
-      {/* ══════════ 3. HERO SECTION ══════════ */}
-      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, #f5f3ff 0%, #faf9ff 40%, #ffffff 100%)', padding: '72px 48px 80px' }}>
+      {/* ══════════ 1. HERO SECTION ══════════ */}
+      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, #f5f3ff 0%, #faf9ff 40%, #ffffff 100%)', padding: '72px 48px 80px', marginTop: 64 }}>
         <div style={{ position: 'absolute', top: -40, right: -40, width: 560, height: 560, background: 'radial-gradient(circle at center, rgba(124,58,237,0.09) 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
 
@@ -398,21 +420,141 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 4. SOCIAL PROOF / TRUSTED BY ══════════ */}
-      <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '44px 48px', overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+      <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '56px 48px', overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+        <style>{`
+          @keyframes marquee {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+          }
+          .marquee-container {
+            display: flex;
+            animation: marquee 30s linear infinite;
+          }
+          .marquee-container:hover {
+            animation-play-state: paused;
+          }
+          .trusted-logo-item {
+            animation: fadeInLogo 0.6s ease-out forwards;
+            opacity: 0;
+          }
+          .trusted-logo-item:nth-child(1) { animation-delay: 0.1s; }
+          .trusted-logo-item:nth-child(2) { animation-delay: 0.2s; }
+          .trusted-logo-item:nth-child(3) { animation-delay: 0.3s; }
+          .trusted-logo-item:nth-child(4) { animation-delay: 0.4s; }
+          .trusted-logo-item:nth-child(5) { animation-delay: 0.5s; }
+          .trusted-logo-item:nth-child(6) { animation-delay: 0.6s; }
+          .trusted-logo-item:nth-child(7) { animation-delay: 0.1s; }
+          .trusted-logo-item:nth-child(8) { animation-delay: 0.2s; }
+          .trusted-logo-item:nth-child(9) { animation-delay: 0.3s; }
+          .trusted-logo-item:nth-child(10) { animation-delay: 0.4s; }
+          .trusted-logo-item:nth-child(11) { animation-delay: 0.5s; }
+          .trusted-logo-item:nth-child(12) { animation-delay: 0.6s; }
+          @keyframes fadeInLogo {
+            from {
+              opacity: 0;
+              transform: translateY(10px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+        `}</style>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 32 }}>
-            Trusted by 14,000+ sales teams &amp; enterprise organizations worldwide
+          <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 48 }}>
+            TRUSTED BY FAST-GROWING SALES TEAMS & ENTERPRISE ORGANIZATIONS
           </p>
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 56 }}>
-            {['TechCorp', 'Sparta Creative', 'Empirio Logistics', 'Acme Systems', 'Initech Global', 'NovaSell'].map(c => (
-              <span key={c} className="trusted-logo" style={{ fontSize: 15, fontWeight: 800, color: '#cbd5e1', letterSpacing: '-0.01em', userSelect: 'none', cursor: 'default' }}>{c}</span>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', position: 'relative', width: '100%' }}>
+            <div className="marquee-container">
+              {/* First set of logos */}
+              {[
+                { name: 'TechCorp', icon: '📦', color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: '⚫', color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: '🔶', color: '#f97316' },
+                { name: 'Acme Systems', icon: '🔺', color: '#0ea5e9' },
+                { name: 'Initech Global', icon: '🟢', color: '#10b981' },
+              ].map((company, i) => (
+                <div key={`${company.name}-1`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <div style={{ 
+                    width: 32, 
+                    height: 32, 
+                    borderRadius: 8, 
+                    background: company.color, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    fontSize: 16
+                  }}>
+                    {company.icon}
+                  </div>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#475569', letterSpacing: '-0.01em', userSelect: 'none' }}>
+                    {company.name}
+                  </span>
+                </div>
+              ))}
+              {/* Duplicate set for seamless loop */}
+              {[
+                { name: 'TechCorp', icon: '📦', color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: '⚫', color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: '🔶', color: '#f97316' },
+                { name: 'Acme Systems', icon: '🔺', color: '#0ea5e9' },
+                { name: 'Initech Global', icon: '🟢', color: '#10b981' },
+              ].map((company, i) => (
+                <div key={`${company.name}-2`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <div style={{ 
+                    width: 32, 
+                    height: 32, 
+                    borderRadius: 8, 
+                    background: company.color, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    fontSize: 16
+                  }}>
+                    {company.icon}
+                  </div>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: '#475569', letterSpacing: '-0.01em', userSelect: 'none' }}>
+                    {company.name}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* ══════════ 5. STATS ROW ══════════ */}
       <section data-reveal="stats" style={{ background: C.white, padding: '80px 48px', opacity: visibleSections.has('stats') ? 1 : 0, transform: visibleSections.has('stats') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+        <style>{`
+          @keyframes fadeUpCard {
+            from {
+              opacity: 0;
+              transform: translateY(30px);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0);
+            }
+          }
+          .stat-card {
+            animation: fadeUpCard 0.6s ease-out forwards;
+            opacity: 0;
+          }
+          .stat-card:nth-child(1) { animation-delay: 0.1s; }
+          .stat-card:nth-child(2) { animation-delay: 0.2s; }
+          .stat-card:nth-child(3) { animation-delay: 0.3s; }
+          .stat-card:nth-child(4) { animation-delay: 0.4s; }
+          .stat-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(124, 58, 237, 0.15) !important;
+          }
+          .stat-icon {
+            transition: transform 0.3s ease;
+          }
+          .stat-card:hover .stat-icon {
+            transform: rotate(10deg);
+          }
+        `}</style>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 52 }}>
             <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>By the numbers</p>
@@ -421,12 +563,13 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
             {stats.map(s => {
               const Icon = s.icon;
+              const displayValue = statCounts[s.key as keyof typeof statCounts] || 0;
               return (
-                <div key={s.label} className="stat-card" style={{ padding: '30px 26px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', textAlign: 'center', transition: 'all 0.25s ease' }}>
-                  <div style={{ height: 48, width: 48, borderRadius: 14, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+                <div key={s.label} className="stat-card" style={{ padding: '30px 26px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', textAlign: 'center', transition: 'all 0.3s ease', cursor: 'pointer' }}>
+                  <div className="stat-icon" style={{ height: 48, width: 48, borderRadius: 14, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
                     <Icon size={20} color={C.violet} />
                   </div>
-                  <p style={{ fontSize: 44, fontWeight: 900, color: C.black, letterSpacing: '-0.04em', margin: '0 0 6px', lineHeight: 1 }}>{s.value}</p>
+                  <p style={{ fontSize: 44, fontWeight: 900, color: C.black, letterSpacing: '-0.04em', margin: '0 0 6px', lineHeight: 1 }}>{displayValue}</p>
                   <p style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 6px' }}>{s.label}</p>
                   <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: 0 }}>{s.sub}</p>
                 </div>
@@ -437,26 +580,72 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 6. FEATURES GRID ══════════ */}
-      <section data-reveal="features" style={{ background: C.sectionAlt, padding: '96px 48px', borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('features') ? 1 : 0, transform: visibleSections.has('features') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+      <section data-reveal="features" style={{ background: C.sectionAlt, padding: '96px 48px', borderTop: `1px solid ${C.border}` }}>
+        <style>{`
+          .feature-card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .feature-card-hover:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(124, 58, 237, 0.2) !important;
+            border-color: #7c3aed !important;
+          }
+          .feature-icon-hover {
+            transition: transform 0.3s ease;
+          }
+          .feature-card-hover:hover .feature-icon-hover {
+            transform: scale(1.1) rotate(5deg);
+          }
+        `}</style>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>Features</p>
-            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>Everything you need to close more deals</h2>
-            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
+              Features
+            </motion.p>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
+              Everything you need to close more deals
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
               All your sales tools unified — no tab-switching, no data silos, no guesswork.
-            </p>
+            </motion.p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-            {features.map(f => {
+            {features.map((f, idx) => {
               const Icon = f.icon;
               return (
-                <div key={f.title} className="feature-card" style={{ padding: '32px 28px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', cursor: 'default' }}>
-                  <div style={{ height: 52, width: 52, borderRadius: 16, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                <motion.div
+                  key={f.title}
+                  initial={{ opacity: 0, y: 40 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ 
+                    duration: 0.5, 
+                    delay: idx * 0.1,
+                    ease: [0.4, 0, 0.2, 1]
+                  }}
+                  className="feature-card-hover"
+                  style={{ padding: '32px 28px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
+                  <div className="feature-icon-hover" style={{ height: 52, width: 52, borderRadius: 16, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
                     <Icon size={24} color={f.fg} />
                   </div>
                   <h3 style={{ fontSize: 17, fontWeight: 800, color: C.black, margin: '0 0 10px', letterSpacing: '-0.01em' }}>{f.title}</h3>
                   <p style={{ fontSize: 14, color: C.textGray, fontWeight: 500, lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -464,110 +653,396 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 7. HOW IT WORKS ══════════ */}
-      <section data-reveal="steps" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('steps') ? 1 : 0, transform: visibleSections.has('steps') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+      <section data-reveal="steps" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}` }}>
+        <style>{`
+          @keyframes pulse {
+            0%, 100% {
+              box-shadow: 0 12px 36px rgba(124, 58, 237, 0.35), 0 0 0 0 rgba(124, 58, 237, 0.4);
+            }
+            50% {
+              box-shadow: 0 16px 48px rgba(124, 58, 237, 0.45), 0 0 0 8px rgba(124, 58, 237, 0);
+            }
+          }
+          .cta-button-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .cta-button-hover:hover {
+            transform: scale(1.05);
+            box-shadow: 0 12px 32px rgba(124, 58, 237, 0.5) !important;
+          }
+          .cta-button-hover:hover .arrow-icon {
+            transform: translateX(4px);
+          }
+          .arrow-icon {
+            transition: transform 0.3s ease;
+            display: inline-block;
+          }
+        `}</style>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>How it works</p>
-            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>Up and running in minutes</h2>
-            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
+              How it works
+            </motion.p>
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
+              Up and running in minutes
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
               No complex setup. No migration headaches. Start closing deals faster on day one.
-            </p>
+            </motion.p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40, position: 'relative' }}>
-            <div style={{ position: 'absolute', top: 48, left: '16.66%', right: '16.66%', height: 2, background: `linear-gradient(90deg, ${C.violetLight}, ${C.violet}, ${C.violetLight})`, zIndex: 0 }} />
+            <motion.div
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              style={{ position: 'absolute', top: 48, left: '16.66%', right: '16.66%', height: 2, background: `linear-gradient(90deg, ${C.violetLight}, ${C.violet}, ${C.violetLight})`, zIndex: 0, transformOrigin: 'left' }} />
             {steps.map((step, idx) => {
               const Icon = step.icon;
+              const isActive = idx === 1;
               return (
-                <div key={step.num} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-                  <div style={{ height: 96, width: 96, borderRadius: '50%', background: idx === 1 ? C.violet : C.white, border: `3px solid ${idx === 1 ? C.violet : C.violetLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, boxShadow: idx === 1 ? `0 12px 36px ${C.violet}55` : '0 4px 20px rgba(0,0,0,0.08)' }}>
-                    <Icon size={32} color={idx === 1 ? C.white : C.violet} />
-                  </div>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'block' }}>Step {step.num}</span>
-                  <h3 style={{ fontSize: 20, fontWeight: 800, color: C.black, margin: '0 0 14px', letterSpacing: '-0.01em' }}>{step.title}</h3>
-                  <p style={{ fontSize: 15, color: C.textGray, fontWeight: 500, lineHeight: 1.75, margin: 0 }}>{step.desc}</p>
-                </div>
+                <motion.div
+                  key={step.num}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ 
+                    duration: 0.5, 
+                    delay: 0.4 + (idx * 0.2),
+                    ease: [0.4, 0, 0.2, 1]
+                  }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                  <motion.div
+                    initial={{ scale: 0.8 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ 
+                      duration: 0.5, 
+                      delay: 0.5 + (idx * 0.2),
+                      type: "spring",
+                      stiffness: 200,
+                      damping: 15
+                    }}
+                    style={{ 
+                      height: 96, 
+                      width: 96, 
+                      borderRadius: '50%', 
+                      background: isActive ? C.violet : C.white, 
+                      border: `3px solid ${isActive ? C.violet : C.violetLight}`, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      marginBottom: 28, 
+                      boxShadow: isActive ? `0 12px 36px ${C.violet}55, 0 0 0 0 rgba(124, 58, 237, 0.4)` : '0 4px 20px rgba(0,0,0,0.08)',
+                      animation: isActive ? 'pulse 2s ease-in-out infinite' : 'none'
+                    }}>
+                    <Icon size={32} color={isActive ? C.white : C.violet} />
+                  </motion.div>
+                  <motion.span
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: 0.6 + (idx * 0.2) }}
+                    style={{ fontSize: 11, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'block' }}>
+                    Step {step.num}
+                  </motion.span>
+                  <motion.h3
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: 0.7 + (idx * 0.2) }}
+                    style={{ fontSize: 20, fontWeight: 800, color: C.black, margin: '0 0 14px', letterSpacing: '-0.01em' }}>
+                    {step.title}
+                  </motion.h3>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: 0.8 + (idx * 0.2) }}
+                    style={{ fontSize: 15, color: C.textGray, fontWeight: 500, lineHeight: 1.75, margin: 0 }}>
+                    {step.desc}
+                  </motion.p>
+                </motion.div>
               );
             })}
           </div>
-          <div style={{ textAlign: 'center', marginTop: 56 }}>
-            <button onClick={() => setIsModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit' }}>
-              Get started free <ArrowRight size={16} />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 1.2 }}
+            style={{ textAlign: 'center', marginTop: 56 }}>
+            <button 
+              onClick={() => setIsModalOpen(true)} 
+              className="cta-button-hover"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit' }}>
+              Get started free <span className="arrow-icon"><ArrowRight size={16} /></span>
             </button>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ══════════ 8. PLATFORM + ORBIT DIAGRAM ══════════ */}
-      <section data-reveal="orbit" style={{ background: '#f0eeff', padding: '96px 48px', borderTop: `1px solid ${C.violetLight}`, overflow: 'hidden', opacity: visibleSections.has('orbit') ? 1 : 0, transform: visibleSections.has('orbit') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.9s ease, transform 0.9s ease' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+      <section data-reveal="orbit" style={{ 
+        background: '#ffffff', 
+        padding: '96px 48px 110px', 
+        position: 'relative', 
+        overflow: 'hidden', 
+        opacity: visibleSections.has('orbit') ? 1 : 0, 
+        transform: visibleSections.has('orbit') ? 'translateY(0)' : 'translateY(32px)', 
+        transition: 'opacity 0.9s ease, transform 0.9s ease' 
+      }}>
+        {/* Leaf Illustration - Bottom Left */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, pointerEvents: 'none', zIndex: 0 }}>
+          <svg width="200" height="220" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0 220C45 200 65 155 55 100C50 72 35 50 12 33C-5 20 -10 10 -10 0" stroke="#a5b4fc" strokeWidth="2.5" strokeLinecap="round"/>
+            <path d="M55 100C82 78 115 83 132 105C110 127 77 122 55 100Z" fill="#c7d2fe" opacity="0.75"/>
+            <path d="M38 138C66 121 93 132 104 154C82 170 55 160 38 138Z" fill="#818cf8" opacity="0.65"/>
+            <path d="M22 170C44 159 66 170 72 187C55 198 33 187 22 170Z" fill="#a5b4fc" opacity="0.85"/>
+            <path d="M16 72C33 50 60 50 72 72C50 88 28 83 16 72Z" fill="#818cf8" opacity="0.55"/>
+            <path d="M-5 120C12 104 34 110 40 126C23 137 6 131 -5 120Z" fill="#c7d2fe" opacity="0.85"/>
+          </svg>
+        </div>
+
+        {/* Leaf Illustration - Bottom Right */}
+        <div style={{ position: 'absolute', bottom: 0, right: 0, pointerEvents: 'none', zIndex: 0 }}>
+          <svg width="260" height="280" viewBox="0 0 260 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M260 280C215 225 183 150 205 65C210 43 222 22 238 0" stroke="#5eead4" strokeWidth="2.5" strokeLinecap="round"/>
+            <path d="M205 150C162 129 119 156 108 188C146 210 189 183 205 150Z" fill="#0d9488" opacity="0.8"/>
+            <path d="M183 86C140 70 102 97 97 130C130 146 167 119 183 86Z" fill="#14b8a6" opacity="0.7"/>
+            <path d="M216 205C183 194 156 216 151 243C178 259 205 238 216 205Z" fill="#2dd4bf" opacity="0.85"/>
+            <path d="M227 38C194 27 167 48 162 75C189 86 211 65 227 38Z" fill="#60a5fa" opacity="0.65"/>
+            <path d="M243 118C216 102 194 118 189 140C211 151 232 135 243 118Z" fill="#3b82f6" opacity="0.55"/>
+          </svg>
+        </div>
+
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative', zIndex: 1 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <p style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>All-in-one platform</p>
-            <h2 style={{ fontSize: 48, fontWeight: 900, color: C.black, lineHeight: 1.1, letterSpacing: '-0.025em', margin: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
+              ALL-IN-ONE PLATFORM
+            </p>
+            <h2 style={{ fontSize: 46, fontWeight: 900, color: C.black, lineHeight: 1.15, letterSpacing: '-0.025em', margin: 0 }}>
               A complete platform<br />to power your<br /><span style={{ color: C.violet }}>revenue engine</span>
             </h2>
-            <p style={{ fontSize: 16, color: C.textGray, fontWeight: 500, lineHeight: 1.8, maxWidth: 440, margin: 0 }}>
-              Consolidate your sales tools into one cohesive solution. Pulse connects every stage of the customer journey — from first touch to closed-won.
+            <p style={{ fontSize: 16, color: '#64748b', fontWeight: 500, lineHeight: 1.75, maxWidth: 440, margin: 0 }}>
+              Consolidate your tools into one cohesive solution. Pulse connects every stage of your customer journey from lead intake to deal closing.
             </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 13 }}>
-              {['Unify your entire sales stack', 'Automate repetitive tasks with AI', 'Get real-time coaching & insights', 'Close more deals, consistently faster'].map(item => (
-                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600, color: C.textGray }}>
-                  <CheckCircle2 size={17} color={C.violet} /> {item}
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                'Unify your sales tools',
+                'Automate repetitive tasks',
+                'Get real-time insights',
+                'Close more deals, faster'
+              ].map(item => (
+                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 700, color: '#1e293b' }}>
+                  <div style={{ height: 22, width: 22, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <CheckCircle2 size={15} color={C.violet} strokeWidth={2.5} />
+                  </div>
+                  {item}
                 </li>
               ))}
             </ul>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 26px', background: C.violet, color: C.white, fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 6px 20px ${C.violet}44`, fontFamily: 'inherit' }}>
-                Start free trial <ArrowRight size={15} />
-              </button>
-              <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 26px', background: C.white, color: C.textGray, fontSize: 14, fontWeight: 700, borderRadius: 100, border: `1.5px solid ${C.border}`, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Explore all features
+            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+              <button 
+                onClick={() => setIsModalOpen(true)} 
+                style={{ 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: 10, 
+                  padding: '14px 28px', 
+                  background: C.white, 
+                  color: C.violet, 
+                  fontSize: 15, 
+                  fontWeight: 700, 
+                  borderRadius: 100, 
+                  border: `1.5px solid ${C.violet}`, 
+                  cursor: 'pointer', 
+                  boxShadow: '0 2px 10px rgba(124, 58, 237, 0.08)', 
+                  fontFamily: 'inherit',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => {
+                  const el = e.currentTarget;
+                  el.style.background = C.violetLighter;
+                  el.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={e => {
+                  const el = e.currentTarget;
+                  el.style.background = C.white;
+                  el.style.transform = 'translateY(0)';
+                }}
+              >
+                Explore all features <ArrowRight size={16} color={C.violet} />
               </button>
             </div>
           </div>
 
           {/* Right — Orbit diagram */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32 }}>
-            <div style={{ position: 'relative', width: 380, height: 380 }}>
-              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px dashed rgba(124,58,237,0.3)' }} />
-              <div style={{ position: 'absolute', top: '15%', left: '15%', right: '15%', bottom: '15%', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.15)' }} />
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.14) 0%, transparent 70%)', pointerEvents: 'none' }} />
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 118, height: 118, borderRadius: '50%', background: 'linear-gradient(145deg, #8b5cf6, #6d28d9)', boxShadow: `0 16px 48px ${C.violet}66`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                <Activity size={36} color={C.white} strokeWidth={1.8} />
-                <span style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.06em' }}>PULSE CRM</span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, position: 'relative' }}>
+            <div style={{ position: 'relative', width: 440, height: 440 }}>
+              
+              {/* Soft purple outer glow circle behind central area */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 300, height: 300, borderRadius: '50%', background: 'rgba(124, 58, 237, 0.04)', pointerEvents: 'none' }} />
+              
+              {/* Intermediate soft ring glow */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 220, height: 220, borderRadius: '50%', background: 'rgba(124, 58, 237, 0.08)', pointerEvents: 'none' }} />
+
+              {/* Dashed orbit circle passing through node centers */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 340, height: 340, borderRadius: '50%', border: '1.5px dashed rgba(124, 58, 237, 0.3)', pointerEvents: 'none' }} />
+
+              {/* Center pulse logo button/circle */}
+              <div style={{ 
+                position: 'absolute', 
+                top: '50%', 
+                left: '50%', 
+                transform: 'translate(-50%,-50%)', 
+                width: 120, 
+                height: 120, 
+                borderRadius: '50%', 
+                background: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)', 
+                boxShadow: '0 12px 36px rgba(124, 58, 237, 0.35), 0 0 0 10px rgba(255, 255, 255, 0.95), 0 0 0 18px rgba(124, 58, 237, 0.06)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                zIndex: 2
+              }}>
+                <Activity size={48} color={C.white} strokeWidth={2.2} />
               </div>
-              {orbitNodes.map(({ label, icon: Icon }, i) => {
+
+              {/* 6 Orbit Nodes */}
+              {orbitNodes.map(({ label, icon: Icon, color, description }, i) => {
                 const baseAngle = (i / orbitNodes.length) * 360;
                 const angle = (baseAngle + orbitAngle - 90) * (Math.PI / 180);
-                const r = 158;
-                const cx = 190, cy = 190;
+                const r = 170;
+                const cx = 220, cy = 220;
                 const x = cx + r * Math.cos(angle);
                 const y = cy + r * Math.sin(angle);
                 const isActive = activeOrbitNode === label;
+
                 return (
-                  <div key={label} onClick={() => setActiveOrbitNode(isActive ? null : label)}
-                    className="orbit-node"
-                    style={{ position: 'absolute', left: x - 32, top: y - 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, width: 64, cursor: 'pointer' }}>
-                    <div style={{ height: 56, width: 56, borderRadius: 18, background: isActive ? C.violet : C.white, boxShadow: isActive ? `0 8px 24px ${C.violet}55` : '0 8px 24px rgba(0,0,0,0.12)', border: `1px solid ${isActive ? C.violet : 'rgba(124,58,237,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
-                      <Icon size={22} color={isActive ? C.white : C.violet} />
+                  <div 
+                    key={label}
+                    onClick={() => setActiveOrbitNode(isActive ? null : label)}
+                    style={{ 
+                      position: 'absolute', 
+                      left: x - 35, 
+                      top: y - 35, 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      cursor: 'pointer',
+                      zIndex: 3,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}>
+                    {/* Round Node Button */}
+                    <div style={{ 
+                      height: 70, 
+                      width: 70, 
+                      borderRadius: '50%', 
+                      background: isActive ? C.violet : C.white, 
+                      boxShadow: isActive ? `0 10px 28px ${C.violet}55` : '0 6px 24px rgba(15, 23, 42, 0.08)', 
+                      border: `2px solid ${isActive ? C.violet : '#ffffff'}`, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      transition: 'all 0.3s ease',
+                      transform: isActive ? 'scale(1.12)' : 'scale(1)'
+                    }}>
+                      <Icon size={26} color={isActive ? C.white : (color || C.violet)} strokeWidth={2.2} />
                     </div>
-                    <span style={{ fontSize: 10.5, fontWeight: 700, color: isActive ? C.violet : C.textGray, whiteSpace: 'nowrap', textAlign: 'center', textShadow: '0 1px 4px rgba(255,255,255,0.8)' }}>{label}</span>
+                    {/* Node Label Below */}
+                    <span style={{ 
+                      fontSize: 12, 
+                      fontWeight: 700, 
+                      color: isActive ? C.violet : '#1e293b', 
+                      whiteSpace: 'nowrap', 
+                      textAlign: 'center',
+                      marginTop: 6,
+                      transition: 'all 0.3s ease'
+                    }}>
+                      {label}
+                    </span>
                   </div>
                 );
               })}
             </div>
-            {/* Orbit info panel */}
+
+            {/* Info panel when node is selected */}
             {activeOrbitNode && (
-              <div style={{ width: '100%', maxWidth: 420, background: C.darkBg, borderRadius: 16, padding: '20px 24px', border: `1px solid ${C.darkBorder}`, position: 'relative', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
-                <button onClick={() => setActiveOrbitNode(null)} style={{ position: 'absolute', top: 14, right: 14, background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <X size={14} color="rgba(255,255,255,0.6)" />
-                </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                  <div style={{ height: 32, width: 32, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {React.createElement(orbitNodes.find(n => n.label === activeOrbitNode)!.icon, { size: 15, color: C.white })}
+              <div style={{ 
+                width: '100%', 
+                maxWidth: 440, 
+                background: C.white, 
+                borderRadius: 18, 
+                padding: '22px 26px', 
+                border: `2px solid ${C.violetLight}`, 
+                boxShadow: '0 12px 36px rgba(124,58,237,0.12)',
+                animation: 'fadeUpStep 0.3s ease-out',
+                position: 'relative',
+                zIndex: 4
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ 
+                      height: 38, 
+                      width: 38, 
+                      borderRadius: '50%', 
+                      background: C.violetLighter, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      border: `1px solid ${C.violetLight}`
+                    }}>
+                      {React.createElement(orbitNodes.find(n => n.label === activeOrbitNode)!.icon, { 
+                        size: 20, 
+                        color: orbitNodes.find(n => n.label === activeOrbitNode)!.color || C.violet, 
+                        strokeWidth: 2 
+                      })}
+                    </div>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: C.black }}>{activeOrbitNode}</span>
                   </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>{activeOrbitNode}</span>
+                  <button 
+                    onClick={() => setActiveOrbitNode(null)} 
+                    style={{ 
+                      background: C.sectionAlt, 
+                      border: `1px solid ${C.border}`, 
+                      borderRadius: 8, 
+                      width: 30, 
+                      height: 30, 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <X size={15} color={C.textGray} />
+                  </button>
                 </div>
-                <p style={{ fontSize: 13, color: C.darkText, lineHeight: 1.7, margin: 0 }}>{orbitNodeInfo[activeOrbitNode]}</p>
+                <p style={{ 
+                  fontSize: 14, 
+                  color: C.textGray, 
+                  lineHeight: 1.65, 
+                  margin: 0,
+                  fontWeight: 500
+                }}>
+                  {orbitNodes.find(n => n.label === activeOrbitNode)!.description}
+                </p>
               </div>
             )}
           </div>
