@@ -234,3 +234,7 @@ build/
 .env
 .env.local
 
+
+# Database files
+*.db
+*.db-journal
