@@ -1,7 +1,6 @@
 // API client wrapper with automatic mock-fallback for robustness
 
 const API_BASE_URL = 'http://localhost:8000';
-const SUMMARIZATION_API_URL = 'http://localhost:8003';
 
 export interface Lead {
   id: number | string;
@@ -458,7 +457,7 @@ export interface ConversationSummary {
 
 export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
   try {
-    const res = await fetch(`${SUMMARIZATION_API_URL}/api/v1/summarization/summarise`, {
+    const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -478,7 +477,7 @@ export async function summarizeThread(threadId: string, messages: SummaryMessage
 
 export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
   try {
-    const res = await fetch(`${SUMMARIZATION_API_URL}/api/v1/summarization/summary/${threadId}`);
+    const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`);
     if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
     return await res.json() as ConversationSummary;
   } catch (err) {
