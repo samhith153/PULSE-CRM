@@ -602,7 +602,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.4 }}
               style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
               Features
@@ -610,7 +610,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.5, delay: 0.1 }}
               style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
               Everything you need to close more deals
@@ -618,7 +618,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.5, delay: 0.2 }}
               style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
               All your sales tools unified — no tab-switching, no data silos, no guesswork.
@@ -632,7 +632,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   key={f.title}
                   initial={{ opacity: 0, y: 40 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
+                  viewport={{ once: true, margin: "0px" }}
                   transition={{ 
                     duration: 0.5, 
                     delay: idx * 0.1,
@@ -683,7 +683,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.4 }}
               style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
               How it works
@@ -691,7 +691,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <motion.h2
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.5, delay: 0.1 }}
               style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
               Up and running in minutes
@@ -699,7 +699,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.5, delay: 0.2 }}
               style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
               No complex setup. No migration headaches. Start closing deals faster on day one.
@@ -709,7 +709,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <motion.div
               initial={{ scaleX: 0 }}
               whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
+              viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 1.2, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
               style={{ position: 'absolute', top: 48, left: '16.66%', right: '16.66%', height: 2, background: `linear-gradient(90deg, ${C.violetLight}, ${C.violet}, ${C.violetLight})`, zIndex: 0, transformOrigin: 'left' }} />
             {steps.map((step, idx) => {
@@ -720,7 +720,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   key={step.num}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
+                  viewport={{ once: true, margin: "0px" }}
                   transition={{ 
                     duration: 0.5, 
                     delay: 0.4 + (idx * 0.2),
@@ -730,7 +730,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   <motion.div
                     initial={{ scale: 0.8 }}
                     whileInView={{ scale: 1 }}
-                    viewport={{ once: true }}
+                    viewport={{ once: true, margin: "0px" }}
                     transition={{ 
                       duration: 0.5, 
                       delay: 0.5 + (idx * 0.2),
@@ -756,7 +756,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   <motion.span
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
+                    viewport={{ once: true, margin: "0px" }}
                     transition={{ duration: 0.4, delay: 0.6 + (idx * 0.2) }}
                     style={{ fontSize: 11, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'block' }}>
                     Step {step.num}
@@ -764,7 +764,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   <motion.h3
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
+                    viewport={{ once: true, margin: "0px" }}
                     transition={{ duration: 0.4, delay: 0.7 + (idx * 0.2) }}
                     style={{ fontSize: 20, fontWeight: 800, color: C.black, margin: '0 0 14px', letterSpacing: '-0.01em' }}>
                     {step.title}
@@ -772,7 +772,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   <motion.p
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
+                    viewport={{ once: true, margin: "0px" }}
                     transition={{ duration: 0.4, delay: 0.8 + (idx * 0.2) }}
                     style={{ fontSize: 15, color: C.textGray, fontWeight: 500, lineHeight: 1.75, margin: 0 }}>
                     {step.desc}
@@ -784,7 +784,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.5, delay: 1.2 }}
             style={{ textAlign: 'center', marginTop: 56 }}>
             <button 
