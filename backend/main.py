@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, companies, contacts, leads, deals, timeline, gmail, users
+from routers import auth, companies, contacts, leads, deals, timeline, gmail, users, summarization
 
 from database import engine
 import models
@@ -258,6 +258,7 @@ app.include_router(deals.router)
 app.include_router(timeline.router)
 app.include_router(gmail.router)
 app.include_router(users.router)
+app.include_router(summarization.router)
 
 @app.get("/")
 def read_root():
