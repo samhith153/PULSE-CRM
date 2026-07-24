@@ -10,7 +10,13 @@ import {
   TrendingUp, 
   ArrowUpRight,
   ShieldCheck,
-  Check
+  Check,
+  BrainCircuit,
+  MessageSquare,
+  Target,
+  Smile,
+  Frown,
+  Meh
 } from 'lucide-react';
 
 interface AILead {
@@ -68,7 +74,7 @@ export default function AIInsightsView() {
         <div>
           <h2 className="font-sans text-2xl text-brand-heading font-bold">AI Copilot Insights</h2>
           <p className="text-xs text-brand-text/80 mt-1 leading-relaxed font-bold max-w-2xl">
-            Real-time recommendations generated using predictive lead scoring, compliance mapping status, and contact velocity.
+            Real-time recommendations powered by predictive lead scoring, conversation intelligence, compliance mapping, and contact velocity.
           </p>
         </div>
       </div>
@@ -194,6 +200,116 @@ export default function AIInsightsView() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Conversation Intelligence Section - Bhavani Summarization */}
+      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+        <h3 className="font-extrabold text-brand-heading text-sm mb-4 flex items-center">
+          <BrainCircuit className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+          <span>Conversation Intelligence</span>
+          <span className="ml-2 text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Bhavani</span>
+        </h3>
+
+        <div className="grid grid-cols-12 gap-4">
+          {/* Sentiment Breakdown */}
+          <div className="col-span-12 lg:col-span-4 p-4 border border-brand-border-purple/15 rounded-xl bg-slate-50/50">
+            <h4 className="text-[10px] font-extrabold text-brand-heading/70 uppercase tracking-wider mb-3 flex items-center">
+              <Smile className="h-3.5 w-3.5 mr-1.5 text-brand-accent" />
+              Sentiment Breakdown
+            </h4>
+            <div className="space-y-2.5">
+              <div>
+                <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
+                  <span className="flex items-center"><Smile className="h-3 w-3 text-emerald-500 mr-1" /> Positive</span>
+                  <span className="tabular-nums">3</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '60%' }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
+                  <span className="flex items-center"><Meh className="h-3 w-3 text-amber-500 mr-1" /> Neutral</span>
+                  <span className="tabular-nums">1</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '20%' }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
+                  <span className="flex items-center"><Frown className="h-3 w-3 text-rose-500 mr-1" /> Negative</span>
+                  <span className="tabular-nums">1</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-rose-500 rounded-full" style={{ width: '20%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Intent Distribution */}
+          <div className="col-span-12 lg:col-span-4 p-4 border border-brand-border-purple/15 rounded-xl bg-slate-50/50">
+            <h4 className="text-[10px] font-extrabold text-brand-heading/70 uppercase tracking-wider mb-3 flex items-center">
+              <Target className="h-3.5 w-3.5 mr-1.5 text-brand-accent" />
+              Intent Distribution
+            </h4>
+            <div className="space-y-2.5">
+              {[
+                { label: 'Follow-up', count: 2, pct: 40 },
+                { label: 'Buy / Purchase', count: 1, pct: 20 },
+                { label: 'Demo Request', count: 1, pct: 20 },
+                { label: 'Negotiate', count: 1, pct: 20 },
+              ].map((item) => (
+                <div key={item.label}>
+                  <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
+                    <span>{item.label}</span>
+                    <span className="tabular-nums">{item.count}</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${item.pct}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] text-slate-400 font-bold mt-3 leading-relaxed">
+              Based on email thread analysis via Groq LLM
+            </p>
+          </div>
+
+          {/* Recent Summaries */}
+          <div className="col-span-12 lg:col-span-4 p-4 border border-brand-border-purple/15 rounded-xl bg-slate-50/50">
+            <h4 className="text-[10px] font-extrabold text-brand-heading/70 uppercase tracking-wider mb-3 flex items-center">
+              <MessageSquare className="h-3.5 w-3.5 mr-1.5 text-brand-accent" />
+              Recent Summaries
+            </h4>
+            <div className="space-y-2.5">
+              {[
+                { from: 'Alex Rivera', summary: 'SAML config approved, questions on liability SLAs.', sentiment: 'positive' },
+                { from: 'Helena Troy', summary: 'Pricing inquiry for 40-seat enterprise tier.', sentiment: 'neutral' },
+                { from: 'Marcus Aurelius', summary: 'Compliance audit files sent, awaiting feedback.', sentiment: 'positive' },
+              ].map((item, i) => (
+                <div key={i} className="p-2.5 bg-white border border-brand-border-purple/10 rounded-lg">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[9px] font-extrabold text-brand-heading">{item.from}</span>
+                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                      item.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
+                      item.sentiment === 'negative' ? 'bg-rose-50 text-rose-700' :
+                      'bg-slate-100 text-slate-600'
+                    }`}>{item.sentiment}</span>
+                  </div>
+                  <p className="text-[9px] text-brand-text/70 font-semibold leading-relaxed">{item.summary}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 pt-3 border-t border-brand-border-purple/10">
+              <p className="text-[9px] text-brand-accent font-extrabold flex items-center">
+                <Sparkles className="h-3 w-3 mr-1" />
+                Powered by Groq (llama-3.3-70b-versatile)
+              </p>
             </div>
           </div>
         </div>

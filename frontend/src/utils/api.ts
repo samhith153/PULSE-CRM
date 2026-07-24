@@ -1,6 +1,7 @@
 // API client wrapper with automatic mock-fallback for robustness
 
 const API_BASE_URL = 'http://localhost:8000';
+const SUMMARIZATION_API_URL = 'http://localhost:8003';
 
 export interface Lead {
   id: number | string;
@@ -426,4 +427,57 @@ export async function updateDealStage(dealId: string | number, stageId: string):
     method: 'PUT',
     body: JSON.stringify({ stage_id: stageId })
   });
+}
+
+// --- Conversation Intelligence (Bhavani Summarization API) ---
+export interface SummaryMessage {
+  sender: string;
+  recipients: string[];
+  subject: string;
+  body: string;
+  timestamp: string;
+  direction: 'incoming' | 'outgoing';
+}
+
+export interface ConversationSummary {
+  thread_id: string;
+  summary: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+  intent: 'demo' | 'buy' | 'negotiate' | 'followup' | 'decline' | 'other';
+  confidence: number;
+  key_points: string[];
+  action_items: string[];
+  processing_time_ms?: number;
+  version?: string;
+}
+
+export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
+  try {
+    const res = await fetch(`${SUMMARIZATION_API_URL}/api/v1/summarization/summarise`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        thread_id: threadId,
+        messages,
+        contact_id: contactId,
+        deal_id: dealId
+      })
+    });
+    if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
+    return await res.json() as ConversationSummary;
+  } catch (err) {
+    console.warn('Failed to summarize thread, using fallback.', err);
+    return null;
+  }
+}
+
+export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
+  try {
+    const res = await fetch(`${SUMMARIZATION_API_URL}/api/v1/summarization/summary/${threadId}`);
+    if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
+    return await res.json() as ConversationSummary;
+  } catch (err) {
+    console.warn('Failed to get summary by thread, using fallback.', err);
+    return null;
+  }
 }
