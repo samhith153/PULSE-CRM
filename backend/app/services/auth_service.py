@@ -134,16 +134,21 @@ class AuthService:
         )
 
         logger.info("User logged in", extra={"user_id": str(user.id)})
-        await self.events.record_event(
-            "USER_LOGGED_IN",
-            organization_id=user.organization_id,
-            actor_id=user.id,
-            aggregate_type="user",
-            aggregate_id=str(user.id),
-            source="auth",
-            payload={"user_id": str(user.id), "email": user.email, "client_ip": client_ip},
-        )
-        return await self._build_tokens(user)
+        tokens = await self._build_tokens(user)
+        try:
+            async with self.db.begin_nested():
+                await self.events.record_event(
+                    "USER_LOGGED_IN",
+                    organization_id=user.organization_id,
+                    actor_id=user.id,
+                    aggregate_type="user",
+                    aggregate_id=str(user.id),
+                    source="auth",
+                    payload={"user_id": str(user.id), "email": user.email, "client_ip": client_ip},
+                )
+        except Exception:
+            logger.exception("Failed to record login event", extra={"user_id": str(user.id)})
+        return tokens
 
     async def refresh_token(self, refresh_token: str) -> TokenResponse:
         payload = decode_refresh_token(refresh_token)
