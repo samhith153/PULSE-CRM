@@ -35,9 +35,8 @@ def _error_body(code: str, message: str, details: list = None) -> dict:
         error_code=code,
         message=message,
         details=details or [],
-        request_id=request_id_var.get("system"),
+        request_id=request_id_var.get() or "system",
     ).model_dump()
-
 
 
 async def pulse_exception_handler(request: Request, exc: PulseCRMException) -> JSONResponse:

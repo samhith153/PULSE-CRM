@@ -1,4 +1,4 @@
-"""
+﻿"""
 RBAC Permission Registry
 Defines all available permissions and their role assignments.
 Used by both the seeder and the require_permission() dependency.
@@ -59,6 +59,9 @@ class Permission(str, Enum):
 
     AI_ACCESS = "ai:access"
 
+    WEBHOOK_MANAGE = "webhook:manage"
+    FILE_UPLOAD = "file:upload"
+
     REPORT_VIEW = "report:view"
     REPORT_EXPORT = "report:export"
 
@@ -110,6 +113,8 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.GMAIL_CONNECT,
         Permission.DASHBOARD_READ,
         Permission.AI_ACCESS,
+        Permission.WEBHOOK_MANAGE,
+        Permission.FILE_UPLOAD,
         Permission.REPORT_VIEW,
         Permission.REPORT_EXPORT,
     },
@@ -133,6 +138,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.DASHBOARD_READ,
+        Permission.FILE_UPLOAD,
         Permission.REPORT_VIEW,
     },
 }
@@ -174,3 +180,4 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
             permissions.update(get_permissions_for_role(built_in_role))
 
     return sorted(permissions)
+

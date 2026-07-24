@@ -68,6 +68,8 @@ class Company(Base):
     name = Column(String(150), nullable=False)
     domain = Column(String(100), nullable=True)
     industry = Column(String(100), nullable=True)
+    current_crm = Column(String(100), nullable=True)
+    operational_system = Column(String(100), nullable=True)
     owner_id = Column(UUID(as_uuid=True), ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -108,7 +110,9 @@ class Lead(Base):
     source = Column(String(50), nullable=True)  # Website, Cold Call, Referral, etc.
     industry = Column(String(100), nullable=True)
     current_crm = Column(String(100), nullable=True)
+    location = Column(String(150), nullable=True)
     operational_system = Column(String(100), nullable=True)
+    operational_systems = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

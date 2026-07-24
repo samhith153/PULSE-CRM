@@ -1,6 +1,4 @@
-﻿"""
-AI-ready placeholder schemas.
-"""
+﻿"""AI schemas."""
 from datetime import datetime
 from typing import Any, Optional
 from uuid import UUID
@@ -22,11 +20,13 @@ class AILeadScoreRequest(BaseModel):
 
 class AILeadScoreResponse(BaseModel):
     lead_id: UUID
-    status: str = "placeholder"
+    status: str = "generated"
     score: Optional[int] = None
     confidence: Optional[int] = None
     factors: list[str] = Field(default_factory=list)
     next_best_actions: list[str] = Field(default_factory=list)
+    explanation: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     generated_at: datetime
 
 
@@ -39,9 +39,11 @@ class AINextBestActionRequest(BaseModel):
 class AINextBestActionResponse(BaseModel):
     entity_type: str
     entity_id: UUID
-    status: str = "placeholder"
+    status: str = "generated"
     actions: list[str] = Field(default_factory=list)
     rationale: Optional[str] = None
+    reasoning: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     generated_at: datetime
 
 
@@ -53,9 +55,10 @@ class AIConversationSummaryRequest(BaseModel):
 
 class AIConversationSummaryResponse(BaseModel):
     thread_id: str
-    status: str = "placeholder"
+    status: str = "generated"
     summary: Optional[str] = None
     bullets: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     generated_at: datetime
 
 
@@ -66,9 +69,10 @@ class AIEmailSummaryRequest(BaseModel):
 
 class AIEmailSummaryResponse(BaseModel):
     email_id: UUID
-    status: str = "placeholder"
+    status: str = "generated"
     summary: Optional[str] = None
     key_points: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     generated_at: datetime
 
 
@@ -81,8 +85,10 @@ class AIRecommendationRequest(BaseModel):
 class AIRecommendationResponse(BaseModel):
     entity_type: str
     entity_id: Optional[UUID] = None
-    status: str = "placeholder"
+    status: str = "generated"
     recommendations: list[str] = Field(default_factory=list)
+    reasoning: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     generated_at: datetime
 
 
@@ -109,11 +115,13 @@ class DealInsightRequest(BaseModel):
 
 class DealInsightResponse(BaseModel):
     deal_id: UUID
-    status: str = "placeholder"
+    status: str = "generated"
     score: Optional[int] = None
     confidence: Optional[int] = None
     factors: list[str] = Field(default_factory=list)
     next_best_actions: list[str] = Field(default_factory=list)
+    explanation: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     generated_at: datetime
 
 
@@ -124,7 +132,8 @@ class SummaryRequest(AIContextRequest):
 class SummaryResponse(BaseModel):
     entity_type: str
     entity_id: Optional[UUID] = None
-    status: str = "placeholder"
+    status: str = "generated"
     summary: Optional[str] = None
     bullets: list[str] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
     generated_at: datetime
