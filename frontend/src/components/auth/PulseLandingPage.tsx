@@ -5,7 +5,7 @@ import {
   Activity, ArrowRight, CheckCircle2, ChevronRight,
   Loader2, Mail, Sparkles, Users, Zap, Award, Shield,
   BarChart2, RefreshCw, Headphones, TrendingUp, Settings,
-  X, LayoutDashboard, Star, Play,
+  X, LayoutDashboard, Star,
   Target, Lock
 } from 'lucide-react';
 import Navbar from '@/components/navigation/Navbar';
@@ -282,13 +282,6 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit', letterSpacing: '-0.01em' }}>
                 Start Free Trial <ArrowRight size={16} />
-              </button>
-              <button onClick={() => setIsModalOpen(true)} className="cta-btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 24px', background: 'transparent', color: C.black, fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                <div style={{ height: 28, width: 28, borderRadius: '50%', background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Play size={11} color={C.violet} fill={C.violet} />
-                </div>
-                Watch Demo
               </button>
             </div>
 
@@ -631,10 +624,6 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
               style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 36px', background: C.white, color: C.violetDark, fontSize: 16, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 10px 32px rgba(0,0,0,0.22)', fontFamily: 'inherit' }}>
               Start Free Trial <ArrowRight size={17} />
-            </button>
-            <button onClick={() => setIsModalOpen(true)} className="cta-btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 36px', background: 'rgba(255,255,255,0.12)', color: C.white, fontSize: 16, fontWeight: 700, borderRadius: 100, border: '1.5px solid rgba(255,255,255,0.35)', cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Play size={15} fill={C.white} color={C.white} /> Book a Demo
             </button>
           </div>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', margin: '22px 0 0', fontWeight: 500 }}>
