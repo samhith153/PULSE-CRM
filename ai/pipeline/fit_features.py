@@ -158,13 +158,13 @@ def customization_potential_score(
     """
 
     score = (
-
-        industry_score * 0.40 +
-
-        operational_score * 0.35 +
-
-        company_score * 0.25
-
+        industry_score * 0.50 +
+        (100 - software_gap_score) * 0.25 +
+        (100 - operational_system_score) * 0.25
     )
-
+ 
+    # Clamp to 0-100 range
+    score = max(0, min(100, score))
+ 
     return round(score)
+ 
