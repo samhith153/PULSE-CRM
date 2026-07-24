@@ -607,7 +607,7 @@ export default function EmailsView() {
                       <div className="mt-2 space-y-2.5">
                         <p className="text-[11px] text-brand-text/80 leading-relaxed font-bold">{aiSummaryResult.summary}</p>
 
-                        {/* Sentiment + Intent + Confidence badges */}
+                        {/* Badge row: sentiment, intent, category, confidence */}
                         <div className="flex flex-wrap gap-1.5">
                           <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
                             aiSummaryResult.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
@@ -621,6 +621,17 @@ export default function EmailsView() {
                             <Target className="h-3 w-3" />
                             <span>{aiSummaryResult.intent}</span>
                           </span>
+                          {aiSummaryResult.category && (
+                            <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                              aiSummaryResult.category === 'urgent' ? 'bg-rose-50 text-rose-700' :
+                              aiSummaryResult.category === 'sales' ? 'bg-emerald-50 text-emerald-700' :
+                              aiSummaryResult.category === 'support' ? 'bg-amber-50 text-amber-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              <MessageSquare className="h-3 w-3" />
+                              <span>{aiSummaryResult.category}</span>
+                            </span>
+                          )}
                           <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[9px] font-extrabold">
                             <MessageSquare className="h-3 w-3" />
                             <span>{(aiSummaryResult.confidence * 100).toFixed(0)}% confidence</span>
@@ -654,6 +665,37 @@ export default function EmailsView() {
                                 </li>
                               ))}
                             </ul>
+                          </div>
+                        )}
+
+                        {/* Draft Reply */}
+                        {aiSummaryResult.draft_reply && (
+                          <div className="border-t border-brand-border-purple/15 pt-2">
+                            <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-1">Draft Reply</p>
+                            <div className="bg-white border border-brand-border-purple/10 rounded-lg p-2.5 text-[10px] text-brand-text/80 font-medium leading-relaxed italic">
+                              "{aiSummaryResult.draft_reply}"
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Follow-up Suggestion */}
+                        {aiSummaryResult.follow_up_suggestion && (
+                          <div className="border-t border-brand-border-purple/15 pt-2 flex items-start space-x-2">
+                            <span className="text-amber-500 text-[10px] mt-0.5">⏰</span>
+                            <div>
+                              <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-0.5">Follow-up</p>
+                              <p className="text-[10px] text-brand-text/80 font-semibold">{aiSummaryResult.follow_up_suggestion}</p>
+                              {aiSummaryResult.follow_up_timing && (
+                                <span className={`inline-block mt-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                                  aiSummaryResult.follow_up_timing === 'immediate' ? 'bg-rose-50 text-rose-700' :
+                                  aiSummaryResult.follow_up_timing === 'today' ? 'bg-amber-50 text-amber-700' :
+                                  aiSummaryResult.follow_up_timing === 'no_followup' ? 'bg-slate-100 text-slate-500' :
+                                  'bg-blue-50 text-blue-700'
+                                }`}>
+                                  {aiSummaryResult.follow_up_timing.replace('_', ' ')}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>

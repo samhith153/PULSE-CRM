@@ -442,13 +442,18 @@ export interface SummaryMessage {
 export interface ConversationSummary {
   thread_id: string;
   summary: string;
+  summary_word: string;
   sentiment: 'positive' | 'neutral' | 'negative';
   intent: 'demo' | 'buy' | 'negotiate' | 'followup' | 'decline' | 'other';
   confidence: number;
   key_points: string[];
   action_items: string[];
+  category?: 'sales' | 'support' | 'general' | 'urgent';
+  draft_reply?: string;
+  follow_up_suggestion?: string;
+  follow_up_timing?: 'immediate' | 'today' | 'tomorrow' | '2_days' | '3_days' | '1_week' | '2_weeks' | 'no_followup';
   processing_time_ms?: number;
-  version?: string;
+  model_version?: string;
 }
 
 export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {

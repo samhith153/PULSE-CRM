@@ -280,7 +280,7 @@ export default function AIInsightsView() {
             </p>
           </div>
 
-          {/* Recent Summaries */}
+          {/* Recent Summaries with Follow-up */}
           <div className="col-span-12 lg:col-span-4 p-4 border border-brand-border-purple/15 rounded-xl bg-slate-50/50">
             <h4 className="text-[10px] font-extrabold text-brand-heading/70 uppercase tracking-wider mb-3 flex items-center">
               <MessageSquare className="h-3.5 w-3.5 mr-1.5 text-brand-accent" />
@@ -288,27 +288,35 @@ export default function AIInsightsView() {
             </h4>
             <div className="space-y-2.5">
               {[
-                { from: 'Alex Rivera', summary: 'SAML config approved, questions on liability SLAs.', sentiment: 'positive' },
-                { from: 'Helena Troy', summary: 'Pricing inquiry for 40-seat enterprise tier.', sentiment: 'neutral' },
-                { from: 'Marcus Aurelius', summary: 'Compliance audit files sent, awaiting feedback.', sentiment: 'positive' },
+                { from: 'Alex Rivera', summary: 'SAML config approved, questions on liability SLAs.', sentiment: 'positive', category: 'sales', followUp: 'Follow up tomorrow with proposal' },
+                { from: 'Helena Troy', summary: 'Pricing inquiry for 40-seat enterprise tier.', sentiment: 'neutral', category: 'sales', followUp: 'Follow up in 2 days with pricing' },
+                { from: 'Marcus Aurelius', summary: 'Compliance audit files sent, awaiting feedback.', sentiment: 'positive', category: 'support', followUp: 'Follow up in 3 days' },
               ].map((item, i) => (
                 <div key={i} className="p-2.5 bg-white border border-brand-border-purple/10 rounded-lg">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-[9px] font-extrabold text-brand-heading">{item.from}</span>
-                    <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
-                      item.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
-                      item.sentiment === 'negative' ? 'bg-rose-50 text-rose-700' :
-                      'bg-slate-100 text-slate-600'
-                    }`}>{item.sentiment}</span>
+                    <div className="flex items-center space-x-1">
+                      <span className={`text-[7px] font-bold px-1 py-0.5 rounded ${
+                        item.category === 'sales' ? 'bg-emerald-50 text-emerald-700' :
+                        item.category === 'urgent' ? 'bg-rose-50 text-rose-700' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>{item.category}</span>
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                        item.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
+                        item.sentiment === 'negative' ? 'bg-rose-50 text-rose-700' :
+                        'bg-slate-100 text-slate-600'
+                      }`}>{item.sentiment}</span>
+                    </div>
                   </div>
                   <p className="text-[9px] text-brand-text/70 font-semibold leading-relaxed">{item.summary}</p>
+                  <p className="text-[8px] text-amber-600 font-extrabold mt-1">⏰ {item.followUp}</p>
                 </div>
               ))}
             </div>
             <div className="mt-3 pt-3 border-t border-brand-border-purple/10">
               <p className="text-[9px] text-brand-accent font-extrabold flex items-center">
                 <Sparkles className="h-3 w-3 mr-1" />
-                Powered by Groq (llama-3.3-70b-versatile)
+                Powered by Groq (llama-3.1-8b-instant)
               </p>
             </div>
           </div>
