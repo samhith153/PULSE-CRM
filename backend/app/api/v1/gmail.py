@@ -13,6 +13,7 @@ from app.schemas.common import PaginatedResponse, StandardResponse
 from app.schemas.email import (
     EmailHistoryResponse,
     EmailResponse,
+    EmailSendRequest,
     EmailSyncRequest,
     EmailSyncResultResponse,
     EmailThreadResponse,
@@ -172,6 +173,35 @@ async def list_emails(
     )
     return {"success": True, "message": "OK", "data": paginated}
 
+@router.post(
+    "/send",
+    response_model=StandardResponse[EmailResponse],
+    summary="Send Gmail email",
+    dependencies=[Depends(require_permission("email:send"))],
+)
+async def send_email(
+    payload: EmailSendRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+):
+    svc = EmailService(db)
+
+    email = await svc.send_email(
+        organization_id=current_user.organization_id,
+        created_by=current_user.id,
+        gmail_connection_id=payload.gmail_connection_id,
+        receiver=str(payload.receiver),
+        subject=payload.subject,
+        html_body=payload.html_body,
+        external_entity_type=payload.external_entity_type,
+        external_entity_id=payload.external_entity_id,
+    )
+
+    return {
+        "success": True,
+        "message": "Email sent successfully.",
+        "data": email,
+    }
 
 @router.post(
     "/sync",
