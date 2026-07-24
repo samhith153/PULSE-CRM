@@ -40,6 +40,10 @@ class Lead(Base, TenantMixin):
         String(50), nullable=True, index=True
     )
     interest: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    industry: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    current_crm: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    location: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
+    operational_systems: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # ── Value ─────────────────────────────────────────────────────────────────
     estimated_value: Mapped[Optional[Decimal]] = mapped_column(

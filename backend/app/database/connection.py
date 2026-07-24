@@ -3,6 +3,7 @@ Database connection utilities.
 """
 
 import logging
+import ssl
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -20,7 +21,21 @@ DATABASE_URL = (
 if not DATABASE_URL:
     raise RuntimeError("Database URL is not configured")
 
-engine = create_async_engine(DATABASE_URL, echo=False, pool_pre_ping=True)
+# ----------------------------------------------------------
+# SSL WORKAROUND (needed for local dev against the Supabase
+# pooler — without this, asyncpg's handshake fails locally
+# even though it works fine on Render).
+# ----------------------------------------------------------
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
+engine = create_async_engine(
+    DATABASE_URL,
+    connect_args={"ssl": ssl_context},
+    echo=False,
+    pool_pre_ping=True,
+)
 AsyncSessionFactory = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 AsyncSessionLocal = AsyncSessionFactory
 

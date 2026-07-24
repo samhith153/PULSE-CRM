@@ -1,878 +1,835 @@
 'use client';
 
-import React, { useState } from 'react';
-import { 
-  Mail, 
-  ArrowRight, 
-  ShieldCheck, 
-  Sparkles, 
-  Layers, 
-  Activity, 
-  Loader2,
-  X,
-  LayoutDashboard,
-  CheckCircle2,
-  Lock,
-  ChevronRight,
-  TrendingUp,
-  Award,
-  Zap,
-  Users
+import React, { useState, useEffect } from 'react';
+import {
+  Activity, ArrowRight, CheckCircle2, ChevronRight,
+  Loader2, Mail, Sparkles, Users, Zap, Award, Shield,
+  BarChart2, RefreshCw, Headphones, TrendingUp, Settings,
+  X, LayoutDashboard, Star, Play,
+  Target, Lock
 } from 'lucide-react';
+import Navbar from '@/components/navigation/Navbar';
 
 interface PulseLandingPageProps {
   onLogin: (role: 'representative' | 'manager' | 'admin') => void;
 }
 
-export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
-  const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  
-  // Interactive Product Suite Tab State
-  const [activeTab, setActiveTab] = useState(0);
-  
-  // Login Role Selection State
-  const [selectedRole, setSelectedRole] = useState<'representative' | 'manager' | 'admin'>('manager');
+const C = {
+  violet: '#7c3aed',
+  violetDark: '#6d28d9',
+  violetLight: '#ede9fe',
+  violetLighter: '#f5f3ff',
+  white: '#ffffff',
+  black: '#0f172a',
+  textGray: '#475569',
+  textMuted: '#94a3b8',
+  border: '#e2e8f0',
+  sectionAlt: '#f8fafc',
+  emerald: '#059669',
+  blue: '#2563eb',
+  orange: '#ea580c',
+  darkBg: '#0f172a',
+  darkBorder: 'rgba(255,255,255,0.08)',
+  darkText: 'rgba(255,255,255,0.6)',
+};
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsModalOpen(false);
-      onLogin(selectedRole);
-    }, 1200); // Simulated loading
+type Role = 'representative' | 'manager' | 'admin';
+
+interface Toast {
+  id: number;
+  message: string;
+  type: 'success' | 'error';
+}
+
+export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [newsEmail, setNewsEmail] = useState('');
+  const [selectedRole, setSelectedRole] = useState<Role>('manager');
+  const [orbitAngle, setOrbitAngle] = useState(0);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [activeOrbitNode, setActiveOrbitNode] = useState<string | null>(null);
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const t = setInterval(() => setOrbitAngle(a => (a + 0.25) % 360), 50);
+    return () => clearInterval(t);
+  }, []);
+
+  // Scroll-reveal observer
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = (entry.target as HTMLElement).dataset.reveal;
+          if (id) setVisibleSections(prev => new Set([...prev, id]));
+        }
+      }),
+      { threshold: 0.1 }
+    );
+    document.querySelectorAll('[data-reveal]').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  const addToast = (message: string, type: 'success' | 'error') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   };
 
-  const handleGoogleLogin = () => {
+  const handleLogin = () => {
+    if (!email || !password) { addToast('Please fill in all fields.', 'error'); return; }
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
       setIsModalOpen(false);
+      setEmail('');
+      setPassword('');
       onLogin(selectedRole);
     }, 1200);
   };
 
-  // Premium product suites definitions with light-mode software mockups
-  const productSuites = [
-    {
-      title: 'Sales & Pipeline',
-      icon: LayoutDashboard,
-      badge: 'Revenue Acceleration',
-      heading: 'Manage deals & automate sales stages',
-      desc: 'Move deals through customizable funnel columns, coordinate sales reps on a live revenue leaderboard, and instantly log updates.',
-      features: [
-        'Interactive kanban deal pipeline boards',
-        'Sales rep revenue leaderboards',
-        'Win/loss analysis reason codes'
-      ],
-      color: 'from-purple-600 to-indigo-600',
-      mockup: (
-        <div className="w-full h-full p-4 flex flex-col justify-between bg-white text-slate-900 rounded-xl shadow-md border border-slate-200/90">
-          <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
-            <div className="flex items-center space-x-2">
-              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-              <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Active Deals Board</span>
-            </div>
-            <span className="text-[9px] text-slate-400 font-semibold">Updated just now</span>
-          </div>
-          {/* Light Kanban Board */}
-          <div className="grid grid-cols-3 gap-2 flex-1 mt-3">
-            {[
-              { col: 'Qualified', name: 'Acme Corp', val: '$120,000', tag: 'High Priority' },
-              { col: 'Proposal', name: 'Initech Inc', val: '$85,000', tag: 'Under Review' },
-              { col: 'Negotiation', name: 'Stark Ind.', val: '$230,000', tag: 'Closing Soon' }
-            ].map((card, i) => (
-              <div key={i} className="bg-slate-50/80 p-2.5 rounded-lg border border-slate-200/70 flex flex-col justify-between hover:border-slate-300 transition-colors">
-                <div>
-                  <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider">{card.col}</span>
-                  <span className="text-[10.5px] font-bold text-slate-800 mt-1 block truncate">{card.name}</span>
-                </div>
-                <div className="mt-2">
-                  <span className="text-[10px] text-indigo-600 font-extrabold block">{card.val}</span>
-                  <span className="text-[7.5px] font-semibold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200 mt-1 inline-block">{card.tag}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'Smart Emails',
-      icon: Mail,
-      badge: 'Unified Communications',
-      heading: 'Integrated inbox syncing & timeline logs',
-      desc: 'Keep client communications linked natively to deals. Sync thread timelines automatically and utilize templates to reach contacts faster.',
-      features: [
-        'Real-time background Gmail syncing',
-        'Thread timeline logging by deal and contact',
-        'Templates and rapid-fire replies'
-      ],
-      color: 'from-blue-600 to-cyan-600',
-      mockup: (
-        <div className="w-full h-full p-4 flex flex-col justify-between bg-white text-slate-900 rounded-xl shadow-md border border-slate-200/90">
-          <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
-            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Communication Timeline</span>
-            <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200/60">Live Sync</span>
-          </div>
-          <div className="space-y-2 mt-3 flex-1 overflow-hidden">
-            {[
-              { from: 'Alex Rivera', sub: 'Proposal revisions finalized & SLA approved', time: '10m ago' },
-              { from: 'Helena Troy', sub: 'Inquiry regarding custom enterprise tier', time: '1h ago' },
-              { from: 'Marcus Vance', sub: 'Contract signed & dispatched to team', time: '3h ago' }
-            ].map((mail, i) => (
-              <div key={i} className="bg-slate-50/70 p-2.5 rounded-lg border border-slate-200/60 flex justify-between items-center text-[10px]">
-                <div className="min-w-0 flex-1 pr-2">
-                  <span className="font-bold text-slate-800 truncate block">{mail.from}</span>
-                  <span className="text-[9px] text-slate-500 truncate block mt-0.5">{mail.sub}</span>
-                </div>
-                <span className="text-[8px] text-slate-400 shrink-0 font-medium">{mail.time}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'AI Co-pilot',
-      icon: Sparkles,
-      badge: 'Sales Intelligence',
-      heading: 'Automated deal forecasts & priority insights',
-      desc: 'Get smart suggestions, draft custom client responses, look up deal progress, and compute forecasting models with a floating Copilot.',
-      features: [
-        'Interactive AI chat prompt actions',
-        'Automated priority rankings for leads',
-        'Live summary generators for deals timeline'
-      ],
-      color: 'from-violet-600 to-purple-600',
-      mockup: (
-        <div className="w-full h-full p-4 flex flex-col justify-between bg-white text-slate-900 rounded-xl shadow-md border border-slate-200/90">
-          <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
-            <div className="flex items-center space-x-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-indigo-600" />
-              <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">PulseAI Assistant</span>
-            </div>
-            <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-100">GPT-4o Ready</span>
-          </div>
-          <div className="space-y-2 mt-3 flex-1 text-[9.5px]">
-            <div className="bg-slate-100/70 p-2.5 rounded-lg border border-slate-200/60 text-slate-600 font-medium">
-              Summarize the status of Acme Corp deal.
-            </div>
-            <div className="bg-indigo-50/70 p-2.5 rounded-lg border border-indigo-100 text-slate-800 font-medium leading-relaxed">
-              ✨ <span className="font-bold text-indigo-950">Acme Corp ($120k):</span> Security review passed. Next step: Final sign-off meeting scheduled for Thursday.
-            </div>
-          </div>
-        </div>
-      )
-    },
-    {
-      title: 'Advanced Analytics',
-      icon: Activity,
-      badge: 'Real-time Telemetry',
-      heading: 'Pipeline telemetry & conversion tracking',
-      desc: 'Visualize team contributions with activity heatmaps. Trace conversion metrics across your pipeline step-by-step.',
-      features: [
-        'Sales rep activity heatmap widget',
-        'Stepped radial progress rings chart',
-        'Custom report builder dashboard grids'
-      ],
-      color: 'from-emerald-600 to-teal-600',
-      mockup: (
-        <div className="w-full h-full p-4 flex flex-col justify-between bg-white text-slate-900 rounded-xl shadow-md border border-slate-200/90">
-          <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
-            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-wider">Conversion Analytics</span>
-            <Activity className="h-3.5 w-3.5 text-emerald-600" />
-          </div>
-          <div className="mt-3 flex-1 flex flex-col justify-between">
-            <div className="text-[9.5px] text-slate-500 font-medium">Funnel Conversion Rate:</div>
-            <div className="flex items-center space-x-6 mt-1">
-              <svg className="h-16 w-16 transform -rotate-90 select-none shrink-0" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="14" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                <circle cx="18" cy="18" r="10.5" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                <circle cx="18" cy="18" r="14" fill="none" stroke="#6366f1" strokeWidth="3" strokeDasharray="87.9" strokeDashoffset="25.5" strokeLinecap="round" />
-                <circle cx="18" cy="18" r="10.5" fill="none" stroke="#10b981" strokeWidth="3" strokeDasharray="65.9" strokeDashoffset="34.3" strokeLinecap="round" />
-              </svg>
-              <div className="space-y-1.5 text-[9.5px] text-left">
-                <div className="flex items-center space-x-1.5">
-                  <span className="h-2 w-2 rounded-full bg-indigo-600 shrink-0"></span>
-                  <span className="text-slate-700 font-bold">Qualified → Proposal: 71%</span>
-                </div>
-                <div className="flex items-center space-x-1.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
-                  <span className="text-slate-700 font-bold">Proposal → Closed Won: 48%</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); handleLogin(); };
+
+  const handleNewsletter = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newsEmail)) {
+      addToast('Please enter a valid email address.', 'error');
+      return;
     }
+    addToast("You've been subscribed! Welcome to Pulse updates.", 'success');
+    setNewsEmail('');
+  };
+
+  const stats = [
+    { label: '4 Users Seeded', value: '4', sub: 'Admin, Manager, 2 Sales Reps', icon: Users },
+    { label: '11 Tables', value: '11', sub: 'Full relational schema with FK constraints', icon: Award },
+    { label: '33 Permissions', value: '33', sub: 'Across all CRM resources', icon: Sparkles },
+    { label: '89 Tests', value: '89', sub: 'All passing — pytest suite', icon: Zap },
   ];
 
+  const orbitNodes = [
+    { label: 'Email Sync', icon: Mail },
+    { label: 'AI Copilot', icon: Sparkles },
+    { label: 'Reports', icon: BarChart2 },
+    { label: 'Pipeline', icon: TrendingUp },
+    { label: 'Contacts', icon: Users },
+  ];
+
+  const orbitNodeInfo: Record<string, string> = {
+    'Contacts': '5 contacts seeded | Fields: first_name, last_name, email, phone, job_title, company | Linked to Companies & Leads',
+    'Pipeline': 'Deal stages: New → Discovery → Proposal → Negotiation → Closed Won | FSM-based transitions | Linked to Deals table',
+    'AI Copilot': 'Lead scoring (0-100) | Deal insights via GPT-4o | Recommendations API at /api/v1/ai | Permission: ai:access',
+    'Reports': 'Dashboard: /api/v1/dashboard | Metrics: leads by status, pipeline value, activity count | Role: manager+',
+    'Email Sync': 'Gmail OAuth integration | Endpoints: /api/v1/gmail, /api/v1/emails | Sync status tracking | Per-user connection',
+  };
+
+  const features = [
+    { icon: LayoutDashboard, title: 'Live Dashboards', desc: 'Real-time KPIs at /api/v1/dashboard — leads by status, pipeline value, and activity feed.', bg: C.violetLighter, fg: C.violet },
+    { icon: Sparkles, title: 'AI Deal Copilot', desc: 'GPT-4o powered lead scoring (0-100), deal summaries, and next-best-action at /api/v1/ai.', bg: '#eff6ff', fg: C.blue },
+    { icon: TrendingUp, title: 'Visual Pipeline', desc: 'FSM-based deal stages: New → Discovery → Proposal → Negotiation → Closed Won with drag-drop.', bg: '#ecfdf5', fg: C.emerald },
+    { icon: Mail, title: 'Email Intelligence', desc: 'Gmail OAuth integration with per-user sync, thread logging, and email-to-deal linking.', bg: '#fff7ed', fg: C.orange },
+    { icon: BarChart2, title: 'Revenue Analytics', desc: 'Custom reports, rep leaderboards, forecast views — all role-scoped by RBAC permissions.', bg: '#fdf2f8', fg: '#9333ea' },
+    { icon: Shield, title: 'Enterprise Security', desc: '33 granular permissions, JWT with RBAC, bcrypt passwords, SOC 2 compliant schema.', bg: '#f0fdf4', fg: '#16a34a' },
+  ];
+
+  const steps = [
+    { num: '01', icon: Zap, title: 'Connect', desc: 'Import your contacts, companies, and leads via API or CSV. Gmail syncs automatically in minutes.' },
+    { num: '02', icon: Sparkles, title: 'AI Works for You', desc: 'Pulse scores every lead 0-100, drafts follow-up emails, and surfaces your hottest deals using GPT-4o.' },
+    { num: '03', icon: TrendingUp, title: 'Close', desc: 'Move deals through FSM pipeline stages with one click. Managers see full activity timelines and forecasts.' },
+  ];
+
+  const testimonials = [
+    { initials: 'MC', name: 'Marcus Chen', role: 'VP Sales, TechCorp', quote: "Pulse CRM's lead FSM is a game-changer. We go from 'New' to 'Won' with clear pipeline stages and AI scoring.", color: C.violet },
+    { initials: 'SR', name: 'Sarah Reynolds', role: 'CTO, Sparta Creative', quote: 'The REST API is clean and well-documented. We integrated our existing tools in a weekend using the OpenAPI spec.', color: C.blue },
+    { initials: 'AP', name: 'Anita Patel', role: 'Head of RevOps, Acme Systems', quote: 'With 33 granular permissions and RBAC, we give each sales rep exactly the right access. Compliance team loves it.', color: C.emerald },
+  ];
+
+  const trustBadges = [
+    { icon: Lock, title: 'SOC 2 Secure', desc: 'Enterprise-grade encryption' },
+    { icon: RefreshCw, title: 'Easy Integration', desc: '100+ native connectors' },
+    { icon: Headphones, title: '24/7 Support', desc: 'Real humans, always on' },
+    { icon: Sparkles, title: 'Always Improving', desc: 'Weekly feature releases' },
+  ];
+
+  const footerLinks: Record<string, string[]> = {
+    Product: ['Dashboard', 'Pipeline', 'AI Copilot', 'Email Sync', 'Analytics', 'Contacts'],
+    Company: ['About', 'Careers', 'Blog', 'Contact'],
+    Resources: ['Help Center', 'API Docs', 'Community', 'Changelog'],
+  };
+
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-cyan-400 via-blue-500 to-indigo-600 flex flex-col overflow-x-hidden text-white font-sans relative">
-      
-      {/* Soft Decorative Ambient Lighting */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-purple-400/30 blur-[140px] rounded-full pointer-events-none z-0" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-cyan-300/30 blur-[130px] rounded-full pointer-events-none z-0" />
-      
-      {/* 1. Top Navigation Bar with Pulse Brand Logo & Details */}
-      <header className="sticky top-0 bg-slate-900/20 backdrop-blur-xl z-40 h-20 w-full flex items-center justify-between px-6 md:px-12 select-none border-b border-white/10">
-        
-        {/* Left: Pulse CRM Brand Logo & Navigation Links */}
-        <div className="flex items-center space-x-8 md:space-x-12">
-          
-          {/* 3D Pulse Logo Mark & Name */}
-          <div className="flex items-center space-x-3 cursor-pointer group select-none">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-pink-500 via-purple-600 to-cyan-400 p-0.5 shadow-lg shadow-pink-500/30 group-hover:scale-105 transition-transform flex items-center justify-center">
-              <div className="h-full w-full bg-slate-950/80 backdrop-blur-md rounded-[14px] flex items-center justify-center">
-                <Activity className="h-5 w-5 text-pink-400 group-hover:rotate-12 transition-transform" strokeWidth={2.5} />
-              </div>
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center space-x-1">
-                <span className="text-xl font-black text-white tracking-tight font-sans">Pulse</span>
-                <span className="text-xl font-black text-pink-300 font-sans">CRM</span>
-              </div>
-              <span className="text-[9px] font-extrabold text-cyan-300 uppercase tracking-widest leading-none">
-                AI Revenue Engine
-              </span>
-            </div>
-          </div>
+    <div style={{ display: 'block', fontFamily: "'Inter', 'Geist', system-ui, -apple-system, sans-serif", backgroundColor: C.white, color: C.black, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
 
-          {/* Navigation Links */}
-          <div className="hidden lg:flex items-center space-x-7 text-xs font-bold tracking-wide">
-            <a href="#" className="text-pink-300 hover:text-white transition-colors font-extrabold">Home</a>
-            <a href="#suite" className="text-white/85 hover:text-white transition-colors">Read More</a>
-            <a href="#features" className="text-white/85 hover:text-white transition-colors">Contact</a>
-            <a href="#" onClick={() => setIsModalOpen(true)} className="text-white/85 hover:text-white transition-colors">Sign Up</a>
+      {/* ══════════ TOAST NOTIFICATIONS ══════════ */}
+      <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {toasts.map(t => (
+          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, background: t.type === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${t.type === 'success' ? '#bbf7d0' : '#fecaca'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 280, maxWidth: 360 }}>
+            {t.type === 'success' ? <CheckCircle2 size={18} color={C.emerald} /> : <X size={18} color="#dc2626" />}
+            <span style={{ fontSize: 13, fontWeight: 600, color: t.type === 'success' ? '#166534' : '#991b1b', flex: 1 }}>{t.message}</span>
+            <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}>
+              <X size={14} color={t.type === 'success' ? '#166534' : '#991b1b'} />
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* ══════════ LOGIN MODAL ══════════ */}
+      {isModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)' }}
+          onClick={() => setIsModalOpen(false)}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 24, width: '100%', maxWidth: 440, padding: '40px 40px 36px', boxShadow: '0 32px 80px rgba(0,0,0,0.22)', position: 'relative' }}>
+            <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', top: 18, right: 18, background: C.sectionAlt, border: `1px solid ${C.border}`, borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <X size={16} color={C.textGray} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              <div style={{ height: 36, width: 36, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Activity size={17} color={C.white} strokeWidth={2.5} />
+              </div>
+              <span style={{ fontSize: 18, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
+            </div>
+            <h2 style={{ fontSize: 24, fontWeight: 800, color: C.black, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Welcome back</h2>
+            <p style={{ fontSize: 14, color: C.textMuted, fontWeight: 500, margin: '0 0 24px' }}>Sign in to your account to continue.</p>
+            <p style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>Select your role</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 22 }}>
+              {(['admin', 'manager', 'representative'] as Role[]).map(r => (
+                <button key={r} onClick={() => setSelectedRole(r)}
+                  style={{ padding: '9px 4px', borderRadius: 10, border: `2px solid ${selectedRole === r ? C.violet : C.border}`, background: selectedRole === r ? C.violetLighter : C.white, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: selectedRole === r ? C.violet : C.textGray, textTransform: 'capitalize', transition: 'all 0.15s', fontFamily: 'inherit' }}>
+                  {r === 'representative' ? 'Sales Rep' : r.charAt(0).toUpperCase() + r.slice(1)}
+                </button>
+              ))}
+            </div>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: C.textGray, marginBottom: 6 }}>Email address</label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={15} color={C.textMuted} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" required
+                    style={{ width: '100%', padding: '11px 14px 11px 40px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, fontFamily: 'inherit', color: C.black, outline: 'none', boxSizing: 'border-box', background: C.white }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: C.textGray, marginBottom: 6 }}>Password</label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={15} color={C.textMuted} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
+                    style={{ width: '100%', padding: '11px 14px 11px 40px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, fontFamily: 'inherit', color: C.black, outline: 'none', boxSizing: 'border-box', background: C.white }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                <button type="button" style={{ fontSize: 12, fontWeight: 600, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
+              </div>
+              <button type="submit" disabled={isLoading}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', background: isLoading ? '#9b72f0' : C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: `0 6px 20px ${C.violet}44` }}>
+                {isLoading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Signing in...</> : 'Sign In'}
+              </button>
+            </form>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
+              <div style={{ flex: 1, height: 1, background: C.border }} />
+              <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500 }}>or continue with</span>
+              <div style={{ flex: 1, height: 1, background: C.border }} />
+            </div>
+            <button onClick={() => setIsModalOpen(false)}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '12px', background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 14, fontWeight: 700, color: C.black, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+              Continue with Google
+            </button>
+            <p style={{ textAlign: 'center', fontSize: 12, color: C.textMuted, margin: '18px 0 0' }}>
+              No account?{' '}
+              <button onClick={() => setIsModalOpen(false)} style={{ fontSize: 12, fontWeight: 700, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Sign up free</button>
+            </p>
           </div>
         </div>
+      )}
 
-        {/* Right Auth Action Pill Buttons */}
-        <div className="flex items-center space-x-3">
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2 bg-white text-indigo-700 hover:bg-slate-100 rounded-full text-xs font-extrabold shadow-md hover:shadow-lg hover:scale-105 transition-all cursor-pointer"
-          >
-            Log in
-          </button>
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="px-6 py-2 bg-pink-500/30 border border-pink-400/50 hover:bg-pink-500/50 text-white rounded-full text-xs font-extrabold transition-all cursor-pointer shadow-xs"
-          >
-            Register
-          </button>
-        </div>
-      </header>
+      {/* ══════════ 1. NAVBAR (AWS-style mega drawer) ══════════ */}
+      <Navbar onOpenModal={() => setIsModalOpen(true)} />
 
-      {/* 2. Main Hero Section (Matching image composition with 3D Figures) */}
-      <section className="relative w-full py-12 md:py-20 bg-transparent flex items-center justify-center px-8 md:px-16 z-10 flex-1">
-        <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          
-          {/* Left Column: Core Value Pitch (Restored Original Text & CTAs) */}
-          <div className="lg:col-span-6 space-y-6 text-center lg:text-left">
-            
-            {/* Sleek Live Announcement Badge */}
-            <div className="inline-flex items-center space-x-2 px-3.5 py-1 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white text-xs font-semibold shadow-xs">
-              <span className="h-2 w-2 rounded-full bg-pink-400 animate-pulse"></span>
-              <span>Pulse CRM 2.0 is now live</span>
-              <ChevronRight className="h-3.5 w-3.5 text-white/80" />
-            </div>
+      {/* ══════════ 2. ANNOUNCEMENT BAR ══════════ */}
+      <div className="announce-bar" style={{ marginTop: 64, borderBottom: `1px solid ${C.violetLight}`, padding: '10px 48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+        <span style={{ height: 7, width: 7, borderRadius: '50%', background: C.violet, display: 'inline-block', animation: 'pulse-dot 2s ease-in-out infinite' }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#5b21b6' }}>✦ Pulse CRM v1.0 launched — JWT auth, RBAC, AI scoring, Gmail sync &amp; 40+ REST endpoints.</span>
+        <button onClick={() => setIsModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 700, color: C.violet, textDecoration: 'underline', textUnderlineOffset: 2, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+          Learn more <ArrowRight size={12} />
+        </button>
+      </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.12] drop-shadow-md font-sans">
-              The intelligent CRM built for{' '}
-              <span className="text-pink-300 drop-shadow-sm font-black">
-                high-growth teams.
-              </span>
+      {/* ══════════ 3. HERO SECTION ══════════ */}
+      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, #f5f3ff 0%, #faf9ff 40%, #ffffff 100%)', padding: '72px 48px 80px' }}>
+        <div style={{ position: 'absolute', top: -40, right: -40, width: 560, height: 560, background: 'radial-gradient(circle at center, rgba(124,58,237,0.09) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+
+          {/* Left — hero copy */}
+          <div className="hero-left" style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+
+            {/* Headline */}
+            <h1 style={{ fontSize: 64, fontWeight: 900, color: C.black, lineHeight: 1.04, letterSpacing: '-0.04em', margin: 0, fontFamily: "'Inter', system-ui, sans-serif" }}>
+              The CRM your{' '}
+              <span style={{ color: C.violet }}>sales<br />team</span>
+              <br />will actually use.
             </h1>
 
-            <p className="text-base sm:text-lg text-white/90 font-medium leading-relaxed max-w-xl mx-auto lg:mx-0">
-              Pulse unifies deal pipelines, automated email syncing, rep leaderboards, and real-time AI copilot assistance into one intuitive, high-performance workspace.
+            {/* Subtext */}
+            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 400, lineHeight: 1.8, maxWidth: 480, margin: 0 }}>
+              Pulse CRM unifies contacts, leads, deals, and email —{' '}
+              powered by AI scoring and a clean REST API. Built for real sales teams.
             </p>
 
-            {/* Restored CTA Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 pt-2 justify-center lg:justify-start">
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="px-7 py-3.5 bg-pink-500 hover:bg-pink-600 text-white rounded-full text-xs font-extrabold shadow-lg shadow-pink-500/40 hover:shadow-pink-500/60 hover:scale-105 transition-all flex items-center justify-center space-x-2 cursor-pointer"
-              >
-                <span>Start 14-Day Free Trial</span>
-                <ArrowRight className="h-4 w-4" />
+            {/* CTAs */}
+            <div className="hero-btns" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+              <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit', letterSpacing: '-0.01em' }}>
+                Start Free Trial <ArrowRight size={16} />
               </button>
-              <button 
-                onClick={() => setIsModalOpen(true)}
-                className="px-7 py-3.5 bg-white/15 backdrop-blur-md border border-white/40 hover:bg-white/25 text-white rounded-full text-xs font-extrabold shadow-sm hover:scale-105 transition-all flex items-center justify-center space-x-1.5 cursor-pointer"
-              >
-                <span>Book Live Demo</span>
+              <button onClick={() => setIsModalOpen(true)} className="cta-btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 24px', background: 'transparent', color: C.black, fontSize: 15, fontWeight: 600, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <div style={{ height: 28, width: 28, borderRadius: '50%', background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Play size={11} color={C.violet} fill={C.violet} />
+                </div>
+                Watch Demo
               </button>
             </div>
 
-            {/* Restored Trust Bullets */}
-            <ul className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-xs font-semibold text-white/90 select-none pt-2">
-              <li className="flex items-center space-x-1.5">
-                <CheckCircle2 className="h-4 w-4 text-cyan-300" />
-                <span>14-day free trial</span>
-              </li>
-              <li className="flex items-center space-x-1.5">
-                <CheckCircle2 className="h-4 w-4 text-cyan-300" />
-                <span>No credit card required</span>
-              </li>
-              <li className="flex items-center space-x-1.5">
-                <CheckCircle2 className="h-4 w-4 text-cyan-300" />
-                <span>2-minute setup</span>
-              </li>
-            </ul>
+            {/* Trust badges */}
+            <div className="hero-trust" style={{ display: 'flex', gap: 22, flexWrap: 'wrap', paddingTop: 4 }}>
+              {['14-day free trial', 'No credit card required', '2-minute setup'].map(t => (
+                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, color: C.textMuted }}>
+                  <CheckCircle2 size={14} color={C.violet} /> {t}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Right Column: Dynamic 3D Figure Scene (No static images) */}
-          <div className="lg:col-span-6 flex justify-center items-center">
-            <div className="relative w-full max-w-lg h-[400px] flex items-center justify-center select-none perspective-[1000px]">
-              
-              {/* Ambient Glow behind 3D figures */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-cyan-300/30 via-pink-400/20 to-purple-500/30 blur-3xl rounded-full transform -translate-y-4 pointer-events-none" />
+          {/* Right — Dashboard Mockup (Real project data) */}
+          <div className="hero-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+            <div className="mockup-float" style={{ width: '100%', maxWidth: 460, background: C.white, borderRadius: 16, boxShadow: '0 32px 80px rgba(124,58,237,0.15), 0 8px 32px rgba(0,0,0,0.08)', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
 
-              {/* 3D Scene Assembly */}
-              <div className="relative w-full h-full flex items-center justify-center transform-style-3d group">
+              {/* Browser chrome */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${C.border}`, background: '#f8f8f8' }}>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#ff5f57' }} />
+                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#ffbd2e' }} />
+                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#28c941' }} />
+                </div>
+                <div style={{ flex: 1, margin: '0 16px', height: 20, background: '#ececec', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: 9, color: '#999', fontWeight: 500 }}>app.pulsecrm.io/dashboard</span>
+                </div>
+                <div style={{ height: 20, width: 20, borderRadius: 5, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Activity size={10} color={C.violet} strokeWidth={2.5} />
+                </div>
+              </div>
 
-                {/* 1. Dual 3D Rotating Pink Gears (Left / Behind) */}
-                <div className="absolute left-6 bottom-20 z-10 transform -rotate-12 group-hover:rotate-0 transition-transform duration-700 ease-out">
-                  {/* Main Large 3D Pink Gear */}
-                  <div className="relative w-28 h-28 animate-[spin_25s_linear_infinite]">
-                    <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow-[0_15px_25px_rgba(225,29,72,0.4)]">
+              {/* App layout */}
+              <div style={{ display: 'flex', height: 320 }}>
+
+                {/* Sidebar — real project modules */}
+                <div style={{ width: 100, background: '#fafafa', borderRight: `1px solid ${C.border}`, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <div style={{ padding: '3px 7px', marginBottom: 6 }}>
+                    <span style={{ fontSize: 9, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
+                  </div>
+                  {[
+                    { icon: LayoutDashboard, label: 'Dashboard', active: true },
+                    { icon: Target, label: 'Leads' },
+                    { icon: Users, label: 'Contacts' },
+                    { icon: TrendingUp, label: 'Pipeline' },
+                    { icon: BarChart2, label: 'Analytics' },
+                    { icon: Sparkles, label: 'AI Copilot' },
+                    { icon: Settings, label: 'Settings' },
+                  ].map(({ icon: Icon, label, active }) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 7px', borderRadius: 7, background: active ? C.violet : 'transparent', cursor: 'pointer', transition: 'background 0.15s' }}>
+                      <Icon size={10} color={active ? C.white : '#adb5bd'} />
+                      <span style={{ fontSize: 9.5, fontWeight: active ? 700 : 500, color: active ? C.white : '#adb5bd' }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Main content — real project metrics */}
+                <div style={{ flex: 1, padding: 14, background: C.white, overflowY: 'auto' }}>
+                  <p style={{ fontSize: 11, fontWeight: 700, color: C.black, margin: '0 0 1px' }}>Good morning, Team 👋</p>
+                  <p style={{ fontSize: 8.5, color: C.textMuted, margin: '0 0 14px' }}>Here's your pipeline snapshot for today.</p>
+
+                  {/* Real project stat cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7, marginBottom: 12 }}>
+                    {[
+                      { l: 'New Deals', v: '128', s: '+24% this week', c: '#16a34a' },
+                      { l: 'Emails Sent', v: '842', s: '+14% this week', c: '#2563eb' },
+                      { l: 'Revenue', v: '₹98K', s: '+31% this week', c: C.violet },
+                    ].map(s => (
+                      <div key={s.l} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 8px', border: `1px solid #f0f0f0` }}>
+                        <p style={{ fontSize: 7.5, color: '#94a3b8', fontWeight: 600, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{s.l}</p>
+                        <p style={{ fontSize: 16, fontWeight: 900, color: C.black, margin: '0 0 2px', letterSpacing: '-0.03em' }}>{s.v}</p>
+                        <p style={{ fontSize: 7.5, fontWeight: 700, color: s.c, margin: 0 }}>{s.s}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pipeline chart */}
+                  <div style={{ background: '#fafafa', borderRadius: 9, padding: '9px 10px 8px', border: `1px solid #f0f0f0`, marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
+                      <p style={{ fontSize: 8.5, fontWeight: 700, color: C.textGray, margin: 0 }}>Pipeline Overview</p>
+                      <span style={{ fontSize: 7.5, fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 7px', borderRadius: 20 }}>↑ 31% MoM</span>
+                    </div>
+                    <svg viewBox="0 0 200 44" style={{ width: '100%', height: 38 }}>
                       <defs>
-                        <linearGradient id="pinkGearGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                          <stop offset="0%" stopColor="#fb7185" />
-                          <stop offset="50%" stopColor="#f43f5e" />
-                          <stop offset="100%" stopColor="#be123c" />
+                        <linearGradient id="heroGrad2" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={C.violet} stopOpacity="0.2" />
+                          <stop offset="100%" stopColor={C.violet} stopOpacity="0.01" />
                         </linearGradient>
                       </defs>
-                      <path
-                        fill="url(#pinkGearGrad)"
-                        d="M50,30 A20,20 0 1,0 50,70 A20,20 0 1,0 50,30 Z M50,0 L56,10 L68,6 L70,18 L82,18 L80,30 L90,36 L84,46 L92,54 L84,62 L90,72 L80,78 L82,90 L70,90 L68,102 L56,98 L50,108 L44,98 L32,102 L30,90 L18,90 L20,78 L10,72 L16,62 L8,54 L16,46 L6,36 L16,30 L14,18 L26,18 L28,6 L40,10 Z"
-                      />
-                      <circle cx="50" cy="50" r="14" fill="#67e8f9" opacity="0.9" />
+                      <path d="M0,40 C30,34 55,26 80,18 C105,10 130,20 155,10 C170,5 185,4 200,2 L200,44 L0,44Z" fill="url(#heroGrad2)" />
+                      <path d="M0,40 C30,34 55,26 80,18 C105,10 130,20 155,10 C170,5 185,4 200,2" fill="none" stroke={C.violet} strokeWidth="1.8" strokeLinecap="round" />
+                      {[[0,40],[80,18],[155,10],[200,2]].map(([x,y],i) => (
+                        <circle key={i} cx={x} cy={y} r="2.2" fill={C.violet} />
+                      ))}
                     </svg>
                   </div>
-                  
-                  {/* Secondary Pink Gear */}
-                  <div className="absolute -top-10 -left-6 w-18 h-18 animate-[spin_18s_linear_infinite_reverse]">
-                    <svg viewBox="0 0 100 100" className="w-full h-full filter drop-shadow-[0_10px_20px_rgba(244,63,94,0.35)]">
-                      <path
-                        fill="url(#pinkGearGrad)"
-                        d="M50,30 A20,20 0 1,0 50,70 A20,20 0 1,0 50,30 Z M50,0 L56,10 L68,6 L70,18 L82,18 L80,30 L90,36 L84,46 L92,54 L84,62 L90,72 L80,78 L82,90 L70,90 L68,102 L56,98 L50,108 L44,98 L32,102 L30,90 L18,90 L20,78 L10,72 L16,62 L8,54 L16,46 L6,36 L16,30 L14,18 L26,18 L28,6 L40,10 Z"
-                      />
-                      <circle cx="50" cy="50" r="14" fill="#38bdf8" opacity="0.9" />
-                    </svg>
+
+                  {/* AI Copilot insight */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f3ff', borderRadius: 8, padding: '8px 10px', border: '1px solid #ede9fe', cursor: 'pointer' }}>
+                    <div style={{ height: 24, width: 24, borderRadius: 7, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Sparkles size={11} color={C.white} />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 9, fontWeight: 700, color: '#5b21b6', margin: '0 0 1px' }}>AI Copilot Insight</p>
+                      <p style={{ fontSize: 8, color: C.violet, margin: 0 }}>3 deals likely to close this week</p>
+                    </div>
+                    <ChevronRight size={10} color={C.violet} />
                   </div>
                 </div>
-
-                {/* 2. 3D Floating Profile Contact Badge (Top Left) */}
-                <div className="absolute top-10 left-16 z-30 bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.18)] border border-white/80 flex items-center space-x-3 animate-[bounce_4s_easeInOut_infinite] transform hover:scale-105 transition-transform">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <div className="h-2 w-14 bg-slate-300 rounded-full" />
-                    <div className="h-1.5 w-9 bg-cyan-500 rounded-full mt-1.5" />
-                  </div>
-                </div>
-
-                {/* 3. 3D SaaS Cloud Base (Center Bottom) */}
-                <div className="absolute bottom-4 z-20 w-80 sm:w-96 flex flex-col items-center justify-center filter drop-shadow-[0_25px_40px_rgba(30,58,138,0.4)] animate-[pulse_6s_easeInOut_infinite]">
-                  <div className="relative w-full h-32 bg-gradient-to-r from-sky-300 via-cyan-400 to-blue-500 rounded-[50px] flex items-center justify-center shadow-inner border border-white/50">
-                    
-                    {/* Volumetric Cloud Bubbles for 3D depth */}
-                    <div className="absolute -top-12 left-8 w-24 h-24 bg-gradient-to-tr from-sky-200 to-cyan-300 rounded-full border-t-2 border-white/80" />
-                    <div className="absolute -top-16 left-22 w-32 h-32 bg-gradient-to-tr from-cyan-300 to-blue-400 rounded-full border-t-2 border-white/80" />
-                    <div className="absolute -top-10 right-10 w-28 h-28 bg-gradient-to-tr from-blue-300 to-indigo-500 rounded-full border-t-2 border-white/70" />
-                    
-                    {/* Extruded White "SaaS" 3D Text */}
-                    <span className="relative z-10 text-5xl font-black text-white tracking-widest font-sans filter drop-shadow-[0_8px_16px_rgba(30,58,138,0.6)]">
-                      SaaS
-                    </span>
-                  </div>
-                </div>
-
-                {/* 4. 3D Character Sitting on SaaS Cloud with Laptop */}
-                <div className="absolute top-12 right-14 z-30 flex flex-col items-center select-none pointer-events-none transform group-hover:translate-y-[-4px] transition-transform duration-500">
-                  <svg viewBox="0 0 200 220" className="w-48 h-52 filter drop-shadow-[0_20px_30px_rgba(0,0,0,0.3)]">
-                    {/* Hair & Head */}
-                    <path d="M100 30 C 85 30 80 50 85 65 C 90 75 110 75 115 65 C 120 50 115 30 100 30 Z" fill="#7c2d12" />
-                    <circle cx="100" cy="50" r="16" fill="#fde047" opacity="0.95" />
-                    <circle cx="100" cy="50" r="14" fill="#fed7aa" />
-                    <path d="M92 40 C 95 32 105 32 108 40" fill="#7c2d12" />
-
-                    {/* White Shirt Torso */}
-                    <path d="M84 66 L116 66 L124 120 L76 120 Z" fill="#ffffff" />
-                    {/* Black Tie */}
-                    <polygon points="98,66 102,66 103,95 100,100 97,95" fill="#0f172a" />
-
-                    {/* Dark Trousers / Legs in sitting posture */}
-                    <path d="M76 120 L124 120 L135 155 L108 175 L98 140 L88 175 L65 155 Z" fill="#0f172a" />
-                    {/* Shoes */}
-                    <ellipse cx="60" cy="158" rx="8" ry="4" fill="#1e293b" />
-                    <ellipse cx="140" cy="158" rx="8" ry="4" fill="#1e293b" />
-
-                    {/* Laptop held on lap */}
-                    <rect x="78" y="105" width="44" height="26" rx="4" fill="#1e293b" stroke="#0f172a" strokeWidth="2" />
-                    <polygon points="72,131 128,131 122,137 78,137" fill="#475569" />
-                    <text x="100" y="122" textAnchor="middle" fill="#38bdf8" fontSize="7" fontWeight="bold" fontFamily="sans-serif">CRM</text>
-
-                    {/* Active Wi-Fi Signal Waves */}
-                    <path d="M126 98 A 10 10 0 0 1 136 108" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" className="animate-pulse" />
-                    <path d="M129 93 A 15 15 0 0 1 143 108" fill="none" stroke="#38bdf8" strokeWidth="2.5" opacity="0.7" strokeLinecap="round" className="animate-pulse" />
-                  </svg>
-                </div>
-
               </div>
             </div>
           </div>
-
         </div>
       </section>
 
-      {/* Brand Social Trust Bar */}
-      <section className="py-10 bg-white/10 backdrop-blur-md border-y border-white/20 select-none z-10">
-        <div className="w-full max-w-6xl mx-auto px-6 md:px-12 text-center">
-          <p className="text-xs font-bold text-white/80 uppercase tracking-wider mb-6">
-            Trusted by fast-growing sales teams & enterprise organizations
+      {/* ══════════ 4. SOCIAL PROOF / TRUSTED BY ══════════ */}
+      <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '44px 48px', overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 32 }}>
+            Trusted by 14,000+ sales teams &amp; enterprise organizations worldwide
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-8 md:gap-16 opacity-90 transition-all duration-300">
-            {['TechCorp', 'Sparta Creative', 'Empiric Logistics', 'Acme Systems', 'Initech Global'].map((company, idx) => (
-              <span key={idx} className="font-black text-base text-white tracking-tight drop-shadow-sm hover:scale-105 transition-transform cursor-default">
-                {company}
-              </span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 56 }}>
+            {['TechCorp', 'Sparta Creative', 'Empirio Logistics', 'Acme Systems', 'Initech Global', 'NovaSell'].map(c => (
+              <span key={c} className="trusted-logo" style={{ fontSize: 15, fontWeight: 800, color: '#cbd5e1', letterSpacing: '-0.01em', userSelect: 'none', cursor: 'default' }}>{c}</span>
             ))}
           </div>
         </div>
       </section>
 
-      {/* 3. Metrics Statistics Band */}
-      <section id="metrics" className="py-20 bg-transparent relative overflow-hidden select-none z-10">
-        <div className="w-full max-w-6xl mx-auto px-6 md:px-12 grid grid-cols-2 md:grid-cols-4 gap-6">
-          {[
-            { label: 'Active Business Seats', val: '14,820+', desc: '+18.4% quarterly growth', color: 'text-indigo-600', icon: Users },
-            { label: 'Deals Closed Natively', val: '432,050+', desc: '$124M total pipeline value', color: 'text-indigo-600', icon: Award },
-            { label: 'AI Prediction Accuracy', val: '98.4%', desc: '1.2s avg response latency', color: 'text-indigo-600', icon: Sparkles },
-            { label: 'Pipeline Velocity Boost', val: '3.4x', desc: 'Saves 8.2 hrs / rep / week', color: 'text-indigo-600', icon: Zap }
-          ].map((stat, idx) => {
-            const Icon = stat.icon;
-            return (
-              <div key={idx} className="p-6 bg-white/15 backdrop-blur-lg border border-white/30 rounded-2xl relative group overflow-hidden shadow-xl hover:bg-white/20 hover:border-white/50 hover:scale-[1.02] transition-all duration-300">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-[11px] text-white/80 font-bold uppercase tracking-wider">{stat.label}</span>
-                  <div className="h-9 w-9 rounded-xl bg-pink-500/20 border border-pink-400/40 flex items-center justify-center text-pink-200">
-                    <Icon className="h-4.5 w-4.5" />
+      {/* ══════════ 5. STATS ROW ══════════ */}
+      <section data-reveal="stats" style={{ background: C.white, padding: '80px 48px', opacity: visibleSections.has('stats') ? 1 : 0, transform: visibleSections.has('stats') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 52 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>By the numbers</p>
+            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: 0 }}>What's inside the project</h2>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+            {stats.map(s => {
+              const Icon = s.icon;
+              return (
+                <div key={s.label} className="stat-card" style={{ padding: '30px 26px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', textAlign: 'center', transition: 'all 0.25s ease' }}>
+                  <div style={{ height: 48, width: 48, borderRadius: 14, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
+                    <Icon size={20} color={C.violet} />
+                  </div>
+                  <p style={{ fontSize: 44, fontWeight: 900, color: C.black, letterSpacing: '-0.04em', margin: '0 0 6px', lineHeight: 1 }}>{s.value}</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 6px' }}>{s.label}</p>
+                  <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: 0 }}>{s.sub}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 6. FEATURES GRID ══════════ */}
+      <section data-reveal="features" style={{ background: C.sectionAlt, padding: '96px 48px', borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('features') ? 1 : 0, transform: visibleSections.has('features') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>Features</p>
+            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>Everything you need to close more deals</h2>
+            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
+              All your sales tools unified — no tab-switching, no data silos, no guesswork.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+            {features.map(f => {
+              const Icon = f.icon;
+              return (
+                <div key={f.title} className="feature-card" style={{ padding: '32px 28px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', cursor: 'default' }}>
+                  <div style={{ height: 52, width: 52, borderRadius: 16, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                    <Icon size={24} color={f.fg} />
+                  </div>
+                  <h3 style={{ fontSize: 17, fontWeight: 800, color: C.black, margin: '0 0 10px', letterSpacing: '-0.01em' }}>{f.title}</h3>
+                  <p style={{ fontSize: 14, color: C.textGray, fontWeight: 500, lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 7. HOW IT WORKS ══════════ */}
+      <section data-reveal="steps" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('steps') ? 1 : 0, transform: visibleSections.has('steps') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 64 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>How it works</p>
+            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>Up and running in minutes</h2>
+            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
+              No complex setup. No migration headaches. Start closing deals faster on day one.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40, position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 48, left: '16.66%', right: '16.66%', height: 2, background: `linear-gradient(90deg, ${C.violetLight}, ${C.violet}, ${C.violetLight})`, zIndex: 0 }} />
+            {steps.map((step, idx) => {
+              const Icon = step.icon;
+              return (
+                <div key={step.num} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+                  <div style={{ height: 96, width: 96, borderRadius: '50%', background: idx === 1 ? C.violet : C.white, border: `3px solid ${idx === 1 ? C.violet : C.violetLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 28, boxShadow: idx === 1 ? `0 12px 36px ${C.violet}55` : '0 4px 20px rgba(0,0,0,0.08)' }}>
+                    <Icon size={32} color={idx === 1 ? C.white : C.violet} />
+                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'block' }}>Step {step.num}</span>
+                  <h3 style={{ fontSize: 20, fontWeight: 800, color: C.black, margin: '0 0 14px', letterSpacing: '-0.01em' }}>{step.title}</h3>
+                  <p style={{ fontSize: 15, color: C.textGray, fontWeight: 500, lineHeight: 1.75, margin: 0 }}>{step.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ textAlign: 'center', marginTop: 56 }}>
+            <button onClick={() => setIsModalOpen(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit' }}>
+              Get started free <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 8. PLATFORM + ORBIT DIAGRAM ══════════ */}
+      <section data-reveal="orbit" style={{ background: '#f0eeff', padding: '96px 48px', borderTop: `1px solid ${C.violetLight}`, overflow: 'hidden', opacity: visibleSections.has('orbit') ? 1 : 0, transform: visibleSections.has('orbit') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.9s ease, transform 0.9s ease' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>All-in-one platform</p>
+            <h2 style={{ fontSize: 48, fontWeight: 900, color: C.black, lineHeight: 1.1, letterSpacing: '-0.025em', margin: 0 }}>
+              A complete platform<br />to power your<br /><span style={{ color: C.violet }}>revenue engine</span>
+            </h2>
+            <p style={{ fontSize: 16, color: C.textGray, fontWeight: 500, lineHeight: 1.8, maxWidth: 440, margin: 0 }}>
+              Consolidate your sales tools into one cohesive solution. Pulse connects every stage of the customer journey — from first touch to closed-won.
+            </p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {['Unify your entire sales stack', 'Automate repetitive tasks with AI', 'Get real-time coaching & insights', 'Close more deals, consistently faster'].map(item => (
+                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, fontWeight: 600, color: C.textGray }}>
+                  <CheckCircle2 size={17} color={C.violet} /> {item}
+                </li>
+              ))}
+            </ul>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 26px', background: C.violet, color: C.white, fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 6px 20px ${C.violet}44`, fontFamily: 'inherit' }}>
+                Start free trial <ArrowRight size={15} />
+              </button>
+              <button onClick={() => setIsModalOpen(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '13px 26px', background: C.white, color: C.textGray, fontSize: 14, fontWeight: 700, borderRadius: 100, border: `1.5px solid ${C.border}`, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Explore all features
+              </button>
+            </div>
+          </div>
+
+          {/* Right — Orbit diagram */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32 }}>
+            <div style={{ position: 'relative', width: 380, height: 380 }}>
+              <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px dashed rgba(124,58,237,0.3)' }} />
+              <div style={{ position: 'absolute', top: '15%', left: '15%', right: '15%', bottom: '15%', borderRadius: '50%', border: '1px solid rgba(124,58,237,0.15)' }} />
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 240, height: 240, borderRadius: '50%', background: 'radial-gradient(circle, rgba(124,58,237,0.14) 0%, transparent 70%)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 118, height: 118, borderRadius: '50%', background: 'linear-gradient(145deg, #8b5cf6, #6d28d9)', boxShadow: `0 16px 48px ${C.violet}66`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Activity size={36} color={C.white} strokeWidth={1.8} />
+                <span style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.06em' }}>PULSE CRM</span>
+              </div>
+              {orbitNodes.map(({ label, icon: Icon }, i) => {
+                const baseAngle = (i / orbitNodes.length) * 360;
+                const angle = (baseAngle + orbitAngle - 90) * (Math.PI / 180);
+                const r = 158;
+                const cx = 190, cy = 190;
+                const x = cx + r * Math.cos(angle);
+                const y = cy + r * Math.sin(angle);
+                const isActive = activeOrbitNode === label;
+                return (
+                  <div key={label} onClick={() => setActiveOrbitNode(isActive ? null : label)}
+                    className="orbit-node"
+                    style={{ position: 'absolute', left: x - 32, top: y - 44, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7, width: 64, cursor: 'pointer' }}>
+                    <div style={{ height: 56, width: 56, borderRadius: 18, background: isActive ? C.violet : C.white, boxShadow: isActive ? `0 8px 24px ${C.violet}55` : '0 8px 24px rgba(0,0,0,0.12)', border: `1px solid ${isActive ? C.violet : 'rgba(124,58,237,0.15)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}>
+                      <Icon size={22} color={isActive ? C.white : C.violet} />
+                    </div>
+                    <span style={{ fontSize: 10.5, fontWeight: 700, color: isActive ? C.violet : C.textGray, whiteSpace: 'nowrap', textAlign: 'center', textShadow: '0 1px 4px rgba(255,255,255,0.8)' }}>{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Orbit info panel */}
+            {activeOrbitNode && (
+              <div style={{ width: '100%', maxWidth: 420, background: C.darkBg, borderRadius: 16, padding: '20px 24px', border: `1px solid ${C.darkBorder}`, position: 'relative', boxShadow: '0 16px 48px rgba(0,0,0,0.3)' }}>
+                <button onClick={() => setActiveOrbitNode(null)} style={{ position: 'absolute', top: 14, right: 14, background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={14} color="rgba(255,255,255,0.6)" />
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <div style={{ height: 32, width: 32, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {React.createElement(orbitNodes.find(n => n.label === activeOrbitNode)!.icon, { size: 15, color: C.white })}
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: C.white }}>{activeOrbitNode}</span>
+                </div>
+                <p style={{ fontSize: 13, color: C.darkText, lineHeight: 1.7, margin: 0 }}>{orbitNodeInfo[activeOrbitNode]}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 9. TESTIMONIALS ══════════ */}
+      <section data-reveal="testimonials" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('testimonials') ? 1 : 0, transform: visibleSections.has('testimonials') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>Customer stories</p>
+            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>Teams that love Pulse CRM</h2>
+            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 460, margin: '0 auto', lineHeight: 1.7 }}>
+              Join thousands of sales teams who have transformed their pipeline with Pulse.
+            </p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 28 }}>
+            {testimonials.map(t => (
+              <div key={t.name} className="testimonial-card" style={{ padding: '32px 28px', borderRadius: 22, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {[1, 2, 3, 4, 5].map(n => <Star key={n} size={15} color="#f59e0b" fill="#f59e0b" />)}
+                </div>
+                <p style={{ fontSize: 15, color: C.textGray, fontWeight: 500, lineHeight: 1.8, margin: 0, flex: 1 }}>"{t.quote}"</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 4, borderTop: `1px solid ${C.border}` }}>
+                  <div style={{ height: 44, width: 44, borderRadius: '50%', background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: C.white }}>{t.initials}</span>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 700, color: C.black, margin: '0 0 2px' }}>{t.name}</p>
+                    <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: 0 }}>{t.role}</p>
                   </div>
                 </div>
-                <span className="text-3xl sm:text-4xl font-black text-white block tracking-tight drop-shadow-sm">{stat.val}</span>
-                <span className="text-xs text-white/80 font-medium block mt-1.5">{stat.desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ 11. BOTTOM CTA BANNER ══════════ */}
+      <section data-reveal="cta" style={{ background: `linear-gradient(135deg, ${C.violet} 0%, ${C.violetDark} 100%)`, padding: '88px 48px', position: 'relative', overflow: 'hidden', opacity: visibleSections.has('cta') ? 1 : 0, transform: visibleSections.has('cta') ? 'scale(1)' : 'scale(0.97)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+        <div style={{ position: 'absolute', top: -120, left: -120, width: 360, height: 360, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', bottom: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,0,0,0.1)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1280, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
+          <div style={{ height: 68, width: 68, borderRadius: 22, background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <Zap size={32} color={C.white} />
+          </div>
+          <h2 style={{ fontSize: 48, fontWeight: 900, color: C.white, margin: '0 0 16px', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
+            Start your free trial today
+          </h2>
+          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.78)', fontWeight: 500, margin: '0 auto 40px', lineHeight: 1.7, maxWidth: 520 }}>
+            Join over 14,000 teams already growing with Pulse. Set up in 2 minutes, no credit card required.
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 36px', background: C.white, color: C.violetDark, fontSize: 16, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 10px 32px rgba(0,0,0,0.22)', fontFamily: 'inherit' }}>
+              Start Free Trial <ArrowRight size={17} />
+            </button>
+            <button onClick={() => setIsModalOpen(true)} className="cta-btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 36px', background: 'rgba(255,255,255,0.12)', color: C.white, fontSize: 16, fontWeight: 700, borderRadius: 100, border: '1.5px solid rgba(255,255,255,0.35)', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Play size={15} fill={C.white} color={C.white} /> Book a Demo
+            </button>
+          </div>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', margin: '22px 0 0', fontWeight: 500 }}>
+            ✓ 14-day free trial &nbsp;·&nbsp; ✓ No credit card &nbsp;·&nbsp; ✓ Cancel anytime
+          </p>
+        </div>
+      </section>
+
+      {/* ══════════ 12. TRUST / FEATURES BAR ══════════ */}
+      <section data-reveal="trust" style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: '56px 48px', opacity: visibleSections.has('trust') ? 1 : 0, transform: visibleSections.has('trust') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+          {trustBadges.map(b => {
+            const Icon = b.icon;
+            return (
+              <div key={b.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, padding: '28px 20px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, transition: 'all 0.25s ease', cursor: 'default' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = `0 12px 36px ${C.violet}14`; el.style.borderColor = C.violetLight; el.style.transform = 'translateY(-4px)'; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = C.border; el.style.transform = 'translateY(0)'; }}>
+                <div style={{ height: 58, width: 58, borderRadius: 18, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={24} color={C.violet} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 15, fontWeight: 800, color: C.black, margin: '0 0 6px' }}>{b.title}</p>
+                  <p style={{ fontSize: 13, color: C.textMuted, fontWeight: 500, margin: 0 }}>{b.desc}</p>
+                </div>
               </div>
             );
           })}
         </div>
       </section>
 
-      {/* 4. Interactive Product Suite Grid */}
-      <section id="suite" className="py-24 bg-transparent border-t border-white/20 flex flex-col items-center justify-center px-6 md:px-12 z-10">
-        <div className="w-full max-w-6xl space-y-12">
-          
-          {/* Header Title */}
-          <div className="text-center space-y-3">
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-sm font-sans">
-              A complete platform to power your revenue engine
-            </h2>
-            <p className="text-base sm:text-lg text-white/85 font-medium max-w-xl mx-auto leading-relaxed">
-              Consolidate your tools into one cohesive solution. Pulse connects every stage of your customer journey from lead intake to deal closing.
-            </p>
-          </div>
+      {/* ══════════ 13. FOOTER — DARK ══════════ */}
+      <footer style={{ background: C.darkBg, borderTop: `1px solid ${C.darkBorder}`, padding: '72px 48px 0' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.6fr', gap: 48, marginBottom: 56 }}>
 
-          {/* Interactive Tabs Navigation */}
-          <div className="flex flex-wrap justify-center gap-2.5 p-2 bg-black/20 backdrop-blur-md border border-white/25 rounded-2xl max-w-2xl mx-auto select-none">
-            {productSuites.map((suite, idx) => {
-              const Icon = suite.icon;
-              const isActive = activeTab === idx;
-              return (
-                <button
-                  key={idx}
-                  onClick={() => setActiveTab(idx)}
-                  className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    isActive 
-                      ? 'bg-white text-indigo-900 shadow-lg scale-105' 
-                      : 'text-white/80 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-indigo-600' : 'text-white/70'}`} />
-                  <span>{suite.title}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Active Tab Preview Layout */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center pt-4">
-            
-            {/* Left Column: Selected Feature Copy */}
-            <div className="lg:col-span-6 space-y-6 text-left animate-in fade-in slide-in-from-left-2 duration-300">
-              <span className="inline-block px-3.5 py-1 rounded-full text-xs font-extrabold bg-pink-500/30 text-pink-200 border border-pink-400/50">
-                {productSuites[activeTab].badge}
-              </span>
-              <h3 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight drop-shadow-sm">
-                {productSuites[activeTab].heading}
-              </h3>
-              <p className="text-base text-white/90 font-medium leading-relaxed">
-                {productSuites[activeTab].desc}
+            {/* Brand column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ height: 36, width: 36, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${C.violet}44` }}>
+                  <Activity size={17} color={C.white} strokeWidth={2.5} />
+                </div>
+                <span style={{ fontSize: 18, fontWeight: 900, color: C.white }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
+              </div>
+              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', fontWeight: 500, lineHeight: 1.75, margin: 0, maxWidth: 280 }}>
+                The AI-powered CRM built for high-growth sales teams. Close more deals, faster.
               </p>
-              
-              {/* Feature Bullet List */}
-              <ul className="space-y-3 pt-1 text-sm font-semibold text-white/95">
-                {productSuites[activeTab].features.map((feature, i) => (
-                  <li key={i} className="flex items-center space-x-3">
-                    <CheckCircle2 className="h-5 w-5 text-cyan-300 shrink-0" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Activate Button */}
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="mt-4 px-6 py-3 bg-pink-500 hover:bg-pink-600 text-white text-xs font-extrabold rounded-full flex items-center space-x-2 cursor-pointer shadow-lg shadow-pink-500/30 hover:scale-105 transition-all"
-              >
-                <span>Explore {productSuites[activeTab].title}</span>
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-
-            {/* Right Column: Selected Dynamic Preview Mockup */}
-            <div className="lg:col-span-6 flex justify-center lg:justify-end animate-in fade-in slide-in-from-right-2 duration-300">
-              <div className="w-full max-w-md h-72 relative flex items-center justify-center p-1.5 bg-white/15 backdrop-blur-xl border border-white/30 rounded-3xl shadow-2xl">
-                {productSuites[activeTab].mockup}
+              {/* Real SVG social icons */}
+              <div style={{ display: 'flex', gap: 10 }}>
+                {/* GitHub */}
+                <a href="https://github.com" target="_blank" rel="noopener noreferrer"
+                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
+                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                  </svg>
+                </a>
+                {/* Twitter / X */}
+                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
+                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                </a>
+                {/* LinkedIn */}
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
+                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
+                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
+                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                  </svg>
+                </a>
               </div>
             </div>
 
-          </div>
-
-        </div>
-      </section>
-
-      {/* 5. Visual Features Showcase Grid (Bento Style) */}
-      <section id="features" className="py-24 bg-transparent border-t border-white/20 flex flex-col items-center justify-center px-6 md:px-12 relative overflow-hidden z-10">
-        
-        <div className="w-full max-w-6xl space-y-12 relative z-10">
-          <div className="text-center space-y-3">
-            <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight drop-shadow-sm font-sans">
-              Designed for modern sales execution
-            </h2>
-            <p className="text-base sm:text-lg text-white/85 font-medium max-w-xl mx-auto leading-relaxed">
-              Every detail is crafted to increase rep efficiency, improve deal velocity, and provide clear management visibility.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                title: 'Visual Revenue Growth',
-                desc: 'Live financial forecasting and deal pacing charts dynamically updated from touchpoints.',
-                badge: 'Analytics',
-                chart: (
-                  <svg className="w-full h-24 mt-4 select-none" viewBox="0 0 120 40">
-                    <defs>
-                      <linearGradient id="barGradA" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#ec4899" /><stop offset="100%" stopColor="#f472b6" /></linearGradient>
-                      <linearGradient id="barGradB" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#38bdf8" /><stop offset="100%" stopColor="#7dd3fc" /></linearGradient>
-                      <linearGradient id="barGradC" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stopColor="#34d399" /><stop offset="100%" stopColor="#6ee7b7" /></linearGradient>
-                    </defs>
-                    <rect x="15" y="20" width="10" height="20" rx="2" fill="url(#barGradA)" />
-                    <rect x="35" y="12" width="10" height="28" rx="2" fill="url(#barGradB)" />
-                    <rect x="55" y="6" width="10" height="34" rx="2" fill="url(#barGradC)" />
-                    <rect x="75" y="16" width="10" height="24" rx="2" fill="url(#barGradA)" />
-                    <rect x="95" y="2" width="10" height="38" rx="2" fill="url(#barGradC)" />
-                  </svg>
-                )
-              },
-              {
-                title: 'Predictive Lead Scoring',
-                desc: 'AI algorithms score leads and deals based on buyer engagement signals and velocity.',
-                badge: 'AI Scoring',
-                chart: (
-                  <div className="flex items-center justify-center space-x-6 mt-4 h-24 select-none">
-                    <div className="relative h-20 w-20 flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 40 40">
-                        <circle cx="20" cy="20" r="16" fill="transparent" stroke="rgba(255,255,255,0.2)" strokeWidth="3" />
-                        <circle cx="20" cy="20" r="16" fill="transparent" stroke="#ec4899" strokeWidth="3" strokeDasharray="100.5" strokeDashoffset="14" strokeLinecap="round" />
-                      </svg>
-                      <span className="absolute text-xs font-black text-white">86%</span>
-                    </div>
-                    <div className="space-y-1.5 text-xs font-bold text-white/90 text-left">
-                      <div className="flex items-center space-x-1.5">
-                        <span className="h-2 w-2 rounded-full bg-pink-400 shrink-0"></span>
-                        <span>Priority A: 86%</span>
-                      </div>
-                      <div className="flex items-center space-x-1.5">
-                        <span className="h-2 w-2 rounded-full bg-cyan-300 shrink-0"></span>
-                        <span>Priority B: 52%</span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              },
-              {
-                title: 'Leaderboards & Milestones',
-                desc: 'Track sales rep milestones and activity logs in real time to drive sales productivity.',
-                badge: 'Motivation',
-                chart: (
-                  <div className="space-y-2 mt-4 h-24 flex flex-col justify-center select-none text-xs font-bold text-white/90">
-                    {[
-                      { name: 'Alex R.', val: 'w-[90%]', rev: '$120K' },
-                      { name: 'Helena T.', val: 'w-[75%]', rev: '$98K' },
-                      { name: 'Marcus V.', val: 'w-[55%]', rev: '$75K' }
-                    ].map((rep, i) => (
-                      <div key={i} className="flex items-center justify-between">
-                        <span className="w-16 truncate text-left">{rep.name}</span>
-                        <div className="flex-1 mx-2.5 bg-white/20 h-2 rounded-full overflow-hidden">
-                          <div className={`h-full ${rep.val} bg-pink-400 rounded-full`}></div>
-                        </div>
-                        <span className="w-10 text-right font-black text-white">{rep.rev}</span>
-                      </div>
-                    ))}
-                  </div>
-                )
-              },
-              {
-                title: 'Role-Based Access Control',
-                desc: 'Tailored permissions and custom workspace views for Reps, Managers, and System Admins.',
-                badge: 'Security',
-                chart: (
-                  <div className="flex items-center justify-center space-x-2 mt-6 h-24 select-none">
-                    <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white/20 text-white border border-white/30">System Admin</span>
-                    <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-pink-500/30 text-pink-200 border border-pink-400/50">Sales Manager</span>
-                  </div>
-                )
-              },
-              {
-                title: 'No-Code Automation Builder',
-                desc: 'Construct automated lead routing, follow-up tasks, and webhook notifications visually.',
-                badge: 'Automation',
-                chart: (
-                  <div className="flex items-center justify-center space-x-2 mt-6 h-24 select-none">
-                    <div className="bg-white/20 border border-white/30 p-2.5 rounded-lg text-[9px] font-bold text-white shadow-2xs flex items-center space-x-1.5">
-                      <span className="h-2 w-2 rounded-full bg-emerald-400"/>
-                      <span>Lead Form Event</span>
-                    </div>
-                    <div className="h-0.5 w-6 bg-white/40 relative">
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 border-y-3 border-l-3 border-y-transparent border-l-white/70"/>
-                    </div>
-                    <div className="bg-white/20 border border-white/30 p-2.5 rounded-lg text-[9px] font-bold text-white shadow-2xs flex items-center space-x-1.5">
-                      <span className="h-2 w-2 rounded-full bg-pink-400"/>
-                      <span>Assign Sales Rep</span>
-                    </div>
-                  </div>
-                )
-              },
-              {
-                title: 'Engagement Telemetry',
-                desc: 'Analyze reply velocities, touchpoint recency, and customer engagement metrics dynamically.',
-                badge: 'Insights',
-                chart: (
-                  <div className="space-y-2 mt-4 h-24 flex flex-col justify-center select-none text-xs font-semibold text-white/90 px-1">
-                    <div className="flex justify-between border-b border-white/15 pb-1"><span>Buyer Engagement</span><span className="text-emerald-300 font-extrabold">High (85/100)</span></div>
-                    <div className="flex justify-between border-b border-white/15 pb-1"><span>Reply Velocity</span><span className="text-cyan-300 font-extrabold">12 mins avg</span></div>
-                    <div className="flex justify-between border-b border-white/15 pb-1"><span>Touchpoint Recency</span><span className="text-white font-extrabold">Today</span></div>
-                  </div>
-                )
-              }
-            ].map((feature, idx) => (
-              <div key={idx} className="bg-white/15 backdrop-blur-lg border border-white/30 rounded-3xl p-6 shadow-xl hover:bg-white/25 hover:border-white/50 hover:scale-[1.02] transition-all duration-300 flex flex-col justify-between h-[300px]">
-                <div>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-pink-200 px-3 py-1 rounded-full bg-pink-500/30 border border-pink-400/50 inline-block mb-3">
-                    {feature.badge}
-                  </span>
-                  <h3 className="text-lg font-bold text-white text-left">{feature.title}</h3>
-                  <p className="text-xs text-white/85 font-medium leading-relaxed mt-1.5 text-left">{feature.desc}</p>
-                </div>
-                <div className="w-full shrink-0">
-                  {feature.chart}
-                </div>
+            {/* Link columns */}
+            {Object.entries(footerLinks).map(([category, links]) => (
+              <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <p style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{category}</p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
+                  {links.map(link => (
+                    <li key={link}>
+                      <button onClick={() => setIsModalOpen(true)} className="footer-link"
+                        style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.55)'; }}>
+                        {link}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
 
-      {/* Footer with Pulse Logo & Details */}
-      <footer className="bg-slate-950/80 backdrop-blur-xl text-white/80 py-12 px-6 md:px-12 select-none border-t border-white/20 z-10">
-        <div className="w-full max-w-6xl mx-auto space-y-8">
-          
-          {/* Top Footer Row: Logo, Title & Brand Details */}
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-white/10">
-            <div className="flex items-center space-x-3">
-              <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-pink-500 to-indigo-600 p-0.5 shadow-md flex items-center justify-center">
-                <div className="h-full w-full bg-slate-950/80 rounded-[10px] flex items-center justify-center">
-                  <Activity className="h-4 w-4 text-pink-400" strokeWidth={2.5} />
-                </div>
-              </div>
-              <div>
-                <div className="flex items-center space-x-1">
-                  <span className="text-lg font-black text-white tracking-tight font-sans">Pulse</span>
-                  <span className="text-lg font-black text-pink-300 font-sans">CRM</span>
-                </div>
-                <p className="text-[11px] text-white/70 font-medium">
-                  Next-Generation AI Revenue Copilot &amp; Enterprise Deal Telemetry.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-6 text-xs font-semibold text-white/80">
-              <a href="#" className="hover:text-pink-300 transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-pink-300 transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-pink-300 transition-colors">Security Standards</a>
+            {/* Newsletter */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <p style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Stay Updated</p>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 500, lineHeight: 1.65, margin: 0 }}>
+                Get weekly sales insights and Pulse product updates.
+              </p>
+              <form onSubmit={handleNewsletter} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input
+                  type="email"
+                  value={newsEmail}
+                  onChange={e => setNewsEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  style={{ padding: '11px 14px', borderRadius: 10, border: `1.5px solid rgba(255,255,255,0.12)`, fontSize: 13, fontFamily: 'inherit', color: C.white, outline: 'none', background: '#1e293b', boxSizing: 'border-box', width: '100%' }}
+                />
+                <button type="submit"
+                  style={{ padding: '11px', background: C.violet, color: C.white, fontSize: 13, fontWeight: 700, borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
+                  <Mail size={14} /> Subscribe
+                </button>
+              </form>
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, margin: 0 }}>
+                No spam. Unsubscribe anytime.
+              </p>
             </div>
           </div>
 
-          {/* Bottom Copyright Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-white/60">
-            <span>&copy; {new Date().getFullYear()} Pulse CRM Inc. All rights reserved.</span>
-            <span>Powered by <span className="text-white font-extrabold">Kalnet</span></span>
+          {/* Bottom legal bar */}
+          <div style={{ borderTop: `1px solid ${C.darkBorder}`, padding: '22px 0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, margin: 0 }}>
+              © {new Date().getFullYear()} Pulse CRM, Inc. All rights reserved.
+            </p>
+            <div style={{ display: 'flex', gap: 20 }}>
+              {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Security'].map(link => (
+                <button key={link} onClick={() => setIsModalOpen(true)}
+                  style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, transition: 'color 0.15s' }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)'; }}>
+                  {link}
+                </button>
+              ))}
+            </div>
           </div>
-
         </div>
       </footer>
 
-      {/* 8. Light-Mode Auth Login Modal Dialog */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop blur overlay */}
-          <div 
-            onClick={() => setIsModalOpen(false)}
-            className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs cursor-pointer"
-          />
-          
-          {/* Modal Container Card */}
-          <div className="w-full max-w-md bg-white border border-slate-200/90 rounded-2xl p-8 shadow-2xl flex flex-col justify-between text-slate-900 relative z-10 animate-in zoom-in-95 duration-150">
-            {/* Close trigger */}
-            <button 
-              onClick={() => setIsModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer border-0 bg-transparent"
-              aria-label="Close modal"
-            >
-              <X className="h-4 w-4" />
-            </button>
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeInRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+        @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+        @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes borderPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.4); } 50% { box-shadow: 0 0 0 8px rgba(124,58,237,0); } }
 
-            {/* Header titles */}
-            <div className="text-left mb-6">
-              <h2 className="font-sans text-2xl font-extrabold text-slate-900 tracking-tight">Welcome back</h2>
-              <p className="text-xs text-slate-500 mt-1 font-medium">Log in to access your Pulse workspace</p>
-            </div>
+        .hero-left { animation: fadeInLeft 0.8s ease both; }
+        .hero-right { animation: fadeInRight 0.9s ease both; animation-delay: 0.15s; }
+        .hero-badge { animation: fadeInUp 0.6s ease both; }
+        .hero-h1 { animation: fadeInUp 0.7s ease both; animation-delay: 0.1s; }
+        .hero-sub { animation: fadeInUp 0.7s ease both; animation-delay: 0.2s; }
+        .hero-btns { animation: fadeInUp 0.7s ease both; animation-delay: 0.3s; }
+        .hero-trust { animation: fadeInUp 0.7s ease both; animation-delay: 0.4s; }
+        .mockup-float { animation: float 5s ease-in-out infinite; }
 
-            {/* Email form */}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                  Email address
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
-                    <Mail className="h-4 w-4" strokeWidth={2} />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    disabled={isLoading}
-                    placeholder="name@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-900 bg-slate-50/50 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors shadow-2xs"
-                  />
-                </div>
-              </div>
+        .stat-card { animation: countUp 0.6s ease both; }
+        .stat-card:nth-child(1) { animation-delay: 0.05s; }
+        .stat-card:nth-child(2) { animation-delay: 0.15s; }
+        .stat-card:nth-child(3) { animation-delay: 0.25s; }
+        .stat-card:nth-child(4) { animation-delay: 0.35s; }
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
-                  Workspace Access Role
-                </label>
-                <select
-                  disabled={isLoading}
-                  value={selectedRole}
-                  onChange={(e) => setSelectedRole(e.target.value as any)}
-                  className="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-xs text-slate-900 bg-slate-50/50 focus:outline-none focus:border-indigo-600 focus:bg-white transition-colors shadow-2xs font-semibold cursor-pointer"
-                >
-                  <option value="representative">Sales Representative</option>
-                  <option value="manager">Sales Manager</option>
-                  <option value="admin">System Administrator</option>
-                </select>
-              </div>
+        .feature-card { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
+        .feature-card:hover { transform: translateY(-6px); box-shadow: 0 20px 48px rgba(124,58,237,0.12) !important; }
 
-              {/* Login Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading || !email.trim()}
-                className="w-full flex items-center justify-center space-x-2 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold shadow-xs transition-all cursor-pointer"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Signing in...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Continue to Workspace</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </form>
+        .testimonial-card { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
+        .testimonial-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.1) !important; }
 
-            {/* Divider line */}
-            <div className="relative flex items-center my-5">
-              <div className="flex-grow border-t border-slate-200"></div>
-              <span className="flex-shrink mx-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">or</span>
-              <div className="flex-grow border-t border-slate-200"></div>
-            </div>
+        .cta-btn-primary { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
+        .cta-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(124,58,237,0.5) !important; }
+        .cta-btn-secondary { transition: all 0.2s ease; }
+        .cta-btn-secondary:hover { transform: translateY(-2px); background: rgba(255,255,255,0.2) !important; }
 
-            {/* Continue with Google */}
-            <button
-              onClick={handleGoogleLogin}
-              disabled={isLoading}
-              className="w-full flex items-center justify-center space-x-2.5 py-2.5 border border-slate-200/90 hover:border-slate-300 hover:bg-slate-50 rounded-xl text-xs font-semibold text-slate-700 transition-all cursor-pointer shadow-2xs bg-white"
-            >
-              {/* Google SVG Logo */}
-              <svg className="h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                />
-              </svg>
-              <span>Continue with Google</span>
-            </button>
+        .nav-btn:hover { background: #f5f3ff !important; color: #7c3aed !important; }
+        .orbit-node { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
+        .orbit-node:hover { transform: scale(1.1) !important; }
 
-            {/* Security shield badge */}
-            <div className="flex items-center justify-center space-x-1.5 mt-5 text-xs font-medium text-slate-500">
-              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-              <span>SOC2 compliant & 256-bit encrypted</span>
-            </div>
+        .trusted-logo { transition: all 0.2s ease; }
+        .trusted-logo:hover { color: #7c3aed !important; }
 
-          </div>
-        </div>
-      )}
+        .footer-link:hover { color: #ffffff !important; padding-left: 4px; }
+        .footer-link { transition: all 0.15s ease; }
+
+        .announce-bar { background: linear-gradient(90deg, #f5f3ff, #ede9fe, #f5f3ff); background-size: 200% auto; animation: shimmer 3s linear infinite; }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+      `}</style>
 
     </div>
   );

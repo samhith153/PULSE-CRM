@@ -69,6 +69,9 @@ CREATE TABLE IF NOT EXISTS leads (
     value NUMERIC(12, 2),
     status VARCHAR(50) DEFAULT 'New',
     source VARCHAR(50),
+    industry VARCHAR(100),
+    current_crm VARCHAR(100),
+    operational_system VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -115,13 +118,35 @@ CREATE TABLE IF NOT EXISTS emails (
     deal_id UUID REFERENCES deals(id) ON DELETE SET NULL,
     contact_id UUID REFERENCES contacts(id) ON DELETE CASCADE NOT NULL,
     message_id VARCHAR(255) UNIQUE NOT NULL,
+    brevo_message_id VARCHAR(255) UNIQUE,
     subject VARCHAR(255),
     body TEXT,
     sender VARCHAR(255) NOT NULL,
     recipient VARCHAR(255) NOT NULL,
+    status VARCHAR(50) NOT NULL DEFAULT 'sent',
     sent_at TIMESTAMP NOT NULL,
+    delivered_at TIMESTAMP,
+    opened_at TIMESTAMP,
+    clicked_at TIMESTAMP,
+    bounced_at TIMESTAMP,
+    deferred_at TIMESTAMP,
+    spam_at TIMESTAMP,
+    unsubscribed_at TIMESTAMP,
+    last_event_at TIMESTAMP,
     is_incoming BOOLEAN DEFAULT TRUE,
     synced_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- Table: email_events
+CREATE TABLE IF NOT EXISTS email_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email_id UUID REFERENCES emails(id) ON DELETE CASCADE NOT NULL,
+    event_key VARCHAR(500) UNIQUE NOT NULL,
+    event_type VARCHAR(50) NOT NULL,
+    event_at TIMESTAMP NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Indexes for performance optimization on FK columns
@@ -136,6 +161,11 @@ CREATE INDEX IF NOT EXISTS idx_activities_deal_id ON activities(deal_id);
 CREATE INDEX IF NOT EXISTS idx_activities_contact_id ON activities(contact_id);
 CREATE INDEX IF NOT EXISTS idx_emails_deal_id ON emails(deal_id);
 CREATE INDEX IF NOT EXISTS idx_emails_contact_id ON emails(contact_id);
+CREATE INDEX IF NOT EXISTS idx_email_events_event_type ON email_events(event_type);
+CREATE INDEX IF NOT EXISTS idx_email_events_event_key ON email_events(event_key);
+CREATE INDEX IF NOT EXISTS idx_email_events_email_id ON email_events(email_id);
+CREATE INDEX IF NOT EXISTS idx_emails_status ON emails(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_emails_brevo_message_id ON emails(brevo_message_id) WHERE brevo_message_id IS NOT NULL;
 
 -- Seed static tables
 INSERT INTO roles (id, name, description) VALUES
