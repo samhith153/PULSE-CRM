@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS companies (
     name VARCHAR(150) NOT NULL,
     domain VARCHAR(100),
     industry VARCHAR(100),
+    current_crm VARCHAR(100),
+    operational_system VARCHAR(100),
     owner_id UUID REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -71,7 +73,9 @@ CREATE TABLE IF NOT EXISTS leads (
     source VARCHAR(50),
     industry VARCHAR(100),
     current_crm VARCHAR(100),
+    location VARCHAR(150),
     operational_system VARCHAR(100),
+    operational_systems VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

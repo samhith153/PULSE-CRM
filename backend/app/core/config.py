@@ -2,7 +2,7 @@
 from typing import List, Optional
 
 import secrets
-from pydantic import field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     REDOC_URL: str = "/redoc"
     OPENAPI_URL: str = "/openapi.json"
 
-    SECRET_KEY: str = "19QH1CDdpBDwKG70Ye63Efgznl53PfJ1jt8SipTlU4BWlmYqLPM66DT_WwN5ll9YpNf2L9jhjKjKMuJHf9CJuw"
+    SECRET_KEY: str = Field(default_factory=lambda: secrets.token_urlsafe(64))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     CORS_ALLOW_METHODS: str = "*"
     CORS_ALLOW_HEADERS: str = "*"
 
+    ENABLE_RATE_LIMIT: bool = True
     RATE_LIMIT_PER_MINUTE: int = 60
     RATE_LIMIT_BURST: int = 10
 
@@ -65,10 +66,26 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = None
     GOOGLE_WEBHOOK_SECRET: Optional[str] = None
+    GMAIL_TOKEN_ENCRYPTION_KEY: Optional[str] = None
     GOOGLE_OAUTH_SCOPES: str = (
         "https://www.googleapis.com/auth/gmail.readonly,"
         "https://www.googleapis.com/auth/gmail.modify"
     )
+
+    ENABLE_AI: bool = True
+    AI_PROVIDER: str = "rule_based"
+    MODEL_NAME: Optional[str] = None
+    OPENAI_API_KEY: Optional[str] = None
+    SCORING_PROVIDER: str = "rule_based"
+    AI_TIMEOUT: int = 30
+
+    WEBHOOK_MAX_ATTEMPTS: int = 5
+    WEBHOOK_TIMEOUT_SECONDS: int = 10
+
+    STORAGE_PROVIDER: str = "local"
+    LOCAL_STORAGE_PATH: str = "uploads"
+    MAX_UPLOAD_SIZE_BYTES: int = 10485760
+    ALLOWED_UPLOAD_CONTENT_TYPES: str = "image/jpeg,image/png,image/webp,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
@@ -87,6 +104,18 @@ class Settings(BaseSettings):
         text = str(value).strip().lower()
         return text in {"1", "true", "yes", "y", "on"}
 
+    @model_validator(mode="after")
+    def _validate_production_secrets(self):
+        if self.is_production:
+            missing = []
+            if not self.SECRET_KEY:
+                missing.append("SECRET_KEY")
+            if not self.GMAIL_TOKEN_ENCRYPTION_KEY:
+                missing.append("GMAIL_TOKEN_ENCRYPTION_KEY")
+            if missing:
+                raise ValueError(f"Missing required production secrets: {', '.join(missing)}")
+        return self
+
     @property
     def cors_origins_list(self) -> List[str]:
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
@@ -104,6 +133,10 @@ class Settings(BaseSettings):
         ]
 
     @property
+    def allowed_upload_content_types_list(self) -> List[str]:
+        return [item.strip() for item in self.ALLOWED_UPLOAD_CONTENT_TYPES.split(",") if item.strip()]
+
+    @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
 
@@ -118,3 +151,4 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()
+
