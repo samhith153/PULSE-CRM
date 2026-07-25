@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import auth, companies, contacts, leads, deals, timeline, gmail, users, summarization
@@ -268,3 +269,9 @@ def read_root():
         "version": "1.0.0",
         "documentation": "/docs"
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run("main:app", host=host, port=port, reload=True)
