@@ -2,10 +2,10 @@
   {
     "lead_id":"3fa85f64-5717-4562-b3fc-2c963f66afa6",
     "feature_version":"v1_real",
-    "generated_at":"2026-07-24T18:30:18.615",
-    "average_response_time":1.56,
+    "generated_at":"2026-07-25T15:49:26.697",
+    "average_response_time":0.21,
     "reply_recency_score":100,
-    "customer_initiative_score":10,
+    "customer_initiative_score":100,
     "buying_stage_score":0,
     "intent_strength_score":0
   }

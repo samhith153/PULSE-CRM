@@ -27,20 +27,12 @@ def average_response_time(emails):
     Returns:
         float: Average response time in hours, or None if no replies
     """
-
     
-
     if emails.empty or len(emails) < 2:
         return None
     
     emails = emails.sort_values("sent_at").copy()
     emails["sent_at"] = pd.to_datetime(emails["sent_at"])
-
-
-    diffs = emails["sent_at"].diff().dropna()
-    avg_hours = diffs.dt.total_seconds().mean() / 3600
-
-
     
     response_times = []
     
@@ -68,7 +60,6 @@ def average_response_time(emails):
     response_count = len(response_times)
     avg_hours = total_response_time / response_count
     
-
     return round(avg_hours, 2)
 
 
@@ -91,26 +82,11 @@ def response_time_score(avg_response_time_hours):
     Returns:
         int: Score 0-100
     """
-
-    if emails.empty:
-        return 0
-
-    latest = pd.to_datetime(emails["sent_at"]).max()
-    if latest.tzinfo is not None:
-        now = pd.Timestamp.now(tz=latest.tzinfo)
-    else:
-        now = pd.Timestamp.now()
-
-    days = (now - latest).days
-
-    if days <= 1:
-
     
-     if avg_response_time_hours is None:
+    if avg_response_time_hours is None:
         return 0  # No response history
     
     if avg_response_time_hours < 2:
-
         return 100
     elif avg_response_time_hours < 8:
         return 90
@@ -126,7 +102,6 @@ def response_time_score(avg_response_time_hours):
 
 def days_since_last_outbound(emails):
     """
-
     Days since LAST OUTBOUND email (sales rep sent email).
     
     Measures: How long has this lead been idle without our action?
@@ -190,12 +165,6 @@ def engagement_decay_penalty(days_since_last_outbound):
         return -30
 
 
-    customer = (emails["direction"] == "inbound").sum()
-    total = len(emails)
-
-    return round((customer / total) * 100)
-
-
 def ai_intent_category_score(intent_category):
     """
     AI Intent Category to engagement score mapping (0-100 normalized).
@@ -253,18 +222,11 @@ def ai_intent_category_score(intent_category):
     return intent_mapping.get(intent_category, 0)
 
 
-
 # Real LeadStatus enum values from app/utils/enums.py:
 # new, contacted, qualified, proposal_sent, negotiation, won, lost, converted
 _STAGE_SCORE_MAP = {
-    "new": 10,
-    "contacted": 30,
-    "qualified": 50,
-    "proposal_sent": 70,
-    "negotiation": 90,
-    "won": 100,
-    "lost": 0,
-    "converted": 100,
+    "new": 10, "contacted": 30, "qualified": 50, "proposal_sent": 70,
+    "negotiation": 90, "won": 100, "lost": 0, "converted": 100,
 }
 
 
@@ -276,42 +238,8 @@ def buying_stage_score(stage):
         return 0
     return _STAGE_SCORE_MAP.get(str(stage).lower(), 0)
 
-    '''Current buying stage to engagement score mapping (0-100)"
-    
-    Mapping per PDF spec:
-    - New Lead: 10
-    - Contacted: 20
-    - Responded: 40
-    - Meeting: 60
-    - Demo: 75
-    - Proposal: 85
-    - Negotiation: 95
-    - Won: 100
-    - Lost: 0
-    
-    Args:
-        stage: str (buying stage name)
-    
-    Returns:
-        int: Score 0-100
-    '''
-    
-    mapping = {
-        "New Lead": 10,
-        "Contacted": 20,
-        "Responded": 40,
-        "Meeting": 60,
-        "Demo": 75,
-        "Proposal": 85,
-        "Negotiation": 95,
-        "Won": 100,
-        "Lost": 0,
-    }
-    
-    return mapping.get(stage, 0)
 
-
-def customer_initiative_score(emails):
+def intent_strength_score(stage):
     """
     Temporary intent score derived from lead status.
     Replace with AI model later.
@@ -320,7 +248,9 @@ def customer_initiative_score(emails):
         return 0
     return _STAGE_SCORE_MAP.get(str(stage).lower(), 0)
 
-"""
+
+def customer_initiative_score(emails):
+    """
     Score based on LATEST email direction in conversation.
     
     If latest email is from customer (inbound) = they're actively driving
@@ -331,8 +261,7 @@ def customer_initiative_score(emails):
     
     Returns:
         int: 100 if customer initiated, 30 if sales initiated, 0 if no emails
-    
-        """
+    """
     
     if emails.empty:
         return 0
@@ -385,4 +314,28 @@ def engagement_trend_score(intent_today, intent_7_days_ago):
         return 25   # Declining ⬇️
     else:
         return 0    # Strong decline 🔴
+
+
+
+def reply_recency_score(emails):
+    """
+    Score based on latest email activity.
+    """
+    if emails.empty:
+        return 0
+
+    latest = pd.to_datetime(emails["sent_at"]).max()
+    now = pd.Timestamp.now(tz=latest.tzinfo) if latest.tzinfo is not None else pd.Timestamp.now()
+    days = (now - latest).days
+
+    if days <= 1:
+        return 100
+    elif days <= 3:
+        return 80
+    elif days <= 7:
+        return 60
+    elif days <= 14:
+        return 40
+    else:
+        return 20
 

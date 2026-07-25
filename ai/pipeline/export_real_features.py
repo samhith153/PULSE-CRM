@@ -11,7 +11,14 @@ from engagement_features import (
     customer_initiative_score, buying_stage_score, intent_strength_score,
 )
 
-ORG_ID = "3a2ea57d-818f-49f3-8d88-a30844da57dc"
+import argparse
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--org-id", required=True, help="Organization UUID to export features for")
+args = parser.parse_args()
+
+ORG_ID = args.org_id
 
 emails = load_real_emails(ORG_ID)
 leads = load_real_leads(ORG_ID)
