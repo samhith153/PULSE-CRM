@@ -1,6 +1,25 @@
-// API client wrapper with automatic mock-fallback for robustness
+// API client
 
 const API_BASE_URL = 'http://localhost:8000';
+const TOKEN_KEY = 'pulse-crm-token';
+
+export function getToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string): void {
+  sessionStorage.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken(): void {
+  sessionStorage.removeItem(TOKEN_KEY);
+}
+
+export function getAuthHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
 
 export interface Lead {
   id: number | string;
@@ -283,47 +302,47 @@ export const MOCK_DEALS: Deal[] = [
   { id: 5, title: "Analytics Custom Tier", company: "ByteSized Co.", value: 18000, stage: "Won", priority: "Low", owner: "Alex Johnson", closeDate: "2025-05-10" }
 ];
 
-// Helper to make API calls with fallback
-async function apiFetch<T>(endpoint: string, options?: RequestInit, fallbackData?: T): Promise<T> {
-  try {
-    const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options?.headers || {})
-      }
-    });
-    if (!res.ok) {
-      throw new Error(`API error ${res.status}`);
-    }
-    return await res.json() as T;
-  } catch (err) {
-    console.warn(`Failed fetching ${endpoint}, using mock fallback.`, err);
-    if (fallbackData !== undefined) return fallbackData;
-    throw err;
+export async function login(email: string, password: string): Promise<{ token: string; user: any }> {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).detail || `Login failed (${res.status})`);
   }
+  return res.json();
+}
+
+async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+      ...(options?.headers || {})
+    }
+  });
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}`);
+  }
+  return res.json() as Promise<T>;
 }
 
 // --- Leads API ---
 export async function getLeads(): Promise<Lead[]> {
-  try {
-    const dbLeads = await apiFetch<any[]>('/leads', {}, []);
-    if (!dbLeads || dbLeads.length === 0) return MOCK_LEADS;
-
-    // Join/map leads with mock metadata since backend schema is simple
-    return dbLeads.map((dl, idx) => {
-      const fallback = MOCK_LEADS[idx] || MOCK_LEADS[0];
-      return {
-        ...fallback, // Inherit all mock fields (timeline, emails, calls, meetings, owner, score)
-        id: dl.id,
-        status: dl.status || fallback.status,
-        value: String(dl.value || fallback.value || ''),
-        notes: dl.description || fallback.notes
-      };
-    });
-  } catch {
-    return MOCK_LEADS;
-  }
+  const dbLeads = await apiFetch<any[]>('/leads');
+  return dbLeads.map((dl, idx) => {
+    const fallback = MOCK_LEADS[idx] || MOCK_LEADS[0];
+    return {
+      ...fallback,
+      id: dl.id,
+      status: dl.status || fallback.status,
+      value: String(dl.value || fallback.value || ''),
+      notes: dl.description || fallback.notes
+    };
+  });
 }
 
 export async function createLead(leadData: any): Promise<any> {
@@ -342,24 +361,18 @@ export async function convertLead(leadId: string | number, payload: { name: stri
 
 // --- Contacts API ---
 export async function getContacts(): Promise<Contact[]> {
-  try {
-    const dbContacts = await apiFetch<any[]>('/contacts', {}, []);
-    if (!dbContacts || dbContacts.length === 0) return MOCK_CONTACTS;
-
-    return dbContacts.map((dc, idx) => {
-      const fallback = MOCK_CONTACTS[idx] || MOCK_CONTACTS[0];
-      return {
-        ...fallback, // Inherit mock timeline, calls, meetings, emails
-        id: dc.id,
-        name: `${dc.first_name} ${dc.last_name}`,
-        email: dc.email,
-        phone: dc.phone || fallback.phone,
-        designation: dc.job_title || fallback.designation
-      };
-    });
-  } catch {
-    return MOCK_CONTACTS;
-  }
+  const dbContacts = await apiFetch<any[]>('/contacts');
+  return dbContacts.map((dc, idx) => {
+    const fallback = MOCK_CONTACTS[idx] || MOCK_CONTACTS[0];
+    return {
+      ...fallback,
+      id: dc.id,
+      name: `${dc.first_name} ${dc.last_name}`,
+      email: dc.email,
+      phone: dc.phone || fallback.phone,
+      designation: dc.job_title || fallback.designation
+    };
+  });
 }
 
 export async function createContact(contactData: any): Promise<any> {
@@ -371,23 +384,17 @@ export async function createContact(contactData: any): Promise<any> {
 
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
-  try {
-    const dbCompanies = await apiFetch<any[]>('/companies', {}, []);
-    if (!dbCompanies || dbCompanies.length === 0) return MOCK_COMPANIES;
-
-    return dbCompanies.map((dc, idx) => {
-      const fallback = MOCK_COMPANIES[idx] || MOCK_COMPANIES[0];
-      return {
-        ...fallback, // Inherit mock contacts, timeline, emails, files
-        id: dc.id,
-        name: dc.name,
-        domain: dc.domain || fallback.domain || '',
-        industry: dc.industry || fallback.industry
-      };
-    });
-  } catch {
-    return MOCK_COMPANIES;
-  }
+  const dbCompanies = await apiFetch<any[]>('/companies');
+  return dbCompanies.map((dc, idx) => {
+    const fallback = MOCK_COMPANIES[idx] || MOCK_COMPANIES[0];
+    return {
+      ...fallback,
+      id: dc.id,
+      name: dc.name,
+      domain: dc.domain || fallback.domain || '',
+      industry: dc.industry || fallback.industry
+    };
+  });
 }
 
 export async function createCompany(companyData: any): Promise<any> {
@@ -399,26 +406,20 @@ export async function createCompany(companyData: any): Promise<any> {
 
 // --- Deals API ---
 export async function getDeals(): Promise<Deal[]> {
-  try {
-    const dbDeals = await apiFetch<any[]>('/deals', {}, []);
-    if (!dbDeals || dbDeals.length === 0) return MOCK_DEALS;
-
-    return dbDeals.map((dd, idx) => {
-      const fallback = MOCK_DEALS[idx] || MOCK_DEALS[0];
-      return {
-        ...fallback,
-        id: dd.id,
-        title: dd.name,
-        value: Number(dd.value || fallback.value),
-        stage: dd.stage_id === 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918' ? 'Qualified' :
-               dd.stage_id === 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919' ? 'Proposal' :
-               dd.stage_id === 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920' ? 'Under Review' :
-               dd.stage_id === 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921' ? 'Won' : 'Lost'
-      };
-    });
-  } catch {
-    return MOCK_DEALS;
-  }
+  const dbDeals = await apiFetch<any[]>('/deals');
+  return dbDeals.map((dd, idx) => {
+    const fallback = MOCK_DEALS[idx] || MOCK_DEALS[0];
+    return {
+      ...fallback,
+      id: dd.id,
+      title: dd.name,
+      value: Number(dd.value || fallback.value),
+      stage: dd.stage_id === 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918' ? 'Qualified' :
+             dd.stage_id === 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919' ? 'Proposal' :
+             dd.stage_id === 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920' ? 'Under Review' :
+             dd.stage_id === 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921' ? 'Won' : 'Lost'
+    };
+  });
 }
 
 export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
@@ -456,32 +457,27 @@ export interface ConversationSummary {
 }
 
 export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        thread_id: threadId,
-        messages,
-        contact_id: contactId,
-        deal_id: dealId
-      })
-    });
-    if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
-    return await res.json() as ConversationSummary;
-  } catch (err) {
-    console.warn('Failed to summarize thread, using fallback.', err);
-    return null;
-  }
+  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders()
+    },
+    body: JSON.stringify({
+      thread_id: threadId,
+      messages,
+      contact_id: contactId,
+      deal_id: dealId
+    })
+  });
+  if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
+  return res.json() as Promise<ConversationSummary>;
 }
 
 export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`);
-    if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
-    return await res.json() as ConversationSummary;
-  } catch (err) {
-    console.warn('Failed to get summary by thread, using fallback.', err);
-    return null;
-  }
+  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
+    headers: { ...getAuthHeaders() }
+  });
+  if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
+  return res.json() as Promise<ConversationSummary>;
 }

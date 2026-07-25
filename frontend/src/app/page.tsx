@@ -39,6 +39,7 @@ import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2 } from 'lucide-react';
+import { clearToken } from '@/utils/api';
 
 export default function DashboardHome() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -60,6 +61,7 @@ export default function DashboardHome() {
   const handleSignOut = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('pulse-crm-auth');
+    clearToken();
   };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);

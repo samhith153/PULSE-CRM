@@ -10,6 +10,7 @@ import {
   Target, Lock
 } from 'lucide-react';
 import Navbar from '@/components/navigation/Navbar';
+import { login as apiLogin, setToken } from '@/utils/api';
 
 interface PulseLandingPageProps {
   onLogin: (role: 'representative' | 'manager' | 'admin') => void;
@@ -117,16 +118,22 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) { addToast('Please fill in all fields.', 'error'); return; }
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const result = await apiLogin(email, password);
+      setToken(result.token);
       setIsLoading(false);
       setIsModalOpen(false);
       setEmail('');
       setPassword('');
+      addToast('Signed in successfully!', 'success');
       onLogin(selectedRole);
-    }, 1200);
+    } catch (err: any) {
+      setIsLoading(false);
+      addToast(err.message || 'Login failed. Please try again.', 'error');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); handleLogin(); };
