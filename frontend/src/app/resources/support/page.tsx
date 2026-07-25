@@ -1,364 +1,234 @@
 'use client';
-import React, { useState } from 'react';
-import Navbar from '@/components/navigation/Navbar';
-import PageModal from '@/components/shared/PageModal';
-import { HelpCircle, Mail, MessageCircle, BookOpen, Search, Clock, CheckCircle, ArrowRight } from 'lucide-react';
+import React from 'react';
+import { motion } from 'framer-motion';
+import { PageContainer } from '@/components/shared/PageTemplates';
+import { Headphones, MessageCircle, Mail, Phone, Clock, CheckCircle, Zap, ArrowRight } from 'lucide-react';
 
-const SUPPORT_CHANNELS = [
-  {
-    icon: Mail,
-    title: 'Email Support',
-    desc: 'Get help via email from our support team',
-    response: '24-hour response time',
-    action: 'support@pulsecrm.io',
-    color: '#7c3aed',
-  },
+const SUPPORT_OPTIONS = [
   {
     icon: MessageCircle,
     title: 'Live Chat',
-    desc: 'Chat with our support team in real-time',
-    response: 'Available 9am-6pm EST',
-    action: 'Start Chat',
-    color: '#059669',
+    description: 'Get instant help from our support team in real-time.',
+    availability: '24/7 Available',
+    responseTime: 'Average: 2 mins',
+    color: '#7c3aed',
+    cta: 'Start Chat',
   },
   {
-    icon: BookOpen,
-    title: 'Documentation',
-    desc: 'Browse guides, tutorials, and best practices',
-    response: 'Instant answers',
-    action: 'View Docs',
+    icon: Mail,
+    title: 'Email Support',
+    description: 'Send us detailed questions and get comprehensive answers.',
+    availability: 'Mon-Fri 9AM-6PM',
+    responseTime: 'Average: 4 hours',
     color: '#2563eb',
+    cta: 'Send Email',
+  },
+  {
+    icon: Phone,
+    title: 'Phone Support',
+    description: 'Speak directly with our technical experts for urgent issues.',
+    availability: 'Enterprise Only',
+    responseTime: 'Immediate',
+    color: '#059669',
+    cta: 'Call Now',
   },
 ];
 
-const COMMON_ISSUES = [
+const SUPPORT_RESOURCES = [
   {
-    category: 'Authentication & Access',
-    issues: [
-      { q: 'I forgot my password', a: 'Click "Forgot Password" on the login page. You\'ll receive a reset link via email within 5 minutes.' },
-      { q: 'Cannot access certain features', a: 'Check your role permissions in Settings > Roles. Contact your organization admin to request additional permissions.' },
-      { q: 'Session keeps expiring', a: 'JWT tokens expire after 24 hours for security. Enable "Remember Me" or ask your admin to adjust session timeout settings.' },
-    ],
+    icon: Headphones,
+    title: 'Documentation',
+    description: 'Comprehensive guides and tutorials',
+    link: '/resources/documentation',
   },
   {
-    category: 'Data Management',
-    issues: [
-      { q: 'How do I import contacts from CSV?', a: 'Go to Contacts > Import. Download our CSV template, populate your data, and upload. We support up to 10,000 contacts per import.' },
-      { q: 'Deals not showing in pipeline', a: 'Check pipeline filters and stage visibility. Ensure deals have assigned owners and valid stage values.' },
-      { q: 'Deleted items by mistake', a: 'Items are soft-deleted. Admins can restore from Settings > Data Management > Deleted Items within 30 days.' },
-    ],
+    icon: MessageCircle,
+    title: 'Community Forums',
+    description: 'Connect with other users',
+    link: '/resources/community',
   },
   {
-    category: 'Email Integration',
-    issues: [
-      { q: 'Emails not syncing', a: 'Re-authorize your email connection in Settings > Integrations. Check that IMAP/SMTP settings are correct and 2FA is configured properly.' },
-      { q: 'Thread linking not working', a: 'Ensure email subjects contain deal/contact references. Check Settings > Email > Thread Linking Rules for configuration.' },
-      { q: 'Cannot send emails from CRM', a: 'Verify SMTP credentials and check that your email provider allows third-party apps. Gmail users need to enable "Less secure app access".' },
-    ],
-  },
-  {
-    category: 'Performance & Technical',
-    issues: [
-      { q: 'Dashboard loading slowly', a: 'Clear browser cache and reload. For persistent issues, check browser console for errors and contact support with error messages.' },
-      { q: 'API rate limit errors', a: 'Default rate limit is 100 requests/minute. Implement exponential backoff and caching. Enterprise plans offer higher limits.' },
-      { q: 'Mobile app not syncing', a: 'Ensure you have an active internet connection. Force close and reopen the app. Check Settings > Mobile > Sync Settings.' },
-    ],
+    icon: Zap,
+    title: 'Status Page',
+    description: 'Check system performance',
+    link: '#',
   },
 ];
 
-const FAQS = [
-  {
-    q: 'What are your support hours?',
-    a: 'Email support is available 24/7 with responses within 24 hours. Live chat is available Monday-Friday, 9am-6pm EST. Enterprise customers get priority support with 4-hour SLA.',
-  },
-  {
-    q: 'Do you offer phone support?',
-    a: 'Phone support is available for Enterprise plan customers. Schedule a call through your dedicated account manager or contact support@pulsecrm.io.',
-  },
-  {
-    q: 'How do I report a bug?',
-    a: 'Email support@pulsecrm.io with a detailed description, steps to reproduce, screenshots, and browser/device information. We prioritize bugs based on severity.',
-  },
-  {
-    q: 'Can you help with custom implementation?',
-    a: 'Yes. Enterprise plans include implementation support. For custom development, integrations, or consulting, contact our professional services team.',
-  },
-  {
-    q: 'Where can I request new features?',
-    a: 'Submit feature requests through our Community feedback portal or email support@pulsecrm.io. We review all suggestions and prioritize based on demand.',
-  },
+const SUPPORT_FEATURES = [
+  'Priority ticket routing',
+  'Dedicated account manager',
+  'Custom SLA agreements',
+  'Onboarding & training',
+  'API integration support',
+  'Regular health checks',
 ];
 
 export default function SupportPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-  const [openIssue, setOpenIssue] = useState<string | null>(null);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-
   return (
-    <div style={{ fontFamily: "'Inter',system-ui,sans-serif", background: '#fff', minHeight: '100vh' }}>
-      <PageModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
-      <Navbar onOpenModal={() => setModalOpen(true)} />
-
+    <PageContainer>
       {/* Hero Section */}
-      <section style={{ marginTop: 64, padding: '72px 48px 56px', background: 'linear-gradient(180deg,#f5f3ff 0%,#fff 100%)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 100, marginBottom: 20 }}>
-            <HelpCircle size={13} color="#7c3aed" />
+      <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #f5f3ff 0%, #fff 100%)', position: 'relative', overflow: 'hidden' }}>
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 0.1 }}
+          transition={{ duration: 1 }}
+          style={{ position: 'absolute', top: -100, left: -100, width: 600, height: 600, background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ maxWidth: 1280, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 100, marginBottom: 20 }}>
+            <Headphones size={13} color="#7c3aed" />
             <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Support</span>
-          </div>
-          <h1 style={{ fontSize: 'clamp(38px,5vw,58px)', fontWeight: 900, color: '#0f172a', lineHeight: 1.08, letterSpacing: '-0.035em', marginBottom: 16 }}>
-            How Can We Help You?
-          </h1>
-          <p style={{ fontSize: 19, color: '#475569', lineHeight: 1.7, maxWidth: 680, marginBottom: 32 }}>
-            Get instant answers to common questions, browse documentation, or contact our support team.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 0, maxWidth: 620, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '4px 4px 4px 16px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
-            <Search size={16} color="#94a3b8" style={{ flexShrink: 0 }} />
-            <input
-              readOnly
-              placeholder="Search for help articles, guides, FAQs..."
-              style={{
-                flex: 1,
-                border: 'none',
-                outline: 'none',
-                fontSize: 15,
-                color: '#0f172a',
-                padding: '10px 12px',
-                fontFamily: 'inherit',
-                background: 'transparent',
-              }}
-            />
-            <button style={{ padding: '10px 18px', background: '#7c3aed', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 9, border: 'none', cursor: 'pointer' }}>
-              Search
-            </button>
-          </div>
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            style={{ fontSize: 'clamp(36px,5vw,56px)', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 16 }}>
+            We're Here to Help
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            style={{ fontSize: 18, color: '#475569', lineHeight: 1.7, maxWidth: 640, margin: '0 auto 40px' }}>
+            Get the support you need, when you need it. Our expert team is ready to assist you 24/7.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {['99.9% Uptime SLA', '24/7 Monitoring', 'Enterprise Support'].map((feature, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 100 }}>
+                <CheckCircle size={14} color="#059669" />
+                <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{feature}</span>
+              </div>
+            ))}
+          </motion.div>
         </div>
       </section>
 
-      {/* Support Channels */}
+      {/* Support Options */}
       <section style={{ padding: '60px 48px', background: '#fff' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', marginBottom: 32, letterSpacing: '-0.02em', textAlign: 'center' }}>
-            Contact Support
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
-            {SUPPORT_CHANNELS.map((channel, idx) => {
-              const Icon = channel.icon;
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={{
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.15 } }
+            }}
+            style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+            {SUPPORT_OPTIONS.map((option, i) => {
+              const Icon = option.icon;
               return (
-                <div
-                  key={idx}
-                  style={{
-                    background: '#f8fafc',
-                    borderRadius: 16,
-                    padding: 32,
-                    border: '1px solid #e2e8f0',
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
+                <motion.div
+                  key={i}
+                  variants={{
+                    hidden: { opacity: 0, y: 30 },
+                    visible: { opacity: 1, y: 0 }
                   }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = '0 8px 28px rgba(0,0,0,0.08)';
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-                    (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
-                  }}
-                >
-                  <div
-                    style={{
-                      height: 64,
-                      width: 64,
-                      borderRadius: 16,
-                      background: `${channel.color}14`,
-                      border: `1px solid ${channel.color}28`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 20px',
-                    }}
-                  >
-                    <Icon size={28} color={channel.color} />
+                  whileHover={{ y: -8, boxShadow: `0 16px 40px ${option.color}20` }}
+                  style={{ padding: 36, background: `linear-gradient(135deg, ${option.color}08 0%, #fff 100%)`, borderRadius: 20, border: `1.5px solid ${option.color}20`, cursor: 'pointer', transition: 'box-shadow 0.3s', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, background: `${option.color}08`, borderRadius: '50%', filter: 'blur(40px)' }} />
+                  <div style={{ height: 64, width: 64, borderRadius: 16, background: option.color, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20, boxShadow: `0 8px 24px ${option.color}40`, position: 'relative' }}>
+                    <Icon size={30} color="#fff" strokeWidth={2} />
                   </div>
-                  <h3 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>{channel.title}</h3>
-                  <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 12 }}>{channel.desc}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 16 }}>
-                    <Clock size={14} color="#94a3b8" />
-                    <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>{channel.response}</span>
+                  <h3 style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 10 }}>{option.title}</h3>
+                  <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 20 }}>{option.description}</p>
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <Clock size={14} color={option.color} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{option.availability}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Zap size={14} color={option.color} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>{option.responseTime}</span>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: channel.color }}>{channel.action} →</div>
-                </div>
+                  <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 20px', background: option.color, color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', fontFamily: 'inherit', width: '100%', justifyContent: 'center' }}>
+                    {option.cta} <ArrowRight size={16} />
+                  </button>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Enterprise Support Features */}
+      <section style={{ padding: '80px 48px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}>
+            <h2 style={{ fontSize: 40, fontWeight: 900, color: '#fff', lineHeight: 1.2, letterSpacing: '-0.03em', marginBottom: 16 }}>
+              Enterprise Support
+            </h2>
+            <p style={{ fontSize: 16, color: '#94a3b8', lineHeight: 1.7, marginBottom: 32 }}>
+              Get dedicated support tailored to your organization's needs with premium SLAs and personalized assistance.
+            </p>
+            <button style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.5)', fontFamily: 'inherit' }}>
+              Contact Sales <ArrowRight size={16} />
+            </button>
+          </motion.div>
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {SUPPORT_FEATURES.map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', background: 'rgba(255,255,255,0.05)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <CheckCircle size={18} color="#7c3aed" strokeWidth={2.5} />
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>{feature}</span>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Additional Resources */}
+      <section style={{ padding: '60px 48px 100px', background: '#f8fafc' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', marginBottom: 12, letterSpacing: '-0.02em' }}>More Resources</h2>
+          <p style={{ fontSize: 16, color: '#64748b', marginBottom: 40 }}>Explore additional ways to get help and stay informed.</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
+            {SUPPORT_RESOURCES.map((resource, i) => {
+              const Icon = resource.icon;
+              return (
+                <motion.a
+                  key={i}
+                  href={resource.link}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  whileHover={{ y: -4 }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 24, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', textDecoration: 'none', cursor: 'pointer' }}>
+                  <div style={{ height: 48, width: 48, borderRadius: 12, background: '#f5f3ff', border: '1px solid #ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={22} color="#7c3aed" />
+                  </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <h4 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{resource.title}</h4>
+                    <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>{resource.description}</p>
+                  </div>
+                </motion.a>
               );
             })}
           </div>
         </div>
       </section>
-
-      {/* Common Issues */}
-      <section style={{ padding: '60px 48px', background: '#f8fafc' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', marginBottom: 32, letterSpacing: '-0.02em' }}>
-            Common Issues & Solutions
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {COMMON_ISSUES.map((category, idx) => (
-              <div key={idx} style={{ background: '#fff', borderRadius: 16, padding: 32, border: '1px solid #e2e8f0' }}>
-                <h3 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 20 }}>{category.category}</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {category.issues.map((issue, i) => {
-                    const key = `${idx}-${i}`;
-                    const isOpen = openIssue === key;
-                    return (
-                      <div
-                        key={i}
-                        style={{
-                          background: '#f8fafc',
-                          border: '1.5px solid',
-                          borderColor: isOpen ? '#c4b5fd' : '#e2e8f0',
-                          borderRadius: 12,
-                          overflow: 'hidden',
-                          transition: 'border-color 0.15s',
-                        }}
-                      >
-                        <button
-                          onClick={() => setOpenIssue(isOpen ? null : key)}
-                          style={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            gap: 16,
-                            padding: '16px 20px',
-                            background: 'transparent',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontFamily: 'inherit',
-                            textAlign: 'left',
-                          }}
-                        >
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>{issue.q}</span>
-                          <ArrowRight
-                            size={16}
-                            color="#94a3b8"
-                            style={{
-                              flexShrink: 0,
-                              transition: 'transform 0.2s',
-                              transform: isOpen ? 'rotate(90deg)' : 'rotate(0)',
-                            }}
-                          />
-                        </button>
-                        {isOpen && (
-                          <div style={{ padding: '0 20px 16px' }}>
-                            <div style={{ height: 1, background: '#ede9fe', marginBottom: 12 }} />
-                            <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.7, margin: 0 }}>{issue.a}</p>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* General FAQs */}
-      <section style={{ padding: '60px 48px 80px', background: '#fff' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', textAlign: 'center', marginBottom: 40, letterSpacing: '-0.02em' }}>
-            Support FAQs
-          </h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {FAQS.map((faq, i) => (
-              <div
-                key={i}
-                style={{
-                  background: '#f8fafc',
-                  border: '1.5px solid',
-                  borderColor: openFaq === i ? '#c4b5fd' : '#e2e8f0',
-                  borderRadius: 14,
-                  overflow: 'hidden',
-                  transition: 'border-color 0.15s',
-                }}
-              >
-                <button
-                  onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 16,
-                    padding: '18px 22px',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                    textAlign: 'left',
-                  }}
-                >
-                  <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', lineHeight: 1.4 }}>{faq.q}</span>
-                  <ArrowRight
-                    size={17}
-                    color="#94a3b8"
-                    style={{
-                      flexShrink: 0,
-                      transition: 'transform 0.2s',
-                      transform: openFaq === i ? 'rotate(90deg)' : 'rotate(0)',
-                    }}
-                  />
-                </button>
-                {openFaq === i && (
-                  <div style={{ padding: '0 22px 18px' }}>
-                    <div style={{ height: 1, background: '#ede9fe', marginBottom: 14 }} />
-                    <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.75, margin: 0 }}>{faq.a}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section style={{ padding: '80px 48px', background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', textAlign: 'center' }}>
-        <div style={{ maxWidth: 640, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 38, fontWeight: 900, color: '#ffffff', letterSpacing: '-0.03em', lineHeight: 1.15, marginBottom: 14 }}>
-            Still Need Help?
-          </h2>
-          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.85)', marginBottom: 32 }}>
-            Our support team is ready to assist you. We typically respond within 24 hours.
-          </p>
-          <button
-            onClick={() => (window.location.href = 'mailto:support@pulsecrm.io')}
-            style={{
-              padding: '14px 32px',
-              background: '#ffffff',
-              color: '#7c3aed',
-              fontSize: 15,
-              fontWeight: 700,
-              borderRadius: 100,
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
-              transition: 'transform 0.15s',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.transform = 'scale(1.03)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
-            }}
-          >
-            Contact Support →
-          </button>
-        </div>
-      </section>
-
-      <footer style={{ padding: '36px 48px', background: '#0f172a', color: '#475569', textAlign: 'center' }}>
-        <p style={{ fontSize: 14 }}>© 2026 Pulse CRM Inc. All rights reserved.</p>
-      </footer>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useInView, useAnimation } from 'framer-motion';
 import Navbar from '@/components/navigation/Navbar';
 import { ArrowRight, CheckCircle, X, Mail, Lock, Loader2, Activity } from 'lucide-react';
 
@@ -42,6 +43,46 @@ export interface FPData {
 }
 
 interface Props { data: FPData }
+
+/* ─── Animated Counter Component ──────────────────── */
+function AnimatedCounter({ value, duration = 2000 }: { value: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true });
+  
+  useEffect(() => {
+    if (!isInView) return;
+    
+    const numericValue = parseInt(value.replace(/[^\d]/g, ''));
+    if (isNaN(numericValue)) return;
+    
+    const steps = 60;
+    const increment = numericValue / steps;
+    let current = 0;
+    
+    const timer = setInterval(() => {
+      current += increment;
+      if (current >= numericValue) {
+        setCount(numericValue);
+        clearInterval(timer);
+      } else {
+        setCount(Math.floor(current));
+      }
+    }, duration / steps);
+    
+    return () => clearInterval(timer);
+  }, [isInView, value, duration]);
+  
+  // Extract non-numeric parts (like %, ×, etc.)
+  const suffix = value.replace(/[\d.,]/g, '');
+  const hasDecimal = value.includes('.');
+  
+  return (
+    <div ref={ref}>
+      {hasDecimal ? value : `${count}${suffix}`}
+    </div>
+  );
+}
 
 /* ─── Inline Auth Modal ──────────────────────────── */
 type Role = 'representative' | 'manager' | 'admin';
@@ -183,72 +224,165 @@ export default function FeaturePage({ data }: Props) {
 
   const openModal = () => setModalOpen(true);
 
+  // Animation variants
+  const pageTransition = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 }
+  };
+
+  const staggerContainer = {
+    animate: {
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const fadeInUp = {
+    initial: { opacity: 0, y: 30 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.5 }
+  };
+
   return (
-    <div style={{ fontFamily:"'Inter',system-ui,sans-serif", background:'#fff', minHeight:'100vh', color:'#0f172a' }}>
+    <motion.div 
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageTransition}
+      transition={{ duration: 0.4 }}
+      style={{ fontFamily:"'Inter',system-ui,sans-serif", background:'#fff', minHeight:'100vh', color:'#0f172a' }}>
       <Navbar onOpenModal={openModal} />
       <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
 
       {/* ── HERO ─────────────────────────────────────── */}
-      <section style={{ marginTop:64, padding:'80px 48px 72px', background:`linear-gradient(180deg,${accentBg} 0%,#fff 100%)`, position:'relative', overflow:'hidden' }}>
-        <div style={{ position:'absolute', top:-80, right:-80, width:560, height:560, background:`radial-gradient(circle,${accent}10 0%,transparent 65%)`, pointerEvents:'none' }} />
+      <motion.section 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        style={{ marginTop:64, padding:'80px 48px 72px', background:`linear-gradient(180deg,${accentBg} 0%,#fff 100%)`, position:'relative', overflow:'hidden' }}>
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          style={{ position:'absolute', top:-80, right:-80, width:560, height:560, background:`radial-gradient(circle,${accent}10 0%,transparent 65%)`, pointerEvents:'none' }} />
         <div style={{ maxWidth:1280, margin:'0 auto', position:'relative' }}>
-          <div style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 16px', background:accentBg, border:`1px solid ${accentBorder}`, borderRadius:100, marginBottom:22 }}>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'6px 16px', background:accentBg, border:`1px solid ${accentBorder}`, borderRadius:100, marginBottom:22 }}>
             {BadgeIcon && <BadgeIcon size={13} color={accent} />}
             <span style={{ fontSize:12, fontWeight:700, color:accent, textTransform:'uppercase', letterSpacing:'0.07em' }}>{data.badge}</span>
-          </div>
-          <h1 style={{ fontSize:'clamp(40px,5vw,62px)', fontWeight:900, color:'#0f172a', lineHeight:1.08, letterSpacing:'-0.035em', marginBottom:22, maxWidth:820 }}>
+          </motion.div>
+          <motion.h1 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+            style={{ fontSize:'clamp(40px,5vw,62px)', fontWeight:900, color:'#0f172a', lineHeight:1.08, letterSpacing:'-0.035em', marginBottom:22, maxWidth:820 }}>
             {data.heroTitle}
-          </h1>
-          <p style={{ fontSize:19, color:'#475569', lineHeight:1.75, maxWidth:680, marginBottom:36 }}>{data.heroDesc}</p>
-          <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
-            <button onClick={openModal}
-              style={{ display:'flex', alignItems:'center', gap:8, padding:'14px 28px', background:accent, color:'#fff', fontSize:15, fontWeight:700, borderRadius:100, border:'none', cursor:'pointer', boxShadow:`0 8px 24px ${accent}44`, transition:'all .15s' }}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-1px)';(e.currentTarget as HTMLElement).style.boxShadow=`0 14px 32px ${accent}55`;}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(0)';(e.currentTarget as HTMLElement).style.boxShadow=`0 8px 24px ${accent}44`;}}>
+          </motion.h1>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            style={{ fontSize:19, color:'#475569', lineHeight:1.75, maxWidth:680, marginBottom:36 }}>{data.heroDesc}</motion.p>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+            style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
+            <motion.button 
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={openModal}
+              style={{ display:'flex', alignItems:'center', gap:8, padding:'14px 28px', background:accent, color:'#fff', fontSize:15, fontWeight:700, borderRadius:100, border:'none', cursor:'pointer', boxShadow:`0 8px 24px ${accent}44`, transition:'box-shadow .2s' }}>
               Start Free Trial <ArrowRight size={16} />
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* ── CAPABILITIES ─────────────────────────────── */}
       <section style={{ padding:'80px 48px', background:'#fff' }}>
         <div style={{ maxWidth:1280, margin:'0 auto' }}>
-          <h2 style={{ fontSize:38, fontWeight:900, color:'#0f172a', textAlign:'center', letterSpacing:'-0.025em', marginBottom:14 }}>{data.overviewTitle}</h2>
-          <p style={{ fontSize:17, color:'#64748b', textAlign:'center', maxWidth:680, margin:'0 auto 56px', lineHeight:1.75 }}>{data.overviewDesc}</p>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(290px,1fr))', gap:20 }}>
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            style={{ fontSize:38, fontWeight:900, color:'#0f172a', textAlign:'center', letterSpacing:'-0.025em', marginBottom:14 }}>{data.overviewTitle}</motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            style={{ fontSize:17, color:'#64748b', textAlign:'center', maxWidth:680, margin:'0 auto 56px', lineHeight:1.75 }}>{data.overviewDesc}</motion.p>
+          <motion.div 
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(290px,1fr))', gap:20 }}>
             {data.capabilities.map((c,i)=>{
               const Icon=c.icon;
               return(
-                <div key={i}
-                  style={{ padding:28, background:'#f8fafc', borderRadius:16, border:'1px solid #e2e8f0', transition:'transform .15s, box-shadow .15s' }}
-                  onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(-2px)';(e.currentTarget as HTMLElement).style.boxShadow='0 8px 28px rgba(0,0,0,.07)';}}
-                  onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='translateY(0)';(e.currentTarget as HTMLElement).style.boxShadow='none';}}>
-                  <div style={{ height:46, width:46, borderRadius:12, background:accentBg, border:`1px solid ${accentBorder}`, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
+                <motion.div 
+                  key={i}
+                  variants={fadeInUp}
+                  whileHover={{ scale: 1.03, y: -4 }}
+                  transition={{ type: "spring", stiffness: 300 }}
+                  style={{ padding:28, background:'#f8fafc', borderRadius:16, border:'1px solid #e2e8f0', cursor:'pointer', position:'relative', overflow:'hidden' }}>
+                  <motion.div 
+                    whileHover={{ rotate: 10, scale: 1.1 }}
+                    transition={{ type: "spring", stiffness: 400 }}
+                    style={{ height:46, width:46, borderRadius:12, background:accentBg, border:`1px solid ${accentBorder}`, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:16 }}>
                     <Icon size={20} color={accent} />
-                  </div>
+                  </motion.div>
                   <h3 style={{ fontSize:16, fontWeight:700, color:'#0f172a', marginBottom:8 }}>{c.title}</h3>
                   <p style={{ fontSize:14, color:'#64748b', lineHeight:1.65 }}>{c.desc}</p>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ── HOW IT WORKS ─────────────────────────────── */}
-      <section style={{ padding:'80px 48px', background:'#f8fafc' }}>
+      <section style={{ padding:'80px 48px', background:'#F8F5FF' }}>
         <div style={{ maxWidth:1080, margin:'0 auto' }}>
-          <h2 style={{ fontSize:38, fontWeight:900, color:'#0f172a', textAlign:'center', letterSpacing:'-0.025em', marginBottom:52 }}>{data.howItWorksTitle}</h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            style={{ fontSize:12, fontWeight:700, color:'#7c3aed', textTransform:'uppercase', letterSpacing:'0.12em', textAlign:'center', marginBottom:14 }}>
+            How it works
+          </motion.p>
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            style={{ fontSize:38, fontWeight:900, color:'#0f172a', textAlign:'center', letterSpacing:'-0.025em', marginBottom:52 }}>{data.howItWorksTitle}</motion.h2>
           <div style={{ display:'flex', flexDirection:'column', gap:36 }}>
             {data.steps.map((s,i)=>(
-              <div key={i} style={{ display:'flex', gap:28, alignItems:'flex-start' }}>
-                <div style={{ fontSize:52, fontWeight:900, color:accentBorder, lineHeight:1, flexShrink:0, minWidth:72, fontVariantNumeric:'tabular-nums' }}>{s.step}</div>
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, x: -30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                style={{ display:'flex', gap:28, alignItems:'flex-start' }}>
+                <motion.div 
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  style={{ fontSize:52, fontWeight:900, color:'#ede9fe', lineHeight:1, flexShrink:0, minWidth:72, fontVariantNumeric:'tabular-nums' }}>{s.step}</motion.div>
                 <div style={{ paddingTop:4 }}>
                   <h3 style={{ fontSize:20, fontWeight:700, color:'#0f172a', marginBottom:10 }}>{s.title}</h3>
                   <p style={{ fontSize:15, color:'#64748b', lineHeight:1.75 }}>{s.desc}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -257,25 +391,58 @@ export default function FeaturePage({ data }: Props) {
       {/* ── STATS ────────────────────────────────────── */}
       <section style={{ padding:'80px 48px', background:'#fff' }}>
         <div style={{ maxWidth:1280, margin:'0 auto' }}>
-          <h2 style={{ fontSize:38, fontWeight:900, color:'#0f172a', textAlign:'center', letterSpacing:'-0.025em', marginBottom:14 }}>{data.statsTitle}</h2>
-          <p style={{ fontSize:17, color:'#64748b', textAlign:'center', maxWidth:680, margin:'0 auto 52px', lineHeight:1.75 }}>{data.statsDesc}</p>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:24 }}>
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            style={{ fontSize:38, fontWeight:900, color:'#0f172a', textAlign:'center', letterSpacing:'-0.025em', marginBottom:14 }}>{data.statsTitle}</motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            style={{ fontSize:17, color:'#64748b', textAlign:'center', maxWidth:680, margin:'0 auto 52px', lineHeight:1.75 }}>{data.statsDesc}</motion.p>
+          <motion.div 
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(220px,1fr))', gap:24 }}>
             {data.stats.map((s,i)=>(
-              <div key={i} style={{ padding:32, background:`linear-gradient(135deg,${accentBg} 0%,#fff 100%)`, borderRadius:20, border:`1px solid ${accentBorder}`, textAlign:'center' }}>
-                <div style={{ fontSize:48, fontWeight:900, color:accent, marginBottom:8, letterSpacing:'-0.03em' }}>{s.stat}</div>
+              <motion.div 
+                key={i}
+                variants={fadeInUp}
+                whileHover={{ y: -8, boxShadow: '0 12px 32px rgba(124, 58, 237, 0.15)' }}
+                transition={{ type: "spring", stiffness: 300 }}
+                style={{ padding:32, background:`linear-gradient(135deg,${accentBg} 0%,#fff 100%)`, borderRadius:20, border:`1px solid ${accentBorder}`, textAlign:'center', cursor:'pointer' }}>
+                <div style={{ fontSize:48, fontWeight:900, color:'#0f172a', marginBottom:8, letterSpacing:'-0.03em' }}>
+                  <AnimatedCounter value={s.stat} />
+                </div>
                 <div style={{ fontSize:16, fontWeight:700, color:'#0f172a', marginBottom:6 }}>{s.label}</div>
                 <div style={{ fontSize:13, color:'#64748b', lineHeight:1.5 }}>{s.desc}</div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ── MOCKUP / DASHBOARD ───────────────────────── */}
       <section style={{ padding:'80px 48px', background:'#f8fafc' }}>
         <div style={{ maxWidth:1280, margin:'0 auto' }}>
-          <h2 style={{ fontSize:38, fontWeight:900, color:'#0f172a', textAlign:'center', letterSpacing:'-0.025em', marginBottom:52 }}>{data.mockupTitle}</h2>
-          <div style={{ background:'#fff', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 24px 64px rgba(0,0,0,.07)' }}>
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            style={{ fontSize:38, fontWeight:900, color:'#0f172a', textAlign:'center', letterSpacing:'-0.025em', marginBottom:52 }}>{data.mockupTitle}</motion.h2>
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            whileHover={{ y: -8 }}
+            style={{ background:'#fff', borderRadius:20, border:'1px solid #e2e8f0', overflow:'hidden', boxShadow:'0 24px 64px rgba(0,0,0,.07)', transition:'box-shadow 0.3s' }}>
             {/* Browser chrome */}
             <div style={{ display:'flex', alignItems:'center', gap:6, padding:'12px 20px', borderBottom:'1px solid #f1f5f9', background:'#f8f8f8' }}>
               <div style={{ height:11, width:11, borderRadius:'50%', background:'#ff5f57' }} />
@@ -288,30 +455,57 @@ export default function FeaturePage({ data }: Props) {
             <div style={{ padding:'32px' }}>
               {data.mockup}
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ── CTA ──────────────────────────────────────── */}
-      <section style={{ padding:'100px 48px', background:`linear-gradient(135deg,${accent} 0%,#5b21b6 100%)`, textAlign:'center' }}>
-        <div style={{ maxWidth:700, margin:'0 auto' }}>
-          <h2 style={{ fontSize:44, fontWeight:900, color:'#fff', marginBottom:16, lineHeight:1.15, letterSpacing:'-0.03em' }}>{data.ctaTitle}</h2>
-          <p style={{ fontSize:18, color:'rgba(255,255,255,.88)', marginBottom:36, lineHeight:1.6 }}>{data.ctaDesc}</p>
-          <div style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
-            <button onClick={openModal}
-              style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'16px 32px', background:'#fff', color:accent, fontSize:16, fontWeight:700, borderRadius:100, border:'none', cursor:'pointer', boxShadow:'0 12px 32px rgba(0,0,0,.15)', transition:'transform .15s' }}
-              onMouseEnter={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1.02)';}}
-              onMouseLeave={e=>{(e.currentTarget as HTMLElement).style.transform='scale(1)';}}>
+      <section style={{ padding:'100px 48px', background:`linear-gradient(135deg,${accent} 0%,#5b21b6 100%)`, textAlign:'center', position:'relative', overflow:'hidden' }}>
+        <motion.div 
+          initial={{ scale: 0.8, opacity: 0 }}
+          whileInView={{ scale: 1, opacity: 0.1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 1 }}
+          style={{ position:'absolute', top:-100, left:-100, width:600, height:600, background:'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)', pointerEvents:'none' }} />
+        <div style={{ maxWidth:700, margin:'0 auto', position:'relative' }}>
+          <motion.h2 
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            style={{ fontSize:44, fontWeight:900, color:'#fff', marginBottom:16, lineHeight:1.15, letterSpacing:'-0.03em' }}>{data.ctaTitle}</motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            style={{ fontSize:18, color:'rgba(255,255,255,.88)', marginBottom:36, lineHeight:1.6 }}>{data.ctaDesc}</motion.p>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            style={{ display:'flex', gap:16, justifyContent:'center', flexWrap:'wrap' }}>
+            <motion.button 
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={openModal}
+              style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'16px 32px', background:'#fff', color:accent, fontSize:16, fontWeight:700, borderRadius:100, border:'none', cursor:'pointer', boxShadow:'0 12px 32px rgba(0,0,0,.15)', transition:'box-shadow .2s' }}>
               Start Free Trial <ArrowRight size={18} />
-            </button>
-          </div>
-          <div style={{ display:'flex', gap:24, justifyContent:'center', marginTop:28, flexWrap:'wrap' }}>
+            </motion.button>
+          </motion.div>
+          <motion.div 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            style={{ display:'flex', gap:24, justifyContent:'center', marginTop:28, flexWrap:'wrap' }}>
             {['14-day free trial','No credit card required','2-minute setup'].map(t=>(
               <span key={t} style={{ display:'flex', alignItems:'center', gap:6, fontSize:13, fontWeight:500, color:'rgba(255,255,255,.8)' }}>
                 <CheckCircle size={14} color="rgba(255,255,255,.9)" />{t}
               </span>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -319,6 +513,6 @@ export default function FeaturePage({ data }: Props) {
       <footer style={{ padding:'36px 48px', background:'#0f172a', color:'#475569', textAlign:'center' }}>
         <p style={{ fontSize:14 }}>© 2026 Pulse CRM Inc. All rights reserved. Powered by <span style={{ color:'#94a3b8', fontWeight:600 }}>Kalnet</span>.</p>
       </footer>
-    </div>
+    </motion.div>
   );
 }
