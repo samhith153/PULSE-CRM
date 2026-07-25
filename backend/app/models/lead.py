@@ -7,7 +7,7 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -41,6 +41,7 @@ class Lead(Base, TenantMixin):
     )
     interest: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     industry: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    employee_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     current_crm: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     location: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
     operational_systems: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

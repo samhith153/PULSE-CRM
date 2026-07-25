@@ -18,6 +18,7 @@ class LeadCreateRequest(BaseModel):
     source: Optional[LeadSource] = None
     interest: Optional[str] = Field(default=None, max_length=100)
     industry: Optional[str] = Field(default=None, max_length=100)
+    employee_count: Optional[int] = None
     current_crm: Optional[str] = Field(default=None, max_length=100)
     location: Optional[str] = Field(default=None, max_length=150)
     operational_systems: Optional[str] = Field(default=None, max_length=255)
@@ -36,6 +37,7 @@ class LeadUpdateRequest(BaseModel):
     source: Optional[LeadSource] = None
     interest: Optional[str] = None
     industry: Optional[str] = Field(default=None, max_length=100)
+    employee_count: Optional[int] = None
     current_crm: Optional[str] = Field(default=None, max_length=100)
     location: Optional[str] = Field(default=None, max_length=150)
     operational_systems: Optional[str] = Field(default=None, max_length=255)
@@ -68,6 +70,7 @@ class LeadResponse(BaseModel):
     source: Optional[str]
     interest: Optional[str]
     industry: Optional[str]
+    employee_count: Optional[int]
     current_crm: Optional[str]
     location: Optional[str]
     operational_systems: Optional[str]

@@ -32,7 +32,9 @@ class UploadService:
         target = self.root / storage_key
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(content)
-        url = f"/{settings.LOCAL_STORAGE_PATH.strip('/').replace('\\', '/')}/{storage_key.replace('\\', '/')}"
+        cleaned_storage_path = settings.LOCAL_STORAGE_PATH.strip("/").replace("\\", "/")
+        cleaned_storage_key = storage_key.replace("\\", "/")
+        url = f"/{cleaned_storage_path}/{cleaned_storage_key}"
         if category == "avatars":
             user.avatar_url = url
             await self.db.flush()
