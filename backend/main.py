@@ -5,6 +5,7 @@ from routers import auth, companies, contacts, leads, deals, timeline, gmail, us
 from database import engine
 import models
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 app = FastAPI(
     title="Pulse CRM REST API",
     description="Backend business logic and synchronization controllers for Pulse CRM",
@@ -240,6 +241,19 @@ def startup_event():
     finally:
         db.close()
 
+
+async def poll_gmail_replies():
+    async with AsyncSessionLocal() as db:  # use your actual session factory
+        svc = EmailService(db)
+        for org_id in await get_all_org_ids(db):  # however you list orgs
+            await svc.sync_all_connections(org_id, created_by=None)
+
+scheduler = AsyncIOScheduler()
+scheduler.add_job(poll_gmail_replies, "interval", minutes=2)
+
+@app.on_event("startup")
+async def start_scheduler():
+    scheduler.start()
 # CORS configurations for cross-origin frontend browser calls
 app.add_middleware(
     CORSMiddleware,

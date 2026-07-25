@@ -51,6 +51,12 @@ from googleapiclient.discovery import build
 
 from app.core.config import settings
 
+import requests as http_requests 
+from googleapiclient.errors import HttpError
+
+from email.utils import parseaddr
+from sqlalchemy import func
+
 logger = get_logger(__name__)
 
 
@@ -91,11 +97,14 @@ class EmailService:
 
         await asyncio.to_thread(_deliver)
 
-    def _build_message(self, subject: str, to_email: str, html_body: str, text_body: str) -> EmailMessage:
+    def _build_message(self, subject: str, to_email: str, html_body: str, text_body: str, message_id: str | None = None) -> EmailMessage:
         msg = EmailMessage()
         msg["Subject"] = subject
         msg["From"] = f"{settings.SMTP_FROM_NAME} <{settings.SMTP_FROM_EMAIL}>"
         msg["To"] = to_email
+        if message_id:
+            domain = settings.SMTP_FROM_EMAIL.split("@")[-1]
+            msg["Message-ID"] = f"<{message_id}@{domain}>"
         msg.set_content(text_body)
         msg.add_alternative(html_body, subtype="html")
         return msg
@@ -269,16 +278,41 @@ class EmailService:
         )
         return GmailOAuthLoginResponse(authorization_url=auth_url, state=state)
 
+    
+
     async def handle_oauth_callback(
         self,
         organization_id: UUID,
         created_by: UUID,
         payload: GmailOAuthCallbackRequest,
     ) -> GmailConnection:
-        email_address = payload.email_address or f"user-{payload.state or 'gmail'}@example.com"
-        access_token = f"access_{payload.code}"
-        refresh_token = f"refresh_{payload.code}"
-        token_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        token_response = http_requests.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": payload.code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": settings.GOOGLE_REDIRECT_URI,
+                "grant_type": "authorization_code",
+            },
+            timeout=15,
+        )
+        token_response.raise_for_status()
+        tokens = token_response.json()
+
+        access_token = tokens["access_token"]
+        refresh_token = tokens.get("refresh_token")  # only present on first consent
+        token_expires_at = datetime.now(timezone.utc) + timedelta(seconds=tokens.get("expires_in", 3600))
+
+        email_address = payload.email_address
+        if not email_address:
+            userinfo = http_requests.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"},
+                timeout=15,
+            ).json()
+            email_address = userinfo.get("email")
+
         return await self.connect_gmail(
             organization_id=organization_id,
             created_by=created_by,
@@ -288,7 +322,7 @@ class EmailService:
             refresh_token_encrypted=refresh_token,
             token_expires_at=token_expires_at,
             sync_cursor=None,
-            scopes_json=[scope.strip() for scope in settings.GOOGLE_OAUTH_SCOPES.split(",") if scope.strip()],
+            scopes_json=[s.strip() for s in settings.GOOGLE_OAUTH_SCOPES.split(",") if s.strip()],
         )
 
     async def refresh_token(self, organization_id: UUID, created_by: UUID, payload: GmailTokenRefreshRequest) -> GmailConnection:
@@ -471,16 +505,18 @@ class EmailService:
                 gmail_connection_id,
             )
 
+        message_id = str(uuid4())
+        thread_id = message_id
+
         message = self._build_message(
             subject=subject,
             to_email=receiver,
             html_body=html_body,
             text_body=html_body,
+            message_id=message_id,
         )
 
         await self._send_smtp_message(message)
-        message_id = str(uuid4())
-        thread_id = message_id
     
 
         email, _ = await self.ingest_email(
@@ -513,12 +549,39 @@ class EmailService:
 
         return EmailResponse.model_validate(email)
 
-    async def fetch_from_gmail(self, organization_id: UUID, connection_id: UUID, created_by: Optional[UUID]) -> EmailSyncResultResponse:
-        connection = await self.connection_repo.get_by_id_in_org(organization_id, connection_id)
-        if not connection:
-            raise NotFoundException("GmailConnection", connection_id)
-        payload = EmailSyncRequest(gmail_connection_id=connection.id, sync_cursor=connection.sync_cursor, messages=[])
-        return await self.sync_messages(organization_id, created_by, payload)
+
+    def _get_gmail_client(self, connection: GmailConnection):
+        creds = Credentials(
+            token=connection.access_token_encrypted,
+            refresh_token=connection.refresh_token_encrypted,
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=settings.GOOGLE_CLIENT_ID,
+            client_secret=settings.GOOGLE_CLIENT_SECRET,
+        )
+        if creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            connection.access_token_encrypted = creds.token
+        return build("gmail", "v1", credentials=creds)
+
+    def _extract_body(self, msg: dict) -> str:
+        payload = msg.get("payload", {})
+        parts = payload.get("parts") or [payload]
+        for part in parts:
+            if part.get("mimeType") == "text/plain" and part.get("body", {}).get("data"):
+                data = part["body"]["data"]
+                return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode("utf-8", errors="ignore")
+        return msg.get("snippet", "")
+
+  
+
+    def _normalize_subject(self, subject: str) -> str:
+        s = subject.strip()
+        for prefix in ("Re:", "RE:", "Fwd:", "FWD:", "Fw:", "re:", "fwd:"):
+            if s.startswith(prefix):
+                s = s[len(prefix):].strip()
+        return s.lower()
+
+
 
     async def webhook_sync(self, organization_id: UUID, created_by: Optional[UUID], payload: GmailWebhookRequest) -> EmailSyncResultResponse:
         if payload.gmail_connection_id:
@@ -653,3 +716,5 @@ class EmailService:
     async def get_by_id_response(self, organization_id: UUID, email_id: UUID) -> EmailDetailResponse:
         email = await self.get_email(organization_id, email_id)
         return EmailDetailResponse.model_validate(email)
+
+    
