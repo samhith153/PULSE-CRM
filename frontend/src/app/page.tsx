@@ -187,7 +187,7 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="flex bg-white h-screen overflow-hidden font-sans text-brand-text antialiased">
+    <div className="flex bg-slate-50 h-screen overflow-hidden font-sans text-brand-text antialiased">
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 
