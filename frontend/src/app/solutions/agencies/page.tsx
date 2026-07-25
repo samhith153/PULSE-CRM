@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Briefcase, Users, Target, Zap } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, FeatureCards, CTASection } from '@/components/shared/PageTemplates';
 
@@ -21,8 +21,6 @@ const AgencyScreenshot = () => (
 );
 
 export default function AgenciesPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -31,7 +29,6 @@ export default function AgenciesPage() {
         title={<>Manage multiple clients.<br /><span style={{ color: '#7c3aed' }}>One clean dashboard.</span></>}
         description="Separate pipelines per client. White-label reporting. Team collaboration. Built for agencies managing dozens of clients."
         screenshot={<AgencyScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <FeatureCards
@@ -45,7 +42,6 @@ export default function AgenciesPage() {
       <CTASection
         title="Built for agencies that scale."
         description="Start free. Manage multiple clients from day one. No per-client fees."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

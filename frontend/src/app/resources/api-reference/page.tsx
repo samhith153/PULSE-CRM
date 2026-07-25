@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { PageContainer } from '@/components/shared/PageTemplates';
 import { Code, CheckCircle } from 'lucide-react';
@@ -27,8 +27,6 @@ const METHOD_COLORS: Record<string, { bg: string; color: string }> = {
 };
 
 export default function APIReferencePage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #f5f3ff 0%, #fff 100%)' }}>

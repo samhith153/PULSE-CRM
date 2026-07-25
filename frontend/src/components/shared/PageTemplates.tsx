@@ -1,8 +1,19 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, createContext, useContext } from 'react';
 import { motion } from 'framer-motion';
 import Navbar from '@/components/navigation/Navbar';
 import { ArrowRight, CheckCircle, X, Mail, Lock, Loader2, Activity } from 'lucide-react';
+
+/* ─── Modal Context ──────────────────────────────────── */
+const ModalContext = createContext<{ openModal: () => void } | null>(null);
+
+export function useModal() {
+  const context = useContext(ModalContext);
+  if (!context) {
+    return { openModal: () => {} }; // Fallback
+  }
+  return context;
+}
 
 /* ─── Auth Modal ──────────────────────────────────── */
 type Role = 'representative' | 'manager' | 'admin';
@@ -12,14 +23,42 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<Role>('manager');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+    
     setLoading(true);
-    setTimeout(() => { setLoading(false); onClose(); }, 1200);
+    setError('');
+    
+    try {
+      // Import login and setToken dynamically to avoid SSR issues
+      const { login, setToken } = await import('@/utils/api');
+      const result = await login(email, password);
+      setToken(result.token);
+      
+      // Set authentication flag
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pulse-crm-auth', 'true');
+        localStorage.setItem('pulse-crm-role', role);
+      }
+      
+      // Success - redirect to dashboard
+      onClose();
+      
+      // Reload the page to trigger authentication check
+      window.location.href = '/';
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'Login failed. Please check your credentials.');
+      setLoading(false);
+    }
   };
 
   const ROLES: { value: Role; label: string }[] = [
@@ -47,6 +86,14 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Welcome back</h2>
         <p style={{ fontSize: 14, color: '#94a3b8', fontWeight: 500, margin: '0 0 24px' }}>Sign in to your account to continue.</p>
+        
+        {error && (
+          <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ height: 6, width: 6, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
+            <span style={{ fontSize: 13, color: '#991b1b', fontWeight: 600 }}>{error}</span>
+          </div>
+        )}
+        
         <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>Select your role</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 22 }}>
           {ROLES.map(r => (
@@ -119,18 +166,20 @@ export function PageContainer({ children }: { children: React.ReactNode }) {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      style={{ fontFamily: "'Inter',system-ui,sans-serif", background: '#fff', minHeight: '100vh', color: '#0f172a' }}>
-      <Navbar onOpenModal={() => setModalOpen(true)} />
-      <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
-      {children}
-      <footer style={{ padding: '36px 48px', background: '#0f172a', color: '#475569', textAlign: 'center' }}>
-        <p style={{ fontSize: 14 }}>© 2026 Pulse CRM Inc. All rights reserved. Powered by <span style={{ color: '#94a3b8', fontWeight: 600 }}>Kalnet</span>.</p>
-      </footer>
-    </motion.div>
+    <ModalContext.Provider value={{ openModal: () => setModalOpen(true) }}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        style={{ fontFamily: "'Inter',system-ui,sans-serif", background: '#fff', minHeight: '100vh', color: '#0f172a' }}>
+        <Navbar onOpenModal={() => setModalOpen(true)} />
+        <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+        {children}
+        <footer style={{ padding: '36px 48px', background: '#0f172a', color: '#475569', textAlign: 'center' }}>
+          <p style={{ fontSize: 14 }}>© 2026 Pulse CRM Inc. All rights reserved. Powered by <span style={{ color: '#94a3b8', fontWeight: 600 }}>Kalnet</span>.</p>
+        </footer>
+      </motion.div>
+    </ModalContext.Provider>
   );
 }
 
@@ -150,6 +199,9 @@ export function HeroWithScreenshot({
   screenshot: React.ReactNode;
   onCTA?: () => void;
 }) {
+  const { openModal } = useModal();
+  const handleCTA = onCTA || openModal;
+
   return (
     <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #f5f3ff 0%, #fff 100%)', position: 'relative', overflow: 'hidden' }}>
       <motion.div
@@ -173,7 +225,7 @@ export function HeroWithScreenshot({
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}
-            onClick={onCTA}
+            onClick={handleCTA}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.4)' }}>
             Start Free Trial <ArrowRight size={16} />
           </motion.button>
@@ -268,6 +320,9 @@ export function Statistics({ stats }: { stats: Array<{ value: string; label: str
 
 /* ─── CTA Section ──────────────────────────────────── */
 export function CTASection({ title, description, onCTA }: { title: string; description: string; onCTA?: () => void }) {
+  const { openModal } = useModal();
+  const handleCTA = onCTA || openModal;
+
   return (
     <section style={{ padding: '100px 48px', background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
       <motion.div
@@ -296,7 +351,7 @@ export function CTASection({ title, description, onCTA }: { title: string; descr
           transition={{ duration: 0.6, delay: 0.2 }}
           whileHover={{ scale: 1.05, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          onClick={onCTA}
+          onClick={handleCTA}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 32px', background: '#fff', color: '#7c3aed', fontSize: 16, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 12px 32px rgba(0,0,0,.15)' }}>
           Start Free Trial <ArrowRight size={18} />
         </motion.button>

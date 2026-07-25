@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Building2, Shield, Users, Zap } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, FeatureCards, CTASection } from '@/components/shared/PageTemplates';
 
@@ -28,8 +28,6 @@ const EnterpriseScreenshot = () => (
 );
 
 export default function EnterprisePage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -38,7 +36,6 @@ export default function EnterprisePage() {
         title={<>Enterprise scale.<br /><span style={{ color: '#7c3aed' }}>Startup speed.</span></>}
         description="SSO, audit logs, 99.9% SLA, unlimited seats, dedicated support, and custom integrations."
         screenshot={<EnterpriseScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <FeatureCards
@@ -52,7 +49,6 @@ export default function EnterprisePage() {
       <CTASection
         title="Ready for enterprise scale."
         description="Contact our sales team for custom pricing and dedicated onboarding."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

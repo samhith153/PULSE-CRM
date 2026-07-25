@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { BarChart2, Users, TrendingUp, Target } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, FeatureCards, CTASection } from '@/components/shared/PageTemplates';
 
@@ -29,8 +29,6 @@ const ManagerScreenshot = () => (
 );
 
 export default function SalesManagersPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -39,7 +37,6 @@ export default function SalesManagersPage() {
         title={<>Full visibility.<br /><span style={{ color: '#7c3aed' }}>Zero blind spots.</span></>}
         description="See every deal, track every rep, forecast every quarter — all from one dashboard that updates in real-time."
         screenshot={<ManagerScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <FeatureCards
@@ -54,7 +51,6 @@ export default function SalesManagersPage() {
       <CTASection
         title="Manage with confidence."
         description="14-day free trial. Full access to team dashboards, forecasting, and leaderboards."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );
