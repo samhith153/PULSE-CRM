@@ -1,9 +1,2 @@
-lead_id,feature_version,generated_at,company,company_band,source,source_score,engagement_score,engagement_level,reply_rate,reply_level,recency_days
-L001,v1,2026-07-23 18:54:08.821285,Bright Future University,Large,LinkedIn,70,60,HIGH,100.0,FAST,1
-L002,v1,2026-07-23 18:54:08.823768,TechNova Solutions,Medium,Website,85,40,MEDIUM,100.0,FAST,0
-L003,v1,2026-07-23 18:54:08.826108,GreenLeaf Hospitality,Small,Cold Email,40,5,LOW,0.0,NO RESPONSE,13
-L004,v1,2026-07-23 18:54:08.828093,Apex Manufacturing,Enterprise,Referral,100,5,LOW,0.0,NO RESPONSE,5
-L005,v1,2026-07-23 18:54:08.829736,CloudEdge Health,Small,Webinar,75,40,MEDIUM,100.0,FAST,2
-L006,v1,2026-07-23 18:54:08.831316,Royal Finance Ltd,Large,Event,65,40,MEDIUM,100.0,FAST,0
-L007,v1,2026-07-23 18:54:08.832940,Urban Homes,Medium,Referral,100,5,LOW,0.0,NO RESPONSE,7
-L008,v1,2026-07-23 18:54:08.836234,Smart Retail Mart,Large,Website,85,40,MEDIUM,100.0,FAST,0
+lead_id,organization_id,feature_version,generated_at,company_size_score,industry_complexity_score,operational_system_score,software_gap_score,customization_potential_score,average_response_time,response_time_score,reply_recency_score,days_since_last_outbound,engagement_decay_penalty,customer_initiative_score,buying_stage_score,intent_strength_score,engagement_trend_score,ai_intent_category,ai_intent_category_score
+2317396d-c365-43a8-b02d-0d03f85fd370,3a2ea57d-818f-49f3-8d88-a30844da57dc,v1_real,2026-07-25 22:09:39.571861,0,95,80,100,52,0.36,100,100,0,0,100,50,50,50,,

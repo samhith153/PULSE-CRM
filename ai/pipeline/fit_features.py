@@ -146,11 +146,7 @@ def software_gap_score(current_crm):
     return 0
 
 
-def customization_potential_score(
-    industry_score,
-    operational_score,
-    company_score
-):
+def customization_potential_score(industry_score, operational_score, gap_score):
     """
     Customization Potential Score
 
@@ -159,12 +155,11 @@ def customization_potential_score(
 
     score = (
         industry_score * 0.50 +
-        (100 - software_gap_score) * 0.25 +
-        (100 - operational_system_score) * 0.25
+        (100 - gap_score) * 0.25 +
+        (100 - operational_score) * 0.25
     )
- 
+
     # Clamp to 0-100 range
     score = max(0, min(100, score))
- 
+
     return round(score)
- 

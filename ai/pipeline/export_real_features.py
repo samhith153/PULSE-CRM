@@ -1,52 +1,73 @@
 import os
+import argparse
 import pandas as pd
+
 pd.set_option("display.max_columns", None)
 pd.set_option("display.width", None)
 
-
-
 from db_adapter import load_real_emails, load_real_leads
 from engagement_features import (
-    average_response_time, reply_recency_score,
+    average_response_time, response_time_score, reply_recency_score,
+    days_since_last_outbound, engagement_decay_penalty,
     customer_initiative_score, buying_stage_score, intent_strength_score,
+    engagement_trend_score,
 )
-
-import argparse
-
+from fit_features import (
+    company_size_score, industry_complexity_score,
+    operational_system_score, software_gap_score,
+    customization_potential_score,
+)
+from load_features import save_feature_vectors_csv, upsert_feature_vectors_db
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--org-id", required=True, help="Organization UUID to export features for")
+parser.add_argument("--org-id", required=True)
 args = parser.parse_args()
-
 ORG_ID = args.org_id
 
 emails = load_real_emails(ORG_ID)
 leads = load_real_leads(ORG_ID)
-leads_lookup = dict(zip(leads["lead_id"], leads["status"]))
+leads_lookup = leads.set_index("lead_id").to_dict(orient="index")
 
 rows = []
 for lead_id, group in emails.groupby("lead_id"):
-    stage = leads_lookup.get(lead_id)
+    lead_info = leads_lookup.get(lead_id, {})
+    stage = lead_info.get("status")
+    avg_resp = average_response_time(group)
+    days_idle = days_since_last_outbound(group)
+
+    industry_score = industry_complexity_score(lead_info.get("industry"))
+    opsys_score = operational_system_score(lead_info.get("operational_system"))
+    size_score = company_size_score(lead_info.get("employee_count"))
+    gap_score = software_gap_score(lead_info.get("current_crm"))
+    custom_score = customization_potential_score(industry_score, opsys_score, gap_score)
+
     rows.append({
         "lead_id": lead_id,
+        "organization_id": ORG_ID,
         "feature_version": "v1_real",
         "generated_at": pd.Timestamp.now(),
-        "average_response_time": average_response_time(group),
+
+        "company_size_score": size_score,
+        "industry_complexity_score": industry_score,
+        "operational_system_score": opsys_score,
+        "software_gap_score": gap_score,
+        "customization_potential_score": custom_score,
+
+        "average_response_time": avg_resp,
+        "response_time_score": response_time_score(avg_resp),
         "reply_recency_score": reply_recency_score(group),
+        "days_since_last_outbound": days_idle,
+        "engagement_decay_penalty": engagement_decay_penalty(days_idle),
         "customer_initiative_score": customer_initiative_score(group),
         "buying_stage_score": buying_stage_score(stage),
         "intent_strength_score": intent_strength_score(stage),
+        "engagement_trend_score": engagement_trend_score(None, None),
+
+        "ai_intent_category": None,
+        "ai_intent_category_score": None,
     })
 
-
-
 out = pd.DataFrame(rows)
-
-output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "mock_data")
-csv_path = os.path.join(output_dir, "engagement_features_real.csv")
-json_path = os.path.join(output_dir, "engagement_features_real.json")
-
-out.to_csv(csv_path, index=False)
-out.to_json(json_path, orient="records", indent=2, date_format="iso")
+save_feature_vectors_csv(out)
+upsert_feature_vectors_db(out)
 print(out)
-print(f"\nSaved to:\n  {os.path.abspath(csv_path)}\n  {os.path.abspath(json_path)}")                         

@@ -103,30 +103,17 @@ def response_time_score(avg_response_time_hours):
 def days_since_last_outbound(emails):
     """
     Days since LAST OUTBOUND email (sales rep sent email).
-    
-    Measures: How long has this lead been idle without our action?
-    
-    Args:
-        emails: DataFrame with columns [direction, sent_at]
-    
-    Returns:
-        int: Number of days, or None if no outbound emails
     """
-    
     if emails.empty:
         return None
-    
-    # Filter for outbound emails only (from sales rep)
+
     outbound_emails = emails[emails["direction"] == "outbound"]
-    
     if outbound_emails.empty:
         return None
-    
-    # Get the latest outbound email
+
     latest_outbound = pd.to_datetime(outbound_emails["sent_at"]).max()
-    days = (datetime.now() - latest_outbound).days
-    
-    return days
+    now = pd.Timestamp.now(tz=latest_outbound.tzinfo) if latest_outbound.tzinfo is not None else pd.Timestamp.now()
+    return (now - latest_outbound).days
 
 
 def engagement_decay_penalty(days_since_last_outbound):

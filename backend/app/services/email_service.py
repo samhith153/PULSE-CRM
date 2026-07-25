@@ -549,7 +549,83 @@ class EmailService:
 
         return EmailResponse.model_validate(email)
 
+    async def fetch_from_gmail(self, organization_id: UUID, connection_id: UUID, created_by: Optional[UUID]) -> EmailSyncResultResponse:
+        connection = await self.connection_repo.get_by_id_in_org(organization_id, connection_id)
+        if not connection:
+            raise NotFoundException("GmailConnection", connection_id)
 
+        service = self._get_gmail_client(connection)
+
+        query = "in:inbox"
+        if connection.sync_cursor:
+            query += f" after:{connection.sync_cursor}"
+
+        ingested: list[Email] = []
+        skipped = 0
+
+        results = service.users().messages().list(userId="me", q=query, maxResults=25).execute()
+        for m in results.get("messages", []):
+            msg = service.users().messages().get(userId="me", id=m["id"], format="full").execute()
+            headers = {h["name"]: h["value"] for h in msg["payload"]["headers"]}
+
+            raw_ref = headers.get("In-Reply-To") or (headers.get("References", "").split()[-1] if headers.get("References") else "")
+            in_reply_to = raw_ref.strip("<>").split("@")[0] if raw_ref else ""
+
+            original = None
+            if in_reply_to:
+                original = await self.email_repo.get_by_message_id_global(in_reply_to)
+
+            if not original:
+                subject = headers.get("Subject", "")
+                normalized = self._normalize_subject(subject)
+                from_header = headers.get("From", "")
+                from_email = parseaddr(from_header)[1]
+                original = await self.email_repo.get_latest_outbound_by_subject_and_participants(
+                    organization_id, normalized, from_email
+                )
+
+            if not original:
+                skipped += 1
+                continue
+
+            merged = dict(original.raw_payload or {})
+            merged["status"] = "replied"
+            merged.setdefault("events", []).append({"event": "replied", "gmail_message_id": m["id"]})
+            original.raw_payload = merged
+
+            email, created = await self.ingest_email(
+                organization_id=organization_id,
+                created_by=created_by,
+                gmail_connection_id=connection.id,
+                gmail_message_id=m["id"],
+                thread_id=original.thread_id,
+                direction=EmailDirection.INBOUND,
+                sender=headers.get("From", ""),
+                receiver=headers.get("To", ""),
+                subject=headers.get("Subject", ""),
+                body_preview=self._extract_body(msg)[:2000],
+                sent_at=datetime.now(timezone.utc),
+                raw_payload={"provider": "gmail", "status": "received"},
+                external_entity_type=original.external_entity_type,
+                external_entity_id=original.external_entity_id,
+            )
+            if created:
+                ingested.append(email)
+            else:
+                skipped += 1
+
+        connection.sync_cursor = str(int(datetime.now(timezone.utc).timestamp()))
+        await self.connection_repo.update(connection, sync_cursor=connection.sync_cursor, sync_status=EmailSyncStatus.ACTIVE.value)
+        await self.email_repo.save()
+
+        return EmailSyncResultResponse(
+            gmail_connection_id=connection.id,
+            synced_count=len(ingested),
+            skipped_count=skipped,
+            next_cursor=connection.sync_cursor,
+            connection_status=EmailSyncStatus.ACTIVE.value,
+            emails=[EmailResponse.model_validate(item) for item in ingested],
+        )
     def _get_gmail_client(self, connection: GmailConnection):
         creds = Credentials(
             token=connection.access_token_encrypted,
