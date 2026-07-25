@@ -224,7 +224,7 @@ export default function WorkflowsView() {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-brand-heading pb-2">
+                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
                     <th className="pb-2">Workflow Name & Scope</th>
                     <th className="pb-2">Trigger Event</th>
                     <th className="pb-2 text-center">Total Runs</th>

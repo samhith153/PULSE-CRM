@@ -1,5 +1,6 @@
-﻿"""
-In-memory event bus with queue-ready semantics.
+﻿"""In-process event bus used for local dispatch and tests.
+
+Durable event processing is handled by EventWorker over the EventOutbox table.
 """
 from __future__ import annotations
 
@@ -7,8 +8,12 @@ import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Awaitable, Callable, Optional
+from typing import Optional
 from uuid import UUID
+
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 @dataclass(slots=True)
@@ -38,11 +43,11 @@ class EventBus:
         self._queue: asyncio.Queue[EventEnvelope] = asyncio.Queue()
 
     def register(self, topic: str, consumer: EventConsumer) -> None:
-        self._consumers[topic].append(consumer)
+        if consumer not in self._consumers[topic]:
+            self._consumers[topic].append(consumer)
 
     async def publish(self, event: EventEnvelope) -> None:
         await self._queue.put(event)
-        await self.dispatch_once()
 
     async def dispatch_once(self) -> None:
         if self._queue.empty():
@@ -62,11 +67,11 @@ class EventBus:
 
 class LoggingEventConsumer(EventConsumer):
     async def handle(self, event: EventEnvelope) -> None:
-        # Queue-ready placeholder consumer. Real integrations can subscribe here.
-        return None
+        logger.info("In-process event dispatched", extra={"event_id": str(event.event_id), "event_type": event.event_type})
 
 
 event_bus = EventBus()
+
 
 def register_default_consumers() -> None:
     event_bus.register("*", LoggingEventConsumer())

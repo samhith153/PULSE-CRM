@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Mail, RefreshCw, Link2, Activity } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, FeatureCards, CTASection } from '@/components/shared/PageTemplates';
 
@@ -29,8 +29,6 @@ const EmailScreenshot = () => (
 );
 
 export default function EmailIntelligencePage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -39,7 +37,6 @@ export default function EmailIntelligencePage() {
         title={<>Every email, automatically<br /><span style={{ color: '#7c3aed' }}>linked to the right deal.</span></>}
         description="Real-time Gmail sync. Every thread tracked. Opens and clicks monitored. AI-drafted replies ready."
         screenshot={<EmailScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <FeatureCards
@@ -53,7 +50,6 @@ export default function EmailIntelligencePage() {
       <CTASection
         title="Never lose track of a conversation."
         description="Connect Gmail to Pulse CRM. Every email auto-linked from day one."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

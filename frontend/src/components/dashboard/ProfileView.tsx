@@ -13,25 +13,42 @@ import {
   ShieldAlert
 } from 'lucide-react';
 
-export default function ProfileView() {
-  const profile = {
+const ROLE_PROFILES = {
+  representative: {
+    name: "Priya Sharma",
+    role: "Sales Representative",
+    department: "Mid-Market Sales",
+    email: "priya.sharma@pulse.crm",
+    phone: "+91 (98765) 43210",
+    joinedDate: "January 2025",
+    avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&fit=crop&q=80",
+    performance: { closedDeals: 12, winRate: "64%", avgCycleTime: "22 Days", quarterQuota: 350000, quarterAchieved: 245000 }
+  },
+  manager: {
     name: "Alex Johnson",
     role: "Sales Manager",
     department: "Enterprise Acquisition",
     email: "alex.johnson@pulse.crm",
     phone: "+1 (555) 739-1928",
     joinedDate: "October 2024",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&fit=crop&q=80"
-  };
+    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120&fit=crop&q=80",
+    performance: { closedDeals: 18, winRate: "72%", avgCycleTime: "18 Days", quarterQuota: 500000, quarterAchieved: 380000 }
+  },
+  admin: {
+    name: "Dr. Rajesh Mehta",
+    role: "Administrator",
+    department: "Operations & Governance",
+    email: "rajesh.mehta@pulse.crm",
+    phone: "+1 (555) 842-0967",
+    joinedDate: "March 2024",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&fit=crop&q=80",
+    performance: { closedDeals: 5, winRate: "88%", avgCycleTime: "14 Days", quarterQuota: 200000, quarterAchieved: 175000 }
+  }
+};
 
-  const performance = {
-    closedDeals: 18,
-    winRate: "72%",
-    avgCycleTime: "18 Days",
-    quarterQuota: 500000,
-    quarterAchieved: 380000
-  };
-
+export default function ProfileView({ userRole = 'manager' }: { userRole?: string }) {
+  const profile = ROLE_PROFILES[userRole as keyof typeof ROLE_PROFILES] || ROLE_PROFILES.manager;
+  const performance = profile.performance;
   const progressPercent = Math.round((performance.quarterAchieved / performance.quarterQuota) * 100);
 
   return (
@@ -91,8 +108,8 @@ export default function ProfileView() {
             </div>
             
             <div className="flex justify-between text-[10px] font-bold text-slate-450 mt-1.5 tabular-nums">
-              <span>Achieved: ${performance.quarterAchieved.toLocaleString()}</span>
-              <span>Quota: ${performance.quarterQuota.toLocaleString()}</span>
+              <span>Achieved: ₹{performance.quarterAchieved.toLocaleString()}</span>
+              <span>Quota: ₹{performance.quarterQuota.toLocaleString()}</span>
             </div>
           </div>
 

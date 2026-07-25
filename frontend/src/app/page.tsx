@@ -39,6 +39,7 @@ import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2 } from 'lucide-react';
+import { clearToken } from '@/utils/api';
 
 export default function DashboardHome() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -60,6 +61,7 @@ export default function DashboardHome() {
   const handleSignOut = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('pulse-crm-auth');
+    clearToken();
   };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -185,7 +187,7 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="flex bg-white h-screen overflow-hidden font-sans text-brand-text antialiased">
+    <div className="flex bg-slate-50 h-screen overflow-hidden font-sans text-brand-text antialiased">
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 
@@ -234,9 +236,9 @@ export default function DashboardHome() {
           ) : activeTab === 'ai insights' ? (
             <AIInsightsView />
           ) : activeTab === 'settings' ? (
-            <SettingsView />
+            <SettingsView userRole={userRole} />
           ) : activeTab === 'profile' ? (
-            <ProfileView />
+            <ProfileView userRole={userRole} />
           ) : activeTab === 'notifications' ? (
             <NotificationsView />
           ) : activeTab === 'calendar' ? (

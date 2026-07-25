@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -19,6 +20,7 @@ from app.middlewares.exception_handler import (
 )
 from app.middlewares.logging import RequestLoggingMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
+from app.middlewares.rate_limit import RateLimitMiddleware
 from app.services.event_bus import register_default_consumers
 
 setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
@@ -51,6 +53,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
         CORSMiddleware,
@@ -65,6 +68,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(Exception, generic_exception_handler)
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+    app.mount("/uploads", StaticFiles(directory=settings.LOCAL_STORAGE_PATH), name="uploads")
 
     @app.get("/", include_in_schema=False)
     async def root():
@@ -78,3 +82,5 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
+
+

@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { TrendingUp, Target, BarChart2, Zap } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, FeatureCards, CTASection } from '@/components/shared/PageTemplates';
 
@@ -27,8 +27,6 @@ const PipelineScreenshot = () => (
 );
 
 export default function VisualPipelinePage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -37,7 +35,6 @@ export default function VisualPipelinePage() {
         title={<>Drag, drop, close.<br /><span style={{ color: '#7c3aed' }}>That simple.</span></>}
         description="Move deals across stages with a single drag. Every change is logged, forecasts update instantly, and your team stays in sync."
         screenshot={<PipelineScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <FeatureCards
@@ -51,7 +48,6 @@ export default function VisualPipelinePage() {
       <CTASection
         title="Start closing faster today."
         description="14-day free trial. Full access to Visual Pipeline, AI scoring, and automation."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

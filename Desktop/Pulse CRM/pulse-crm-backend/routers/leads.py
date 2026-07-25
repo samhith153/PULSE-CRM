@@ -28,7 +28,9 @@ def create_lead(payload: LeadCreate, db: Session = Depends(get_db)):
         source=payload.source,
         industry=payload.industry,
         current_crm=payload.current_crm,
-        operational_system=payload.operational_system
+        location=payload.location,
+        operational_system=payload.operational_system,
+        operational_systems=payload.operational_systems
     )
     db.add(lead)
     db.commit()
