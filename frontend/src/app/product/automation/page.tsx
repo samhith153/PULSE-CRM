@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Workflow, Zap, Mail, Users } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, FeatureCards, CTASection } from '@/components/shared/PageTemplates';
 
@@ -31,8 +31,6 @@ const AutomationScreenshot = () => (
 );
 
 export default function AutomationPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -41,7 +39,6 @@ export default function AutomationPage() {
         title={<>Your sales process,<br /><span style={{ color: '#7c3aed' }}>running on autopilot.</span></>}
         description="Build powerful workflows without code. Route leads, trigger emails, and notify your team — all automated."
         screenshot={<AutomationScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <FeatureCards
@@ -56,7 +53,6 @@ export default function AutomationPage() {
       <CTASection
         title="Put your sales process on autopilot."
         description="Start free. Build your first workflow in minutes. No code required."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

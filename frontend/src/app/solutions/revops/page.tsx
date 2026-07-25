@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Target, BarChart2, Shield, Workflow } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, FeatureCards, CTASection } from '@/components/shared/PageTemplates';
 
@@ -24,8 +24,6 @@ const RevOpsScreenshot = () => (
 );
 
 export default function RevOpsPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -34,7 +32,6 @@ export default function RevOpsPage() {
         title={<>One system.<br /><span style={{ color: '#7c3aed' }}>Every team aligned.</span></>}
         description="RBAC, integrations, cross-functional reporting, and data governance built for RevOps teams."
         screenshot={<RevOpsScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <FeatureCards
@@ -49,7 +46,6 @@ export default function RevOpsPage() {
       <CTASection
         title="Built for RevOps at scale."
         description="14-day free trial. Full access to RBAC, integrations, and reporting."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

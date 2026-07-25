@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PageContainer } from '@/components/shared/PageTemplates';
+import { PageContainer, useModal } from '@/components/shared/PageTemplates';
 import { Users, MessageCircle, BookOpen, Award, TrendingUp, Sparkles, Calendar, ArrowRight } from 'lucide-react';
 
 const COMMUNITY_STATS = [
@@ -56,6 +56,12 @@ const COMMUNITY_CHANNELS = [
 ];
 
 export default function CommunityPage() {
+  const { openModal } = useModal();
+
+  const handleJoinCommunity = () => {
+    openModal();
+  };
+
   return (
     <PageContainer>
       {/* Hero Section */}
@@ -93,6 +99,7 @@ export default function CommunityPage() {
             transition={{ delay: 0.3 }}
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}
+            onClick={handleJoinCommunity}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.4)', fontFamily: 'inherit' }}>
             Join Community <ArrowRight size={16} />
           </motion.button>
