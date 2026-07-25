@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = 'https://pulse-crm-245t.onrender.com';
 const TOKEN_KEY = 'pulse-crm-token';
 
 export function getToken(): string | null {
