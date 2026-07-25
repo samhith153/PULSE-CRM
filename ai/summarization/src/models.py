@@ -40,28 +40,16 @@ class SummariseResponse(BaseModel):
     """Response from summarisation."""
     thread_id: str
     summary: str
+    summary_word: str  # ✅ NEW: Single word for lead scoring
     sentiment: str  # positive / neutral / negative
     intent: str     # demo / buy / negotiate / followup / decline / other
     confidence: float  # 0.0 to 1.0
     key_points: Optional[List[str]] = []
     action_items: Optional[List[str]] = []
+    # ✅ NEW: For Priority 3
+    category: Optional[str] = None  # sales/support/general/urgent
+    draft_reply: Optional[str] = None  # Automated reply suggestion
+    follow_up_suggestion: Optional[str] = None  # ✅ NEW: Follow-up suggestion
+    follow_up_timing: Optional[str] = None  # ✅ NEW: When to follow up
     processing_time_ms: Optional[int] = None
-    model_version: Optional[str] = Field(default="gemini-1.5-pro-v1", alias="version")
-
-class SummaryDB(BaseModel):
-    """Database model for conversation_summaries table."""
-    id: str
-    thread_id: str
-    summary: str
-    sentiment: str
-    intent: str
-    confidence: float
-    key_points: List[str]
-    action_items: List[str]
-    model_version: str
-    processing_time_ms: int
-    organisation_id: str
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    model_version: Optional[str] = "llama-3.1-8b-instant"

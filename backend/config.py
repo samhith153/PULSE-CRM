@@ -1,8 +1,12 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "postgresql://postgres:postgres@localhost:5432/pulse-crm"
+    "DATABASE_URL",
+    f"sqlite:///{Path(__file__).parent / 'pulse-crm.db'}"
 )
 
 JWT_SECRET_KEY = os.getenv(

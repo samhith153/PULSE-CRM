@@ -1,8 +1,8 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-# Load environment variables
-load_dotenv()
+# Load from the root .env (searches parent dirs)
+load_dotenv(find_dotenv())
 
 class Config:
     # LLM

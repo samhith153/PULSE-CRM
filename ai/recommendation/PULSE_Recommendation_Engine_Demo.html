@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PULSE — Recommendation Engine Demo</title>
+<style>
+  :root {
+    --navy: #2B2A28;
+    --gold: #B5651D;
+    --ice: #F2EDE4;
+    --dark: #222222;
+    --grey: #6B6459;
+    --line: #E3DACB;
+    --accent: #0F8C7F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", Calibri, Arial, sans-serif;
+    color: var(--dark);
+    background: #FAF7F1;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
+  header { text-align: center; margin-bottom: 40px; }
+  .kicker { color: var(--gold); font-weight: 700; letter-spacing: 2px; font-size: 13px; }
+  h1 { color: var(--navy); font-size: 40px; margin: 6px 0 8px; }
+  .subtitle { color: var(--grey); font-size: 17px; font-style: italic; margin: 0; }
+
+  section { background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 28px 32px; margin-bottom: 24px; }
+  h2 { color: var(--navy); font-size: 21px; margin: 0 0 14px; border-bottom: 2px solid var(--gold);
+    padding-bottom: 8px; }
+  h3 { color: var(--navy); font-size: 16px; margin: 18px 0 6px; }
+  p { margin: 0 0 10px; }
+  ul { margin: 8px 0 10px 20px; padding: 0; }
+  li { margin-bottom: 6px; }
+
+  .equation {
+    background: var(--ice); border-left: 4px solid var(--navy);
+    padding: 14px 18px; font-family: "Consolas", monospace; font-size: 14.5px;
+    border-radius: 4px; margin: 10px 0; overflow-x: auto;
+  }
+  .feature-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+  .feature-table th { background: var(--navy); color: #fff; text-align: left; padding: 8px 10px; }
+  .feature-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  .feature-table tr:nth-child(even) td { background: #FAFBFF; }
+
+  code.inline { background: var(--ice); padding: 1px 6px; border-radius: 4px; font-size: 13.5px; }
+
+  pre.code-block {
+    background: #1E1E2E; color: #D6D9E8; padding: 18px 20px; border-radius: 8px;
+    overflow-x: auto; font-size: 13px; line-height: 1.55; font-family: "Consolas", monospace;
+  }
+  pre.code-block .c { color: #8890B5; }
+  pre.code-block .k { color: #C8890F; }
+  pre.code-block .s { color: #8FD4A8; }
+
+  /* ---- interactive demo ---- */
+  .controls { display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+  .control-row { display: flex; align-items: center; gap: 14px; }
+  .control-row label { width: 170px; font-size: 14px; color: var(--grey); flex-shrink: 0; }
+  .control-row input[type=range] { flex: 1; }
+  .control-row select { flex: 1; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); font-size: 14px; }
+  .readout { min-width: 34px; text-align: right; font-weight: 600; font-size: 14px; }
+
+  .bar-row { margin-bottom: 8px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 3px; }
+  .bar-track { height: 9px; background: #EFEAE0; border-radius: 5px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 5px; background: var(--line); transition: width 0.2s ease; }
+  .bar-fill.top { background: var(--accent); }
+
+  .result-card { background: var(--ice); border-radius: 8px; padding: 18px 20px; margin-top: 18px; }
+  .result-card .label { font-size: 13px; color: var(--grey); margin-bottom: 4px; }
+  .result-card .action { font-size: 22px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .result-card .reason { font-size: 14.5px; color: var(--dark); }
+
+  footer { text-align: center; color: var(--grey); font-size: 12.5px; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="kicker">KALNET · PULSE</div>
+    <h1>Recommendation Engine</h1>
+    <p class="subtitle">Core idea, equations, code, and a working interactive demo</p>
+  </header>
+
+  <section>
+    <h2>📌 Core idea</h2>
+    <p>The engine takes a lead's <strong>score</strong> (from the Lead Scoring module), how many <strong>days
+    since its last activity</strong>, whether a <strong>reply</strong> has been received, and its current
+    <strong>pipeline stage</strong>. It filters down to only the actions that make sense at that stage, scores
+    each one with a transparent formula, and recommends the highest-scoring action — always paired with a
+    plain-English reason.</p>
+    <p>Phase 1 is deliberately <strong>rule-based, not ML</strong> — this matches PULSE's "usable before it's
+    automated" principle. The interface is designed so Stage 3's ML model can later replace the rule table
+    without changing anything downstream.</p>
+  </section>
+
+  <section>
+    <h2>📌 Feature inputs</h2>
+    <table class="feature-table">
+      <tr><th>Feature</th><th>Type</th><th>Role in the formula</th></tr>
+      <tr><td>current_score</td><td>Derived</td><td>Normalized to 0–1, drives score-weighted actions</td></tr>
+      <tr><td>days_since_last_activity</td><td>Computed</td><td>Converted to an urgency factor (capped at 1)</td></tr>
+      <tr><td>reply_received_flag</td><td>Computed</td><td>Binary factor, shifts weight toward/away from follow-up</td></tr>
+      <tr><td>current_stage</td><td>User-entered</td><td>Filters which actions are even valid candidates</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>📌 Core equation</h2>
+    <p>For every candidate action <code class="inline">a</code> valid at the lead's current stage:</p>
+    <div class="equation">weight(a) = w1 · scoreNorm + w2 · urgency + w3 · replyFactor</div>
+    <p>Where:</p>
+    <div class="equation">scoreNorm = score / 100
+urgency   = min(days_since_activity / 7, 1)
+replyFactor = reply_received ? 1 : 0   (or inverted, depending on the action)</div>
+    <p>The recommended action is the one with the highest weight:</p>
+    <div class="equation">recommended_action = argmax( weight(a) )   for a in validActionsForStage</div>
+    <p>The <strong>reason</strong> is generated from whichever single term contributed most to the winning
+    action's weight — so the explanation is never invented, it's read directly off the math.</p>
+  </section>
+
+  <section>
+    <h2>📌 Core logic (JavaScript)</h2>
+    <pre class="code-block"><span class="c">// Each action defines which stages it's valid for, and how much</span>
+<span class="c">// weight it gives to score / urgency / reply. invertX flips the factor</span>
+<span class="c">// (e.g. "Mark as stale" favors LOW score, not high).</span>
+<span class="k">const</span> actionDefs = {
+  <span class="s">"Send follow-up"</span>:      { stages: [<span class="s">"Contacted"</span>,<span class="s">"Qualified"</span>],
+                                w: {u:0.5, r:0.3, s:0.2}, invertR: <span class="k">true</span> },
+  <span class="s">"Schedule demo"</span>:       { stages: [<span class="s">"Qualified"</span>,<span class="s">"Demo Scheduled"</span>],
+                                w: {s:0.6, u:0.2, r:0.2}, invertU: <span class="k">true</span> },
+  <span class="s">"Send proposal"</span>:       { stages: [<span class="s">"Demo Scheduled"</span>,<span class="s">"Negotiation"</span>],
+                                w: {s:0.5, r:0.3, u:0.2}, invertU: <span class="k">true</span> },
+  <span class="s">"Mark as stale"</span>:       { stages: [<span class="s">"Contacted"</span>,<span class="s">"Qualified"</span>,<span class="s">"Demo Scheduled"</span>],
+                                w: {u:0.7, s:0.3}, invertS: <span class="k">true</span> },
+  <span class="s">"Escalate to manager"</span>: { stages: [<span class="s">"Negotiation"</span>],
+                                w: {s:0.5, u:0.5} }
+};
+
+<span class="k">function</span> recommend(score, daysSinceActivity, replyReceived, stage) {
+  <span class="k">const</span> scoreNorm = score / 100;
+  <span class="k">const</span> urgency   = Math.min(daysSinceActivity / 7, 1);
+
+  <span class="k">let</span> results = [];
+  <span class="k">for</span> (<span class="k">const</span> [name, def] <span class="k">of</span> Object.entries(actionDefs)) {
+    <span class="k">if</span> (!def.stages.includes(stage)) <span class="k">continue</span>; <span class="c">// not valid at this stage</span>
+
+    <span class="k">const</span> sVal = def.invertS ? (1 - scoreNorm) : scoreNorm;
+    <span class="k">const</span> uVal = def.invertU ? (1 - urgency)   : urgency;
+    <span class="k">const</span> rVal = def.invertR ? (1 - (replyReceived?1:0)) : (replyReceived?1:0);
+
+    <span class="k">let</span> weight = 0, topFactor = <span class="s">""</span>, topContribution = -1;
+    <span class="k">if</span> (def.w.s !== <span class="k">undefined</span>) { <span class="k">const</span> c = def.w.s*sVal; weight += c;
+      <span class="k">if</span> (c > topContribution) { topContribution = c; topFactor = <span class="s">"score"</span>; } }
+    <span class="k">if</span> (def.w.u !== <span class="k">undefined</span>) { <span class="k">const</span> c = def.w.u*uVal; weight += c;
+      <span class="k">if</span> (c > topContribution) { topContribution = c; topFactor = <span class="s">"urgency"</span>; } }
+    <span class="k">if</span> (def.w.r !== <span class="k">undefined</span>) { <span class="k">const</span> c = def.w.r*rVal; weight += c;
+      <span class="k">if</span> (c > topContribution) { topContribution = c; topFactor = <span class="s">"reply status"</span>; } }
+
+    results.push({ name, weight, topFactor });
+  }
+
+  results.sort((a,b) => b.weight - a.weight);
+  <span class="k">return</span> results; <span class="c">// results[0] is the recommended action</span>
+}</pre>
+  </section>
+
+  <section>
+    <h2>📌 Interactive prototype — try it live</h2>
+    <div class="controls">
+      <div class="control-row">
+        <label for="score">Lead score</label>
+        <input type="range" id="score" min="0" max="100" step="1" value="62" oninput="update()">
+        <span class="readout" id="scoreOut">62</span>
+      </div>
+      <div class="control-row">
+        <label for="days">Days since last activity</label>
+        <input type="range" id="days" min="0" max="14" step="1" value="6" oninput="update()">
+        <span class="readout" id="daysOut">6</span>
+      </div>
+      <div class="control-row">
+        <label for="reply">Reply received</label>
+        <select id="reply" onchange="update()">
+          <option value="0" selected>No</option>
+          <option value="1">Yes</option>
+        </select>
+      </div>
+      <div class="control-row">
+        <label for="stage">Pipeline stage</label>
+        <select id="stage" onchange="update()">
+          <option value="Contacted" selected>Contacted</option>
+          <option value="Qualified">Qualified</option>
+          <option value="Demo Scheduled">Demo Scheduled</option>
+          <option value="Negotiation">Negotiation</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="bars"></div>
+
+    <div class="result-card">
+      <div class="label">Recommended action</div>
+      <div class="action" id="actionOut">—</div>
+      <div class="reason" id="reasonOut">—</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>📌 What else we can do (next steps)</h2>
+    <ul>
+      <li><strong>Confidence display</strong> — show the winning action's weight gap over the runner-up</li>
+      <li><strong>Feedback loop</strong> — log which suggestions reps act on, to inform Phase 3's ML model</li>
+      <li><strong>Snooze / dismiss</strong> — let reps override, feeding a correction signal back in</li>
+      <li><strong>Time-decay</strong> — recent activity should count more than a reply from weeks ago</li>
+      <li><strong>Ranked list</strong> — show top 2–3 candidate actions instead of just one</li>
+    </ul>
+  </section>
+
+  <footer>KALNET · Internal &amp; Confidential · PULSE Phase 1 — Recommendation / Next-Best-Action Module</footer>
+</div>
+
+<script>
+const actionDefs = {
+  "Send follow-up":      { stages: ["Contacted","Qualified"], w: {u:0.5, r:0.3, s:0.2}, invertR: true },
+  "Schedule demo":       { stages: ["Qualified","Demo Scheduled"], w: {s:0.6, u:0.2, r:0.2}, invertU: true },
+  "Send proposal":       { stages: ["Demo Scheduled","Negotiation"], w: {s:0.5, r:0.3, u:0.2}, invertU: true },
+  "Mark as stale":       { stages: ["Contacted","Qualified","Demo Scheduled"], w: {u:0.7, s:0.3}, invertS: true },
+  "Escalate to manager": { stages: ["Negotiation"], w: {s:0.5, u:0.5} }
+};
+
+function recommend(score, daysSinceActivity, replyReceived, stage) {
+  const scoreNorm = score / 100;
+  const urgency   = Math.min(daysSinceActivity / 7, 1);
+  let results = [];
+  for (const [name, def] of Object.entries(actionDefs)) {
+    if (!def.stages.includes(stage)) continue;
+    const sVal = def.invertS ? (1 - scoreNorm) : scoreNorm;
+    const uVal = def.invertU ? (1 - urgency) : urgency;
+    const rVal = def.invertR ? (1 - (replyReceived?1:0)) : (replyReceived?1:0);
+    let weight = 0, topFactor = "", topContribution = -1;
+    if (def.w.s !== undefined) { const c = def.w.s*sVal; weight += c; if (c > topContribution) { topContribution = c; topFactor = "score"; } }
+    if (def.w.u !== undefined) { const c = def.w.u*uVal; weight += c; if (c > topContribution) { topContribution = c; topFactor = "urgency"; } }
+    if (def.w.r !== undefined) { const c = def.w.r*rVal; weight += c; if (c > topContribution) { topContribution = c; topFactor = "reply status"; } }
+    results.push({ name, weight, topFactor });
+  }
+  results.sort((a,b) => b.weight - a.weight);
+  return results;
+}
+
+function update() {
+  const score = Number(document.getElementById("score").value);
+  const days = Number(document.getElementById("days").value);
+  const reply = Number(document.getElementById("reply").value);
+  const stage = document.getElementById("stage").value;
+  document.getElementById("scoreOut").textContent = score;
+  document.getElementById("daysOut").textContent = days;
+
+  const results = recommend(score, days, reply, stage);
+  const maxW = Math.max(...results.map(r => r.weight), 0.01);
+
+  const barsEl = document.getElementById("bars");
+  barsEl.innerHTML = "";
+  results.forEach((r, i) => {
+    const pct = Math.round((r.weight / maxW) * 100);
+    const row = document.createElement("div");
+    row.className = "bar-row";
+    row.innerHTML = `
+      <div class="bar-label">
+        <span style="${i===0 ? 'font-weight:700;color:var(--navy);' : 'color:var(--grey);'}">${r.name}</span>
+        <span style="color:var(--grey);">${Math.round(r.weight*100)}%</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill ${i===0?'top':''}" style="width:${pct}%;"></div></div>
+    `;
+    barsEl.appendChild(row);
+  });
+
+  if (results.length) {
+    const top = results[0];
+    document.getElementById("actionOut").textContent = top.name;
+    let reasonText = "";
+    if (top.topFactor === "urgency") reasonText = `No activity in ${days} days, and the lead is still in the ${stage} stage.`;
+    else if (top.topFactor === "score") reasonText = `Lead score is ${score}/100, strong enough to justify this action at the ${stage} stage.`;
+    else reasonText = (reply ? "A reply was received" : "No reply yet") + `, which shifted the recommendation at the ${stage} stage.`;
+    document.getElementById("reasonOut").textContent = reasonText;
+  }
+}
+update();
+</script>
+
+</body>
+</html>

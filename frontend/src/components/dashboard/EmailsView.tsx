@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Inbox, 
   Send, 
@@ -25,8 +25,15 @@ import {
   ArrowLeft,
   CornerDownLeft,
   MailOpen,
-  SendHorizontal
+  SendHorizontal,
+  Loader2,
+  BrainCircuit,
+  TrendingUp,
+  AlertCircle,
+  MessageSquare,
+  Target
 } from 'lucide-react';
+import { summarizeThread, ConversationSummary, SummaryMessage } from '@/utils/api';
 
 interface EmailThread {
   id: number;
@@ -101,6 +108,39 @@ export default function EmailsView() {
   const [inlineComposerMode, setInlineComposerMode] = useState<'reply' | 'forward' | null>(null);
   const [inlineBody, setInlineBody] = useState('');
   const [inlineTo, setInlineTo] = useState('');
+
+  // AI Summarization state
+  const [aiSummaryResult, setAiSummaryResult] = useState<ConversationSummary | null>(null);
+  const [isSummarizing, setIsSummarizing] = useState(false);
+
+  // Summarize thread when selected
+  useEffect(() => {
+    if (!selectedThreadId) {
+      setAiSummaryResult(null);
+      return;
+    }
+    const thread = threads.find(t => t.id === selectedThreadId);
+    if (!thread) return;
+
+    setIsSummarizing(true);
+    setAiSummaryResult(null);
+
+    const messages: SummaryMessage[] = [{
+      sender: thread.senderEmail,
+      recipients: ['sarah.j@pulse.crm'],
+      subject: thread.subject,
+      body: thread.body,
+      timestamp: new Date().toISOString(),
+      direction: thread.folder === 'sent' ? 'outgoing' : 'incoming'
+    }];
+
+    summarizeThread(`thread-${thread.id}`, messages)
+      .then(result => {
+        if (result) setAiSummaryResult(result);
+        setIsSummarizing(false);
+      })
+      .catch(() => setIsSummarizing(false));
+  }, [selectedThreadId]);
 
   // Active thread helper
   const activeThread = selectedThreadId ? threads.find(t => t.id === selectedThreadId) || null : null;
@@ -545,14 +585,124 @@ export default function EmailsView() {
                 <span className="text-[10px] text-slate-450 font-bold tabular-nums">{activeThread.time}</span>
               </div>
 
-              {/* AI Summary Banner */}
-              <div className="bg-brand-sidebar-hover/15 border border-brand-border-purple/25 rounded-xl p-4 flex items-start space-x-3 shrink-0">
-                <div className="p-1 bg-brand-accent/10 rounded-lg text-brand-accent shrink-0">
-                  <Sparkles className="h-4.5 w-4.5 animate-pulse" />
-                </div>
-                <div>
-                  <h4 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">Gemini CRM Summary</h4>
-                  <p className="text-[11px] text-brand-text/80 mt-1 leading-relaxed font-bold">{activeThread.aiSummary}</p>
+              {/* AI Summary Banner - Bhavani Conversation Intelligence */}
+              <div className="bg-brand-sidebar-hover/15 border border-brand-border-purple/25 rounded-xl p-4 shrink-0">
+                <div className="flex items-start space-x-3">
+                  <div className="p-1 bg-brand-accent/10 rounded-lg text-brand-accent shrink-0">
+                    <BrainCircuit className="h-4.5 w-4.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">Conversation Intelligence</h4>
+                      {aiSummaryResult && (
+                        <span className="text-[9px] text-slate-400 font-semibold">{aiSummaryResult.processing_time_ms}ms</span>
+                      )}
+                    </div>
+                    {isSummarizing ? (
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Loader2 className="h-3.5 w-3.5 text-brand-accent animate-spin" />
+                        <span className="text-[10px] text-slate-500 font-bold">Analysing conversation...</span>
+                      </div>
+                    ) : aiSummaryResult ? (
+                      <div className="mt-2 space-y-2.5">
+                        <p className="text-[11px] text-brand-text/80 leading-relaxed font-bold">{aiSummaryResult.summary}</p>
+
+                        {/* Badge row: sentiment, intent, category, confidence */}
+                        <div className="flex flex-wrap gap-1.5">
+                          <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                            aiSummaryResult.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
+                            aiSummaryResult.sentiment === 'negative' ? 'bg-rose-50 text-rose-700' :
+                            'bg-slate-100 text-slate-600'
+                          }`}>
+                            <TrendingUp className="h-3 w-3" />
+                            <span>{aiSummaryResult.sentiment}</span>
+                          </span>
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[9px] font-extrabold">
+                            <Target className="h-3 w-3" />
+                            <span>{aiSummaryResult.intent}</span>
+                          </span>
+                          {aiSummaryResult.category && (
+                            <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
+                              aiSummaryResult.category === 'urgent' ? 'bg-rose-50 text-rose-700' :
+                              aiSummaryResult.category === 'sales' ? 'bg-emerald-50 text-emerald-700' :
+                              aiSummaryResult.category === 'support' ? 'bg-amber-50 text-amber-700' :
+                              'bg-slate-100 text-slate-600'
+                            }`}>
+                              <MessageSquare className="h-3 w-3" />
+                              <span>{aiSummaryResult.category}</span>
+                            </span>
+                          )}
+                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[9px] font-extrabold">
+                            <MessageSquare className="h-3 w-3" />
+                            <span>{(aiSummaryResult.confidence * 100).toFixed(0)}% confidence</span>
+                          </span>
+                        </div>
+
+                        {/* Key Points */}
+                        {aiSummaryResult.key_points && aiSummaryResult.key_points.length > 0 && (
+                          <div className="border-t border-brand-border-purple/15 pt-2">
+                            <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-1">Key Points</p>
+                            <ul className="space-y-0.5">
+                              {aiSummaryResult.key_points.map((point, i) => (
+                                <li key={i} className="text-[10px] text-brand-text/70 font-semibold flex items-start space-x-1.5">
+                                  <span className="text-brand-accent mt-0.5">•</span>
+                                  <span>{point}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Action Items */}
+                        {aiSummaryResult.action_items && aiSummaryResult.action_items.length > 0 && (
+                          <div className="border-t border-brand-border-purple/15 pt-2">
+                            <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-1">Action Items</p>
+                            <ul className="space-y-0.5">
+                              {aiSummaryResult.action_items.map((item, i) => (
+                                <li key={i} className="text-[10px] text-brand-text/70 font-semibold flex items-start space-x-1.5">
+                                  <span className="text-amber-500 mt-0.5">◆</span>
+                                  <span>{item}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Draft Reply */}
+                        {aiSummaryResult.draft_reply && (
+                          <div className="border-t border-brand-border-purple/15 pt-2">
+                            <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-1">Draft Reply</p>
+                            <div className="bg-white border border-brand-border-purple/10 rounded-lg p-2.5 text-[10px] text-brand-text/80 font-medium leading-relaxed italic">
+                              "{aiSummaryResult.draft_reply}"
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Follow-up Suggestion */}
+                        {aiSummaryResult.follow_up_suggestion && (
+                          <div className="border-t border-brand-border-purple/15 pt-2 flex items-start space-x-2">
+                            <span className="text-amber-500 text-[10px] mt-0.5">⏰</span>
+                            <div>
+                              <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-0.5">Follow-up</p>
+                              <p className="text-[10px] text-brand-text/80 font-semibold">{aiSummaryResult.follow_up_suggestion}</p>
+                              {aiSummaryResult.follow_up_timing && (
+                                <span className={`inline-block mt-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                                  aiSummaryResult.follow_up_timing === 'immediate' ? 'bg-rose-50 text-rose-700' :
+                                  aiSummaryResult.follow_up_timing === 'today' ? 'bg-amber-50 text-amber-700' :
+                                  aiSummaryResult.follow_up_timing === 'no_followup' ? 'bg-slate-100 text-slate-500' :
+                                  'bg-blue-50 text-blue-700'
+                                }`}>
+                                  {aiSummaryResult.follow_up_timing.replace('_', ' ')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-slate-400 font-semibold mt-1">Unable to generate summary</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
