@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { PageContainer } from '@/components/shared/PageTemplates';
 import { Wrench, CheckCircle } from 'lucide-react';
@@ -14,8 +14,6 @@ const STEPS = [
 ];
 
 export default function ImplementationGuidePage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #f5f3ff 0%, #fff 100%)' }}>

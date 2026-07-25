@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Sparkles, Mail, Target, Brain } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, Statistics, CTASection } from '@/components/shared/PageTemplates';
 import { motion } from 'framer-motion';
@@ -31,8 +31,6 @@ const AICopilotScreenshot = () => (
 );
 
 export default function AICopilotPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -41,7 +39,6 @@ export default function AICopilotPage() {
         title={<>Your smartest rep<br /><span style={{ color: '#7c3aed' }}>is built right in.</span></>}
         description="AI scores every lead, drafts personalized emails, and flags at-risk deals — all powered by GPT-4o."
         screenshot={<AICopilotScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       {/* Feature Highlight */}
@@ -50,7 +47,7 @@ export default function AICopilotPage() {
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.6 }}>
             <h2 style={{ fontSize: 36, fontWeight: 900, color: '#0f172a', marginBottom: 16, letterSpacing: '-0.02em' }}>Intelligence that sells for you</h2>
             <p style={{ fontSize: 16, color: '#64748b', lineHeight: 1.7, marginBottom: 24 }}>
@@ -74,7 +71,7 @@ export default function AICopilotPage() {
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.6 }}
             style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #fff 100%)', padding: 32, borderRadius: 16, border: '1px solid #ede9fe' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed', marginBottom: 16 }}>Top Scored Leads Today</div>
@@ -108,7 +105,6 @@ export default function AICopilotPage() {
       <CTASection
         title="Let AI do the heavy lifting."
         description="Start your free 14-day trial with full AI Copilot access from day one."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );
