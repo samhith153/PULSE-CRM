@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PageContainer } from '@/components/shared/PageTemplates';
+import { PageContainer, useModal } from '@/components/shared/PageTemplates';
 import { Headphones, MessageCircle, Mail, Phone, Clock, CheckCircle, Zap, ArrowRight } from 'lucide-react';
 
 const SUPPORT_OPTIONS = [
@@ -65,6 +65,12 @@ const SUPPORT_FEATURES = [
 ];
 
 export default function SupportPage() {
+  const { openModal } = useModal();
+
+  const handleContactSales = () => {
+    openModal();
+  };
+
   return (
     <PageContainer>
       {/* Hero Section */}
@@ -173,7 +179,9 @@ export default function SupportPage() {
             <p style={{ fontSize: 16, color: '#94a3b8', lineHeight: 1.7, marginBottom: 32 }}>
               Get dedicated support tailored to your organization's needs with premium SLAs and personalized assistance.
             </p>
-            <button style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.5)', fontFamily: 'inherit' }}>
+            <button 
+              onClick={handleContactSales}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.5)', fontFamily: 'inherit' }}>
               Contact Sales <ArrowRight size={16} />
             </button>
           </motion.div>

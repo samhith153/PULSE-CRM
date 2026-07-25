@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Rocket, Zap, Banknote, TrendingUp } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, Statistics, CTASection } from '@/components/shared/PageTemplates';
 
@@ -14,8 +14,6 @@ const StartupScreenshot = () => (
 );
 
 export default function StartupsPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -24,7 +22,6 @@ export default function StartupsPage() {
         title={<>Launch in 2 minutes.<br /><span style={{ color: '#7c3aed' }}>Scale without limits.</span></>}
         description="Sign up, import contacts, close your first deal — all in under 10 minutes. No consultants. No onboarding calls."
         screenshot={<StartupScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <Statistics
@@ -39,7 +36,6 @@ export default function StartupsPage() {
       <CTASection
         title="Start closing deals today."
         description="Sign up free. Import contacts. Create your first deal in under 10 minutes."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

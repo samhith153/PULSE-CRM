@@ -98,7 +98,7 @@ export default function CompaniesView() {
     }
   ]);
 
-  const [selectedId, setSelectedId] = useState<number | string>(1);
+  const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -112,13 +112,10 @@ export default function CompaniesView() {
   useEffect(() => {
     getCompanies().then(data => {
       setCompanies(data as any);
-      if (data.length > 0) {
-        setSelectedId(data[0].id as any);
-      }
     });
   }, []);
 
-  const active = companies.find(c => c.id === selectedId) || companies[0];
+  const active = selectedId ? companies.find(c => c.id === selectedId) || null : null;
 
   const filtered = companies.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -151,6 +148,7 @@ export default function CompaniesView() {
 
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!active) return;
     setCompanies(companies.map(c => c.id === active.id ? {
       ...c,
       name: form.name,
@@ -165,7 +163,7 @@ export default function CompaniesView() {
 
   const handleAddContact = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactName.trim()) return;
+    if (!contactName.trim() || !active) return;
     setCompanies(companies.map(c => c.id === active.id ? {
       ...c,
       contacts: [...c.contacts, contactName.trim()]
@@ -177,7 +175,7 @@ export default function CompaniesView() {
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Companies List */}
-      <div className="col-span-12 lg:col-span-8 space-y-5">
+      <div className={`col-span-12 ${active ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
@@ -262,7 +260,7 @@ export default function CompaniesView() {
       </div>
 
       {/* Details Side Panel */}
-      <div className="col-span-12 lg:col-span-4 space-y-5">
+      {active && <div className="col-span-12 lg:col-span-4 space-y-5">
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
           <div className="flex items-center space-x-2.5 pb-3 border-b border-brand-border-purple/15">
             <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
@@ -353,9 +351,9 @@ export default function CompaniesView() {
                 )}
               </div>
             </div>
-          </div>
         </div>
       </div>
+      </div>}
 
       {/* Add Company Modal */}
       {isAddModalOpen && (

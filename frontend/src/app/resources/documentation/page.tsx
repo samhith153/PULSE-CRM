@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { PageContainer } from '@/components/shared/PageTemplates';
+import { PageContainer, useModal } from '@/components/shared/PageTemplates';
 import { BookOpen, Search, ChevronRight, TrendingUp, Users, FileText, Sparkles, Mail, Shield, Settings, Activity } from 'lucide-react';
 
 const SECTIONS = [
@@ -16,7 +16,16 @@ const SECTIONS = [
 ];
 
 export default function DocumentationPage() {
-  const [modalOpen, setModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { openModal } = useModal();
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      alert(`Searching for: "${searchQuery}"`);
+    } else {
+      alert('Please enter a search term');
+    }
+  };
 
   return (
     <PageContainer>
@@ -49,8 +58,15 @@ export default function DocumentationPage() {
             transition={{ delay: 0.3 }}
             style={{ display: 'flex', alignItems: 'center', gap: 0, maxWidth: 520, background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '4px 4px 4px 16px', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
             <Search size={16} color="#94a3b8" style={{ flexShrink: 0 }} />
-            <input readOnly placeholder="Search documentation..." style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#0f172a', padding: '10px 12px', fontFamily: 'inherit', background: 'transparent' }} />
-            <button style={{ padding: '10px 18px', background: '#7c3aed', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 9, border: 'none', cursor: 'pointer' }}>Search</button>
+            <input 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              placeholder="Search documentation..." 
+              style={{ flex: 1, border: 'none', outline: 'none', fontSize: 15, color: '#0f172a', padding: '10px 12px', fontFamily: 'inherit', background: 'transparent' }} />
+            <button 
+              onClick={handleSearch}
+              style={{ padding: '10px 18px', background: '#7c3aed', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 9, border: 'none', cursor: 'pointer' }}>Search</button>
           </motion.div>
         </div>
       </section>

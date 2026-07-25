@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Shield, Lock, Key, UserCheck, FileText, Eye } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, FeatureCards, CTASection } from '@/components/shared/PageTemplates';
 
@@ -34,8 +34,6 @@ const SecurityScreenshot = () => (
 );
 
 export default function SecurityRBACPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -44,7 +42,6 @@ export default function SecurityRBACPage() {
         title={<>Enterprise-grade security<br /><span style={{ color: '#7c3aed' }}>built in from day one.</span></>}
         description="SOC 2 certified. 33 granular permissions. SSO/SAML support. Full audit logs. AES-256 encryption."
         screenshot={<SecurityScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       <FeatureCards
@@ -61,7 +58,6 @@ export default function SecurityRBACPage() {
       <CTASection
         title="Security your compliance team will approve."
         description="Start free with enterprise security enabled from day one. No add-ons."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );
