@@ -236,9 +236,9 @@ export default function DashboardHome() {
           ) : activeTab === 'ai insights' ? (
             <AIInsightsView />
           ) : activeTab === 'settings' ? (
-            <SettingsView />
+            <SettingsView userRole={userRole} />
           ) : activeTab === 'profile' ? (
-            <ProfileView />
+            <ProfileView userRole={userRole} />
           ) : activeTab === 'notifications' ? (
             <NotificationsView />
           ) : activeTab === 'calendar' ? (

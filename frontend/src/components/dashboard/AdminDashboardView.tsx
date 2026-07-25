@@ -540,7 +540,7 @@ export default function AdminDashboardView() {
         <div className="overflow-x-auto select-none">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-3">
+              <tr className="text-[10px] font-extrabold text-black uppercase tracking-wider border-b border-slate-100 pb-3">
                 <th className="py-3 px-4">PRODUCTS</th>
                 <th className="py-3 px-4">PRICE</th>
                 <th className="py-3 px-4">DEPOSIT</th>

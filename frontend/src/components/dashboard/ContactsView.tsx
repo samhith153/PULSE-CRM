@@ -224,7 +224,7 @@ export default function ContactsView() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-brand-heading pb-2">
+                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
                   <th className="pb-2">Contact Name</th>
                   <th className="pb-2">Company</th>
                   <th className="pb-2">Designation</th>
@@ -238,11 +238,11 @@ export default function ContactsView() {
                   <tr 
                     key={con.id}
                     onClick={() => setSelectedId(con.id)}
-                    className={`hover:bg-slate-50/50 cursor-pointer ${con.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
+                    className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${con.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
                   >
-                    <td className="py-3 font-extrabold text-brand-heading">{con.name}</td>
-                    <td className="py-3 text-brand-text/80">{con.company}</td>
-                    <td className="py-3">{con.designation}</td>
+                    <td className="py-3 font-extrabold text-brand-heading truncate max-w-[150px]">{con.name}</td>
+                    <td className="py-3 text-brand-text/80 truncate max-w-[130px]">{con.company}</td>
+                    <td className="py-3 truncate max-w-[120px]">{con.designation}</td>
                     <td className="py-3 tabular-nums">{con.phone}</td>
                     <td className="py-3 truncate max-w-[120px]">{con.email}</td>
                     <td className="py-3 text-right" onClick={e => e.stopPropagation()}>

@@ -212,7 +212,7 @@ export default function CompaniesView() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-brand-heading pb-2">
+                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
                   <th className="pb-2">Company Name</th>
                   <th className="pb-2">Industry</th>
                   <th className="pb-2">Revenue</th>
@@ -226,10 +226,10 @@ export default function CompaniesView() {
                   <tr 
                     key={comp.id}
                     onClick={() => setSelectedId(comp.id)}
-                    className={`hover:bg-slate-50/50 cursor-pointer ${comp.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
+                    className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${comp.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
                   >
-                    <td className="py-3 font-extrabold text-brand-heading">{comp.name}</td>
-                    <td className="py-3 text-brand-text/80">{comp.industry}</td>
+                    <td className="py-3 font-extrabold text-brand-heading truncate max-w-[160px]">{comp.name}</td>
+                    <td className="py-3 text-brand-text/80 truncate max-w-[120px]">{comp.industry}</td>
                     <td className="py-3 tabular-nums">{comp.revenue || '—'}</td>
                     <td className="py-3 text-center tabular-nums">{comp.employees}</td>
                     <td className="py-3 text-center tabular-nums">{comp.openDeals}</td>

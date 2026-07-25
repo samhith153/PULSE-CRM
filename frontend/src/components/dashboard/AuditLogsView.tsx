@@ -89,7 +89,7 @@ export default function AuditLogsView() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-slate-400">
+              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
                 <th className="px-4 py-3.5">Audit ID</th>
                 <th className="px-4 py-3.5">Timestamp</th>
                 <th className="px-4 py-3.5">Actor</th>

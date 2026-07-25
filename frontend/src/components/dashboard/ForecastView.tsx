@@ -160,7 +160,7 @@ export default function ForecastView() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-slate-400">
+              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
                 <th className="py-2.5">Quarter</th>
                 <th className="py-2.5 text-right">Quota Target</th>
                 <th className="py-2.5 text-right">Expected Closed</th>
@@ -173,7 +173,7 @@ export default function ForecastView() {
               {quarterlyForecast.map((item, idx) => {
                 const pct = Math.round((item.committed / item.quota) * 100);
                 return (
-                  <tr key={idx} className="hover:bg-slate-50/50">
+                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3 font-extrabold">{item.quarter}</td>
                     <td className="py-3 text-right tabular-nums">₹{item.quota.toLocaleString()}</td>
                     <td className="py-3 text-right tabular-nums font-extrabold text-brand-heading">₹{item.committed.toLocaleString()}</td>
