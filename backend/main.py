@@ -1,4 +1,6 @@
 import os
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import auth, companies, contacts, leads, deals, timeline, gmail, users, summarization
@@ -6,24 +8,16 @@ from routers import auth, companies, contacts, leads, deals, timeline, gmail, us
 from database import engine
 import models
 
-app = FastAPI(
-    title="Pulse CRM REST API",
-    description="Backend business logic and synchronization controllers for Pulse CRM",
-    version="1.0.0"
-)
 
-@app.on_event("startup")
-def startup_event():
-    # Create all tables if they don't exist
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     models.Base.metadata.create_all(bind=engine)
-    
-    # Seed the database
+
     from database import SessionLocal
     from uuid import UUID
-    
+
     db = SessionLocal()
     try:
-        # Seed Roles
         if db.query(models.Role).first() is None:
             roles = [
                 models.Role(
@@ -45,7 +39,6 @@ def startup_event():
             db.add_all(roles)
             db.commit()
 
-        # Seed Pipeline Stages
         if db.query(models.PipelineStage).first() is None:
             stages = [
                 models.PipelineStage(
@@ -82,7 +75,6 @@ def startup_event():
             db.add_all(stages)
             db.commit()
 
-        # Seed Permissions
         if db.query(models.Permission).first() is None:
             permissions = [
                 models.Permission(
@@ -104,7 +96,6 @@ def startup_event():
             db.add_all(permissions)
             db.commit()
 
-        # Seed default User (Sarah Johnson)
         sarah = db.query(models.User).filter(models.User.email == 'sarah.j@pulse.crm').first()
         if sarah is None:
             sarah = models.User(
@@ -113,14 +104,12 @@ def startup_event():
                 password_hash='pbkdf2:sha256:260000$hashedpassword',
                 full_name='Sarah Johnson'
             )
-            # Add Administrator role
             role = db.query(models.Role).filter(models.Role.name == 'Administrator').first()
             if role:
                 sarah.roles.append(role)
             db.add(sarah)
             db.commit()
 
-        # Seed Companies
         if db.query(models.Company).first() is None:
             companies = [
                 models.Company(
@@ -148,7 +137,6 @@ def startup_event():
             db.add_all(companies)
             db.commit()
 
-        # Seed Contacts
         if db.query(models.Contact).first() is None:
             contacts = [
                 models.Contact(
@@ -182,7 +170,6 @@ def startup_event():
             db.add_all(contacts)
             db.commit()
 
-        # Seed Leads
         if db.query(models.Lead).first() is None:
             leads = [
                 models.Lead(
@@ -207,7 +194,6 @@ def startup_event():
             db.add_all(leads)
             db.commit()
 
-        # Seed Deals
         if db.query(models.Deal).first() is None:
             deals = [
                 models.Deal(
@@ -241,16 +227,24 @@ def startup_event():
     finally:
         db.close()
 
-# CORS configurations for cross-origin frontend browser calls
+    yield
+
+
+app = FastAPI(
+    title="Pulse CRM REST API",
+    description="Backend business logic and synchronization controllers for Pulse CRM",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adapt to specific domains in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount all endpoint routers
 app.include_router(auth.router)
 app.include_router(companies.router)
 app.include_router(contacts.router)
@@ -260,6 +254,7 @@ app.include_router(timeline.router)
 app.include_router(gmail.router)
 app.include_router(users.router)
 app.include_router(summarization.router)
+
 
 @app.get("/")
 def read_root():
