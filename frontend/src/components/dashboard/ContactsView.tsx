@@ -89,7 +89,7 @@ export default function ContactsView() {
     }
   ]);
 
-  const [selectedId, setSelectedId] = useState<number | string>(1);
+  const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeHistoryTab, setActiveHistoryTab] = useState<'timeline' | 'calls' | 'meetings' | 'emails'>('timeline');
 
@@ -109,13 +109,10 @@ export default function ContactsView() {
   useEffect(() => {
     getContacts().then(data => {
       setContacts(data as any);
-      if (data.length > 0) {
-        setSelectedId(data[0].id as any);
-      }
     });
   }, []);
 
-  const active = contacts.find(c => c.id === selectedId) || contacts[0];
+  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : null;
 
   const filtered = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -144,6 +141,7 @@ export default function ContactsView() {
 
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!active) return;
     setContacts(contacts.map(c => c.id === active.id ? {
       ...c,
       name: form.name,
@@ -166,6 +164,7 @@ export default function ContactsView() {
 
   const handleSendEmail = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!active) return;
     setContacts(contacts.map(c => c.id === active.id ? {
       ...c,
       emails: [{ id: Date.now(), subject: emailForm.subject, body: emailForm.body, time: "Just now" }, ...c.emails],
@@ -177,6 +176,7 @@ export default function ContactsView() {
 
   const handleLogCall = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!active) return;
     setContacts(contacts.map(c => c.id === active.id ? {
       ...c,
       calls: [{ id: Date.now(), outcome: callForm.outcome, notes: callForm.notes, time: "Just now" }, ...c.calls],
@@ -189,7 +189,7 @@ export default function ContactsView() {
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Contact Table Section */}
-      <div className="col-span-12 lg:col-span-8 space-y-5">
+      <div className={`col-span-12 ${active ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
@@ -280,7 +280,7 @@ export default function ContactsView() {
       </div>
 
       {/* Selected Contact details Pane */}
-      <div className="col-span-12 lg:col-span-4 space-y-5">
+      {active && <div className="col-span-12 lg:col-span-4 space-y-5">
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
           <div className="flex items-center space-x-2.5 pb-3 border-b border-brand-border-purple/15">
             <div className="h-8.5 w-8.5 rounded-full bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
@@ -412,9 +412,9 @@ export default function ContactsView() {
                 </div>
               )}
             </div>
-          </div>
         </div>
       </div>
+      </div>}
 
       {/* Add Contact Modal */}
       {isAddModalOpen && (
@@ -509,7 +509,7 @@ export default function ContactsView() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Email {active.name}</h3>
+              <h3 className="font-bold text-brand-heading text-sm">Email {active?.name}</h3>
               <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">

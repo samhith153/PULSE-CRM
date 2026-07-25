@@ -172,7 +172,7 @@ export default function LeadsView() {
   ]);
 
   // Selections & Filters State
-  const [selectedLeadId, setSelectedLeadId] = useState<number | string>(1);
+  const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
@@ -196,14 +196,11 @@ export default function LeadsView() {
   useEffect(() => {
     getLeads().then(data => {
       setLeads(data as any);
-      if (data.length > 0) {
-        setSelectedLeadId(data[0].id as any);
-      }
     });
   }, []);
 
   // Get currently active lead object
-  const activeLead = leads.find(l => l.id === selectedLeadId) || leads[0];
+  const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
 
   // AI Recommendation engine
   const getAIRecommendation = (lead: Lead) => {
@@ -342,6 +339,7 @@ export default function LeadsView() {
   // Action: Edit Lead Submit
   const handleEditLead = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         return {
@@ -390,6 +388,7 @@ export default function LeadsView() {
   // Action: Send Email Submit
   const handleSendEmail = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         const newEmail: EmailItem = {
@@ -420,6 +419,7 @@ export default function LeadsView() {
   // Action: Log Call Submit
   const handleLogCall = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         const newCall: CallItem = {
@@ -450,6 +450,7 @@ export default function LeadsView() {
   // Action: Schedule Meeting Submit
   const handleScheduleMeeting = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         const newMeeting: MeetingItem = {
@@ -480,6 +481,7 @@ export default function LeadsView() {
 
   // Action: Save Editable Notes
   const handleSaveNotes = (val: string) => {
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         return { ...l, notes: val };
@@ -491,7 +493,7 @@ export default function LeadsView() {
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Left Pane (Table, filters, search, headers) */}
-      <div className="col-span-12 lg:col-span-8 space-y-5">
+      <div className={`col-span-12 ${activeLead ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
@@ -687,7 +689,7 @@ export default function LeadsView() {
       </div>
 
       {/* Right Pane (Selected Lead Details drawer, activities, timeline logs, editable notes, AI advice) */}
-      <div className="col-span-12 lg:col-span-4 space-y-5">
+      {activeLead && <div className="col-span-12 lg:col-span-4 space-y-5">
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
           {/* Card Title Header */}
           <div className="flex items-start justify-between border-b border-brand-border-purple/15 pb-3">
@@ -943,10 +945,10 @@ export default function LeadsView() {
                   )}
                 </div>
               )}
-            </div>
-          </div>
         </div>
       </div>
+    </div>
+      </div>}
 
       {/* CREATE LEAD DIALOG MODAL */}
       {isCreateModalOpen && (
@@ -1087,7 +1089,7 @@ export default function LeadsView() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead.name}</h3>
+              <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead?.name}</h3>
               <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">
