@@ -1,13 +1,11 @@
-# 🛠 Fix Plan: Brevo Webhook + DB Resilience
+# Fix: `summarise_thread` ImportError on Render Deployment
 
-## Status Tracking
+## Steps
 
-- [x] **1. Fix `app/api/v1/brevo.py`** — Handle empty body, GET verification, non-JSON gracefully
-- [x] **2. Fix `app/services/brevo_service.py`** — Add proper event processing with validation
-- [x] **3. Fix `app/database/connection.py`** — Add retry logic, consistent logging, clean prints
-
-## Summary of Changes
-
-### `app/api/v1/brevo.py`
-- Added `GET /webhook` endpoint for Brevo URL verification (returns "
+- [x] Step 0: Investigate and identify root cause
+- [x] Step 1: Update `backend/ai/summarization/src/models.py` — Add `SummariseRequest` and sync `SummariseResponse`
+- [x] Step 2: Create `backend/ai/summarization/src/config.py` — Configuration module
+- [x] Step 3: Create `backend/ai/summarization/src/database.py` — In-memory storage for summaries
+- [x] Step 4: Update `backend/ai/summarization/src/agent.py` — Add `async def summarise_thread(...)` with Groq support
+- [x] Step 5: Update `backend/requirements.txt` — Add `groq` dependency
 
