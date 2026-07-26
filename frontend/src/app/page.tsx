@@ -43,14 +43,8 @@ import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2 } from 'lucide
 import { clearToken } from '@/utils/api';
 
 export default function DashboardHome() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-
-  useEffect(() => {
-    const auth = sessionStorage.getItem('pulse-crm-auth') === 'true';
-    setIsAuthenticated(auth);
-    setIsAuthLoading(false);
-  }, []);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   const handleLogin = (role: 'representative' | 'manager' | 'admin') => {
     setIsAuthenticated(true);
