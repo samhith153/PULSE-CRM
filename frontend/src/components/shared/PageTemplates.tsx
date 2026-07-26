@@ -23,6 +23,7 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [orgName, setOrgName] = useState('');
   const [role, setRole] = useState<Role>('manager');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,7 +32,7 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || (mode === 'signup' && !name)) {
+    if (!email || !password || (mode === 'signup' && (!name || !orgName))) {
       setError('Please fill in all fields');
       return;
     }
@@ -43,9 +44,9 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
       const { setToken } = await import('@/utils/api');
 
       if (mode === 'signup') {
-        // Simulate signup
-        await new Promise(r => setTimeout(r, 1000));
-        setToken('mock-jwt-token-' + Date.now());
+        const { register } = await import('@/utils/api');
+        const result = await register(name, email, password, orgName);
+        setToken(result.access_token);
       } else {
         const { login } = await import('@/utils/api');
         const result = await login(email, password);
@@ -118,16 +119,28 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {mode === 'signup' && (
-            <div>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Full name</label>
-              <div style={{ position: 'relative' }}>
-                <input type="text" value={name} onChange={e => setName(e.target.value)}
-                  placeholder="John Doe" required
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
-                  onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
-                  onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
+            <>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Full name</label>
+                <div style={{ position: 'relative' }}>
+                  <input type="text" value={name} onChange={e => setName(e.target.value)}
+                    placeholder="John Doe" required
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
+                    onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                    onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
+                </div>
               </div>
-            </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Company name</label>
+                <div style={{ position: 'relative' }}>
+                  <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)}
+                    placeholder="Acme Corp" required
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
+                    onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                    onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
+                </div>
+              </div>
+            </>
           )}
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email address</label>

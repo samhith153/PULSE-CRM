@@ -300,6 +300,20 @@ export const MOCK_DEALS: Deal[] = [
   { id: 5, title: "Analytics Custom Tier", company: "ByteSized Co.", value: 18000, stage: "Won", priority: "Low", owner: "Alex Johnson", closeDate: "2025-05-10" }
 ];
 
+export async function register(fullName: string, email: string, password: string, organizationName: string): Promise<{ access_token: string; refresh_token: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ full_name: fullName, email, password, organization_name: organizationName })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).detail || `Registration failed (${res.status})`);
+  }
+  const json = await res.json();
+  return json.data;
+}
+
 export async function login(email: string, password: string): Promise<{ token: string; user: any }> {
   const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
