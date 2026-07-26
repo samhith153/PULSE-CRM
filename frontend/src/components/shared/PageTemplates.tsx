@@ -5,7 +5,8 @@ import Navbar from '@/components/navigation/Navbar';
 import { ArrowRight, CheckCircle, X, Mail, Lock, Loader2, Activity } from 'lucide-react';
 
 /* ─── Modal Context ──────────────────────────────────── */
-const ModalContext = createContext<{ openModal: () => void } | null>(null);
+type ModalMode = 'signin' | 'signup';
+const ModalContext = createContext<{ openModal: (mode?: ModalMode) => void } | null>(null);
 
 export function useModal() {
   const context = useContext(ModalContext);
@@ -18,8 +19,8 @@ export function useModal() {
 /* ─── Auth Modal ──────────────────────────────────── */
 type Role = 'representative' | 'manager' | 'admin';
 
-function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolean; onClose: () => void; defaultMode?: 'signin' | 'signup' }) {
+  const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -206,16 +207,17 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 /* ─── Page Container ──────────────────────────────── */
 export function PageContainer({ children }: { children: React.ReactNode }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>('signup');
 
   return (
-    <ModalContext.Provider value={{ openModal: () => setModalOpen(true) }}>
+    <ModalContext.Provider value={{ openModal: (mode) => { setModalMode(mode || 'signin'); setModalOpen(true); } }}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
         style={{ fontFamily: "'Inter',system-ui,sans-serif", background: '#fff', minHeight: '100vh', color: '#0f172a' }}>
-        <Navbar onOpenModal={() => setModalOpen(true)} />
-        <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+        <Navbar onOpenModal={() => { setModalMode('signin'); setModalOpen(true); }} onOpenSignUp={() => { setModalMode('signup'); setModalOpen(true); }} />
+        <AuthModal key={modalMode} defaultMode={modalMode} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
         {children}
         <footer style={{ padding: '36px 48px', background: '#0f172a', color: '#475569', textAlign: 'center' }}>
           <p style={{ fontSize: 14 }}>© 2026 Pulse CRM Inc. All rights reserved. Powered by <span style={{ color: '#94a3b8', fontWeight: 600 }}>Kalnet</span>.</p>

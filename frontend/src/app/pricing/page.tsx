@@ -103,7 +103,7 @@ function PricingContent() {
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#f3f0ff', minHeight: '100vh', marginTop: -64 }}>
-      <Navbar onOpenModal={openModal} />
+      <Navbar onOpenModal={() => openModal('signin')} onOpenSignUp={() => openModal('signup')} />
 
       {/* ── HEADER ── */}
       <section style={{ paddingTop: 120, paddingBottom: 64, textAlign: 'center', background: '#f3f0ff' }}>
@@ -235,7 +235,7 @@ function PricingContent() {
 
               {/* CTA button */}
               <button
-                onClick={openModal}
+                onClick={() => openModal('signup')}
                 style={{
                   width: '100%', padding: '14px',
                   borderRadius: 12, border: 'none',
@@ -357,7 +357,7 @@ function PricingContent() {
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
-              onClick={openModal}
+              onClick={() => openModal('signup')}
               style={{
                 padding: '14px 32px', background: '#ffffff', color: '#7c3aed',
                 fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none',
