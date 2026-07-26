@@ -39,6 +39,16 @@ def _error_body(code: str, message: str, details: list = None) -> dict:
     ).model_dump()
 
 
+def _add_cors_headers(response: JSONResponse) -> JSONResponse:
+    """Add CORS headers to error responses so the browser doesn't block them."""
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
+
+
 async def pulse_exception_handler(request: Request, exc: PulseCRMException) -> JSONResponse:
     """Maps every custom domain exception to an HTTP status code."""
     status_map = {
@@ -69,10 +79,10 @@ async def pulse_exception_handler(request: Request, exc: PulseCRMException) -> J
         for k, v in (exc.details or {}).items()
     ]
 
-    return JSONResponse(
+    return _add_cors_headers(JSONResponse(
         status_code=status_code,
         content=_error_body(exc.code, exc.message, details),
-    )
+    ))
 
 
 async def validation_exception_handler(
@@ -86,23 +96,24 @@ async def validation_exception_handler(
         )
         for err in exc.errors()
     ]
-    return JSONResponse(
+    return _add_cors_headers(JSONResponse(
         status_code=422,
         content=_error_body(
             "VALIDATION_ERROR",
             "Request validation failed. Check the 'details' field.",
             details,
         ),
-    )
+    ))
 
 
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unexpected server errors."""
     logger.exception("Unexpected error on %s %s", request.method, request.url.path)
-    return JSONResponse(
+    response = JSONResponse(
         status_code=500,
         content=_error_body(
             "INTERNAL_SERVER_ERROR",
             "An unexpected error occurred. Please try again later.",
         ),
     )
+    return _add_cors_headers(response)

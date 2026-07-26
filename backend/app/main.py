@@ -53,7 +53,6 @@ def create_app() -> FastAPI:
     )
 
     app.add_middleware(RequestIDMiddleware)
-    app.add_middleware(PrivateNetworkAccessMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -65,6 +64,7 @@ def create_app() -> FastAPI:
         allow_headers=settings.cors_headers_list,
         expose_headers=["*"],
     )
+    app.add_middleware(PrivateNetworkAccessMiddleware)
 
     app.add_exception_handler(PulseCRMException, pulse_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -85,5 +85,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-
