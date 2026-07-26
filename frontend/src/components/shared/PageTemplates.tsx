@@ -50,7 +50,7 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
       } else {
         const { login } = await import('@/utils/api');
         const result = await login(email, password);
-        setToken(result.token);
+        setToken(result.access_token);
       }
 
       if (typeof window !== 'undefined') {
@@ -413,3 +413,4 @@ export function CTASection({ title, description, onCTA }: { title: string; descr
     </section>
   );
 }
+

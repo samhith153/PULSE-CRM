@@ -123,7 +123,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     setIsLoading(true);
     try {
       const result = await apiLogin(email, password);
-      setToken(result.token);
+      setToken(result.access_token);
       setIsLoading(false);
       setIsModalOpen(false);
       setEmail('');
@@ -1305,3 +1305,4 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     </div>
   );
 }
+
