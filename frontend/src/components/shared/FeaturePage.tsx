@@ -349,7 +349,7 @@ export default function FeaturePage({ data }: Props) {
             <motion.button 
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.98 }}
-              onClick={openModal}
+              onClick={() => openModal('signup')}
               style={{ display:'flex', alignItems:'center', gap:8, padding:'14px 28px', background:accent, color:'#fff', fontSize:15, fontWeight:700, borderRadius:100, border:'none', cursor:'pointer', boxShadow:`0 8px 24px ${accent}44`, transition:'box-shadow .2s' }}>
               Start Free Trial <ArrowRight size={16} />
             </motion.button>
@@ -542,7 +542,7 @@ export default function FeaturePage({ data }: Props) {
             <motion.button 
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.98 }}
-              onClick={openModal}
+              onClick={() => openModal('signup')}
               style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'16px 32px', background:'#fff', color:accent, fontSize:16, fontWeight:700, borderRadius:100, border:'none', cursor:'pointer', boxShadow:'0 12px 32px rgba(0,0,0,.15)', transition:'box-shadow .2s' }}>
               Start Free Trial <ArrowRight size={18} />
             </motion.button>
