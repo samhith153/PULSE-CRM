@@ -13,6 +13,7 @@ import LeadsView from '@/components/dashboard/LeadsView';
 import CompaniesView from '@/components/dashboard/CompaniesView';
 import ContactsView from '@/components/dashboard/ContactsView';
 import PipelineView from '@/components/dashboard/PipelineView';
+import DealsView from '@/components/dashboard/DealsView';
 import ActivitiesView from '@/components/dashboard/ActivitiesView';
 import EmailsView from '@/components/dashboard/EmailsView';
 import AIInsightsView from '@/components/dashboard/AIInsightsView';
@@ -219,7 +220,9 @@ export default function DashboardHome() {
             <ContactsView />
           ) : activeTab === 'companies' ? (
             <CompaniesView />
-          ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
+          ) : activeTab === 'deals' ? (
+            <DealsView />
+          ) : (activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
             <PipelineView />
           ) : activeTab === 'products' ? (
             <ProductsView />

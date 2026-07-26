@@ -16,7 +16,9 @@ import {
   Target,
   Smile,
   Frown,
-  Meh
+  Meh,
+  IndianRupee,
+  DollarSign
 } from 'lucide-react';
 
 interface AILead {
@@ -202,6 +204,49 @@ export default function AIInsightsView() {
               })}
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Deal Value Predictions Section */}
+      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+        <h3 className="font-extrabold text-brand-heading text-sm mb-4 flex items-center">
+          <DollarSign className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+          <span>AI Deal Value Predictions</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { deal: "TechCorp Cloud Migration", company: "TechCorp Inc.", currentValue: "$120,000", predictedValue: "$138,000", confidence: 89, trend: "up", reason: "SAML SSO approved, enterprise SLA terms aligning" },
+            { deal: "MedSaaS Compliance Suite", company: "MedSaaS Solutions", currentValue: "$85,000", predictedValue: "$72,000", confidence: 62, trend: "down", reason: "Competitor pricing pressure, decision timeline extended" },
+            { deal: "Sparta Creative Enterprise", company: "Sparta Creative", currentValue: "$45,000", predictedValue: "$52,000", confidence: 76, trend: "up", reason: "40-seat inquiry, volume discount negotiation positive" },
+          ].map((item, idx) => (
+            <div key={idx} className="border border-brand-border-purple/15 rounded-xl p-4 bg-slate-50/30">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h4 className="text-xs font-extrabold text-brand-heading">{item.deal}</h4>
+                  <p className="text-[10px] text-brand-text/60 font-semibold">{item.company}</p>
+                </div>
+                <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center ${
+                  item.trend === 'up' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                }`}>
+                  {item.trend === 'up' ? '▲ +' : '▼ '}{Math.round(((parseInt(item.predictedValue.replace(/[^0-9]/g, '')) - parseInt(item.currentValue.replace(/[^0-9]/g, ''))) / parseInt(item.currentValue.replace(/[^0-9]/g, ''))) * 100)}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] font-bold mb-2">
+                <span className="text-slate-500">Current: <span className="text-brand-heading">{item.currentValue}</span></span>
+                <span className="text-slate-500">Predicted: <span className="text-brand-accent">{item.predictedValue}</span></span>
+              </div>
+              <div className="mb-2">
+                <div className="flex justify-between text-[9px] font-bold text-brand-text/60 mb-1">
+                  <span>Confidence</span>
+                  <span>{item.confidence}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${item.confidence >= 80 ? 'bg-emerald-500' : item.confidence >= 65 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${item.confidence}%` }} />
+                </div>
+              </div>
+              <p className="text-[9px] text-brand-text/70 font-semibold">{item.reason}</p>
+            </div>
+          ))}
         </div>
       </div>
 

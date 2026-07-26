@@ -171,8 +171,15 @@ export default function LeadsView() {
     }
   ]);
 
-  // Selections & Filters State
-  const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
+  // View Mode: table vs priority
+  const [viewMode, setViewMode] = useState<'table' | 'priority'>('table');
+
+  // Summary card state (click to open, double-click to close)
+  const [summaryLeadId, setSummaryLeadId] = useState<number | string | null>(null);
+
+  // Original selected lead for edit/create action context
+  const [editLeadId, setEditLeadId] = useState<number | string | null>(null);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
@@ -199,8 +206,10 @@ export default function LeadsView() {
     });
   }, []);
 
-  // Get currently active lead object
-  const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
+  // Active lead for summary card
+  const summaryLead = summaryLeadId ? leads.find(l => l.id === summaryLeadId) || null : null;
+  // Active lead for edit modal
+  const activeLead = editLeadId ? leads.find(l => l.id === editLeadId) || null : summaryLead;
 
   // AI Recommendation engine
   const getAIRecommendation = (lead: Lead) => {
@@ -491,15 +500,33 @@ export default function LeadsView() {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-6 items-start">
-      {/* Left Pane (Table, filters, search, headers) */}
-      <div className={`col-span-12 ${activeLead ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
-          {/* Header Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div>
-              <h2 className="font-sans text-2xl text-brand-heading font-bold">Sales Leads</h2>
-              <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Manage prospects, monitor qualification scores, and trigger follow-ups.</p>
+    <div className="space-y-6">
+      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+        {/* Header Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 className="font-sans text-2xl text-brand-heading font-bold">Sales Leads</h2>
+            <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Manage prospects, monitor qualification scores, and trigger follow-ups.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex space-x-0.5 p-0.5 bg-brand-sidebar-hover/15 border border-brand-border-purple/20 rounded-lg">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                  viewMode === 'table' ? 'bg-white text-brand-heading shadow-sm' : 'text-brand-text/60 hover:text-brand-heading'
+                }`}
+              >
+                Table
+              </button>
+              <button
+                onClick={() => setViewMode('priority')}
+                className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                  viewMode === 'priority' ? 'bg-white text-brand-heading shadow-sm' : 'text-brand-text/60 hover:text-brand-heading'
+                }`}
+              >
+                Priority
+              </button>
             </div>
             <button 
               onClick={() => {
@@ -512,10 +539,10 @@ export default function LeadsView() {
               <span>Add Lead</span>
             </button>
           </div>
+        </div>
 
           {/* Search & Filters block */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            {/* Search Input */}
             <div className="relative">
               <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
                 <Search className="h-3.5 w-3.5" />
@@ -528,8 +555,6 @@ export default function LeadsView() {
                 className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text bg-slate-50/50 focus:bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
               />
             </div>
-            
-            {/* Status Filter */}
             <div className="relative">
               <select 
                 value={statusFilter}
@@ -544,8 +569,6 @@ export default function LeadsView() {
                 <option value="Lost">Lost</option>
               </select>
             </div>
-
-            {/* Priority Filter */}
             <div className="relative">
               <select 
                 value={priorityFilter}
@@ -560,395 +583,231 @@ export default function LeadsView() {
             </div>
           </div>
 
-          {/* Lead Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
-                  <th className="pb-2">Name & Company</th>
-                  <th className="pb-2 text-center">Score</th>
-                  <th className="pb-2">Status</th>
-                  <th className="pb-2">Priority</th>
-                  <th className="pb-2">Owner</th>
-                  <th className="pb-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                {filteredLeads.length > 0 ? (
-                  filteredLeads.map((lead) => {
-                    const isSelected = lead.id === selectedLeadId;
-                    return (
-                      <tr 
-                        key={lead.id}
-                        onClick={() => setSelectedLeadId(lead.id)}
-                        className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${
-                          isSelected ? 'bg-brand-secondary-accent/10' : ''
-                        }`}
-                      >
-                        {/* Name & Company */}
-                        <td className="py-3">
-                          <div className="font-extrabold text-brand-heading">{lead.name}</div>
-                          <div className="text-[10px] text-brand-text/60 mt-0.5 flex items-center">
-                            <Building2 className="h-3 w-3 mr-1 text-brand-text/40" />
-                            {lead.company}
-                          </div>
-                        </td>
-                        
-                        {/* Lead Score */}
-                        <td className="py-3 text-center">
-                          <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                            lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
-                            lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
-                          }`}>
-                            {lead.score}
-                          </span>
-                        </td>
-
-                        {/* Status Badge */}
-                        <td className="py-3">
-                          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
-                            lead.status === 'New' ? 'text-blue-750 bg-blue-50' :
-                            lead.status === 'Contacted' ? 'text-yellow-750 bg-yellow-50' :
-                            lead.status === 'Qualified' ? 'text-purple-750 bg-purple-50' :
-                            lead.status === 'Converted' ? 'text-emerald-750 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'
-                          }`}>
-                            {lead.status}
-                          </span>
-                        </td>
-
-                        {/* Priority Badge */}
-                        <td className="py-3">
-                          <span className={`text-[9px] font-bold ${
-                            lead.priority === 'High' ? 'text-rose-600' :
-                            lead.priority === 'Medium' ? 'text-amber-600' : 'text-slate-500'
-                          }`}>
-                            ● {lead.priority}
-                          </span>
-                        </td>
-
-                        {/* Owner */}
-                        <td className="py-3">
-                          <div className="flex items-center space-x-1.5">
-                            <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
-                            <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
-                          </div>
-                        </td>
-
-                        {/* Row Actions */}
-                        <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end space-x-1">
-                            {lead.status !== 'Converted' && (
-                              <button 
-                                onClick={() => handleConvertLead(lead.id)}
-                                className="px-2 py-0.5 border border-emerald-250 text-emerald-750 hover:bg-emerald-600 hover:text-white rounded text-[10px] font-extrabold transition-colors cursor-pointer"
-                                title="Convert Lead"
-                              >
-                                Convert
-                              </button>
-                            )}
-                            <button 
-                              onClick={() => {
-                                setLeadForm({
-                                  name: lead.name,
-                                  company: lead.company,
-                                  email: lead.email,
-                                  phone: lead.phone,
-                                  status: lead.status,
-                                  priority: lead.priority,
-                                  owner: lead.owner,
-                                  notes: lead.notes
-                                });
-                                setIsEditModalOpen(true);
-                              }}
-                              className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteLead(lead.id)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400">
-                      No leads matching search or filter selections.
-                    </td>
+          {/* === TABLE VIEW === */}
+          {viewMode === 'table' && (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
+                    <th className="pb-2">Name & Company</th>
+                    <th className="pb-2 text-center">Score</th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2">Priority</th>
+                    <th className="pb-2">Owner</th>
+                    <th className="pb-2 text-right">Actions</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
+                  {filteredLeads.length > 0 ? (
+                    filteredLeads.map((lead) => {
+                      const showSummary = lead.id === summaryLeadId;
+                      return (
+                        <React.Fragment key={lead.id}>
+                          <tr 
+                            onClick={() => setSummaryLeadId(lead.id === summaryLeadId ? null : lead.id)}
+                            onDoubleClick={() => setSummaryLeadId(null)}
+                            className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${
+                              showSummary ? 'bg-brand-secondary-accent/10' : ''
+                            }`}
+                          >
+                            <td className="py-3">
+                              <div className="font-extrabold text-brand-heading">{lead.name}</div>
+                              <div className="text-[10px] text-brand-text/60 mt-0.5 flex items-center">
+                                <Building2 className="h-3 w-3 mr-1 text-brand-text/40" />
+                                {lead.company}
+                              </div>
+                            </td>
+                            <td className="py-3 text-center">
+                              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                                lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
+                                lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
+                              }`}>
+                                {lead.score}
+                              </span>
+                            </td>
+                            <td className="py-3">
+                              <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                lead.status === 'New' ? 'text-blue-750 bg-blue-50' :
+                                lead.status === 'Contacted' ? 'text-yellow-750 bg-yellow-50' :
+                                lead.status === 'Qualified' ? 'text-purple-750 bg-purple-50' :
+                                lead.status === 'Converted' ? 'text-emerald-750 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'
+                              }`}>
+                                {lead.status}
+                              </span>
+                            </td>
+                            <td className="py-3">
+                              <span className={`text-[9px] font-bold ${
+                                lead.priority === 'High' ? 'text-rose-600' :
+                                lead.priority === 'Medium' ? 'text-amber-600' : 'text-slate-500'
+                              }`}>
+                                ● {lead.priority}
+                              </span>
+                            </td>
+                            <td className="py-3">
+                              <div className="flex items-center space-x-1.5">
+                                <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
+                                <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex items-center justify-end space-x-1">
+                                {lead.status !== 'Converted' && (
+                                  <button 
+                                    onClick={() => handleConvertLead(lead.id)}
+                                    className="px-2 py-0.5 border border-emerald-250 text-emerald-750 hover:bg-emerald-600 hover:text-white rounded text-[10px] font-extrabold transition-colors cursor-pointer"
+                                    title="Convert Lead"
+                                  >
+                                    Convert
+                                  </button>
+                                )}
+                                <button 
+                                  onClick={() => {
+                                    setEditLeadId(lead.id);
+                                    setLeadForm({
+                                      name: lead.name,
+                                      company: lead.company,
+                                      email: lead.email,
+                                      phone: lead.phone,
+                                      status: lead.status,
+                                      priority: lead.priority,
+                                      owner: lead.owner,
+                                      notes: lead.notes
+                                    });
+                                    setIsEditModalOpen(true);
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteLead(lead.id)}
+                                  className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                          {/* Summary card appears below the clicked row */}
+                          {showSummary && (
+                            <tr>
+                              <td colSpan={6} className="pt-0 pb-4 px-0">
+                                <LeadSummaryCard
+                                  lead={lead}
+                                  onClose={() => setSummaryLeadId(null)}
+                                  onEmail={() => { setEditLeadId(lead.id); setIsEmailModalOpen(true); }}
+                                  onCall={() => { setEditLeadId(lead.id); setIsCallModalOpen(true); }}
+                                  onMeeting={() => { setEditLeadId(lead.id); setIsMeetingModalOpen(true); }}
+                                  getAIRecommendation={getAIRecommendation}
+                                  getEngagementDetails={getEngagementDetails}
+                                  getReplyDetails={getReplyDetails}
+                                  getRecencyDays={getRecencyDays}
+                                  getCompanyBand={getCompanyBand}
+                                  getSourceQuality={getSourceQuality}
+                                  activeHistoryTab={activeHistoryTab}
+                                  setActiveHistoryTab={setActiveHistoryTab}
+                                  handleSaveNotes={handleSaveNotes}
+                                />
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-slate-400">
+                        No leads matching search or filter selections.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* === PRIORITY VIEW === */}
+          {viewMode === 'priority' && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+              {(['High', 'Medium', 'Low'] as const).map((priority) => {
+                const priorityLeads = filteredLeads.filter(l => l.priority === priority);
+                return (
+                  <div key={priority} className="border border-brand-border-purple/20 rounded-xl bg-slate-50/30 p-4 min-h-[300px]">
+                    <div className="flex items-center justify-between pb-3 border-b border-brand-border-purple/15 mb-3">
+                      <h3 className={`text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 ${
+                        priority === 'High' ? 'text-rose-700' :
+                        priority === 'Medium' ? 'text-amber-700' : 'text-slate-500'
+                      }`}>
+                        <span className={`h-2.5 w-2.5 rounded-full ${
+                          priority === 'High' ? 'bg-rose-500' :
+                          priority === 'Medium' ? 'bg-amber-500' : 'bg-slate-400'
+                        }`} />
+                        {priority}
+                      </h3>
+                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full tabular-nums ${
+                        priority === 'High' ? 'bg-rose-50 text-rose-700' :
+                        priority === 'Medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {priorityLeads.length}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {priorityLeads.length > 0 ? priorityLeads.map(lead => (
+                        <div 
+                          key={lead.id}
+                          onClick={() => setSummaryLeadId(lead.id === summaryLeadId ? null : lead.id)}
+                          onDoubleClick={() => setSummaryLeadId(null)}
+                          className={`bg-white border rounded-xl p-3.5 cursor-pointer transition-all hover:shadow-sm ${
+                            lead.id === summaryLeadId ? 'border-brand-accent ring-1 ring-brand-accent/20' : 'border-brand-border-purple/20'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <h4 className="text-xs font-extrabold text-brand-heading">{lead.name}</h4>
+                              <p className="text-[10px] text-brand-text/60 font-semibold">{lead.company}</p>
+                            </div>
+                            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                              lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
+                              lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
+                            }`}>
+                              {lead.score}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 text-[9px] font-bold">
+                            <span className={`px-1.5 py-0.5 rounded-full ${
+                              lead.status === 'New' ? 'text-blue-750 bg-blue-50' :
+                              lead.status === 'Contacted' ? 'text-yellow-750 bg-yellow-50' :
+                              lead.status === 'Qualified' ? 'text-purple-750 bg-purple-50' :
+                              lead.status === 'Converted' ? 'text-emerald-750 bg-emerald-50' : 'text-slate-500 bg-slate-100'
+                            }`}>
+                              {lead.status}
+                            </span>
+                            <span className="text-slate-400">{lead.owner.split(' ')[0]}</span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-400">{lead.source || '—'}</span>
+                          </div>
+                          {/* Summary content when card is selected */}
+                          {lead.id === summaryLeadId && (
+                            <div className="mt-3 pt-3 border-t border-brand-border-purple/10 text-[10px] font-semibold text-brand-text/75 space-y-2">
+                              <p className="leading-relaxed">{lead.notes.substring(0, 100)}...</p>
+                              <div className="flex gap-1.5">
+                                <button onClick={(e) => { e.stopPropagation(); setEditLeadId(lead.id); setIsEmailModalOpen(true); }} className="px-2 py-1 border border-brand-border-purple/30 rounded text-[9px] font-extrabold hover:bg-slate-50">Email</button>
+                                <button onClick={(e) => { e.stopPropagation(); setEditLeadId(lead.id); setIsCallModalOpen(true); }} className="px-2 py-1 border border-brand-border-purple/30 rounded text-[9px] font-extrabold hover:bg-slate-50">Call</button>
+                                <button onClick={(e) => { e.stopPropagation(); setEditLeadId(lead.id); setIsMeetingModalOpen(true); }} className="px-2 py-1 border border-brand-border-purple/30 rounded text-[9px] font-extrabold hover:bg-slate-50">Meet</button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )) : (
+                        <p className="text-center text-slate-400 text-xs py-8 font-semibold">No {priority.toLowerCase()} priority leads.</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
-
-      {/* Right Pane (Selected Lead Details drawer, activities, timeline logs, editable notes, AI advice) */}
-      {activeLead && <div className="col-span-12 lg:col-span-4 space-y-5">
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
-          {/* Card Title Header */}
-          <div className="flex items-start justify-between border-b border-brand-border-purple/15 pb-3">
-            <div>
-              <h3 className="font-extrabold text-brand-heading text-sm">{activeLead.name}</h3>
-              <p className="text-[10px] text-brand-text/60 font-bold">{activeLead.company}</p>
-            </div>
-            
-            {/* Circular score progress indicator */}
-            <div className="flex items-center space-x-1 bg-brand-sidebar-hover/30 border border-brand-border-purple/35 rounded-lg px-2 py-0.5">
-              <Award className="h-3.5 w-3.5 text-brand-accent" strokeWidth={2} />
-              <span className="text-[10px] font-extrabold text-brand-text tabular-nums">{activeLead.score}%</span>
-            </div>
-          </div>
-
-          {/* Quick Details Fields list */}
-          <div className="py-3.5 space-y-2.5 text-[11px] font-semibold border-b border-brand-border-purple/15">
-            <div className="flex justify-between">
-              <span className="text-brand-text/50">Status</span>
-              <span className={`font-bold px-1.5 py-0.25 rounded ${
-                activeLead.status === 'Converted' ? 'text-emerald-700 bg-emerald-50' : 'text-brand-heading'
-              }`}>{activeLead.status}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-brand-text/50">Priority</span>
-              <span className="text-brand-text">{activeLead.priority}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-brand-text/50">Email</span>
-              <a href={`mailto:${activeLead.email}`} className="text-brand-accent hover:underline truncate max-w-[150px]">{activeLead.email}</a>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-brand-text/50">Phone</span>
-              <span className="text-brand-text tabular-nums">{activeLead.phone}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-brand-text/50">Owner</span>
-              <div className="flex items-center space-x-1">
-                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-slate-200" />
-                <span className="text-brand-text">{activeLead.owner}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Engineered AI Features (ML Pipeline Integration) */}
-          <div className="py-3.5 border-b border-brand-border-purple/15 space-y-3">
-            <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider flex items-center space-x-1">
-              <Award className="h-4 w-4 text-brand-accent" />
-              <span>AI Pipeline Features</span>
-            </h4>
-            
-            <div className="grid grid-cols-2 gap-2.5 text-[10px] font-bold">
-              {/* Engagement Level */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Engagement Level</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-heading font-extrabold">{getEngagementDetails(activeLead.emails).score} pts</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide ${
-                    getEngagementDetails(activeLead.emails).level === 'HIGH' 
-                      ? 'bg-emerald-50 text-emerald-700' 
-                      : getEngagementDetails(activeLead.emails).level === 'MEDIUM'
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-rose-50 text-rose-700'
-                  }`}>
-                    {getEngagementDetails(activeLead.emails).level}
-                  </span>
-                </div>
-              </div>
-
-              {/* Reply Rate */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Reply Velocity</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-heading font-extrabold">{getReplyDetails(activeLead.emails).rate}%</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide ${
-                    getReplyDetails(activeLead.emails).level === 'FAST' 
-                      ? 'bg-emerald-50 text-emerald-700' 
-                      : getReplyDetails(activeLead.emails).level === 'MEDIUM'
-                      ? 'bg-amber-50 text-amber-700'
-                      : getReplyDetails(activeLead.emails).level === 'SLOW'
-                      ? 'bg-rose-50 text-rose-700'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {getReplyDetails(activeLead.emails).level}
-                  </span>
-                </div>
-              </div>
-
-              {/* Recency */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Touchpoint Recency</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-heading font-extrabold">
-                    {getRecencyDays(activeLead.timeline) === 999 ? 'No touch' : `${getRecencyDays(activeLead.timeline)} days`}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-blue-50 text-blue-700">
-                    {getRecencyDays(activeLead.timeline) <= 3 ? 'Active' : getRecencyDays(activeLead.timeline) <= 7 ? 'Warm' : 'Cold'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Company Band & Source */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Firmographic Band</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-heading font-extrabold truncate max-w-[55px]" title={activeLead.company}>
-                    {getCompanyBand(activeLead.company)}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-purple-50 text-purple-700">
-                    Q: {getSourceQuality(activeLead.source)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Recommendation Alert box */}
-          <div className="mt-4 bg-brand-sidebar-hover/20 border border-brand-border-purple/30 rounded-xl p-3.5 flex items-start space-x-2">
-            <Sparkles className="h-4.5 w-4.5 text-brand-accent shrink-0 mt-0.5" strokeWidth={2} />
-            <div>
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">AI Next Best Action</h4>
-              <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-bold">{getAIRecommendation(activeLead)}</p>
-            </div>
-          </div>
-
-          {/* Live Notes block */}
-          <div className="mt-4">
-            <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">Internal Notes</h4>
-            <textarea
-              className="w-full p-2 border border-brand-border-purple/30 rounded-lg text-[11px] font-semibold text-brand-text bg-slate-50/50 focus:bg-white placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 min-h-[70px] resize-y leading-relaxed"
-              value={activeLead.notes}
-              onChange={(e) => handleSaveNotes(e.target.value)}
-              placeholder="Record lead feedback, key challenges, sizing metrics..."
-            />
-          </div>
-
-          {/* Action Triggers panel */}
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <button 
-              onClick={() => setIsEmailModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-brand-border-purple/35 hover:border-brand-border-purple hover:bg-slate-50 rounded-lg text-[10px] font-extrabold text-brand-text/80 cursor-pointer transition-colors"
-            >
-              <Mail className="h-3.5 w-3.5 text-slate-450" />
-              <span>Email</span>
-            </button>
-            <button 
-              onClick={() => setIsCallModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-brand-border-purple/35 hover:border-brand-border-purple hover:bg-slate-50 rounded-lg text-[10px] font-extrabold text-brand-text/80 cursor-pointer transition-colors"
-            >
-              <Phone className="h-3.5 w-3.5 text-slate-450" />
-              <span>Log Call</span>
-            </button>
-            <button 
-              onClick={() => setIsMeetingModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-brand-border-purple/35 hover:border-brand-border-purple hover:bg-slate-50 rounded-lg text-[10px] font-extrabold text-brand-text/80 cursor-pointer transition-colors"
-            >
-              <Calendar className="h-3.5 w-3.5 text-slate-450" />
-              <span>Meet</span>
-            </button>
-          </div>
-
-          {/* Activity Feeds Tabs toggles */}
-          <div className="mt-5 border-t border-brand-border-purple/15 pt-4">
-            <div className="flex border-b border-brand-border-purple/15 text-[10px] font-extrabold uppercase">
-              {['timeline', 'emails', 'calls', 'meetings'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveHistoryTab(tab as any)}
-                  className={`pb-1.5 px-2.5 border-b-2 transition-all cursor-pointer ${
-                    activeHistoryTab === tab 
-                      ? 'border-brand-secondary-accent text-brand-heading' 
-                      : 'border-transparent text-slate-450 hover:text-brand-text'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* Tab content loops */}
-            <div className="mt-3.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
-              {activeHistoryTab === 'timeline' && (
-                <div className="space-y-3 pl-2 border-l border-brand-border-purple/15">
-                  {activeLead.timeline.length > 0 ? (
-                    activeLead.timeline.map((act) => (
-                      <div key={act.id} className="relative text-[10px] font-semibold leading-relaxed">
-                        {/* Dot indicator */}
-                        <div className="absolute -left-[12.5px] top-1 h-2 w-2 rounded-full bg-brand-secondary-accent border border-white" />
-                        <div className="font-extrabold text-brand-heading flex justify-between">
-                          <span>{act.title}</span>
-                          <span className="text-slate-400 font-bold">{act.time}</span>
-                        </div>
-                        <p className="text-brand-text/75 mt-0.5">{act.desc}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-slate-400 py-3 text-[10px]">No timeline logs recorded.</p>
-                  )}
-                </div>
-              )}
-
-              {activeHistoryTab === 'emails' && (
-                <div className="space-y-2.5">
-                  {activeLead.emails.length > 0 ? (
-                    activeLead.emails.map((e) => (
-                      <div key={e.id} className="p-2 border border-brand-border-purple/20 rounded-lg bg-slate-50/50">
-                        <div className="flex justify-between items-center text-[10px] font-extrabold text-brand-heading">
-                          <span className="truncate max-w-[150px]">{e.subject}</span>
-                          <span className="text-slate-400 font-bold">{e.time}</span>
-                        </div>
-                        <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-semibold">{e.body}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-slate-400 py-3 text-[10px]">No emails logged.</p>
-                  )}
-                </div>
-              )}
-
-              {activeHistoryTab === 'calls' && (
-                <div className="space-y-2.5">
-                  {activeLead.calls.length > 0 ? (
-                    activeLead.calls.map((c) => (
-                      <div key={c.id} className="p-2 border border-brand-border-purple/20 rounded-lg bg-slate-50/50">
-                        <div className="flex justify-between items-center text-[10px] font-extrabold text-brand-heading">
-                          <span>{c.outcome}</span>
-                          <span className="text-slate-400 font-bold">{c.time}</span>
-                        </div>
-                        <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-semibold">{c.notes}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-slate-400 py-3 text-[10px]">No call notes logged.</p>
-                  )}
-                </div>
-              )}
-
-              {activeHistoryTab === 'meetings' && (
-                <div className="space-y-2.5">
-                  {activeLead.meetings.length > 0 ? (
-                    activeLead.meetings.map((m) => (
-                      <div key={m.id} className="p-2 border border-brand-border-purple/20 rounded-lg bg-slate-50/50">
-                        <div className="flex justify-between items-center text-[10px] font-extrabold text-brand-heading">
-                          <span>{m.title}</span>
-                          <span className="text-brand-accent">{m.date}</span>
-                        </div>
-                        <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Time: {m.time}</p>
-                        <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-semibold">{m.desc}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-slate-400 py-3 text-[10px]">No meetings scheduled.</p>
-                  )}
-                </div>
-              )}
-        </div>
-      </div>
-    </div>
-      </div>}
 
       {/* CREATE LEAD DIALOG MODAL */}
       {isCreateModalOpen && (
@@ -1185,6 +1044,135 @@ export default function LeadsView() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// -------------------- LeadSummaryCard Component --------------------
+function LeadSummaryCard({ lead, onClose, onEmail, onCall, onMeeting, getAIRecommendation, getEngagementDetails, getReplyDetails, getRecencyDays, getCompanyBand, getSourceQuality, activeHistoryTab, setActiveHistoryTab, handleSaveNotes }: {
+  lead: Lead;
+  onClose: () => void;
+  onEmail: () => void;
+  onCall: () => void;
+  onMeeting: () => void;
+  getAIRecommendation: (lead: Lead) => string;
+  getEngagementDetails: (emails: any[]) => { score: number; level: string };
+  getReplyDetails: (emails: any[]) => { rate: number; level: string };
+  getRecencyDays: (timeline: any[]) => number;
+  getCompanyBand: (companyName: string) => string;
+  getSourceQuality: (source?: string) => number;
+  activeHistoryTab: string;
+  setActiveHistoryTab: (tab: any) => void;
+  handleSaveNotes: (val: string) => void;
+}) {
+  const tabs = ['timeline', 'emails', 'calls', 'meetings'];
+  return (
+    <div className="bg-white border border-brand-border-purple/20 rounded-xl p-4 shadow-sm/5 my-2 animate-in fade-in slide-in-from-top-2 duration-200">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <div>
+            <h3 className="font-extrabold text-brand-heading text-sm">{lead.name}</h3>
+            <p className="text-[10px] text-brand-text/60 font-bold">{lead.company}</p>
+          </div>
+          <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+            lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
+            lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
+          }`}>
+            {lead.score}
+          </span>
+        </div>
+        <button onClick={onClose} className="p-1 text-slate-400 hover:text-brand-text cursor-pointer"><X className="h-4 w-4" /></button>
+      </div>
+
+      <div className="flex items-center gap-3 text-[10px] font-bold mb-3">
+        <span className={`px-1.5 py-0.5 rounded-full ${
+          lead.status === 'New' ? 'text-blue-750 bg-blue-50' :
+          lead.status === 'Contacted' ? 'text-yellow-750 bg-yellow-50' :
+          lead.status === 'Qualified' ? 'text-purple-750 bg-purple-50' :
+          lead.status === 'Converted' ? 'text-emerald-750 bg-emerald-50' : 'text-slate-500 bg-slate-100'
+        }`}>
+          {lead.status}
+        </span>
+        <span className={`${lead.priority === 'High' ? 'text-rose-600' : lead.priority === 'Medium' ? 'text-amber-600' : 'text-slate-500'}`}>
+          ● {lead.priority}
+        </span>
+        <a href={`mailto:${lead.email}`} className="text-brand-accent hover:underline">{lead.email}</a>
+        <span className="text-slate-400 tabular-nums">{lead.phone}</span>
+        <span className="text-slate-400">Owner: {lead.owner}</span>
+      </div>
+
+      {/* AI Recommendation */}
+      <div className="mb-3 bg-brand-sidebar-hover/20 border border-brand-border-purple/30 rounded-lg p-2.5 flex items-start space-x-2">
+        <Sparkles className="h-3.5 w-3.5 text-brand-accent shrink-0 mt-0.5" strokeWidth={2} />
+        <p className="text-[10px] text-brand-text/80 font-bold">{getAIRecommendation(lead)}</p>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex gap-2 mb-3">
+        <button onClick={onEmail} className="inline-flex items-center space-x-1 px-2.5 py-1 border border-brand-border-purple/35 rounded-lg text-[10px] font-extrabold text-brand-text/80 hover:bg-slate-50 cursor-pointer"><Mail className="h-3 w-3" /><span>Email</span></button>
+        <button onClick={onCall} className="inline-flex items-center space-x-1 px-2.5 py-1 border border-brand-border-purple/35 rounded-lg text-[10px] font-extrabold text-brand-text/80 hover:bg-slate-50 cursor-pointer"><Phone className="h-3 w-3" /><span>Log Call</span></button>
+        <button onClick={onMeeting} className="inline-flex items-center space-x-1 px-2.5 py-1 border border-brand-border-purple/35 rounded-lg text-[10px] font-extrabold text-brand-text/80 hover:bg-slate-50 cursor-pointer"><Calendar className="h-3 w-3" /><span>Meet</span></button>
+      </div>
+
+      {/* Mini AI Features Grid */}
+      <div className="grid grid-cols-4 gap-2 mb-3 text-[9px] font-bold">
+        <div className="bg-slate-50 border border-slate-100 rounded-lg p-2">
+          <span className="text-slate-400 block text-[8px]">Engagement</span>
+          <span className="text-brand-heading">{getEngagementDetails(lead.emails).score} pts</span>
+          <span className={`ml-1 px-1 py-0.25 rounded text-[7px] ${
+            getEngagementDetails(lead.emails).level === 'HIGH' ? 'bg-emerald-50 text-emerald-700' :
+            getEngagementDetails(lead.emails).level === 'MEDIUM' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'
+          }`}>{getEngagementDetails(lead.emails).level}</span>
+        </div>
+        <div className="bg-slate-50 border border-slate-100 rounded-lg p-2">
+          <span className="text-slate-400 block text-[8px]">Reply Vel.</span>
+          <span className="text-brand-heading">{getReplyDetails(lead.emails).rate}%</span>
+          <span className={`ml-1 px-1 py-0.25 rounded text-[7px] ${
+            getReplyDetails(lead.emails).level === 'FAST' ? 'bg-emerald-50 text-emerald-700' :
+            getReplyDetails(lead.emails).level === 'MEDIUM' ? 'bg-amber-50 text-amber-700' :
+            getReplyDetails(lead.emails).level === 'SLOW' ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-600'
+          }`}>{getReplyDetails(lead.emails).level}</span>
+        </div>
+        <div className="bg-slate-50 border border-slate-100 rounded-lg p-2">
+          <span className="text-slate-400 block text-[8px]">Recency</span>
+          <span className="text-brand-heading">{getRecencyDays(lead.timeline) === 999 ? 'None' : `${getRecencyDays(lead.timeline)}d`}</span>
+          <span className="ml-1 px-1 py-0.25 rounded text-[7px] bg-blue-50 text-blue-700">
+            {getRecencyDays(lead.timeline) <= 3 ? 'Active' : getRecencyDays(lead.timeline) <= 7 ? 'Warm' : 'Cold'}
+          </span>
+        </div>
+        <div className="bg-slate-50 border border-slate-100 rounded-lg p-2">
+          <span className="text-slate-400 block text-[8px]">Firmographic</span>
+          <span className="text-brand-heading">{getCompanyBand(lead.company)}</span>
+          <span className="ml-1 px-1 py-0.25 rounded text-[7px] bg-purple-50 text-purple-700">Q:{getSourceQuality(lead.source)}</span>
+        </div>
+      </div>
+
+      {/* Notes & Activity tabs */}
+      <div className="flex border-b border-brand-border-purple/15 text-[9px] font-extrabold uppercase mb-2">
+        {tabs.map((tab) => (
+          <button key={tab} onClick={() => setActiveHistoryTab(tab as any)}
+            className={`pb-1 px-2.5 border-b-2 transition-all cursor-pointer ${
+              activeHistoryTab === tab ? 'border-brand-secondary-accent text-brand-heading' : 'border-transparent text-slate-450 hover:text-brand-text'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+      <div className="max-h-32 overflow-y-auto text-[10px] font-semibold text-brand-text/75 space-y-1.5 pr-1">
+        {activeHistoryTab === 'timeline' && (lead.timeline.length > 0 ? lead.timeline.map(a => (
+          <div key={a.id} className="flex justify-between"><span>{a.title}</span><span className="text-slate-400 text-[9px]">{a.time}</span></div>
+        )) : <p className="text-slate-400 text-center py-2">No timeline.</p>)}
+        {activeHistoryTab === 'emails' && (lead.emails.length > 0 ? lead.emails.map(e => (
+          <div key={e.id} className="border-b border-brand-border-purple/10 pb-1"><span className="font-extrabold text-brand-heading">{e.subject}</span><p className="text-[9px]">{e.body.substring(0, 60)}...</p></div>
+        )) : <p className="text-slate-400 text-center py-2">No emails.</p>)}
+        {activeHistoryTab === 'calls' && (lead.calls.length > 0 ? lead.calls.map(c => (
+          <div key={c.id} className="border-b border-brand-border-purple/10 pb-1"><span className="font-extrabold text-brand-heading">{c.outcome}</span><p className="text-[9px]">{c.notes.substring(0, 60)}...</p></div>
+        )) : <p className="text-slate-400 text-center py-2">No calls.</p>)}
+        {activeHistoryTab === 'meetings' && (lead.meetings.length > 0 ? lead.meetings.map(m => (
+          <div key={m.id} className="border-b border-brand-border-purple/10 pb-1"><span className="font-extrabold text-brand-heading">{m.title}</span><p className="text-[9px]">{m.date} @ {m.time}</p></div>
+        )) : <p className="text-slate-400 text-center py-2">No meetings.</p>)}
+      </div>
     </div>
   );
 }

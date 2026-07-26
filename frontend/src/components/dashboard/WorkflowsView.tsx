@@ -22,8 +22,10 @@ import {
   FileText,
   UserPlus,
   HelpCircle,
-  FolderOpen
+  FolderOpen,
+  CheckSquare
 } from 'lucide-react';
+import TasksView from './TasksView';
 
 interface Workflow {
   id: number;
@@ -47,6 +49,7 @@ interface WorkflowNode {
 }
 
 export default function WorkflowsView() {
+  const [workflowSubTab, setWorkflowSubTab] = useState<'workflows' | 'tasks'>('workflows');
   const [workflows, setWorkflows] = useState<Workflow[]>([
     { id: 1, name: "Lead Assignment Automation", desc: "Auto-assigns new enterprise leads to regional reps based on geolocation.", triggerType: "creation", triggerLabel: "New Lead Created", totalRuns: 1240, successRate: "99.8%", activeContacts: 24, status: "Active" },
     { id: 2, name: "SaaS Free Trial Nurture", desc: "Sends a welcome email series and checks product usage milestones.", triggerType: "form_submission", triggerLabel: "Trial Sign-Up Form", totalRuns: 850, successRate: "97.5%", activeContacts: 112, status: "Active" },
@@ -184,6 +187,36 @@ export default function WorkflowsView() {
 
   return (
     <div className="space-y-6">
+      {/* Sub-tab toggle */}
+      <div className="flex space-x-1.5 p-1 bg-brand-sidebar-hover/15 border border-brand-border-purple/20 rounded-xl w-fit">
+        <button
+          onClick={() => setWorkflowSubTab('workflows')}
+          className={`py-1.5 px-4 rounded-lg font-extrabold text-xs transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+            workflowSubTab === 'workflows'
+              ? 'bg-brand-accent text-white shadow-sm'
+              : 'text-brand-text/75 hover:text-brand-heading hover:bg-brand-sidebar-hover/20'
+          }`}
+        >
+          <GitBranch className="h-3.5 w-3.5" />
+          <span>Automations</span>
+        </button>
+        <button
+          onClick={() => setWorkflowSubTab('tasks')}
+          className={`py-1.5 px-4 rounded-lg font-extrabold text-xs transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+            workflowSubTab === 'tasks'
+              ? 'bg-brand-accent text-white shadow-sm'
+              : 'text-brand-text/75 hover:text-brand-heading hover:bg-brand-sidebar-hover/20'
+          }`}
+        >
+          <CheckSquare className="h-3.5 w-3.5" />
+          <span>Tasks Workspace</span>
+        </button>
+      </div>
+
+      {workflowSubTab === 'tasks' ? (
+        <TasksView />
+      ) : (
+      <>
       {!isBuilderOpen ? (
         // ----------------- LANDING SCREEN -----------------
         <div className="space-y-6">
@@ -609,6 +642,8 @@ export default function WorkflowsView() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );
