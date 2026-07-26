@@ -122,7 +122,7 @@ function Dropdown({ items, onNavigate }: { items: DropdownItem[]; onNavigate: (h
 }
 
 /* ─── Main Navbar ────────────────────────────────────── */
-export default function Navbar({ onOpenModal }: NavbarProps) {
+export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
