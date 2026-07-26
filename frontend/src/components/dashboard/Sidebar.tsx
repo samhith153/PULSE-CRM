@@ -223,7 +223,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
               className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group relative ${
                 isTabActive('dashboard')
                   ? collapsed 
-                    ? 'bg-brand-secondary-accent/20 text-brand-accent shadow-sm' 
+                    ? 'bg-brand-secondary-accent/15 text-brand-accent border-l-2 border-brand-secondary-accent shadow-sm' 
                     : 'bg-brand-secondary-accent/15 text-brand-accent border-l-4 border-brand-secondary-accent shadow-sm/5 font-extrabold' 
                   : collapsed
                     ? 'hover:bg-slate-100 text-brand-text/70 hover:text-brand-text'
@@ -233,7 +233,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
             >
               <LayoutDashboard 
                 className={`h-5 w-5 shrink-0 transition-colors ${
-                  isTabActive('dashboard') ? 'text-brand-heading' : 'text-brand-text/70 group-hover:text-brand-text'
+                  isTabActive('dashboard') ? (collapsed ? 'text-brand-accent' : 'text-brand-heading') : 'text-brand-text/70 group-hover:text-brand-text'
                 }`}
                 strokeWidth={2}
               />
@@ -274,7 +274,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
                     className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group relative ${
                       active 
                         ? collapsed
-                          ? 'bg-brand-secondary-accent/20 text-brand-accent shadow-sm'
+                          ? 'bg-brand-secondary-accent/15 text-brand-accent border-l-2 border-brand-secondary-accent shadow-sm'
                           : 'bg-brand-secondary-accent/15 text-brand-accent border-l-4 border-brand-secondary-accent shadow-sm/5 font-extrabold'
                         : collapsed
                           ? 'hover:bg-slate-100 text-brand-text/70 hover:text-brand-text'
@@ -284,7 +284,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
                   >
                     <Icon 
                       className={`h-5 w-5 shrink-0 transition-colors ${
-                        active ? 'text-brand-heading' : 'text-brand-text/70 group-hover:text-brand-text'
+                        active ? (collapsed ? 'text-brand-accent' : 'text-brand-heading') : 'text-brand-text/70 group-hover:text-brand-text'
                       }`}
                       strokeWidth={2}
                     />

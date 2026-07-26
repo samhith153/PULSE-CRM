@@ -13,6 +13,7 @@ type MenuKey = 'product' | 'solutions' | 'resources' | null;
 
 interface NavbarProps {
   onOpenModal: () => void;
+  onOpenSignUp?: () => void;
 }
 
 /* ─── Dropdown content definitions ──────────────────── */
@@ -121,7 +122,7 @@ function Dropdown({ items, onNavigate }: { items: DropdownItem[]; onNavigate: (h
 }
 
 /* ─── Main Navbar ────────────────────────────────────── */
-export default function Navbar({ onOpenModal }: NavbarProps) {
+export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -323,7 +324,7 @@ export default function Navbar({ onOpenModal }: NavbarProps) {
               Log In
             </button>
             <button
-              onClick={onOpenModal}
+              onClick={onOpenSignUp || onOpenModal}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
                 padding: '9px 20px', borderRadius: 100, border: 'none',
@@ -341,7 +342,7 @@ export default function Navbar({ onOpenModal }: NavbarProps) {
                 (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(124,58,237,0.35)';
               }}
             >
-              Get Started <ArrowRight size={14} />
+              Sign Up <ArrowRight size={14} />
             </button>
           </div>
 
@@ -459,7 +460,7 @@ export default function Navbar({ onOpenModal }: NavbarProps) {
               Log In
             </button>
             <button
-              onClick={() => { setMobileOpen(false); onOpenModal(); }}
+              onClick={() => { setMobileOpen(false); (onOpenSignUp || onOpenModal)(); }}
               style={{
                 padding: '14px', borderRadius: 12, border: 'none',
                 background: '#7c3aed', fontSize: 15, fontWeight: 700, color: '#fff',
@@ -467,7 +468,7 @@ export default function Navbar({ onOpenModal }: NavbarProps) {
                 boxShadow: '0 6px 20px rgba(124,58,237,0.35)',
               }}
             >
-              Get Started Free →
+              Sign Up Free →
             </button>
           </div>
         </div>

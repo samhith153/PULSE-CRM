@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:8000';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
 export function getToken(): string | null {
@@ -300,8 +300,22 @@ export const MOCK_DEALS: Deal[] = [
   { id: 5, title: "Analytics Custom Tier", company: "ByteSized Co.", value: 18000, stage: "Won", priority: "Low", owner: "Alex Johnson", closeDate: "2025-05-10" }
 ];
 
-export async function login(email: string, password: string): Promise<{ token: string; user: any }> {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+export async function register(fullName: string, email: string, password: string, organizationName: string): Promise<{ access_token: string; refresh_token: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ full_name: fullName, email, password, organization_name: organizationName })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).detail || `Registration failed (${res.status})`);
+  }
+  const json = await res.json();
+  return json.data;
+}
+
+export async function login(email: string, password: string): Promise<{ access_token: string; refresh_token: string; token_type?: string; expires_in?: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
@@ -310,7 +324,8 @@ export async function login(email: string, password: string): Promise<{ token: s
     const err = await res.json().catch(() => ({}));
     throw new Error((err as any).detail || `Login failed (${res.status})`);
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -325,12 +340,13 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   if (!res.ok) {
     throw new Error(`API error ${res.status}`);
   }
-  return res.json() as Promise<T>;
+  const json = await res.json();
+  return (json.data ?? json) as T;
 }
 
 // --- Leads API ---
 export async function getLeads(): Promise<Lead[]> {
-  const dbLeads = await apiFetch<any[]>('/leads');
+  const dbLeads = await apiFetch<any[]>('/api/v1/leads');
   return dbLeads.map((dl, idx) => {
     const fallback = MOCK_LEADS[idx] || MOCK_LEADS[0];
     return {
@@ -344,14 +360,14 @@ export async function getLeads(): Promise<Lead[]> {
 }
 
 export async function createLead(leadData: any): Promise<any> {
-  return apiFetch('/leads', {
+  return apiFetch('/api/v1/leads', {
     method: 'POST',
     body: JSON.stringify(leadData)
   });
 }
 
 export async function convertLead(leadId: string | number, payload: { name: string }): Promise<any> {
-  return apiFetch(`/leads/${leadId}/convert`, {
+  return apiFetch(`/api/v1/leads/${leadId}/convert`, {
     method: 'PUT',
     body: JSON.stringify(payload)
   });
@@ -359,7 +375,7 @@ export async function convertLead(leadId: string | number, payload: { name: stri
 
 // --- Contacts API ---
 export async function getContacts(): Promise<Contact[]> {
-  const dbContacts = await apiFetch<any[]>('/contacts');
+  const dbContacts = await apiFetch<any[]>('/api/v1/contacts');
   return dbContacts.map((dc, idx) => {
     const fallback = MOCK_CONTACTS[idx] || MOCK_CONTACTS[0];
     return {
@@ -374,7 +390,7 @@ export async function getContacts(): Promise<Contact[]> {
 }
 
 export async function createContact(contactData: any): Promise<any> {
-  return apiFetch('/contacts', {
+  return apiFetch('/api/v1/contacts', {
     method: 'POST',
     body: JSON.stringify(contactData)
   });
@@ -382,7 +398,7 @@ export async function createContact(contactData: any): Promise<any> {
 
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
-  const dbCompanies = await apiFetch<any[]>('/companies');
+  const dbCompanies = await apiFetch<any[]>('/api/v1/companies');
   return dbCompanies.map((dc, idx) => {
     const fallback = MOCK_COMPANIES[idx] || MOCK_COMPANIES[0];
     return {
@@ -396,7 +412,7 @@ export async function getCompanies(): Promise<Company[]> {
 }
 
 export async function createCompany(companyData: any): Promise<any> {
-  return apiFetch('/companies', {
+  return apiFetch('/api/v1/companies', {
     method: 'POST',
     body: JSON.stringify(companyData)
   });
@@ -404,7 +420,7 @@ export async function createCompany(companyData: any): Promise<any> {
 
 // --- Deals API ---
 export async function getDeals(): Promise<Deal[]> {
-  const dbDeals = await apiFetch<any[]>('/deals');
+  const dbDeals = await apiFetch<any[]>('/api/v1/deals');
   return dbDeals.map((dd, idx) => {
     const fallback = MOCK_DEALS[idx] || MOCK_DEALS[0];
     return {
@@ -421,7 +437,7 @@ export async function getDeals(): Promise<Deal[]> {
 }
 
 export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
-  return apiFetch(`/deals/${dealId}/stage`, {
+  return apiFetch(`/api/v1/deals/${dealId}/stage`, {
     method: 'PUT',
     body: JSON.stringify({ stage_id: stageId })
   });
@@ -479,3 +495,4 @@ export async function getSummaryByThread(threadId: string): Promise<Conversation
   if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
   return res.json() as Promise<ConversationSummary>;
 }
+

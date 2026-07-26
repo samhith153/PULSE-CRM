@@ -5,7 +5,8 @@ import Navbar from '@/components/navigation/Navbar';
 import { ArrowRight, CheckCircle, X, Mail, Lock, Loader2, Activity } from 'lucide-react';
 
 /* ─── Modal Context ──────────────────────────────────── */
-const ModalContext = createContext<{ openModal: () => void } | null>(null);
+type ModalMode = 'signin' | 'signup';
+const ModalContext = createContext<{ openModal: (mode?: ModalMode) => void } | null>(null);
 
 export function useModal() {
   const context = useContext(ModalContext);
@@ -18,9 +19,12 @@ export function useModal() {
 /* ─── Auth Modal ──────────────────────────────────── */
 type Role = 'representative' | 'manager' | 'admin';
 
-function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolean; onClose: () => void; defaultMode?: 'signin' | 'signup' }) {
+  const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [orgName, setOrgName] = useState('');
   const [role, setRole] = useState<Role>('manager');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -29,34 +33,38 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!email || !password || (mode === 'signup' && (!name || !orgName))) {
       setError('Please fill in all fields');
       return;
     }
-    
+
     setLoading(true);
     setError('');
-    
+
     try {
-      // Import login and setToken dynamically to avoid SSR issues
-      const { login, setToken } = await import('@/utils/api');
-      const result = await login(email, password);
-      setToken(result.token);
-      
-      // Set authentication flag
+      const { setToken } = await import('@/utils/api');
+
+      if (mode === 'signup') {
+        const { register } = await import('@/utils/api');
+        const result = await register(name, email, password, orgName);
+        setToken(result.access_token);
+      } else {
+        const { login } = await import('@/utils/api');
+        const result = await login(email, password);
+        setToken(result.access_token);
+      }
+
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pulse-crm-auth', 'true');
         localStorage.setItem('pulse-crm-role', role);
+        localStorage.setItem('pulse-crm-user', name || role);
       }
-      
-      // Success - redirect to dashboard
+
       onClose();
-      
-      // Reload the page to trigger authentication check
       window.location.href = '/';
     } catch (err: any) {
-      console.error('Login error:', err);
-      setError(err.message || 'Login failed. Please check your credentials.');
+      console.error('Auth error:', err);
+      setError(err.message || 'Authentication failed.');
       setLoading(false);
     }
   };
@@ -66,6 +74,13 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
     { value: 'manager', label: 'Manager' },
     { value: 'representative', label: 'Sales Rep' },
   ];
+
+  const isSignin = mode === 'signin';
+
+  const switchMode = () => {
+    setMode(isSignin ? 'signup' : 'signin');
+    setError('');
+  };
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)', padding: 16 }}
@@ -84,16 +99,16 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
             Pulse<span style={{ color: '#7c3aed' }}>CRM</span>
           </span>
         </div>
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>Welcome back</h2>
-        <p style={{ fontSize: 14, color: '#94a3b8', fontWeight: 500, margin: '0 0 24px' }}>Sign in to your account to continue.</p>
-        
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>{isSignin ? 'Welcome back' : 'Create your account'}</h2>
+        <p style={{ fontSize: 14, color: '#94a3b8', fontWeight: 500, margin: '0 0 24px' }}>{isSignin ? 'Sign in to your account to continue.' : 'Get started with PulseCRM in seconds.'}</p>
+
         {error && (
           <div style={{ padding: '12px 16px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ height: 6, width: 6, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
             <span style={{ fontSize: 13, color: '#991b1b', fontWeight: 600 }}>{error}</span>
           </div>
         )}
-        
+
         <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>Select your role</p>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 22 }}>
           {ROLES.map(r => (
@@ -104,6 +119,30 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
           ))}
         </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {mode === 'signup' && (
+            <>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Full name</label>
+                <div style={{ position: 'relative' }}>
+                  <input type="text" value={name} onChange={e => setName(e.target.value)}
+                    placeholder="John Doe" required
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
+                    onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                    onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
+                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Company name</label>
+                <div style={{ position: 'relative' }}>
+                  <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)}
+                    placeholder="Acme Corp" required
+                    style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
+                    onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                    onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
+                </div>
+              </div>
+            </>
+          )}
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>Email address</label>
             <div style={{ position: 'relative' }}>
@@ -126,12 +165,14 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
             </div>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="button" style={{ fontSize: 12, fontWeight: 600, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
-          </div>
+          {isSignin && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" style={{ fontSize: 12, fontWeight: 600, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
+            </div>
+          )}
           <button type="submit" disabled={loading}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', background: loading ? '#9b72f0' : '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all .15s', boxShadow: '0 6px 20px rgba(124,58,237,0.35)' }}>
-            {loading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Signing in…</> : 'Sign In'}
+            {loading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> {isSignin ? 'Signing in\u2026' : 'Creating account\u2026'}</> : isSignin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
@@ -152,8 +193,10 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
           Continue with Google
         </button>
         <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b8', margin: '18px 0 0' }}>
-          No account?{' '}
-          <button onClick={onClose} style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Sign up free</button>
+          {isSignin ? "No account? " : "Already have an account? "}
+          <button onClick={switchMode} style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+            {isSignin ? 'Sign up free' : 'Sign in'}
+          </button>
         </p>
       </div>
       <style>{`@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }`}</style>
@@ -164,16 +207,17 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 /* ─── Page Container ──────────────────────────────── */
 export function PageContainer({ children }: { children: React.ReactNode }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>('signup');
 
   return (
-    <ModalContext.Provider value={{ openModal: () => setModalOpen(true) }}>
+    <ModalContext.Provider value={{ openModal: (mode) => { setModalMode(mode || 'signin'); setModalOpen(true); } }}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
         style={{ fontFamily: "'Inter',system-ui,sans-serif", background: '#fff', minHeight: '100vh', color: '#0f172a' }}>
-        <Navbar onOpenModal={() => setModalOpen(true)} />
-        <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+        <Navbar onOpenModal={() => { setModalMode('signin'); setModalOpen(true); }} onOpenSignUp={() => { setModalMode('signup'); setModalOpen(true); }} />
+        <AuthModal key={modalMode} defaultMode={modalMode} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
         {children}
         <footer style={{ padding: '36px 48px', background: '#0f172a', color: '#475569', textAlign: 'center' }}>
           <p style={{ fontSize: 14 }}>© 2026 Pulse CRM Inc. All rights reserved. Powered by <span style={{ color: '#94a3b8', fontWeight: 600 }}>Kalnet</span>.</p>
@@ -371,3 +415,4 @@ export function CTASection({ title, description, onCTA }: { title: string; descr
     </section>
   );
 }
+

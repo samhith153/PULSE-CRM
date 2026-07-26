@@ -19,8 +19,9 @@ from app.middlewares.exception_handler import (
     validation_exception_handler,
 )
 from app.middlewares.logging import RequestLoggingMiddleware
-from app.middlewares.request_id import RequestIDMiddleware
+from app.middlewares.private_network import PrivateNetworkAccessMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
+from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
 
 setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
@@ -61,7 +62,9 @@ def create_app() -> FastAPI:
         allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
         allow_methods=settings.cors_methods_list,
         allow_headers=settings.cors_headers_list,
+        expose_headers=["*"],
     )
+    app.add_middleware(PrivateNetworkAccessMiddleware)
 
     app.add_exception_handler(PulseCRMException, pulse_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
@@ -82,5 +85,3 @@ def create_app() -> FastAPI:
 
 
 app = create_app()
-
-
