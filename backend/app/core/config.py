@@ -87,6 +87,13 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = 10485760
     ALLOWED_UPLOAD_CONTENT_TYPES: str = "image/jpeg,image/png,image/webp,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
+    # ── Recommendation Engine Weights ──────────────────────────────────────
+    DEAL_VALUE_WEIGHT: float = 0.15
+    EMAIL_OPEN_WEIGHT: float = 0.15
+    MEETING_WEIGHT: float = 0.20
+    REP_WORKLOAD_WEIGHT: float = 0.10
+    CONTACT_TIME_WEIGHT: float = 0.10
+
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
 

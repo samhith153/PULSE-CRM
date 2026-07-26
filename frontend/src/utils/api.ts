@@ -314,7 +314,7 @@ export async function register(fullName: string, email: string, password: string
   return json.data;
 }
 
-export async function login(email: string, password: string): Promise<{ token: string; user: any }> {
+export async function login(email: string, password: string): Promise<{ access_token: string; refresh_token: string; token_type?: string; expires_in?: number }> {
   const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -324,7 +324,8 @@ export async function login(email: string, password: string): Promise<{ token: s
     const err = await res.json().catch(() => ({}));
     throw new Error((err as any).detail || `Login failed (${res.status})`);
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -339,7 +340,8 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   if (!res.ok) {
     throw new Error(`API error ${res.status}`);
   }
-  return res.json() as Promise<T>;
+  const json = await res.json();
+  return (json.data ?? json) as T;
 }
 
 // --- Leads API ---
@@ -493,3 +495,4 @@ export async function getSummaryByThread(threadId: string): Promise<Conversation
   if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
   return res.json() as Promise<ConversationSummary>;
 }
+
