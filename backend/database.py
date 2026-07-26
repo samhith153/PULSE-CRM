@@ -3,8 +3,14 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 from config import DATABASE_URL
 
+# Convert asyncpg URL to psycopg2 for synchronous engine compatibility
+_sync_url = DATABASE_URL
+if "+asyncpg" in _sync_url:
+    _sync_url = _sync_url.replace("+asyncpg", "+psycopg2")
+    print(f"🔁 Converted asyncpg URL to psycopg2 for sync engine")
+
 # Check if using SQLite
-is_sqlite = DATABASE_URL.startswith("sqlite")
+is_sqlite = _sync_url.startswith("sqlite")
 
 connect_args = {}
 if is_sqlite:
@@ -20,7 +26,7 @@ if not is_sqlite:
     engine_args["max_overflow"] = 20
 
 # Create database engine
-engine = create_engine(DATABASE_URL, **engine_args)
+engine = create_engine(_sync_url, **engine_args)
 
 # Enable foreign keys for SQLite
 if is_sqlite:
