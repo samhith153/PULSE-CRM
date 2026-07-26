@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { X, Mail, Lock, Loader2, Activity, AlertCircle } from 'lucide-react';
+import { login, register, setToken } from '@/utils/api';
 
 type Role = 'representative' | 'manager' | 'admin';
 type ModalMode = 'signin' | 'signup';
@@ -35,14 +36,10 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
     setError('');
 
     try {
-      const { setToken } = await import('@/utils/api');
-
       if (mode === 'signup') {
-        const { register } = await import('@/utils/api');
         const result = await register(name, email, password, orgName);
         setToken(result.access_token);
       } else {
-        const { login } = await import('@/utils/api');
         const result = await login(email, password);
         setToken(result.token);
       }
