@@ -54,6 +54,8 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   const [authName, setAuthName] = useState('');
   const [authOrg, setAuthOrg] = useState('');
   const [authError, setAuthError] = useState('');
+  const openSignUp = () => { setAuthMode('signup'); setIsModalOpen(true); };
+  const openSignIn = () => { setAuthMode('signin'); setIsModalOpen(true); };
   const [orbitAngle, setOrbitAngle] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [activeOrbitNode, setActiveOrbitNode] = useState<string | null>(null);
@@ -235,7 +237,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       {isModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)' }}
           onClick={() => setIsModalOpen(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 20, width: '100%', maxWidth: 380, padding: '24px 28px 20px', boxShadow: '0 32px 80px rgba(0,0,0,0.22)', position: 'relative' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 20, width: '100%', maxWidth: 380, padding: '24px 28px 20px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 32px 80px rgba(0,0,0,0.22)', position: 'relative' }}>
             <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', top: 14, right: 14, background: C.sectionAlt, border: `1px solid ${C.border}`, borderRadius: 8, width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <X size={14} color={C.textGray} />
             </button>
@@ -349,7 +351,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
 
             {/* CTAs */}
             <div className="hero-btns" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
+              <button onClick={openSignUp} className="cta-btn-primary"
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit', letterSpacing: '-0.01em' }}>
                 Start Free Trial <ArrowRight size={16} />
               </button>
@@ -836,7 +838,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             transition={{ duration: 0.5, delay: 1.2 }}
             style={{ textAlign: 'center', marginTop: 56 }}>
             <button 
-              onClick={() => setIsModalOpen(true)} 
+              onClick={openSignUp} 
               className="cta-button-hover"
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit' }}>
               Get started free <span className="arrow-icon"><ArrowRight size={16} /></span>
@@ -929,7 +931,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </ul>
             <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
               <button 
-                onClick={() => setIsModalOpen(true)} 
+                onClick={openSignUp} 
                 style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center', 
@@ -1166,7 +1168,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             Join over 14,000 teams already growing with Pulse. Set up in 2 minutes, no credit card required.
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
+            <button onClick={openSignUp} className="cta-btn-primary"
               style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 36px', background: C.white, color: C.violetDark, fontSize: 16, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 10px 32px rgba(0,0,0,0.22)', fontFamily: 'inherit' }}>
               Start Free Trial <ArrowRight size={17} />
             </button>
@@ -1232,7 +1234,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
                   {links.map(link => (
                     <li key={link}>
-                      <button onClick={() => setIsModalOpen(true)} className="footer-link"
+                      <button onClick={openSignUp} className="footer-link"
                         style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
                         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.55)'; }}>
@@ -1276,7 +1278,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </p>
             <div style={{ display: 'flex', gap: 20 }}>
               {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Security'].map(link => (
-                <button key={link} onClick={() => setIsModalOpen(true)}
+                <button key={link} onClick={openSignUp}
                   style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, transition: 'color 0.15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)'; }}>
