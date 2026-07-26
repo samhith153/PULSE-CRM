@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.contact import Contact
     from app.models.deal import Deal
+    from app.models.recommendation_feature import RecommendationFeature
     from app.models.user import User
 
 
@@ -100,6 +101,13 @@ class Lead(Base, TenantMixin):
     )
     deal: Mapped[Optional["Deal"]] = relationship(
         "Deal", back_populates="lead", lazy="select", uselist=False
+    )
+    recommendation_features: Mapped[list["RecommendationFeature"]] = relationship(
+        "RecommendationFeature",
+        back_populates="lead",
+        lazy="select",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     def __repr__(self) -> str:

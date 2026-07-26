@@ -74,13 +74,9 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
           const id = (entry.target as HTMLElement).dataset.reveal;
           if (id) {
             setVisibleSections(prev => new Set([...prev, id]));
-            // Trigger count-up animation when stats section is visible
             if (id === 'stats' && !hasAnimated) {
               setHasAnimated(true);
-              // Reset counts to 0 first
               setStatCounts({ users: 0, tables: 0, permissions: 0, tests: 0 });
-              
-              // Animate each stat with different durations
               const animateCount = (key: string, target: number, duration: number) => {
                 const steps = 60;
                 const increment = target / steps;
@@ -95,7 +91,6 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   }
                 }, duration / steps);
               };
-              
               setTimeout(() => animateCount('users', 4, 1000), 200);
               setTimeout(() => animateCount('tables', 11, 1200), 300);
               setTimeout(() => animateCount('permissions', 33, 1400), 400);
@@ -116,29 +111,6 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   };
 
-<<<<<<< HEAD
-  const handleLogin = async () => {
-    if (!email || !password) { addToast('Please fill in all fields.', 'error'); return; }
-    setIsLoading(true);
-    try {
-      const result = await apiLogin(email, password);
-      setToken(result.access_token);
-      setIsLoading(false);
-      setIsModalOpen(false);
-      setEmail('');
-      setPassword('');
-      addToast('Signed in successfully!', 'success');
-      onLogin(selectedRole);
-    } catch (err: any) {
-      setIsLoading(false);
-      addToast(err.message || 'Login failed. Please try again.', 'error');
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); handleLogin(); };
-
-=======
->>>>>>> 6e93de4000414ba72c29c4b17f954f859ff4d8fc
   const handleNewsletter = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newsEmail)) {
@@ -193,1052 +165,373 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     { icon: Sparkles, title: 'Always Improving', desc: 'Weekly feature releases' },
   ];
 
-  const footerLinks: Record<string, string[]> = {
-    Product: ['Dashboard', 'Pipeline', 'AI Copilot', 'Email Sync', 'Analytics', 'Contacts'],
-    Company: ['About', 'Careers', 'Blog', 'Contact'],
-    Resources: ['Help Center', 'API Docs', 'Community', 'Changelog'],
+const footerLinks: Record<string, string[]> = {
+    'Product': ['Features', 'API', 'Security', 'Changelog', 'Integrations'],
+    'Company': ['About', 'Blog', 'Careers', 'Press', 'Partners'],
+    'Support': ['Docs', 'Status', 'Community', 'Contact', 'API Reference'],
+    'Legal': ['Privacy', 'Terms', 'GDPR', 'Cookies', 'Licenses'],
   };
 
-  return (
-    <div style={{ display: 'block', fontFamily: "'Inter', 'Geist', system-ui, -apple-system, sans-serif", backgroundColor: C.white, color: C.black, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
+  const stagger = (delay: number) => ({ initial: { opacity: 0, y: 30 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true }, transition: { duration: 0.6, delay } });
 
-      {/* ══════════ TOAST NOTIFICATIONS ══════════ */}
-      <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, marginTop: 0 }}>
+  return (
+    <div className="min-h-screen" style={{ background: 'linear-gradient(to bottom, #0f172a, #1e293b, #0f172a)', color: '#e2e8f0' }}>
+      <Navbar onLogin={onLogin} onOpenAuth={openSignUp} />
+
+      {/* Toast notifications */}
+      <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2">
         {toasts.map(t => (
-          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, background: t.type === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${t.type === 'success' ? '#bbf7d0' : '#fecaca'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 280, maxWidth: 360 }}>
-            {t.type === 'success' ? <CheckCircle2 size={18} color={C.emerald} /> : <X size={18} color="#dc2626" />}
-            <span style={{ fontSize: 13, fontWeight: 600, color: t.type === 'success' ? '#166534' : '#991b1b', flex: 1 }}>{t.message}</span>
-            <button onClick={() => setToasts(prev => prev.filter(x => x.id !== t.id))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center' }}>
-              <X size={14} color={t.type === 'success' ? '#166534' : '#991b1b'} />
-            </button>
-          </div>
+          <motion.div
+            key={t.id}
+            initial={{ opacity: 0, x: 80 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 80 }}
+            style={{
+              background: t.type === 'success' ? '#065f46' : '#7f1d1d',
+              color: '#fef2f2',
+              padding: '12px 20px',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+              fontSize: '14px',
+              fontWeight: 500,
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            {t.type === 'success' ? <CheckCircle2 size={18} /> : <X size={18} />}
+            {t.message}
+          </motion.div>
         ))}
       </div>
 
-      {/* ══════════ AUTH MODAL ══════════ */}
-      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultMode="signup" onSuccess={() => { const r = localStorage.getItem('pulse-crm-role'); onLogin((r as any) || 'manager'); }} />
-
-      {/* ══════════ NAVBAR ══════════ */}
-      <Navbar onOpenModal={openSignIn} onOpenSignUp={openSignUp} />
-
-      {/* ══════════ 1. HERO SECTION ══════════ */}
-      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, #f5f3ff 0%, #faf9ff 40%, #ffffff 100%)', padding: '72px 48px 80px', marginTop: 64 }}>
-        <div style={{ position: 'absolute', top: -40, right: -40, width: 560, height: 560, background: 'radial-gradient(circle at center, rgba(124,58,237,0.09) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
-
-          {/* Left — hero copy */}
-          <div className="hero-left" style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
-
-            {/* Headline */}
-            <h1 style={{ fontSize: 64, fontWeight: 900, color: C.black, lineHeight: 1.04, letterSpacing: '-0.04em', margin: 0, fontFamily: "'Inter', system-ui, sans-serif" }}>
-              The CRM your{' '}
-              <span style={{ color: C.violet }}>sales<br />team</span>
-              <br />will actually use.
+      {/* HERO */}
+      <section className="relative overflow-hidden pt-24 pb-20 md:pt-36 md:pb-28 px-4">
+        <div className="relative z-10 max-w-6xl mx-auto text-center">
+          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium mb-6" style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.2)', color: '#a78bfa' }}>
+              <Sparkles size={14} />
+              v1.0.0 — 89 tests passing · 11 tables · 33 permissions
+            </div>
+            <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6" style={{ color: '#f1f5f9' }}>
+              Close Deals Faster<br />
+              <span style={{ background: 'linear-gradient(135deg, #a78bfa, #6366f1, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>with AI-Powered CRM</span>
             </h1>
-
-            {/* Subtext */}
-            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 400, lineHeight: 1.8, maxWidth: 480, margin: 0 }}>
-              Pulse CRM unifies contacts, leads, deals, and email —{' '}
-              powered by AI scoring and a clean REST API. Built for real sales teams.
+            <p className="text-lg md:text-xl max-w-2xl mx-auto mb-10" style={{ color: C.darkText }}>
+              From lead scoring to pipeline management to GPT-4o summaries — Pulse CRM
+              is your all-in-one sales platform. Open-source. RESTful. Enterprise-ready.
             </p>
-
-            {/* CTAs */}
-            <div className="hero-btns" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button onClick={openSignUp} className="cta-btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit', letterSpacing: '-0.01em' }}>
-                Start Free Trial <ArrowRight size={16} />
-              </button>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={openSignUp}
+                className="px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2 shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#fff', border: '1px solid rgba(124,58,237,0.3)' }}
+              >
+                Get Started Free
+                <ArrowRight size={18} />
+              </motion.button>
+              <motion.a
+                whileHover={{ scale: 1.03 }}
+                href="https://github.com/Kalnet-Pulse/Pulse-CRM"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2"
+                style={{ background: 'rgba(255,255,255,0.05)', color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.1)' }}
+              >
+                <Star size={18} />
+                Star on GitHub
+              </motion.a>
             </div>
-
-            {/* Trust badges */}
-            <div className="hero-trust" style={{ display: 'flex', gap: 22, flexWrap: 'wrap', paddingTop: 4 }}>
-              {['14-day free trial', 'No credit card required', '2-minute setup'].map(t => (
-                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, color: C.textMuted }}>
-                  <CheckCircle2 size={14} color={C.violet} /> {t}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Right — Dashboard Mockup (Real project data) */}
-          <div className="hero-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-            <div className="mockup-float" style={{ width: '100%', maxWidth: 460, background: C.white, borderRadius: 16, boxShadow: '0 32px 80px rgba(124,58,237,0.15), 0 8px 32px rgba(0,0,0,0.08)', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-
-              {/* Browser chrome */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${C.border}`, background: '#f8f8f8' }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#ff5f57' }} />
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#ffbd2e' }} />
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#28c941' }} />
-                </div>
-                <div style={{ flex: 1, margin: '0 16px', height: 20, background: '#ececec', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 9, color: '#999', fontWeight: 500 }}>app.pulsecrm.io/dashboard</span>
-                </div>
-                <div style={{ height: 20, width: 20, borderRadius: 5, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Activity size={10} color={C.violet} strokeWidth={2.5} />
-                </div>
-              </div>
-
-              {/* App layout */}
-              <div style={{ display: 'flex', height: 320 }}>
-
-                {/* Sidebar — real project modules */}
-                <div style={{ width: 100, background: '#fafafa', borderRight: `1px solid ${C.border}`, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <div style={{ padding: '3px 7px', marginBottom: 6 }}>
-                    <span style={{ fontSize: 9, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
-                  </div>
-                  {[
-                    { icon: LayoutDashboard, label: 'Dashboard', active: true },
-                    { icon: Target, label: 'Leads' },
-                    { icon: Users, label: 'Contacts' },
-                    { icon: TrendingUp, label: 'Pipeline' },
-                    { icon: BarChart2, label: 'Analytics' },
-                    { icon: Sparkles, label: 'AI Copilot' },
-                    { icon: Settings, label: 'Settings' },
-                  ].map(({ icon: Icon, label, active }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 7px', borderRadius: 7, background: active ? C.violet : 'transparent', cursor: 'pointer', transition: 'background 0.15s' }}>
-                      <Icon size={10} color={active ? C.white : '#adb5bd'} />
-                      <span style={{ fontSize: 9.5, fontWeight: active ? 700 : 500, color: active ? C.white : '#adb5bd' }}>{label}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Main content — real project metrics */}
-                <div style={{ flex: 1, padding: 14, background: C.white, overflowY: 'auto' }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: C.black, margin: '0 0 1px' }}>Good morning, Team 👋</p>
-                  <p style={{ fontSize: 8.5, color: C.textMuted, margin: '0 0 14px' }}>Here's your pipeline snapshot for today.</p>
-
-                  {/* Real project stat cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7, marginBottom: 12 }}>
-                    {[
-                      { l: 'New Deals', v: '128', s: '+24% this week', c: '#16a34a' },
-                      { l: 'Emails Sent', v: '842', s: '+14% this week', c: '#2563eb' },
-                      { l: 'Revenue', v: '₹98K', s: '+31% this week', c: C.violet },
-                    ].map(s => (
-                      <div key={s.l} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 8px', border: `1px solid #f0f0f0` }}>
-                        <p style={{ fontSize: 7.5, color: '#94a3b8', fontWeight: 600, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{s.l}</p>
-                        <p style={{ fontSize: 16, fontWeight: 900, color: C.black, margin: '0 0 2px', letterSpacing: '-0.03em' }}>{s.v}</p>
-                        <p style={{ fontSize: 7.5, fontWeight: 700, color: s.c, margin: 0 }}>{s.s}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Pipeline chart */}
-                  <div style={{ background: '#fafafa', borderRadius: 9, padding: '9px 10px 8px', border: `1px solid #f0f0f0`, marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-                      <p style={{ fontSize: 8.5, fontWeight: 700, color: C.textGray, margin: 0 }}>Pipeline Overview</p>
-                      <span style={{ fontSize: 7.5, fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 7px', borderRadius: 20 }}>↑ 31% MoM</span>
-                    </div>
-                    <svg viewBox="0 0 200 44" style={{ width: '100%', height: 38 }}>
-                      <defs>
-                        <linearGradient id="heroGrad2" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={C.violet} stopOpacity="0.2" />
-                          <stop offset="100%" stopColor={C.violet} stopOpacity="0.01" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M0,40 C30,34 55,26 80,18 C105,10 130,20 155,10 C170,5 185,4 200,2 L200,44 L0,44Z" fill="url(#heroGrad2)" />
-                      <path d="M0,40 C30,34 55,26 80,18 C105,10 130,20 155,10 C170,5 185,4 200,2" fill="none" stroke={C.violet} strokeWidth="1.8" strokeLinecap="round" />
-                      {[[0,40],[80,18],[155,10],[200,2]].map(([x,y],i) => (
-                        <circle key={i} cx={x} cy={y} r="2.2" fill={C.violet} />
-                      ))}
-                    </svg>
-                  </div>
-
-                  {/* AI Copilot insight */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f3ff', borderRadius: 8, padding: '8px 10px', border: '1px solid #ede9fe', cursor: 'pointer' }}>
-                    <div style={{ height: 24, width: 24, borderRadius: 7, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Sparkles size={11} color={C.white} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 9, fontWeight: 700, color: '#5b21b6', margin: '0 0 1px' }}>AI Copilot Insight</p>
-                      <p style={{ fontSize: 8, color: C.violet, margin: 0 }}>3 deals likely to close this week</p>
-                    </div>
-                    <ChevronRight size={10} color={C.violet} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ 4. SOCIAL PROOF / TRUSTED BY ══════════ */}
-      <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '56px 48px', overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
-        <style>{`
-          @keyframes marquee {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-50%); }
-          }
-          .marquee-container {
-            display: flex;
-            animation: marquee 30s linear infinite;
-          }
-          .marquee-container:hover {
-            animation-play-state: paused;
-          }
-          .trusted-logo-item {
-            animation: fadeInLogo 0.6s ease-out forwards;
-            opacity: 0;
-          }
-          .trusted-logo-item:nth-child(1) { animation-delay: 0.1s; }
-          .trusted-logo-item:nth-child(2) { animation-delay: 0.2s; }
-          .trusted-logo-item:nth-child(3) { animation-delay: 0.3s; }
-          .trusted-logo-item:nth-child(4) { animation-delay: 0.4s; }
-          .trusted-logo-item:nth-child(5) { animation-delay: 0.5s; }
-          .trusted-logo-item:nth-child(6) { animation-delay: 0.6s; }
-          .trusted-logo-item:nth-child(7) { animation-delay: 0.1s; }
-          .trusted-logo-item:nth-child(8) { animation-delay: 0.2s; }
-          .trusted-logo-item:nth-child(9) { animation-delay: 0.3s; }
-          .trusted-logo-item:nth-child(10) { animation-delay: 0.4s; }
-          .trusted-logo-item:nth-child(11) { animation-delay: 0.5s; }
-          .trusted-logo-item:nth-child(12) { animation-delay: 0.6s; }
-          @keyframes fadeInLogo {
-            from {
-              opacity: 0;
-              transform: translateY(10px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 48 }}>
-            TRUSTED BY FAST-GROWING SALES TEAMS & ENTERPRISE ORGANIZATIONS
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', position: 'relative', width: '100%' }}>
-            <div className="marquee-container">
-              {/* First set of logos */}
-              {[
-                { name: 'TechCorp', icon: '📦', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '⚫', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '🔶', color: '#f97316' },
-                { name: 'Acme Systems', icon: '🔺', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '🟢', color: '#10b981' },
-              ].map((company, i) => (
-                <div key={`${company.name}-1`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  <div style={{ 
-                    width: 32, 
-                    height: 32, 
-                    borderRadius: 8, 
-                    background: company.color, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontSize: 16
-                  }}>
-                    {company.icon}
-                  </div>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: '#475569', letterSpacing: '-0.01em', userSelect: 'none' }}>
-                    {company.name}
-                  </span>
-                </div>
-              ))}
-              {/* Duplicate set for seamless loop */}
-              {[
-                { name: 'TechCorp', icon: '📦', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '⚫', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '🔶', color: '#f97316' },
-                { name: 'Acme Systems', icon: '🔺', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '🟢', color: '#10b981' },
-              ].map((company, i) => (
-                <div key={`${company.name}-2`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  <div style={{ 
-                    width: 32, 
-                    height: 32, 
-                    borderRadius: 8, 
-                    background: company.color, 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    fontSize: 16
-                  }}>
-                    {company.icon}
-                  </div>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: '#475569', letterSpacing: '-0.01em', userSelect: 'none' }}>
-                    {company.name}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ 5. STATS ROW ══════════ */}
-      <section data-reveal="stats" style={{ background: C.white, padding: '80px 48px', opacity: visibleSections.has('stats') ? 1 : 0, transform: visibleSections.has('stats') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
-        <style>{`
-          @keyframes fadeUpCard {
-            from {
-              opacity: 0;
-              transform: translateY(30px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .stat-card {
-            animation: fadeUpCard 0.6s ease-out forwards;
-            opacity: 0;
-          }
-          .stat-card:nth-child(1) { animation-delay: 0.1s; }
-          .stat-card:nth-child(2) { animation-delay: 0.2s; }
-          .stat-card:nth-child(3) { animation-delay: 0.3s; }
-          .stat-card:nth-child(4) { animation-delay: 0.4s; }
-          .stat-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 40px rgba(124, 58, 237, 0.15) !important;
-          }
-          .stat-icon {
-            transition: transform 0.3s ease;
-          }
-          .stat-card:hover .stat-icon {
-            transform: rotate(10deg);
-          }
-        `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>By the numbers</p>
-            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: 0 }}>What's inside the project</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-            {stats.map(s => {
-              const Icon = s.icon;
-              const displayValue = statCounts[s.key as keyof typeof statCounts] || 0;
-              return (
-                <div key={s.label} className="stat-card" style={{ padding: '30px 26px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', textAlign: 'center', transition: 'all 0.3s ease', cursor: 'pointer' }}>
-                  <div className="stat-icon" style={{ height: 48, width: 48, borderRadius: 14, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
-                    <Icon size={20} color={C.violet} />
-                  </div>
-                  <p style={{ fontSize: 44, fontWeight: 900, color: C.black, letterSpacing: '-0.04em', margin: '0 0 6px', lineHeight: 1 }}>{displayValue}</p>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 6px' }}>{s.label}</p>
-                  <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: 0 }}>{s.sub}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ 6. FEATURES GRID ══════════ */}
-      <section data-reveal="features" style={{ background: C.sectionAlt, padding: '96px 48px', borderTop: `1px solid ${C.border}` }}>
-        <style>{`
-          .feature-card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          }
-          .feature-card-hover:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 60px rgba(124, 58, 237, 0.2) !important;
-            border-color: #7c3aed !important;
-          }
-          .feature-icon-hover {
-            transition: transform 0.3s ease;
-          }
-          .feature-card-hover:hover .feature-icon-hover {
-            transform: scale(1.1) rotate(5deg);
-          }
-        `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.4 }}
-              style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
-              Features
-            </motion.p>
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
-              Everything you need to close more deals
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
-              All your sales tools unified — no tab-switching, no data silos, no guesswork.
-            </motion.p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-            {features.map((f, idx) => {
-              const Icon = f.icon;
-              return (
-                <motion.div
-                  key={f.title}
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "0px" }}
-                  transition={{ 
-                    duration: 0.5, 
-                    delay: idx * 0.1,
-                    ease: [0.4, 0, 0.2, 1]
-                  }}
-                  className="feature-card-hover"
-                  style={{ padding: '32px 28px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
-                  <div className="feature-icon-hover" style={{ height: 52, width: 52, borderRadius: 16, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-                    <Icon size={24} color={f.fg} />
-                  </div>
-                  <h3 style={{ fontSize: 17, fontWeight: 800, color: C.black, margin: '0 0 10px', letterSpacing: '-0.01em' }}>{f.title}</h3>
-                  <p style={{ fontSize: 14, color: C.textGray, fontWeight: 500, lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════ 7. HOW IT WORKS ══════════ */}
-      <section data-reveal="steps" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}` }}>
-        <style>{`
-          @keyframes pulse {
-            0%, 100% {
-              box-shadow: 0 12px 36px rgba(124, 58, 237, 0.35), 0 0 0 0 rgba(124, 58, 237, 0.4);
-            }
-            50% {
-              box-shadow: 0 16px 48px rgba(124, 58, 237, 0.45), 0 0 0 8px rgba(124, 58, 237, 0);
-            }
-          }
-          .cta-button-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          }
-          .cta-button-hover:hover {
-            transform: scale(1.05);
-            box-shadow: 0 12px 32px rgba(124, 58, 237, 0.5) !important;
-          }
-          .cta-button-hover:hover .arrow-icon {
-            transform: translateX(4px);
-          }
-          .arrow-icon {
-            transition: transform 0.3s ease;
-            display: inline-block;
-          }
-        `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.4 }}
-              style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
-              How it works
-            </motion.p>
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
-              Up and running in minutes
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
-              No complex setup. No migration headaches. Start closing deals faster on day one.
-            </motion.p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40, position: 'relative' }}>
-            <motion.div
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 1.2, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              style={{ position: 'absolute', top: 48, left: '16.66%', right: '16.66%', height: 2, background: `linear-gradient(90deg, ${C.violetLight}, ${C.violet}, ${C.violetLight})`, zIndex: 0, transformOrigin: 'left' }} />
-            {steps.map((step, idx) => {
-              const Icon = step.icon;
-              const isActive = idx === 1;
-              return (
-                <motion.div
-                  key={step.num}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "0px" }}
-                  transition={{ 
-                    duration: 0.5, 
-                    delay: 0.4 + (idx * 0.2),
-                    ease: [0.4, 0, 0.2, 1]
-                  }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', zIndex: 1 }}>
-                  <motion.div
-                    initial={{ scale: 0.8 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true, margin: "0px" }}
-                    transition={{ 
-                      duration: 0.5, 
-                      delay: 0.5 + (idx * 0.2),
-                      type: "spring",
-                      stiffness: 200,
-                      damping: 15
-                    }}
-                    style={{ 
-                      height: 96, 
-                      width: 96, 
-                      borderRadius: '50%', 
-                      background: isActive ? C.violet : C.white, 
-                      border: `3px solid ${isActive ? C.violet : C.violetLight}`, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      marginBottom: 28, 
-                      boxShadow: isActive ? `0 12px 36px ${C.violet}55, 0 0 0 0 rgba(124, 58, 237, 0.4)` : '0 4px 20px rgba(0,0,0,0.08)',
-                      animation: isActive ? 'pulse 2s ease-in-out infinite' : 'none'
-                    }}>
-                    <Icon size={32} color={isActive ? C.white : C.violet} />
-                  </motion.div>
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true, margin: "0px" }}
-                    transition={{ duration: 0.4, delay: 0.6 + (idx * 0.2) }}
-                    style={{ fontSize: 11, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'block' }}>
-                    Step {step.num}
-                  </motion.span>
-                  <motion.h3
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "0px" }}
-                    transition={{ duration: 0.4, delay: 0.7 + (idx * 0.2) }}
-                    style={{ fontSize: 20, fontWeight: 800, color: C.black, margin: '0 0 14px', letterSpacing: '-0.01em' }}>
-                    {step.title}
-                  </motion.h3>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true, margin: "0px" }}
-                    transition={{ duration: 0.4, delay: 0.8 + (idx * 0.2) }}
-                    style={{ fontSize: 15, color: C.textGray, fontWeight: 500, lineHeight: 1.75, margin: 0 }}>
-                    {step.desc}
-                  </motion.p>
-                </motion.div>
-              );
-            })}
-          </div>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "0px" }}
-            transition={{ duration: 0.5, delay: 1.2 }}
-            style={{ textAlign: 'center', marginTop: 56 }}>
-            <button 
-              onClick={openSignUp} 
-              className="cta-button-hover"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit' }}>
-              Get started free <span className="arrow-icon"><ArrowRight size={16} /></span>
-            </button>
           </motion.div>
         </div>
+
+        {/* 3D Orbit Visualization */}
+        <div className="relative max-w-5xl mx-auto mt-20 md:mt-28 px-4">
+          <div className="relative flex items-center justify-center" style={{ minHeight: '420px' }}>
+            {/* Central Core */}
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.8, delay: 0.4, type: 'spring' }}
+              className="absolute z-10 flex flex-col items-center justify-center rounded-full"
+              style={{
+                width: '130px', height: '130px',
+                background: 'radial-gradient(circle at 30% 30%, rgba(124,58,237,0.25), rgba(99,102,241,0.12))',
+                border: '2px solid rgba(124,58,237,0.25)',
+                boxShadow: '0 0 60px rgba(124,58,237,0.15)',
+              }}
+            >
+              <Settings size={28} style={{ color: '#a78bfa' }} />
+              <span className="text-xs font-semibold mt-1" style={{ color: '#c4b5fd' }}>PULSE CRM</span>
+            </motion.div>
+
+            {/* Orbit Ring */}
+            <svg className="absolute" width="400" height="400" viewBox="0 0 400 400" style={{ opacity: 0.3 }}>
+              <circle cx="200" cy="200" r="160" fill="none" stroke="rgba(124,58,237,0.15)" strokeWidth="1.5" strokeDasharray="6 6" />
+              <circle cx="200" cy="200" r="190" fill="none" stroke="rgba(99,102,241,0.1)" strokeWidth="1" strokeDasharray="4 8" />
+            </svg>
+
+            {/* Orbiting Nodes */}
+            {orbitNodes.map((node, i) => {
+              const angle = (i * 60 + orbitAngle) * (Math.PI / 180);
+              const rx = 160, ry = 100;
+              const x = 200 + rx * Math.cos(angle) - 30;
+              const y = 200 + ry * Math.sin(angle) - 30;
+              const isActive = activeOrbitNode === node.label;
+              return (
+                <motion.div
+                  key={node.label}
+                  className="absolute cursor-pointer"
+                  style={{ left: `${(x / 400) * 100}%`, top: `${(y / 400) * 100}%`, width: '56px', height: '56px' }}
+                  onMouseEnter={() => setActiveOrbitNode(node.label)}
+                  onMouseLeave={() => setActiveOrbitNode(null)}
+                  whileHover={{ scale: 1.15 }}
+                  transition={{ type: 'spring', stiffness: 200 }}
+                >
+                  <div
+                    className="flex items-center justify-center rounded-full w-full h-full"
+                    style={{
+                      background: isActive ? 'linear-gradient(135deg, #7c3aed, #6366f1)' : 'rgba(255,255,255,0.06)',
+                      border: `2px solid ${isActive ? '#7c3aed' : 'rgba(255,255,255,0.08)'}`,
+                      boxShadow: isActive ? '0 0 24px rgba(124,58,237,0.3)' : 'none',
+                      transition: 'all 0.3s ease',
+                    }}
+                  >
+                    <node.icon size={20} style={{ color: isActive ? '#fff' : node.color }} />
+                  </div>
+                  {/* Tooltip */}
+                  {isActive && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="absolute z-20 w-52 p-3 rounded-xl text-xs"
+                      style={{
+                        background: '#1e293b',
+                        border: '1px solid rgba(124,58,237,0.2)',
+                        color: '#e2e8f0',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        top: '64px',
+                        boxShadow: '0 12px 30px rgba(0,0,0,0.4)',
+                      }}
+                    >
+                      <p className="font-semibold mb-1" style={{ color: '#a78bfa' }}>{node.label}</p>
+                      <p style={{ color: C.darkText }}>{node.description}</p>
+                    </motion.div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
       </section>
 
-      {/* ══════════ 7.5. TRUST / FEATURES BAR ══════════ */}
-      <section data-reveal="trust" style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: '56px 48px', opacity: visibleSections.has('trust') ? 1 : 0, transform: visibleSections.has('trust') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
-          {trustBadges.map(b => {
-            const Icon = b.icon;
+      {/* STATS BAR */}
+      <section data-reveal="stats" className="py-14 md:py-20 px-4" style={{ background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+          {stats.map(s => {
+            const isVisible = visibleSections.has('stats');
             return (
-              <div key={b.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, padding: '28px 20px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, transition: 'all 0.25s ease', cursor: 'default' }}
-                onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = `0 12px 36px ${C.violet}14`; el.style.borderColor = C.violetLight; el.style.transform = 'translateY(-4px)'; }}
-                onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = C.border; el.style.transform = 'translateY(0)'; }}>
-                <div style={{ height: 58, width: 58, borderRadius: 18, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={24} color={C.violet} />
+              <motion.div
+                key={s.key}
+                initial={{ opacity: 0, y: 20 }}
+                animate={isVisible ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.5 }}
+                className="text-center p-4 rounded-xl"
+                style={{ border: '1px solid rgba(255,255,255,0.05)' }}
+              >
+                <s.icon size={28} className="mx-auto mb-2" style={{ color: '#a78bfa' }} />
+                <div className="text-3xl md:text-4xl font-bold" style={{ color: '#f1f5f9' }}>
+                  {statCounts[s.key as keyof typeof statCounts]}+
                 </div>
-                <div>
-                  <p style={{ fontSize: 15, fontWeight: 800, color: C.black, margin: '0 0 6px' }}>{b.title}</p>
-                  <p style={{ fontSize: 13, color: C.textMuted, fontWeight: 500, margin: 0 }}>{b.desc}</p>
-                </div>
-              </div>
+                <div className="text-sm mt-1 font-medium" style={{ color: '#a78bfa' }}>{s.label}</div>
+                <div className="text-xs mt-1" style={{ color: C.darkText }}>{s.sub}</div>
+              </motion.div>
             );
           })}
         </div>
       </section>
 
-      {/* ══════════ 8. PLATFORM + ORBIT DIAGRAM ══════════ */}
-      <section data-reveal="orbit" style={{ 
-        background: '#ffffff', 
-        padding: '96px 48px 110px', 
-        position: 'relative', 
-        overflow: 'hidden', 
-        opacity: visibleSections.has('orbit') ? 1 : 0, 
-        transform: visibleSections.has('orbit') ? 'translateY(0)' : 'translateY(32px)', 
-        transition: 'opacity 0.9s ease, transform 0.9s ease' 
-      }}>
-        {/* Leaf Illustration - Bottom Left */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, pointerEvents: 'none', zIndex: 0 }}>
-          <svg width="200" height="220" viewBox="0 0 200 220" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0 220C45 200 65 155 55 100C50 72 35 50 12 33C-5 20 -10 10 -10 0" stroke="#a5b4fc" strokeWidth="2.5" strokeLinecap="round"/>
-            <path d="M55 100C82 78 115 83 132 105C110 127 77 122 55 100Z" fill="#c7d2fe" opacity="0.75"/>
-            <path d="M38 138C66 121 93 132 104 154C82 170 55 160 38 138Z" fill="#818cf8" opacity="0.65"/>
-            <path d="M22 170C44 159 66 170 72 187C55 198 33 187 22 170Z" fill="#a5b4fc" opacity="0.85"/>
-            <path d="M16 72C33 50 60 50 72 72C50 88 28 83 16 72Z" fill="#818cf8" opacity="0.55"/>
-            <path d="M-5 120C12 104 34 110 40 126C23 137 6 131 -5 120Z" fill="#c7d2fe" opacity="0.85"/>
-          </svg>
-        </div>
-
-        {/* Leaf Illustration - Bottom Right */}
-        <div style={{ position: 'absolute', bottom: 0, right: 0, pointerEvents: 'none', zIndex: 0 }}>
-          <svg width="260" height="280" viewBox="0 0 260 280" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M260 280C215 225 183 150 205 65C210 43 222 22 238 0" stroke="#5eead4" strokeWidth="2.5" strokeLinecap="round"/>
-            <path d="M205 150C162 129 119 156 108 188C146 210 189 183 205 150Z" fill="#0d9488" opacity="0.8"/>
-            <path d="M183 86C140 70 102 97 97 130C130 146 167 119 183 86Z" fill="#14b8a6" opacity="0.7"/>
-            <path d="M216 205C183 194 156 216 151 243C178 259 205 238 216 205Z" fill="#2dd4bf" opacity="0.85"/>
-            <path d="M227 38C194 27 167 48 162 75C189 86 211 65 227 38Z" fill="#60a5fa" opacity="0.65"/>
-            <path d="M243 118C216 102 194 118 189 140C211 151 232 135 243 118Z" fill="#3b82f6" opacity="0.55"/>
-          </svg>
-        </div>
-
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <p style={{ fontSize: 12, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
-              ALL-IN-ONE PLATFORM
-            </p>
-            <h2 style={{ fontSize: 46, fontWeight: 900, color: C.black, lineHeight: 1.15, letterSpacing: '-0.025em', margin: 0 }}>
-              A complete platform<br />to power your<br /><span style={{ color: C.violet }}>revenue engine</span>
+      {/* FEATURES GRID */}
+      <section data-reveal="features" className="py-14 md:py-24 px-4">
+        <div className="max-w-6xl mx-auto">
+          <motion.div {...stagger(0)} className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ color: '#f1f5f9' }}>
+              Everything you need to <span style={{ color: '#a78bfa' }}>sell smarter</span>
             </h2>
-            <p style={{ fontSize: 16, color: '#64748b', fontWeight: 500, lineHeight: 1.75, maxWidth: 440, margin: 0 }}>
-              Consolidate your tools into one cohesive solution. Pulse connects every stage of your customer journey from lead intake to deal closing.
+            <p className="text-lg max-w-2xl mx-auto" style={{ color: C.darkText }}>
+              From lead capture to closed won — Pulse CRM provides enterprise features without the enterprise complexity.
             </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[
-                'Unify your sales tools',
-                'Automate repetitive tasks',
-                'Get real-time insights',
-                'Close more deals, faster'
-              ].map(item => (
-                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 700, color: '#1e293b' }}>
-                  <div style={{ height: 22, width: 22, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <CheckCircle2 size={15} color={C.violet} strokeWidth={2.5} />
-                  </div>
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-              <button 
-                onClick={openSignUp} 
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: 10, 
-                  padding: '14px 28px', 
-                  background: C.white, 
-                  color: C.violet, 
-                  fontSize: 15, 
-                  fontWeight: 700, 
-                  borderRadius: 100, 
-                  border: `1.5px solid ${C.violet}`, 
-                  cursor: 'pointer', 
-                  boxShadow: '0 2px 10px rgba(124, 58, 237, 0.08)', 
-                  fontFamily: 'inherit',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={e => {
-                  const el = e.currentTarget;
-                  el.style.background = C.violetLighter;
-                  el.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={e => {
-                  const el = e.currentTarget;
-                  el.style.background = C.white;
-                  el.style.transform = 'translateY(0)';
-                }}
+          </motion.div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
+            {features.map((f, i) => (
+              <motion.div
+                key={f.title}
+                {...stagger(0.1 * i)}
+                className="p-6 rounded-2xl transition-all duration-300"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                whileHover={{ y: -4, borderColor: 'rgba(124,58,237,0.2)', boxShadow: '0 12px 30px rgba(0,0,0,0.15)' }}
               >
-                Explore all features <ArrowRight size={16} color={C.violet} />
-              </button>
-            </div>
-          </div>
-
-          {/* Right — Orbit diagram */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, position: 'relative' }}>
-            <div style={{ position: 'relative', width: 440, height: 440 }}>
-              
-              {/* Soft purple outer glow circle behind central area */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 300, height: 300, borderRadius: '50%', background: 'rgba(124, 58, 237, 0.04)', pointerEvents: 'none' }} />
-              
-              {/* Intermediate soft ring glow */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 220, height: 220, borderRadius: '50%', background: 'rgba(124, 58, 237, 0.08)', pointerEvents: 'none' }} />
-
-              {/* Dashed orbit circle passing through node centers */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 340, height: 340, borderRadius: '50%', border: '1.5px dashed rgba(124, 58, 237, 0.3)', pointerEvents: 'none' }} />
-
-              {/* Center pulse logo button/circle */}
-              <div style={{ 
-                position: 'absolute', 
-                top: '50%', 
-                left: '50%', 
-                transform: 'translate(-50%,-50%)', 
-                width: 120, 
-                height: 120, 
-                borderRadius: '50%', 
-                background: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)', 
-                boxShadow: '0 12px 36px rgba(124, 58, 237, 0.35), 0 0 0 10px rgba(255, 255, 255, 0.95), 0 0 0 18px rgba(124, 58, 237, 0.06)', 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                zIndex: 2
-              }}>
-                <Activity size={48} color={C.white} strokeWidth={2.2} />
-              </div>
-
-              {/* 6 Orbit Nodes */}
-              {orbitNodes.map(({ label, icon: Icon, color, description }, i) => {
-                const baseAngle = (i / orbitNodes.length) * 360;
-                const angle = (baseAngle + orbitAngle - 90) * (Math.PI / 180);
-                const r = 170;
-                const cx = 220, cy = 220;
-                const x = cx + r * Math.cos(angle);
-                const y = cy + r * Math.sin(angle);
-                const isActive = activeOrbitNode === label;
-
-                return (
-                  <div 
-                    key={label}
-                    onClick={() => setActiveOrbitNode(isActive ? null : label)}
-                    style={{ 
-                      position: 'absolute', 
-                      left: x - 35, 
-                      top: y - 35, 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      cursor: 'pointer',
-                      zIndex: 3,
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}>
-                    {/* Round Node Button */}
-                    <div style={{ 
-                      height: 70, 
-                      width: 70, 
-                      borderRadius: '50%', 
-                      background: isActive ? C.violet : C.white, 
-                      boxShadow: isActive ? `0 10px 28px ${C.violet}55` : '0 6px 24px rgba(15, 23, 42, 0.08)', 
-                      border: `2px solid ${isActive ? C.violet : '#ffffff'}`, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      transition: 'all 0.3s ease',
-                      transform: isActive ? 'scale(1.12)' : 'scale(1)'
-                    }}>
-                      <Icon size={26} color={isActive ? C.white : (color || C.violet)} strokeWidth={2.2} />
-                    </div>
-                    {/* Node Label Below */}
-                    <span style={{ 
-                      fontSize: 12, 
-                      fontWeight: 700, 
-                      color: isActive ? C.violet : '#1e293b', 
-                      whiteSpace: 'nowrap', 
-                      textAlign: 'center',
-                      marginTop: 6,
-                      transition: 'all 0.3s ease'
-                    }}>
-                      {label}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Info panel when node is selected */}
-            {activeOrbitNode && (
-              <div style={{ 
-                width: '100%', 
-                maxWidth: 440, 
-                background: C.white, 
-                borderRadius: 18, 
-                padding: '22px 26px', 
-                border: `2px solid ${C.violetLight}`, 
-                boxShadow: '0 12px 36px rgba(124,58,237,0.12)',
-                animation: 'fadeUpStep 0.3s ease-out',
-                position: 'relative',
-                zIndex: 4
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ 
-                      height: 38, 
-                      width: 38, 
-                      borderRadius: '50%', 
-                      background: C.violetLighter, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      border: `1px solid ${C.violetLight}`
-                    }}>
-                      {React.createElement(orbitNodes.find(n => n.label === activeOrbitNode)!.icon, { 
-                        size: 20, 
-                        color: orbitNodes.find(n => n.label === activeOrbitNode)!.color || C.violet, 
-                        strokeWidth: 2 
-                      })}
-                    </div>
-                    <span style={{ fontSize: 16, fontWeight: 800, color: C.black }}>{activeOrbitNode}</span>
-                  </div>
-                  <button 
-                    onClick={() => setActiveOrbitNode(null)} 
-                    style={{ 
-                      background: C.sectionAlt, 
-                      border: `1px solid ${C.border}`, 
-                      borderRadius: 8, 
-                      width: 30, 
-                      height: 30, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  >
-                    <X size={15} color={C.textGray} />
-                  </button>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4" style={{ background: f.bg }}>
+                  <f.icon size={22} style={{ color: f.fg }} />
                 </div>
-                <p style={{ 
-                  fontSize: 14, 
-                  color: C.textGray, 
-                  lineHeight: 1.65, 
-                  margin: 0,
-                  fontWeight: 500
-                }}>
-                  {orbitNodes.find(n => n.label === activeOrbitNode)!.description}
-                </p>
-              </div>
-            )}
+                <h3 className="text-lg font-semibold mb-2" style={{ color: '#e2e8f0' }}>{f.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: C.darkText }}>{f.desc}</p>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* ══════════ 9. TESTIMONIALS ══════════ */}
-      <section data-reveal="testimonials" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('testimonials') ? 1 : 0, transform: visibleSections.has('testimonials') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>Customer stories</p>
-            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>Teams that love Pulse CRM</h2>
-            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 460, margin: '0 auto', lineHeight: 1.7 }}>
-              Join thousands of sales teams who have transformed their pipeline with Pulse.
+      {/* HOW IT WORKS */}
+      <section data-reveal="howitworks" className="py-14 md:py-24 px-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
+        <div className="max-w-5xl mx-auto">
+          <motion.div {...stagger(0)} className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ color: '#f1f5f9' }}>
+              From lead to <span style={{ color: '#a78bfa' }}>closed won</span>
+            </h2>
+            <p className="text-lg max-w-2xl mx-auto" style={{ color: C.darkText }}>
+              Three simple steps to transform leads into revenue.
             </p>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 28 }}>
-            {testimonials.map(t => (
-              <div key={t.name} className="testimonial-card" style={{ padding: '32px 28px', borderRadius: 22, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 20 }}>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {[1, 2, 3, 4, 5].map(n => <Star key={n} size={15} color="#f59e0b" fill="#f59e0b" />)}
+          </motion.div>
+          <div className="relative grid md:grid-cols-3 gap-8">
+            {steps.map((s, i) => (
+              <motion.div key={s.num} {...stagger(0.15 * i)} className="relative text-center p-6">
+                <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-5" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(99,102,241,0.1))', border: '1px solid rgba(124,58,237,0.15)' }}>
+                  <s.icon size={28} style={{ color: '#a78bfa' }} />
                 </div>
-                <p style={{ fontSize: 15, color: C.textGray, fontWeight: 500, lineHeight: 1.8, margin: 0, flex: 1 }}>"{t.quote}"</p>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, paddingTop: 4, borderTop: `1px solid ${C.border}` }}>
-                  <div style={{ height: 44, width: 44, borderRadius: '50%', background: t.color, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: C.white }}>{t.initials}</span>
-                  </div>
+                <div className="text-3xl font-bold mb-2" style={{ color: 'rgba(124,58,237,0.3)' }}>{s.num}</div>
+                <h3 className="text-xl font-semibold mb-2" style={{ color: '#e2e8f0' }}>{s.title}</h3>
+                <p className="text-sm leading-relaxed" style={{ color: C.darkText }}>{s.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS */}
+      <section data-reveal="testimonials" className="py-14 md:py-24 px-4">
+        <div className="max-w-5xl mx-auto">
+          <motion.div {...stagger(0)} className="text-center mb-14">
+            <h2 className="text-3xl md:text-5xl font-bold mb-4" style={{ color: '#f1f5f9' }}>
+              Trusted by <span style={{ color: '#a78bfa' }}>sales teams</span>
+            </h2>
+          </motion.div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {testimonials.map((t, i) => (
+              <motion.div
+                key={t.name}
+                {...stagger(0.15 * i)}
+                className="p-6 rounded-2xl"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold" style={{ background: t.color, color: '#fff' }}>{t.initials}</div>
                   <div>
-                    <p style={{ fontSize: 14, fontWeight: 700, color: C.black, margin: '0 0 2px' }}>{t.name}</p>
-                    <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: 0 }}>{t.role}</p>
+                    <div className="font-semibold text-sm" style={{ color: '#e2e8f0' }}>{t.name}</div>
+                    <div className="text-xs" style={{ color: C.darkText }}>{t.role}</div>
                   </div>
                 </div>
-              </div>
+                <p className="text-sm leading-relaxed italic" style={{ color: C.darkText }}>"{t.quote}"</p>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ══════════ 11. BOTTOM CTA BANNER ══════════ */}
-      <section data-reveal="cta" style={{ background: `linear-gradient(135deg, ${C.violet} 0%, ${C.violetDark} 100%)`, padding: '88px 48px', position: 'relative', overflow: 'hidden', opacity: visibleSections.has('cta') ? 1 : 0, transform: visibleSections.has('cta') ? 'scale(1)' : 'scale(0.97)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
-        <div style={{ position: 'absolute', top: -120, left: -120, width: 360, height: 360, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,0,0,0.1)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-          <div style={{ height: 68, width: 68, borderRadius: 22, background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-            <Zap size={32} color={C.white} />
-          </div>
-          <h2 style={{ fontSize: 48, fontWeight: 900, color: C.white, margin: '0 0 16px', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
-            Start your free trial today
+      {/* TRUST BADGES */}
+      <section data-reveal="trust" className="py-12 md:py-20 px-4" style={{ background: 'rgba(255,255,255,0.02)' }}>
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
+          {trustBadges.map((b, i) => (
+            <motion.div key={b.title} {...stagger(0.1 * i)} className="text-center p-4 rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.05)' }}>
+              <b.icon size={24} className="mx-auto mb-2" style={{ color: '#a78bfa' }} />
+              <div className="font-semibold text-sm" style={{ color: '#e2e8f0' }}>{b.title}</div>
+              <div className="text-xs mt-1" style={{ color: C.darkText }}>{b.desc}</div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section data-reveal="cta" className="py-14 md:py-24 px-4">
+        <motion.div {...stagger(0)} className="max-w-2xl mx-auto text-center p-10 rounded-3xl" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.10), rgba(99,102,241,0.05))', border: '1px solid rgba(124,58,237,0.12)' }}>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4" style={{ color: '#f1f5f9' }}>
+            Ready to transform your sales process?
           </h2>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.78)', fontWeight: 500, margin: '0 auto 40px', lineHeight: 1.7, maxWidth: 520 }}>
-            Join over 14,000 teams already growing with Pulse. Set up in 2 minutes, no credit card required.
+          <p className="mb-8" style={{ color: C.darkText }}>
+            Join teams that close deals faster with AI-powered CRM.
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <button onClick={openSignUp} className="cta-btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 36px', background: C.white, color: C.violetDark, fontSize: 16, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 10px 32px rgba(0,0,0,0.22)', fontFamily: 'inherit' }}>
-              Start Free Trial <ArrowRight size={17} />
-            </button>
-          </div>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', margin: '22px 0 0', fontWeight: 500 }}>
-            ✓ 14-day free trial &nbsp;·&nbsp; ✓ No credit card &nbsp;·&nbsp; ✓ Cancel anytime
-          </p>
+          <motion.button
+            whileHover={{ scale: 1.04 }}
+            whileTap={{ scale: 0.96 }}
+            onClick={openSignUp}
+            className="px-8 py-3.5 rounded-xl text-base font-semibold inline-flex items-center gap-2 shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#fff', border: '1px solid rgba(124,58,237,0.3)' }}
+          >
+            Start Free Trial
+            <ChevronRight size={18} />
+          </motion.button>
+        </motion.div>
+      </section>
+
+      {/* NEWSLETTER */}
+      <section data-reveal="newsletter" className="py-10 px-4" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <div className="max-w-md mx-auto text-center">
+          <p className="text-sm font-medium mb-3" style={{ color: '#a78bfa' }}>Stay up to date</p>
+          <form onSubmit={handleNewsletter} className="flex gap-2">
+            <input
+              type="email"
+              value={newsEmail}
+              onChange={e => setNewsEmail(e.target.value)}
+              placeholder="you@company.com"
+              className="flex-1 px-4 py-2.5 rounded-xl text-sm outline-none"
+              style={{ background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', border: '1px solid rgba(255,255,255,0.08)' }}
+            />
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              type="submit"
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)', color: '#fff' }}
+            >
+              Subscribe
+            </motion.button>
+          </form>
         </div>
       </section>
 
-      {/* ══════════ 13. FOOTER — DARK ══════════ */}
-      <footer style={{ background: C.darkBg, borderTop: `1px solid ${C.darkBorder}`, padding: '72px 48px 0' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.6fr', gap: 48, marginBottom: 56 }}>
-
-            {/* Brand column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ height: 36, width: 36, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${C.violet}44` }}>
-                  <Activity size={17} color={C.white} strokeWidth={2.5} />
-                </div>
-                <span style={{ fontSize: 18, fontWeight: 900, color: C.white }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
-              </div>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', fontWeight: 500, lineHeight: 1.75, margin: 0, maxWidth: 280 }}>
-                The AI-powered CRM built for high-growth sales teams. Close more deals, faster.
-              </p>
-              {/* Real SVG social icons */}
-              <div style={{ display: 'flex', gap: 10 }}>
-                {/* GitHub */}
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                  </svg>
-                </a>
-                {/* Twitter / X */}
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                </a>
-                {/* LinkedIn */}
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                  </svg>
-                </a>
-              </div>
+      {/* FOOTER */}
+      <footer className="py-12 px-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 mb-10">
+          {Object.entries(footerLinks).map(([category, links]) => (
+            <div key={category}>
+              <h4 className="text-sm font-semibold mb-3" style={{ color: '#e2e8f0' }}>{category}</h4>
+              <ul className="space-y-2">
+                {links.map(link => (
+                  <li key={link}>
+                    <a href="#" className="text-sm transition-colors" style={{ color: C.darkText }} onMouseEnter={e => (e.currentTarget.style.color = '#a78bfa')} onMouseLeave={e => (e.currentTarget.style.color = C.darkText)}>{link}</a>
+                  </li>
+                ))}
+              </ul>
             </div>
-
-            {/* Link columns */}
-            {Object.entries(footerLinks).map(([category, links]) => (
-              <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <p style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{category}</p>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
-                  {links.map(link => (
-                    <li key={link}>
-                      <button onClick={openSignUp} className="footer-link"
-                        style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.55)'; }}>
-                        {link}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-
-            {/* Newsletter */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Stay Updated</p>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 500, lineHeight: 1.65, margin: 0 }}>
-                Get weekly sales insights and Pulse product updates.
-              </p>
-              <form onSubmit={handleNewsletter} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <input
-                  type="email"
-                  value={newsEmail}
-                  onChange={e => setNewsEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  style={{ padding: '11px 14px', borderRadius: 10, border: `1.5px solid rgba(255,255,255,0.12)`, fontSize: 13, fontFamily: 'inherit', color: C.white, outline: 'none', background: '#1e293b', boxSizing: 'border-box', width: '100%' }}
-                />
-                <button type="submit"
-                  style={{ padding: '11px', background: C.violet, color: C.white, fontSize: 13, fontWeight: 700, borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-                  <Mail size={14} /> Subscribe
-                </button>
-              </form>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, margin: 0 }}>
-                No spam. Unsubscribe anytime.
-              </p>
-            </div>
-          </div>
-
-          {/* Bottom legal bar */}
-          <div style={{ borderTop: `1px solid ${C.darkBorder}`, padding: '22px 0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, margin: 0 }}>
-              © {new Date().getFullYear()} Pulse CRM, Inc. All rights reserved.
-            </p>
-            <div style={{ display: 'flex', gap: 20 }}>
-              {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Security'].map(link => (
-                <button key={link} onClick={openSignUp}
-                  style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, transition: 'color 0.15s' }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)'; }}>
-                  {link}
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
+        </div>
+        <div className="text-center text-xs" style={{ color: C.darkText }}>
+          &copy; {new Date().getFullYear()} KALNET PULSE CRM. MIT License. Built with FastAPI, PostgreSQL, Next.js, and GPT-4o.
         </div>
       </footer>
 
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
-        @keyframes fadeInUp { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes fadeInLeft { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes fadeInRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes scaleIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
-        @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
-        @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-        @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-        @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes borderPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.4); } 50% { box-shadow: 0 0 0 8px rgba(124,58,237,0); } }
-
-        .hero-left { animation: fadeInLeft 0.8s ease both; }
-        .hero-right { animation: fadeInRight 0.9s ease both; animation-delay: 0.15s; }
-        .hero-badge { animation: fadeInUp 0.6s ease both; }
-        .hero-h1 { animation: fadeInUp 0.7s ease both; animation-delay: 0.1s; }
-        .hero-sub { animation: fadeInUp 0.7s ease both; animation-delay: 0.2s; }
-        .hero-btns { animation: fadeInUp 0.7s ease both; animation-delay: 0.3s; }
-        .hero-trust { animation: fadeInUp 0.7s ease both; animation-delay: 0.4s; }
-        .mockup-float { animation: float 5s ease-in-out infinite; }
-
-        .stat-card { animation: countUp 0.6s ease both; }
-        .stat-card:nth-child(1) { animation-delay: 0.05s; }
-        .stat-card:nth-child(2) { animation-delay: 0.15s; }
-        .stat-card:nth-child(3) { animation-delay: 0.25s; }
-        .stat-card:nth-child(4) { animation-delay: 0.35s; }
-
-        .feature-card { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
-        .feature-card:hover { transform: translateY(-6px); box-shadow: 0 20px 48px rgba(124,58,237,0.12) !important; }
-
-        .testimonial-card { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
-        .testimonial-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.1) !important; }
-
-        .cta-btn-primary { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
-        .cta-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(124,58,237,0.5) !important; }
-        .cta-btn-secondary { transition: all 0.2s ease; }
-        .cta-btn-secondary:hover { transform: translateY(-2px); background: rgba(255,255,255,0.2) !important; }
-
-        .nav-btn:hover { background: #f5f3ff !important; color: #7c3aed !important; }
-        .orbit-node { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
-        .orbit-node:hover { transform: scale(1.1) !important; }
-
-        .trusted-logo { transition: all 0.2s ease; }
-        .trusted-logo:hover { color: #7c3aed !important; }
-
-        .footer-link:hover { color: #ffffff !important; padding-left: 4px; }
-        .footer-link { transition: all 0.15s ease; }
-
-        .announce-bar { background: linear-gradient(90deg, #f5f3ff, #ede9fe, #f5f3ff); background-size: 200% auto; animation: shimmer 3s linear infinite; }
-
-        * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-      `}</style>
-
+      {/* AUTH MODAL */}
+      {isModalOpen && (
+        <AuthModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onLogin={onLogin}
+        />
+      )}
     </div>
   );
 }
-
