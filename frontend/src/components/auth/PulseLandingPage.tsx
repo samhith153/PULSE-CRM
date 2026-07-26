@@ -283,7 +283,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       )}
 
       {/* ══════════ NAVBAR ══════════ */}
-      <Navbar onOpenModal={() => setIsModalOpen(true)} />
+      <Navbar onOpenModal={() => setIsModalOpen(true)} onOpenSignUp={() => setIsModalOpen(true)} />
 
       {/* ══════════ 1. HERO SECTION ══════════ */}
       <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, #f5f3ff 0%, #faf9ff 40%, #ffffff 100%)', padding: '72px 48px 80px', marginTop: 64 }}>

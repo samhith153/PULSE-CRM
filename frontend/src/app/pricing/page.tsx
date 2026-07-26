@@ -103,7 +103,7 @@ function PricingContent() {
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#f3f0ff', minHeight: '100vh', marginTop: -64 }}>
-      <Navbar onOpenModal={openModal} />
+      <Navbar onOpenModal={() => openModal('signin')} onOpenSignUp={() => openModal('signup')} />
 
       {/* ── HEADER ── */}
       <section style={{ paddingTop: 120, paddingBottom: 64, textAlign: 'center', background: '#f3f0ff' }}>

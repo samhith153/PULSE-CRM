@@ -87,19 +87,49 @@ function AnimatedCounter({ value, duration = 2000 }: { value: string; duration?:
 /* ─── Inline Auth Modal ──────────────────────────── */
 type Role = 'representative' | 'manager' | 'admin';
 
-function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [email, setEmail]       = useState('');
+function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolean; onClose: () => void; defaultMode?: 'signin' | 'signup' }) {
+  const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
+  const [name, setName] = useState('');
+  const [orgName, setOrgName] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole]         = useState<Role>('manager');
-  const [loading, setLoading]   = useState(false);
+  const [role, setRole] = useState<Role>('manager');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
+    if (!email || !password || (mode === 'signup' && (!name || !orgName))) {
+      setError('Please fill in all fields');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => { setLoading(false); onClose(); }, 1200);
+    setError('');
+
+    try {
+      const { setToken } = await import('@/utils/api');
+      if (mode === 'signup') {
+        const { register } = await import('@/utils/api');
+        const result = await register(name, email, password, orgName);
+        setToken(result.access_token);
+      } else {
+        const { login } = await import('@/utils/api');
+        const result = await login(email, password);
+        setToken(result.token);
+      }
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pulse-crm-auth', 'true');
+        localStorage.setItem('pulse-crm-role', role);
+        localStorage.setItem('pulse-crm-user', name || role);
+      }
+      onClose();
+      window.location.href = '/';
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed.');
+      setLoading(false);
+    }
   };
 
   const handleGoogle = () => {
@@ -113,19 +143,20 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
     { value: 'representative', label: 'Sales Rep' },
   ];
 
+  const isSignin = mode === 'signin';
+  const switchMode = () => { setMode(isSignin ? 'signup' : 'signin'); setError(''); };
+
   return (
     <div style={{ position:'fixed', inset:0, zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(15,23,42,0.65)', backdropFilter:'blur(6px)', padding:16 }}
       onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
         style={{ background:'#fff', borderRadius:24, width:'100%', maxWidth:440, padding:'40px 40px 36px', boxShadow:'0 32px 80px rgba(0,0,0,0.22)', position:'relative' }}>
 
-        {/* close */}
         <button onClick={onClose}
           style={{ position:'absolute', top:18, right:18, background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:10, width:34, height:34, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
           <X size={16} color="#64748b" />
         </button>
 
-        {/* brand */}
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
           <div style={{ height:36, width:36, borderRadius:10, background:'#7c3aed', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(124,58,237,0.35)' }}>
             <Activity size={17} color="#fff" strokeWidth={2.5} />
@@ -135,10 +166,16 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
           </span>
         </div>
 
-        <h2 style={{ fontSize:24, fontWeight:800, color:'#0f172a', margin:'0 0 4px', letterSpacing:'-0.02em' }}>Welcome back</h2>
-        <p style={{ fontSize:14, color:'#94a3b8', fontWeight:500, margin:'0 0 24px' }}>Sign in to your account to continue.</p>
+        <h2 style={{ fontSize:24, fontWeight:800, color:'#0f172a', margin:'0 0 4px', letterSpacing:'-0.02em' }}>{isSignin ? 'Welcome back' : 'Create your account'}</h2>
+        <p style={{ fontSize:14, color:'#94a3b8', fontWeight:500, margin:'0 0 24px' }}>{isSignin ? 'Sign in to your account to continue.' : 'Get started with PulseCRM in seconds.'}</p>
 
-        {/* role selector */}
+        {error && (
+          <div style={{ padding:'12px 16px', background:'#fef2f2', border:'1px solid #fecaca', borderRadius:10, marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
+            <div style={{ height:6, width:6, borderRadius:'50%', background:'#dc2626', flexShrink:0 }} />
+            <span style={{ fontSize:13, color:'#991b1b', fontWeight:600 }}>{error}</span>
+          </div>
+        )}
+
         <p style={{ fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.08em', margin:'0 0 10px' }}>Select your role</p>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:22 }}>
           {ROLES.map(r => (
@@ -150,39 +187,52 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
         </div>
 
         <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:14 }}>
-          {/* email */}
+          {mode === 'signup' && (
+            <>
+              <div>
+                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#475569', marginBottom:6 }}>Full name</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="John Doe" required
+                  style={{ width:'100%', padding:'11px 14px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff' }}
+                  onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                  onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#475569', marginBottom:6 }}>Company name</label>
+                <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="Acme Corp" required
+                  style={{ width:'100%', padding:'11px 14px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff' }}
+                  onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                  onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
+              </div>
+            </>
+          )}
           <div>
             <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#475569', marginBottom:6 }}>Email address</label>
             <div style={{ position:'relative' }}>
               <Mail size={15} color="#94a3b8" style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="you@company.com" required
-                style={{ width:'100%', padding:'11px 14px 11px 40px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff', transition:'border-color .15s' }}
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" required
+                style={{ width:'100%', padding:'11px 14px 11px 40px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff' }}
                 onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
             </div>
           </div>
-
-          {/* password */}
           <div>
             <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#475569', marginBottom:6 }}>Password</label>
             <div style={{ position:'relative' }}>
               <Lock size={15} color="#94a3b8" style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="••••••••" required
-                style={{ width:'100%', padding:'11px 14px 11px 40px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff', transition:'border-color .15s' }}
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
+                style={{ width:'100%', padding:'11px 14px 11px 40px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff' }}
                 onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
             </div>
           </div>
-
-          <div style={{ display:'flex', justifyContent:'flex-end' }}>
-            <button type="button" style={{ fontSize:12, fontWeight:600, color:'#7c3aed', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>Forgot password?</button>
-          </div>
-
+          {isSignin && (
+            <div style={{ display:'flex', justifyContent:'flex-end' }}>
+              <button type="button" style={{ fontSize:12, fontWeight:600, color:'#7c3aed', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>Forgot password?</button>
+            </div>
+          )}
           <button type="submit" disabled={loading}
-            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px', background: loading ? '#9b72f0' : '#7c3aed', color:'#fff', fontSize:15, fontWeight:700, borderRadius:12, border:'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit', transition:'all .15s', boxShadow:'0 6px 20px rgba(124,58,237,0.35)' }}>
-            {loading ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite' }} /> Signing in…</> : 'Sign In'}
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px', background: loading ? '#9b72f0' : '#7c3aed', color:'#fff', fontSize:15, fontWeight:700, borderRadius:12, border:'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit', boxShadow:'0 6px 20px rgba(124,58,237,0.35)' }}>
+            {loading ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite' }} /> {isSignin ? 'Signing in\u2026' : 'Creating account\u2026'}</> : isSignin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
 
@@ -193,7 +243,7 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
         </div>
 
         <button onClick={handleGoogle} disabled={loading}
-          style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'12px', background:'#fff', border:'1.5px solid #e2e8f0', borderRadius:12, fontSize:14, fontWeight:700, color:'#0f172a', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 2px 8px rgba(0,0,0,0.06)', transition:'all .15s' }}
+          style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'12px', background:'#fff', border:'1.5px solid #e2e8f0', borderRadius:12, fontSize:14, fontWeight:700, color:'#0f172a', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}
           onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#7c3aed'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; }}>
           <svg width="18" height="18" viewBox="0 0 24 24">
@@ -206,8 +256,10 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
         </button>
 
         <p style={{ textAlign:'center', fontSize:12, color:'#94a3b8', margin:'18px 0 0' }}>
-          No account?{' '}
-          <button onClick={onClose} style={{ fontSize:12, fontWeight:700, color:'#7c3aed', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>Sign up free</button>
+          {isSignin ? "No account? " : "Already have an account? "}
+          <button onClick={switchMode} style={{ fontSize:12, fontWeight:700, color:'#7c3aed', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+            {isSignin ? 'Sign up free' : 'Sign in'}
+          </button>
         </p>
       </div>
       <style>{`@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }`}</style>
@@ -217,12 +269,13 @@ function AuthModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
 export default function FeaturePage({ data }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'signin' | 'signup'>('signup');
   const accent       = data.accent       ?? '#7c3aed';
   const accentBg     = data.accentBg     ?? '#f5f3ff';
   const accentBorder = data.accentBorder ?? '#ede9fe';
   const BadgeIcon    = data.badgeIcon;
 
-  const openModal = () => setModalOpen(true);
+  const openModal = (mode?: 'signin' | 'signup') => { setModalMode(mode || 'signin'); setModalOpen(true); };
 
   // Animation variants
   const pageTransition = {
@@ -253,8 +306,8 @@ export default function FeaturePage({ data }: Props) {
       variants={pageTransition}
       transition={{ duration: 0.4 }}
       style={{ fontFamily:"'Inter',system-ui,sans-serif", background:'#fff', minHeight:'100vh', color:'#0f172a' }}>
-      <Navbar onOpenModal={openModal} />
-      <AuthModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      <Navbar onOpenModal={() => openModal('signin')} onOpenSignUp={() => openModal('signup')} />
+      <AuthModal key={modalMode} defaultMode={modalMode} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
 
       {/* ── HERO ─────────────────────────────────────── */}
       <motion.section 
