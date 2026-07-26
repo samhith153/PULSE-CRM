@@ -50,6 +50,10 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   const [password, setPassword] = useState('');
   const [newsEmail, setNewsEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState<Role>('manager');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signup');
+  const [authName, setAuthName] = useState('');
+  const [authOrg, setAuthOrg] = useState('');
+  const [authError, setAuthError] = useState('');
   const [orbitAngle, setOrbitAngle] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [activeOrbitNode, setActiveOrbitNode] = useState<string | null>(null);
@@ -118,25 +122,38 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   };
 
-  const handleLogin = async () => {
-    if (!email || !password) { addToast('Please fill in all fields.', 'error'); return; }
+  const handleAuth = async () => {
+    if (!email || !password || (authMode === 'signup' && (!authName || !authOrg))) {
+      setAuthError('Please fill in all fields.');
+      return;
+    }
     setIsLoading(true);
+    setAuthError('');
     try {
-      const result = await apiLogin(email, password);
-      setToken(result.token);
+      const { setToken } = await import('@/utils/api');
+      if (authMode === 'signup') {
+        const { register } = await import('@/utils/api');
+        const result = await register(authName, email, password, authOrg);
+        setToken(result.access_token);
+      } else {
+        const result = await apiLogin(email, password);
+        setToken(result.token);
+      }
       setIsLoading(false);
       setIsModalOpen(false);
       setEmail('');
       setPassword('');
-      addToast('Signed in successfully!', 'success');
+      setAuthName('');
+      setAuthOrg('');
+      addToast(authMode === 'signup' ? 'Account created!' : 'Signed in successfully!', 'success');
       onLogin(selectedRole);
     } catch (err: any) {
       setIsLoading(false);
-      addToast(err.message || 'Login failed. Please try again.', 'error');
+      setAuthError(err.message || 'Authentication failed.');
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); handleLogin(); };
+  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); handleAuth(); };
 
   const handleNewsletter = (e: React.FormEvent) => {
     e.preventDefault();
@@ -214,7 +231,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         ))}
       </div>
 
-      {/* ══════════ LOGIN MODAL ══════════ */}
+      {/* ══════════ AUTH MODAL (signin/signup) ══════════ */}
       {isModalOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)' }}
           onClick={() => setIsModalOpen(false)}>
@@ -228,8 +245,14 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               </div>
               <span style={{ fontSize: 15, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 800, color: C.black, margin: '0 0 2px', letterSpacing: '-0.02em' }}>Welcome back</h2>
-            <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: '0 0 16px' }}>Sign in to your account to continue.</p>
+            <h2 style={{ fontSize: 20, fontWeight: 800, color: C.black, margin: '0 0 2px', letterSpacing: '-0.02em' }}>{authMode === 'signin' ? 'Welcome back' : 'Create your account'}</h2>
+            <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: '0 0 16px' }}>{authMode === 'signin' ? 'Sign in to your account to continue.' : 'Get started with PulseCRM in seconds.'}</p>
+            {authError && (
+              <div style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ height: 6, width: 6, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
+                <span style={{ fontSize: 11, color: '#991b1b', fontWeight: 600 }}>{authError}</span>
+              </div>
+            )}
             <p style={{ fontSize: 10, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Select your role</p>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 16 }}>
               {(['admin', 'manager', 'representative'] as Role[]).map(r => (
@@ -240,6 +263,20 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               ))}
             </div>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {authMode === 'signup' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.textGray, marginBottom: 4 }}>Full name</label>
+                    <input type="text" value={authName} onChange={e => setAuthName(e.target.value)} placeholder="John Doe" required
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: `1.5px solid ${C.border}`, fontSize: 13, fontFamily: 'inherit', color: C.black, outline: 'none', boxSizing: 'border-box', background: C.white }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.textGray, marginBottom: 4 }}>Company name</label>
+                    <input type="text" value={authOrg} onChange={e => setAuthOrg(e.target.value)} placeholder="Acme Corp" required
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: 8, border: `1.5px solid ${C.border}`, fontSize: 13, fontFamily: 'inherit', color: C.black, outline: 'none', boxSizing: 'border-box', background: C.white }} />
+                  </div>
+                </>
+              )}
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: C.textGray, marginBottom: 4 }}>Email address</label>
                 <div style={{ position: 'relative' }}>
@@ -256,12 +293,14 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                     style={{ width: '100%', padding: '9px 12px 9px 34px', borderRadius: 8, border: `1.5px solid ${C.border}`, fontSize: 13, fontFamily: 'inherit', color: C.black, outline: 'none', boxSizing: 'border-box', background: C.white }} />
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                <button type="button" style={{ fontSize: 11, fontWeight: 600, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
-              </div>
+              {authMode === 'signin' && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                  <button type="button" style={{ fontSize: 11, fontWeight: 600, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
+                </div>
+              )}
               <button type="submit" disabled={isLoading}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px', background: isLoading ? '#9b72f0' : C.violet, color: C.white, fontSize: 13, fontWeight: 700, borderRadius: 10, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: `0 6px 20px ${C.violet}44` }}>
-                {isLoading ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Signing in...</> : 'Sign In'}
+                {isLoading ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> {authMode === 'signin' ? 'Signing in...' : 'Creating account...'}</> : authMode === 'signin' ? 'Sign In' : 'Create Account'}
               </button>
             </form>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '14px 0' }}>
@@ -275,15 +314,17 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               Continue with Google
             </button>
             <p style={{ textAlign: 'center', fontSize: 11, color: C.textMuted, margin: '14px 0 0' }}>
-              No account?{' '}
-              <button onClick={() => setIsModalOpen(false)} style={{ fontSize: 12, fontWeight: 700, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Sign up free</button>
+              {authMode === 'signin' ? "No account? " : "Already have an account? "}
+              <button onClick={() => { setAuthMode(authMode === 'signin' ? 'signup' : 'signin'); setAuthError(''); }} style={{ fontSize: 12, fontWeight: 700, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {authMode === 'signin' ? 'Sign up free' : 'Sign in'}
+              </button>
             </p>
           </div>
         </div>
       )}
 
       {/* ══════════ NAVBAR ══════════ */}
-      <Navbar onOpenModal={() => setIsModalOpen(true)} onOpenSignUp={() => setIsModalOpen(true)} />
+      <Navbar onOpenModal={() => { setAuthMode('signin'); setIsModalOpen(true); }} onOpenSignUp={() => { setAuthMode('signup'); setIsModalOpen(true); }} />
 
       {/* ══════════ 1. HERO SECTION ══════════ */}
       <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, #f5f3ff 0%, #faf9ff 40%, #ffffff 100%)', padding: '72px 48px 80px', marginTop: 64 }}>
