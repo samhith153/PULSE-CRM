@@ -62,6 +62,12 @@ class LeadStatusUpdateRequest(BaseModel):
     )
 
 
+class LeadConvertRequest(BaseModel):
+    industry: Optional[str] = Field(default=None, max_length=100)
+    revenue: Optional[str] = Field(default=None, max_length=50)
+    employee_count: Optional[int] = Field(default=None, ge=0)
+
+
 class LeadResponse(BaseModel):
     id: UUID
     title: str
