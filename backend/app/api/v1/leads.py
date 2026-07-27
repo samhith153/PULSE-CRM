@@ -19,6 +19,7 @@ from app.schemas.common import PaginatedResponse, StandardResponse
 from app.schemas.lead import (
     LeadAssignRequest,
     LeadCreateRequest,
+    LeadConvertRequest,
     LeadResponse,
     LeadStatusUpdateRequest,
     LeadUpdateRequest,
@@ -166,9 +167,20 @@ async def convert_lead(
     lead_id: UUID,
     current_user: CurrentUser,
     db: DBSession,
+    payload: Optional[LeadConvertRequest] = None,
 ) -> dict:
     svc = LeadService(db)
-    deal = await svc.convert_to_deal(lead_id, current_user.organization_id, current_user.id)
+    industry = payload.industry if payload else None
+    revenue = payload.revenue if payload else None
+    employee_count = payload.employee_count if payload else None
+    deal = await svc.convert_to_deal(
+        lead_id,
+        current_user.organization_id,
+        current_user.id,
+        industry=industry,
+        revenue=revenue,
+        employee_count=employee_count,
+    )
     return {"success": True, "message": "Lead converted to deal.", "data": DealResponse.model_validate(deal)}
 
 
