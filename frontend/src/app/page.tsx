@@ -66,7 +66,7 @@ export default function DashboardHome() {
   };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | string>('dashboard');
   const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('representative');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -76,7 +76,15 @@ export default function DashboardHome() {
     if (savedRole && ['representative', 'manager', 'admin'].includes(savedRole)) {
       setUserRole(savedRole);
     }
+    const savedTab = localStorage.getItem('pulse-crm-active-tab');
+    if (savedTab) {
+      setActiveTab(savedTab);
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('pulse-crm-active-tab', activeTab);
+  }, [activeTab]);
 
   const handleSetUserRole = (role: 'representative' | 'manager' | 'admin') => {
     setUserRole(role);
@@ -147,8 +155,22 @@ export default function DashboardHome() {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <Loader2 className="h-8 w-8 text-brand-accent animate-spin" />
+      <div className="min-h-screen w-full flex bg-slate-50 antialiased">
+        <div className="w-16 shrink-0 bg-white border-r border-slate-100" />
+        <div className="flex-1 p-6 md:p-8 space-y-6">
+          <div className="h-10 bg-slate-100 rounded-xl w-48 animate-pulse" />
+          <div className="h-px bg-slate-100" />
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-9 space-y-6">
+              <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />
+              <div className="h-48 bg-slate-100 rounded-xl animate-pulse" />
+            </div>
+            <div className="col-span-12 lg:col-span-3 space-y-6">
+              <div className="h-40 bg-slate-100 rounded-xl animate-pulse" />
+              <div className="h-40 bg-slate-100 rounded-xl animate-pulse" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -184,7 +206,21 @@ export default function DashboardHome() {
 
         {/* Dashboard inner scroll view with increased whitespace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-          {activeTab === 'leads' ? (
+          {isLoading ? (
+            <div className="space-y-6 animate-pulse">
+              <div className="h-10 bg-slate-100 rounded-xl w-56" />
+              <div className="grid grid-cols-12 gap-6">
+                <div className="col-span-12 lg:col-span-9 space-y-6">
+                  <div className="h-40 bg-slate-100 rounded-xl" />
+                  <div className="h-56 bg-slate-100 rounded-xl" />
+                </div>
+                <div className="col-span-12 lg:col-span-3 space-y-6">
+                  <div className="h-36 bg-slate-100 rounded-xl" />
+                  <div className="h-36 bg-slate-100 rounded-xl" />
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (
             <ContactsView />
