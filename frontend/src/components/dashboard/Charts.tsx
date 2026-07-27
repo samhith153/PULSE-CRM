@@ -147,7 +147,12 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
 
             {/* SVG Line Graph - Visually Lighter */}
             <div className="relative h-56 w-full mt-4">
-              <svg className="w-full h-full" viewBox="0 0 550 200" preserveAspectRatio="none">
+              <svg 
+                className="w-full h-full overflow-visible" 
+                viewBox="0 0 550 200" 
+                preserveAspectRatio="none"
+                onMouseLeave={() => setRevenueHoveredPoint(null)}
+              >
                 <defs>
                   <linearGradient id="revenue-gradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#7e71f9" stopOpacity="0.12" />
@@ -191,19 +196,11 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                       <circle
                         cx={pt.x}
                         cy={pt.y}
-                        r={isHovered ? "5" : "2"}
+                        r={isHovered ? "6" : "3"}
                         fill={isHovered ? "#FFFFFF" : "#7957fb"}
                         stroke="#7957fb"
                         strokeWidth={isHovered ? "3.5" : "0"}
-                        className="cursor-pointer transition-all duration-150"
-                        onMouseEnter={() => {
-                          setRevenueHoveredPoint({
-                            x: pt.x,
-                            y: pt.y,
-                            label: pt.name + ", 2025",
-                            value: pt.value
-                          });
-                        }}
+                        className="transition-all duration-200 pointer-events-none"
                       />
                       <text
                         x={pt.x}
@@ -219,7 +216,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
 
                 {/* Tooltip Overlay */}
                 {revenueHoveredPoint && (
-                  <g>
+                  <g className="pointer-events-none">
                     <line
                       x1={revenueHoveredPoint.x}
                       y1={revenueHoveredPoint.y}
@@ -229,19 +226,48 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                       strokeWidth="1"
                       strokeDasharray="3,3"
                     />
+                    <circle
+                      cx={revenueHoveredPoint.x}
+                      cy={revenueHoveredPoint.y}
+                      r="10"
+                      fill="#7957fb"
+                      fillOpacity="0.15"
+                      className="animate-ping"
+                    />
                     <foreignObject
                       x={revenueHoveredPoint.x - 60}
-                      y={revenueHoveredPoint.y - 60}
+                      y={revenueHoveredPoint.y - 65}
                       width="120"
-                      height="50"
+                      height="55"
                     >
-                      <div className="bg-slate-900 border border-slate-850 rounded-lg p-1.5 shadow-lg text-center select-none">
+                      <div className="bg-slate-900 border border-slate-800 rounded-lg p-1.5 shadow-lg text-center select-none animate-in fade-in zoom-in-95 duration-150">
                         <p className="text-[8px] font-bold text-slate-400">{revenueHoveredPoint.label}</p>
                         <p className="text-xs font-extrabold text-white tabular-nums leading-tight">{revenueHoveredPoint.value}</p>
                       </div>
                     </foreignObject>
                   </g>
                 )}
+
+                {/* Transparent Interceptors for Column-Based Hovering */}
+                {revenuePoints.map((pt, idx) => (
+                  <rect
+                    key={`hover-interceptor-${idx}`}
+                    x={pt.x - 37.5}
+                    y="0"
+                    width="75"
+                    height="180"
+                    fill="transparent"
+                    className="cursor-pointer"
+                    onMouseEnter={() => {
+                      setRevenueHoveredPoint({
+                        x: pt.x,
+                        y: pt.y,
+                        label: pt.name + ", 2025",
+                        value: pt.value
+                      });
+                    }}
+                  />
+                ))}
               </svg>
             </div>
           </div>

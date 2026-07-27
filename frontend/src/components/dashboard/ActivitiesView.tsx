@@ -1,9 +1,17 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { AlertCircle, Calendar, CheckSquare, Clock, FileText, GitPullRequest, Loader2, Mail, Phone, RefreshCw, Search, UserPlus } from 'lucide-react';
-import { ActivityTimelineItem, getActivities } from '@/utils/api';
-import TasksView from './TasksView';
+import React, { useState } from 'react';
+import { 
+  Clock, 
+  Mail, 
+  Phone, 
+  Calendar, 
+  UserPlus, 
+  FileText, 
+  GitPullRequest,
+  Search,
+  ListFilter
+} from 'lucide-react';
 import CalendarView from './CalendarView';
 
 type MainTab = 'timeline' | 'tasks' | 'calendar';
@@ -43,9 +51,19 @@ function iconFor(action: string) {
 }
 
 export default function ActivitiesView() {
-  const [mainTab, setMainTab] = useState<MainTab>('timeline');
-  const [activityTab, setActivityTab] = useState<ActivityTab>('all');
-  const [activities, setActivities] = useState<ActivityTimelineItem[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<'audit' | 'calendar'>('audit');
+  
+  const [logs] = useState<ActivityLog[]>([
+    { id: 1, type: 'note', title: 'Internal Note Added', desc: 'Alex Rivera: Interested in enterprise migration plan.', user: 'Sarah Johnson', time: '10 mins ago', dateKey: 'today' },
+    { id: 2, type: 'email', title: 'Proposal Email Sent', desc: 'Subject: Cloud migration specs and security SLAs', user: 'Sarah Johnson', time: '2 hours ago', dateKey: 'today' },
+    { id: 3, type: 'meeting', title: 'Meeting Scheduled: Security Review', desc: 'Date: May 20, 2025 at 10:00 AM', user: 'Alex Johnson', time: '1 day ago', dateKey: 'week' },
+    { id: 4, type: 'call', title: 'Call Logged: Outbound Discovery', desc: 'Outcome: Spoke with Marcus Aurelius. Compliance checklist discussed.', user: 'Alex Johnson', time: '3 days ago', dateKey: 'week' },
+    { id: 5, type: 'stage_change', title: 'Deal Moved to Proposal', desc: 'Database Cloud Migration moved from Contacted to Proposal.', user: 'System', time: '4 days ago', dateKey: 'week' },
+    { id: 6, type: 'creation', title: 'New Lead Ingested', desc: 'Helena Troy registered via custom enterprise contact form.', user: 'System', time: '1 week ago', dateKey: 'month' },
+    { id: 7, type: 'call', title: 'Call Outcome: Busy', desc: 'Tried calling David Hume. Cold nurturing assigned.', user: 'David Wilson', time: '2 weeks ago', dateKey: 'month' }
+  ]);
+
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -88,20 +106,28 @@ export default function ActivitiesView() {
   return (
     <div className="space-y-6">
       <div className="flex space-x-1.5 p-1 bg-brand-sidebar-hover/15 border border-brand-border-purple/20 rounded-xl w-fit">
-        {[
-          { id: 'timeline', label: 'Activity Timeline', icon: Clock },
-          { id: 'tasks', label: 'Tasks Workspace', icon: CheckSquare },
-          { id: 'calendar', label: 'Calendar', icon: Calendar }
-        ].map(tab => {
-          const Icon = tab.icon;
-          const active = mainTab === tab.id;
-          return (
-            <button key={tab.id} onClick={() => setMainTab(tab.id as MainTab)} className={`py-1.5 px-4 rounded-lg font-extrabold text-xs transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${active ? 'bg-brand-accent text-white shadow-sm' : 'text-brand-text/75 hover:text-brand-heading hover:bg-brand-sidebar-hover/20'}`}>
-              <Icon className="h-3.5 w-3.5" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
+        <button
+          onClick={() => setActiveSubTab('audit')}
+          className={`py-1.5 px-4 rounded-lg font-extrabold text-xs transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'audit' 
+              ? 'bg-brand-accent text-white shadow-sm' 
+              : 'text-brand-text/75 hover:text-brand-heading hover:bg-brand-sidebar-hover/20'
+          }`}
+        >
+          <ListFilter className="h-3.5 w-3.5" />
+          <span>Audit Logs</span>
+        </button>
+        <button
+          onClick={() => setActiveSubTab('calendar')}
+          className={`py-1.5 px-4 rounded-lg font-extrabold text-xs transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+            activeSubTab === 'calendar' 
+              ? 'bg-brand-accent text-white shadow-sm' 
+              : 'text-brand-text/75 hover:text-brand-heading hover:bg-brand-sidebar-hover/20'
+          }`}
+        >
+          <Calendar className="h-3.5 w-3.5" />
+          <span>Calendar</span>
+        </button>
       </div>
 
       {mainTab === 'timeline' && (
@@ -161,8 +187,7 @@ export default function ActivitiesView() {
         </div>
       )}
 
-      {mainTab === 'tasks' && <TasksView />}
-      {mainTab === 'calendar' && <CalendarView />}
+      {activeSubTab === 'calendar' && <CalendarView />}
     </div>
   );
 }
