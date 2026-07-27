@@ -1,15 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
-
-if (typeof globalThis !== 'undefined' && !(globalThis as any).isEmpty) {
-  (globalThis as any).isEmpty = function(obj: any): boolean {
-    if (obj == null) return true;
-    if (Array.isArray(obj) || typeof obj === 'string') return obj.length === 0;
-    if (typeof obj === 'object') return Object.keys(obj).length === 0;
-    return false;
-  };
-}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -36,6 +28,14 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <Script
+        id="isEmpty-polyfill"
+        beforeInteractive={true}
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `if(typeof window!=='undefined'&&!window.isEmpty){window.isEmpty=function(o){if(o==null)return true;if(Array.isArray(o)||typeof o==='string')return o.length===0;if(typeof o==='object')return Object.keys(o).length===0;return false;};}`,
+        }}
+      />
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
