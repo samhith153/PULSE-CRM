@@ -87,9 +87,9 @@ export default function SalesRepsPage() {
 
       <Statistics
         stats={[
-          { value: '0–100', label: 'AI Lead Score', description: 'Every lead scored with a transparent, explainable reason' },
-          { value: 'Gmail', label: 'OAuth2 Sync', description: 'Full thread history synced and linked to your deals' },
-          { value: 'Groq', label: 'Email Summaries', description: 'Llama 3.3-70B analyses threads and suggests next steps' },
+          { value: '2.1×', label: 'More Deals Closed', description: 'Reps with AI close twice as many deals' },
+          { value: '45min', label: 'Admin Saved Daily', description: 'Automated logging eliminates busywork' },
+          { value: '8.2h', label: 'Saved Per Week', description: 'Total time savings from automation' },
         ]}
       />
 

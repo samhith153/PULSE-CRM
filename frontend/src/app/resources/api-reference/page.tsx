@@ -5,26 +5,18 @@ import { PageContainer } from '@/components/shared/PageTemplates';
 import { Code, CheckCircle } from 'lucide-react';
 
 const ENDPOINTS = [
-  { method: 'GET',  path: '/api/v1/health',              desc: 'Health check + ping',                    tag: 'Health' },
-  { method: 'POST', path: '/api/v1/auth/login',           desc: 'Email + password → JWT tokens',          tag: 'Auth' },
-  { method: 'POST', path: '/api/v1/auth/register',        desc: 'Create new user account',                tag: 'Auth' },
-  { method: 'POST', path: '/api/v1/auth/refresh',         desc: 'Refresh access token',                   tag: 'Auth' },
-  { method: 'GET',  path: '/api/v1/dashboard',            desc: 'Role-scoped KPI metrics',                tag: 'Dashboard' },
-  { method: 'GET',  path: '/api/v1/companies',            desc: 'List companies (paginated + search)',     tag: 'Companies' },
-  { method: 'POST', path: '/api/v1/companies',            desc: 'Create a new company',                   tag: 'Companies' },
-  { method: 'GET',  path: '/api/v1/contacts',             desc: 'List contacts (paginated + search)',      tag: 'Contacts' },
-  { method: 'POST', path: '/api/v1/contacts',             desc: 'Create a new contact',                   tag: 'Contacts' },
-  { method: 'GET',  path: '/api/v1/leads',                desc: 'List leads with AI scores',               tag: 'Leads' },
-  { method: 'POST', path: '/api/v1/leads/{id}/assign',    desc: 'Assign lead to a user',                  tag: 'Leads' },
-  { method: 'POST', path: '/api/v1/leads/{id}/convert',   desc: 'Convert lead to deal',                   tag: 'Leads' },
-  { method: 'GET',  path: '/api/v1/deals',                desc: 'List all pipeline deals',                 tag: 'Deals' },
-  { method: 'GET',  path: '/api/v1/pipeline',             desc: 'Pipeline stages overview',                tag: 'Pipeline' },
-  { method: 'GET',  path: '/api/v1/activities',           desc: 'List logged activities (timeline)',       tag: 'Activities' },
-  { method: 'GET',  path: '/api/v1/gmail',                desc: 'Gmail OAuth connect / sync',              tag: 'Gmail' },
-  { method: 'POST', path: '/api/v1/emails',               desc: 'Send email via SMTP or Gmail',            tag: 'Emails' },
-  { method: 'GET',  path: '/api/v1/ai',                   desc: 'AI score, summary & recommendation',      tag: 'AI' },
-  { method: 'GET',  path: '/api/v1/timeline',             desc: 'Full activity timeline for an entity',    tag: 'Timeline' },
-  { method: 'POST', path: '/api/v1/webhooks',             desc: 'Register / manage webhook endpoints',     tag: 'Webhooks' },
+  { method: 'GET', path: '/api/v1/dashboard', desc: 'KPI metrics for current user', tag: 'Dashboard' },
+  { method: 'GET', path: '/api/v1/companies', desc: 'List all companies (paginated)', tag: 'Companies' },
+  { method: 'POST', path: '/api/v1/companies', desc: 'Create a new company', tag: 'Companies' },
+  { method: 'GET', path: '/api/v1/contacts', desc: 'List all contacts (paginated)', tag: 'Contacts' },
+  { method: 'POST', path: '/api/v1/contacts', desc: 'Create a new contact', tag: 'Contacts' },
+  { method: 'GET', path: '/api/v1/leads', desc: 'List leads with AI scores', tag: 'Leads' },
+  { method: 'POST', path: '/api/v1/leads', desc: 'Create lead and trigger AI', tag: 'Leads' },
+  { method: 'GET', path: '/api/v1/deals', desc: 'List all pipeline deals', tag: 'Deals' },
+  { method: 'POST', path: '/api/v1/deals', desc: 'Create new deal', tag: 'Deals' },
+  { method: 'GET', path: '/api/v1/activities', desc: 'List logged activities', tag: 'Activities' },
+  { method: 'POST', path: '/api/v1/ai/score/{id}', desc: 'Get AI lead score', tag: 'AI' },
+  { method: 'POST', path: '/api/v1/ai/draft-email', desc: 'Generate email draft', tag: 'AI' },
 ];
 
 const METHOD_COLORS: Record<string, { bg: string; color: string }> = {
@@ -86,9 +78,9 @@ export default function APIReferencePage() {
 
           <div style={{ marginTop: 48, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
             {[
-              { icon: CheckCircle, title: 'Swagger UI at /docs', desc: 'Try all endpoints live with JWT bearer auth in the browser' },
-              { icon: Code, title: 'ReDoc at /redoc', desc: 'Clean OpenAPI 3.0 reference with full request/response schemas' },
-              { icon: CheckCircle, title: 'JWT Bearer Auth', desc: 'Every protected endpoint requires Authorization: Bearer <token>' },
+              { icon: CheckCircle, title: 'Interactive Swagger', desc: 'Try endpoints live at /api/docs' },
+              { icon: Code, title: 'OpenAPI 3.0 Spec', desc: 'Download spec to generate SDKs' },
+              { icon: CheckCircle, title: 'Webhook Events', desc: 'Real-time event subscriptions' },
             ].map(({ icon: Icon, title, desc }, i) => (
               <motion.div
                 key={i}

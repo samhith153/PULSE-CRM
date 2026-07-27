@@ -7,7 +7,6 @@ Seeds:      Permissions → Roles → Organization → Admin user →
             Sample Companies → Sample Contacts → Sample Leads
 """
 import asyncio
-import os
 from datetime import datetime, timezone
 
 from sqlalchemy import select
@@ -190,7 +189,7 @@ async def seed_sample_users(
         u = User(
             email=email,
             full_name=full_name,
-            hashed_password=hash_password(os.getenv("SEED_USER_PASSWORD", "Demo@123456")),
+            hashed_password=hash_password("Demo@123456"),
             organization_id=org.id,
             is_verified=True,
             is_active=True,

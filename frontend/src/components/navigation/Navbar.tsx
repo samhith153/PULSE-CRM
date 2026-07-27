@@ -18,31 +18,31 @@ interface NavbarProps {
 
 /* ─── Dropdown content definitions ──────────────────── */
 const PRODUCT_ITEMS = [
-  { icon: LayoutDashboard, label: 'Visual Pipeline',     desc: 'FSM deal stages: New → Qualified → Proposal → Negotiation → Won',  href: '/product/visual-pipeline' },
-  { icon: Sparkles,        label: 'AI Scoring & Copilot', desc: 'Rule-based lead scoring (0–100) + Groq/Llama email summarization', href: '/product/ai-copilot' },
-  { icon: BarChart2,       label: 'Revenue Analytics',   desc: 'Live dashboards, pipeline value, rep leaderboards & forecasts',    href: '/product/revenue-analytics' },
-  { icon: Mail,            label: 'Email Intelligence',  desc: 'Gmail OAuth sync, thread logging & email-to-deal linking',        href: '/product/email-intelligence' },
-  { icon: Workflow,        label: 'Next-Best-Action',    desc: 'Rule-based recommendation engine — follow-up, demo, proposal',    href: '/product/automation' },
-  { icon: Shield,          label: 'Security & RBAC',     desc: '3 roles, 33 permissions, JWT auth & bcrypt passwords',            href: '/product/security-rbac' },
+  { icon: LayoutDashboard, label: 'Visual Pipeline',     desc: 'Drag-and-drop deal boards with stage tracking',  href: '/product/visual-pipeline' },
+  { icon: Sparkles,        label: 'AI Copilot',          desc: 'GPT-4o lead scoring, summaries & email drafts',  href: '/product/ai-copilot' },
+  { icon: BarChart2,       label: 'Revenue Analytics',   desc: 'Live forecasts, funnels & rep leaderboards',     href: '/product/revenue-analytics' },
+  { icon: Mail,            label: 'Email Intelligence',  desc: 'Gmail/Outlook sync with thread timelines',       href: '/product/email-intelligence' },
+  { icon: Workflow,        label: 'Automation',          desc: 'No-code workflows, routing & webhooks',          href: '/product/automation' },
+  { icon: Shield,          label: 'Security & RBAC',     desc: 'SOC 2, SSO/SAML & 33 granular permissions',     href: '/product/security-rbac' },
 ];
 
 const SOLUTIONS_ITEMS = [
-  { icon: Users,     label: 'Sales Representatives', desc: 'AI-scored leads, Gmail sync & next-best-action recommendations', href: '/solutions/sales-reps' },
-  { icon: BarChart2, label: 'Sales Managers',        desc: 'Full pipeline visibility, activity timelines & role-scoped dashboards', href: '/solutions/sales-managers' },
-  { icon: Building2, label: 'Enterprise',            desc: 'Multi-tenant RBAC, audit-ready schema & async FastAPI backend',  href: '/solutions/enterprise' },
-  { icon: Rocket,    label: 'Startups',              desc: 'Live in minutes — seed data, JWT auth & 40+ REST endpoints ready', href: '/solutions/startups' },
-  { icon: Briefcase, label: 'Agencies',              desc: 'Multi-org support with per-tenant data isolation',               href: '/solutions/agencies' },
-  { icon: Target,    label: 'RevOps Teams',          desc: 'RBAC, Brevo/SMTP email, webhooks & cross-functional reporting',  href: '/solutions/revops' },
+  { icon: Users,     label: 'Sales Representatives', desc: 'Close more deals with AI-drafted emails & scoring', href: '/solutions/sales-reps' },
+  { icon: BarChart2, label: 'Sales Managers',        desc: 'Full pipeline visibility & team performance',       href: '/solutions/sales-managers' },
+  { icon: Building2, label: 'Enterprise',            desc: 'SSO, audit logs, SLA & unlimited seats',           href: '/solutions/enterprise' },
+  { icon: Rocket,    label: 'Startups',              desc: 'Launch in 2 minutes, scale without re-platforming', href: '/solutions/startups' },
+  { icon: Briefcase, label: 'Agencies',              desc: 'Multi-client pipelines with white-labelling',      href: '/solutions/agencies' },
+  { icon: Target,    label: 'RevOps Teams',          desc: 'RBAC, integrations & cross-functional reporting',  href: '/solutions/revops' },
 ];
 
 
 const RESOURCES_ITEMS = [
-  { icon: BookOpen,       label: 'Documentation',        desc: 'Setup guides, architecture overview & configuration',          href: '/resources/documentation' },
-  { icon: Code,           label: 'API Reference',        desc: '40+ REST endpoints with Swagger UI at /docs and /redoc',      href: '/resources/api-reference' },
-  { icon: Wrench,         label: 'Implementation Guide', desc: 'Docker setup, migrations, seed data & test credentials',      href: '/resources/implementation-guide' },
-  { icon: FileText,       label: 'Blog',                 desc: 'AI scoring deep-dives, CRM architecture & sales strategy',    href: '/resources/blog' },
-  { icon: MessageCircle,  label: 'Community',            desc: 'Connect with developers and sales teams building on Pulse',   href: '/resources/community' },
-  { icon: HelpCircle,     label: 'Support',              desc: 'Get help from our team — bugs, integrations, or setup',       href: '/resources/support' },
+  { icon: BookOpen,       label: 'Documentation',       desc: 'Guides for every feature & integration',           href: '/resources/documentation' },
+  { icon: Code,           label: 'API Reference',       desc: '40+ REST endpoints with interactive Swagger UI',   href: '/resources/api-reference' },
+  { icon: Wrench,         label: 'Implementation Guide', desc: 'Step-by-step setup & best practices',             href: '/resources/implementation-guide' },
+  { icon: FileText,       label: 'Blog',                desc: 'Sales strategy, AI in CRM & product updates',      href: '/resources/blog' },
+  { icon: MessageCircle,  label: 'Community',           desc: 'Join 5,000+ sales pros in our Slack community',    href: '/resources/community' },
+  { icon: HelpCircle,     label: 'Support',             desc: 'Get help from our support team',                   href: '/resources/support' },
 ];
 
 type DropdownItem = { icon: React.ElementType; label: string; desc: string; href: string };
@@ -246,7 +246,7 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
             <span style={{ fontSize: 19, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em' }}>Pulse</span>
             <span style={{ fontSize: 19, fontWeight: 900, color: '#7c3aed', letterSpacing: '-0.03em', marginLeft: -4 }}>CRM</span>
             <span className="logo-tagline" style={{ fontSize: 9, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.14em', marginLeft: 4 }}>
-              RULE-BASED AI · GROQ/LLAMA
+              AI REVENUE ENGINE
             </span>
           </button>
 

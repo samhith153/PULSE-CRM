@@ -15,7 +15,6 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onSuccess }: AuthModalProps) {
   const [mode, setMode] = useState<ModalMode>(defaultMode);
-  const [unavailableMsg, setUnavailableMsg] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,7 +41,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
         setToken(result.access_token);
       } else {
         const result = await login(email, password);
-        setToken(result.access_token);
+        setToken(result.token);
       }
 
       if (typeof window !== 'undefined') {
@@ -179,8 +178,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
           <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 500, whiteSpace: 'nowrap' }}>or continue with</span>
           <div style={{ flex: 1, height: 1, background: '#e2e8f0' }} />
         </div>
-        {unavailableMsg && <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#b91c1c', marginBottom: 8 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{unavailableMsg}</div>}
-        <button onClick={() => { setUnavailableMsg('Feature unavailable'); setTimeout(() => setUnavailableMsg(''), 3000); }} disabled={loading}
+        <button onClick={() => { setLoading(true); setTimeout(() => { setLoading(false); onClose(); }, 1200); }} disabled={loading}
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '11px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 13, fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s' }}>
           <svg width="17" height="17" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

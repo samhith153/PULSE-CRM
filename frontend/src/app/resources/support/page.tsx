@@ -7,30 +7,30 @@ import { Headphones, MessageCircle, Mail, Phone, Clock, CheckCircle, Zap, ArrowR
 const SUPPORT_OPTIONS = [
   {
     icon: MessageCircle,
-    title: 'GitHub Issues',
-    description: 'Report bugs and request features on the public repository. Best for technical issues.',
-    availability: 'Open source',
-    responseTime: 'Community-driven',
+    title: 'Live Chat',
+    description: 'Get instant help from our support team in real-time.',
+    availability: '24/7 Available',
+    responseTime: 'Average: 2 mins',
     color: '#7c3aed',
-    cta: 'Open Issue',
+    cta: 'Start Chat',
   },
   {
     icon: Mail,
     title: 'Email Support',
-    description: 'Send detailed setup questions, integration problems, or feedback to our team.',
-    availability: 'Mon–Fri',
-    responseTime: 'Within 1–2 business days',
+    description: 'Send us detailed questions and get comprehensive answers.',
+    availability: 'Mon-Fri 9AM-6PM',
+    responseTime: 'Average: 4 hours',
     color: '#2563eb',
     cta: 'Send Email',
   },
   {
     icon: Phone,
-    title: 'API Docs (Self-serve)',
-    description: 'Interactive Swagger UI at /docs and ReDoc at /redoc — try any endpoint live with your token.',
-    availability: 'Always available',
-    responseTime: 'Instant',
+    title: 'Phone Support',
+    description: 'Speak directly with our technical experts for urgent issues.',
+    availability: 'Enterprise Only',
+    responseTime: 'Immediate',
     color: '#059669',
-    cta: 'Open /docs',
+    cta: 'Call Now',
   },
 ];
 
@@ -56,12 +56,12 @@ const SUPPORT_RESOURCES = [
 ];
 
 const SUPPORT_FEATURES = [
-  'Implementation guide included',
-  'JWT + RBAC setup walkthrough',
-  'Docker + PostgreSQL configuration',
-  'Seeded test data & credentials',
-  'API integration guidance',
-  'Alembic migration support',
+  'Priority ticket routing',
+  'Dedicated account manager',
+  'Custom SLA agreements',
+  'Onboarding & training',
+  'API integration support',
+  'Regular health checks',
 ];
 
 export default function SupportPage() {
@@ -107,7 +107,7 @@ export default function SupportPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
-            {['JWT + RBAC auth', 'FastAPI + PostgreSQL', 'Swagger UI at /docs'].map((feature, i) => (
+            {['99.9% Uptime SLA', '24/7 Monitoring', 'Enterprise Support'].map((feature, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 100 }}>
                 <CheckCircle size={14} color="#059669" />
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{feature}</span>
@@ -174,10 +174,10 @@ export default function SupportPage() {
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}>
             <h2 style={{ fontSize: 40, fontWeight: 900, color: '#fff', lineHeight: 1.2, letterSpacing: '-0.03em', marginBottom: 16 }}>
-              Setup & Integration Help
+              Enterprise Support
             </h2>
             <p style={{ fontSize: 16, color: '#94a3b8', lineHeight: 1.7, marginBottom: 32 }}>
-              Need help getting the backend running, integrating Gmail OAuth, or wiring up the AI scoring engine? Our setup guide covers all of it.
+              Get dedicated support tailored to your organization's needs with premium SLAs and personalized assistance.
             </p>
             <button 
               onClick={handleContactSales}
