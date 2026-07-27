@@ -75,6 +75,76 @@ interface Lead {
   meetings: MeetingItem[];
 }
 
+// ==================== SVG Line Chart Component ====================
+function LeadActivityChart({ leads }: { leads: any[] }) {
+  const W = 700;
+  const H = 120;
+  const PAD = { top: 10, right: 10, bottom: 20, left: 30 };
+  const chartW = W - PAD.left - PAD.right;
+  const chartH = H - PAD.top - PAD.bottom;
+
+  const dates: string[] = [];
+  const counts: number[] = [];
+  const now = new Date();
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    dates.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    let count = 0;
+    leads.forEach(l => {
+      if (l.timeline) {
+        l.timeline.forEach(t => {
+          const tLower = (t.time || '').toLowerCase();
+          if (i === 0 && tLower.includes('just now')) count++;
+          if (i === 0 && tLower.includes('today')) count++;
+          if (i === 1 && tLower.includes('yesterday')) count++;
+          const match = tLower.match(/(\d+)\s+day/);
+          if (match && parseInt(match[1]) === i) count++;
+        });
+      }
+    });
+    counts.push(count || (i === 0 ? Math.max(leads.length, 1) : 0));
+  }
+
+  const maxVal = Math.max(...counts, 1);
+  const points = counts.map((c, i) => {
+    const x = PAD.left + (i / Math.max(counts.length - 1, 1)) * chartW;
+    const y = PAD.top + chartH - (c / maxVal) * chartH;
+    return `${x},${y}`;
+  }).join(' ');
+
+  const areaPoints = `${PAD.left},${PAD.top + chartH} ${points} ${PAD.left + chartW},${PAD.top + chartH}`;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-32" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#6366f1" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#6366f1" stopOpacity="0.02" />
+        </linearGradient>
+      </defs>
+      {[0, 0.25, 0.5, 0.75, 1].map(pct => (
+        <line key={pct} x1={PAD.left} y1={PAD.top + chartH * (1 - pct)} x2={W - PAD.right} y2={PAD.top + chartH * (1 - pct)} stroke="#e2e8f0" strokeWidth="0.5" />
+      ))}
+      <polygon points={areaPoints} fill="url(#chartGrad)" />
+      <polyline points={points} fill="none" stroke="#6366f1" strokeWidth="2" strokeLinejoin="round" />
+      {counts.map((c, i) => {
+        const x = PAD.left + (i / Math.max(counts.length - 1, 1)) * chartW;
+        const y = PAD.top + chartH - (c / maxVal) * chartH;
+        return <circle key={i} cx={x} cy={y} r="3" fill="#6366f1" />;
+      })}
+      {dates.map((d, i) => {
+        const x = PAD.left + (i / Math.max(dates.length - 1, 1)) * chartW;
+        return (
+          <text key={i} x={x} y={H - 2} textAnchor="middle" fontSize="8" fill="#94a3b8" fontFamily="sans-serif">
+            {d}
+          </text>
+        );
+      })}
+    </svg>
+  );
+}
+
 export default function LeadsView() {
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([
@@ -171,8 +241,8 @@ export default function LeadsView() {
     }
   ]);
 
-  // View Mode: table vs priority
-  const [viewMode, setViewMode] = useState<'table' | 'priority'>('table');
+  // Switch: show score-based priority view when enabled
+  const [showPriorityView, setShowPriorityView] = useState(false);
 
   // Summary card state (click to open, double-click to close)
   const [summaryLeadId, setSummaryLeadId] = useState<number | string | null>(null);
@@ -191,6 +261,9 @@ export default function LeadsView() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [convertLeadId, setConvertLeadId] = useState<number | string | null>(null);
+  const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employees: '' });
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
@@ -305,16 +378,37 @@ export default function LeadsView() {
     return sizeMap[companyName] || "Medium";
   };
 
-  // Filtered Leads list
-  const filteredLeads = leads.filter(l => {
-    const matchesSearch = l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          l.company.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || l.status === statusFilter;
-    const matchesPriority = priorityFilter === 'All' || l.priority === priorityFilter;
-    return matchesSearch && matchesStatus && matchesPriority;
-  });
+   // Filtered Leads list
+   const filteredLeads = leads.filter(l => {
+     const matchesSearch = l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                           l.company.toLowerCase().includes(searchQuery.toLowerCase());
+     const matchesStatus = statusFilter === 'All' || l.status === statusFilter;
+     const matchesPriority = priorityFilter === 'All' || l.priority === priorityFilter;
+     return matchesSearch && matchesStatus && matchesPriority;
+   });
 
-  // Action: Create Lead Submit
+   // Score-based priority view helpers
+   const getEngagementScore = (lead: Lead) => {
+     let score = 0;
+     if (lead.emails && lead.emails.length > 0) {
+       score += lead.emails.length * 5;
+       lead.emails.forEach(e => {
+         if (e.subject?.toLowerCase().includes('re:')) score += 15;
+       });
+     }
+     if (lead.calls && lead.calls.length > 0) score += lead.calls.length * 10;
+     if (lead.meetings && lead.meetings.length > 0) score += lead.meetings.length * 15;
+     if (lead.timeline && lead.timeline.length > 0) score += lead.timeline.length * 3;
+     return Math.min(score, 100);
+   };
+
+   const sortedLeadsByScore = [...filteredLeads].sort((a, b) => {
+     const aScore = Math.round(a.score * 0.6 + getEngagementScore(a) * 0.4);
+     const bScore = Math.round(b.score * 0.6 + getEngagementScore(b) * 0.4);
+     return bScore - aScore;
+   });
+
+   // Action: Create Lead Submit
   const handleCreateLead = (e: React.FormEvent) => {
     e.preventDefault();
     const newLead: Lead = {
@@ -379,19 +473,38 @@ export default function LeadsView() {
 
   // Action: Convert Lead (Updates status to Converted)
   const handleConvertLead = (id: number) => {
-    setLeads(leads.map(l => {
-      if (l.id === id) {
-        return {
-          ...l,
-          status: 'Converted' as const,
-          timeline: [
-            { id: Date.now(), type: 'conversion', title: 'Lead Converted', desc: 'Converted to active Account & Deal pipeline opportunity.', time: 'Just now' },
-            ...l.timeline
-          ]
-        };
-      }
-      return l;
-    }));
+    setConvertLeadId(id);
+    setConvertForm({ industry: '', revenue: '', employees: '' });
+    setIsConvertModalOpen(true);
+  };
+
+  const handleConvertLeadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!convertLeadId) return;
+    try {
+      await convertLead(convertLeadId, {
+        industry: convertForm.industry,
+        revenue: Number(convertForm.revenue) || 0,
+        employees: Number(convertForm.employees) || 0
+      });
+      setLeads(leads.map(l => {
+        if (l.id === convertLeadId) {
+          return {
+            ...l,
+            status: 'Converted' as const,
+            timeline: [
+              { id: Date.now(), type: 'conversion', title: 'Lead Converted', desc: `Converted to Account. Industry: ${convertForm.industry}, Revenue: ${convertForm.revenue}, Employees: ${convertForm.employees}.`, time: 'Just now' },
+              ...l.timeline
+            ]
+          };
+        }
+        return l;
+      }));
+      setIsConvertModalOpen(false);
+      setConvertLeadId(null);
+    } catch (err) {
+      console.error('Convert lead failed:', err);
+    }
   };
 
   // Action: Send Email Submit
@@ -504,30 +617,16 @@ export default function LeadsView() {
       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
         {/* Header Row */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <div>
+          <div className="flex items-center gap-3">
             <h2 className="font-sans text-2xl text-brand-heading font-bold">Sales Leads</h2>
-            <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Manage prospects, monitor qualification scores, and trigger follow-ups.</p>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={showPriorityView} onChange={(e) => setShowPriorityView(e.target.checked)} className="sr-only peer" />
+              <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-accent" />
+              <span className="ml-2 text-[10px] font-extrabold text-brand-text/70">Priority View</span>
+            </label>
           </div>
+          <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Manage prospects, monitor qualification scores, and trigger follow-ups.</p>
           <div className="flex items-center gap-2">
-            {/* View Mode Toggle */}
-            <div className="flex space-x-0.5 p-0.5 bg-brand-sidebar-hover/15 border border-brand-border-purple/20 rounded-lg">
-              <button
-                onClick={() => setViewMode('table')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
-                  viewMode === 'table' ? 'bg-white text-brand-heading shadow-sm' : 'text-brand-text/60 hover:text-brand-heading'
-                }`}
-              >
-                Table
-              </button>
-              <button
-                onClick={() => setViewMode('priority')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
-                  viewMode === 'priority' ? 'bg-white text-brand-heading shadow-sm' : 'text-brand-text/60 hover:text-brand-heading'
-                }`}
-              >
-                Priority
-              </button>
-            </div>
             <button 
               onClick={() => {
                 setLeadForm({ name: '', company: '', email: '', phone: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
@@ -583,8 +682,14 @@ export default function LeadsView() {
             </div>
           </div>
 
+          {/* === SVG LINE CHART === */}
+          <div className="mb-4 bg-slate-50/50 rounded-xl p-4 border border-brand-border-purple/10">
+            <h3 className="text-[10px] font-extrabold uppercase tracking-wider text-brand-text/50 mb-2">Lead Activity Timeline</h3>
+            <LeadActivityChart leads={leads} />
+          </div>
+
           {/* === TABLE VIEW === */}
-          {viewMode === 'table' && (
+          {!showPriorityView && (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left">
                 <thead>
@@ -726,88 +831,84 @@ export default function LeadsView() {
             </div>
           )}
 
-          {/* === PRIORITY VIEW === */}
-          {viewMode === 'priority' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-              {(['High', 'Medium', 'Low'] as const).map((priority) => {
-                const priorityLeads = filteredLeads.filter(l => l.priority === priority);
-                return (
-                  <div key={priority} className="border border-brand-border-purple/20 rounded-xl bg-slate-50/30 p-4 min-h-[300px]">
-                    <div className="flex items-center justify-between pb-3 border-b border-brand-border-purple/15 mb-3">
-                      <h3 className={`text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5 ${
-                        priority === 'High' ? 'text-rose-700' :
-                        priority === 'Medium' ? 'text-amber-700' : 'text-slate-500'
-                      }`}>
-                        <span className={`h-2.5 w-2.5 rounded-full ${
-                          priority === 'High' ? 'bg-rose-500' :
-                          priority === 'Medium' ? 'bg-amber-500' : 'bg-slate-400'
-                        }`} />
-                        {priority}
-                      </h3>
-                      <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full tabular-nums ${
-                        priority === 'High' ? 'bg-rose-50 text-rose-700' :
-                        priority === 'Medium' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {priorityLeads.length}
-                      </span>
-                    </div>
-                    <div className="space-y-3">
-                      {priorityLeads.length > 0 ? priorityLeads.map(lead => (
-                        <div 
-                          key={lead.id}
-                          onClick={() => setSummaryLeadId(lead.id === summaryLeadId ? null : lead.id)}
-                          onDoubleClick={() => setSummaryLeadId(null)}
-                          className={`bg-white border rounded-xl p-3.5 cursor-pointer transition-all hover:shadow-sm ${
-                            lead.id === summaryLeadId ? 'border-brand-accent ring-1 ring-brand-accent/20' : 'border-brand-border-purple/20'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <h4 className="text-xs font-extrabold text-brand-heading">{lead.name}</h4>
-                              <p className="text-[10px] text-brand-text/60 font-semibold">{lead.company}</p>
-                            </div>
-                            <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                              lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
-                              lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
-                            }`}>
-                              {lead.score}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-[9px] font-bold">
-                            <span className={`px-1.5 py-0.5 rounded-full ${
-                              lead.status === 'New' ? 'text-blue-750 bg-blue-50' :
-                              lead.status === 'Contacted' ? 'text-yellow-750 bg-yellow-50' :
-                              lead.status === 'Qualified' ? 'text-purple-750 bg-purple-50' :
-                              lead.status === 'Converted' ? 'text-emerald-750 bg-emerald-50' : 'text-slate-500 bg-slate-100'
-                            }`}>
-                              {lead.status}
-                            </span>
-                            <span className="text-slate-400">{lead.owner.split(' ')[0]}</span>
-                            <span className="text-slate-300">•</span>
-                            <span className="text-slate-400">{lead.source || '—'}</span>
-                          </div>
-                          {/* Summary content when card is selected */}
-                          {lead.id === summaryLeadId && (
-                            <div className="mt-3 pt-3 border-t border-brand-border-purple/10 text-[10px] font-semibold text-brand-text/75 space-y-2">
-                              <p className="leading-relaxed">{lead.notes.substring(0, 100)}...</p>
-                              <div className="flex gap-1.5">
-                                <button onClick={(e) => { e.stopPropagation(); setEditLeadId(lead.id); setIsEmailModalOpen(true); }} className="px-2 py-1 border border-brand-border-purple/30 rounded text-[9px] font-extrabold hover:bg-slate-50">Email</button>
-                                <button onClick={(e) => { e.stopPropagation(); setEditLeadId(lead.id); setIsCallModalOpen(true); }} className="px-2 py-1 border border-brand-border-purple/30 rounded text-[9px] font-extrabold hover:bg-slate-50">Call</button>
-                                <button onClick={(e) => { e.stopPropagation(); setEditLeadId(lead.id); setIsMeetingModalOpen(true); }} className="px-2 py-1 border border-brand-border-purple/30 rounded text-[9px] font-extrabold hover:bg-slate-50">Meet</button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )) : (
-                        <p className="text-center text-slate-400 text-xs py-8 font-semibold">No {priority.toLowerCase()} priority leads.</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+          {/* === SCORE-BASED PRIORITY VIEW === */}
+          {showPriorityView && (
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-brand-heading pb-2">
+                    <th className="pb-2 text-left">Company Name</th>
+                    <th className="pb-2 text-center">Fit Score</th>
+                    <th className="pb-2 text-center">Engagement Score</th>
+                    <th className="pb-2 text-center">Overall Score</th>
+                    <th className="pb-2 text-left">Recommendation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedLeadsByScore.map(lead => {
+                    const fitScore = lead.score;
+                    const engagementScore = getEngagementScore(lead);
+                    const overallScore = Math.round(fitScore * 0.6 + engagementScore * 0.4);
+                    const recommendation = getAIRecommendation(lead);
+                    return (
+                      <tr key={lead.id} className="border-b border-brand-border-purple/10 hover:bg-slate-50/50 cursor-pointer" onClick={() => setSummaryLeadId(lead.id === summaryLeadId ? null : lead.id)}>
+                        <td className="py-2.5 pr-3">
+                          <div className="font-extrabold text-brand-heading text-xs">{lead.company}</div>
+                          <div className="text-[10px] text-brand-text/50 font-semibold">{lead.name}</div>
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className={`text-xs font-extrabold tabular-nums ${fitScore >= 80 ? 'text-emerald-700' : fitScore >= 60 ? 'text-amber-700' : 'text-rose-700'}`}>{fitScore}</span>
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className={`text-xs font-extrabold tabular-nums ${engagementScore >= 30 ? 'text-emerald-700' : engagementScore >= 15 ? 'text-amber-700' : 'text-rose-700'}`}>{engagementScore}</span>
+                        </td>
+                        <td className="py-2.5 px-2 text-center">
+                          <span className={`text-xs font-extrabold tabular-nums px-1.5 py-0.5 rounded ${overallScore >= 70 ? 'bg-emerald-50 text-emerald-700' : overallScore >= 40 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'}`}>{overallScore}</span>
+                        </td>
+                        <td className="py-2.5 pl-3 text-[10px] text-brand-text/70 font-semibold max-w-xs">{recommendation}</td>
+                      </tr>
+                    );
+                  })}
+                  {sortedLeadsByScore.length === 0 && (
+                    <tr><td colSpan={5} className="py-8 text-center text-slate-400 text-xs font-semibold">No leads to display.</td></tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-          )}
-        </div>
+       )}
+
+       {/* CONVERT LEAD DIALOG MODAL */}
+       {isConvertModalOpen && (
+         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
+               <h3 className="font-bold text-brand-heading text-sm">Convert Lead</h3>
+               <button onClick={() => setIsConvertModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+             </div>
+             <form onSubmit={handleConvertLeadSubmit} className="p-5 space-y-4">
+               <div>
+                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
+                 <input type="text" required placeholder="e.g. Software, Healthcare, Finance" value={convertForm.industry} onChange={(e) => setConvertForm({...convertForm, industry: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+               </div>
+               <div className="grid grid-cols-2 gap-4">
+                 <div>
+                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue ($)</label>
+                   <input type="number" required placeholder="e.g. 50000" value={convertForm.revenue} onChange={(e) => setConvertForm({...convertForm, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                 </div>
+                 <div>
+                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Employees</label>
+                   <input type="number" required placeholder="e.g. 50" value={convertForm.employees} onChange={(e) => setConvertForm({...convertForm, employees: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                 </div>
+               </div>
+               <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
+                 <button type="button" onClick={() => setIsConvertModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                 <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Convert</button>
+               </div>
+             </form>
+           </div>
+         </div>
+       )}
+     </div>
 
       {/* CREATE LEAD DIALOG MODAL */}
       {isCreateModalOpen && (

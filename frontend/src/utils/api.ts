@@ -364,7 +364,7 @@ export async function createLead(leadData: any): Promise<any> {
   });
 }
 
-export async function convertLead(leadId: string | number, payload: { name: string }): Promise<any> {
+export async function convertLead(leadId: string | number, payload: { name?: string; industry?: string; revenue?: number; employees?: number }): Promise<any> {
   return apiFetch(`/leads/${leadId}/convert`, {
     method: 'PUT',
     body: JSON.stringify(payload)
