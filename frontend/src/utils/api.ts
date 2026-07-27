@@ -346,7 +346,8 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 // --- Leads API ---
 export async function getLeads(): Promise<Lead[]> {
-  const dbLeads = await apiFetch<any[]>('/api/v1/leads');
+  const dbResult = await apiFetch<any>('/api/v1/leads');
+  const dbLeads: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbLeads.map((dl, idx) => {
     const fallback = MOCK_LEADS[idx] || MOCK_LEADS[0];
     return {
@@ -375,7 +376,8 @@ export async function convertLead(leadId: string | number, payload: { name: stri
 
 // --- Contacts API ---
 export async function getContacts(): Promise<Contact[]> {
-  const dbContacts = await apiFetch<any[]>('/api/v1/contacts');
+  const dbResult = await apiFetch<any>('/api/v1/contacts');
+  const dbContacts: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbContacts.map((dc, idx) => {
     const fallback = MOCK_CONTACTS[idx] || MOCK_CONTACTS[0];
     return {
@@ -398,7 +400,8 @@ export async function createContact(contactData: any): Promise<any> {
 
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
-  const dbCompanies = await apiFetch<any[]>('/api/v1/companies');
+  const dbResult = await apiFetch<any>('/api/v1/companies');
+  const dbCompanies: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbCompanies.map((dc, idx) => {
     const fallback = MOCK_COMPANIES[idx] || MOCK_COMPANIES[0];
     return {
@@ -420,7 +423,8 @@ export async function createCompany(companyData: any): Promise<any> {
 
 // --- Deals API ---
 export async function getDeals(): Promise<Deal[]> {
-  const dbDeals = await apiFetch<any[]>('/api/v1/deals');
+  const dbResult = await apiFetch<any>('/api/v1/deals');
+  const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbDeals.map((dd, idx) => {
     const fallback = MOCK_DEALS[idx] || MOCK_DEALS[0];
     return {
