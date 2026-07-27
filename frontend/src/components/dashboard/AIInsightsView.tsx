@@ -16,7 +16,9 @@ import {
   Target,
   Smile,
   Frown,
-  Meh
+  Meh,
+  Clock,
+  TrendingDown
 } from 'lucide-react';
 
 interface AILead {
@@ -82,67 +84,137 @@ export default function AIInsightsView() {
       {/* Main Grid split */}
       <div className="grid grid-cols-12 gap-6">
         
-        {/* Left Side: Score Distribution & Top Prospects (8 columns) */}
+        {/* Left Side: AI Action Center 4-Grid (8 columns) */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
           
-          {/* Top Leads */}
           <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
             <h3 className="font-extrabold text-brand-heading text-sm mb-4 flex items-center">
-              <Award className="h-4.5 w-4.5 mr-2 text-brand-accent" />
-              <span>Top CRM prospects</span>
+              <BrainCircuit className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+              <span>AI Action Center</span>
             </h3>
 
-            <div className="space-y-3.5">
-              {topLeads.map((lead, idx) => (
-                <div key={idx} className="p-4 border border-brand-border-purple/20 rounded-xl bg-slate-50/50 flex justify-between items-start">
-                  <div>
-                    <h4 className="text-xs font-extrabold text-brand-heading">{lead.name}</h4>
-                    <p className="text-[10px] text-brand-accent font-bold mt-0.5">{lead.company}</p>
-                    <p className="text-[10px] text-brand-text/75 mt-2 leading-relaxed font-semibold">{lead.reason}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Immediate Action */}
+              <div className="bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
+                <div>
+                  <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
+                    <h4 className="text-xs font-extrabold text-rose-600 uppercase tracking-wider flex items-center">
+                      <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+                      <span>Immediate Action</span>
+                    </h4>
+                    <span className="text-[9px] font-extrabold bg-rose-50 text-rose-700 px-1.5 py-0.5 rounded-full">
+                      P1 Urgent
+                    </span>
                   </div>
-                  <span className="text-xs font-extrabold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded tabular-nums shrink-0">
-                    Score: {lead.score}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Lead Score Distribution progress bars */}
-          <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
-            <h3 className="font-extrabold text-brand-heading text-sm mb-4 flex items-center">
-              <TrendingUp className="h-4.5 w-4.5 mr-2 text-brand-accent" />
-              <span>Lead Score Distribution</span>
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-[10px] font-extrabold text-brand-heading mb-1.5">
-                  <span>Hot Leads (Score 80+)</span>
-                  <span className="tabular-nums">2 leads</span>
-                </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '66%' }} />
+                  <div className="space-y-3">
+                    <div className="p-2.5 bg-white border border-rose-100 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-brand-heading">Helena Troy</span>
+                        <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">95 Score</span>
+                      </div>
+                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">High seat potential. Priority SLA requirements.</p>
+                    </div>
+                    <div className="p-2.5 bg-white border border-rose-100 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-brand-heading">Alex Rivera</span>
+                        <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">88 Score</span>
+                      </div>
+                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">SSO setup complete. Ready for NDA/Legal contract.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <div className="flex justify-between text-[10px] font-extrabold text-brand-heading mb-1.5">
-                  <span>Warm Nurturing (Score 50-79)</span>
-                  <span className="tabular-nums">1 lead</span>
-                </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '33%' }} />
+              {/* Follow Up Due */}
+              <div className="bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
+                <div>
+                  <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
+                    <h4 className="text-xs font-extrabold text-amber-600 uppercase tracking-wider flex items-center">
+                      <Clock className="h-3.5 w-3.5 mr-1.5" />
+                      <span>Follow Up Due</span>
+                    </h4>
+                    <span className="text-[9px] font-extrabold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">
+                      Missed
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-2.5 bg-white border border-amber-100 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-brand-heading">Sparta Creative</span>
+                        <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Overdue 3d</span>
+                      </div>
+                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Missed scheduled demo call. Immediate rescheduling required.</p>
+                    </div>
+                    <div className="p-2.5 bg-white border border-amber-100 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-brand-heading">TechCorp Inc.</span>
+                        <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Overdue 5d</span>
+                      </div>
+                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">No response to final pricing quote sent last week.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div>
-                <div className="flex justify-between text-[10px] font-extrabold text-brand-heading mb-1.5">
-                  <span>At-Risk / Cold (Score &lt;50)</span>
-                  <span className="tabular-nums">1 lead</span>
+              {/* Rising Interest */}
+              <div className="bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
+                <div>
+                  <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
+                    <h4 className="text-xs font-extrabold text-emerald-600 uppercase tracking-wider flex items-center">
+                      <Flame className="h-3.5 w-3.5 mr-1.5 animate-pulse" />
+                      <span>Rising Interest</span>
+                    </h4>
+                    <span className="text-[9px] font-extrabold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                      Spiking
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-2.5 bg-white border border-emerald-100 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-brand-heading">Marcus Aurelius</span>
+                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Score 78</span>
+                      </div>
+                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Engagement spiked 45%. Reviewing integrations documentation.</p>
+                    </div>
+                    <div className="p-2.5 bg-white border border-emerald-100 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-brand-heading">Empire Group</span>
+                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Score 74</span>
+                      </div>
+                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Opened product proposal email 5 times in the last 24h.</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-rose-500 rounded-full" style={{ width: '33%' }} />
+              </div>
+
+              {/* Going Cold */}
+              <div className="bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
+                <div>
+                  <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
+                    <h4 className="text-xs font-extrabold text-slate-500 uppercase tracking-wider flex items-center">
+                      <TrendingDown className="h-3.5 w-3.5 mr-1.5" />
+                      <span>Going Cold</span>
+                    </h4>
+                    <span className="text-[9px] font-extrabold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded-full">
+                      At Risk
+                    </span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-2.5 bg-white border border-slate-200 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-brand-heading">David Hume</span>
+                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Score 41</span>
+                      </div>
+                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">No response to follow-ups in 14d. Budget constraints cited.</p>
+                    </div>
+                    <div className="p-2.5 bg-white border border-slate-200 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-extrabold text-brand-heading">Liberty Corp</span>
+                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Score 35</span>
+                      </div>
+                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Inbound lead inactive for 21 days since discovery call.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
