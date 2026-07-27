@@ -1,14 +1,18 @@
 ﻿from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional
 
 import secrets
+from dotenv import find_dotenv, load_dotenv
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ = load_dotenv(find_dotenv())
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=Path(find_dotenv()) if find_dotenv() else ".env",
         env_file_encoding="utf-8-sig",
         case_sensitive=False,
         extra="ignore",
@@ -98,7 +102,10 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "json"
 
     FIRST_SUPERUSER_EMAIL: str = "admin@kalnet-pulse.com"
-    FIRST_SUPERUSER_PASSWORD: str = "Admin@123456"
+    FIRST_SUPERUSER_PASSWORD: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        description="Override via env FIRST_SUPERUSER_PASSWORD"
+    )
     FIRST_SUPERUSER_FULL_NAME: str = "System Administrator"
 
     @field_validator("DEBUG", mode="before")
