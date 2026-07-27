@@ -85,20 +85,50 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
   return (
     <div className="space-y-6">
       
-      {/* Report Builder Card - Styled using main accent and soft shadows */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 hover:-translate-y-0.5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300">
-        <h3 className="font-bold text-brand-heading text-sm">Report builder</h3>
-        <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-          Create custom reports with your own metrics and filters.
-        </p>
-        <button
-          onClick={onNewReportClick}
-          className="w-full mt-4 flex items-center justify-center space-x-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white py-2 px-4 rounded-lg text-xs font-bold shadow-sm/10 transition-all duration-200 cursor-pointer"
-        >
-          <Plus className="h-4 w-4" strokeWidth={2} />
-          <span>Create Custom Report</span>
-        </button>
-      </div>
+       {/* Report Builder Card */}
+       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 hover:-translate-y-0.5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300">
+         <div className="flex items-center justify-between mb-3">
+           <h3 className="font-bold text-brand-heading text-sm">Report builder</h3>
+           <span className="text-[9px] font-extrabold uppercase bg-brand-secondary-accent/20 text-brand-accent px-1.5 py-0.5 rounded">Builder</span>
+         </div>
+         <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+           Create custom reports with your own metrics and filters.
+         </p>
+
+         {/* Quick Templates */}
+         <div className="mt-4 space-y-2">
+           <p className="text-[9px] font-extrabold text-brand-text/50 uppercase tracking-wider">Quick Templates</p>
+           {[
+             { name: 'Sales Performance', desc: 'Revenue by team and region', icon: TrendingUp },
+             { name: 'Deal Pipeline', desc: 'Stage distribution and conversion', icon: FolderOpen },
+             { name: 'Activity Summary', desc: 'Calls, emails, and meetings', icon: Activity },
+           ].map((tpl, idx) => (
+             <button
+               key={idx}
+               onClick={onNewReportClick}
+               className="w-full flex items-center space-x-3 p-2.5 rounded-lg border border-brand-border-purple/15 hover:border-brand-border-purple/35 hover:bg-brand-sidebar-hover/10 transition-all duration-200 cursor-pointer group text-left"
+             >
+               <div className="h-7 w-7 rounded-lg bg-brand-sidebar-hover/15 flex items-center justify-center shrink-0 text-brand-accent group-hover:bg-brand-accent/15 transition-colors">
+                 <tpl.icon className="h-3.5 w-3.5" strokeWidth={1.75} />
+               </div>
+               <div className="flex-1 min-w-0">
+                 <h5 className="text-[11px] font-extrabold text-brand-heading leading-tight">{tpl.name}</h5>
+                 <p className="text-[9px] text-brand-text/50 mt-0.5 truncate">{tpl.desc}</p>
+               </div>
+             </button>
+           ))}
+         </div>
+
+         <div className="mt-4 pt-3 border-t border-brand-border-purple/15">
+           <button
+             onClick={onNewReportClick}
+             className="w-full flex items-center justify-center space-x-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white py-2 px-4 rounded-lg text-xs font-bold shadow-sm/10 transition-all duration-200 cursor-pointer"
+           >
+             <Plus className="h-4 w-4" strokeWidth={2} />
+             <span>Create Custom Report</span>
+           </button>
+         </div>
+       </div>
 
       {/* Key Metrics Summary - Polished layout with tabular values */}
       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 hover:-translate-y-0.5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300">

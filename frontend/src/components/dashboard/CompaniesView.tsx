@@ -99,6 +99,7 @@ export default function CompaniesView() {
   ]);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
+  const [summaryCompanyId, setSummaryCompanyId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -173,187 +174,101 @@ export default function CompaniesView() {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-6 items-start">
-      {/* Companies List */}
-      <div className={`col-span-12 ${active ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div>
-              <h2 className="font-sans text-2xl text-brand-heading font-bold">Companies</h2>
-              <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Monitor accounts, track revenue sizes, and view contact chains.</p>
-            </div>
-            <button 
-              onClick={() => {
-                setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
-                setIsAddModalOpen(true);
-              }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Company</span>
-            </button>
+    <div className="space-y-6">
+      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <h2 className="font-sans text-2xl text-brand-heading font-bold">Companies</h2>
+            <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Monitor accounts, track revenue sizes, and view contact chains.</p>
           </div>
+          <button 
+            onClick={() => {
+              setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
+              setIsAddModalOpen(true);
+            }}
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+          >
+            <Plus className="h-3.5 w-3.5" />
+            <span>Add Company</span>
+          </button>
+        </div>
 
-          <div className="relative mb-4">
-            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
-              <Search className="h-3.5 w-3.5" />
-            </span>
-            <input 
-              type="text" 
-              placeholder="Search companies..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
-            />
-          </div>
+        <div className="relative mb-4">
+          <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
+            <Search className="h-3.5 w-3.5" />
+          </span>
+          <input 
+            type="text" 
+            placeholder="Search companies..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
+          />
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
-                  <th className="pb-2">Company Name</th>
-                  <th className="pb-2">Industry</th>
-                  <th className="pb-2">Revenue</th>
-                  <th className="pb-2 text-center">Employees</th>
-                  <th className="pb-2 text-center">Open Deals</th>
-                  <th className="pb-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                {filtered.map((comp) => (
-                  <tr 
-                    key={comp.id}
-                    onClick={() => setSelectedId(comp.id)}
-                    className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${comp.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
-                  >
-                    <td className="py-3 font-extrabold text-brand-heading truncate max-w-[160px]">{comp.name}</td>
-                    <td className="py-3 text-brand-text/80 truncate max-w-[120px]">{comp.industry}</td>
-                    <td className="py-3 tabular-nums">{comp.revenue || '—'}</td>
-                    <td className="py-3 text-center tabular-nums">{comp.employees}</td>
-                    <td className="py-3 text-center tabular-nums">{comp.openDeals}</td>
-                    <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
-                      <div className="flex justify-end space-x-1">
-                        <button 
-                          onClick={() => {
-                            setForm({
-                              name: comp.name,
-                              industry: comp.industry,
-                              revenue: comp.revenue,
-                              employees: comp.employees,
-                              owner: comp.owner,
-                              notes: comp.notes
-                            });
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
+                <th className="pb-2">Company Name</th>
+                <th className="pb-2">Industry</th>
+                <th className="pb-2">Revenue</th>
+                <th className="pb-2 text-center">Employees</th>
+                <th className="pb-2 text-center">Open Deals</th>
+                <th className="pb-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
+              {filtered.map((comp) => {
+                const showSummary = comp.id === summaryCompanyId;
+                return (
+                  <React.Fragment key={comp.id}>
+                    <tr 
+                      onClick={() => setSummaryCompanyId(comp.id === summaryCompanyId ? null : comp.id)}
+                      onDoubleClick={() => setSummaryCompanyId(null)}
+                      className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${showSummary ? 'bg-brand-secondary-accent/10' : ''}`}
+                    >
+                      <td className="py-3 font-extrabold text-brand-heading truncate max-w-[160px]">{comp.name}</td>
+                      <td className="py-3 text-brand-text/80 truncate max-w-[120px]">{comp.industry}</td>
+                      <td className="py-3 tabular-nums">{comp.revenue || '—'}</td>
+                      <td className="py-3 text-center tabular-nums">{comp.employees}</td>
+                      <td className="py-3 text-center tabular-nums">{comp.openDeals}</td>
+                      <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-end space-x-1">
+                          <button 
+                            onClick={() => {
+                              setSelectedId(comp.id);
+                              setForm({
+                                name: comp.name,
+                                industry: comp.industry,
+                                revenue: comp.revenue,
+                                employees: comp.employees,
+                                owner: comp.owner,
+                                notes: comp.notes
+                              });
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {showSummary && (
+                      <tr>
+                        <td colSpan={6} className="pt-0 pb-4 px-0">
+                          <CompanySummaryCard comp={comp} onClose={() => setSummaryCompanyId(null)} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
-
-      {/* Details Side Panel */}
-      {active && <div className="col-span-12 lg:col-span-4 space-y-5">
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
-          <div className="flex items-center space-x-2.5 pb-3 border-b border-brand-border-purple/15">
-            <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
-              <Building2 className="h-4.5 w-4.5" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-brand-heading text-sm">{active.name}</h3>
-              <p className="text-[10px] text-brand-text/60 font-bold">{active.industry}</p>
-            </div>
-          </div>
-
-          <div className="py-3 space-y-2.5 text-[11px] font-semibold border-b border-brand-border-purple/15">
-            <div className="flex justify-between">
-              <span className="text-brand-text/50">Owner</span>
-              <span className="text-brand-text">{active.owner}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-brand-text/50">Revenue Size</span>
-              <span className="text-brand-text tabular-nums">{active.revenue || '—'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-brand-text/50">Employees</span>
-              <span className="text-brand-text tabular-nums">{active.employees}</span>
-            </div>
-          </div>
-
-          {/* Contacts list */}
-          <div className="py-3 border-b border-brand-border-purple/15">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Company Contacts</h4>
-              <button 
-                onClick={() => setIsAddContactModalOpen(true)}
-                className="text-brand-accent hover:text-brand-accent-hover inline-flex items-center space-x-0.5 text-[10px] font-bold cursor-pointer"
-              >
-                <PlusCircle className="h-3 w-3" />
-                <span>Add Link</span>
-              </button>
-            </div>
-            <div className="space-y-1.5">
-              {active.contacts.length > 0 ? (
-                active.contacts.map((c, i) => (
-                  <div key={i} className="text-[11px] text-brand-text font-bold flex items-center">
-                    <Users className="h-3 w-3 mr-1.5 text-brand-text/40" />
-                    {c}
-                  </div>
-                ))
-              ) : (
-                <p className="text-slate-400 text-[10px] font-semibold">No contacts linked yet.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Notes */}
-          <div className="py-3 border-b border-brand-border-purple/15">
-            <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">Notes</h4>
-            <p className="text-[11px] text-brand-text/80 leading-relaxed font-bold bg-slate-50/60 p-2 border border-brand-border-purple/20 rounded-lg">{active.notes || 'No internal notes saved.'}</p>
-          </div>
-
-          {/* Timeline & Files */}
-          <div className="pt-3 space-y-4">
-            <div>
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-2">Recent Timeline</h4>
-              <div className="space-y-2">
-                {active.timeline.map((item) => (
-                  <div key={item.id} className="text-[10px] font-semibold flex justify-between">
-                    <span className="text-brand-text/80">{item.title}</span>
-                    <span className="text-slate-400 font-bold">{item.time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-2">Uploaded Attachments</h4>
-              <div className="space-y-1.5">
-                {active.files.length > 0 ? (
-                  active.files.map((file) => (
-                    <div key={file.id} className="p-2 border border-brand-border-purple/15 rounded bg-slate-50/50 flex justify-between items-center text-[10px] font-semibold">
-                      <span className="flex items-center text-brand-heading font-extrabold">
-                        <Paperclip className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-                        {file.name}
-                      </span>
-                      <span className="text-slate-400">{file.size}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-slate-400 text-[10px] font-semibold">No files uploaded.</p>
-                )}
-              </div>
-            </div>
-        </div>
-      </div>
-      </div>}
 
       {/* Add Company Modal */}
       {isAddModalOpen && (
@@ -438,7 +353,7 @@ export default function CompaniesView() {
         </div>
       )}
 
-      {/* Add Contact Modal */}
+      {/* Link Contact Modal */}
       {isAddContactModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -459,6 +374,72 @@ export default function CompaniesView() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// -------------------- CompanySummaryCard Component --------------------
+function CompanySummaryCard({ comp, onClose }: { comp: Company; onClose: () => void }) {
+  return (
+    <div className="bg-white border border-brand-border-purple/20 rounded-xl p-4 shadow-sm/5 my-2 animate-in fade-in slide-in-from-top-2 duration-200">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <div className="h-8 w-8 rounded-lg bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
+            <Building2 className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-brand-heading text-sm">{comp.name}</h3>
+            <p className="text-[10px] text-brand-text/60 font-bold">{comp.industry}</p>
+          </div>
+        </div>
+        <button onClick={onClose} className="p-1 text-slate-400 hover:text-brand-text cursor-pointer"><X className="h-4 w-4" /></button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4 mb-3 text-[11px] font-semibold">
+        <div><span className="text-brand-text/50 block">Owner</span><span className="text-brand-text">{comp.owner}</span></div>
+        <div><span className="text-brand-text/50 block">Revenue</span><span className="text-brand-text tabular-nums">{comp.revenue || '—'}</span></div>
+        <div><span className="text-brand-text/50 block">Employees</span><span className="text-brand-text tabular-nums">{comp.employees}</span></div>
+      </div>
+
+      <div className="mb-3">
+        <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">Contacts</h4>
+        <div className="flex flex-wrap gap-1.5">
+          {comp.contacts.length > 0 ? comp.contacts.map((c, i) => (
+            <span key={i} className="text-[10px] font-bold bg-slate-50 border border-brand-border-purple/20 px-2 py-0.5 rounded-full">{c}</span>
+          )) : <span className="text-[10px] text-slate-400">No contacts linked.</span>}
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">Notes</h4>
+        <p className="text-[10px] text-brand-text/80 font-semibold bg-slate-50/60 p-2 border border-brand-border-purple/20 rounded-lg">{comp.notes || 'No notes saved.'}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">Timeline</h4>
+          <div className="space-y-1">
+            {comp.timeline.map(item => (
+              <div key={item.id} className="text-[10px] font-semibold flex justify-between">
+                <span className="text-brand-text/80">{item.title}</span>
+                <span className="text-slate-400">{item.time}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">Attachments</h4>
+          <div className="space-y-1">
+            {comp.files.length > 0 ? comp.files.map(file => (
+              <div key={file.id} className="text-[10px] font-semibold flex items-center">
+                <Paperclip className="h-3 w-3 mr-1 text-slate-400" />
+                <span className="text-brand-heading">{file.name}</span>
+                <span className="text-slate-400 ml-1">({file.size})</span>
+              </div>
+            )) : <span className="text-[10px] text-slate-400">No files.</span>}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
