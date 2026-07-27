@@ -1,4 +1,4 @@
-﻿"""
+"""
 Gmail integration routes.
 """
 from __future__ import annotations
@@ -172,6 +172,18 @@ async def list_emails(
         page_size=page_size,
     )
     return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.post(
+    "/connections/{connection_id}/sync",
+    response_model=StandardResponse[EmailSyncResultResponse],
+    summary="Fetch and sync Gmail messages for a connection",
+    dependencies=[Depends(require_permission("email:sync"))],
+)
+async def fetch_connection_emails(connection_id: UUID, current_user: CurrentUser, db: DBSession) -> dict:
+    svc = EmailService(db)
+    result = await svc.fetch_from_gmail(current_user.organization_id, connection_id, current_user.id)
+    return {"success": True, "message": "Gmail messages synced.", "data": result}
 
 @router.post(
     "/send",
