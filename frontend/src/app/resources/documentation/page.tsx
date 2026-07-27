@@ -5,14 +5,14 @@ import { PageContainer, useModal } from '@/components/shared/PageTemplates';
 import { BookOpen, Search, ChevronRight, TrendingUp, Users, FileText, Sparkles, Mail, Shield, Settings, Activity } from 'lucide-react';
 
 const SECTIONS = [
-  { icon: Activity,      title: 'Getting Started',         count: 5, color: '#7c3aed' },
-  { icon: Users,         title: 'Auth & User Management',  count: 6, color: '#2563eb' },
-  { icon: FileText,      title: 'Core CRM Modules',        count: 6, color: '#059669' },
-  { icon: Sparkles,      title: 'AI Scoring & Copilot',    count: 5, color: '#d97706' },
-  { icon: Mail,          title: 'Gmail & Email Sync',      count: 4, color: '#9333ea' },
-  { icon: TrendingUp,    title: 'Pipeline & Deals',        count: 4, color: '#dc2626' },
-  { icon: Settings,      title: 'RBAC & Permissions',      count: 5, color: '#0891b2' },
-  { icon: Shield,        title: 'Security & Multi-tenancy',count: 4, color: '#475569' },
+  { icon: Activity, title: 'Getting Started', count: 5, color: '#7c3aed' },
+  { icon: Users, title: 'User Management', count: 5, color: '#2563eb' },
+  { icon: FileText, title: 'Core CRM Modules', count: 5, color: '#059669' },
+  { icon: Sparkles, title: 'AI Copilot', count: 5, color: '#d97706' },
+  { icon: Mail, title: 'Email Integration', count: 5, color: '#9333ea' },
+  { icon: TrendingUp, title: 'Reports & Analytics', count: 5, color: '#dc2626' },
+  { icon: Settings, title: 'Configuration', count: 5, color: '#0891b2' },
+  { icon: Shield, title: 'Security', count: 5, color: '#475569' },
 ];
 
 export default function DocumentationPage() {

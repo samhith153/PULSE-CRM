@@ -121,7 +121,6 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
               { name: 'Contacts', icon: Contact, tab: 'contacts' },
               { name: 'Companies', icon: Building2, tab: 'companies' },
               { name: 'Deals', icon: Layers, tab: 'deals' },
-              { name: 'Pipeline', icon: TrendingUp, tab: 'pipeline' },
               { name: 'Products', icon: Package, tab: 'products' },
             ]
           },
