@@ -4,15 +4,23 @@ import json
 import logging
 from typing import Dict, Any, List
 from datetime import datetime
-from groq import Groq
+from groq import Groq, GroqError
 
 from .config import config
 from .models import SummariseResponse, Message
 
 logger = logging.getLogger("ai.summarization.agent")
 
-# Initialize Groq client
-client = Groq(api_key=config.LLM_API_KEY)
+# Initialize Groq client lazily so app imports and tests do not require GROQ_API_KEY.
+client = None
+
+def get_client() -> Groq:
+    global client
+    if client is None:
+        if not config.LLM_API_KEY:
+            raise GroqError("GROQ_API_KEY is required to summarise email threads.")
+        client = Groq(api_key=config.LLM_API_KEY)
+    return client
 
 
 def create_prompt(messages: List[Dict], context: str = "") -> str:
@@ -217,7 +225,7 @@ async def summarise_thread(
         try:
             logger.info("Attempt %d...", attempt + 1)
 
-            response = client.chat.completions.create(
+            response = get_client().chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
