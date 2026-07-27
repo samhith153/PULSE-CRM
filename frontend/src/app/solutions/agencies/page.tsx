@@ -27,21 +27,21 @@ export default function AgenciesPage() {
         badge="Solutions · Agencies"
         badgeIcon={Briefcase}
         title={<>Manage multiple clients.<br /><span style={{ color: '#7c3aed' }}>One clean dashboard.</span></>}
-        description="Separate pipelines per client. White-label reporting. Team collaboration. Built for agencies managing dozens of clients."
+        description="Separate pipelines per organization. Full RBAC per org. REST API for automated client onboarding. Built on multi-tenant architecture with complete data isolation."
         screenshot={<AgencyScreenshot />}
       />
 
       <FeatureCards
         features={[
-          { icon: Users, title: 'Multi-Client Pipelines', description: 'Separate deal pipelines for every client you manage.' },
-          { icon: Target, title: 'White-Label Reports', description: 'Branded reports with your agency logo and colors.' },
-          { icon: Zap, title: 'Team Collaboration', description: 'Assign team members to specific client accounts.' },
+          { icon: Users, title: 'Multi-org isolation', description: 'Every organization has its own scoped data via organization_id on all 11 tables. Complete isolation.' },
+          { icon: Target, title: 'RBAC per organization', description: 'Assign Admin, Manager, or Sales Rep roles independently within each org you manage.' },
+          { icon: Zap, title: 'REST API access', description: 'Automate client onboarding and data import using the 40+ REST endpoints with JWT authentication.' },
         ]}
       />
 
       <CTASection
-        title="Built for agencies that scale."
-        description="Start free. Manage multiple clients from day one. No per-client fees."
+        title="Built for multi-org management."
+        description="Org-level isolation, RBAC, and full API access — ready for any client setup."
       />
     </PageContainer>
   );

@@ -5,52 +5,52 @@ import { PageContainer, useModal } from '@/components/shared/PageTemplates';
 import { Users, MessageCircle, BookOpen, Award, TrendingUp, Sparkles, Calendar, ArrowRight } from 'lucide-react';
 
 const COMMUNITY_STATS = [
-  { value: '15K+', label: 'Active Members', description: 'Growing community' },
-  { value: '50K+', label: 'Conversations', description: 'Helpful discussions' },
-  { value: '200+', label: 'Events', description: 'Webinars & meetups' },
+  { value: 'GitHub', label: 'Open Source Repo', description: 'Star the project and follow development' },
+  { value: 'Swagger', label: 'Interactive API Docs', description: 'Try all 40+ endpoints at /docs' },
+  { value: 'Discord', label: 'Dev Community', description: 'Ask questions and share integrations' },
 ];
 
 const COMMUNITY_CHANNELS = [
   {
     icon: MessageCircle,
-    title: 'Discussion Forums',
-    description: 'Connect with peers, ask questions, and share best practices with the community.',
-    members: '12K+ members',
+    title: 'GitHub Issues',
+    description: 'Report bugs, request features, and track project progress directly on the repository.',
+    members: 'Open source',
     color: '#7c3aed',
   },
   {
     icon: BookOpen,
-    title: 'Knowledge Base',
-    description: 'Access guides, tutorials, and resources created by the community.',
-    members: '5K+ articles',
+    title: 'API Docs (/docs)',
+    description: 'Interactive Swagger UI with all 40+ endpoints. Try live requests with your JWT token.',
+    members: '40+ endpoints',
     color: '#2563eb',
   },
   {
     icon: Calendar,
-    title: 'Events & Webinars',
-    description: 'Join live sessions, workshops, and networking events with industry experts.',
-    members: '200+ events',
+    title: 'ReDoc (/redoc)',
+    description: 'Clean, readable OpenAPI 3.0 reference with request/response schemas for every endpoint.',
+    members: 'OpenAPI 3.0',
     color: '#059669',
   },
   {
     icon: Award,
-    title: 'Champions Program',
-    description: 'Become a certified Pulse CRM expert and help others succeed.',
-    members: '500+ champions',
+    title: 'Implementation Guide',
+    description: 'Step-by-step Docker + FastAPI setup guide. From git clone to your first working API call.',
+    members: '8-step guide',
     color: '#d97706',
   },
   {
     icon: TrendingUp,
-    title: 'Success Stories',
-    description: 'Get inspired by real customer stories and case studies.',
-    members: '100+ stories',
+    title: 'Backend Architecture',
+    description: 'Clean Architecture with Routes → Services → Repositories. DDD and SOLID principles throughout.',
+    members: 'FastAPI + PG',
     color: '#dc2626',
   },
   {
     icon: Sparkles,
-    title: 'Beta Program',
-    description: 'Be the first to try new features and shape the product roadmap.',
-    members: '1K+ testers',
+    title: 'AI Scoring Docs',
+    description: 'Deep-dive into the fit/engagement scoring engine, Groq/Llama integration, and recommendation logic.',
+    members: 'Rule-based AI',
     color: '#9333ea',
   },
 ];
@@ -84,14 +84,14 @@ export default function CommunityPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             style={{ fontSize: 'clamp(36px,5vw,56px)', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 16 }}>
-            Join the Pulse CRM Community
+            Developer Resources
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             style={{ fontSize: 18, color: '#475569', lineHeight: 1.7, maxWidth: 640, margin: '0 auto 40px' }}>
-            Connect with thousands of sales professionals, share insights, and grow together.
+            Explore the docs, API reference, and engineering resources for Pulse CRM.
           </motion.p>
           <motion.button
             initial={{ opacity: 0, y: 20 }}
