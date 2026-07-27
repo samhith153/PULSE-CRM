@@ -117,7 +117,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
       } else {
         const { login } = await import('@/utils/api');
         const result = await login(email, password);
-        setToken(result.token);
+        setToken(result.access_token);
       }
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pulse-crm-auth', 'true');
