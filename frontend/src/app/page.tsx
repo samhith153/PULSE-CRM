@@ -13,6 +13,7 @@ import LeadsView from '@/components/dashboard/LeadsView';
 import CompaniesView from '@/components/dashboard/CompaniesView';
 import ContactsView from '@/components/dashboard/ContactsView';
 import PipelineView from '@/components/dashboard/PipelineView';
+import DealsView from '@/components/dashboard/DealsView';
 import ActivitiesView from '@/components/dashboard/ActivitiesView';
 import EmailsView from '@/components/dashboard/EmailsView';
 import AIInsightsView from '@/components/dashboard/AIInsightsView';
@@ -38,7 +39,7 @@ import IntegrationsView from '@/components/dashboard/IntegrationsView';
 import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
-import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2 } from 'lucide-react';
+import { Settings2, Loader2 } from 'lucide-react';
 import { clearToken } from '@/utils/api';
 
 export default function DashboardHome() {
@@ -65,20 +66,25 @@ export default function DashboardHome() {
   };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [dashboardSubTab, setDashboardSubTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState<'dashboard' | string>('dashboard');
+  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('representative');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
-  
-  // User Role State
-  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
 
   useEffect(() => {
     const savedRole = localStorage.getItem('pulse-crm-role') as any;
     if (savedRole && ['representative', 'manager', 'admin'].includes(savedRole)) {
       setUserRole(savedRole);
     }
+    const savedTab = localStorage.getItem('pulse-crm-active-tab');
+    if (savedTab) {
+      setActiveTab(savedTab);
+    }
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('pulse-crm-active-tab', activeTab);
+  }, [activeTab]);
 
   const handleSetUserRole = (role: 'representative' | 'manager' | 'admin') => {
     setUserRole(role);
@@ -124,29 +130,9 @@ export default function DashboardHome() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-  const [showFiltersMenu, setShowFiltersMenu] = useState(false);
-  const [selectedPipelineType, setSelectedPipelineType] = useState('All');
   
-  // Simulated loading and empty states
+  // Simulated loading state
   const [isLoading, setIsLoading] = useState(false);
-  const [isEmpty, setIsEmpty] = useState(false);
-
-  // Trigger loading skeleton on sub-tab change to demo loaders
-  const handleSubTabChange = (tabKey: string) => {
-    setDashboardSubTab(tabKey);
-    setIsLoading(true);
-    
-    // Simulate empty state on Marketing tab for demo
-    if (tabKey === 'marketing') {
-      setIsEmpty(true);
-    } else {
-      setIsEmpty(false);
-    }
-
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 450);
-  };
 
   // Custom reports state
   const [recentReports, setRecentReports] = useState([
@@ -165,19 +151,26 @@ export default function DashboardHome() {
 
   const subTabs = [
     { name: 'Overview', key: 'overview' },
-    { name: 'Sales', key: 'sales' },
-    { name: 'Pipeline', key: 'pipeline' },
-    { name: 'Activity', key: 'activity' },
-    { name: 'Marketing', key: 'marketing' }, // will show empty state
-    { name: 'Team', key: 'team' },
-    { name: 'Forecasting', key: 'forecasting' },
-    { name: 'Custom Reports', key: 'custom' },
   ];
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <Loader2 className="h-8 w-8 text-brand-accent animate-spin" />
+      <div className="min-h-screen w-full flex bg-slate-50 antialiased">
+        <div className="w-16 shrink-0 bg-white border-r border-slate-100" />
+        <div className="flex-1 p-6 md:p-8 space-y-6">
+          <div className="h-10 bg-slate-100 rounded-xl w-48 animate-pulse" />
+          <div className="h-px bg-slate-100" />
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 lg:col-span-9 space-y-6">
+              <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />
+              <div className="h-48 bg-slate-100 rounded-xl animate-pulse" />
+            </div>
+            <div className="col-span-12 lg:col-span-3 space-y-6">
+              <div className="h-40 bg-slate-100 rounded-xl animate-pulse" />
+              <div className="h-40 bg-slate-100 rounded-xl animate-pulse" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -213,13 +206,29 @@ export default function DashboardHome() {
 
         {/* Dashboard inner scroll view with increased whitespace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-          {activeTab === 'leads' ? (
+          {isLoading ? (
+            <div className="space-y-6 animate-pulse">
+              <div className="h-10 bg-slate-100 rounded-xl w-56" />
+              <div className="grid grid-cols-12 gap-6">
+                <div className="col-span-12 lg:col-span-9 space-y-6">
+                  <div className="h-40 bg-slate-100 rounded-xl" />
+                  <div className="h-56 bg-slate-100 rounded-xl" />
+                </div>
+                <div className="col-span-12 lg:col-span-3 space-y-6">
+                  <div className="h-36 bg-slate-100 rounded-xl" />
+                  <div className="h-36 bg-slate-100 rounded-xl" />
+                </div>
+              </div>
+            </div>
+          ) : activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (
             <ContactsView />
           ) : activeTab === 'companies' ? (
             <CompaniesView />
-          ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
+          ) : activeTab === 'deals' ? (
+            <DealsView />
+          ) : (activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
             <PipelineView />
           ) : activeTab === 'products' ? (
             <ProductsView />
@@ -277,79 +286,20 @@ export default function DashboardHome() {
                 </div>
               </div>
 
-              {/* Sub Navigation Tabs (Tactile pills) */}
-              <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <nav className="flex space-x-1 p-1 bg-brand-sidebar-hover/15 border border-brand-border-purple/20 rounded-xl overflow-x-auto scrollbar-none min-w-0">
-                  {subTabs.map((tab) => {
-                    const isActive = dashboardSubTab === tab.key;
-                    return (
-                      <button
-                        key={tab.key}
-                        onClick={() => handleSubTabChange(tab.key)}
-                        className={`py-1.5 px-3.5 rounded-lg font-extrabold text-xs transition-all duration-200 whitespace-nowrap cursor-pointer ${
-                          isActive 
-                            ? 'bg-brand-accent text-white shadow-sm' 
-                            : 'text-brand-text/75 hover:text-brand-heading hover:bg-brand-sidebar-hover/20'
-                        }`}
-                      >
-                        {tab.name}
-                      </button>
-                    );
-                  })}
-                </nav>
-
-                {/* Datepicker and Filters (Tactile and premium style) */}
-                <div className="flex items-center space-x-2 shrink-0 self-start lg:self-center">
-                  <button className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5">
-                    <Calendar className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
-                    <span className="tabular-nums">May 12 – May 18, 2025</span>
-                  </button>
-
-                  <div className="relative">
-                    <button 
-                      onClick={() => setShowFiltersMenu(!showFiltersMenu)}
-                      className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5"
-                    >
-                      <Filter className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
-                      <span>Filters</span>
-                      <ChevronDown className="h-3 w-3 text-slate-400" strokeWidth={1.75} />
-                    </button>
-                    
-                    {showFiltersMenu && (
-                      <div className="absolute right-0 mt-2 w-56 bg-white border border-brand-border-purple/35 rounded-xl shadow-xl overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 duration-200 p-2.5 text-left">
-                        <p className="text-[9px] font-bold text-brand-heading uppercase tracking-wider mb-2 px-2">Filter Pipeline</p>
-                        <div className="space-y-0.5">
-                          {['All', 'Enterprise Deals', 'Mid-Market Deals', 'Small Business Deals'].map((type) => (
-                            <button
-                              key={type}
-                              onClick={() => {
-                                setSelectedPipelineType(type);
-                                setShowFiltersMenu(false);
-                              }}
-                              className="w-full flex items-center justify-between text-xs font-semibold text-brand-text/80 hover:bg-slate-50 px-2 py-1.5 rounded-lg text-left"
-                            >
-                              <span>{type}</span>
-                              {selectedPipelineType === type && <Check className="h-3.5 w-3.5 text-brand-accent" strokeWidth={2} />}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <button 
-                    onClick={() => setIsCustomizerOpen(true)}
-                    className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5"
-                  >
-                    <Settings2 className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
-                    <span>Customize Layout</span>
-                  </button>
-                </div>
+              {/* Toolbar */}
+              <div className="flex items-center justify-end">
+                <button 
+                  onClick={() => setIsCustomizerOpen(true)}
+                  className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5"
+                >
+                  <Settings2 className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
+                  <span>Customize Layout</span>
+                </button>
               </div>
 
               {/* KPI Stat Cards (Spans full horizontal width above grid split) */}
               {layoutSettings.statCards && (
-                <StatCards timeFilter={dashboardSubTab} loading={isLoading} />
+                <StatCards timeFilter="overview" loading={isLoading} />
               )}
 
               {/* 12-Column Dashboard Grid Layout */}

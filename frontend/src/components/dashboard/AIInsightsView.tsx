@@ -11,12 +11,9 @@ import {
   ArrowUpRight,
   ShieldCheck,
   Check,
-  BrainCircuit,
-  MessageSquare,
   Target,
-  Smile,
-  Frown,
-  Meh
+  IndianRupee,
+  DollarSign
 } from 'lucide-react';
 
 interface AILead {
@@ -74,7 +71,7 @@ export default function AIInsightsView() {
         <div>
           <h2 className="font-sans text-2xl text-brand-heading font-bold">AI Copilot Insights</h2>
           <p className="text-xs text-brand-text/80 mt-1 leading-relaxed font-bold max-w-2xl">
-            Real-time recommendations powered by predictive lead scoring, conversation intelligence, compliance mapping, and contact velocity.
+            Real-time AI recommendations with predictive insights, deal value predictions, and action prioritization.
           </p>
         </div>
       </div>
@@ -205,119 +202,173 @@ export default function AIInsightsView() {
         </div>
       </div>
 
-      {/* Conversation Intelligence Section - Bhavani Summarization */}
+      {/* Deal Value Predictions Section */}
       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
         <h3 className="font-extrabold text-brand-heading text-sm mb-4 flex items-center">
-          <BrainCircuit className="h-4.5 w-4.5 mr-2 text-brand-accent" />
-          <span>Conversation Intelligence</span>
-          <span className="ml-2 text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Bhavani</span>
+          <DollarSign className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+          <span>AI Deal Value Predictions</span>
         </h3>
-
-        <div className="grid grid-cols-12 gap-4">
-          {/* Sentiment Breakdown */}
-          <div className="col-span-12 lg:col-span-4 p-4 border border-brand-border-purple/15 rounded-xl bg-slate-50/50">
-            <h4 className="text-[10px] font-extrabold text-brand-heading/70 uppercase tracking-wider mb-3 flex items-center">
-              <Smile className="h-3.5 w-3.5 mr-1.5 text-brand-accent" />
-              Sentiment Breakdown
-            </h4>
-            <div className="space-y-2.5">
-              <div>
-                <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
-                  <span className="flex items-center"><Smile className="h-3 w-3 text-emerald-500 mr-1" /> Positive</span>
-                  <span className="tabular-nums">3</span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { deal: "TechCorp Cloud Migration", company: "TechCorp Inc.", currentValue: "$120,000", predictedValue: "$138,000", confidence: 89, trend: "up", reason: "SAML SSO approved, enterprise SLA terms aligning" },
+            { deal: "MedSaaS Compliance Suite", company: "MedSaaS Solutions", currentValue: "$85,000", predictedValue: "$72,000", confidence: 62, trend: "down", reason: "Competitor pricing pressure, decision timeline extended" },
+            { deal: "Sparta Creative Enterprise", company: "Sparta Creative", currentValue: "$45,000", predictedValue: "$52,000", confidence: 76, trend: "up", reason: "40-seat inquiry, volume discount negotiation positive" },
+          ].map((item, idx) => (
+            <div key={idx} className="border border-brand-border-purple/15 rounded-xl p-4 bg-slate-50/30">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h4 className="text-xs font-extrabold text-brand-heading">{item.deal}</h4>
+                  <p className="text-[10px] text-brand-text/60 font-semibold">{item.company}</p>
+                </div>
+                <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full flex items-center ${
+                  item.trend === 'up' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                }`}>
+                  {item.trend === 'up' ? '▲ +' : '▼ '}{Math.round(((parseInt(item.predictedValue.replace(/[^0-9]/g, '')) - parseInt(item.currentValue.replace(/[^0-9]/g, ''))) / parseInt(item.currentValue.replace(/[^0-9]/g, ''))) * 100)}%
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] font-bold mb-2">
+                <span className="text-slate-500">Current: <span className="text-brand-heading">{item.currentValue}</span></span>
+                <span className="text-slate-500">Predicted: <span className="text-brand-accent">{item.predictedValue}</span></span>
+              </div>
+              <div className="mb-2">
+                <div className="flex justify-between text-[9px] font-bold text-brand-text/60 mb-1">
+                  <span>Confidence</span>
+                  <span>{item.confidence}%</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '60%' }} />
+                  <div className={`h-full rounded-full ${item.confidence >= 80 ? 'bg-emerald-500' : item.confidence >= 65 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${item.confidence}%` }} />
                 </div>
               </div>
-              <div>
-                <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
-                  <span className="flex items-center"><Meh className="h-3 w-3 text-amber-500 mr-1" /> Neutral</span>
-                  <span className="tabular-nums">1</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '20%' }} />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
-                  <span className="flex items-center"><Frown className="h-3 w-3 text-rose-500 mr-1" /> Negative</span>
-                  <span className="tabular-nums">1</span>
-                </div>
-                <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-rose-500 rounded-full" style={{ width: '20%' }} />
-                </div>
-              </div>
+              <p className="text-[9px] text-brand-text/70 font-semibold">{item.reason}</p>
             </div>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          {/* Intent Distribution */}
-          <div className="col-span-12 lg:col-span-4 p-4 border border-brand-border-purple/15 rounded-xl bg-slate-50/50">
-            <h4 className="text-[10px] font-extrabold text-brand-heading/70 uppercase tracking-wider mb-3 flex items-center">
-              <Target className="h-3.5 w-3.5 mr-1.5 text-brand-accent" />
-              Intent Distribution
-            </h4>
+      {/* AI Action Grid - Immediate Action | Follow Up Due | Rising Interest | Going Cold */}
+      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+        <h3 className="font-extrabold text-brand-heading text-sm mb-4 flex items-center">
+          <Target className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+          <span>AI Action Grid</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Immediate Action */}
+          <div className="border border-rose-200 rounded-xl p-4 bg-rose-50/30 hover:bg-rose-50/50 hover:border-rose-300 transition-all duration-200 cursor-default">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-[10px] font-extrabold text-rose-700 uppercase tracking-wider flex items-center">
+                <AlertTriangle className="h-4 w-4 mr-1.5" />
+                Immediate Action
+              </h4>
+              <span className="text-[9px] font-extrabold bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">Highest</span>
+            </div>
             <div className="space-y-2.5">
               {[
-                { label: 'Follow-up', count: 2, pct: 40 },
-                { label: 'Buy / Purchase', count: 1, pct: 20 },
-                { label: 'Demo Request', count: 1, pct: 20 },
-                { label: 'Negotiate', count: 1, pct: 20 },
-              ].map((item) => (
-                <div key={item.label}>
-                  <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
-                    <span>{item.label}</span>
-                    <span className="tabular-nums">{item.count}</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-purple-500 rounded-full" style={{ width: `${item.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-[9px] text-slate-400 font-bold mt-3 leading-relaxed">
-              Based on email thread analysis via Groq LLM
-            </p>
-          </div>
-
-          {/* Recent Summaries with Follow-up */}
-          <div className="col-span-12 lg:col-span-4 p-4 border border-brand-border-purple/15 rounded-xl bg-slate-50/50">
-            <h4 className="text-[10px] font-extrabold text-brand-heading/70 uppercase tracking-wider mb-3 flex items-center">
-              <MessageSquare className="h-3.5 w-3.5 mr-1.5 text-brand-accent" />
-              Recent Summaries
-            </h4>
-            <div className="space-y-2.5">
-              {[
-                { from: 'Alex Rivera', summary: 'SAML config approved, questions on liability SLAs.', sentiment: 'positive', category: 'sales', followUp: 'Follow up tomorrow with proposal' },
-                { from: 'Helena Troy', summary: 'Pricing inquiry for 40-seat enterprise tier.', sentiment: 'neutral', category: 'sales', followUp: 'Follow up in 2 days with pricing' },
-                { from: 'Marcus Aurelius', summary: 'Compliance audit files sent, awaiting feedback.', sentiment: 'positive', category: 'support', followUp: 'Follow up in 3 days' },
-              ].map((item, i) => (
-                <div key={i} className="p-2.5 bg-white border border-brand-border-purple/10 rounded-lg">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[9px] font-extrabold text-brand-heading">{item.from}</span>
-                    <div className="flex items-center space-x-1">
-                      <span className={`text-[7px] font-bold px-1 py-0.5 rounded ${
-                        item.category === 'sales' ? 'bg-emerald-50 text-emerald-700' :
-                        item.category === 'urgent' ? 'bg-rose-50 text-rose-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>{item.category}</span>
-                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
-                        item.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
-                        item.sentiment === 'negative' ? 'bg-rose-50 text-rose-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>{item.sentiment}</span>
+                { name: "Helena Troy", company: "Sparta Creative", action: "Send SSO proposal within 2 hours", priority: "Critical", value: "₹45K" },
+                { name: "Alex Rivera", company: "TechCorp Inc.", action: "Review legal contract terms by EOD", priority: "Critical", value: "₹120K" },
+              ].map((item, idx) => (
+                <div key={idx} className="p-2.5 bg-white border border-rose-100 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[11px] font-extrabold text-brand-heading">{item.name}</p>
+                      <p className="text-[10px] text-brand-text/60 font-semibold">{item.company}</p>
                     </div>
+                    <span className="text-[8px] font-extrabold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded-full">{item.priority}</span>
                   </div>
-                  <p className="text-[9px] text-brand-text/70 font-semibold leading-relaxed">{item.summary}</p>
-                  <p className="text-[8px] text-amber-600 font-extrabold mt-1">⏰ {item.followUp}</p>
+                  <p className="text-[10px] text-brand-text/80 mt-1.5 font-semibold leading-relaxed">{item.action}</p>
+                  <p className="text-[9px] text-brand-accent font-extrabold mt-1">Value: {item.value}</p>
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-brand-border-purple/10">
-              <p className="text-[9px] text-brand-accent font-extrabold flex items-center">
-                <Sparkles className="h-3 w-3 mr-1" />
-                Powered by Groq (llama-3.1-8b-instant)
-              </p>
+          </div>
+
+          {/* Follow Up Due */}
+          <div className="border border-amber-200 rounded-xl p-4 bg-amber-50/30 hover:bg-amber-50/50 hover:border-amber-300 transition-all duration-200 cursor-default">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-[10px] font-extrabold text-amber-700 uppercase tracking-wider flex items-center">
+                <Clock className="h-4 w-4 mr-1.5" />
+                Follow Up Due
+              </h4>
+              <span className="text-[9px] font-extrabold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Missed</span>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { name: "Marcus Aurelius", company: "MedSaaS Solutions", missed: "Compliance doc upload", days: "3 days ago", priority: "High", value: "₹85K" },
+                { name: "David Hume", company: "Empiric Logistics", missed: "Pricing follow-up", days: "7 days ago", priority: "Medium", value: "—" },
+              ].map((item, idx) => (
+                <div key={idx} className="p-2.5 bg-white border border-amber-100 rounded-lg">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-[11px] font-extrabold text-brand-heading">{item.name}</p>
+                      <p className="text-[10px] text-brand-text/60 font-semibold">{item.company}</p>
+                    </div>
+                    <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full ${item.priority === 'High' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}`}>{item.priority}</span>
+                  </div>
+                  <p className="text-[10px] text-brand-text/70 mt-1.5 font-semibold">Missed: {item.missed}</p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[9px] text-amber-600 font-extrabold">⏰ {item.days}</span>
+                    <span className="text-[9px] text-brand-text/60 font-semibold tabular-nums">{item.value}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Rising Interest */}
+          <div className="border border-emerald-200 rounded-xl p-4 bg-emerald-50/30 hover:bg-emerald-50/50 hover:border-emerald-300 transition-all duration-200 cursor-default">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wider flex items-center">
+                <TrendingUp className="h-4 w-4 mr-1.5" />
+                Rising Interest
+              </h4>
+              <span className="text-[9px] font-extrabold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Growing</span>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { name: "TechCorp SSO Deal", company: "TechCorp Inc.", interest: "92% match", signal: "Engineering team actively reviewing", trend: "+15%" },
+                { name: "MedSaaS Compliance Deal", company: "MedSaaS Solutions", interest: "78% match", signal: "HIPAA docs shared, awaiting feedback", trend: "+8%" },
+              ].map((item, idx) => (
+                <div key={idx} className="p-2.5 bg-white border border-emerald-100 rounded-lg">
+                  <div className="flex justify-between items-start mb-1">
+                    <p className="text-[11px] font-extrabold text-brand-heading">{item.name}</p>
+                    <span className="text-[9px] font-extrabold text-emerald-600 tabular-nums">{item.trend}</span>
+                  </div>
+                  <p className="text-[10px] text-brand-text/60 font-semibold">{item.company}</p>
+                  <p className="text-[10px] font-bold text-brand-text/80 mt-1.5">{item.signal}</p>
+                  <div className="mt-2 h-1.5 w-full bg-emerald-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: item.interest.replace('%', '') }} />
+                  </div>
+                  <p className="text-[9px] text-emerald-600 font-extrabold mt-1 text-right">{item.interest}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Going Cold */}
+          <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/30 hover:bg-slate-50/50 hover:border-slate-300 transition-all duration-200 cursor-default">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-[10px] font-extrabold text-slate-600 uppercase tracking-wider flex items-center">
+                <Frown className="h-4 w-4 mr-1.5" />
+                Going Cold
+              </h4>
+              <span className="text-[9px] font-extrabold bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">At Risk</span>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { name: "David Hume", company: "Empiric Logistics", days: "21 days", lastAction: "Cold nurturing assigned", recovery: "Low budget prospect" },
+                { name: "Sparta Creative Trial", company: "Sparta Creative", days: "14 days", lastAction: "Demo completed", recovery: "No follow-up scheduled" },
+              ].map((item, idx) => (
+                <div key={idx} className="p-2.5 bg-white border border-slate-100 rounded-lg">
+                  <div className="flex items-start justify-between mb-1">
+                    <div>
+                      <p className="text-[11px] font-extrabold text-brand-heading">{item.name}</p>
+                      <p className="text-[10px] text-brand-text/60 font-semibold">{item.company}</p>
+                    </div>
+                    <span className="text-[9px] font-extrabold text-slate-500 tabular-nums">{item.days}</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 font-semibold">{item.lastAction}</p>
+                  <p className="text-[9px] text-slate-400 mt-1 font-medium">Recovery: {item.recovery}</p>
+                </div>
+              ))}
             </div>
           </div>
         </div>
