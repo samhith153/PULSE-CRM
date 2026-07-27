@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Dict, Any, List
 from datetime import datetime
 from groq import Groq
 
 from .config import config
 from .models import SummariseResponse, Message
+
+logger = logging.getLogger("ai.summarization.agent")
 
 # Initialize Groq client
 client = Groq(api_key=config.LLM_API_KEY)
@@ -172,7 +175,7 @@ def parse_response(response_text: str) -> Dict[str, Any]:
 
         return data
     except (json.JSONDecodeError, ValueError) as e:
-        print(f"⚠️ Parse error: {e}")
+        logger.warning("Parse error: %s", e)
         summary = response_text[:200] if len(response_text) > 200 else response_text
         return {
             "summary": summary,
@@ -207,12 +210,12 @@ async def summarise_thread(
     prompt = create_prompt(messages, context)
     model = config.LLM_MODEL
 
-    print(f"📝 Summarising thread: {thread_id}")
-    print(f"🤖 Using model: {model}")
+    logger.info("Summarising thread: %s", thread_id)
+    logger.info("Using model: %s", model)
 
     for attempt in range(config.MAX_RETRIES + 1):
         try:
-            print(f"🔄 Attempt {attempt + 1}...")
+            logger.info("Attempt %d...", attempt + 1)
 
             response = client.chat.completions.create(
                 model=model,
@@ -225,19 +228,19 @@ async def summarise_thread(
             )
 
             result_text = response.choices[0].message.content
-            print(f"✅ Groq response received ({len(result_text)} chars)")
+            logger.info("Groq response received (%d chars)", len(result_text))
 
             result = parse_response(result_text)
 
             if result.get("confidence", 0) >= config.MIN_CONFIDENCE_THRESHOLD:
-                print(f"✅ Confidence: {result.get('confidence')} (threshold met)")
+                logger.info("Confidence: %s (threshold met)", result.get('confidence'))
                 break
             else:
-                print(f"⚠️ Confidence too low: {result.get('confidence')}")
+                logger.warning("Confidence too low: %s", result.get('confidence'))
                 continue
 
         except Exception as e:
-            print(f"❌ Groq error: {e}")
+            logger.error("Groq error: %s", e)
             if attempt == config.MAX_RETRIES:
                 result = {
                     "summary": f"Email thread with {len(messages)} messages",
