@@ -42,7 +42,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
         setToken(result.access_token);
       } else {
         const result = await login(email, password);
-        setToken(result.token);
+        setToken(result.access_token);
       }
 
       if (typeof window !== 'undefined') {
