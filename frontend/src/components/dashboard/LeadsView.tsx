@@ -73,6 +73,14 @@ interface Lead {
   emails: EmailItem[];
   calls: CallItem[];
   meetings: MeetingItem[];
+  
+  // Custom form fields
+  jobTitle?: string;
+  companyIndustry?: string;
+  companyLocation?: string;
+  companySize?: string;
+  currentCrm?: string;
+  operationalSystem?: string;
 }
 
 export default function LeadsView() {
@@ -190,7 +198,21 @@ export default function LeadsView() {
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
-    name: '', company: '', email: '', phone: '', status: 'New' as Lead['status'], priority: 'Medium' as Lead['priority'], owner: 'Sarah Johnson', notes: ''
+    name: '',
+    jobTitle: '',
+    email: '',
+    phone: '',
+    company: '',
+    companyIndustry: 'Other',
+    companyLocation: '',
+    companySize: '',
+    currentCrm: 'Unknown',
+    leadSource: 'Website',
+    operationalSystem: '',
+    status: 'New' as Lead['status'],
+    priority: 'Medium' as Lead['priority'],
+    owner: 'Sarah Johnson',
+    notes: ''
   });
   const [emailForm, setEmailForm] = useState({ subject: '', body: '' });
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
@@ -361,18 +383,42 @@ export default function LeadsView() {
         ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80" 
         : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
       notes: leadForm.notes,
+      source: leadForm.leadSource,
       timeline: [
         { id: 1, type: "creation", title: "Lead Created Manually", desc: `Lead added to database by system user.`, time: "Just now" }
       ],
       emails: [],
       calls: [],
-      meetings: []
+      meetings: [],
+      
+      jobTitle: leadForm.jobTitle,
+      companyIndustry: leadForm.companyIndustry,
+      companyLocation: leadForm.companyLocation,
+      companySize: leadForm.companySize,
+      currentCrm: leadForm.currentCrm || 'Unknown',
+      operationalSystem: leadForm.operationalSystem
     };
     const updated = [newLead, ...leads];
     setLeads(updated);
     setSelectedLeadId(newLead.id);
     setIsCreateModalOpen(false);
-    setLeadForm({ name: '', company: '', email: '', phone: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
+    setLeadForm({
+      name: '',
+      jobTitle: '',
+      email: '',
+      phone: '',
+      company: '',
+      companyIndustry: 'Other',
+      companyLocation: '',
+      companySize: '',
+      currentCrm: 'Unknown',
+      leadSource: 'Website',
+      operationalSystem: '',
+      status: 'New',
+      priority: 'Medium',
+      owner: 'Sarah Johnson',
+      notes: ''
+    });
   };
 
   // Action: Edit Lead Submit
@@ -390,7 +436,15 @@ export default function LeadsView() {
           status: leadForm.status,
           priority: leadForm.priority,
           owner: leadForm.owner,
-          notes: leadForm.notes
+          notes: leadForm.notes,
+          
+          jobTitle: leadForm.jobTitle,
+          companyIndustry: leadForm.companyIndustry,
+          companyLocation: leadForm.companyLocation,
+          companySize: leadForm.companySize,
+          currentCrm: leadForm.currentCrm,
+          source: leadForm.leadSource,
+          operationalSystem: leadForm.operationalSystem
         };
       }
       return l;
@@ -817,7 +871,15 @@ export default function LeadsView() {
                                   status: lead.status,
                                   priority: lead.priority,
                                   owner: lead.owner,
-                                  notes: lead.notes
+                                  notes: lead.notes,
+                                  
+                                  jobTitle: lead.jobTitle || '',
+                                  companyIndustry: lead.companyIndustry || 'Other',
+                                  companyLocation: lead.companyLocation || '',
+                                  companySize: lead.companySize || '',
+                                  currentCrm: lead.currentCrm || 'Unknown',
+                                  leadSource: lead.source || 'Website',
+                                  operationalSystem: lead.operationalSystem || '',
                                 });
                                 setIsEditModalOpen(true);
                               }}
@@ -905,6 +967,48 @@ export default function LeadsView() {
                 <span className="text-brand-text">{activeLead.owner}</span>
               </div>
             </div>
+            {activeLead.jobTitle && (
+              <div className="flex justify-between">
+                <span className="text-brand-text/50">Job Title</span>
+                <span className="text-brand-text">{activeLead.jobTitle}</span>
+              </div>
+            )}
+            {activeLead.companyIndustry && (
+              <div className="flex justify-between">
+                <span className="text-brand-text/50">Industry</span>
+                <span className="text-brand-text">{activeLead.companyIndustry}</span>
+              </div>
+            )}
+            {activeLead.companyLocation && (
+              <div className="flex justify-between">
+                <span className="text-brand-text/50">Location</span>
+                <span className="text-brand-text">{activeLead.companyLocation}</span>
+              </div>
+            )}
+            {activeLead.companySize && (
+              <div className="flex justify-between">
+                <span className="text-brand-text/50">Company Size</span>
+                <span className="text-brand-text">{activeLead.companySize}</span>
+              </div>
+            )}
+            {activeLead.currentCrm && (
+              <div className="flex justify-between">
+                <span className="text-brand-text/50">Current CRM</span>
+                <span className="text-brand-text">{activeLead.currentCrm}</span>
+              </div>
+            )}
+            {activeLead.source && (
+              <div className="flex justify-between">
+                <span className="text-brand-text/50">Source</span>
+                <span className="text-brand-text">{activeLead.source}</span>
+              </div>
+            )}
+            {activeLead.operationalSystem && (
+              <div className="flex justify-between">
+                <span className="text-brand-text/50">Ops System</span>
+                <span className="text-brand-text">{activeLead.operationalSystem}</span>
+              </div>
+            )}
           </div>
 
           {/* Engineered AI Features (ML Pipeline Integration) */}
@@ -1179,31 +1283,103 @@ export default function LeadsView() {
               <h3 className="font-bold text-brand-heading text-sm">Add New Lead</h3>
               <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
-            <form onSubmit={handleCreateLead} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Lead Name</label>
-                  <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+            <form onSubmit={handleCreateLead} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              {/* Section 1: Personal Info */}
+              <div className="border border-brand-border-purple/15 rounded-xl p-3.5 bg-slate-50/50 space-y-3">
+                <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wide border-b border-slate-100 pb-1">1. Personal Info</h4>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Name</label>
+                    <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Job Title</label>
+                    <input type="text" required placeholder="e.g. VP Engineering" value={leadForm.jobTitle} onChange={(e) => setLeadForm({...leadForm, jobTitle: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email</label>
+                    <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone No.</label>
+                    <input type="text" required placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email</label>
-                  <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+
+              {/* Section 2: Company Details */}
+              <div className="border border-brand-border-purple/15 rounded-xl p-3.5 bg-slate-50/50 space-y-3">
+                <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wide border-b border-slate-100 pb-1">2. Company Details</h4>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company Name</label>
+                    <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
+                    <select required value={leadForm.companyIndustry} onChange={(e) => setLeadForm({...leadForm, companyIndustry: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
+                      {['Manufacturing', 'Healthcare', 'Pharma', 'Logistics', 'Construction', 'Education', 'Finance', 'Insurance', 'Hospitality', 'Real Estate', 'Agriculture', 'Legal', 'Retail', 'Media', 'Consulting', 'Other', 'Unknown'].map((ind) => (
+                        <option key={ind} value={ind}>{ind}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone</label>
-                  <input type="text" required placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Location</label>
+                    <input type="text" required placeholder="e.g. Mumbai, India" value={leadForm.companyLocation} onChange={(e) => setLeadForm({...leadForm, companyLocation: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Size</label>
+                    <input type="text" required placeholder="e.g. 250 employees" value={leadForm.companySize} onChange={(e) => setLeadForm({...leadForm, companySize: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Lead Source</label>
+                    <select value={leadForm.leadSource} onChange={(e) => setLeadForm({...leadForm, leadSource: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
+                      {['Referral', 'Website', 'LinkedIn', 'Webinar', 'Event', 'Cold Email', 'Other'].map((src) => (
+                        <option key={src} value={src}>{src}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Owner</label>
+                    <select value={leadForm.owner} onChange={(e) => setLeadForm({...leadForm, owner: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
+                      <option>Sarah Johnson</option>
+                      <option>Alex Johnson</option>
+                      <option>Lisa Martinez</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+
+              {/* Section 3: Tech Stack (Optional Fields) */}
+              <div className="border border-brand-border-purple/15 rounded-xl p-3.5 bg-slate-50/50 space-y-3">
+                <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wide border-b border-slate-100 pb-1">3. Tech Stack (Optional)</h4>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Current CRM (Optional)</label>
+                    <select value={leadForm.currentCrm} onChange={(e) => setLeadForm({...leadForm, currentCrm: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
+                      {['No CRM', 'Zoho', 'HubSpot', 'Salesforce', 'Other CRM', 'Excel / Google Sheets', 'WhatsApp / Manual Tools', 'Custom Software', 'Unknown'].map((crm) => (
+                        <option key={crm} value={crm}>{crm}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Operational System (Optional)</label>
+                    <input type="text" placeholder="e.g. ERP/Billing System" value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status and Priority Row */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Status</label>
-                  <select value={leadForm.status} onChange={(e) => setLeadForm({...leadForm, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <select value={leadForm.status} onChange={(e) => setLeadForm({...leadForm, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
                     <option>New</option>
                     <option>Contacted</option>
                     <option>Qualified</option>
@@ -1211,21 +1387,14 @@ export default function LeadsView() {
                 </div>
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
-                  <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Owner</label>
-                  <select value={leadForm.owner} onChange={(e) => setLeadForm({...leadForm, owner: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    <option>Sarah Johnson</option>
-                    <option>Alex Johnson</option>
-                    <option>Lisa Martinez</option>
-                  </select>
-                </div>
               </div>
+
               <div>
                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Initial Notes</label>
                 <textarea placeholder="Describe technical requirements, pipeline potential..." value={leadForm.notes} onChange={(e) => setLeadForm({...leadForm, notes: e.target.value})} className="w-full p-2 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 min-h-[60px]" />
@@ -1247,31 +1416,103 @@ export default function LeadsView() {
               <h3 className="font-bold text-brand-heading text-sm">Edit Lead Details</h3>
               <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
-            <form onSubmit={handleEditLead} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Lead Name</label>
-                  <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+            <form onSubmit={handleEditLead} className="p-5 space-y-4 max-h-[70vh] overflow-y-auto pr-1">
+              {/* Section 1: Personal Info */}
+              <div className="border border-brand-border-purple/15 rounded-xl p-3.5 bg-slate-50/50 space-y-3">
+                <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wide border-b border-slate-100 pb-1">1. Personal Info</h4>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Name</label>
+                    <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Job Title</label>
+                    <input type="text" required placeholder="e.g. VP Engineering" value={leadForm.jobTitle} onChange={(e) => setLeadForm({...leadForm, jobTitle: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email</label>
+                    <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone No.</label>
+                    <input type="text" required placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email</label>
-                  <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+
+              {/* Section 2: Company Details */}
+              <div className="border border-brand-border-purple/15 rounded-xl p-3.5 bg-slate-50/50 space-y-3">
+                <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wide border-b border-slate-100 pb-1">2. Company Details</h4>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company Name</label>
+                    <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
+                    <select required value={leadForm.companyIndustry} onChange={(e) => setLeadForm({...leadForm, companyIndustry: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none">
+                      {['Manufacturing', 'Healthcare', 'Pharma', 'Logistics', 'Construction', 'Education', 'Finance', 'Insurance', 'Hospitality', 'Real Estate', 'Agriculture', 'Legal', 'Retail', 'Media', 'Consulting', 'Other', 'Unknown'].map((ind) => (
+                        <option key={ind} value={ind}>{ind}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone</label>
-                  <input type="text" required placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Location</label>
+                    <input type="text" required placeholder="e.g. Mumbai, India" value={leadForm.companyLocation} onChange={(e) => setLeadForm({...leadForm, companyLocation: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Size</label>
+                    <input type="text" required placeholder="e.g. 250 employees" value={leadForm.companySize} onChange={(e) => setLeadForm({...leadForm, companySize: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Lead Source</label>
+                    <select value={leadForm.leadSource} onChange={(e) => setLeadForm({...leadForm, leadSource: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none">
+                      {['Referral', 'Website', 'LinkedIn', 'Webinar', 'Event', 'Cold Email', 'Other'].map((src) => (
+                        <option key={src} value={src}>{src}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Owner</label>
+                    <select value={leadForm.owner} onChange={(e) => setLeadForm({...leadForm, owner: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none">
+                      <option>Sarah Johnson</option>
+                      <option>Alex Johnson</option>
+                      <option>Lisa Martinez</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+
+              {/* Section 3: Tech Stack (Optional Fields) */}
+              <div className="border border-brand-border-purple/15 rounded-xl p-3.5 bg-slate-50/50 space-y-3">
+                <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wide border-b border-slate-100 pb-1">3. Tech Stack (Optional)</h4>
+                <div className="grid grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Current CRM (Optional)</label>
+                    <select value={leadForm.currentCrm} onChange={(e) => setLeadForm({...leadForm, currentCrm: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none">
+                      {['No CRM', 'Zoho', 'HubSpot', 'Salesforce', 'Other CRM', 'Excel / Google Sheets', 'WhatsApp / Manual Tools', 'Custom Software', 'Unknown'].map((crm) => (
+                        <option key={crm} value={crm}>{crm}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Operational System (Optional)</label>
+                    <input type="text" placeholder="e.g. SAP ERP" value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Status, Priority & Notes */}
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Status</label>
-                  <select value={leadForm.status} onChange={(e) => setLeadForm({...leadForm, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <select value={leadForm.status} onChange={(e) => setLeadForm({...leadForm, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none">
                     <option>New</option>
                     <option>Contacted</option>
                     <option>Qualified</option>
@@ -1281,21 +1522,19 @@ export default function LeadsView() {
                 </div>
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
-                  <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none">
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Owner</label>
-                  <select value={leadForm.owner} onChange={(e) => setLeadForm({...leadForm, owner: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    <option>Sarah Johnson</option>
-                    <option>Alex Johnson</option>
-                    <option>Lisa Martinez</option>
-                  </select>
-                </div>
               </div>
+
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Initial Notes</label>
+                <textarea placeholder="Describe technical requirements, pipeline potential..." value={leadForm.notes} onChange={(e) => setLeadForm({...leadForm, notes: e.target.value})} className="w-full p-2 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 min-h-[60px]" />
+              </div>
+              
               <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
                 <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Save Changes</button>

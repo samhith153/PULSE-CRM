@@ -40,6 +40,8 @@ import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2, Plus } from 'lucide-react';
 import { clearToken } from '@/utils/api';
+import SiteSkeleton from '@/components/shared/SiteSkeleton';
+import ViewSkeleton from '@/components/shared/ViewSkeleton';
 
 export default function DashboardHome() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -75,6 +77,18 @@ export default function DashboardHome() {
   
   // User Role State
   const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
+
+  // Transition loading states
+  const [isViewLoading, setIsViewLoading] = useState(false);
+
+  const handleTabChange = (tab: string) => {
+    if (tab === activeTab) return;
+    setIsViewLoading(true);
+    setActiveTab(tab);
+    setTimeout(() => {
+      setIsViewLoading(false);
+    }, 350);
+  };
 
   useEffect(() => {
     const savedRole = localStorage.getItem('pulse-crm-role') as any;
@@ -178,11 +192,7 @@ export default function DashboardHome() {
   ];
 
   if (isAuthLoading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <Loader2 className="h-8 w-8 text-brand-accent animate-spin" />
-      </div>
-    );
+    return <SiteSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -194,7 +204,7 @@ export default function DashboardHome() {
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={handleTabChange} 
         collapsed={sidebarCollapsed} 
         setCollapsed={setSidebarCollapsed} 
         userRole={userRole}
@@ -208,7 +218,7 @@ export default function DashboardHome() {
           collapsed={sidebarCollapsed} 
           setCollapsed={setSidebarCollapsed} 
           onNewReportClick={() => setIsReportModalOpen(true)} 
-          onTabChange={(tab) => setActiveTab(tab)}
+          onTabChange={handleTabChange}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onSignOut={handleSignOut}
           userRole={userRole}
@@ -216,7 +226,9 @@ export default function DashboardHome() {
 
         {/* Dashboard inner scroll view with increased whitespace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-          {activeTab === 'leads' ? (
+          {isViewLoading ? (
+            <ViewSkeleton tab={activeTab} />
+          ) : activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (
             <ContactsView />
@@ -263,7 +275,7 @@ export default function DashboardHome() {
           ) : activeTab === 'audit logs' ? (
             <AuditLogsView />
           ) : activeTab === 'dashboard' && userRole === 'manager' ? (
-            <ManagerDashboardView onTabChange={setActiveTab} />
+            <ManagerDashboardView onTabChange={handleTabChange} />
           ) : activeTab === 'dashboard' && userRole === 'admin' ? (
             <AdminDashboardView />
           ) : (
@@ -320,7 +332,7 @@ export default function DashboardHome() {
                     loading={isLoading} 
                     showLeaderboard={layoutSettings.leaderboard}
                     showProductivity={layoutSettings.productivity}
-                    onTabChange={setActiveTab}
+                    onTabChange={handleTabChange}
                   />
                 )}
 
@@ -456,7 +468,7 @@ export default function DashboardHome() {
       <CommandPalette 
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
         onNewReportClick={() => setIsReportModalOpen(true)}
       />
 
