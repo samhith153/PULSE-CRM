@@ -31,7 +31,7 @@ export default function ActivitiesView() {
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    getActivities({ page_size: 150 }).then(res => {
+    getActivities({ page_size: 100 }).then(res => {
       const list = res.data || res || [];
       const mapped = list.map((act: any) => {
         let type: ActivityLog['type'] = 'note';

@@ -40,7 +40,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
     Promise.all([
       getLeads(),
       getDeals(),
-      getActivities({ page_size: 150 })
+      getActivities({ page_size: 100 })
     ]).then(([leadsData, dealsData, activitiesData]) => {
       setLeads(leadsData || []);
       setDeals(dealsData || []);

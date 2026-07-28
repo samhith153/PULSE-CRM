@@ -40,7 +40,7 @@ export default function TeamPerformanceView() {
     Promise.all([
       getLeads(),
       getDeals(),
-      getActivities({ page_size: 250 })
+      getActivities({ page_size: 100 })
     ]).then(([leadsData, dealsData, activitiesData]) => {
       const leads = leadsData || [];
       const deals = dealsData || [];

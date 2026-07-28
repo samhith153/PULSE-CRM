@@ -47,7 +47,7 @@ export default function ReportsView() {
       getLeads(),
       getDeals(),
       getCompanies(),
-      getActivities({ page_size: 250 }),
+      getActivities({ page_size: 100 }),
     ]).then(([leadsData, dealsData, companiesData, activitiesData]) => {
       setLeads(leadsData || []);
       setDeals(dealsData || []);
