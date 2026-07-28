@@ -1,0 +1,319 @@
+@import "tailwindcss";
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #1A2B27;
+  
+  --brand-bg: #ffffff;
+  --brand-sidebar: #ffffff;
+  --brand-sidebar-hover: #f1f5f9;
+  --brand-text: #00004f;
+  --brand-heading: #6448dc;
+  
+  --brand-accent: #7957fb;
+  --brand-accent-hover: #6340df;
+  --brand-cta: #7957fb;
+  --brand-cta-hover: #6340df;
+  --brand-secondary-accent: #7e71f9;
+  --brand-border-purple: #7e8cf1;
+  
+  --brand-blue: #79a7e8;
+  --brand-light-blue: #6ec2de;
+  --brand-periwinkle: #7e8cf1;
+  --brand-soft-purple: #7e71f9;
+}
+
+[data-theme="dark"] {
+  --background: #0b0f19;
+  --foreground: #f1f5f9;
+  
+  --brand-bg: #111827;
+  --brand-sidebar: #0b0f19;
+  --brand-sidebar-hover: #1f2937;
+  --brand-text: #e5e7eb;
+  --brand-heading: #c084fc;
+  
+  --brand-accent: #a78bfa;
+  --brand-accent-hover: #8b5cf6;
+  --brand-cta: #a78bfa;
+  --brand-cta-hover: #8b5cf6;
+  --brand-secondary-accent: #4c1d95;
+  --brand-border-purple: #374151;
+  
+  --brand-blue: #3b82f6;
+  --brand-light-blue: #06b6d4;
+  --brand-periwinkle: #6366f1;
+  --brand-soft-purple: #8b5cf6;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-sidebar: var(--brand-sidebar);
+  --color-brand-sidebar-hover: var(--brand-sidebar-hover);
+  --color-brand-text: var(--brand-text);
+  --color-brand-heading: var(--brand-heading);
+  
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-brand-cta: var(--brand-cta);
+  --color-brand-cta-hover: var(--brand-cta-hover);
+  --color-brand-secondary-accent: var(--brand-secondary-accent);
+  --color-brand-border-purple: var(--brand-border-purple);
+  
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-light-blue: var(--brand-light-blue);
+  --color-brand-periwinkle: var(--brand-periwinkle);
+  --color-brand-soft-purple: var(--brand-soft-purple);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Inter, system-ui, -apple-system, sans-serif;
+  scroll-behavior: smooth;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Global 200ms transition helper */
+.transition-custom {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
+
+/* Force tabular lining numbers for alignment */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* Hide Turbopack / Next.js Development Issue Overlay & Debug Badges */
+nextjs-portal,
+#nextjs-portal,
+[class*="nextjs-portal"],
+div[data-nextjs-toast-wrapper],
+div[class*="nextjs-toast"],
+[id^="nextjs"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* --- Spacing & Breathing Room Adjustments --- */
+
+/* Increase global card padding to p-6 (24px) for cards using p-5 (20px) */
+.rounded-xl.p-5 {
+  padding: 1.5rem !important;
+}
+
+/* Add more padding to table rows to prevent congested grids */
+table tbody tr td {
+  padding-top: 0.9rem !important;
+  padding-bottom: 0.9rem !important;
+}
+table thead tr th {
+  padding-bottom: 0.75rem !important;
+}
+
+/* Bump microscopic text sizes slightly for better legibility and ease of reading */
+.text-\[9px\] {
+  font-size: 10px !important;
+}
+.text-\[10px\] {
+  font-size: 11.5px !important;
+  letter-spacing: 0.025em;
+}
+.text-\[11px\] {
+  font-size: 12.5px !important;
+  letter-spacing: 0.01em;
+}
+.text-xs {
+  font-size: 13.5px !important;
+}
+
+/* Give grid layouts more spacing */
+.gap-6 {
+  gap: 1.75rem !important; /* 28px */
+}
+.gap-5 {
+  gap: 1.5rem !important; /* 24px */
+}
+.gap-4 {
+  gap: 1.25rem !important; /* 20px */
+}
+
+/* Give vertical flex stacks slightly more spacing */
+.space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.75rem !important;
+}
+.space-y-5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.5rem !important;
+}
+.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.25rem !important;
+}
+
+/* Ensure buttons and inputs have consistent, comfortable spacing */
+input, select, textarea {
+  padding-top: 0.5rem !important;
+  padding-bottom: 0.5rem !important;
+}
+
+/* --- Dark Theme Overrides for Standard Layout Classes --- */
+[data-theme="dark"] {
+  /* Force global backgrounds */
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+
+  body {
+    background-color: #0b0f19 !important;
+    color: #f1f5f9 !important;
+  }
+
+  /* Dashboard background overrides */
+  .bg-white {
+    background-color: #111827 !important;
+  }
+  
+  .bg-slate-50 {
+    background-color: #1f2937 !important;
+  }
+  
+  .bg-slate-50\/50 {
+    background-color: rgba(31, 41, 55, 0.5) !important;
+  }
+  
+  .bg-slate-50\/60 {
+    background-color: rgba(31, 41, 55, 0.6) !important;
+  }
+  
+  .bg-slate-100 {
+    background-color: #374151 !important;
+  }
+
+  .bg-slate-100\/50 {
+    background-color: rgba(55, 65, 81, 0.5) !important;
+  }
+
+  .hover\:bg-slate-50:hover {
+    background-color: #1f2937 !important;
+  }
+
+  .hover\:bg-slate-50\/50:hover {
+    background-color: rgba(31, 41, 55, 0.5) !important;
+  }
+  
+  .active\:bg-slate-50:active {
+    background-color: #374151 !important;
+  }
+
+  /* Borders */
+  .border-slate-100 {
+    border-color: #1f2937 !important;
+  }
+  
+  .border-slate-200 {
+    border-color: #374151 !important;
+  }
+
+  .border-slate-300 {
+    border-color: #4b5563 !important;
+  }
+  
+  .border-brand-border-purple\/20 {
+    border-color: rgba(126, 140, 241, 0.25) !important;
+  }
+
+  .border-brand-border-purple\/35 {
+    border-color: rgba(126, 140, 241, 0.35) !important;
+  }
+
+  .border-brand-border-purple\/15 {
+    border-color: rgba(126, 140, 241, 0.15) !important;
+  }
+
+  .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #1f2937 !important;
+  }
+
+  /* Text Colors */
+  .text-slate-400 {
+    color: #9ca3af !important;
+  }
+
+  .text-slate-500 {
+    color: #9ca3af !important;
+  }
+
+  .text-slate-600 {
+    color: #d1d5db !important;
+  }
+
+  .text-slate-700 {
+    color: #e5e7eb !important;
+  }
+
+  .text-slate-800 {
+    color: #f3f4f6 !important;
+  }
+
+  .text-slate-900 {
+    color: #f9fafb !important;
+  }
+
+  /* Inputs, Textareas, Selects */
+  input, select, textarea {
+    background-color: #1f2937 !important;
+    color: #f1f5f9 !important;
+    border-color: #475569 !important;
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: #9ca3af !important;
+  }
+
+  /* Sidebar styling fixes */
+  aside {
+    background-color: #111827 !important;
+    border-color: #1f2937 !important;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.2) !important;
+  }
+
+  /* Header styling fixes */
+  header {
+    background-color: #111827 !important;
+    border-color: #1f2937 !important;
+  }
+
+  /* Dropdowns / Modals styling fixes */
+  .shadow-xl, .shadow-2xl {
+    background-color: #1f2937 !important;
+    border-color: #374151 !important;
+  }
+  
+  /* Report Builder & other modal panels */
+  .fixed.inset-0.bg-slate-900\/40 {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+  }
+
+  /* Calendar fixes */
+  .grid-cols-7 > div {
+    border-color: #1f2937 !important;
+  }
+
+  /* Inboxes and Mail details list items */
+  .border-l-4.border-brand-accent {
+    background-color: #1e1b4b !important; /* Indigo background for unread email */
+  }
+
+  /* Tab selection */
+  .bg-brand-sidebar-hover\/15 {
+    background-color: rgba(167, 139, 250, 0.15) !important;
+  }
+}
