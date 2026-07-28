@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { 
   LayoutDashboard, 
   Users, 
@@ -311,10 +312,12 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
         >
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-              <img 
+              <Image 
                 src={profile.avatar} 
                 alt={`${profile.name} Profile`} 
+                width={32} height={32}
                 className="h-full w-full object-cover"
+                unoptimized
               />
             </div>
             {!collapsed && (

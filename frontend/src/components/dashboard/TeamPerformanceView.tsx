@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { 
   Award, 
   TrendingUp, 
@@ -112,7 +113,7 @@ export default function TeamPerformanceView() {
                     </td>
                     <td className="py-3">
                       <div className="flex items-center space-x-2.5">
-                        <img src={rep.avatar} alt={rep.name} className="h-6 w-6 rounded-full border border-slate-100 object-cover" />
+                        <Image src={rep.avatar} alt={rep.name} width={24} height={24} className="h-6 w-6 rounded-full border border-slate-100 object-cover" unoptimized />
                         <span className="font-extrabold">{rep.name}</span>
                       </div>
                     </td>
