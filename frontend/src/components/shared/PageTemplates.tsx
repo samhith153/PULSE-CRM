@@ -269,7 +269,7 @@ export function HeroWithScreenshot({
           <motion.button
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}
-            onClick={handleCTA}
+            onClick={() => handleCTA()}
             style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.4)' }}>
             Start Free Trial <ArrowRight size={16} />
           </motion.button>
@@ -395,7 +395,7 @@ export function CTASection({ title, description, onCTA }: { title: string; descr
           transition={{ duration: 0.6, delay: 0.2 }}
           whileHover={{ scale: 1.05, y: -2 }}
           whileTap={{ scale: 0.98 }}
-          onClick={handleCTA}
+          onClick={() => handleCTA()}
           style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 32px', background: '#fff', color: '#7c3aed', fontSize: 16, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 12px 32px rgba(0,0,0,.15)' }}>
           Start Free Trial <ArrowRight size={18} />
         </motion.button>
