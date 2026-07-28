@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { 
   TrendingUp, 
   IndianRupee, 
@@ -673,7 +674,7 @@ export default function ReportsView() {
                     <div key={idx} className="space-y-1">
                       <div className="flex items-center justify-between text-xs font-bold text-brand-text">
                         <div className="flex items-center space-x-2">
-                          <img src={rep.avatar} alt={rep.name} className="h-5 w-5 rounded-full object-cover border border-slate-200" />
+                          <Image src={rep.avatar} alt={rep.name} width={20} height={20} className="h-5 w-5 rounded-full object-cover border border-slate-200" unoptimized />
                           <span className="truncate max-w-[100px]">{rep.name}</span>
                         </div>
                         <span className="tabular-nums text-[10px] text-brand-heading font-extrabold">{label}</span>

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { 
   User, 
   Target, 
@@ -58,7 +59,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-6 shadow-sm/5">
         <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5">
           <div className="h-20 w-20 rounded-full overflow-hidden border border-brand-border-purple/35 shrink-0 shadow-md">
-            <img src={profile.avatar} alt={profile.name} className="h-full w-full object-cover" />
+            <Image src={profile.avatar} alt={profile.name} width={80} height={80} className="h-full w-full object-cover" unoptimized />
           </div>
           
           <div className="flex-1 text-center sm:text-left min-w-0">

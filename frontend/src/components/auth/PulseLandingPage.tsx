@@ -176,6 +176,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     Resources: ['API Docs (/docs)', 'ReDoc (/redoc)', 'Implementation Guide', 'Changelog'],
   };
 
+  // Shared layout constants
+  const maxW = 1280;
+  const px = 'clamp(24px, 5vw, 80px)';
+  const sectionPy = '48px';
+
   return (
     <div style={{ display: 'block', fontFamily: "'Inter', 'Geist', system-ui, -apple-system, sans-serif", backgroundColor: C.white, color: C.black, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
 
@@ -198,21 +203,21 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ NAVBAR ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <Navbar onOpenModal={openSignIn} onOpenSignUp={openSignUp} />
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 1. HERO SECTION ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(160deg, #f5f3ff 0%, #faf8ff 50%, #f0eefe 100%)', paddingTop: 120, paddingBottom: 0, marginTop: 64 }}>
+      {/* ══════════ 1. HERO SECTION ══════════ */}
+      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(160deg, #f5f3ff 0%, #faf8ff 50%, #f0eefe 100%)', paddingTop: 64, paddingBottom: 64, marginTop: 64 }}>
         {/* Background glow blobs */}
         <div style={{ position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)', width: 700, height: 400, background: `radial-gradient(ellipse, ${C.violet}18 0%, transparent 70%)`, pointerEvents: 'none', filter: 'blur(40px)' }} />
         <div style={{ position: 'absolute', top: 60, left: '15%', width: 300, height: 300, background: 'radial-gradient(circle, #a78bfa18 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
         <div style={{ position: 'absolute', top: 60, right: '15%', width: 300, height: 300, background: 'radial-gradient(circle, #7c3aed14 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
 
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 48px', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto', padding: `0 ${px}`, position: 'relative', zIndex: 1 }}>
 
           {/* ΓöÇΓöÇ Top badge ΓöÇΓöÇ */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            style={{ display: 'flex', justifyContent: 'center', marginBottom: 32 }}>
+            style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', border: `1px solid ${C.violetLight}`, borderRadius: 100, boxShadow: `0 2px 12px ${C.violet}14` }}>
               <Sparkles size={13} color={C.violet} />
               <span style={{ fontSize: 12, fontWeight: 600, color: C.violet }}>The future of sales is here</span>
@@ -224,12 +229,12 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            style={{ textAlign: 'center', marginBottom: 24 }}>
-            <h1 style={{ fontSize: 'clamp(44px, 6vw, 76px)', fontWeight: 900, color: C.black, lineHeight: 1.08, letterSpacing: '-0.04em', margin: 0 }}>
+            style={{ textAlign: 'center', marginBottom: 18 }}>
+            <h1 style={{ fontSize: 'clamp(32px, 4.5vw, 56px)', fontWeight: 900, color: C.black, lineHeight: 1.08, letterSpacing: '-0.04em', margin: 0 }}>
               Close More Deals with{' '}
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '1.1em', height: '1.1em', background: `linear-gradient(135deg, ${C.violet} 0%, #9333ea 100%)`, borderRadius: '0.22em', boxShadow: `0 8px 24px ${C.violet}50`, verticalAlign: 'middle', flexShrink: 0 }}>
-                  <Sparkles size={28} color="#fff" strokeWidth={2.5} />
+                  <Sparkles size={22} color="#fff" strokeWidth={2.5} />
                 </span>
                 <span style={{ color: C.violet }}>Smarter</span>
               </span>
@@ -243,8 +248,8 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            style={{ textAlign: 'center', fontSize: 18, color: C.textGray, fontWeight: 400, lineHeight: 1.7, maxWidth: 600, margin: '0 auto 40px' }}>
-            Pulse CRM unifies your leads, deals, and Gmail ΓÇö scored by transparent AI, managed through an FSM pipeline, and built for real sales teams.
+            style={{ textAlign: 'center', fontSize: 16, color: C.textGray, fontWeight: 400, lineHeight: 1.7, maxWidth: 560, margin: '0 auto 28px' }}>
+            Pulse CRM unifies your leads, deals, and Gmail — scored by transparent AI, managed through an FSM pipeline, and built for real sales teams.
           </motion.p>
 
           {/* ΓöÇΓöÇ CTAs ΓöÇΓöÇ */}
@@ -252,7 +257,8 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
-            style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 56 }}>
+            className="pulse-hero-btns"
+            style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 64 }}>
             <button
               onClick={openSignUp}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer', boxShadow: `0 8px 28px ${C.violet}55`, fontFamily: 'inherit', letterSpacing: '-0.01em', transition: 'all 0.2s' }}
@@ -408,8 +414,8 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 4. SOCIAL PROOF / TRUSTED BY ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '56px 48px', overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+      {/* ══════════ 4. SOCIAL PROOF / TRUSTED BY ══════════ */}
+      <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: `56px ${px}`, overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
         <style>{`
           @keyframes marquee {
             0% { transform: translateX(0); }
@@ -449,7 +455,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             }
           }
         `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 48 }}>
             TRUSTED BY FAST-GROWING SALES TEAMS & ENTERPRISE ORGANIZATIONS
           </p>
@@ -512,15 +518,15 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 6. FEATURES GRID ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <section data-reveal="features" style={{ background: C.sectionAlt, padding: '96px 48px', borderTop: `1px solid ${C.border}` }}>
+      {/* ══════════ 6. FEATURES GRID ══════════ */}
+      <section data-reveal="features" style={{ background: C.sectionAlt, padding: `40px ${px}`, borderTop: `1px solid ${C.border}` }}>
         <style>{`
           .feature-card-hover {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           }
           .feature-card-hover:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 60px rgba(124, 58, 237, 0.2) !important;
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 12px 32px rgba(124, 58, 237, 0.15) !important;
             border-color: #7c3aed !important;
           }
           .feature-icon-hover {
@@ -530,54 +536,50 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             transform: scale(1.1) rotate(5deg);
           }
         `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.4 }}
-              style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
+              style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 8px' }}>
               Features
             </motion.p>
             <motion.h2
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
+              transition={{ duration: 0.4, delay: 0.1 }}
+              style={{ fontSize: 26, fontWeight: 800, color: C.black, letterSpacing: '-0.02em', margin: '0 0 8px' }}>
               Everything you need to close more deals
             </motion.h2>
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
-              Everything built and wired ΓÇö scoring, pipeline, Gmail, RBAC, and analytics. No tab-switching, no data silos.
+              transition={{ duration: 0.4, delay: 0.15 }}
+              style={{ fontSize: 13.5, color: C.textGray, fontWeight: 400, maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
+              Scoring, pipeline, Gmail, RBAC, and analytics — all built and wired together.
             </motion.p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+          <div className="pulse-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             {features.map((f, idx) => {
               const Icon = f.icon;
               return (
                 <motion.div
                   key={f.title}
-                  initial={{ opacity: 0, y: 40 }}
+                  initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "0px" }}
-                  transition={{ 
-                    duration: 0.5, 
-                    delay: idx * 0.1,
-                    ease: [0.4, 0, 0.2, 1]
-                  }}
+                  transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.4, 0, 0.2, 1] }}
                   className="feature-card-hover"
-                  style={{ padding: '32px 28px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
-                  <div className="feature-icon-hover" style={{ height: 52, width: 52, borderRadius: 16, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-                    <Icon size={24} color={f.fg} />
+                  style={{ padding: '18px 16px', borderRadius: 14, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 1px 6px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
+                  <div className="feature-icon-hover" style={{ height: 36, width: 36, borderRadius: 10, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Icon size={17} color={f.fg} />
                   </div>
-                  <h3 style={{ fontSize: 17, fontWeight: 800, color: C.black, margin: '0 0 10px', letterSpacing: '-0.01em' }}>{f.title}</h3>
-                  <p style={{ fontSize: 14, color: C.textGray, fontWeight: 500, lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 5px', letterSpacing: '-0.01em' }}>{f.title}</h3>
+                  <p style={{ fontSize: 12, color: C.textGray, fontWeight: 400, lineHeight: 1.55, margin: 0 }}>{f.desc}</p>
                 </motion.div>
               );
             })}
@@ -585,290 +587,207 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 7. HOW IT WORKS ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <section data-reveal="steps" style={{ background: '#eeeafd', padding: '80px 48px 72px', position: 'relative', overflow: 'hidden' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+      {/* ══════════ 7. HOW IT WORKS ══════════ */}
+      <section data-reveal="steps" style={{ background: '#eeeafd', padding: `32px ${px}`, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          {/* Header — centered */}
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <motion.div
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 14px', background: 'rgba(255,255,255,0.7)', border: `1px solid ${C.violetLight}`, borderRadius: 100, marginBottom: 18 }}>
-              <Zap size={12} color={C.violet} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em' }}>HOW IT WORKS</span>
+              transition={{ duration: 0.4 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'rgba(255,255,255,0.7)', border: `1px solid ${C.violetLight}`, borderRadius: 100, marginBottom: 10 }}>
+              <Zap size={10} color={C.violet} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em' }}>HOW IT WORKS</span>
             </motion.div>
             <motion.h2
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 12 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.08 }}
-              style={{ fontSize: 52, fontWeight: 900, color: C.black, letterSpacing: '-0.04em', margin: '0 0 14px', lineHeight: 1.08 }}>
+              transition={{ duration: 0.4, delay: 0.07 }}
+              style={{ fontSize: 26, fontWeight: 800, color: C.black, letterSpacing: '-0.025em', margin: '0 0 7px', lineHeight: 1.15 }}>
               Up and running in minutes
             </motion.h2>
             <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: 0.15 }}
-              style={{ fontSize: 17, color: C.textGray, fontWeight: 400, maxWidth: 500, margin: '0 auto', lineHeight: 1.65 }}>
-              No complex setup. No migration headaches.<br />Start closing deals faster on day one.
+              transition={{ duration: 0.4, delay: 0.12 }}
+              style={{ fontSize: 13.5, color: C.textGray, fontWeight: 400, maxWidth: 400, margin: '0 auto', lineHeight: 1.55 }}>
+              No complex setup. Start closing deals faster on day one.
             </motion.p>
           </div>
 
           {/* Main: Steps Left + Cards Right */}
-          <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 60, alignItems: 'start' }}>
+          <div className="pulse-hiw-grid" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 32, alignItems: 'start' }}>
 
             {/* ΓöÇΓöÇ LEFT: Steps ΓöÇΓöÇ */}
             <div>
               {[
-                { num: '01', icon: Zap, title: 'Connect', desc: 'Import contacts and leads via CSV or REST API. Link Gmail with OAuth for automatic email sync.' },
-                { num: '02', icon: Sparkles, title: 'AI Works for You', desc: 'Scores every lead 0ΓÇô100 using fit + engagement. Groq/Llama summarises threads and suggests next actions.' },
-                { num: '03', icon: TrendingUp, title: 'Close', desc: 'Move deals through FSM pipeline stages. Role-scoped dashboards keep reps and managers aligned.' },
+                { num: '01', icon: Zap, title: 'Connect', desc: 'Import contacts and leads via CSV or REST API. Link Gmail with OAuth.' },
+                { num: '02', icon: Sparkles, title: 'AI Works for You', desc: 'Scores every lead 0–100. Groq/Llama summarises threads and suggests next actions.' },
+                { num: '03', icon: TrendingUp, title: 'Close', desc: 'Move deals through FSM stages. Role-scoped dashboards keep reps aligned.' },
               ].map((step, idx) => {
                 const Icon = step.icon;
                 return (
                   <motion.div
                     key={idx}
-                    initial={{ opacity: 0, x: -30 }}
+                    initial={{ opacity: 0, x: -20 }}
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
-                    transition={{ duration: 0.55, delay: idx * 0.15 }}
-                    style={{ display: 'flex', gap: 14, marginBottom: idx < 2 ? 32 : 0, position: 'relative' }}>
-                    {/* vertical connector line ΓÇö full height through text to next circle */}
+                    transition={{ duration: 0.4, delay: idx * 0.1 }}
+                    style={{ display: 'flex', gap: 10, marginBottom: idx < 2 ? 20 : 0, position: 'relative' }}>
                     {idx < 2 && (
-                      <div style={{
-                        position: 'absolute',
-                        left: 22,
-                        top: 44,
-                        width: 2,
-                        height: 'calc(100% + 32px)',
-                        background: `linear-gradient(180deg, ${C.violet}60 0%, ${C.violet}20 100%)`,
-                        transform: 'translateX(-50%)'
-                      }} />
+                      <div style={{ position: 'absolute', left: 17, top: 34, width: 2, height: 'calc(100% + 20px)', background: `linear-gradient(180deg, ${C.violet}50 0%, ${C.violet}15 100%)`, transform: 'translateX(-50%)' }} />
                     )}
-                    {/* Circular icon */}
-                    <div style={{ width: 44, height: 44, borderRadius: '50%', background: C.white, border: `1.5px solid ${C.violetLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1, boxShadow: `0 4px 16px ${C.violet}18` }}>
-                      <Icon size={20} color={C.violet} strokeWidth={2.5} />
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: C.white, border: `1.5px solid ${C.violetLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1, boxShadow: `0 3px 10px ${C.violet}15` }}>
+                      <Icon size={15} color={C.violet} strokeWidth={2.5} />
                     </div>
-                    {/* Text */}
-                    <div style={{ paddingTop: 2 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>STEP {step.num}</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, color: C.black, marginBottom: 5, letterSpacing: '-0.02em' }}>{step.title}</div>
-                      <div style={{ fontSize: 13, color: C.textGray, lineHeight: 1.5, fontWeight: 400 }}>{step.desc}</div>
+                    <div style={{ paddingTop: 1 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>STEP {step.num}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.black, marginBottom: 3, letterSpacing: '-0.01em' }}>{step.title}</div>
+                      <div style={{ fontSize: 11.5, color: C.textGray, lineHeight: 1.5, fontWeight: 400 }}>{step.desc}</div>
                     </div>
                   </motion.div>
                 );
               })}
             </div>
 
-            {/* ΓöÇΓöÇ RIGHT: Cards Grid ΓöÇΓöÇ */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* ── RIGHT: Cards Grid ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
               {/* ROW 1: AI Score | Visual Pipeline | Revenue Analytics */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr 1.2fr', gap: 16 }}>
-
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr 1.2fr', gap: 10 }}>
                 {/* AI Score */}
-                <motion.div
-                  initial={{ opacity: 0, y: 28 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }}
-                  style={{ background: C.white, borderRadius: 18, padding: '20px 20px 16px', border: `1px solid ${C.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', cursor: 'default', transition: 'box-shadow 0.2s, transform 0.2s' }}>
-                  {/* Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI SCORE</span>
-                    <Sparkles size={12} color={C.violet} />
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.2 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 13px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI SCORE</span>
+                    <Sparkles size={9} color={C.violet} />
                   </div>
-                  {/* Big number */}
-                  <div style={{ fontSize: 58, fontWeight: 900, color: '#10b981', lineHeight: 1, letterSpacing: '-0.05em', marginBottom: 2 }}>89</div>
-                  <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500, marginBottom: 14 }}>Hot Lead</div>
-                  {/* Mini sparkline */}
-                  <svg viewBox="0 0 100 36" style={{ width: '100%', height: 36 }}>
-                    <defs>
-                      <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <polyline points="0,30 14,26 28,28 38,20 50,22 62,14 74,10 86,6 100,4" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                    <polygon points="0,30 14,26 28,28 38,20 50,22 62,14 74,10 86,6 100,4 100,36 0,36" fill="url(#sparkGrad)" />
+                  <div style={{ fontSize: 32, fontWeight: 900, color: '#10b981', lineHeight: 1, letterSpacing: '-0.04em', marginBottom: 1 }}>89</div>
+                  <div style={{ fontSize: 10, color: '#64748b', fontWeight: 500, marginBottom: 6 }}>Hot Lead</div>
+                  <svg viewBox="0 0 100 20" style={{ width: '100%', height: 20 }}>
+                    <defs><linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity="0.2"/><stop offset="100%" stopColor="#10b981" stopOpacity="0"/></linearGradient></defs>
+                    <polyline points="0,18 14,15 28,16 38,11 50,12 62,7 74,5 86,3 100,1" fill="none" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    <polygon points="0,18 14,15 28,16 38,11 50,12 62,7 74,5 86,3 100,1 100,20 0,20" fill="url(#sparkGrad)"/>
                   </svg>
                 </motion.div>
-
                 {/* Visual Pipeline */}
-                <motion.div
-                  initial={{ opacity: 0, y: 28 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                  whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }}
-                  style={{ background: C.white, borderRadius: 18, padding: '20px 18px 18px', border: `1px solid ${C.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', cursor: 'default' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 18 }}>
-                    <LayoutDashboard size={14} color={C.violet} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>VISUAL PIPELINE</span>
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.27 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 11px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                    <LayoutDashboard size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>VISUAL PIPELINE</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                    {[
-                      { label: 'New', count: 12, bg: '#ede9fe', active: false },
-                      { label: 'Qualified', count: 8, bg: '#ede9fe', active: false },
-                      { label: 'Demo', count: 5, bg: C.white, active: true },
-                      { label: 'Proposal', count: 3, bg: '#fef9c3', active: false },
-                      { label: 'Won', count: 7, bg: '#dcfce7', active: false },
-                    ].map((s, i) => (
-                      <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-                        <div style={{ height: 44, background: s.active ? C.white : s.bg, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 18, color: s.active ? C.violet : C.black, border: s.active ? `2px solid ${C.violet}` : '2px solid transparent', boxShadow: s.active ? `0 2px 10px ${C.violet}25` : 'none', marginBottom: 6 }}>
-                          {s.count}
-                        </div>
-                        <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>{s.label}</div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[{l:'New',n:12,bg:'#ede9fe',a:false},{l:'Qualified',n:8,bg:'#ede9fe',a:false},{l:'Demo',n:5,bg:C.white,a:true},{l:'Proposal',n:3,bg:'#fef9c3',a:false},{l:'Won',n:7,bg:'#dcfce7',a:false}].map((s,i)=>(
+                      <div key={i} style={{ flex:1, textAlign:'center' }}>
+                        <div style={{ height:26, background:s.a?C.white:s.bg, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:12, color:s.a?C.violet:C.black, border:s.a?`2px solid ${C.violet}`:'2px solid transparent', marginBottom:3 }}>{s.n}</div>
+                        <div style={{ fontSize:8, color:'#94a3b8', fontWeight:600 }}>{s.l}</div>
                       </div>
                     ))}
                   </div>
                 </motion.div>
-
                 {/* Revenue Analytics */}
-                <motion.div
-                  initial={{ opacity: 0, y: 28 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.4 }}
-                  whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }}
-                  style={{ background: C.white, borderRadius: 18, padding: '20px 18px 16px', border: `1px solid ${C.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', cursor: 'default' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16 }}>
-                    <BarChart2 size={14} color={C.violet} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>REVENUE ANALYTICS</span>
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.34 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 11px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                    <BarChart2 size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>REVENUE</span>
                   </div>
-                  <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginBottom: 3 }}>Monthly Revenue</div>
-                      <div style={{ fontSize: 26, fontWeight: 900, color: C.violet, letterSpacing: '-0.03em' }}>Γé╣1.2L</div>
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, marginBottom: 3 }}>Win Rate</div>
-                      <div style={{ fontSize: 26, fontWeight: 900, color: '#10b981', letterSpacing: '-0.03em' }}>67%</div>
-                    </div>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 7 }}>
+                    <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Revenue</div><div style={{ fontSize: 16, fontWeight: 900, color: C.violet, letterSpacing: '-0.02em' }}>₹1.2L</div></div>
+                    <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Win Rate</div><div style={{ fontSize: 16, fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em' }}>67%</div></div>
                   </div>
-                  {/* Bar chart */}
-                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 42 }}>
-                    {[30, 38, 35, 42, 45, 40, 55, 65, 70, 68].map((h, i) => (
-                      <div key={i} style={{ flex: 1, background: i >= 6 ? C.violet : '#ddd6fe', borderRadius: '3px 3px 0 0', height: `${h}%`, transition: 'height 0.3s' }} />
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 22 }}>
+                    {[30,38,35,42,45,40,55,65,70,68].map((h,i)=>(
+                      <div key={i} style={{ flex:1, background:i>=6?C.violet:'#ddd6fe', borderRadius:'2px 2px 0 0', height:`${h}%` }} />
                     ))}
                   </div>
                 </motion.div>
               </div>
 
               {/* ROW 2: AI Copilot | Import Contacts | Email Activity */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 {/* AI Copilot */}
-                <motion.div
-                  initial={{ opacity: 0, y: 28 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.5 }}
-                  whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }}
-                  style={{ background: C.white, borderRadius: 18, padding: '20px 20px 18px', border: `1px solid ${C.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', cursor: 'default' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16 }}>
-                    <Sparkles size={14} color={C.violet} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI COPILOT</span>
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.4 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 13px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                    <Sparkles size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI COPILOT</span>
                   </div>
-                  {/* Chat bubble */}
-                  <div style={{ padding: '14px 16px', background: '#f8f7ff', borderRadius: 12, border: `1px solid ${C.violetLight}`, marginBottom: 14 }}>
-                    <div style={{ fontSize: 13, color: C.violet, fontWeight: 600, marginBottom: 6, lineHeight: 1.4 }}>
-                      "Schedule demo with Acme Corp"
-                    </div>
-                    <div style={{ fontSize: 12, color: '#8b5cf6', fontWeight: 500 }}>
-                      Positive sentiment ΓÇó High engagement
-                    </div>
+                  <div style={{ padding: '7px 9px', background: '#f8f7ff', borderRadius: 8, border: `1px solid ${C.violetLight}`, marginBottom: 7 }}>
+                    <div style={{ fontSize: 11, color: C.violet, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>"Schedule demo with Acme Corp"</div>
+                    <div style={{ fontSize: 10, color: '#8b5cf6', fontWeight: 500 }}>Positive sentiment • High engagement</div>
                   </div>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <div style={{ padding: '6px 14px', background: C.violetLighter, borderRadius: 8, fontSize: 12, fontWeight: 600, color: C.violet }}>
-                      Demo Ready
-                    </div>
-                    <div style={{ padding: '6px 14px', background: C.violetLighter, borderRadius: 8, fontSize: 12, fontWeight: 600, color: C.violet }}>
-                      High Priority
-                    </div>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    <div style={{ padding: '3px 9px', background: C.violetLighter, borderRadius: 6, fontSize: 10, fontWeight: 600, color: C.violet }}>Demo Ready</div>
+                    <div style={{ padding: '3px 9px', background: C.violetLighter, borderRadius: 6, fontSize: 10, fontWeight: 600, color: C.violet }}>High Priority</div>
                   </div>
                 </motion.div>
 
                 {/* Import Contacts */}
-                <motion.div
-                  initial={{ opacity: 0, y: 28 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.6 }}
-                  whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }}
-                  style={{ background: C.white, borderRadius: 18, padding: '20px 20px 18px', border: `1px solid ${C.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', cursor: 'default' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 18 }}>
-                    <Users size={14} color={C.violet} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>IMPORT CONTACTS</span>
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.47 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 13px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                    <Users size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>IMPORT CONTACTS</span>
                   </div>
-                  {/* Dashed upload zone */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '22px 16px', background: '#fafbff', borderRadius: 14, border: `2px dashed ${C.violetLight}`, gap: 10 }}>
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 6px 20px ${C.violet}40` }}>
-                      <ChevronRight size={22} color={C.white} strokeWidth={2.5} style={{ transform: 'rotate(-90deg)' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px', background: '#fafbff', borderRadius: 9, border: `2px dashed ${C.violetLight}`, gap: 5 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${C.violet}40` }}>
+                      <ChevronRight size={14} color={C.white} strokeWidth={2.5} style={{ transform: 'rotate(-90deg)' }} />
                     </div>
-                    <div style={{ fontSize: 13, color: '#94a3b8', fontWeight: 600 }}>CSV, Gmail, CRM</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>CSV, Gmail, CRM</div>
                   </div>
                 </motion.div>
 
                 {/* Email Activity */}
-                <motion.div
-                  initial={{ opacity: 0, y: 28 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.7 }}
-                  whileHover={{ y: -4, boxShadow: '0 16px 40px rgba(0,0,0,0.12)' }}
-                  style={{ background: C.white, borderRadius: 18, padding: '20px 20px 18px', border: `1px solid ${C.border}`, boxShadow: '0 4px 16px rgba(0,0,0,0.07)', cursor: 'default' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16 }}>
-                    <Mail size={14} color={C.violet} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>EMAIL ACTIVITY</span>
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.54 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 13px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                    <Mail size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>EMAIL ACTIVITY</span>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-                    {[
-                      { sender: 'John @ Acme', time: '2m ago' },
-                      { sender: 'Sarah @ TechCo', time: '1h ago' },
-                      { sender: 'Mike @ StartupX', time: '3h ago' },
-                    ].map((email, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
-                          <span style={{ fontSize: 14, fontWeight: 600, color: C.black }}>{email.sender}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {[{sender:'John @ Acme',time:'2m ago'},{sender:'Sarah @ TechCo',time:'1h ago'},{sender:'Mike @ StartupX',time:'3h ago'}].map((email,i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, fontWeight: 600, color: C.black }}>{email.sender}</span>
                         </div>
-                        <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, flexShrink: 0 }}>{email.time}</span>
+                        <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500, flexShrink: 0 }}>{email.time}</span>
                       </div>
                     ))}
                   </div>
                 </motion.div>
-
               </div>
             </div>
           </div>
 
           {/* CTA */}
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.8 }}
-            style={{ textAlign: 'center', marginTop: 56 }}>
+            transition={{ duration: 0.4, delay: 0.6 }}
+            style={{ textAlign: 'center', marginTop: 20 }}>
             <button
               onClick={openSignUp}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '15px 36px', background: C.violet, color: C.white, fontSize: 16, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 10px 30px ${C.violet}55`, fontFamily: 'inherit', transition: 'all 0.25s', letterSpacing: '-0.01em' }}
-              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 16px 40px ${C.violet}65`; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 10px 30px ${C.violet}55`; }}>
-              Get started free <ArrowRight size={17} strokeWidth={2.5} />
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 26px', background: C.violet, color: C.white, fontSize: 13, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 6px 20px ${C.violet}50`, fontFamily: 'inherit', transition: 'all 0.2s', letterSpacing: '-0.01em' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 10px 28px ${C.violet}60`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 6px 20px ${C.violet}50`; }}>
+              Get started free <ArrowRight size={14} strokeWidth={2.5} />
             </button>
-            <div style={{ display: 'flex', gap: 36, justifyContent: 'center', marginTop: 22, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
               {[
                 { icon: Shield, text: '14-day free trial' },
                 { icon: CheckCircle2, text: 'No credit card required' },
                 { icon: Zap, text: '2-minute setup' },
               ].map(item => (
-                <span key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, color: '#64748b' }}>
-                  <item.icon size={15} color={C.violet} strokeWidth={2} /> {item.text}
+                <span key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, color: '#64748b' }}>
+                  <item.icon size={12} color={C.violet} strokeWidth={2} /> {item.text}
                 </span>
               ))}
             </div>
@@ -876,21 +795,21 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 7.5. TRUST / FEATURES BAR ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <section data-reveal="trust" style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: '56px 48px', opacity: visibleSections.has('trust') ? 1 : 0, transform: visibleSections.has('trust') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+      {/* ══════════ 7.5. TRUST / FEATURES BAR ══════════ */}
+      <section data-reveal="trust" style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: `40px ${px}`, opacity: visibleSections.has('trust') ? 1 : 0, transform: visibleSections.has('trust') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+        <div className="pulse-trust-grid" style={{ maxWidth: maxW, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
           {trustBadges.map(b => {
             const Icon = b.icon;
             return (
-              <div key={b.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, padding: '28px 20px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, transition: 'all 0.25s ease', cursor: 'default' }}
-                onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = `0 12px 36px ${C.violet}14`; el.style.borderColor = C.violetLight; el.style.transform = 'translateY(-4px)'; }}
+              <div key={b.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10, padding: '18px 14px', borderRadius: 16, border: `1px solid ${C.border}`, background: C.white, transition: 'all 0.25s ease', cursor: 'default' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = `0 8px 24px ${C.violet}14`; el.style.borderColor = C.violetLight; el.style.transform = 'translateY(-3px)'; }}
                 onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = C.border; el.style.transform = 'translateY(0)'; }}>
-                <div style={{ height: 58, width: 58, borderRadius: 18, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={24} color={C.violet} />
+                <div style={{ height: 40, width: 40, borderRadius: 12, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={18} color={C.violet} />
                 </div>
                 <div>
-                  <p style={{ fontSize: 15, fontWeight: 800, color: C.black, margin: '0 0 6px' }}>{b.title}</p>
-                  <p style={{ fontSize: 13, color: C.textMuted, fontWeight: 500, margin: 0 }}>{b.desc}</p>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 3px' }}>{b.title}</p>
+                  <p style={{ fontSize: 11.5, color: C.textMuted, fontWeight: 400, margin: 0 }}>{b.desc}</p>
                 </div>
               </div>
             );
@@ -901,7 +820,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 8. PLATFORM + ORBIT DIAGRAM ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="orbit" style={{ 
         background: '#ffffff', 
-        padding: '96px 48px 110px', 
+        padding: `40px ${px}`, 
         position: 'relative', 
         overflow: 'hidden', 
         opacity: visibleSections.has('orbit') ? 1 : 0, 
@@ -932,27 +851,27 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
           </svg>
         </div>
 
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <p style={{ fontSize: 12, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
+        <div className="pulse-orbit-grid" style={{ maxWidth: maxW, margin: '0 auto', display: 'grid', gridTemplateColumns: '5fr 7fr', gap: 48, alignItems: 'center', position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 'clamp(0px, 4vw, 64px)' }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
               ALL-IN-ONE PLATFORM
             </p>
-            <h2 style={{ fontSize: 46, fontWeight: 900, color: C.black, lineHeight: 1.15, letterSpacing: '-0.025em', margin: 0 }}>
-              A complete platform<br />to power your<br /><span style={{ color: C.violet }}>sales pipeline</span>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: C.black, lineHeight: 1.2, letterSpacing: '-0.02em', margin: 0 }}>
+              A complete platform<br />to power your{' '}<span style={{ color: C.violet }}>sales pipeline</span>
             </h2>
-            <p style={{ fontSize: 16, color: '#64748b', fontWeight: 500, lineHeight: 1.75, maxWidth: 440, margin: 0 }}>
-              One FastAPI backend powers your entire revenue workflow ΓÇö from lead intake to deal close, with transparent AI scoring at every step.
+            <p style={{ fontSize: 14, color: '#64748b', fontWeight: 400, lineHeight: 1.7, maxWidth: 400, margin: 0 }}>
+              One FastAPI backend powers your entire revenue workflow — from lead intake to deal close, with transparent AI scoring at every step.
             </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
                 'Rule-based AI scoring ΓÇö no black box',
                 'Gmail OAuth sync with Groq/Llama summaries',
                 'FSM pipeline with real-time RBAC dashboards',
                 'Close more deals with less admin work'
               ].map(item => (
-                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 700, color: '#1e293b' }}>
-                  <div style={{ height: 22, width: 22, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <CheckCircle2 size={15} color={C.violet} strokeWidth={2.5} />
+                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
+                  <div style={{ height: 20, width: 20, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <CheckCircle2 size={13} color={C.violet} strokeWidth={2.5} />
                   </div>
                   {item}
                 </li>
@@ -965,10 +884,10 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   display: 'inline-flex', 
                   alignItems: 'center', 
                   gap: 10, 
-                  padding: '14px 28px', 
+                  padding: '11px 22px', 
                   background: C.white, 
                   color: C.violet, 
-                  fontSize: 15, 
+                  fontSize: 13, 
                   fontWeight: 700, 
                   borderRadius: 100, 
                   border: `1.5px solid ${C.violet}`, 
@@ -1150,19 +1069,19 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 9. TESTIMONIALS ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <section data-reveal="testimonials" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('testimonials') ? 1 : 0, transform: visibleSections.has('testimonials') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>Customer stories</p>
-            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>Teams that love Pulse CRM</h2>
-            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 460, margin: '0 auto', lineHeight: 1.7 }}>
-              Real feedback from dev teams and sales leaders using Pulse CRM in production.
+      {/* ══════════ 9. TESTIMONIALS ══════════ */}
+      <section data-reveal="testimonials" style={{ background: C.white, padding: `40px ${px}`, borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('testimonials') ? 1 : 0, transform: visibleSections.has('testimonials') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 8px' }}>Customer stories</p>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: C.black, letterSpacing: '-0.02em', margin: '0 0 8px' }}>Teams that love Pulse CRM</h2>
+            <p style={{ fontSize: 13.5, color: C.textGray, fontWeight: 400, maxWidth: 400, margin: '0 auto', lineHeight: 1.55 }}>
+              Real feedback from dev teams and sales leaders using Pulse CRM.
             </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 28 }}>
+          <div className="pulse-testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {testimonials.map(t => (
-              <div key={t.name} className="testimonial-card" style={{ padding: '32px 28px', borderRadius: 22, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div key={t.name} className="testimonial-card" style={{ padding: '20px 18px', borderRadius: 16, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 2px 10px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                   {[1, 2, 3, 4, 5].map(n => <Star key={n} size={15} color="#f59e0b" fill="#f59e0b" />)}
                 </div>
@@ -1182,91 +1101,84 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 11. BOTTOM CTA BANNER ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <section data-reveal="cta" style={{ background: `linear-gradient(135deg, ${C.violet} 0%, ${C.violetDark} 100%)`, padding: '88px 48px', position: 'relative', overflow: 'hidden', opacity: visibleSections.has('cta') ? 1 : 0, transform: visibleSections.has('cta') ? 'scale(1)' : 'scale(0.97)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
-        <div style={{ position: 'absolute', top: -120, left: -120, width: 360, height: 360, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,0,0,0.1)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-          <div style={{ height: 68, width: 68, borderRadius: 22, background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-            <Zap size={32} color={C.white} />
+      {/* ══════════ 11. BOTTOM CTA BANNER ══════════ */}
+      <section data-reveal="cta" style={{ background: C.sectionAlt, padding: `${sectionPy} ${px}`, opacity: visibleSections.has('cta') ? 1 : 0, transform: visibleSections.has('cta') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
+          {/* Floating card */}
+          <div style={{ background: `linear-gradient(135deg, ${C.violet} 0%, #6d28d9 100%)`, borderRadius: 28, padding: '64px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: `0 24px 64px ${C.violet}40` }}>
+            {/* Decorative blobs inside card */}
+            <div style={{ position: 'absolute', top: -60, left: -60, width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: -80, right: -60, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,0,0,0.08)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: '30%', right: '10%', width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ height: 60, width: 60, borderRadius: 18, background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', backdropFilter: 'blur(10px)' }}>
+                <Zap size={28} color={C.white} strokeWidth={2.5} />
+              </div>
+              <h2 style={{ fontSize: 46, fontWeight: 900, color: C.white, margin: '0 0 14px', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                Start your free trial today
+              </h2>
+              <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.80)', fontWeight: 400, margin: '0 auto 36px', lineHeight: 1.7, maxWidth: 500 }}>
+                Score every lead, sync Gmail, manage your pipeline, and close more deals — all in one place. Set up in 2 minutes, no credit card required.
+              </p>
+              <button
+                onClick={openSignUp}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '15px 38px', background: C.white, color: C.violetDark, fontSize: 16, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 28px rgba(0,0,0,0.20)', fontFamily: 'inherit', transition: 'all 0.2s', letterSpacing: '-0.01em' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 36px rgba(0,0,0,0.28)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.20)'; }}>
+                Start Free Trial <ArrowRight size={17} />
+              </button>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', margin: '20px 0 0', fontWeight: 500 }}>
+                ✓ 14-day free trial &nbsp;·&nbsp; ✓ No credit card &nbsp;·&nbsp; ✓ Cancel anytime
+              </p>
+            </div>
           </div>
-          <h2 style={{ fontSize: 48, fontWeight: 900, color: C.white, margin: '0 0 16px', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
-            Start your free trial today
-          </h2>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.78)', fontWeight: 500, margin: '0 auto 40px', lineHeight: 1.7, maxWidth: 520 }}>
-            Score every lead, sync Gmail, manage your pipeline, and close more deals ΓÇö all in one place. Set up in 2 minutes, no credit card required.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <button onClick={openSignUp} className="cta-btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 36px', background: C.white, color: C.violetDark, fontSize: 16, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 10px 32px rgba(0,0,0,0.22)', fontFamily: 'inherit' }}>
-              Start Free Trial <ArrowRight size={17} />
-            </button>
-          </div>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', margin: '22px 0 0', fontWeight: 500 }}>
-            Γ£ô 14-day free trial &nbsp;┬╖&nbsp; Γ£ô No credit card &nbsp;┬╖&nbsp; Γ£ô Cancel anytime
-          </p>
         </div>
       </section>
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 13. FOOTER ΓÇö DARK ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
-      <footer style={{ background: C.darkBg, borderTop: `1px solid ${C.darkBorder}`, padding: '72px 48px 0' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.6fr', gap: 48, marginBottom: 56 }}>
+      {/* ══════════ 13. FOOTER — DARK ══════════ */}
+      <footer style={{ background: C.darkBg, borderTop: `1px solid ${C.darkBorder}`, padding: `32px ${px} 0` }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
+          <div className="pulse-footer-grid" style={{ display: 'grid', gridTemplateColumns: '200px 1fr 1fr 1fr 220px', gap: 28, marginBottom: 28, alignItems: 'start' }}>
 
             {/* Brand column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ height: 36, width: 36, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${C.violet}44` }}>
-                  <Activity size={17} color={C.white} strokeWidth={2.5} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ height: 26, width: 26, borderRadius: 7, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 3px 10px ${C.violet}44` }}>
+                  <Activity size={12} color={C.white} strokeWidth={2.5} />
                 </div>
-                <span style={{ fontSize: 18, fontWeight: 900, color: C.white }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: C.white }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
               </div>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', fontWeight: 500, lineHeight: 1.75, margin: 0, maxWidth: 280 }}>
+              <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', fontWeight: 400, lineHeight: 1.65, margin: 0, maxWidth: 220 }}>
                 FastAPI + PostgreSQL CRM with transparent AI scoring, Gmail sync, and 40+ REST endpoints. Built for real sales teams.
               </p>
-              {/* Real SVG social icons */}
-              <div style={{ display: 'flex', gap: 10 }}>
-                {/* GitHub */}
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                  </svg>
-                </a>
-                {/* Twitter / X */}
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                </a>
-                {/* LinkedIn */}
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                  </svg>
-                </a>
+              <div style={{ display: 'flex', gap: 7 }}>
+                {[
+                  { href: 'https://github.com', svg: <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg> },
+                  { href: 'https://twitter.com', svg: <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+                  { href: 'https://linkedin.com', svg: <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> },
+                ].map(({ href, svg }, i) => (
+                  <a key={i} href={href} target="_blank" rel="noopener noreferrer"
+                    style={{ height: 28, width: 28, borderRadius: 7, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
+                    {svg}
+                  </a>
+                ))}
               </div>
             </div>
 
             {/* Link columns */}
             {Object.entries(footerLinks).map(([category, links]) => (
-              <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <p style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{category}</p>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
+              <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 9.5, fontWeight: 800, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{category}</p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {links.map(link => (
                     <li key={link}>
                       <button onClick={openSignUp} className="footer-link"
-                        style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
+                        style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
                         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.55)'; }}>
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.5)'; }}>
                         {link}
                       </button>
                     </li>
@@ -1276,41 +1188,34 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             ))}
 
             {/* Newsletter */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Stay Updated</p>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 500, lineHeight: 1.65, margin: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 9.5, fontWeight: 800, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Stay Updated</p>
+              <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', fontWeight: 400, lineHeight: 1.6, margin: 0 }}>
                 Get weekly sales insights and Pulse product updates.
               </p>
-              <form onSubmit={handleNewsletter} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <input
-                  type="email"
-                  value={newsEmail}
-                  onChange={e => setNewsEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  style={{ padding: '11px 14px', borderRadius: 10, border: `1.5px solid rgba(255,255,255,0.12)`, fontSize: 13, fontFamily: 'inherit', color: C.white, outline: 'none', background: '#1e293b', boxSizing: 'border-box', width: '100%' }}
-                />
+              <form onSubmit={handleNewsletter} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                <input type="email" value={newsEmail} onChange={e => setNewsEmail(e.target.value)} placeholder="your@email.com"
+                  style={{ padding: '8px 11px', borderRadius: 8, border: `1.5px solid rgba(255,255,255,0.12)`, fontSize: 12, fontFamily: 'inherit', color: C.white, outline: 'none', background: '#1e293b', boxSizing: 'border-box', width: '100%' }} />
                 <button type="submit"
-                  style={{ padding: '11px', background: C.violet, color: C.white, fontSize: 13, fontWeight: 700, borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-                  <Mail size={14} /> Subscribe
+                  style={{ padding: '8px', background: C.violet, color: C.white, fontSize: 12, fontWeight: 700, borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                  <Mail size={12} /> Subscribe
                 </button>
               </form>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, margin: 0 }}>
-                No spam. Unsubscribe anytime.
-              </p>
+              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 400, margin: 0 }}>No spam. Unsubscribe anytime.</p>
             </div>
           </div>
 
           {/* Bottom legal bar */}
-          <div style={{ borderTop: `1px solid ${C.darkBorder}`, padding: '22px 0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, margin: 0 }}>
-              ┬⌐ {new Date().getFullYear()} Pulse CRM, Inc. All rights reserved.
+          <div style={{ borderTop: `1px solid ${C.darkBorder}`, padding: '10px 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 400, margin: 0 }}>
+              © {new Date().getFullYear()} Pulse CRM, Inc. All rights reserved.
             </p>
-            <div style={{ display: 'flex', gap: 20 }}>
+            <div style={{ display: 'flex', gap: 16 }}>
               {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Security'].map(link => (
                 <button key={link} onClick={openSignUp}
-                  style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, transition: 'color 0.15s' }}
+                  style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 400, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, transition: 'color 0.15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)'; }}>
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.35)'; }}>
                   {link}
                 </button>
               ))}
@@ -1372,6 +1277,50 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
 
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
+
+        /* ── Responsive layout ── */
+
+        /* 1280px — keep everything as-is, just ensure no overflow */
+        @media (max-width: 1280px) {
+          .pulse-footer-grid { grid-template-columns: 180px 1fr 1fr 1fr 200px !important; gap: 20px !important; }
+        }
+
+        /* 1024px tablet landscape */
+        @media (max-width: 1024px) {
+          .pulse-features-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .pulse-trust-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .pulse-footer-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 24px !important; }
+          .pulse-orbit-grid { grid-template-columns: 1fr !important; gap: 48px !important; }
+          .pulse-testimonials-grid { grid-template-columns: 1fr 1fr !important; }
+          .pulse-hiw-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+        }
+
+        /* 768px tablet portrait */
+        @media (max-width: 768px) {
+          .pulse-features-grid { grid-template-columns: 1fr 1fr !important; }
+          .pulse-trust-grid { grid-template-columns: 1fr 1fr !important; }
+          .pulse-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
+          .pulse-testimonials-grid { grid-template-columns: 1fr !important; }
+          .pulse-hero-btns { flex-direction: column !important; align-items: center !important; }
+          .pulse-hero-btns > button, .pulse-hero-btns > a { width: 100% !important; max-width: 320px !important; justify-content: center !important; }
+        }
+
+        /* 480px mobile */
+        @media (max-width: 480px) {
+          .pulse-features-grid { grid-template-columns: 1fr !important; }
+          .pulse-trust-grid { grid-template-columns: 1fr 1fr !important; }
+          .pulse-footer-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* 375px small mobile */
+        @media (max-width: 375px) {
+          .pulse-trust-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* Prevent horizontal scroll at any breakpoint */
+        @media (max-width: 1280px) {
+          body { overflow-x: hidden; }
+        }
       `}</style>
 
     </div>
