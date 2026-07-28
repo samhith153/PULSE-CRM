@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getContacts } from '@/utils/api';
+import { getContacts, createContact, updateContact } from '@/utils/api';
 import { 
   Contact, 
   Search, 
@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 interface ContactItem {
-  id: number;
+  id: string | number;
   name: string;
   company: string;
   designation: string;
@@ -33,61 +33,11 @@ interface ContactItem {
   emails: { id: number; subject: string; body: string; time: string }[];
 }
 
+const EMPTY_CONTACTS: ContactItem[] = [];
+
 export default function ContactsView() {
-  const [contacts, setContacts] = useState<ContactItem[]>([
-    {
-      id: 1,
-      name: "Alex Rivera",
-      company: "TechCorp Inc.",
-      designation: "VP of Engineering",
-      phone: "+1 (555) 019-2834",
-      email: "alex.rivera@techcorp.com",
-      notes: "Preferred contact method is email. High technical authority.",
-      timeline: [
-        { id: 1, title: "SSO blueprint sent", time: "2 days ago" },
-        { id: 2, title: "Intro call logged", time: "1 week ago" }
-      ],
-      calls: [
-        { id: 1, outcome: "Spoke with Lead", notes: "Discussed cloud migration scope.", time: "1 week ago" }
-      ],
-      meetings: [],
-      emails: [
-        { id: 1, subject: "Cloud migration outline", body: "Shared guidelines and specs document.", time: "2 days ago" }
-      ]
-    },
-    {
-      id: 2,
-      name: "Marcus Aurelius",
-      company: "MedSaaS Solutions",
-      designation: "Director of Compliance",
-      phone: "+1 (555) 304-9843",
-      email: "marcus.aurelius@medsaas.org",
-      notes: "Extremely detail oriented. Highly concerned with security guidelines.",
-      timeline: [
-        { id: 1, title: "Product walkthrough demo", time: "3 days ago" }
-      ],
-      calls: [],
-      meetings: [
-        { id: 1, title: "Security compliance review", date: "2025-05-20", time: "10:00 AM" }
-      ],
-      emails: []
-    },
-    {
-      id: 3,
-      name: "Helena Troy",
-      company: "Sparta Creative",
-      designation: "CEO & Founder",
-      phone: "+1 (555) 834-0192",
-      email: "helena.t@spartacreative.io",
-      notes: "Met at local design panel. Interested in CRM team workflows onboarding.",
-      timeline: [
-        { id: 1, title: "Profile created", time: "10 hours ago" }
-      ],
-      calls: [],
-      meetings: [],
-      emails: []
-    }
-  ]);
+  const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
+  const [loading, setLoading] = useState(true);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,54 +57,103 @@ export default function ContactsView() {
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
 
   useEffect(() => {
-    getContacts().then(data => {
-      setContacts(data as any);
+    let cancelled = false;
+    setLoading(true);
+    getContacts().then((data) => {
+      if (!cancelled) {
+        setContacts(data as any);
+        setLoading(false);
+        if (data.length && !selectedId) setSelectedId((data as any)[0].id);
+      }
+    }).catch(() => {
+      if (!cancelled) setLoading(false);
     });
+    return () => { cancelled = true; };
   }, []);
 
-  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : null;
+  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : (contacts.length > 0 ? contacts[0] : null);
 
   const filtered = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newContact: ContactItem = {
-      id: Date.now(),
-      name: form.name,
-      company: form.company,
-      designation: form.designation,
-      phone: form.phone,
-      email: form.email,
-      notes: form.notes,
-      timeline: [{ id: 1, title: "Contact Registered", time: "Just now" }],
-      calls: [],
-      meetings: [],
-      emails: []
-    };
-    setContacts([newContact, ...contacts]);
-    setSelectedId(newContact.id);
-    setIsAddModalOpen(false);
+    try {
+      const parts = form.name.trim().split(/\s+/).filter(Boolean);
+      const [first_name, ...rest] = parts;
+      const last_name = rest.join(' ') || (parts.length === 1 ? parts[0] : '');
+      const created = await createContact({
+        first_name: first_name || form.name || 'Unnamed',
+        last_name: last_name || '',
+        email: form.email,
+        phone: form.phone || null,
+        mobile: null,
+        job_title: form.designation || null,
+        department: null,
+        linkedin_url: null,
+        twitter_url: null,
+        address: null,
+        city: null,
+        country: null,
+        notes: form.notes || null,
+        company_id: null,
+      });
+      const newContact: ContactItem = {
+        id: created?.data?.id || created?.id || Date.now(),
+        name: [created?.data?.first_name, created?.data?.last_name].filter(Boolean).join(' ') || form.name,
+        company: form.company,
+        designation: form.designation,
+        phone: form.phone,
+        email: form.email,
+        notes: form.notes,
+        timeline: [{ id: 1, title: 'Contact Registered', time: 'Just now' }],
+        calls: [],
+        meetings: [],
+        emails: []
+      };
+      setContacts([newContact, ...contacts]);
+      setSelectedId(newContact.id);
+      setIsAddModalOpen(false);
+      setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
+    } catch {
+      alert('Failed to add contact.');
+    }
   };
 
-  const handleEdit = (e: React.FormEvent) => {
+  const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!active) return;
-    setContacts(contacts.map(c => c.id === active.id ? {
-      ...c,
-      name: form.name,
-      company: form.company,
-      designation: form.designation,
-      phone: form.phone,
-      email: form.email,
-      notes: form.notes
-    } : c));
-    setIsEditModalOpen(false);
+    if (!active || typeof active.id !== 'string') return;
+    try {
+      const parts = form.name.trim().split(/\s+/).filter(Boolean);
+      const [first_name, ...rest] = parts;
+      const last_name = rest.join(' ') || (parts.length === 1 ? parts[0] : '');
+      const updated = await updateContact(String(active.id), {
+        first_name: first_name || form.name || 'Unnamed',
+        last_name: last_name || '',
+        email: form.email || null,
+        phone: form.phone || null,
+        job_title: form.designation || null,
+        notes: form.notes || null,
+      });
+      const source = updated?.data ?? updated;
+      setContacts(contacts.map(c => c.id === active.id ? {
+        ...c,
+        name: [source?.first_name, source?.last_name].filter(Boolean).join(' ') || c.name,
+        company: form.company,
+        designation: form.designation,
+        phone: form.phone,
+        email: form.email,
+        notes: form.notes,
+      } : c));
+      setIsEditModalOpen(false);
+    } catch {
+      alert('Failed to save contact.');
+    }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: number | string) => {
     const remaining = contacts.filter(c => c.id !== id);
     if (remaining.length > 0) {
       setContacts(remaining);
@@ -361,7 +360,7 @@ export default function ContactsView() {
             <div className="max-h-48 overflow-y-auto pr-1">
               {activeHistoryTab === 'timeline' && (
                 <div className="space-y-2 pl-2 border-l border-brand-border-purple/15">
-                  {active.timeline.map((act) => (
+                  {active?.timeline?.map((act) => (
                     <div key={act.id} className="relative text-[10px] font-semibold">
                       <div className="absolute -left-[12.5px] top-1 h-2 w-2 rounded-full bg-brand-secondary-accent border border-white" />
                       <div className="font-extrabold text-brand-heading flex justify-between">

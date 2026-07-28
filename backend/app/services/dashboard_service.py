@@ -1533,9 +1533,10 @@ class DashboardService:
         }
         activity_heatmap: list[RepActivityHeatmapPoint] = []
         for act_type, actions in heatmap_actions.items():
+            day_expr = func.date_trunc("day", ActivityTimeline.created_at)
             heatmap_stmt = (
                 select(
-                    func.date_trunc("day", ActivityTimeline.created_at).label("day"),
+                    day_expr.label("day"),
                     func.count(ActivityTimeline.id),
                 )
                 .where(
@@ -1545,8 +1546,8 @@ class DashboardService:
                     ActivityTimeline.action.in_(actions),
                     ActivityTimeline.created_at >= ninety_days_ago,
                 )
-                .group_by(func.date_trunc("day", ActivityTimeline.created_at))
-                .order_by(func.date_trunc("day", ActivityTimeline.created_at))
+                .group_by(day_expr)
+                .order_by(day_expr)
             )
             rows = (await self.db.execute(heatmap_stmt)).all()
             for day_ts, cnt in rows:
