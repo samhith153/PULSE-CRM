@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { getLeads } from '@/utils/api';
 import { 
   Search, 
@@ -629,7 +630,7 @@ export default function LeadsView() {
                         {/* Owner */}
                         <td className="py-3">
                           <div className="flex items-center space-x-1.5">
-                            <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
+                            <Image src={lead.ownerAvatar} alt={lead.owner} width={20} height={20} className="h-5 w-5 rounded-full border border-slate-200" unoptimized />
                             <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
                           </div>
                         </td>
@@ -728,7 +729,7 @@ export default function LeadsView() {
             <div className="flex justify-between items-center">
               <span className="text-brand-text/50">Owner</span>
               <div className="flex items-center space-x-1">
-                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-slate-200" />
+                <Image src={activeLead.ownerAvatar} alt={activeLead.owner} width={18} height={18} className="h-4.5 w-4.5 rounded-full border border-slate-200" unoptimized />
                 <span className="text-brand-text">{activeLead.owner}</span>
               </div>
             </div>
