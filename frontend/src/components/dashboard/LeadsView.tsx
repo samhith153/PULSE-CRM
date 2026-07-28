@@ -208,7 +208,7 @@ export default function LeadsView() {
     companySize: '',
     currentCrm: 'Unknown',
     leadSource: 'Website',
-    operationalSystem: '',
+    operationalSystem: 'Unknown',
     status: 'New' as Lead['status'],
     priority: 'Medium' as Lead['priority'],
     owner: 'Sarah Johnson',
@@ -658,7 +658,23 @@ export default function LeadsView() {
             </div>
             <button 
               onClick={() => {
-                setLeadForm({ name: '', company: '', email: '', phone: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
+                setLeadForm({
+                  name: '',
+                  jobTitle: '',
+                  email: '',
+                  phone: '',
+                  company: '',
+                  companyIndustry: 'Other',
+                  companyLocation: '',
+                  companySize: '',
+                  currentCrm: 'Unknown',
+                  leadSource: 'Website',
+                  operationalSystem: 'Unknown',
+                  status: 'New',
+                  priority: 'Medium',
+                  owner: 'Sarah Johnson',
+                  notes: ''
+                });
                 setIsCreateModalOpen(true);
               }}
               className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 transition-colors cursor-pointer"
@@ -1278,7 +1294,7 @@ export default function LeadsView() {
       {/* CREATE LEAD DIALOG MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-brand-heading text-sm">Add New Lead</h3>
               <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
@@ -1370,7 +1386,11 @@ export default function LeadsView() {
                   </div>
                   <div>
                     <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Operational System (Optional)</label>
-                    <input type="text" placeholder="e.g. ERP/Billing System" value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                    <select value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
+                      {['No Structured System', 'Spreadsheets / Manual Tools', 'Structured Business Software', 'Custom Internal Software', 'Unknown'].map((sys) => (
+                        <option key={sys} value={sys}>{sys}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
@@ -1411,7 +1431,7 @@ export default function LeadsView() {
       {/* EDIT LEAD DIALOG MODAL */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-brand-heading text-sm">Edit Lead Details</h3>
               <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
@@ -1503,7 +1523,11 @@ export default function LeadsView() {
                   </div>
                   <div>
                     <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Operational System (Optional)</label>
-                    <input type="text" placeholder="e.g. SAP ERP" value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                    <select value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none">
+                      {['No Structured System', 'Spreadsheets / Manual Tools', 'Structured Business Software', 'Custom Internal Software', 'Unknown'].map((sys) => (
+                        <option key={sys} value={sys}>{sys}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
