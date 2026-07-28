@@ -20,7 +20,7 @@ import {
   Clock,
   TrendingDown
 } from 'lucide-react';
-import { getLeads, getEmails } from '@/utils/api';
+import { getLeads, getEmails, getEnhancedRecommendation } from '@/utils/api';
 
 interface AILead {
   name: string;
@@ -43,14 +43,84 @@ export default function AIInsightsView() {
   const [loading, setLoading] = useState(true);
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
 
+  const [immediateActions, setImmediateActions] = useState<any[]>([]);
+  const [followUps, setFollowUps] = useState<any[]>([]);
+  const [risingInterests, setRisingInterests] = useState<any[]>([]);
+  const [goingColds, setGoingColds] = useState<any[]>([]);
+
   useEffect(() => {
     Promise.all([
       getLeads(),
       getEmails({ page_size: 50 })
-    ]).then(([leadsData, emailsData]) => {
-      setLeads(leadsData || []);
+    ]).then(async ([leadsData, emailsData]) => {
+      const leadsList = leadsData || [];
       const emailList = emailsData?.data || emailsData || [];
+      setLeads(leadsList);
       setEmails(emailList);
+
+      const activeLeads = leadsList.filter((l: any) => l.status !== 'Converted' && l.status !== 'Lost');
+
+      // 1. Immediate Action: Active leads with high score or priority
+      const immediateCandidates = activeLeads
+        .filter((l: any) => (l.score || 50) >= 80 || l.priority === 'High')
+        .sort((a: any, b: any) => (b.score || 0) - (a.score || 0))
+        .slice(0, 2);
+
+      const immediateWithRecs = await Promise.all(
+        immediateCandidates.map(async (l: any) => {
+          let reason = l.notes || `High-priority prospect requesting custom deployment timeline.`;
+          try {
+            const rec = await getEnhancedRecommendation(l.id);
+            if (rec && rec.reasoning) {
+              reason = rec.reasoning;
+            }
+          } catch (e) {
+            // Dynamic fallback based on lead values
+            reason = `Inbound lead from ${l.source || 'Direct'} in ${l.companyIndustry || 'Unknown'} industry with value ₹${Number(l.estimated_value || l.value || 50000).toLocaleString('en-IN')}.`;
+          }
+          return {
+            name: l.name,
+            company: l.company,
+            score: l.score || 85,
+            reason
+          };
+        })
+      );
+      setImmediateActions(immediateWithRecs);
+
+      // 2. Follow Up Due: Contacted leads
+      const followUpList = activeLeads
+        .filter((l: any) => l.status === 'Contacted')
+        .slice(0, 2)
+        .map((l: any) => ({
+          company: l.company,
+          reason: `No timeline responses logged since stage updated for ${l.name} (${l.jobTitle || 'Lead'}).`,
+          timeframe: 'Overdue 3d'
+        }));
+      setFollowUps(followUpList);
+
+      // 3. Rising Interest: Active leads with mid-high score and engagement
+      const risingList = activeLeads
+        .filter((l: any) => (l.score || 50) >= 70 && (l.score || 50) < 80)
+        .slice(0, 2)
+        .map((l: any) => ({
+          name: l.name,
+          score: l.score || 74,
+          reason: `Engagement index is high. Target CRM configured as ${l.currentCRM || 'Unknown'}.`
+        }));
+      setRisingInterests(risingList);
+
+      // 4. Going Cold: Active leads with low score
+      const coldList = activeLeads
+        .filter((l: any) => (l.score || 50) < 50)
+        .slice(0, 2)
+        .map((l: any) => ({
+          name: l.name,
+          score: l.score || 42,
+          reason: `Lead score has dropped to ${l.score || 42}% with no activity updates.`
+        }));
+      setGoingColds(coldList);
+
       setLoading(false);
     }).catch(err => {
       console.error("Failed to load AI Insights:", err);
@@ -66,66 +136,24 @@ export default function AIInsightsView() {
     }
   };
 
-  // 1. Compute Action Lists
-  const activeLeads = leads.filter(l => l.status !== 'Converted' && l.status !== 'Lost');
-
-  // Immediate Action: Active leads with high score or priority
-  const immediateActions = activeLeads
-    .filter(l => (l.score || 50) >= 80 || l.priority === 'High')
-    .sort((a, b) => (b.score || 0) - (a.score || 0))
-    .slice(0, 2)
-    .map(l => ({
-      name: l.name,
-      company: l.company,
-      score: l.score || 85,
-      reason: l.notes || `High-priority prospect requesting custom deployment timeline.`
-    }));
-
-  // Follow Up Due: Contacted leads
-  const followUps = activeLeads
-    .filter(l => l.status === 'Contacted')
-    .slice(0, 2)
-    .map(l => ({
-      company: l.company,
-      reason: `No timeline responses logged in the last 72 hours.`,
-      timeframe: 'Overdue 3d'
-    }));
-
-  // Rising Interest: Active leads with mid-high score and engagement
-  const risingInterests = activeLeads
-    .filter(l => (l.score || 50) >= 70 && (l.score || 50) < 80)
-    .slice(0, 2)
-    .map(l => ({
-      name: l.name,
-      score: l.score || 74,
-      reason: `Opened proposal guidelines email. Awaiting compliance review.`
-    }));
-
-  // Going Cold: Active leads with low score
-  const goingColds = activeLeads
-    .filter(l => (l.score || 50) < 50)
-    .slice(0, 2)
-    .map(l => ({
-      name: l.name,
-      score: l.score || 42,
-      reason: `Outreach emails unanswered. Reviewing low-budget nurture sequence.`
-    }));
-
+  // Compute stats based on activeLeads
+  const activeLeadsVal = leads.filter(l => l.status !== 'Converted' && l.status !== 'Lost');
+  
   // 2. Health Index
-  const pipelineHealthIndex = activeLeads.length > 0 
-    ? Math.round(activeLeads.reduce((sum, l) => sum + (l.score || 50), 0) / activeLeads.length) 
+  const pipelineHealthIndex = activeLeadsVal.length > 0 
+    ? Math.round(activeLeadsVal.reduce((sum, l) => sum + (l.score || 50), 0) / activeLeadsVal.length) 
     : 0;
 
   // 3. Priorities list
   const priorities: ActionItem[] = [
-    ...activeLeads.filter(l => (l.score || 50) >= 80).slice(0, 2).map((l, idx) => ({
+    ...activeLeadsVal.filter(l => (l.score || 50) >= 80).slice(0, 2).map((l, idx) => ({
       id: idx + 1,
       title: `Review Proposal for ${l.company}`,
       desc: `Provide technical SLA document details to ${l.name}.`,
       dealValue: l.value ? `₹${Number(l.value).toLocaleString('en-IN')}` : '₹120,000',
       priority: 'High' as const
     })),
-    ...activeLeads.filter(l => l.status === 'Contacted').slice(0, 1).map((l, idx) => ({
+    ...activeLeadsVal.filter(l => l.status === 'Contacted').slice(0, 1).map((l, idx) => ({
       id: 3,
       title: `Call back: ${l.name}`,
       desc: `Reschedule compliance call audit review.`,

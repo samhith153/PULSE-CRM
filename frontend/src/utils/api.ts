@@ -673,3 +673,16 @@ export async function createActivity(activityData: any): Promise<any> {
     body: JSON.stringify(activityData)
   });
 }
+
+export async function getEnhancedRecommendation(leadId: string): Promise<any> {
+  return apiFetch(`/api/v1/ai/enhanced-recommendation?lead_id=${leadId}`, {
+    method: 'POST'
+  });
+}
+
+export async function getLeadScore(leadId: string): Promise<any> {
+  return apiFetch(`/api/v1/ai/lead-score`, {
+    method: 'POST',
+    body: JSON.stringify({ lead_id: leadId })
+  });
+}
