@@ -70,7 +70,7 @@ from app.api.v1.recommendation_features import router as recommendation_features
 from app.api.v1.timeline import router as timeline_router
 from app.api.v1.users import router as users_router
 from app.api.v1.smtp import router as smtp_router
-from app.api.v1.summarization import router as summarization_router
+
 from app.api.v1.brevo import router as brevo_router
 api_router = APIRouter()
 
@@ -104,9 +104,5 @@ api_router.include_router(
     prefix="/brevo",
     tags=["Brevo"],
 )
-api_router.include_router(
-    summarization_router,
-    prefix="/summarization",
-    tags=["Conversation Intelligence"],
-)
+
 

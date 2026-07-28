@@ -32,9 +32,13 @@ ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
+connect_args = {}
+if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL and "@db:" not in DATABASE_URL:
+    connect_args["ssl"] = ssl_context
+
 engine = create_async_engine(
     DATABASE_URL,
-    connect_args={"ssl": ssl_context},
+    connect_args=connect_args,
     echo=False,
     pool_pre_ping=True,
     pool_size=settings.DATABASE_POOL_SIZE,

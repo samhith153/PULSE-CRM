@@ -80,6 +80,7 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = "rule_based"
     MODEL_NAME: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     SCORING_PROVIDER: str = "rule_based"
     AI_TIMEOUT: int = 30
 
