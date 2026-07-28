@@ -261,9 +261,10 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               Start Free Trial
             </button>
             <button
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: 'rgba(255,255,255,0.9)', color: C.violet, fontSize: 15, fontWeight: 700, borderRadius: 12, border: `1.5px solid ${C.violetLight}`, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em', backdropFilter: 'blur(10px)', transition: 'all 0.2s', boxShadow: `0 2px 12px ${C.violet}14` }}
+              onClick={() => { alert('Thanks for your interest! We will get back to you soon.'); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#f8fafc', color: '#475569', fontSize: 15, fontWeight: 700, borderRadius: 12, border: '1.5px solid #e2e8f0', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em', transition: 'all 0.2s', boxShadow: `0 2px 12px ${C.violet}14` }}
               onMouseEnter={e => { e.currentTarget.style.background = C.violetLighter; e.currentTarget.style.borderColor = C.violet; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.9)'; e.currentTarget.style.borderColor = C.violetLight; }}>
+              onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
               <Activity size={16} color={C.violet} /> Request Demo
             </button>
           </motion.div>

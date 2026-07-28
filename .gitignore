@@ -191,3 +191,6 @@ yarn-error.log*
 # Playwright
 .test-results/
 playwright-report/
+test-results/
+test-results.json
+test-seed-data.json
