@@ -50,6 +50,10 @@ export default function DashboardHome() {
   useEffect(() => {
     const auth = sessionStorage.getItem('pulse-crm-auth') === 'true';
     setIsAuthenticated(auth);
+    const savedTab = sessionStorage.getItem('pulse-crm-active-tab');
+    if (savedTab) {
+      setActiveTab(savedTab);
+    }
     setIsAuthLoading(false);
   }, []);
 
@@ -58,11 +62,14 @@ export default function DashboardHome() {
     sessionStorage.setItem('pulse-crm-auth', 'true');
     setUserRole(role);
     localStorage.setItem('pulse-crm-role', role);
+    setActiveTab('dashboard');
+    sessionStorage.setItem('pulse-crm-active-tab', 'dashboard');
   };
 
   const handleSignOut = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('pulse-crm-auth');
+    sessionStorage.removeItem('pulse-crm-active-tab');
     clearToken();
   };
 
@@ -85,6 +92,7 @@ export default function DashboardHome() {
     if (tab === activeTab) return;
     setIsViewLoading(true);
     setActiveTab(tab);
+    sessionStorage.setItem('pulse-crm-active-tab', tab);
     setTimeout(() => {
       setIsViewLoading(false);
     }, 350);
