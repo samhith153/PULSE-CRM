@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { getLeads } from '@/utils/api';
+import { getLeads, convertLead } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -70,6 +70,9 @@ interface Lead {
   ownerAvatar: string;
   notes: string;
   source?: string;
+  industry?: string;
+  value?: number;
+  employee_count?: number;
   timeline: ActivityItem[];
   emails: EmailItem[];
   calls: CallItem[];
@@ -785,6 +788,8 @@ export default function LeadsView() {
                                 ● {lead.priority}
                               </span>
                             </td>
+                          </>
+                        )}
 
                         {/* Owner */}
                         <td className="py-3">
