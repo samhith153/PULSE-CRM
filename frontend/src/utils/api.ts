@@ -308,7 +308,23 @@ export async function register(fullName: string, email: string, password: string
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).detail || `Registration failed (${res.status})`);
+    let message = `Registration failed (${res.status})`;
+    const detail = err?.detail;
+    if (Array.isArray(detail) && detail.length) {
+      const first = detail[0];
+      const field = String(first?.loc ? Array.isArray(first.loc) ? first.loc.join(' ') : first.loc : first?.field || '').replace('body -> ', '').replace(/->/g, ' ').trim();
+      const msg = String(first?.msg || first?.message || '');
+      if (/password/i.test(field) || /password/i.test(msg)) {
+        message = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+      } else if (/organization with name/i.test(msg) || /already exists/i.test(msg)) {
+        message = 'An organization with this name already exists. Please choose a different name.';
+      } else {
+        message = field ? `${field}: ${msg}` : msg;
+      }
+    } else if (typeof detail === 'string') {
+      message = detail;
+    }
+    throw new Error(message);
   }
   const json = await res.json();
   return json.data;
