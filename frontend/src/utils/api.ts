@@ -666,3 +666,10 @@ export async function getActivities(params: ActivityListParams = {}): Promise<Pa
     `/api/v1/activities${toQuery({ ...rest, action: activity_type })}`
   );
 }
+
+export async function createActivity(activityData: any): Promise<any> {
+  return apiFetch('/api/v1/activities', {
+    method: 'POST',
+    body: JSON.stringify(activityData)
+  });
+}

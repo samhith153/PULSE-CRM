@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Calendar as CalendarIcon, 
   Clock, 
@@ -14,9 +14,10 @@ import {
   Video,
   PhoneCall
 } from 'lucide-react';
+import { getActivities, createActivity } from '@/utils/api';
 
 interface EventItem {
-  id: number;
+  id: number | string;
   title: string;
   type: 'meeting' | 'call' | 'followup' | 'task';
   date: string;
@@ -27,31 +28,100 @@ interface EventItem {
 
 export default function CalendarView() {
   const [activeView, setActiveView] = useState<'month' | 'week' | 'day'>('week');
-  const [events, setEvents] = useState<EventItem[]>([
-    { id: 1, title: "SSO Migration Scope Sync", type: "meeting", date: "2025-05-14", time: "10:00 AM", attendees: "Alex Rivera", details: "Review SAML setup specs and security guidelines." },
-    { id: 2, title: "Call: Marcus HIPAA Check", type: "call", date: "2025-05-15", time: "02:30 PM", attendees: "Marcus Aurelius", details: "Log call details on healthcare privacy standards." },
-    { id: 3, title: "Task: Proposal Outline draft", type: "task", date: "2025-05-16", time: "11:00 AM", attendees: "Self", details: "Draft custom proposal for TechCorp cloud project." },
-    { id: 4, title: "Follow-up: Helena Troy", type: "followup", date: "2025-05-14", time: "04:00 PM", attendees: "Helena Troy", details: "Email volumetric team agency pricing sheet." }
-  ]);
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Dynamic current week slots generator starting on Monday
+  const getWeekSlots = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
+    const monday = new Date(today);
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    monday.setDate(today.getDate() + diff);
+    
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days.map((day, idx) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + idx);
+      
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const dayStr = String(date.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${dayStr}`;
+      
+      const isToday = date.toDateString() === today.toDateString();
+      
+      return {
+        day,
+        num: date.getDate(),
+        dateString,
+        active: isToday
+      };
+    });
+  };
+
+  const weekSlots = getWeekSlots();
+  const todayStr = new Date().toISOString().split('T')[0];
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [form, setForm] = useState({
-    title: '', type: 'meeting' as EventItem['type'], date: '2025-05-14', time: '10:00 AM', attendees: '', details: ''
+    title: '', type: 'meeting' as EventItem['type'], date: todayStr, time: '10:00 AM', attendees: '', details: ''
   });
 
-  const handleAdd = (e: React.FormEvent) => {
+  useEffect(() => {
+    getActivities({ page_size: 100 }).then(res => {
+      const list = res.data || res || [];
+      const mapped = list
+        .filter((act: any) => ['meeting', 'call', 'task', 'followup'].includes(act.action))
+        .map((act: any) => ({
+          id: act.id,
+          title: act.title,
+          type: act.action as any,
+          date: act.payload?.date || act.created_at?.split('T')[0] || todayStr,
+          time: act.payload?.time || '10:00 AM',
+          attendees: act.payload?.attendees || 'Self',
+          details: act.description || ''
+        }));
+      setEvents(mapped);
+      setLoading(false);
+    }).catch(err => {
+      console.error("Error fetching calendar events:", err);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newEvent: EventItem = {
-      id: Date.now(),
+    const newEventPayload = {
+      entity_type: 'system',
+      entity_id: '00000000-0000-0000-0000-000000000000',
+      action: form.type,
       title: form.title,
-      type: form.type,
-      date: form.date,
-      time: form.time,
-      attendees: form.attendees,
-      details: form.details
+      description: form.details,
+      payload: {
+        time: form.time,
+        attendees: form.attendees,
+        date: form.date
+      }
     };
-    setEvents([...events, newEvent]);
-    setIsAddOpen(false);
+    try {
+      const res = await createActivity(newEventPayload);
+      const savedEvent = res.data || res;
+      const mappedEvent: EventItem = {
+        id: savedEvent.id,
+        title: savedEvent.title,
+        type: savedEvent.action as any,
+        date: savedEvent.payload?.date || form.date,
+        time: savedEvent.payload?.time || form.time,
+        attendees: savedEvent.payload?.attendees || form.attendees,
+        details: savedEvent.description || form.details
+      };
+      setEvents([...events, mappedEvent]);
+      setIsAddOpen(false);
+      setForm({ title: '', type: 'meeting', date: todayStr, time: '10:00 AM', attendees: '', details: '' });
+    } catch (err) {
+      console.error("Error saving calendar event:", err);
+    }
   };
 
   const getBadgeColor = (type: EventItem['type']) => {
@@ -62,6 +132,15 @@ export default function CalendarView() {
       case 'followup': return 'bg-blue-50 text-blue-750 border border-blue-100';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white border border-brand-border-purple/20 rounded-xl p-8 col-span-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-accent"></div>
+        <p className="text-xs text-brand-text/60 mt-4 font-bold">Synchronizing calendar agenda...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
@@ -106,16 +185,8 @@ export default function CalendarView() {
           {/* Calendar visual grid - Week View */}
           {activeView === 'week' && (
             <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-brand-text border-t border-brand-border-purple/15 pt-4">
-              {[
-                { day: 'Mon', num: 12, active: false },
-                { day: 'Tue', num: 13, active: false },
-                { day: 'Wed', num: 14, active: true }, // Today
-                { day: 'Thu', num: 15, active: false },
-                { day: 'Fri', num: 16, active: false },
-                { day: 'Sat', num: 17, active: false },
-                { day: 'Sun', num: 18, active: false }
-              ].map((slot, idx) => {
-                const dayEvents = events.filter(e => e.date === `2025-05-${slot.num}`);
+              {weekSlots.map((slot, idx) => {
+                const dayEvents = events.filter(e => e.date === slot.dateString);
                 return (
                   <div key={idx} className="space-y-3">
                     <div className={`p-2.5 rounded-lg border ${

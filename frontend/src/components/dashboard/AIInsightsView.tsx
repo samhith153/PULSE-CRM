@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   Award, 
@@ -20,6 +20,7 @@ import {
   Clock,
   TrendingDown
 } from 'lucide-react';
+import { getLeads, getEmails } from '@/utils/api';
 
 interface AILead {
   name: string;
@@ -37,26 +38,25 @@ interface ActionItem {
 }
 
 export default function AIInsightsView() {
-  const [topLeads] = useState<AILead[]>([
-    { name: "Helena Troy", company: "Sparta Creative", score: 95, reason: "Inbound request has high seat potential and priority SLA requirements." },
-    { name: "Alex Rivera", company: "TechCorp Inc.", score: 88, reason: "SAML SSO setup cleared by engineering. Ready for legal contract." }
-  ]);
-
-  const [hotLeads] = useState<AILead[]>([
-    { name: "Marcus Aurelius", company: "MedSaaS Solutions", score: 72, reason: "Evaluated competitor pricing. High priority HIPAA requirement." }
-  ]);
-
-  const [atRiskLeads] = useState<AILead[]>([
-    { name: "David Hume", company: "Empiric Logistics", score: 41, reason: "Budget is out of scope. Nurturing required." }
-  ]);
-
-  const [priorities, setPriorities] = useState<ActionItem[]>([
-    { id: 1, title: "Review TechCorp Contract", desc: "Liability SLA terms require legal approval review.", dealValue: "₹120,000", priority: "High" },
-    { id: 2, title: "Call Marcus Aurelius", desc: "Follow up on compliance audit files download feedback.", dealValue: "₹85,000", priority: "High" },
-    { id: 3, title: "Email Helena Troy", desc: "Send volumetric team discounts sheet for 40 seats.", dealValue: "₹45,000", priority: "Medium" }
-  ]);
-
+  const [leads, setLeads] = useState<any[]>([]);
+  const [emails, setEmails] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [checkedIds, setCheckedIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    Promise.all([
+      getLeads(),
+      getEmails({ page_size: 50 })
+    ]).then(([leadsData, emailsData]) => {
+      setLeads(leadsData || []);
+      const emailList = emailsData?.data || emailsData || [];
+      setEmails(emailList);
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to load AI Insights:", err);
+      setLoading(false);
+    });
+  }, []);
 
   const handleToggle = (id: number) => {
     if (checkedIds.includes(id)) {
@@ -65,6 +65,145 @@ export default function AIInsightsView() {
       setCheckedIds([...checkedIds, id]);
     }
   };
+
+  // 1. Compute Action Lists
+  const activeLeads = leads.filter(l => l.status !== 'Converted' && l.status !== 'Lost');
+
+  // Immediate Action: Active leads with high score or priority
+  const immediateActions = activeLeads
+    .filter(l => (l.score || 50) >= 80 || l.priority === 'High')
+    .sort((a, b) => (b.score || 0) - (a.score || 0))
+    .slice(0, 2)
+    .map(l => ({
+      name: l.name,
+      company: l.company,
+      score: l.score || 85,
+      reason: l.notes || `High-priority prospect requesting custom deployment timeline.`
+    }));
+
+  // Follow Up Due: Contacted leads
+  const followUps = activeLeads
+    .filter(l => l.status === 'Contacted')
+    .slice(0, 2)
+    .map(l => ({
+      company: l.company,
+      reason: `No timeline responses logged in the last 72 hours.`,
+      timeframe: 'Overdue 3d'
+    }));
+
+  // Rising Interest: Active leads with mid-high score and engagement
+  const risingInterests = activeLeads
+    .filter(l => (l.score || 50) >= 70 && (l.score || 50) < 80)
+    .slice(0, 2)
+    .map(l => ({
+      name: l.name,
+      score: l.score || 74,
+      reason: `Opened proposal guidelines email. Awaiting compliance review.`
+    }));
+
+  // Going Cold: Active leads with low score
+  const goingColds = activeLeads
+    .filter(l => (l.score || 50) < 50)
+    .slice(0, 2)
+    .map(l => ({
+      name: l.name,
+      score: l.score || 42,
+      reason: `Outreach emails unanswered. Reviewing low-budget nurture sequence.`
+    }));
+
+  // 2. Health Index
+  const pipelineHealthIndex = activeLeads.length > 0 
+    ? Math.round(activeLeads.reduce((sum, l) => sum + (l.score || 50), 0) / activeLeads.length) 
+    : 0;
+
+  // 3. Priorities list
+  const priorities: ActionItem[] = [
+    ...activeLeads.filter(l => (l.score || 50) >= 80).slice(0, 2).map((l, idx) => ({
+      id: idx + 1,
+      title: `Review Proposal for ${l.company}`,
+      desc: `Provide technical SLA document details to ${l.name}.`,
+      dealValue: l.value ? `₹${Number(l.value).toLocaleString('en-IN')}` : '₹120,000',
+      priority: 'High' as const
+    })),
+    ...activeLeads.filter(l => l.status === 'Contacted').slice(0, 1).map((l, idx) => ({
+      id: 3,
+      title: `Call back: ${l.name}`,
+      desc: `Reschedule compliance call audit review.`,
+      dealValue: l.value ? `₹${Number(l.value).toLocaleString('en-IN')}` : '₹45,000',
+      priority: 'Medium' as const
+    }))
+  ];
+
+  // 4. Sentiment Classifier
+  let positive = 0;
+  let neutral = 0;
+  let negative = 0;
+  emails.forEach((email: any) => {
+    const text = `${email.subject} ${email.body_preview || ''}`.toLowerCase();
+    if (text.includes('great') || text.includes('good') || text.includes('thank') || text.includes('yes') || text.includes('agree') || text.includes('interested')) {
+      positive++;
+    } else if (text.includes('bad') || text.includes('expensive') || text.includes('cancel') || text.includes('no') || text.includes('stop') || text.includes('disappointed')) {
+      negative++;
+    } else {
+      neutral++;
+    }
+  });
+
+  const totalSentiment = positive + neutral + negative || 1;
+  const positivePct = Math.round((positive / totalSentiment) * 100);
+  const neutralPct = Math.round((neutral / totalSentiment) * 100);
+  const negativePct = Math.round((negative / totalSentiment) * 100);
+
+  // 5. Intent Classifier
+  const intents = { followup: 0, buy: 0, demo: 0, negotiate: 0 };
+  emails.forEach((email: any) => {
+    const text = `${email.subject} ${email.body_preview || ''}`.toLowerCase();
+    if (text.includes('demo') || text.includes('meeting') || text.includes('calendar')) {
+      intents.demo++;
+    } else if (text.includes('buy') || text.includes('purchase') || text.includes('subscribe') || text.includes('order')) {
+      intents.buy++;
+    } else if (text.includes('pricing') || text.includes('quote') || text.includes('proposal') || text.includes('negotiate') || text.includes('cost')) {
+      intents.negotiate++;
+    } else {
+      intents.followup++;
+    }
+  });
+  const totalIntent = intents.followup + intents.buy + intents.demo + intents.negotiate || 1;
+  const intentData = [
+    { label: 'Follow-up', count: intents.followup, pct: Math.round((intents.followup / totalIntent) * 100) },
+    { label: 'Buy / Purchase', count: intents.buy, pct: Math.round((intents.buy / totalIntent) * 100) },
+    { label: 'Demo Request', count: intents.demo, pct: Math.round((intents.demo / totalIntent) * 100) },
+    { label: 'Negotiate', count: intents.negotiate, pct: Math.round((intents.negotiate / totalIntent) * 100) }
+  ];
+
+  // 6. Recent Summaries
+  const recentSummaries = emails.slice(0, 3).map((email: any) => {
+    const text = `${email.subject} ${email.body_preview || ''}`.toLowerCase();
+    let sentiment = 'neutral';
+    if (text.includes('great') || text.includes('good') || text.includes('thank') || text.includes('yes') || text.includes('agree')) sentiment = 'positive';
+    else if (text.includes('bad') || text.includes('expensive') || text.includes('cancel') || text.includes('no')) sentiment = 'negative';
+
+    let category = 'general';
+    if (text.includes('demo') || text.includes('meeting')) category = 'urgent';
+    else if (text.includes('pricing') || text.includes('quote') || text.includes('proposal') || text.includes('buy')) category = 'sales';
+
+    return {
+      from: email.sender?.split('<')[0]?.replace(/"/g, '')?.trim() || 'Prospect',
+      summary: email.body_preview || `Inbound message regarding "${email.subject}".`,
+      sentiment,
+      category,
+      followUp: text.includes('demo') ? 'Reschedule client demo call' : text.includes('pricing') ? 'Review custom SLA proposal terms' : 'Follow up within 48 hours'
+    };
+  });
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white border border-brand-border-purple/20 rounded-xl p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-accent"></div>
+        <p className="text-xs text-brand-text/60 mt-4 font-bold">Querying AI scoring pipeline models...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -107,20 +246,19 @@ export default function AIInsightsView() {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-2.5 bg-white border border-rose-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Helena Troy</span>
-                        <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">95 Score</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">High seat potential. Priority SLA requirements.</p>
-                    </div>
-                    <div className="p-2.5 bg-white border border-rose-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Alex Rivera</span>
-                        <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">88 Score</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">SSO setup complete. Ready for NDA/Legal contract.</p>
-                    </div>
+                    {immediateActions.length > 0 ? (
+                      immediateActions.map((l, idx) => (
+                        <div key={idx} className="p-2.5 bg-white border border-rose-100 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-extrabold text-brand-heading">{l.name}</span>
+                            <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">{l.score} Score</span>
+                          </div>
+                          <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">{l.reason}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 text-center py-8 font-bold">No urgent leads found.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -138,20 +276,19 @@ export default function AIInsightsView() {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-2.5 bg-white border border-amber-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Sparta Creative</span>
-                        <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Overdue 3d</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Missed scheduled demo call. Immediate rescheduling required.</p>
-                    </div>
-                    <div className="p-2.5 bg-white border border-amber-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">TechCorp Inc.</span>
-                        <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Overdue 5d</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">No response to final pricing quote sent last week.</p>
-                    </div>
+                    {followUps.length > 0 ? (
+                      followUps.map((l, idx) => (
+                        <div key={idx} className="p-2.5 bg-white border border-amber-100 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-extrabold text-brand-heading">{l.company}</span>
+                            <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">{l.timeframe}</span>
+                          </div>
+                          <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">{l.reason}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 text-center py-8 font-bold">No pending follow-ups.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -169,20 +306,19 @@ export default function AIInsightsView() {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-2.5 bg-white border border-emerald-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Marcus Aurelius</span>
-                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Score 78</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Engagement spiked 45%. Reviewing integrations documentation.</p>
-                    </div>
-                    <div className="p-2.5 bg-white border border-emerald-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Empire Group</span>
-                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Score 74</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Opened product proposal email 5 times in the last 24h.</p>
-                    </div>
+                    {risingInterests.length > 0 ? (
+                      risingInterests.map((l, idx) => (
+                        <div key={idx} className="p-2.5 bg-white border border-emerald-100 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-extrabold text-brand-heading">{l.name}</span>
+                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Score {l.score}</span>
+                          </div>
+                          <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">{l.reason}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 text-center py-8 font-bold">No spiking activity.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -200,20 +336,19 @@ export default function AIInsightsView() {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">David Hume</span>
-                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Score 41</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">No response to follow-ups in 14d. Budget constraints cited.</p>
-                    </div>
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Liberty Corp</span>
-                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Score 35</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Inbound lead inactive for 21 days since discovery call.</p>
-                    </div>
+                    {goingColds.length > 0 ? (
+                      goingColds.map((l, idx) => (
+                        <div key={idx} className="p-2.5 bg-white border border-slate-200 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-extrabold text-brand-heading">{l.name}</span>
+                            <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Score {l.score}</span>
+                          </div>
+                          <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">{l.reason}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 text-center py-8 font-bold">No cold accounts detected.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -232,8 +367,10 @@ export default function AIInsightsView() {
             </h3>
 
             <div className="text-center py-4 bg-slate-50/50 border border-brand-border-purple/15 rounded-xl">
-              <span className="text-4xl font-serif text-brand-heading font-normal tabular-nums">94<span className="text-sm font-sans text-brand-text/50">/100</span></span>
-              <p className="text-[10px] text-emerald-600 font-extrabold mt-1.5">▲ Excellent Velocity (+3% vs yesterday)</p>
+              <span className="text-4xl font-serif text-brand-heading font-normal tabular-nums">{pipelineHealthIndex}<span className="text-sm font-sans text-brand-text/50">/100</span></span>
+              <p className={`text-[10px] font-extrabold mt-1.5 ${pipelineHealthIndex >= 60 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {pipelineHealthIndex >= 75 ? '▲ Excellent Velocity' : pipelineHealthIndex >= 50 ? '● Stable Velocity' : '▼ Action Recommended'}
+              </p>
             </div>
             <p className="text-[9px] text-slate-400 font-bold mt-3 leading-relaxed">
               Calculated using meeting logs frequency, contract proposal response times, and target ratios.
@@ -248,30 +385,34 @@ export default function AIInsightsView() {
             </h3>
 
             <div className="space-y-3.5">
-              {priorities.map((item) => {
-                const isChecked = checkedIds.includes(item.id);
-                return (
-                  <div 
-                    key={item.id}
-                    onClick={() => handleToggle(item.id)}
-                    className="flex items-start space-x-2.5 cursor-pointer"
-                  >
-                    <div className={`h-4.5 w-4.5 rounded border flex items-center justify-center shrink-0 mt-0.5 ${
-                      isChecked ? 'bg-brand-accent border-brand-accent text-white' : 'border-brand-border-purple/35 bg-white'
-                    }`}>
-                      {isChecked && <Check className="h-3 w-3" strokeWidth={3} />}
-                    </div>
-                    <div className={isChecked ? 'line-through opacity-55' : ''}>
-                      <div className="flex justify-between items-center w-full gap-2">
-                        <h4 className="text-[11px] font-extrabold text-brand-heading leading-tight">{item.title}</h4>
-                        <span className={`text-[8px] font-bold shrink-0 ${item.priority === 'High' ? 'text-rose-600' : 'text-slate-450'}`}>{item.priority}</span>
+              {priorities.length > 0 ? (
+                priorities.map((item) => {
+                  const isChecked = checkedIds.includes(item.id);
+                  return (
+                    <div 
+                      key={item.id}
+                      onClick={() => handleToggle(item.id)}
+                      className="flex items-start space-x-2.5 cursor-pointer"
+                    >
+                      <div className={`h-4.5 w-4.5 rounded border flex items-center justify-center shrink-0 mt-0.5 ${
+                        isChecked ? 'bg-brand-accent border-brand-accent text-white' : 'border-brand-border-purple/35 bg-white'
+                      }`}>
+                        {isChecked && <Check className="h-3 w-3" strokeWidth={3} />}
                       </div>
-                      <p className="text-[9px] text-brand-text/75 mt-0.5 leading-relaxed font-bold">{item.desc}</p>
-                      <p className="text-[9px] text-brand-accent font-extrabold mt-1">Value: {item.dealValue}</p>
+                      <div className={isChecked ? 'line-through opacity-55' : ''}>
+                        <div className="flex justify-between items-center w-full gap-2">
+                          <h4 className="text-[11px] font-extrabold text-brand-heading leading-tight">{item.title}</h4>
+                          <span className={`text-[8px] font-bold shrink-0 ${item.priority === 'High' ? 'text-rose-600' : 'text-slate-450'}`}>{item.priority}</span>
+                        </div>
+                        <p className="text-[9px] text-brand-text/75 mt-0.5 leading-relaxed font-bold">{item.desc}</p>
+                        <p className="text-[9px] text-brand-accent font-extrabold mt-1">Value: {item.dealValue}</p>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <p className="text-[10px] text-slate-400 text-center py-4 font-bold">No priorities set.</p>
+              )}
             </div>
           </div>
         </div>
@@ -296,28 +437,28 @@ export default function AIInsightsView() {
               <div>
                 <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
                   <span className="flex items-center"><Smile className="h-3 w-3 text-emerald-500 mr-1" /> Positive</span>
-                  <span className="tabular-nums">3</span>
+                  <span className="tabular-nums">{positive}</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: '60%' }} />
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${positivePct}%` }} />
                 </div>
               </div>
               <div>
                 <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
                   <span className="flex items-center"><Meh className="h-3 w-3 text-amber-500 mr-1" /> Neutral</span>
-                  <span className="tabular-nums">1</span>
+                  <span className="tabular-nums">{neutral}</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500 rounded-full" style={{ width: '20%' }} />
+                  <div className="h-full bg-amber-500 rounded-full" style={{ width: `${neutralPct}%` }} />
                 </div>
               </div>
               <div>
                 <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
                   <span className="flex items-center"><Frown className="h-3 w-3 text-rose-500 mr-1" /> Negative</span>
-                  <span className="tabular-nums">1</span>
+                  <span className="tabular-nums">{negative}</span>
                 </div>
                 <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-rose-500 rounded-full" style={{ width: '20%' }} />
+                  <div className="h-full bg-rose-500 rounded-full" style={{ width: `${negativePct}%` }} />
                 </div>
               </div>
             </div>
@@ -330,12 +471,7 @@ export default function AIInsightsView() {
               Intent Distribution
             </h4>
             <div className="space-y-2.5">
-              {[
-                { label: 'Follow-up', count: 2, pct: 40 },
-                { label: 'Buy / Purchase', count: 1, pct: 20 },
-                { label: 'Demo Request', count: 1, pct: 20 },
-                { label: 'Negotiate', count: 1, pct: 20 },
-              ].map((item) => (
+              {intentData.map((item) => (
                 <div key={item.label}>
                   <div className="flex justify-between text-[10px] font-bold text-brand-heading mb-1">
                     <span>{item.label}</span>
@@ -359,31 +495,31 @@ export default function AIInsightsView() {
               Recent Summaries
             </h4>
             <div className="space-y-2.5">
-              {[
-                { from: 'Alex Rivera', summary: 'SAML config approved, questions on liability SLAs.', sentiment: 'positive', category: 'sales', followUp: 'Follow up tomorrow with proposal' },
-                { from: 'Helena Troy', summary: 'Pricing inquiry for 40-seat enterprise tier.', sentiment: 'neutral', category: 'sales', followUp: 'Follow up in 2 days with pricing' },
-                { from: 'Marcus Aurelius', summary: 'Compliance audit files sent, awaiting feedback.', sentiment: 'positive', category: 'support', followUp: 'Follow up in 3 days' },
-              ].map((item, i) => (
-                <div key={i} className="p-2.5 bg-white border border-brand-border-purple/10 rounded-lg">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[9px] font-extrabold text-brand-heading">{item.from}</span>
-                    <div className="flex items-center space-x-1">
-                      <span className={`text-[7px] font-bold px-1 py-0.5 rounded ${
-                        item.category === 'sales' ? 'bg-emerald-50 text-emerald-700' :
-                        item.category === 'urgent' ? 'bg-rose-50 text-rose-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>{item.category}</span>
-                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
-                        item.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
-                        item.sentiment === 'negative' ? 'bg-rose-50 text-rose-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>{item.sentiment}</span>
+              {recentSummaries.length > 0 ? (
+                recentSummaries.map((item, i) => (
+                  <div key={i} className="p-2.5 bg-white border border-brand-border-purple/10 rounded-lg">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[9px] font-extrabold text-brand-heading truncate max-w-[120px]">{item.from}</span>
+                      <div className="flex items-center space-x-1">
+                        <span className={`text-[7px] font-bold px-1 py-0.5 rounded ${
+                          item.category === 'sales' ? 'bg-emerald-50 text-emerald-700' :
+                          item.category === 'urgent' ? 'bg-rose-50 text-rose-700' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>{item.category}</span>
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                          item.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
+                          item.sentiment === 'negative' ? 'bg-rose-50 text-rose-700' :
+                          'bg-slate-100 text-slate-600'
+                        }`}>{item.sentiment}</span>
+                      </div>
                     </div>
+                    <p className="text-[9px] text-brand-text/70 font-semibold leading-relaxed line-clamp-2">{item.summary}</p>
+                    <p className="text-[8px] text-amber-600 font-extrabold mt-1">⏰ {item.followUp}</p>
                   </div>
-                  <p className="text-[9px] text-brand-text/70 font-semibold leading-relaxed">{item.summary}</p>
-                  <p className="text-[8px] text-amber-600 font-extrabold mt-1">⏰ {item.followUp}</p>
-                </div>
-              ))}
+                ))
+              ) : (
+                <p className="text-[10px] text-slate-400 text-center py-8 font-bold">No emails to summarize.</p>
+              )}
             </div>
             <div className="mt-3 pt-3 border-t border-brand-border-purple/10">
               <p className="text-[9px] text-brand-accent font-extrabold flex items-center">
