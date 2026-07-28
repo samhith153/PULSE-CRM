@@ -137,3 +137,28 @@ class SummaryResponse(BaseModel):
     bullets: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     generated_at: datetime
+
+
+class EnhancedRecommendationResponse(BaseModel):
+    """Extended recommendation response with all 6 new features."""
+
+    lead_id: UUID
+    current_score: int
+    deal_value: Optional[float] = None
+    email_open_count: int = 0
+    email_opened_no_reply_flag: bool = False
+    meeting_attendance_status: Optional[str] = None
+    rep_active_action_count: int = 0
+    best_contact_time_slot: Optional[str] = None
+    recommended_action: str
+    reasoning: str
+    all_candidates: list[dict[str, Any]] = Field(default_factory=list)
+
+    model_config = {"from_attributes": True}
+
+
+class EnhancedRecommendationRequest(BaseModel):
+    lead_id: UUID
+    organization_id: Optional[UUID] = None
+    current_score: int = Field(default=50, ge=0, le=100)
+    current_stage: str = Field(default="new", min_length=1, max_length=50)

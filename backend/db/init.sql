@@ -69,6 +69,8 @@ CREATE TABLE IF NOT EXISTS leads (
     value NUMERIC(12, 2),
     status VARCHAR(50) DEFAULT 'New',
     source VARCHAR(50),
+    industry VARCHAR(100),
+    employee_count INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

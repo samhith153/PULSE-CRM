@@ -1,6 +1,4 @@
-// API client
-
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
 export function getToken(): string | null {
@@ -302,8 +300,38 @@ export const MOCK_DEALS: Deal[] = [
   { id: 5, title: "Analytics Custom Tier", company: "ByteSized Co.", value: 18000, stage: "Won", priority: "Low", owner: "Alex Johnson", closeDate: "2025-05-10" }
 ];
 
-export async function login(email: string, password: string): Promise<{ token: string; user: any }> {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+export async function register(fullName: string, email: string, password: string, organizationName: string): Promise<{ access_token: string; refresh_token: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ full_name: fullName, email, password, organization_name: organizationName })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    let message = `Registration failed (${res.status})`;
+    const detail = err?.detail;
+    if (Array.isArray(detail) && detail.length) {
+      const first = detail[0];
+      const field = String(first?.loc ? Array.isArray(first.loc) ? first.loc.join(' ') : first.loc : first?.field || '').replace('body -> ', '').replace(/->/g, ' ').trim();
+      const msg = String(first?.msg || first?.message || '');
+      if (/password/i.test(field) || /password/i.test(msg)) {
+        message = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+      } else if (/organization with name/i.test(msg) || /already exists/i.test(msg)) {
+        message = 'An organization with this name already exists. Please choose a different name.';
+      } else {
+        message = field ? `${field}: ${msg}` : msg;
+      }
+    } else if (typeof detail === 'string') {
+      message = detail;
+    }
+    throw new Error(message);
+  }
+  const json = await res.json();
+  return json.data;
+}
+
+export async function login(email: string, password: string): Promise<{ access_token: string; refresh_token: string; token_type?: string; expires_in?: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password })
@@ -312,7 +340,8 @@ export async function login(email: string, password: string): Promise<{ token: s
     const err = await res.json().catch(() => ({}));
     throw new Error((err as any).detail || `Login failed (${res.status})`);
   }
-  return res.json();
+  const json = await res.json();
+  return json.data ?? json;
 }
 
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -327,12 +356,14 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   if (!res.ok) {
     throw new Error(`API error ${res.status}`);
   }
-  return res.json() as Promise<T>;
+  const json = await res.json();
+  return (json.data ?? json) as T;
 }
 
 // --- Leads API ---
 export async function getLeads(): Promise<Lead[]> {
-  const dbLeads = await apiFetch<any[]>('/leads');
+  const dbResult = await apiFetch<any>('/api/v1/leads');
+  const dbLeads: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbLeads.map((dl, idx) => {
     const fallback = MOCK_LEADS[idx] || MOCK_LEADS[0];
     return {
@@ -346,22 +377,26 @@ export async function getLeads(): Promise<Lead[]> {
 }
 
 export async function createLead(leadData: any): Promise<any> {
-  return apiFetch('/leads', {
+  return apiFetch('/api/v1/leads', {
     method: 'POST',
     body: JSON.stringify(leadData)
   });
 }
 
-export async function convertLead(leadId: string | number, payload: { name: string }): Promise<any> {
-  return apiFetch(`/leads/${leadId}/convert`, {
-    method: 'PUT',
+export async function convertLead(
+  leadId: string | number,
+  payload: { industry?: string; revenue?: string; employee_count?: number }
+): Promise<any> {
+  return apiFetch(`/api/v1/leads/${leadId}/convert`, {
+    method: 'POST',
     body: JSON.stringify(payload)
   });
 }
 
 // --- Contacts API ---
 export async function getContacts(): Promise<Contact[]> {
-  const dbContacts = await apiFetch<any[]>('/contacts');
+  const dbResult = await apiFetch<any>('/api/v1/contacts');
+  const dbContacts: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbContacts.map((dc, idx) => {
     const fallback = MOCK_CONTACTS[idx] || MOCK_CONTACTS[0];
     return {
@@ -376,7 +411,7 @@ export async function getContacts(): Promise<Contact[]> {
 }
 
 export async function createContact(contactData: any): Promise<any> {
-  return apiFetch('/contacts', {
+  return apiFetch('/api/v1/contacts', {
     method: 'POST',
     body: JSON.stringify(contactData)
   });
@@ -384,7 +419,8 @@ export async function createContact(contactData: any): Promise<any> {
 
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
-  const dbCompanies = await apiFetch<any[]>('/companies');
+  const dbResult = await apiFetch<any>('/api/v1/companies');
+  const dbCompanies: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbCompanies.map((dc, idx) => {
     const fallback = MOCK_COMPANIES[idx] || MOCK_COMPANIES[0];
     return {
@@ -398,7 +434,7 @@ export async function getCompanies(): Promise<Company[]> {
 }
 
 export async function createCompany(companyData: any): Promise<any> {
-  return apiFetch('/companies', {
+  return apiFetch('/api/v1/companies', {
     method: 'POST',
     body: JSON.stringify(companyData)
   });
@@ -406,7 +442,8 @@ export async function createCompany(companyData: any): Promise<any> {
 
 // --- Deals API ---
 export async function getDeals(): Promise<Deal[]> {
-  const dbDeals = await apiFetch<any[]>('/deals');
+  const dbResult = await apiFetch<any>('/api/v1/deals');
+  const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbDeals.map((dd, idx) => {
     const fallback = MOCK_DEALS[idx] || MOCK_DEALS[0];
     return {
@@ -423,7 +460,7 @@ export async function getDeals(): Promise<Deal[]> {
 }
 
 export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
-  return apiFetch(`/deals/${dealId}/stage`, {
+  return apiFetch(`/api/v1/deals/${dealId}/stage`, {
     method: 'PUT',
     body: JSON.stringify({ stage_id: stageId })
   });
@@ -480,4 +517,168 @@ export async function getSummaryByThread(threadId: string): Promise<Conversation
   });
   if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
   return res.json() as Promise<ConversationSummary>;
+}
+
+
+function toQuery(params: Record<string, string | number | boolean | null | undefined>): string {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') search.set(key, String(value));
+  });
+  const query = search.toString();
+  return query ? `?${query}` : '';
+}
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages?: number;
+  has_next?: boolean;
+  has_prev?: boolean;
+}
+
+export interface GmailConnection {
+  id: string;
+  user_id: string;
+  email_address: string;
+  sync_status: string;
+  sync_cursor?: string | null;
+  token_expires_at?: string | null;
+  scopes_json?: string[] | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GmailOAuthLogin {
+  authorization_url: string;
+  state: string;
+}
+
+export interface EmailAttachment {
+  filename: string;
+  content_type?: string | null;
+  size_bytes?: number | null;
+  attachment_id?: string | null;
+  inline?: boolean;
+}
+
+export interface SyncedEmail {
+  id: string;
+  gmail_message_id: string;
+  thread_id?: string | null;
+  direction: 'inbound' | 'outbound' | string;
+  sender: string;
+  receiver?: string | null;
+  subject: string;
+  body_preview?: string | null;
+  sent_at: string;
+  attachment_metadata: EmailAttachment[];
+  raw_payload?: Record<string, unknown> | null;
+  is_read: boolean;
+  email_open_count?: number;
+  gmail_connection_id?: string | null;
+  external_entity_type?: string | null;
+  external_entity_id?: string | null;
+}
+
+export interface ActivityTimelineItem {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  title: string;
+  description?: string | null;
+  payload?: Record<string, unknown> | null;
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EmailListParams {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  direction?: 'inbound' | 'outbound' | '';
+  thread_id?: string;
+  sort_order?: 'asc' | 'desc';
+}
+
+export interface ActivityListParams {
+  page?: number;
+  page_size?: number;
+  entity_type?: string;
+  entity_id?: string;
+  activity_type?: string;
+  search?: string;
+}
+
+export async function startGmailOAuth(): Promise<GmailOAuthLogin> {
+  return apiFetch<GmailOAuthLogin>('/api/v1/gmail/oauth/login');
+}
+
+export async function completeGmailOAuth(code: string, state?: string | null): Promise<GmailConnection> {
+  return apiFetch<GmailConnection>('/api/v1/gmail/oauth/callback', {
+    method: 'POST',
+    body: JSON.stringify({ code, state })
+  });
+}
+
+export async function getGmailConnections(): Promise<GmailConnection[]> {
+  return apiFetch<GmailConnection[]>('/api/v1/gmail/connections');
+}
+
+export async function getGmailStatus(): Promise<{ connected: boolean; connection?: GmailConnection | null }> {
+  const connections = await getGmailConnections();
+  const connection = connections.find(item => item.is_active) ?? connections[0] ?? null;
+  return { connected: Boolean(connection?.is_active), connection };
+}
+
+export interface EmailSyncResult {
+  gmail_connection_id: string;
+  synced_count: number;
+  skipped_count: number;
+  next_cursor?: string | null;
+  connection_status: string;
+  emails: SyncedEmail[];
+}
+
+export interface SendEmailPayload {
+  gmail_connection_id: string;
+  receiver: string;
+  subject: string;
+  html_body: string;
+  external_entity_type?: string | null;
+  external_entity_id?: string | null;
+}
+
+export async function syncGmail(connectionId: string): Promise<EmailSyncResult> {
+  return apiFetch<EmailSyncResult>(`/api/v1/gmail/connections/${connectionId}/sync`, {
+    method: 'POST'
+  });
+}
+
+export async function sendGmailEmail(payload: SendEmailPayload): Promise<SyncedEmail> {
+  return apiFetch<SyncedEmail>('/api/v1/gmail/send', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getEmails(params: EmailListParams = {}): Promise<PaginatedResult<SyncedEmail>> {
+  return apiFetch<PaginatedResult<SyncedEmail>>(`/api/v1/emails${toQuery(params)}`);
+}
+
+export async function getEmail(id: string): Promise<SyncedEmail> {
+  return apiFetch<SyncedEmail>(`/api/v1/emails/${id}`);
+}
+
+export async function getActivities(params: ActivityListParams = {}): Promise<PaginatedResult<ActivityTimelineItem>> {
+  const { activity_type, ...rest } = params;
+  return apiFetch<PaginatedResult<ActivityTimelineItem>>(
+    `/api/v1/activities${toQuery({ ...rest, action: activity_type })}`
+  );
 }

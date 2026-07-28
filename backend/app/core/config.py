@@ -1,14 +1,18 @@
 ﻿from functools import lru_cache
+from pathlib import Path
 from typing import List, Optional
 
 import secrets
+from dotenv import find_dotenv, load_dotenv
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_ = load_dotenv(find_dotenv())
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=Path(find_dotenv()) if find_dotenv() else ".env",
         env_file_encoding="utf-8-sig",
         case_sensitive=False,
         extra="ignore",
@@ -41,7 +45,7 @@ class Settings(BaseSettings):
     SUPABASE_KEY: Optional[str] = None
     SUPABASE_SERVICE_KEY: Optional[str] = None
 
-    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000"
+    CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,https://pulse-crm-eight-pearl.vercel.app,https://pulse-crm-245t.onrender.com"
     CORS_ALLOW_CREDENTIALS: bool = True
     CORS_ALLOW_METHODS: str = "*"
     CORS_ALLOW_HEADERS: str = "*"
@@ -87,11 +91,21 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = 10485760
     ALLOWED_UPLOAD_CONTENT_TYPES: str = "image/jpeg,image/png,image/webp,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 
+    # ── Recommendation Engine Weights ──────────────────────────────────────
+    DEAL_VALUE_WEIGHT: float = 0.15
+    EMAIL_OPEN_WEIGHT: float = 0.15
+    MEETING_WEIGHT: float = 0.20
+    REP_WORKLOAD_WEIGHT: float = 0.10
+    CONTACT_TIME_WEIGHT: float = 0.10
+
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
 
     FIRST_SUPERUSER_EMAIL: str = "admin@kalnet-pulse.com"
-    FIRST_SUPERUSER_PASSWORD: str = "Admin@123456"
+    FIRST_SUPERUSER_PASSWORD: str = Field(
+        default_factory=lambda: secrets.token_urlsafe(32),
+        description="Override via env FIRST_SUPERUSER_PASSWORD"
+    )
     FIRST_SUPERUSER_FULL_NAME: str = "System Administrator"
 
     @field_validator("DEBUG", mode="before")

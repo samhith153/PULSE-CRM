@@ -79,7 +79,7 @@ export default function TeamPerformanceView() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-slate-400">
+              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
                 <th className="py-2.5">Rank</th>
                 <th className="py-2.5">Salesperson</th>
                 <th className="py-2.5 text-right">Revenue Won</th>
@@ -100,7 +100,7 @@ export default function TeamPerformanceView() {
                 const status = getStatus(rep.winRate);
                 
                 return (
-                  <tr key={rep.rank} className="hover:bg-slate-50/50">
+                  <tr key={rep.rank} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3">
                       <div className="flex items-center space-x-1">
                         <span className={`h-5 w-5 rounded-full flex items-center justify-center font-black ${

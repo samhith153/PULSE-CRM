@@ -52,12 +52,12 @@ const PLANS = [
     cta: 'Contact Sales',
     features: [
       'Everything in Growth',
-      'SSO & SAML',
-      'Dedicated CSM',
+      'Dedicated onboarding',
       'Custom integrations',
-      'SLA guarantee',
-      'On-prem option',
-      'Audit logs & SOC 2',
+      'Multi-org management',
+      'Priority support',
+      'Self-hosted option',
+      'Custom data retention',
     ],
   },
 ];
@@ -65,15 +65,15 @@ const PLANS = [
 const FAQS = [
   {
     q: 'Can I import my existing CRM data?',
-    a: 'Yes — use CSV import or the REST API to migrate contacts, companies, and deals from Salesforce, HubSpot, Zoho, or any other CRM. Free migration assistance is included on all paid plans.',
+    a: 'Yes — use CSV import or the REST API at /api/v1/contacts, /api/v1/companies, and /api/v1/leads to migrate your data. All endpoints accept JSON payloads and are documented in the Swagger UI at /docs.',
   },
   {
     q: 'What happens after the 14-day trial?',
     a: 'Your account moves to read-only mode. All your data is preserved for 30 days so you can export it or upgrade to a paid plan at any time.',
   },
   {
-    q: 'Is the AI Copilot included on all plans?',
-    a: 'Basic AI scoring is available on Starter. Full AI Copilot with unlimited GPT-4o queries, email drafting, and deal summaries is available on Growth and Enterprise.',
+    q: 'Is the AI scoring included on all plans?',
+    a: 'Basic rule-based lead scoring (0–100) is available on Starter. The full AI stack — Groq/Llama 3.3 email summarisation, intent detection, draft replies, and next-best-action recommendations — is available on Growth and Enterprise.',
   },
   {
     q: 'Can I change plans at any time?',
@@ -81,11 +81,11 @@ const FAQS = [
   },
   {
     q: 'Do you offer discounts for nonprofits or startups?',
-    a: 'Yes — contact our team at sales@pulsecrm.io for nonprofit and early-stage startup pricing. We offer 50% discounts for qualifying organizations.',
+    a: 'Yes — contact our team for nonprofit and early-stage startup pricing. We offer discounts for qualifying organizations.',
   },
   {
     q: 'Is my data secure?',
-    a: 'All plans use AES-256 encryption at rest and TLS 1.3 in transit. JWT authentication and bcrypt password hashing are standard across every plan. SOC 2 compliance applies to Enterprise.',
+    a: 'All plans use JWT authentication with access + refresh tokens. Passwords are bcrypt-hashed via passlib. Every resource has soft-delete and organization-level multi-tenant isolation. Data is never hard-deleted.',
   },
 ];
 
@@ -103,7 +103,7 @@ function PricingContent() {
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#f3f0ff', minHeight: '100vh', marginTop: -64 }}>
-      <Navbar onOpenModal={openModal} />
+      <Navbar onOpenModal={() => openModal('signin')} onOpenSignUp={() => openModal('signup')} />
 
       {/* ── HEADER ── */}
       <section style={{ paddingTop: 120, paddingBottom: 64, textAlign: 'center', background: '#f3f0ff' }}>
@@ -235,7 +235,7 @@ function PricingContent() {
 
               {/* CTA button */}
               <button
-                onClick={openModal}
+                onClick={() => openModal('signup')}
                 style={{
                   width: '100%', padding: '14px',
                   borderRadius: 12, border: 'none',
@@ -357,7 +357,7 @@ function PricingContent() {
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
-              onClick={openModal}
+              onClick={() => openModal('signup')}
               style={{
                 padding: '14px 32px', background: '#ffffff', color: '#7c3aed',
                 fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none',

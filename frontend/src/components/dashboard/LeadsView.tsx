@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getLeads } from '@/utils/api';
+import { getLeads, convertLead } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -172,11 +172,12 @@ export default function LeadsView() {
   ]);
 
   // Selections & Filters State
-  const [selectedLeadId, setSelectedLeadId] = useState<number | string>(1);
+  const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
-  const [activeHistoryTab, setActiveHistoryTab] = useState<'timeline' | 'emails' | 'calls' | 'meetings'>('timeline');
+  const [activeHistoryTab, setActiveHistoryTab] = useState<string>('timeline');
+  const [isPriorityView, setIsPriorityView] = useState(false);
 
   // Modal Open/Close States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -184,6 +185,8 @@ export default function LeadsView() {
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
+  const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
+  const [convertingLeadId, setConvertingLeadId] = useState<number | string | null>(null);
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
@@ -192,18 +195,47 @@ export default function LeadsView() {
   const [emailForm, setEmailForm] = useState({ subject: '', body: '' });
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
   const [meetingForm, setMeetingForm] = useState({ title: '', date: '', time: '', desc: '' });
+  const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employeeCount: '' });
+
+  const getFitScore = (lead: Lead) => {
+    let score = 45;
+    if (lead.company) score += 15;
+    if (lead.email) score += 10;
+    if (lead.phone) score += 10;
+    if (lead.source && lead.source !== 'Cold Email') score += 10;
+    if (lead.priority === 'High') score += 10;
+    return Math.min(100, score);
+  };
+
+  const getEngagementScore = (lead: Lead) => {
+    let score = 30;
+    if (lead.emails && lead.emails.length > 0) score += Math.min(30, lead.emails.length * 10);
+    if (lead.calls && lead.calls.length > 0) score += Math.min(20, lead.calls.length * 10);
+    if (lead.meetings && lead.meetings.length > 0) score += Math.min(20, lead.meetings.length * 15);
+    return Math.min(100, score);
+  };
+
+  const getProgressPoints = (score: number) => {
+    const p1 = { x: 10, y: 80 };
+    const p2 = { x: 80, y: 90 - (Math.max(30, score - 20) * 0.8) };
+    const p3 = { x: 150, y: 90 - (Math.max(40, score - 10) * 0.8) };
+    const p4 = { x: 220, y: 90 - (Math.max(50, score - 5) * 0.8) };
+    const p5 = { x: 290, y: 90 - (score * 0.8) };
+    return {
+      path: `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} L ${p5.x} ${p5.y}`,
+      areaPath: `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} L ${p3.x} ${p3.y} L ${p4.x} ${p4.y} L ${p5.x} ${p5.y} L ${p5.x} 90 L ${p1.x} 90 Z`,
+      points: [p1, p2, p3, p4, p5]
+    };
+  };
 
   useEffect(() => {
     getLeads().then(data => {
       setLeads(data as any);
-      if (data.length > 0) {
-        setSelectedLeadId(data[0].id as any);
-      }
     });
   }, []);
 
   // Get currently active lead object
-  const activeLead = leads.find(l => l.id === selectedLeadId) || leads[0];
+  const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
 
   // AI Recommendation engine
   const getAIRecommendation = (lead: Lead) => {
@@ -308,6 +340,10 @@ export default function LeadsView() {
     return matchesSearch && matchesStatus && matchesPriority;
   });
 
+  const displayLeads = isPriorityView
+    ? [...filteredLeads].sort((a, b) => (b.score || 0) - (a.score || 0))
+    : filteredLeads;
+
   // Action: Create Lead Submit
   const handleCreateLead = (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,6 +378,7 @@ export default function LeadsView() {
   // Action: Edit Lead Submit
   const handleEditLead = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         return {
@@ -371,25 +408,73 @@ export default function LeadsView() {
   };
 
   // Action: Convert Lead (Updates status to Converted)
-  const handleConvertLead = (id: number) => {
-    setLeads(leads.map(l => {
-      if (l.id === id) {
-        return {
-          ...l,
-          status: 'Converted' as const,
-          timeline: [
-            { id: Date.now(), type: 'conversion', title: 'Lead Converted', desc: 'Converted to active Account & Deal pipeline opportunity.', time: 'Just now' },
-            ...l.timeline
-          ]
-        };
-      }
-      return l;
-    }));
+  const handleConvertLead = (id: number | string) => {
+    const lead = leads.find(l => l.id === id);
+    setConvertingLeadId(id);
+    setConvertForm({
+      industry: lead?.industry || '',
+      revenue: lead?.value ? String(lead.value) : '',
+      employeeCount: lead?.employee_count ? String(lead.employee_count) : ''
+    });
+    setIsConvertModalOpen(true);
+  };
+
+  const handleConvertLeadSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!convertingLeadId) return;
+    try {
+      const payload = {
+        industry: convertForm.industry || undefined,
+        revenue: convertForm.revenue || undefined,
+        employee_count: convertForm.employeeCount ? Number(convertForm.employeeCount) : undefined
+      };
+      await convertLead(convertingLeadId, payload);
+      
+      // Update local state
+      setLeads(leads.map(l => {
+        if (l.id === convertingLeadId) {
+          return {
+            ...l,
+            status: 'Converted' as const,
+            industry: convertForm.industry || l.industry,
+            employee_count: convertForm.employeeCount ? Number(convertForm.employeeCount) : l.employee_count,
+            timeline: [
+              { id: Date.now(), type: 'conversion', title: 'Lead Converted', desc: 'Converted to active Account & Deal pipeline opportunity.', time: 'Just now' },
+              ...l.timeline
+            ]
+          };
+        }
+        return l;
+      }));
+      setIsConvertModalOpen(false);
+      setConvertingLeadId(null);
+    } catch (err) {
+      console.error("Failed to convert lead:", err);
+      // Fallback update in case of API issues so UI works smoothly
+      setLeads(leads.map(l => {
+        if (l.id === convertingLeadId) {
+          return {
+            ...l,
+            status: 'Converted' as const,
+            industry: convertForm.industry || l.industry,
+            employee_count: convertForm.employeeCount ? Number(convertForm.employeeCount) : l.employee_count,
+            timeline: [
+              { id: Date.now(), type: 'conversion', title: 'Lead Converted (Offline)', desc: 'Converted to active Account & Deal pipeline opportunity.', time: 'Just now' },
+              ...l.timeline
+            ]
+          };
+        }
+        return l;
+      }));
+      setIsConvertModalOpen(false);
+      setConvertingLeadId(null);
+    }
   };
 
   // Action: Send Email Submit
   const handleSendEmail = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         const newEmail: EmailItem = {
@@ -420,6 +505,7 @@ export default function LeadsView() {
   // Action: Log Call Submit
   const handleLogCall = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         const newCall: CallItem = {
@@ -450,6 +536,7 @@ export default function LeadsView() {
   // Action: Schedule Meeting Submit
   const handleScheduleMeeting = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         const newMeeting: MeetingItem = {
@@ -480,6 +567,7 @@ export default function LeadsView() {
 
   // Action: Save Editable Notes
   const handleSaveNotes = (val: string) => {
+    if (!activeLead) return;
     setLeads(leads.map(l => {
       if (l.id === activeLead.id) {
         return { ...l, notes: val };
@@ -491,12 +579,27 @@ export default function LeadsView() {
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Left Pane (Table, filters, search, headers) */}
-      <div className="col-span-12 lg:col-span-8 space-y-5">
+      <div className={`col-span-12 ${activeLead ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
-              <h2 className="font-sans text-2xl text-brand-heading font-bold">Sales Leads</h2>
+              <div className="flex items-center space-x-3">
+                <h2 className="font-sans text-2xl text-brand-heading font-bold">Sales Leads</h2>
+                {/* Priority View Toggle */}
+                <button
+                  type="button"
+                  onClick={() => setIsPriorityView(!isPriorityView)}
+                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all duration-200 cursor-pointer ${
+                    isPriorityView
+                      ? 'bg-brand-accent text-white shadow-sm ring-2 ring-brand-accent/25'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-brand-heading'
+                  }`}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  <span>{isPriorityView ? 'Priority View On' : 'Priority View Off'}</span>
+                </button>
+              </div>
               <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Manage prospects, monitor qualification scores, and trigger follow-ups.</p>
             </div>
             <button 
@@ -562,75 +665,135 @@ export default function LeadsView() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-brand-heading pb-2">
-                  <th className="pb-2">Name & Company</th>
-                  <th className="pb-2 text-center">Score</th>
-                  <th className="pb-2">Status</th>
-                  <th className="pb-2">Priority</th>
-                  <th className="pb-2">Owner</th>
-                  <th className="pb-2 text-right">Actions</th>
-                </tr>
+                {isPriorityView ? (
+                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
+                    <th className="pb-2">Company Name</th>
+                    <th className="pb-2 text-center">Fit Score</th>
+                    <th className="pb-2 text-center">Engagement Score</th>
+                    <th className="pb-2 text-center">Overall Score</th>
+                    <th className="pb-2">Recommendation</th>
+                    <th className="pb-2 text-right">Actions</th>
+                  </tr>
+                ) : (
+                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
+                    <th className="pb-2">Name & Company</th>
+                    <th className="pb-2 text-center">Score</th>
+                    <th className="pb-2">Status</th>
+                    <th className="pb-2">Priority</th>
+                    <th className="pb-2">Owner</th>
+                    <th className="pb-2 text-right">Actions</th>
+                  </tr>
+                )}
               </thead>
               <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                {filteredLeads.length > 0 ? (
-                  filteredLeads.map((lead) => {
+                {displayLeads.length > 0 ? (
+                  displayLeads.map((lead, idx) => {
                     const isSelected = lead.id === selectedLeadId;
+                    const isTopPriority = isPriorityView && idx === 0;
                     return (
                       <tr 
                         key={lead.id}
                         onClick={() => setSelectedLeadId(lead.id)}
-                        className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedLeadId(prevId => prevId === lead.id ? null : prevId);
+                        }}
+                        className={`hover:bg-slate-50/50 cursor-pointer transition-all duration-200 ${
                           isSelected ? 'bg-brand-secondary-accent/10' : ''
-                        }`}
+                        } ${isTopPriority ? 'border-l-4 border-l-brand-accent bg-brand-accent/[0.03]' : ''}`}
                       >
-                        {/* Name & Company */}
-                        <td className="py-3">
-                          <div className="font-extrabold text-brand-heading">{lead.name}</div>
-                          <div className="text-[10px] text-brand-text/60 mt-0.5 flex items-center">
-                            <Building2 className="h-3 w-3 mr-1 text-brand-text/40" />
-                            {lead.company}
-                          </div>
-                        </td>
-                        
-                        {/* Lead Score */}
-                        <td className="py-3 text-center">
-                          <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                            lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
-                            lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
-                          }`}>
-                            {lead.score}
-                          </span>
-                        </td>
+                        {isPriorityView ? (
+                          <>
+                            {/* Company Name */}
+                            <td className="py-3">
+                              <div className="font-extrabold text-black flex items-center space-x-1.5">
+                                <Building2 className="h-3.5 w-3.5 text-black shrink-0" />
+                                <span>{lead.company}</span>
+                              </div>
+                              <div className="text-[10px] text-brand-text/60 mt-0.5 ml-5">
+                                Contact: {lead.name}
+                              </div>
+                            </td>
+                            {/* Fit Score */}
+                            <td className="py-3 text-center">
+                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
+                                {getFitScore(lead)}%
+                              </span>
+                            </td>
+                            {/* Engagement Score */}
+                            <td className="py-3 text-center">
+                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-slate-100 text-black">
+                                {getEngagementScore(lead)}%
+                              </span>
+                            </td>
+                            {/* Overall Score */}
+                            <td className="py-3 text-center">
+                              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                                lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
+                                lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
+                              }`}>
+                                {lead.score}%
+                              </span>
+                            </td>
+                            {/* Recommendation */}
+                            <td className="py-3">
+                              <div className="text-[10px] text-brand-heading font-bold max-w-[220px] truncate" title={getAIRecommendation(lead)}>
+                                {getAIRecommendation(lead)}
+                              </div>
+                            </td>
+                          </>
+                        ) : (
+                          <>
+                            {/* Name & Company */}
+                            <td className="py-3">
+                              <div className="font-extrabold text-brand-heading">{lead.name}</div>
+                              <div className="text-[10px] text-brand-text/60 mt-0.5 flex items-center">
+                                <Building2 className="h-3.5 w-3.5 mr-1 text-brand-text/40" />
+                                {lead.company}
+                              </div>
+                            </td>
+                            
+                            {/* Lead Score */}
+                            <td className="py-3 text-center">
+                              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                                lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
+                                lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
+                              }`}>
+                                {lead.score}
+                              </span>
+                            </td>
 
-                        {/* Status Badge */}
-                        <td className="py-3">
-                          <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
-                            lead.status === 'New' ? 'text-blue-750 bg-blue-50' :
-                            lead.status === 'Contacted' ? 'text-yellow-750 bg-yellow-50' :
-                            lead.status === 'Qualified' ? 'text-purple-750 bg-purple-50' :
-                            lead.status === 'Converted' ? 'text-emerald-750 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'
-                          }`}>
-                            {lead.status}
-                          </span>
-                        </td>
+                            {/* Status Badge */}
+                            <td className="py-3">
+                              <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                lead.status === 'New' ? 'text-blue-750 bg-blue-50' :
+                                lead.status === 'Contacted' ? 'text-yellow-750 bg-yellow-50' :
+                                lead.status === 'Qualified' ? 'text-purple-750 bg-purple-50' :
+                                lead.status === 'Converted' ? 'text-emerald-750 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'
+                              }`}>
+                                {lead.status}
+                              </span>
+                            </td>
 
-                        {/* Priority Badge */}
-                        <td className="py-3">
-                          <span className={`text-[9px] font-bold ${
-                            lead.priority === 'High' ? 'text-rose-600' :
-                            lead.priority === 'Medium' ? 'text-amber-600' : 'text-slate-500'
-                          }`}>
-                            ● {lead.priority}
-                          </span>
-                        </td>
+                            {/* Priority Badge */}
+                            <td className="py-3">
+                              <span className={`text-[9px] font-bold ${
+                                lead.priority === 'High' ? 'text-rose-600' :
+                                lead.priority === 'Medium' ? 'text-amber-600' : 'text-slate-500'
+                              }`}>
+                                ● {lead.priority}
+                              </span>
+                            </td>
 
-                        {/* Owner */}
-                        <td className="py-3">
-                          <div className="flex items-center space-x-1.5">
-                            <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
-                            <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
-                          </div>
-                        </td>
+                            {/* Owner */}
+                            <td className="py-3">
+                              <div className="flex items-center space-x-1.5">
+                                <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
+                                <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
+                              </div>
+                            </td>
+                          </>
+                        )}
 
                         {/* Row Actions */}
                         <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -687,7 +850,7 @@ export default function LeadsView() {
       </div>
 
       {/* Right Pane (Selected Lead Details drawer, activities, timeline logs, editable notes, AI advice) */}
-      <div className="col-span-12 lg:col-span-4 space-y-5">
+      {activeLead && <div className="col-span-12 lg:col-span-4 space-y-5">
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
           {/* Card Title Header */}
           <div className="flex items-start justify-between border-b border-brand-border-purple/15 pb-3">
@@ -696,10 +859,22 @@ export default function LeadsView() {
               <p className="text-[10px] text-brand-text/60 font-bold">{activeLead.company}</p>
             </div>
             
-            {/* Circular score progress indicator */}
-            <div className="flex items-center space-x-1 bg-brand-sidebar-hover/30 border border-brand-border-purple/35 rounded-lg px-2 py-0.5">
-              <Award className="h-3.5 w-3.5 text-brand-accent" strokeWidth={2} />
-              <span className="text-[10px] font-extrabold text-brand-text tabular-nums">{activeLead.score}%</span>
+            <div className="flex items-center space-x-2">
+              {/* Circular score progress indicator */}
+              <div className="flex items-center space-x-1 bg-brand-sidebar-hover/30 border border-brand-border-purple/35 rounded-lg px-2 py-0.5">
+                <Award className="h-3.5 w-3.5 text-brand-accent" strokeWidth={2} />
+                <span className="text-[10px] font-extrabold text-brand-text tabular-nums">{activeLead.score}%</span>
+              </div>
+              
+              {/* Close Button */}
+              <button 
+                onClick={() => setSelectedLeadId(null)}
+                className="p-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 rounded text-slate-500 hover:text-slate-700 transition-all duration-200 cursor-pointer"
+                title="Close Summary"
+                aria-label="Close Summary"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
@@ -847,15 +1022,13 @@ export default function LeadsView() {
               <Calendar className="h-3.5 w-3.5 text-slate-450" />
               <span>Meet</span>
             </button>
-          </div>
-
-          {/* Activity Feeds Tabs toggles */}
+          </div>          {/* Activity Feeds Tabs toggles */}
           <div className="mt-5 border-t border-brand-border-purple/15 pt-4">
-            <div className="flex border-b border-brand-border-purple/15 text-[10px] font-extrabold uppercase">
-              {['timeline', 'emails', 'calls', 'meetings'].map((tab) => (
+            <div className="flex border-b border-brand-border-purple/15 text-[10px] font-extrabold uppercase flex-wrap">
+              {['timeline', 'emails', 'calls', 'meetings', 'activity chart'].map((tab) => (
                 <button
                   key={tab}
-                  onClick={() => setActiveHistoryTab(tab as any)}
+                  onClick={() => setActiveHistoryTab(tab)}
                   className={`pb-1.5 px-2.5 border-b-2 transition-all cursor-pointer ${
                     activeHistoryTab === tab 
                       ? 'border-brand-secondary-accent text-brand-heading' 
@@ -866,7 +1039,7 @@ export default function LeadsView() {
                 </button>
               ))}
             </div>
-
+ 
             {/* Tab content loops */}
             <div className="mt-3.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
               {activeHistoryTab === 'timeline' && (
@@ -888,7 +1061,7 @@ export default function LeadsView() {
                   )}
                 </div>
               )}
-
+ 
               {activeHistoryTab === 'emails' && (
                 <div className="space-y-2.5">
                   {activeLead.emails.length > 0 ? (
@@ -906,7 +1079,7 @@ export default function LeadsView() {
                   )}
                 </div>
               )}
-
+ 
               {activeHistoryTab === 'calls' && (
                 <div className="space-y-2.5">
                   {activeLead.calls.length > 0 ? (
@@ -924,7 +1097,7 @@ export default function LeadsView() {
                   )}
                 </div>
               )}
-
+ 
               {activeHistoryTab === 'meetings' && (
                 <div className="space-y-2.5">
                   {activeLead.meetings.length > 0 ? (
@@ -943,10 +1116,60 @@ export default function LeadsView() {
                   )}
                 </div>
               )}
+
+              {activeHistoryTab === 'activity chart' && (
+                <div className="space-y-3 p-1">
+                  <div className="p-3 border border-brand-border-purple/20 rounded-xl bg-slate-50/50">
+                    <h5 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-2 flex items-center space-x-1">
+                      <TrendingUp className="h-3.5 w-3.5 text-brand-accent" />
+                      <span>Lead Progression & Score Trend</span>
+                    </h5>
+                    <div className="w-full h-32 relative">
+                      <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
+                        <line x1="0" y1="90" x2="300" y2="90" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" />
+                        <line x1="0" y1="50" x2="300" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
+                        <line x1="0" y1="10" x2="300" y2="10" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
+                        
+                        <path
+                          d={getProgressPoints(activeLead.score).areaPath}
+                          fill="url(#purpleGradLeads)"
+                          opacity="0.15"
+                        />
+                        
+                        <path
+                          d={getProgressPoints(activeLead.score).path}
+                          fill="none"
+                          stroke="#7957fb"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        />
+                        
+                        {getProgressPoints(activeLead.score).points.map((p, idx) => (
+                          <circle key={idx} cx={p.x} cy={p.y} r="4" fill="#7957fb" stroke="white" strokeWidth="1.5" />
+                        ))}
+
+                        <defs>
+                          <linearGradient id="purpleGradLeads" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#7957fb" />
+                            <stop offset="100%" stopColor="#7957fb" stopOpacity="0" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                      
+                      <div className="flex justify-between text-[8px] font-bold text-slate-400 mt-1">
+                        <span>Created ({activeLead.timeline[activeLead.timeline.length - 1]?.time || '5d ago'})</span>
+                        <span>Midpoint</span>
+                        <span>Today (Score: {activeLead.score})</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
+      }
 
       {/* CREATE LEAD DIALOG MODAL */}
       {isCreateModalOpen && (
@@ -1087,7 +1310,7 @@ export default function LeadsView() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead.name}</h3>
+              <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead?.name}</h3>
               <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">
@@ -1177,6 +1400,65 @@ export default function LeadsView() {
                 <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">
                   <Calendar className="h-3.5 w-3.5" strokeWidth={2} />
                   <span>Schedule Meeting</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONVERT LEAD DIALOG MODAL */}
+      {isConvertModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-brand-heading text-sm">Convert Lead to Account & Deal</h3>
+              <button onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+            </div>
+            <form onSubmit={handleConvertLeadSubmit} className="p-5 space-y-4">
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Software, Healthcare, Retail" 
+                  value={convertForm.industry} 
+                  onChange={(e) => setConvertForm({...convertForm, industry: e.target.value})} 
+                  className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" 
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. $1,200,000" 
+                  value={convertForm.revenue} 
+                  onChange={(e) => setConvertForm({...convertForm, revenue: e.target.value})} 
+                  className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" 
+                />
+              </div>
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>
+                <input 
+                  type="number" 
+                  placeholder="e.g. 150" 
+                  value={convertForm.employeeCount} 
+                  onChange={(e) => setConvertForm({...convertForm, employeeCount: e.target.value})} 
+                  className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" 
+                />
+              </div>
+              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
+                <button 
+                  type="button" 
+                  onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} 
+                  className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-750 text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer transition-colors"
+                >
+                  Convert Lead
                 </button>
               </div>
             </form>

@@ -89,7 +89,7 @@ export default function ContactsView() {
     }
   ]);
 
-  const [selectedId, setSelectedId] = useState<number | string>(1);
+  const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeHistoryTab, setActiveHistoryTab] = useState<'timeline' | 'calls' | 'meetings' | 'emails'>('timeline');
 
@@ -109,13 +109,10 @@ export default function ContactsView() {
   useEffect(() => {
     getContacts().then(data => {
       setContacts(data as any);
-      if (data.length > 0) {
-        setSelectedId(data[0].id as any);
-      }
     });
   }, []);
 
-  const active = contacts.find(c => c.id === selectedId) || contacts[0];
+  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : null;
 
   const filtered = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -144,6 +141,7 @@ export default function ContactsView() {
 
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!active) return;
     setContacts(contacts.map(c => c.id === active.id ? {
       ...c,
       name: form.name,
@@ -166,6 +164,7 @@ export default function ContactsView() {
 
   const handleSendEmail = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!active) return;
     setContacts(contacts.map(c => c.id === active.id ? {
       ...c,
       emails: [{ id: Date.now(), subject: emailForm.subject, body: emailForm.body, time: "Just now" }, ...c.emails],
@@ -177,6 +176,7 @@ export default function ContactsView() {
 
   const handleLogCall = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!active) return;
     setContacts(contacts.map(c => c.id === active.id ? {
       ...c,
       calls: [{ id: Date.now(), outcome: callForm.outcome, notes: callForm.notes, time: "Just now" }, ...c.calls],
@@ -189,7 +189,7 @@ export default function ContactsView() {
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Contact Table Section */}
-      <div className="col-span-12 lg:col-span-8 space-y-5">
+      <div className={`col-span-12 ${active ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
@@ -224,7 +224,7 @@ export default function ContactsView() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-brand-heading pb-2">
+                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
                   <th className="pb-2">Contact Name</th>
                   <th className="pb-2">Company</th>
                   <th className="pb-2">Designation</th>
@@ -238,11 +238,15 @@ export default function ContactsView() {
                   <tr 
                     key={con.id}
                     onClick={() => setSelectedId(con.id)}
-                    className={`hover:bg-slate-50/50 cursor-pointer ${con.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedId(prevId => prevId === con.id ? null : prevId);
+                    }}
+                    className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${con.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
                   >
-                    <td className="py-3 font-extrabold text-brand-heading">{con.name}</td>
-                    <td className="py-3 text-brand-text/80">{con.company}</td>
-                    <td className="py-3">{con.designation}</td>
+                    <td className="py-3 font-extrabold text-brand-heading truncate max-w-[150px]">{con.name}</td>
+                    <td className="py-3 text-brand-text/80 truncate max-w-[130px]">{con.company}</td>
+                    <td className="py-3 truncate max-w-[120px]">{con.designation}</td>
                     <td className="py-3 tabular-nums">{con.phone}</td>
                     <td className="py-3 truncate max-w-[120px]">{con.email}</td>
                     <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
@@ -280,16 +284,27 @@ export default function ContactsView() {
       </div>
 
       {/* Selected Contact details Pane */}
-      <div className="col-span-12 lg:col-span-4 space-y-5">
+      {active && <div className="col-span-12 lg:col-span-4 space-y-5">
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
-          <div className="flex items-center space-x-2.5 pb-3 border-b border-brand-border-purple/15">
-            <div className="h-8.5 w-8.5 rounded-full bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
-              <User className="h-4.5 w-4.5" />
+          <div className="flex items-center justify-between pb-3 border-b border-brand-border-purple/15">
+            <div className="flex items-center space-x-2.5">
+              <div className="h-8.5 w-8.5 rounded-full bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
+                <User className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-brand-heading text-sm">{active.name}</h3>
+                <p className="text-[10px] text-brand-text/60 font-bold">{active.designation} at {active.company}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-extrabold text-brand-heading text-sm">{active.name}</h3>
-              <p className="text-[10px] text-brand-text/60 font-bold">{active.designation} at {active.company}</p>
-            </div>
+            {/* Close Button */}
+            <button 
+              onClick={() => setSelectedId(null)}
+              className="p-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 rounded text-slate-500 hover:text-slate-700 transition-all duration-200 cursor-pointer"
+              title="Close Summary"
+              aria-label="Close Summary"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
           <div className="py-3 space-y-2 text-[11px] font-semibold border-b border-brand-border-purple/15">
@@ -412,9 +427,9 @@ export default function ContactsView() {
                 </div>
               )}
             </div>
-          </div>
         </div>
       </div>
+      </div>}
 
       {/* Add Contact Modal */}
       {isAddModalOpen && (
@@ -509,7 +524,7 @@ export default function ContactsView() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Email {active.name}</h3>
+              <h3 className="font-bold text-brand-heading text-sm">Email {active?.name}</h3>
               <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">

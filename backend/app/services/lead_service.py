@@ -1,4 +1,4 @@
-﻿"""
+"""
 Lead Management Service
 """
 from typing import List, Optional, Tuple
@@ -208,7 +208,15 @@ class LeadService:
         await self.repo.soft_delete(lead)
         logger.info("Lead deleted", extra={"lead_id": str(lead_id)})
 
-    async def convert_to_deal(self, lead_id: UUID, organization_id: UUID, created_by: UUID) -> Deal:
+    async def convert_to_deal(
+        self,
+        lead_id: UUID,
+        organization_id: UUID,
+        created_by: UUID,
+        industry: Optional[str] = None,
+        revenue: Optional[str] = None,
+        employee_count: Optional[int] = None,
+    ) -> Deal:
         tx_context = self.db.begin_nested() if self.db.in_transaction() else self.db.begin()
         async with tx_context:
             lead = await self.get(lead_id, organization_id)
@@ -243,7 +251,25 @@ class LeadService:
                 created_by=created_by,
             )
 
-            await self.repo.update(lead, status=LeadStatus.CONVERTED.value)
+            if lead.company_id:
+                company = await self.company_repo.get_active_by_id(lead.company_id, organization_id)
+                if company:
+                    comp_updates = {}
+                    if industry is not None:
+                        comp_updates["industry"] = industry
+                    if revenue is not None:
+                        comp_updates["annual_revenue"] = revenue
+                    if employee_count is not None:
+                        comp_updates["employee_count"] = employee_count
+                    if comp_updates:
+                        await self.company_repo.update(company, **comp_updates)
+
+            lead_updates = {"status": LeadStatus.CONVERTED.value}
+            if industry is not None:
+                lead_updates["industry"] = industry
+            if employee_count is not None:
+                lead_updates["employee_count"] = employee_count
+            await self.repo.update(lead, **lead_updates)
 
             await self.timeline.record_activity(
                 organization_id=organization_id,

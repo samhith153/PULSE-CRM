@@ -140,7 +140,7 @@ export default function UsersView() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-slate-400">
+              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
                 <th className="py-2.5">User</th>
                 <th className="py-2.5">Email</th>
                 <th className="py-2.5">Authorization Role</th>
@@ -152,7 +152,7 @@ export default function UsersView() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs font-semibold text-brand-text">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50/50">
+                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-3 font-extrabold">{user.name}</td>
                   <td className="py-3 text-slate-500">{user.email}</td>
                   <td className="py-3">
