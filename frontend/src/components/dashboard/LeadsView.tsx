@@ -677,7 +677,7 @@ export default function LeadsView() {
                   </tr>
                 ) : (
                   <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
-                    <th className="pb-2">Name & Company</th>
+                    <th className="pb-2">Name &amp; Company</th>
                     <th className="pb-2 text-center">Score</th>
                     <th className="pb-2">Status</th>
                     <th className="pb-2">Priority</th>
@@ -1121,7 +1121,7 @@ export default function LeadsView() {
                   <div className="p-3 border border-brand-border-purple/20 rounded-xl bg-slate-50/50">
                     <h5 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-2 flex items-center space-x-1">
                       <TrendingUp className="h-3.5 w-3.5 text-brand-accent" />
-                      <span>Lead Progression & Score Trend</span>
+                      <span>Lead Progression &amp; Score Trend</span>
                     </h5>
                     <div className="w-full h-32 relative">
                       <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
@@ -1411,7 +1411,7 @@ export default function LeadsView() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Convert Lead to Account & Deal</h3>
+              <h3 className="font-bold text-brand-heading text-sm">Convert Lead to Account &amp; Deal</h3>
               <button onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleConvertLeadSubmit} className="p-5 space-y-4">
