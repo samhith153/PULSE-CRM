@@ -64,6 +64,9 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
 
   // 1. Calculations
   const wonDeals = deals.filter(d => d.stage === 'Won' || d.status === 'Won' || d.status === 'won');
+  const wonCount = wonDeals.length;
+  const lostDeals = deals.filter(d => d.stage === 'Lost' || d.status === 'Lost' || d.status === 'lost');
+  const lostCount = lostDeals.length;
   const wonRevenue = wonDeals.reduce((sum, d) => sum + (Number(d.value || d.amount) || 0), 0);
   const totalTarget = 3000000; // baseline team target
 
