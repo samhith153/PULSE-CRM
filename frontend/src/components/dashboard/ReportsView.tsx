@@ -61,15 +61,13 @@ export default function ReportsView() {
   const s = data.summary;
   const totalLeads = asNumber(s.leads?.total);
   const converted = asNumber(s.leads?.converted);
-  const won = asNumber(s.won_deals);
-  const lost = asNumber(s.lost_deals);
-  const totalDeals = won + lost;
-  const winRate = totalDeals ? (won / totalDeals) * 100 : 0;
+  const lost = Math.max(0, totalLeads - converted);
+  const winRate = asNumber(s.leads?.conversion_rate) || (totalLeads ? (converted / totalLeads) * 100 : 0);
 
   const kpis: KPI[] = [
     { title: 'Total Revenue Won', value: formatINR(s.revenue?.this_year), change: formatPct(asNumber(s.revenue?.growth_pct)), isPositive: asNumber(s.revenue?.growth_pct) >= 0, timeframe: 'this year', icon: IndianRupee },
     { title: 'New Leads Created', value: `${formatNum(totalLeads)} leads`, change: formatPct(asNumber(s.leads?.monthly_growth_pct)), isPositive: asNumber(s.leads?.monthly_growth_pct) >= 0, timeframe: 'vs last month', icon: Users },
-    { title: 'Win Rate', value: `${winRate.toFixed(1)}%`, change: formatPct(asNumber(s.deal_win_rate)), isPositive: asNumber(s.deal_win_rate) >= 0, timeframe: 'overall', icon: Target },
+    { title: 'Lead Conversion', value: `${winRate.toFixed(1)}%`, change: formatPct(winRate), isPositive: winRate >= 0, timeframe: 'overall', icon: Target },
     { title: 'Avg Sales Cycle', value: '—', change: 'live data n/a', isPositive: true, timeframe: 'from deals', icon: Clock },
   ];
 
@@ -78,7 +76,7 @@ export default function ReportsView() {
     : [
         { stage: 'Leads', count: totalLeads, percentage: 100, conversion_rate: '100' },
         { stage: 'Converted', count: converted, percentage: totalLeads ? (converted / totalLeads) * 100 : 0, conversion_rate: totalLeads ? (converted / totalLeads) * 100 : 0 },
-        { stage: 'Won Deals', count: won, percentage: totalLeads ? (won / totalLeads) * 100 : 0, conversion_rate: totalLeads ? (won / totalLeads) * 100 : 0 },
+        { stage: 'Lost', count: lost, percentage: totalLeads ? (lost / totalLeads) * 100 : 0, conversion_rate: totalLeads ? (lost / totalLeads) * 100 : 0 },
       ];
 
   const reps = (data.top_sales_reps ?? []).map((r) => ({
@@ -91,7 +89,7 @@ export default function ReportsView() {
   const maxRevenue = Math.max(1, ...reps.map((r) => r.revenue));
   const maxDeals = Math.max(1, ...reps.map((r) => r.deals));
 
-  const totalConversion = totalLeads ? (won / totalLeads) * 100 : 0;
+  const totalConversion = winRate;
 
   return (
     <div className="space-y-6">
@@ -184,7 +182,7 @@ export default function ReportsView() {
             <div className="space-y-3">
               <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Total Leads</span><span className="tabular-nums">{formatNum(totalLeads)}</span></div>
               <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Converted</span><span className="tabular-nums">{formatNum(converted)}</span></div>
-              <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Won Deals</span><span className="tabular-nums">{won}</span></div>
+              <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Won Deals</span><span className="tabular-nums">{converted}</span></div>
               <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Lost Deals</span><span className="tabular-nums">{lost}</span></div>
               <div className="pt-2 border-t border-slate-100 flex justify-between text-[11px] font-extrabold text-brand-heading"><span>Overall Win Rate</span><span className="tabular-nums">{winRate.toFixed(1)}%</span></div>
             </div>
@@ -210,7 +208,7 @@ export default function ReportsView() {
               <div className="flex items-center space-x-4 bg-slate-50 border border-slate-200/80 px-4 py-2 rounded-xl">
                 <div>
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Conversion</span>
-                  <span className="text-xs text-slate-600 font-semibold">{won} of {formatNum(totalLeads)} Won</span>
+                  <span className="text-xs text-slate-600 font-semibold">{converted} of {formatNum(totalLeads)} Converted</span>
                 </div>
                 <div className="text-right pl-3 border-l border-slate-200">
                   <span className="text-lg font-black text-indigo-600 block leading-none">{totalConversion.toFixed(1)}%</span>

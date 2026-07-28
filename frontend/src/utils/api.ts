@@ -81,6 +81,66 @@ export interface Deal {
   closeDate: string;
 }
 
+export async function register(fullName: string, email: string, password: string, organizationName: string): Promise<{ access_token: string; refresh_token: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ full_name: fullName, email, password, organization_name: organizationName })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    let message = `Registration failed (${res.status})`;
+    const detail = err?.detail;
+    if (Array.isArray(detail) && detail.length) {
+      const first = detail[0];
+      const field = String(first?.loc ? Array.isArray(first.loc) ? first.loc.join(' ') : first.loc : first?.field || '').replace('body -> ', '').replace(/->/g, ' ').trim();
+      const msg = String(first?.msg || first?.message || '');
+      if (/password/i.test(field) || /password/i.test(msg)) {
+        message = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+      } else if (/organization with name/i.test(msg) || /already exists/i.test(msg)) {
+        message = 'An organization with this name already exists. Please choose a different name.';
+      } else {
+        message = field ? `${field}: ${msg}` : msg;
+      }
+    } else if (typeof detail === 'string') {
+      message = detail;
+    }
+    throw new Error(message);
+  }
+  const json = await res.json();
+  return json.data;
+}
+
+export async function login(email: string, password: string): Promise<{ access_token: string; refresh_token: string; token_type?: string; expires_in?: number }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).detail || `Login failed (${res.status})`);
+  }
+  const json = await res.json();
+  return json.data ?? json;
+}
+
+async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeaders(),
+      ...(options?.headers || {})
+    }
+  });
+  if (!res.ok) {
+    throw new Error(`API error ${res.status}`);
+  }
+  const json = await res.json();
+  return (json.data ?? json) as T;
+}
+
 // --- Leads API ---
 export async function getLeads(): Promise<Lead[]> {
   const dbResult = await apiFetch<any>('/api/v1/leads');
