@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Send } from 'lucide-react';
-import { getEmail, getEmails, getGmailStatus, sendGmailEmail, syncGmail, SyncedEmail } from '@/utils/api';
+import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search } from 'lucide-react';
+import { getEmail, getEmails, SyncedEmail } from '@/utils/api';
 
 type MailboxFilter = 'all' | 'inbound' | 'outbound' | 'unread';
 
@@ -30,13 +30,7 @@ export default function EmailsView() {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [composeTo, setComposeTo] = useState('');
-  const [composeSubject, setComposeSubject] = useState('');
-  const [composeBody, setComposeBody] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   const direction = filter === 'inbound' ? 'inbound' : filter === 'outbound' ? 'outbound' : '';
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -84,74 +78,14 @@ export default function EmailsView() {
     }
   };
 
-  const handleSync = async () => {
-    setIsSyncing(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const status = await getGmailStatus();
-      if (!status.connection?.id) throw new Error('Connect Gmail before syncing emails.');
-      const result = await syncGmail(status.connection.id);
-      setNotice(`Synced ${result.synced_count} new email${result.synced_count === 1 ? '' : 's'} from Gmail.`);
-      await loadEmails();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to sync Gmail.');
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
-  const handleSendEmail = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSending(true);
-    setError(null);
-    setNotice(null);
-    try {
-      const status = await getGmailStatus();
-      if (!status.connection?.id) throw new Error('Connect Gmail before sending emails.');
-      await sendGmailEmail({
-        gmail_connection_id: status.connection.id,
-        receiver: composeTo,
-        subject: composeSubject,
-        html_body: composeBody
-      });
-      setComposeTo('');
-      setComposeSubject('');
-      setComposeBody('');
-      setFilter('outbound');
-      setPage(1);
-      setNotice('Email sent successfully.');
-      await loadEmails();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to send email.');
-    } finally {
-      setIsSending(false);
-    }
-  };
-
   return (
     <div className="flex border border-brand-border-purple/20 rounded-xl overflow-hidden bg-white h-[650px] shadow-sm/5">
       <aside className="w-56 shrink-0 border-r border-brand-border-purple/15 bg-slate-50/50 p-3 flex flex-col gap-4">
-        <button onClick={handleSync} disabled={isSyncing} className="flex items-center justify-center gap-2 bg-brand-accent hover:bg-brand-accent-hover text-white py-3 px-4 rounded-xl text-xs font-bold transition-colors disabled:opacity-60">
-          {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-          <span>Sync Gmail</span>
-        </button>
-
-        <form onSubmit={handleSendEmail} className="space-y-2 border-t border-brand-border-purple/15 pt-3">
-          <input value={composeTo} onChange={event => setComposeTo(event.target.value)} type="email" required placeholder="Recipient" className="w-full px-3 py-2 border border-brand-border-purple/30 rounded-lg text-[11px] font-semibold text-brand-text focus:outline-none bg-white" />
-          <input value={composeSubject} onChange={event => setComposeSubject(event.target.value)} required placeholder="Subject" className="w-full px-3 py-2 border border-brand-border-purple/30 rounded-lg text-[11px] font-semibold text-brand-text focus:outline-none bg-white" />
-          <textarea value={composeBody} onChange={event => setComposeBody(event.target.value)} required placeholder="Message" rows={5} className="w-full px-3 py-2 border border-brand-border-purple/30 rounded-lg text-[11px] font-semibold text-brand-text focus:outline-none bg-white resize-none" />
-          <button type="submit" disabled={isSending} className="w-full flex items-center justify-center gap-2 bg-brand-heading hover:bg-brand-text text-white py-2.5 px-3 rounded-xl text-xs font-bold transition-colors disabled:opacity-60">
-            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            <span>Send Email</span>
-          </button>
-        </form>
-
         <nav className="space-y-0.5">
           {[
             { id: 'all', label: 'All Mail', icon: Mail, count: total },
             { id: 'inbound', label: 'Inbox', icon: Inbox, count: unreadCount },
-            { id: 'outbound', label: 'Sent', icon: Send, count: 0 },
+            { id: 'outbound', label: 'Sent', icon: MailOpen, count: 0 },
             { id: 'unread', label: 'Unread', icon: MailOpen, count: unreadCount }
           ].map(item => {
             const Icon = item.icon;
@@ -178,7 +112,6 @@ export default function EmailsView() {
         </div>
 
         {error && <div className="m-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}
-        {notice && <div className="m-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">{notice}</div>}
 
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
           {isLoading ? (
