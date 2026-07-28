@@ -121,29 +121,31 @@ export default function StatCards({ timeFilter, loading = false }: StatCardsProp
         return (
           <div 
             key={idx} 
-            className="bg-white border border-brand-border-purple/20 rounded-xl p-4.5 shadow-sm/5 hover:shadow-md hover:-translate-y-0.5 hover:border-brand-border-purple/40 transition-all duration-300 flex flex-col justify-between min-h-[130px] overflow-hidden"
+            className="bg-white border border-brand-border-purple/20 rounded-xl p-4 shadow-sm/5 hover:shadow-md hover:-translate-y-0.5 hover:border-brand-border-purple/40 transition-all duration-300 flex flex-col justify-between min-h-[130px] overflow-hidden"
           >
-            {/* Header info - Title and Icon side-by-side */}
+            {/* Header info - Title, Change, and Icon */}
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold text-brand-heading uppercase tracking-wider truncate">
-                {stat.title}
-              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-bold text-brand-heading uppercase tracking-wider truncate">
+                  {stat.title}
+                </span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 w-fit mt-1 leading-none ${
+                  stat.isPositive 
+                    ? 'text-emerald-700 bg-emerald-50 border border-emerald-100/50' 
+                    : 'text-rose-700 bg-rose-50 border border-rose-100/50'
+                }`}>
+                  {stat.change}
+                </span>
+              </div>
               <div className="h-7 w-7 rounded-lg bg-brand-sidebar-hover/20 text-brand-heading flex items-center justify-center border border-brand-border-purple/20 shrink-0">
                 <Icon className="h-4 w-4" strokeWidth={1.75} />
               </div>
             </div>
 
-            {/* Stat value & trend - Responsive sizing to prevent wrapping overflow */}
-            <div className="mt-3 flex items-baseline justify-between gap-1 flex-wrap">
-              <span className="text-2xl sm:text-3xl font-extrabold text-brand-text tracking-tight font-sans tabular-nums leading-none">
+            {/* Stat value */}
+            <div className="mt-2.5">
+              <span className="text-xl sm:text-2xl font-extrabold text-brand-text tracking-tight font-sans tabular-nums leading-none block">
                 {stat.value}
-              </span>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 self-center leading-none ${
-                stat.isPositive 
-                  ? 'text-emerald-700 bg-emerald-50 border border-emerald-100/50' 
-                  : 'text-rose-700 bg-rose-50 border border-rose-100/50'
-              }`}>
-                {stat.change}
               </span>
             </div>
 
@@ -158,7 +160,7 @@ export default function StatCards({ timeFilter, loading = false }: StatCardsProp
                   <path
                     d={sparklinePath}
                     fill="none"
-                    stroke={stat.isPositive ? "#7e71f9" : "#79a7e8"}
+                    stroke={stat.isPositive ? "#10b981" : "#ef4444"}
                     strokeWidth={1.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"

@@ -224,6 +224,10 @@ export default function CompaniesView() {
                   <tr 
                     key={comp.id}
                     onClick={() => setSelectedId(comp.id)}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedId(prevId => prevId === comp.id ? null : prevId);
+                    }}
                     className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${comp.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
                   >
                     <td className="py-3 font-extrabold text-brand-heading truncate max-w-[160px]">{comp.name}</td>
@@ -262,14 +266,25 @@ export default function CompaniesView() {
       {/* Details Side Panel */}
       {active && <div className="col-span-12 lg:col-span-4 space-y-5">
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
-          <div className="flex items-center space-x-2.5 pb-3 border-b border-brand-border-purple/15">
-            <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
-              <Building2 className="h-4.5 w-4.5" />
+          <div className="flex items-center justify-between pb-3 border-b border-brand-border-purple/15">
+            <div className="flex items-center space-x-2.5">
+              <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
+                <Building2 className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-brand-heading text-sm">{active.name}</h3>
+                <p className="text-[10px] text-brand-text/60 font-bold">{active.industry}</p>
+              </div>
             </div>
-            <div>
-              <h3 className="font-extrabold text-brand-heading text-sm">{active.name}</h3>
-              <p className="text-[10px] text-brand-text/60 font-bold">{active.industry}</p>
-            </div>
+            {/* Close Button */}
+            <button 
+              onClick={() => setSelectedId(null)}
+              className="p-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 rounded text-slate-500 hover:text-slate-700 transition-all duration-200 cursor-pointer"
+              title="Close Summary"
+              aria-label="Close Summary"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
           <div className="py-3 space-y-2.5 text-[11px] font-semibold border-b border-brand-border-purple/15">

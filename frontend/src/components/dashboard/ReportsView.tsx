@@ -15,7 +15,8 @@ import {
   Percent, 
   Activity,
   Layers,
-  ChevronDown
+  ChevronDown,
+  Lightbulb
 } from 'lucide-react';
 
 interface KPI {
@@ -153,25 +154,27 @@ export default function ReportsView() {
           return (
             <div 
               key={idx} 
-              className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 hover:shadow-md hover:-translate-y-0.5 hover:border-brand-border-purple/40 transition-all duration-300 flex flex-col justify-between h-32"
+              className="bg-white border border-brand-border-purple/20 rounded-xl p-4 shadow-sm/5 hover:shadow-md hover:-translate-y-0.5 hover:border-brand-border-purple/40 transition-all duration-300 flex flex-col justify-between min-h-[130px]"
             >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold text-brand-heading uppercase tracking-wider">
-                  {kpi.title}
-                </span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex flex-col min-w-0">
+                  <span className="text-[10px] font-bold text-brand-heading uppercase tracking-wider truncate">
+                    {kpi.title}
+                  </span>
+                  <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded text-emerald-700 bg-emerald-50 border border-emerald-100/50 self-start mt-1 leading-none">
+                    {kpi.change}
+                  </span>
+                </div>
                 <div className="h-8 w-8 rounded-lg bg-brand-sidebar-hover/20 text-brand-heading flex items-center justify-center border border-brand-border-purple/20 shrink-0">
                   <Icon className="h-4.5 w-4.5" />
                 </div>
               </div>
-              <div className="mt-2 flex items-baseline justify-between gap-1 flex-wrap">
-                <span className="text-2xl font-extrabold text-brand-text tracking-tight font-sans tabular-nums leading-none">
+              <div className="mt-2.5">
+                <span className="text-xl sm:text-2xl font-extrabold text-brand-text tracking-tight font-sans tabular-nums leading-none block">
                   {kpi.value}
                 </span>
-                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded text-emerald-700 bg-emerald-50 border border-emerald-100/50 self-center leading-none">
-                  {kpi.change}
-                </span>
               </div>
-              <div className="mt-2 pt-2 border-t border-slate-50 text-[9px] text-brand-text/60 font-semibold">
+              <div className="mt-2.5 pt-2.5 border-t border-slate-100 text-[9px] text-brand-text/60 font-semibold">
                 {kpi.timeframe}
               </div>
             </div>
@@ -464,8 +467,9 @@ export default function ReportsView() {
 
           <div className="space-y-4 mt-6">
             {reasonData.map((d, idx) => {
-              const wonPct = (d.won / maxReasonValue) * 100;
-              const lostPct = (d.lost / maxReasonValue) * 100;
+              const total = d.won + d.lost;
+              const wonPct = total > 0 ? (d.won / total) * 100 : 0;
+              const lostPct = total > 0 ? (d.lost / total) * 100 : 0;
 
               return (
                 <div 
@@ -748,6 +752,45 @@ export default function ReportsView() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Win Rate by Product (Horizontal Bar Chart) */}
+          <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col justify-between hover:border-brand-border-purple/40 hover:shadow-md transition-all duration-300">
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-brand-heading text-sm">Win Rate by Product</h3>
+                <span title="Win rate percentage for deals closed per product tier">
+                  <Info className="h-3.5 w-3.5 text-slate-400 cursor-help" />
+                </span>
+              </div>
+              
+              <div className="space-y-3.5 mt-4">
+                {[
+                  { name: "Enterprise DB Cloud", winRate: 74, color: "#7957fb" },
+                  { name: "Real-time AI Co-pilot", winRate: 62, color: "#7e71f9" },
+                  { name: "Compliance & Security SLAs", winRate: 55, color: "#7e8cf1" },
+                  { name: "Professional Migration", winRate: 48, color: "#79a7e8" },
+                  { name: "SSO Integration Gateways", winRate: 40, color: "#6ec2de" }
+                ].map((item, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex justify-between text-xs font-bold text-brand-text">
+                      <span className="truncate max-w-[170px]">{item.name}</span>
+                      <span className="text-[10px] text-brand-heading font-extrabold tabular-nums">{item.winRate}%</span>
+                    </div>
+                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${item.winRate}%`, backgroundColor: item.color }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+              <span className="text-[10px] font-bold text-slate-400">Based on Q2 closed opportunities</span>
             </div>
           </div>
         </div>
