@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Shield, 
   Lock, 
@@ -10,6 +10,7 @@ import {
   Info,
   Sparkles
 } from 'lucide-react';
+import { getUsers } from '@/utils/api';
 
 interface PermissionRow {
   key: string;
@@ -23,7 +24,7 @@ interface PermissionRow {
 }
 
 export default function RolesPermissionsView() {
-  const [matrix, setMatrix] = useState<PermissionRow[]>([
+  const defaultMatrix: PermissionRow[] = [
     { 
       key: "view_leads", 
       category: "CRM Data", 
@@ -54,7 +55,6 @@ export default function RolesPermissionsView() {
       manager: false, 
       representative: false 
     },
-    
     { 
       key: "view_reports", 
       category: "Analytics", 
@@ -75,7 +75,6 @@ export default function RolesPermissionsView() {
       manager: true, 
       representative: false 
     },
-    
     { 
       key: "manage_users", 
       category: "Administration", 
@@ -106,13 +105,63 @@ export default function RolesPermissionsView() {
       manager: false, 
       representative: false 
     }
-  ]);
+  ];
 
+  const [matrix, setMatrix] = useState<PermissionRow[]>(defaultMatrix);
   const [toast, setToast] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [roleCounts, setRoleCounts] = useState({
+    admin: 2,
+    manager: 3,
+    representative: 40
+  });
+
+  useEffect(() => {
+    // 1. Load matrix from localStorage if saved
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pulse-crm-permissions-matrix');
+      if (saved) {
+        try {
+          setMatrix(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse saved permissions matrix:", e);
+        }
+      }
+    }
+
+    // 2. Fetch users to compute dynamic role user counts
+    getUsers().then(res => {
+      const users = res.data?.data || res.data || res || [];
+      let admins = 0;
+      let managers = 0;
+      let reps = 0;
+
+      users.forEach((user: any) => {
+        const uRoles = user.roles || [];
+        const isAdmin = uRoles.some((r: string) => r.toLowerCase().includes('admin')) || user.is_superuser;
+        const isManager = uRoles.some((r: string) => r.toLowerCase().includes('manager'));
+        const isRep = uRoles.some((r: string) => r.toLowerCase().includes('rep') || r.toLowerCase().includes('representative'));
+
+        if (isAdmin) admins++;
+        else if (isManager) managers++;
+        else if (isRep) reps++;
+        else reps++; // default fallback count
+      });
+
+      setRoleCounts({
+        admin: Math.max(admins, 1),
+        manager: Math.max(managers, 1),
+        representative: Math.max(reps, 1)
+      });
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to load users for roles count:", err);
+      setLoading(false);
+    });
+  }, []);
 
   const togglePermission = (idx: number, role: 'admin' | 'manager' | 'representative') => {
-    // Admin permissions locked to true for safety
-    if (role === 'admin') return;
+    if (role === 'admin') return; // locked to true for safety
     
     const updated = [...matrix];
     updated[idx][role] = !updated[idx][role];
@@ -120,9 +169,21 @@ export default function RolesPermissionsView() {
   };
 
   const handleSave = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pulse-crm-permissions-matrix', JSON.stringify(matrix));
+    }
     setToast("Authorization matrix configurations saved successfully!");
     setTimeout(() => setToast(null), 3000);
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white border border-brand-border-purple/20 rounded-xl p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-accent"></div>
+        <p className="text-xs text-brand-text/60 mt-4 font-bold">Querying system user accounts and roles...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 font-sans">
@@ -157,9 +218,9 @@ export default function RolesPermissionsView() {
       {/* Roles Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {[
-          { name: "System Administrator", usersCount: 2, desc: "Full root access permissions. Manage system configurations, user profiles, integrations, and core database settings." },
-          { name: "Sales Manager", usersCount: 3, desc: "Manage team performance, review forecasted revenue metrics, sign off on deal stages, and generate audit logs." },
-          { name: "Sales Representative", usersCount: 40, desc: "Standard workspace profile. Ingest leads, log activity calls, edit deals pipeline stages, and sync email accounts." }
+          { name: "System Administrator", usersCount: roleCounts.admin, desc: "Full root access permissions. Manage system configurations, user profiles, integrations, and core database settings." },
+          { name: "Sales Manager", usersCount: roleCounts.manager, desc: "Manage team performance, review forecasted revenue metrics, sign off on deal stages, and generate audit logs." },
+          { name: "Sales Representative", usersCount: roleCounts.representative, desc: "Standard workspace profile. Ingest leads, log activity calls, edit deals pipeline stages, and sync email accounts." }
         ].map((item, idx) => (
           <div 
             key={idx} 
@@ -184,7 +245,7 @@ export default function RolesPermissionsView() {
             <span>Permission Access Matrix</span>
           </h3>
           <span className="text-xs font-medium text-slate-400">
-            8 Total System Policy Rules
+            {matrix.length} Total System Policy Rules
           </span>
         </div>
 

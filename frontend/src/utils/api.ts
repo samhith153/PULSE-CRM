@@ -686,3 +686,18 @@ export async function getLeadScore(leadId: string): Promise<any> {
     body: JSON.stringify({ lead_id: leadId })
   });
 }
+
+export async function getUsers(): Promise<any> {
+  return apiFetch('/api/v1/users');
+}
+
+export async function getWebhookEndpoints(): Promise<any> {
+  return apiFetch('/api/v1/webhooks/endpoints');
+}
+
+export async function createWebhookEndpoint(webhookData: any): Promise<any> {
+  return apiFetch('/api/v1/webhooks/endpoints', {
+    method: 'POST',
+    body: JSON.stringify(webhookData)
+  });
+}
