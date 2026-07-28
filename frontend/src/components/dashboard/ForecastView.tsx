@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   Target, 
@@ -12,23 +12,184 @@ import {
   CheckCircle,
   HelpCircle
 } from 'lucide-react';
+import { getDeals } from '@/utils/api';
 
 export default function ForecastView() {
-  const [confidenceScore, setConfidenceScore] = useState(88);
-  const expectedRevenue = 3450000;
+  const [deals, setDeals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [confidenceScore, setConfidenceScore] = useState(85);
+
+  useEffect(() => {
+    getDeals().then(res => {
+      setDeals(res || []);
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to load forecasting:", err);
+      setLoading(false);
+    });
+  }, []);
+
+  // 1. Expected Revenue & Best Case calculations
+  const wonDeals = deals.filter(d => d.stage === 'Won' || d.status === 'Won' || d.status === 'won');
+  const wonCount = wonDeals.length;
+  const lostDeals = deals.filter(d => d.stage === 'Lost' || d.status === 'Lost' || d.status === 'lost');
+  const lostCount = lostDeals.length;
+
+  // Calculate dynamic confidence score
+  useEffect(() => {
+    if (wonCount + lostCount > 0) {
+      const rate = Math.round((wonCount / (wonCount + lostCount)) * 100);
+      setConfidenceScore(Math.max(rate, 65)); // fallback floor of 65% for visualization
+    }
+  }, [wonCount, lostCount]);
+
+  let expectedRevenue = 0;
+  let bestCaseRevenue = 0;
+  let activePipeCoverage = 0;
+
+  deals.forEach(d => {
+    const val = Number(d.value || d.amount) || 0;
+    const stage = d.stage?.toLowerCase() || d.status?.toLowerCase() || '';
+    
+    let prob = 0.0;
+    if (stage === 'won') prob = 1.0;
+    else if (stage === 'negotiation') prob = 0.75;
+    else if (stage === 'proposal') prob = 0.50;
+    else if (stage === 'qualified') prob = 0.25;
+    else if (stage === 'new') prob = 0.10;
+
+    expectedRevenue += val * prob;
+    if (['won', 'negotiation', 'proposal'].includes(stage)) {
+      bestCaseRevenue += val;
+    }
+    if (stage !== 'won' && stage !== 'lost') {
+      activePipeCoverage += val;
+    }
+  });
+
+  const quotaTarget = 3000000;
+  const coverageRatio = expectedRevenue > 0 ? (activePipeCoverage / quotaTarget).toFixed(2) : '0.00';
+
+  // 2. Dynamic Monthly Forecast (Current month + next 2 months)
+  const now = new Date();
+  const months = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const label = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    months.push({
+      label,
+      expected: 0,
+      bestCase: 0,
+      pipeline: 0,
+      monthIndex: d.getMonth(),
+      year: d.getFullYear()
+    });
+  }
+
+  deals.forEach((deal: any) => {
+    const stage = deal.stage?.toLowerCase() || deal.status?.toLowerCase() || '';
+    let prob = 0.0;
+    if (stage === 'won') prob = 1.0;
+    else if (stage === 'negotiation') prob = 0.75;
+    else if (stage === 'proposal') prob = 0.50;
+    else if (stage === 'qualified') prob = 0.25;
+    else if (stage === 'new') prob = 0.10;
+
+    const val = Number(deal.value || deal.amount) || 0;
+    const dealDate = new Date(deal.closed_at || deal.created_at || Date.now());
+    const m = dealDate.getMonth();
+    const y = dealDate.getFullYear();
+
+    months.forEach(item => {
+      if (item.monthIndex === m && item.year === y) {
+        item.expected += val * prob;
+        if (['won', 'negotiation', 'proposal'].includes(stage)) {
+          item.bestCase += val;
+        }
+        if (stage !== 'won' && stage !== 'lost') {
+          item.pipeline += val;
+        }
+      }
+    });
+  });
+
+  const monthlyForecast = months.map(m => ({
+    month: m.label,
+    expected: Math.round(m.expected),
+    bestCase: Math.round(m.bestCase),
+    pipeline: Math.round(m.pipeline)
+  }));
+  const maxVal = Math.max(...monthlyForecast.map(m => Math.max(m.expected, m.bestCase, m.pipeline)), 100000);
+
+  // 3. Dynamic Quarterly Forecast Projections (Current Quarter + Next Quarter)
+  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+  const quarters = [];
   
-  const monthlyForecast = [
-    { month: "May 2025", expected: 1100000, bestCase: 1300000, pipeline: 1800000 },
-    { month: "June 2025", expected: 1250000, bestCase: 1550000, pipeline: 2100000 },
-    { month: "July 2025", expected: 1100000, bestCase: 1400000, pipeline: 1950000 }
-  ];
+  quarters.push({
+    label: `Q${currentQuarter} ${now.getFullYear()}`,
+    qNum: currentQuarter,
+    year: now.getFullYear(),
+    committed: 0,
+    bestCase: 0,
+    pipeline: 0,
+    quota: quotaTarget
+  });
 
-  const quarterlyForecast = [
-    { quarter: "Q3 2025", committed: 3450000, bestCase: 4250000, pipeline: 5850000, quota: 3000000 },
-    { quarter: "Q4 2025", committed: 3900000, bestCase: 4800000, pipeline: 6500000, quota: 3500000 }
-  ];
+  const nextQ = currentQuarter === 4 ? 1 : currentQuarter + 1;
+  const nextQYear = currentQuarter === 4 ? now.getFullYear() + 1 : now.getFullYear();
+  quarters.push({
+    label: `Q${nextQ} ${nextQYear}`,
+    qNum: nextQ,
+    year: nextQYear,
+    committed: 0,
+    bestCase: 0,
+    pipeline: 0,
+    quota: quotaTarget + 500000
+  });
 
-  const maxVal = 7000000;
+  deals.forEach((deal: any) => {
+    const stage = deal.stage?.toLowerCase() || deal.status?.toLowerCase() || '';
+    let prob = 0.0;
+    if (stage === 'won') prob = 1.0;
+    else if (stage === 'negotiation') prob = 0.75;
+    else if (stage === 'proposal') prob = 0.50;
+    else if (stage === 'qualified') prob = 0.25;
+    else if (stage === 'new') prob = 0.10;
+
+    const val = Number(deal.value || deal.amount) || 0;
+    const dealDate = new Date(deal.closed_at || deal.created_at || Date.now());
+    const dealQ = Math.floor(dealDate.getMonth() / 3) + 1;
+    const dealY = dealDate.getFullYear();
+
+    quarters.forEach(item => {
+      if (item.qNum === dealQ && item.year === dealY) {
+        item.committed += val * prob;
+        if (['won', 'negotiation', 'proposal'].includes(stage)) {
+          item.bestCase += val;
+        }
+        if (stage !== 'won' && stage !== 'lost') {
+          item.pipeline += val;
+        }
+      }
+    });
+  });
+
+  const quarterlyForecast = quarters.map(q => ({
+    quarter: q.label,
+    committed: Math.round(q.committed),
+    bestCase: Math.round(q.bestCase),
+    pipeline: Math.round(q.pipeline),
+    quota: q.quota
+  }));
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] bg-white border border-brand-border-purple/20 rounded-xl p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-accent"></div>
+        <p className="text-xs text-brand-text/60 mt-4 font-bold">Simulating sales pipeline projection cycles...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -48,25 +209,25 @@ export default function ForecastView() {
           <div className="flex justify-between items-start">
             <div>
               <span className="text-[10px] font-extrabold text-brand-text/60 uppercase block">Expected Revenue</span>
-              <h2 className="text-3xl font-bold text-brand-heading mt-1">₹{expectedRevenue.toLocaleString()}</h2>
+              <h2 className="text-3xl font-bold text-brand-heading mt-1">₹{Math.round(expectedRevenue).toLocaleString('en-IN')}</h2>
             </div>
             <span className="text-[9px] font-extrabold bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded uppercase tracking-wider">
-              Q3 Projected
+              Q{currentQuarter} Projected
             </span>
           </div>
 
           <p className="text-xs text-brand-text/75 leading-relaxed font-semibold">
-            Based on active deals, historical conversion rates, and representative quota velocity. The team is projected to exceed the base Q3 quota of ₹3,000,000 by 15%.
+            Based on active deals, historical conversion rates, and representative quota velocity. The team is projected to hit {Math.round((expectedRevenue / quotaTarget) * 100)}% of the base quota target (₹{quotaTarget.toLocaleString('en-IN')}).
           </p>
 
           <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
             <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase">Best Case Pipeline</span>
-              <p className="text-sm font-extrabold text-brand-text mt-0.5">₹4,250,000</p>
+              <p className="text-sm font-extrabold text-brand-text mt-0.5">₹{Math.round(bestCaseRevenue).toLocaleString('en-IN')}</p>
             </div>
             <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase">Active Pipe Coverage</span>
-              <p className="text-sm font-extrabold text-brand-text mt-0.5">1.95x Target</p>
+              <p className="text-sm font-extrabold text-brand-text mt-0.5">{coverageRatio}x Target</p>
             </div>
           </div>
         </div>
@@ -102,7 +263,7 @@ export default function ForecastView() {
 
           <div className="w-full p-2.5 bg-brand-sidebar-hover/10 border border-brand-border-purple/15 rounded-xl">
             <p className="text-[10px] font-bold text-brand-text/80">
-              High confidence ranking. Data points match historical Q3 close rates with low deal churn.
+              Confidence is derived from historical organizational close ratios and current pipeline distribution.
             </p>
           </div>
         </div>
@@ -121,7 +282,7 @@ export default function ForecastView() {
               <div className="flex justify-between text-xs font-bold text-brand-text">
                 <span className="font-extrabold">{item.month}</span>
                 <span className="tabular-nums font-extrabold text-brand-heading">
-                  Expected: ₹{item.expected.toLocaleString()} / Max: ₹{item.bestCase.toLocaleString()}
+                  Expected: ₹{item.expected.toLocaleString('en-IN')} / Max: ₹{item.bestCase.toLocaleString('en-IN')}
                 </span>
               </div>
               <div className="relative h-6 w-full bg-slate-100 rounded-lg overflow-hidden flex items-center px-2.5">
@@ -139,10 +300,10 @@ export default function ForecastView() {
                 <div 
                   className="absolute top-0 bottom-0 w-0.5 bg-brand-border-purple/80 z-10"
                   style={{ left: `${(item.pipeline / maxVal) * 100}%` }}
-                  title={`Pipeline coverage: ₹${item.pipeline.toLocaleString()}`}
+                  title={`Pipeline coverage: ₹${item.pipeline.toLocaleString('en-IN')}`}
                 />
                 <span className="z-20 text-[9px] font-extrabold text-brand-heading flex items-center">
-                  Pipeline: ₹{item.pipeline.toLocaleString()}
+                  Pipeline: ₹{item.pipeline.toLocaleString('en-IN')}
                 </span>
               </div>
             </div>
@@ -175,10 +336,10 @@ export default function ForecastView() {
                 return (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
                     <td className="py-3 font-extrabold">{item.quarter}</td>
-                    <td className="py-3 text-right tabular-nums">₹{item.quota.toLocaleString()}</td>
-                    <td className="py-3 text-right tabular-nums font-extrabold text-brand-heading">₹{item.committed.toLocaleString()}</td>
-                    <td className="py-3 text-right tabular-nums">₹{item.bestCase.toLocaleString()}</td>
-                    <td className="py-3 text-right tabular-nums text-slate-500">₹{item.pipeline.toLocaleString()}</td>
+                    <td className="py-3 text-right tabular-nums">₹{item.quota.toLocaleString('en-IN')}</td>
+                    <td className="py-3 text-right tabular-nums font-extrabold text-brand-heading">₹{item.committed.toLocaleString('en-IN')}</td>
+                    <td className="py-3 text-right tabular-nums">₹{item.bestCase.toLocaleString('en-IN')}</td>
+                    <td className="py-3 text-right tabular-nums text-slate-500">₹{item.pipeline.toLocaleString('en-IN')}</td>
                     <td className="py-3 text-right">
                       <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold tabular-nums">
                         {pct}%
