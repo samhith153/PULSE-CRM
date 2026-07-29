@@ -72,6 +72,8 @@ from app.api.v1.users import router as users_router
 from app.api.v1.smtp import router as smtp_router
 from app.api.v1.summarization import router as summarization_router
 from app.api.v1.brevo import router as brevo_router
+from app.api.v1.calendar import router as calendar_router
+from app.api.v1.ai_insights import router as ai_insights_router
 api_router = APIRouter()
 
 api_router.include_router(health_router, prefix="/health", tags=["Health"])
@@ -109,4 +111,6 @@ api_router.include_router(
     prefix="/summarization",
     tags=["Conversation Intelligence"],
 )
+api_router.include_router(calendar_router, prefix="/calendar", tags=["Calendar"])
+api_router.include_router(ai_insights_router, prefix="/ai-insights", tags=["AI Insights"])
 
