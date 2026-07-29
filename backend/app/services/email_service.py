@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import asyncio
-from multiprocessing import connection
 import secrets
 import smtplib
 import ssl
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
+from email.utils import parseaddr
 from html import escape
 from pathlib import Path
 from string import Template
@@ -38,18 +38,10 @@ from app.schemas.email import (
 )
 from app.schemas.event_outbox import EventType
 from app.services.event_service import EventService
+from app.services.gmail_client import GmailClient, decode_gmail_body, gmail_datetime, headers_map
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import EmailDirection, EmailSyncStatus, SortOrder
 
-import base64
-
-from email.mime.text import MIMEText
-
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-
-from app.core.config import settings
 
 logger = get_logger(__name__)
 
@@ -61,6 +53,7 @@ class EmailService:
         self.email_repo = EmailRepository(db)
         self.timeline = TimelineEngineService(db)
         self.events = EventService(db)
+        self.gmail_client = GmailClient()
 
     async def _render_template(self, template_name: str, context: dict[str, object]) -> str:
         template_path = Path(__file__).resolve().parents[1] / "templates" / template_name
@@ -233,8 +226,8 @@ class EmailService:
             created_by=created_by,
             user_id=user_id,
             email_address=email_address,
-            access_token_encrypted=access_token_encrypted,
-            refresh_token_encrypted=refresh_token_encrypted,
+            access_token_encrypted=self.gmail_client.cipher.encrypt(access_token_encrypted),
+            refresh_token_encrypted=self.gmail_client.cipher.encrypt(refresh_token_encrypted),
             token_expires_at=token_expires_at,
             sync_cursor=sync_cursor,
             scopes_json=scopes_json,
@@ -255,19 +248,7 @@ class EmailService:
 
     async def start_oauth_login(self, organization_id: UUID, created_by: UUID, email_address: Optional[str] = None) -> GmailOAuthLoginResponse:
         state = secrets.token_urlsafe(24)
-        scopes = settings.GOOGLE_OAUTH_SCOPES.replace(",", " ")
-        redirect_uri = settings.GOOGLE_REDIRECT_URI or "http://localhost/oauth/google/callback"
-        auth_url = (
-            "https://accounts.google.com/o/oauth2/v2/auth"
-            f"?client_id={settings.GOOGLE_CLIENT_ID or 'placeholder-client-id'}"
-            f"&redirect_uri={redirect_uri}"
-            f"&response_type=code"
-            f"&scope={scopes}"
-            f"&access_type=offline"
-            f"&prompt=consent"
-            f"&state={state}"
-        )
-        return GmailOAuthLoginResponse(authorization_url=auth_url, state=state)
+        return GmailOAuthLoginResponse(authorization_url=self.gmail_client.authorization_url(state), state=state)
 
     async def handle_oauth_callback(
         self,
@@ -275,10 +256,15 @@ class EmailService:
         created_by: UUID,
         payload: GmailOAuthCallbackRequest,
     ) -> GmailConnection:
-        email_address = payload.email_address or f"user-{payload.state or 'gmail'}@example.com"
-        access_token = f"access_{payload.code}"
-        refresh_token = f"refresh_{payload.code}"
-        token_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        from app.core.exceptions import ValidationException
+
+        token_response = await self.gmail_client.exchange_code(payload.code)
+        access_token = token_response["access_token"]
+        refresh_token = token_response.get("refresh_token")
+        profile = await self.gmail_client.get_profile(access_token)
+        email_address = payload.email_address or profile.get("emailAddress")
+        if not email_address:
+            raise ValidationException("Google profile did not include an email address.")
         return await self.connect_gmail(
             organization_id=organization_id,
             created_by=created_by,
@@ -286,21 +272,28 @@ class EmailService:
             email_address=str(email_address),
             access_token_encrypted=access_token,
             refresh_token_encrypted=refresh_token,
-            token_expires_at=token_expires_at,
+            token_expires_at=self.gmail_client.token_expiry(token_response),
             sync_cursor=None,
             scopes_json=[scope.strip() for scope in settings.GOOGLE_OAUTH_SCOPES.split(",") if scope.strip()],
         )
 
     async def refresh_token(self, organization_id: UUID, created_by: UUID, payload: GmailTokenRefreshRequest) -> GmailConnection:
+        from app.core.exceptions import ValidationException
+
         connection = await self.connection_repo.get_by_id_in_org(organization_id, payload.gmail_connection_id)
         if not connection:
             raise NotFoundException("GmailConnection", payload.gmail_connection_id)
-        connection.access_token_encrypted = f"access_{uuid4().hex}"
-        connection.token_expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+        refresh_token = self.gmail_client.cipher.decrypt(connection.refresh_token_encrypted)
+        if not refresh_token:
+            raise ValidationException("Gmail refresh token is not available for this connection.")
+        token_response = await self.gmail_client.refresh_access_token(refresh_token)
+        connection.access_token_encrypted = self.gmail_client.cipher.encrypt(token_response["access_token"])
+        if token_response.get("refresh_token"):
+            connection.refresh_token_encrypted = self.gmail_client.cipher.encrypt(token_response.get("refresh_token"))
+        connection.token_expires_at = self.gmail_client.token_expiry(token_response)
         connection.sync_status = EmailSyncStatus.ACTIVE.value
         await self.db.flush()
         return connection
-
     async def list_connections(self, organization_id: UUID) -> list[GmailConnection]:
         return await self.connection_repo.list_by_organization(organization_id)
 
@@ -513,13 +506,64 @@ class EmailService:
 
         return EmailResponse.model_validate(email)
 
+    async def _access_token_for_connection(self, organization_id: UUID, created_by: Optional[UUID], connection: GmailConnection) -> str:
+        from app.core.exceptions import ValidationException
+
+        expires_at = connection.token_expires_at
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at and expires_at <= datetime.now(timezone.utc) + timedelta(minutes=2):
+            refreshed = await self.refresh_token(
+                organization_id,
+                created_by or connection.user_id,
+                GmailTokenRefreshRequest(gmail_connection_id=connection.id),
+            )
+            connection = refreshed
+        token = self.gmail_client.cipher.decrypt(connection.access_token_encrypted)
+        if not token:
+            raise ValidationException("Gmail access token is not available for this connection.")
+        return token
+
+    def _gmail_message_to_sync(self, connection: GmailConnection, message: dict) -> EmailSyncMessageRequest:
+        headers = headers_map(message)
+        sender = parseaddr(headers.get("from") or connection.email_address)[1] or connection.email_address
+        receiver = parseaddr(headers.get("to") or connection.email_address)[1] or connection.email_address
+        body = decode_gmail_body(message.get("payload", {})) or message.get("snippet") or ""
+        labels = set(message.get("labelIds") or [])
+        direction = EmailDirection.OUTBOUND.value if "SENT" in labels else EmailDirection.INBOUND.value
+        return EmailSyncMessageRequest(
+            gmail_message_id=message["id"],
+            thread_id=message.get("threadId"),
+            direction=direction,
+            sender=sender,
+            receiver=receiver,
+            subject=headers.get("subject") or "(no subject)",
+            body_preview=body[:500],
+            sent_at=gmail_datetime(message),
+            attachment_metadata=[],
+            raw_payload=message,
+            is_read="UNREAD" not in labels,
+        )
+
     async def fetch_from_gmail(self, organization_id: UUID, connection_id: UUID, created_by: Optional[UUID]) -> EmailSyncResultResponse:
         connection = await self.connection_repo.get_by_id_in_org(organization_id, connection_id)
         if not connection:
             raise NotFoundException("GmailConnection", connection_id)
-        payload = EmailSyncRequest(gmail_connection_id=connection.id, sync_cursor=connection.sync_cursor, messages=[])
+        access_token = await self._access_token_for_connection(organization_id, created_by, connection)
+        listed = await self.gmail_client.list_messages(access_token, page_token=connection.sync_cursor, max_results=25)
+        messages = []
+        for item in listed.get("messages", []):
+            try:
+                raw_message = await self.gmail_client.get_message(access_token, item["id"])
+                messages.append(self._gmail_message_to_sync(connection, raw_message))
+            except Exception as exc:
+                logger.warning("Skipping Gmail message after fetch failure", extra={"message_id": item.get("id"), "error": str(exc)})
+        payload = EmailSyncRequest(
+            gmail_connection_id=connection.id,
+            sync_cursor=listed.get("nextPageToken") or listed.get("historyId") or connection.sync_cursor,
+            messages=messages,
+        )
         return await self.sync_messages(organization_id, created_by, payload)
-
     async def webhook_sync(self, organization_id: UUID, created_by: Optional[UUID], payload: GmailWebhookRequest) -> EmailSyncResultResponse:
         if payload.gmail_connection_id:
             return await self.fetch_from_gmail(organization_id, payload.gmail_connection_id, created_by)
@@ -653,3 +697,6 @@ class EmailService:
     async def get_by_id_response(self, organization_id: UUID, email_id: UUID) -> EmailDetailResponse:
         email = await self.get_email(organization_id, email_id)
         return EmailDetailResponse.model_validate(email)
+
+
+

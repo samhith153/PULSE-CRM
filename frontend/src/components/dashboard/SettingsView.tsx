@@ -14,12 +14,19 @@ import {
   ToggleRight
 } from 'lucide-react';
 
-export default function SettingsView() {
+const ROLE_DEFAULTS = {
+  representative: { name: 'Priya Sharma', role: 'Sales Representative', email: 'priya.sharma@pulse.crm' },
+  manager: { name: 'Alex Johnson', role: 'Sales Manager', email: 'alex.johnson@pulse.crm' },
+  admin: { name: 'Dr. Rajesh Mehta', role: 'Administrator', email: 'rajesh.mehta@pulse.crm' }
+};
+
+export default function SettingsView({ userRole = 'manager' }: { userRole?: string }) {
+  const defaults = ROLE_DEFAULTS[userRole as keyof typeof ROLE_DEFAULTS] || ROLE_DEFAULTS.manager;
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'notifications' | 'integrations'>('profile');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // States for forms
-  const [profileForm, setProfileForm] = useState({ name: 'Alex Johnson', role: 'Sales Manager', email: 'alex.johnson@pulse.crm' });
+  const [profileForm, setProfileForm] = useState(defaults);
   const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' });
   const [notifPreferences, setNotifPreferences] = useState({ leadAssigned: true, emailReply: true, meetingReminder: true, taskDue: false });
   const [gmailSync, setGmailSync] = useState(true);

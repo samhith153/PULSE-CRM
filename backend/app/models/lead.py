@@ -7,7 +7,7 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from app.models.company import Company
     from app.models.contact import Contact
     from app.models.deal import Deal
+    from app.models.recommendation_feature import RecommendationFeature
     from app.models.user import User
 
 
@@ -41,6 +42,7 @@ class Lead(Base, TenantMixin):
     )
     interest: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     industry: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    employee_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     current_crm: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     location: Mapped[Optional[str]] = mapped_column(String(150), nullable=True)
     operational_systems: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -97,8 +99,18 @@ class Lead(Base, TenantMixin):
     contact: Mapped[Optional["Contact"]] = relationship(
         "Contact", back_populates="leads", lazy="select"
     )
+    owner: Mapped[Optional["User"]] = relationship(
+        "User", back_populates="leads", lazy="select"
+    )
     deal: Mapped[Optional["Deal"]] = relationship(
         "Deal", back_populates="lead", lazy="select", uselist=False
+    )
+    recommendation_features: Mapped[list["RecommendationFeature"]] = relationship(
+        "RecommendationFeature",
+        back_populates="lead",
+        lazy="select",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )
 
     def __repr__(self) -> str:

@@ -7,8 +7,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import AsyncIterator
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import StreamingResponse
 
 from app.api.deps import CurrentUser, DBSession, require_permission
@@ -27,10 +28,12 @@ from app.schemas.ai import (
     AIRecommendationResponse,
     DealInsightRequest,
     DealInsightResponse,
+    EnhancedRecommendationResponse,
     SummaryRequest,
     SummaryResponse,
 )
 from app.services.ai_service import AIService
+from app.services.recommendation_engine_service import EnhancedRecommendationService
 
 router = APIRouter(dependencies=[Depends(require_permission("ai:access"))])
 
@@ -101,3 +104,24 @@ async def deal_insight(payload: DealInsightRequest, current_user: CurrentUser, d
 async def summary(payload: SummaryRequest, current_user: CurrentUser, db: DBSession) -> SummaryResponse:
     service = AIService(db)
     return await service.summarize(current_user.organization_id, payload.entity_type, payload.prompt)
+
+
+@router.post(
+    "/enhanced-recommendation",
+    response_model=EnhancedRecommendationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get enhanced recommendation with 6 new features",
+)
+async def enhanced_recommendation(
+    lead_id: UUID = Query(..., description="Lead ID to generate recommendation for"),
+    current_user: CurrentUser = None,
+    db: DBSession = None,
+) -> EnhancedRecommendationResponse:
+    """Generate an enhanced recommendation for a lead with all 6 new features:
+    deal_value, email_open_count, email_opened_no_reply_flag,
+    meeting_attendance_status, rep_active_action_count, best_contact_time_slot."""
+    service = EnhancedRecommendationService(db)
+    return await service.get_enhanced_recommendation(
+        organization_id=current_user.organization_id,
+        lead_id=lead_id,
+    )

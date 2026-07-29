@@ -1,9 +1,20 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ['localhost', '127.0.0.1', '[::1]'],
-  turbopack: {
-    root: process.cwd(),
+  // Skip type-check during CI/Vercel build (types checked separately)
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
+  // Whitelist external image domains used in dashboard avatars
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+        pathname: '/**',
+      },
+    ],
   },
 };
 

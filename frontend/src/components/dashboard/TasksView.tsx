@@ -121,7 +121,7 @@ export default function TasksView() {
 
           <div className="space-y-3">
             {overdueList.map((t) => (
-              <div key={t.id} className="bg-white border border-brand-border-purple/25 rounded-lg p-3.5 shadow-sm/5 flex items-start space-x-3">
+              <div key={t.id} className="bg-rose-50/70 border border-rose-100 border-l-4 border-l-rose-500 rounded-lg p-3.5 shadow-sm/5 flex items-start space-x-3">
                 <button onClick={() => handleToggle(t.id)} className="text-slate-400 hover:text-brand-accent mt-0.5 cursor-pointer">
                   <Circle className="h-4 w-4" />
                 </button>
@@ -154,7 +154,7 @@ export default function TasksView() {
 
           <div className="space-y-3">
             {pendingList.map((t) => (
-              <div key={t.id} className="bg-white border border-brand-border-purple/25 rounded-lg p-3.5 shadow-sm/5 flex items-start space-x-3">
+              <div key={t.id} className="bg-indigo-50/40 border border-brand-border-purple/20 border-l-4 border-l-brand-accent rounded-lg p-3.5 shadow-sm/5 flex items-start space-x-3">
                 <button onClick={() => handleToggle(t.id)} className="text-slate-400 hover:text-emerald-600 mt-0.5 cursor-pointer">
                   <Circle className="h-4 w-4" />
                 </button>
@@ -205,7 +205,7 @@ export default function TasksView() {
 
           <div className="space-y-3 opacity-60">
             {completedList.map((t) => (
-              <div key={t.id} className="bg-white border border-brand-border-purple/25 rounded-lg p-3.5 shadow-sm/5 flex items-start space-x-3">
+              <div key={t.id} className="bg-emerald-50/40 border border-emerald-100 border-l-4 border-l-emerald-500 rounded-lg p-3.5 shadow-sm/5 flex items-start space-x-3">
                 <button onClick={() => handleToggle(t.id)} className="text-emerald-600 mt-0.5 cursor-pointer">
                   <CheckCircle2 className="h-4 w-4" />
                 </button>

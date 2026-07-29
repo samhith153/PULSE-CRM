@@ -8,6 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.models.lead import Lead
 from app.utils.enums import LeadStatus, LeadSource
 
 
@@ -18,6 +19,7 @@ class LeadCreateRequest(BaseModel):
     source: Optional[LeadSource] = None
     interest: Optional[str] = Field(default=None, max_length=100)
     industry: Optional[str] = Field(default=None, max_length=100)
+    employee_count: Optional[int] = None
     current_crm: Optional[str] = Field(default=None, max_length=100)
     location: Optional[str] = Field(default=None, max_length=150)
     operational_systems: Optional[str] = Field(default=None, max_length=255)
@@ -27,6 +29,8 @@ class LeadCreateRequest(BaseModel):
     company_id: Optional[UUID] = None
     contact_id: Optional[UUID] = None
     owner_id: Optional[UUID] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class LeadUpdateRequest(BaseModel):
@@ -36,6 +40,7 @@ class LeadUpdateRequest(BaseModel):
     source: Optional[LeadSource] = None
     interest: Optional[str] = None
     industry: Optional[str] = Field(default=None, max_length=100)
+    employee_count: Optional[int] = None
     current_crm: Optional[str] = Field(default=None, max_length=100)
     location: Optional[str] = Field(default=None, max_length=150)
     operational_systems: Optional[str] = Field(default=None, max_length=255)
@@ -46,6 +51,8 @@ class LeadUpdateRequest(BaseModel):
     company_id: Optional[UUID] = None
     contact_id: Optional[UUID] = None
     owner_id: Optional[UUID] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
 
 
 class LeadAssignRequest(BaseModel):
@@ -60,6 +67,12 @@ class LeadStatusUpdateRequest(BaseModel):
     )
 
 
+class LeadConvertRequest(BaseModel):
+    industry: Optional[str] = Field(default=None, max_length=100)
+    revenue: Optional[str] = Field(default=None, max_length=50)
+    employee_count: Optional[int] = Field(default=None, ge=0)
+
+
 class LeadResponse(BaseModel):
     id: UUID
     title: str
@@ -68,6 +81,7 @@ class LeadResponse(BaseModel):
     source: Optional[str]
     interest: Optional[str]
     industry: Optional[str]
+    employee_count: Optional[int]
     current_crm: Optional[str]
     location: Optional[str]
     operational_systems: Optional[str]
@@ -83,5 +97,46 @@ class LeadResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    company_name: Optional[str] = None
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
+    owner_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+    @staticmethod
+    def from_lead(lead: Lead) -> "LeadResponse":
+        return LeadResponse(
+            id=lead.id,
+            title=lead.title,
+            description=lead.description,
+            status=lead.status,
+            source=lead.source,
+            interest=lead.interest,
+            industry=lead.industry,
+            employee_count=lead.employee_count,
+            current_crm=lead.current_crm,
+            location=lead.location,
+            operational_systems=lead.operational_systems,
+            estimated_value=lead.estimated_value,
+            currency=lead.currency,
+            score=lead.score,
+            notes=lead.notes,
+            close_reason=lead.close_reason,
+            company_id=lead.company_id,
+            contact_id=lead.contact_id,
+            owner_id=lead.owner_id,
+            organization_id=lead.organization_id,
+            is_active=lead.is_active,
+            created_at=lead.created_at,
+            updated_at=lead.updated_at,
+            company_name=lead.company.name if lead.company else None,
+            contact_name=(
+                f"{lead.contact.first_name} {lead.contact.last_name}".strip()
+                if lead.contact else None
+            ),
+            contact_email=lead.contact.email if lead.contact else None,
+            contact_phone=lead.contact.phone if lead.contact else None,
+            owner_name=lead.owner.full_name if lead.owner else None,
+        )

@@ -104,5 +104,10 @@ class Deal(Base, TenantMixin):
         lazy="select",
     )
 
+    @property
+    def deal_value(self) -> Decimal | None:
+        """Alias for amount to expose deal_value consistently."""
+        return self.amount
+
     def __repr__(self) -> str:
         return f"<Deal id={self.id} name={self.name!r} status={self.status!r}>"

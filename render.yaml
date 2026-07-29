@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: pulse-crm-backend
+    runtime: python
+    repo: https://github.com/samhith153/PULSE-CRM
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/v1/health
+    rootDir: backend
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: ENVIRONMENT
+        value: production
+      - key: SUMMARIZATION_API_KEY
+        sync: false
+
+

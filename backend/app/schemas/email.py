@@ -108,6 +108,7 @@ class EmailResponse(BaseModel):
     attachment_metadata: list[AttachmentMetadata] = Field(default_factory=list)
     raw_payload: Optional[dict]
     is_read: bool
+    email_open_count: int = 0
     gmail_connection_id: Optional[UUID]
     external_entity_type: Optional[str]
     external_entity_id: Optional[UUID]

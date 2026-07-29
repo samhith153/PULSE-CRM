@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.lead import Lead
 from app.repositories.base import BaseRepository
@@ -20,6 +21,11 @@ class LeadRepository(BaseRepository[Lead]):
     def _base_query(self, organization_id: UUID):
         return (
             select(Lead)
+            .options(
+                selectinload(Lead.company),
+                selectinload(Lead.contact),
+                selectinload(Lead.owner),
+            )
             .where(
                 Lead.organization_id == organization_id,
                 Lead.is_deleted == False,

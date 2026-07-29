@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { 
   ChevronDown, 
   ArrowUpRight, 
@@ -110,7 +111,7 @@ export default function Widgets({
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-bold text-brand-heading">
+                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-bold text-black">
                   <th className="pb-2 font-bold tracking-wider">Team Member</th>
                   <th className="pb-2 font-bold tracking-wider text-center">Deals Won</th>
                   <th className="pb-2 font-bold tracking-wider">Revenue</th>
@@ -125,7 +126,7 @@ export default function Widgets({
                       {/* Member Info */}
                       <td className="py-2.5 flex items-center space-x-2.5">
                         <div className="h-6.5 w-6.5 rounded-full overflow-hidden shrink-0 border border-brand-border-purple/20">
-                          <img src={member.avatar} alt={member.name} className="h-full w-full object-cover" />
+                          <Image src={member.avatar} alt={member.name} width={26} height={26} className="h-full w-full object-cover" unoptimized />
                         </div>
                         <span className="font-bold text-brand-text truncate max-w-[120px]">{member.name}</span>
                       </td>

@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -18,6 +19,8 @@ from app.middlewares.exception_handler import (
     validation_exception_handler,
 )
 from app.middlewares.logging import RequestLoggingMiddleware
+from app.middlewares.private_network import PrivateNetworkAccessMiddleware
+from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
 
@@ -51,6 +54,7 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(RateLimitMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
         CORSMiddleware,
@@ -58,13 +62,16 @@ def create_app() -> FastAPI:
         allow_credentials=settings.CORS_ALLOW_CREDENTIALS,
         allow_methods=settings.cors_methods_list,
         allow_headers=settings.cors_headers_list,
+        expose_headers=["*"],
     )
+    app.add_middleware(PrivateNetworkAccessMiddleware)
 
     app.add_exception_handler(PulseCRMException, pulse_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+    app.mount("/uploads", StaticFiles(directory=settings.LOCAL_STORAGE_PATH), name="uploads")
 
     @app.get("/", include_in_schema=False)
     async def root():
