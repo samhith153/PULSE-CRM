@@ -99,6 +99,9 @@ class Lead(Base, TenantMixin):
     contact: Mapped[Optional["Contact"]] = relationship(
         "Contact", back_populates="leads", lazy="select"
     )
+    owner: Mapped[Optional["User"]] = relationship(
+        "User", back_populates="leads", lazy="select"
+    )
     deal: Mapped[Optional["Deal"]] = relationship(
         "Deal", back_populates="lead", lazy="select", uselist=False
     )

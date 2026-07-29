@@ -55,7 +55,7 @@ async def list_leads(
         page, page_size,
     )
     paginated = PaginatedResponse.create(
-        data=[LeadResponse.model_validate(l) for l in leads],
+        data=[LeadResponse.from_lead(l) for l in leads],
         total=total,
         page=page,
         page_size=page_size,
@@ -77,7 +77,7 @@ async def create_lead(
 ) -> dict:
     svc = LeadService(db)
     lead = await svc.create(payload, current_user.organization_id, current_user.id)
-    return {"success": True, "message": "Lead created.", "data": LeadResponse.model_validate(lead)}
+    return {"success": True, "message": "Lead created.", "data": LeadResponse.from_lead(lead)}
 
 
 @router.get(
@@ -93,7 +93,7 @@ async def get_lead(
 ) -> dict:
     svc = LeadService(db)
     lead = await svc.get(lead_id, current_user.organization_id)
-    return {"success": True, "message": "OK", "data": LeadResponse.model_validate(lead)}
+    return {"success": True, "message": "OK", "data": LeadResponse.from_lead(lead)}
 
 
 @router.put(
@@ -110,7 +110,7 @@ async def update_lead(
 ) -> dict:
     svc = LeadService(db)
     lead = await svc.update(lead_id, current_user.organization_id, payload)
-    return {"success": True, "message": "Lead updated.", "data": LeadResponse.model_validate(lead)}
+    return {"success": True, "message": "Lead updated.", "data": LeadResponse.from_lead(lead)}
 
 
 @router.patch(
@@ -132,7 +132,7 @@ async def update_lead_status(
 ) -> dict:
     svc = LeadService(db)
     lead = await svc.update_status(lead_id, current_user.organization_id, payload)
-    return {"success": True, "message": "Lead status updated.", "data": LeadResponse.model_validate(lead)}
+    return {"success": True, "message": "Lead status updated.", "data": LeadResponse.from_lead(lead)}
 
 
 @router.post(
@@ -149,7 +149,7 @@ async def assign_lead(
 ) -> dict:
     svc = LeadService(db)
     lead = await svc.assign(lead_id, current_user.organization_id, payload)
-    return {"success": True, "message": "Lead assigned.", "data": LeadResponse.model_validate(lead)}
+    return {"success": True, "message": "Lead assigned.", "data": LeadResponse.from_lead(lead)}
 
 
 @router.post(
@@ -187,7 +187,7 @@ async def convert_lead(
 @router.delete(
     "/{lead_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete lead (soft)",
+    summary="Delete lead (hard)",
     dependencies=[Depends(require_permission("lead:delete"))],
 )
 async def delete_lead(

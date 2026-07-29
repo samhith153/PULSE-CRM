@@ -51,15 +51,32 @@ class LeadService:
         organization_id: UUID,
         created_by: UUID,
     ) -> Lead:
+        data = payload.model_dump(exclude_none=True)
+        email = data.pop("email", None)
+        phone = data.pop("phone", None)
+
+        if email:
+            contact = await self.contact_repo.get_by_email_in_org(email, organization_id)
+            if not contact:
+                contact = await self.contact_repo.create(
+                    first_name=payload.title,
+                    last_name="",
+                    email=email,
+                    phone=phone or "",
+                    organization_id=organization_id,
+                    created_by=created_by,
+                )
+            data["contact_id"] = contact.id
+
         await self._validate_relations(
             organization_id,
-            payload.company_id,
-            payload.contact_id,
-            payload.owner_id,
+            data.get("company_id"),
+            data.get("contact_id"),
+            data.get("owner_id"),
         )
 
         lead = await self.repo.create(
-            **payload.model_dump(exclude_none=True),
+            **data,
             organization_id=organization_id,
             created_by=created_by,
         )
@@ -113,6 +130,21 @@ class LeadService:
     async def update(self, lead_id: UUID, organization_id: UUID, payload: LeadUpdateRequest) -> Lead:
         lead = await self.get(lead_id, organization_id)
         update_data = payload.model_dump(exclude_none=True)
+        email = update_data.pop("email", None)
+        phone = update_data.pop("phone", None)
+
+        if email:
+            contact = await self.contact_repo.get_by_email_in_org(email, organization_id)
+            if not contact:
+                contact = await self.contact_repo.create(
+                    first_name=update_data.get("title", lead.title),
+                    last_name="",
+                    email=email,
+                    phone=phone or "",
+                    organization_id=organization_id,
+                    created_by=lead.created_by,
+                )
+            update_data["contact_id"] = contact.id
 
         await self._validate_relations(
             organization_id,
@@ -205,8 +237,8 @@ class LeadService:
 
     async def delete(self, lead_id: UUID, organization_id: UUID) -> None:
         lead = await self.get(lead_id, organization_id)
-        await self.repo.soft_delete(lead)
-        logger.info("Lead deleted", extra={"lead_id": str(lead_id)})
+        await self.repo.delete(lead)
+        logger.info("Lead hard-deleted", extra={"lead_id": str(lead_id)})
 
     async def convert_to_deal(
         self,

@@ -15,6 +15,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.database.base import Base, AuditMixin
 
 if TYPE_CHECKING:
+    from app.models.lead import Lead
     from app.models.organization import Organization
     from app.models.role import Role
 
@@ -84,6 +85,9 @@ class User(Base, AuditMixin):
     )
     user_roles: Mapped[List["UserRole"]] = relationship(
         "UserRole", back_populates="user", lazy="selectin", cascade="all, delete-orphan"
+    )
+    leads: Mapped[List["Lead"]] = relationship(
+        "Lead", back_populates="owner", lazy="select"
     )
 
     # ── Convenience property ──────────────────────────────────────────────────
