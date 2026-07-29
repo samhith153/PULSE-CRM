@@ -20,23 +20,34 @@ export function getAuthHeaders(): Record<string, string> {
 }
 
 export interface Lead {
-  id: number | string;
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
-  score: number;
-  status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
-  priority: 'High' | 'Medium' | 'Low';
-  owner: string;
-  ownerAvatar: string;
-  notes: string;
-  value?: string | number;
-  source?: string;
-  timeline: { id: number; type: string; title: string; desc: string; time: string }[];
-  emails: { id: number; subject: string; body: string; time: string }[];
-  calls: { id: number; outcome: string; notes: string; time: string }[];
-  meetings: { id: number; title: string; date: string; time: string; desc: string }[];
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  source: string | null;
+  interest: string | null;
+  industry: string | null;
+  employee_count: number | null;
+  current_crm: string | null;
+  location: string | null;
+  operational_systems: string | null;
+  estimated_value: number | null;
+  currency: string;
+  score: number | null;
+  notes: string | null;
+  close_reason: string | null;
+  company_id: string | null;
+  contact_id: string | null;
+  owner_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  company_name: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  owner_name: string | null;
 }
 
 export interface Contact {
@@ -137,6 +148,9 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   if (!res.ok) {
     throw new Error(`API error ${res.status}`);
   }
+  if (res.status === 204) {
+    return undefined as T;
+  }
   const json = await res.json();
   return (json.data ?? json) as T;
 }
@@ -144,39 +158,34 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // --- Leads API ---
 export async function getLeads(): Promise<Lead[]> {
   const dbResult = await apiFetch<any>('/api/v1/leads');
-  const dbLeads: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return dbLeads.map((dl, idx) => {
-    return {
-      id: dl.id,
-      name: dl.name || dl.full_name || `Lead ${dl.id}`,
-      company: dl.company?.name || dl.company_name || '',
-      email: dl.email || '',
-      phone: dl.phone || dl.mobile || '',
-      score: dl.score ?? 0,
-      status: dl.status || 'New',
-      priority: dl.priority || 'Medium',
-      owner: dl.owner_name || dl.owner || '',
-      ownerAvatar: dl.owner_avatar || '',
-      notes: dl.description || '',
-      value: String(dl.value || ''),
-      source: dl.source || '',
-      timeline: [],
-      emails: [],
-      calls: [],
-      meetings: [],
-    };
-  });
+  const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
+  return items as Lead[];
 }
 
-export async function createLead(leadData: any): Promise<any> {
-  return apiFetch('/api/v1/leads', {
+export async function getLead(leadId: string): Promise<Lead> {
+  return apiFetch<Lead>(`/api/v1/leads/${leadId}`);
+}
+
+export async function createLead(leadData: Record<string, unknown>): Promise<Lead> {
+  return apiFetch<Lead>('/api/v1/leads', {
     method: 'POST',
     body: JSON.stringify(leadData)
   });
 }
 
+export async function updateLead(leadId: string, leadData: Record<string, unknown>): Promise<Lead> {
+  return apiFetch<Lead>(`/api/v1/leads/${leadId}`, {
+    method: 'PUT',
+    body: JSON.stringify(leadData)
+  });
+}
+
+export async function deleteLead(leadId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/leads/${leadId}`, { method: 'DELETE' });
+}
+
 export async function convertLead(
-  leadId: string | number,
+  leadId: string,
   payload: { industry?: string; revenue?: string; employee_count?: number }
 ): Promise<any> {
   return apiFetch(`/api/v1/leads/${leadId}/convert`, {

@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
-import { getLeads, convertLead } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -23,8 +22,57 @@ import {
   TrendingUp, 
   User, 
   Building2,
-  AlertCircle
+  AlertCircle,
+  MapPin,
+  Briefcase,
+  Globe,
+  Monitor,
+  Users
 } from 'lucide-react';
+
+// Mapping helpers
+const STATUS_MAP: Record<string, string> = {
+  'New': 'new', 'Contacted': 'contacted', 'Qualified': 'qualified', 'Converted': 'converted', 'Lost': 'lost',
+};
+const STATUS_UNMAP: Record<string, Lead['status']> = {
+  'new': 'New', 'contacted': 'Contacted', 'qualified': 'Qualified', 'converted': 'Converted', 'lost': 'Lost',
+};
+const SOURCE_MAP: Record<string, string> = {
+  'Website': 'website', 'Referral': 'referral', 'LinkedIn': 'linkedin',
+  'Cold Email': 'email_campaign', 'Event': 'trade_show', 'Webinar': 'inbound',
+  'Partner': 'partner', 'Paid Ads': 'social_media', 'Organic Search': 'website', 'Other': 'other',
+};
+
+function backendToLocal(b: BackendLead): Lead {
+  const source = b.source || undefined;
+  const mappedSource = source ? Object.entries(SOURCE_MAP).find(([,v]) => v === source)?.[0] || source : undefined;
+  return {
+    id: b.id,
+    name: b.title,
+    company: b.company_name || '',
+    email: b.contact_email || '',
+    phone: b.contact_phone || '',
+    score: b.score ?? 0,
+    status: STATUS_UNMAP[b.status] || 'New',
+    priority: 'Medium',
+    owner: b.owner_name || 'Unassigned',
+    ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
+    notes: b.notes || '',
+    source: mappedSource,
+    industry: b.industry || undefined,
+    jobTitle: undefined,
+    location: b.location || undefined,
+    numberOfEmployees: b.employee_count?.toString() || undefined,
+    currentCRM: b.current_crm || undefined,
+    operationalSystem: b.operational_systems || undefined,
+    value: b.estimated_value ? Number(b.estimated_value) : undefined,
+    employee_count: b.employee_count || undefined,
+    timeline: [],
+    emails: [],
+    calls: [],
+    meetings: [],
+  };
+}
 
 // Types Definition
 interface ActivityItem {
@@ -58,7 +106,7 @@ interface MeetingItem {
 }
 
 interface Lead {
-  id: number;
+  id: string;
   name: string;
   company: string;
   email: string;
@@ -70,9 +118,14 @@ interface Lead {
   ownerAvatar: string;
   notes: string;
   source?: string;
-  industry?: string;
-  value?: number;
+  value?: string | number;
   employee_count?: number;
+  jobTitle?: string;
+  industry?: string;
+  location?: string;
+  numberOfEmployees?: string;
+  currentCRM?: string;
+  operationalSystem?: string;
   timeline: ActivityItem[];
   emails: EmailItem[];
   calls: CallItem[];
@@ -81,99 +134,7 @@ interface Lead {
 
 export default function LeadsView() {
   // Prepopulated state variables
-  const [leads, setLeads] = useState<Lead[]>([
-    {
-      id: 1,
-      name: "Alex Rivera",
-      company: "TechCorp Inc.",
-      email: "alex.rivera@techcorp.com",
-      phone: "+1 (555) 019-2834",
-      score: 88,
-      status: "Qualified",
-      priority: "High",
-      owner: "Sarah Johnson",
-      ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-      notes: "Met at TechEx 2025. Interested in migrating their legacy database to our unified SaaS solution. Has a budget of ₹120K. Ready for proposal stage next week.",
-      source: "Referral",
-      timeline: [
-        { id: 1, type: "creation", title: "Lead Ingestion", desc: "Lead created from TechEx 2025 conference scan.", time: "4 days ago" },
-        { id: 2, type: "call", title: "Discovery Call Logged", desc: "Spoke to Alex. Confirmed decision matrix and budget availability.", time: "2 days ago" }
-      ],
-      emails: [
-        { id: 1, subject: "Pulse CRM Info Request", body: "Hi Alex, thank you for stopping by our booth. Here is the migration documentation we discussed.", time: "3 days ago" }
-      ],
-      calls: [
-        { id: 1, outcome: "Spoke with Lead", notes: "Alex is highly technical. Focus proposal on database security and speed.", time: "2 days ago" }
-      ],
-      meetings: []
-    },
-    {
-      id: 2,
-      name: "Marcus Aurelius",
-      company: "MedSaaS Solutions",
-      email: "marcus.aurelius@medsaas.org",
-      phone: "+1 (555) 304-9843",
-      score: 72,
-      status: "Contacted",
-      priority: "Medium",
-      owner: "Alex Johnson",
-      ownerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
-      notes: "Currently evaluating competitor pricing. Emphasized compliance standards (HIPAA/GDPR) as critical factors. Scheduled a follow-up demo.",
-      source: "Website",
-      timeline: [
-        { id: 1, type: "creation", title: "Lead Form Submission", desc: "Lead created from inbound marketing landing page.", time: "6 days ago" },
-        { id: 2, type: "email", title: "Introduction Email Sent", desc: "Shared introduction and pricing tiers overview.", time: "5 days ago" }
-      ],
-      emails: [
-        { id: 1, subject: "Welcome to Pulse CRM", body: "Hello Marcus, introducing Pulse and attaching compliance guidelines.", time: "5 days ago" }
-      ],
-      calls: [],
-      meetings: []
-    },
-    {
-      id: 3,
-      name: "Helena Troy",
-      company: "Sparta Creative",
-      email: "helena.t@spartacreative.io",
-      phone: "+1 (555) 834-0192",
-      score: 95,
-      status: "New",
-      priority: "High",
-      owner: "Sarah Johnson",
-      ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-      notes: "Inbound contact request. Enterprise customer asking about custom SSO support and priority SLA details. Immediate response required.",
-      source: "LinkedIn",
-      timeline: [
-        { id: 1, type: "creation", title: "Inbound Request Recieved", desc: "Submitted custom enterprise contact form.", time: "2 hours ago" }
-      ],
-      emails: [],
-      calls: [],
-      meetings: []
-    },
-    {
-      id: 4,
-      name: "David Hume",
-      company: "Empiric Logistics",
-      email: "david.hume@empiric.co.uk",
-      phone: "+44 20 7946 0192",
-      score: 41,
-      status: "Lost",
-      priority: "Low",
-      owner: "David Wilson",
-      ownerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&q=80",
-      notes: "Small business prospect. Rejected pricing packages as out of scope for budget limit. Keep in cold nurturing list for low-tier launch.",
-      source: "Cold Email",
-      timeline: [
-        { id: 1, type: "creation", title: "API Ingestion", desc: "Lead created through automated developer partner API.", time: "10 days ago" },
-        { id: 2, type: "call", title: "Call Outcome: Busy", desc: "Tried logging call, prospect rejected due to resource limits.", time: "8 days ago" }
-      ],
-      emails: [],
-      calls: [
-        { id: 1, outcome: "Lead Not Interested", notes: "No budget availability. Moving to cold nurturing.", time: "8 days ago" }
-      ],
-      meetings: []
-    }
-  ]);
+  const [leads, setLeads] = useState<Lead[]>([]);
 
   // Selections & Filters State
   const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
@@ -190,11 +151,15 @@ export default function LeadsView() {
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
-  const [convertingLeadId, setConvertingLeadId] = useState<number | string | null>(null);
+  const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
-    name: '', company: '', email: '', phone: '', status: 'New' as Lead['status'], priority: 'Medium' as Lead['priority'], owner: 'Sarah Johnson', notes: ''
+    name: '', jobTitle: '', email: '', phone: '',
+    company: '', industry: '', location: '', numberOfEmployees: '',
+    source: '', currentCRM: '', operationalSystem: '',
+    status: 'New' as Lead['status'], priority: 'Medium' as Lead['priority'], owner: 'Sarah Johnson', notes: ''
   });
   const [emailForm, setEmailForm] = useState({ subject: '', body: '' });
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
@@ -234,7 +199,8 @@ export default function LeadsView() {
 
   useEffect(() => {
     getLeads().then(data => {
-      setLeads(data as any);
+      const mapped = (data ?? []).map(backendToLocal);
+      setLeads(mapped);
     });
   }, []);
 
@@ -349,70 +315,81 @@ export default function LeadsView() {
     : filteredLeads;
 
   // Action: Create Lead Submit
-  const handleCreateLead = (e: React.FormEvent) => {
+  const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newLead: Lead = {
-      id: Date.now(),
-      name: leadForm.name,
-      company: leadForm.company,
-      email: leadForm.email,
-      phone: leadForm.phone,
-      score: Math.floor(Math.random() * 40) + 55, // Random score 55-95
-      status: leadForm.status,
-      priority: leadForm.priority,
-      owner: leadForm.owner,
-      ownerAvatar: leadForm.owner === 'Sarah Johnson' 
-        ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80" 
-        : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
-      notes: leadForm.notes,
-      timeline: [
-        { id: 1, type: "creation", title: "Lead Created Manually", desc: `Lead added to database by system user.`, time: "Just now" }
-      ],
-      emails: [],
-      calls: [],
-      meetings: []
+    const payload: Record<string, unknown> = {
+      title: leadForm.name,
+      company_name: leadForm.company,
+      email: leadForm.email || undefined,
+      phone: leadForm.phone || undefined,
+      source: SOURCE_MAP[leadForm.source as string] || leadForm.source || undefined,
+      industry: leadForm.industry || undefined,
+      location: leadForm.location || undefined,
+      employee_count: leadForm.numberOfEmployees ? parseInt(leadForm.numberOfEmployees, 10) || undefined : undefined,
+      current_crm: leadForm.currentCRM || undefined,
+      operational_systems: leadForm.operationalSystem || undefined,
+      notes: leadForm.notes || undefined,
     };
-    const updated = [newLead, ...leads];
-    setLeads(updated);
-    setSelectedLeadId(newLead.id);
+    try {
+      const created = await createLead(payload);
+      const newLead: Lead = {
+        ...backendToLocal(created),
+        timeline: [
+          { id: Date.now(), type: "creation" as const, title: "Lead Created Manually", desc: `Lead added to database by system user.`, time: "Just now" }
+        ],
+      };
+      setLeads([newLead, ...leads]);
+      setSelectedLeadId(newLead.id);
+    } catch (err) {
+      console.error("Failed to create lead:", err);
+    }
     setIsCreateModalOpen(false);
-    setLeadForm({ name: '', company: '', email: '', phone: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
+    setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
   };
 
   // Action: Edit Lead Submit
-  const handleEditLead = (e: React.FormEvent) => {
+  const handleEditLead = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeLead) return;
-    setLeads(leads.map(l => {
-      if (l.id === activeLead.id) {
-        return {
-          ...l,
-          name: leadForm.name,
-          company: leadForm.company,
-          email: leadForm.email,
-          phone: leadForm.phone,
-          status: leadForm.status,
-          priority: leadForm.priority,
-          owner: leadForm.owner,
-          notes: leadForm.notes
-        };
-      }
-      return l;
-    }));
+    const payload: Record<string, unknown> = {
+      title: leadForm.name,
+      company_name: leadForm.company,
+      email: leadForm.email || undefined,
+      phone: leadForm.phone || undefined,
+      status: STATUS_MAP[leadForm.status as string] || leadForm.status,
+      source: SOURCE_MAP[leadForm.source as string] || leadForm.source || undefined,
+      industry: leadForm.industry || undefined,
+      location: leadForm.location || undefined,
+      employee_count: leadForm.numberOfEmployees ? parseInt(leadForm.numberOfEmployees, 10) || undefined : undefined,
+      notes: leadForm.notes || undefined,
+    };
+    try {
+      const updated = await updateLead(activeLead.id, payload);
+      setLeads(leads.map(l => l.id === activeLead.id ? backendToLocal(updated) : l));
+    } catch (err) {
+      console.error("Failed to update lead:", err);
+    }
     setIsEditModalOpen(false);
   };
 
   // Action: Delete Lead
-  const handleDeleteLead = (id: number) => {
-    const remaining = leads.filter(l => l.id !== id);
-    if (remaining.length > 0) {
+  const handleDeleteLead = async () => {
+    if (!deleteConfirmId) return;
+    try {
+      await apiDeleteLead(deleteConfirmId);
+      const remaining = leads.filter(l => l.id !== deleteConfirmId);
       setLeads(remaining);
-      setSelectedLeadId(remaining[0].id);
+      if (selectedLeadId === deleteConfirmId) {
+        setSelectedLeadId(remaining.length > 0 ? remaining[0].id : null);
+      }
+    } catch (err) {
+      console.error("Failed to delete lead:", err);
     }
+    setDeleteConfirmId(null);
   };
 
   // Action: Convert Lead (Updates status to Converted)
-  const handleConvertLead = (id: number | string) => {
+  const handleConvertLead = (id: string) => {
     const lead = leads.find(l => l.id === id);
     setConvertingLeadId(id);
     setConvertForm({
@@ -608,7 +585,7 @@ export default function LeadsView() {
             </div>
             <button 
               onClick={() => {
-                setLeadForm({ name: '', company: '', email: '', phone: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
+                setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
                 setIsCreateModalOpen(true);
               }}
               className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 transition-colors cursor-pointer"
@@ -680,7 +657,7 @@ export default function LeadsView() {
                   </tr>
                 ) : (
                   <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
-                    <th className="pb-2">Name &amp; Company</th>
+                    <th className="pb-2">Name & Company</th>
                     <th className="pb-2 text-center">Score</th>
                     <th className="pb-2">Status</th>
                     <th className="pb-2">Priority</th>
@@ -788,16 +765,16 @@ export default function LeadsView() {
                                 ● {lead.priority}
                               </span>
                             </td>
+
+                            {/* Owner */}
+                            <td className="py-3">
+                              <div className="flex items-center space-x-1.5">
+                                <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
+                                <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
+                              </div>
+                            </td>
                           </>
                         )}
-
-                        {/* Owner */}
-                        <td className="py-3">
-                          <div className="flex items-center space-x-1.5">
-                            <Image src={lead.ownerAvatar} alt={lead.owner} width={20} height={20} className="h-5 w-5 rounded-full border border-slate-200" unoptimized />
-                            <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
-                          </div>
-                        </td>
 
                         {/* Row Actions */}
                         <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
@@ -815,9 +792,16 @@ export default function LeadsView() {
                               onClick={() => {
                                 setLeadForm({
                                   name: lead.name,
+                                  jobTitle: lead.jobTitle || '',
                                   company: lead.company,
                                   email: lead.email,
                                   phone: lead.phone,
+                                  industry: lead.industry || '',
+                                  location: lead.location || '',
+                                  numberOfEmployees: lead.numberOfEmployees || '',
+                                  source: lead.source || '',
+                                  currentCRM: lead.currentCRM || '',
+                                  operationalSystem: lead.operationalSystem || '',
                                   status: lead.status,
                                   priority: lead.priority,
                                   owner: lead.owner,
@@ -830,7 +814,7 @@ export default function LeadsView() {
                               <Edit className="h-3.5 w-3.5" />
                             </button>
                             <button 
-                              onClick={() => handleDeleteLead(lead.id)}
+                              onClick={() => setDeleteConfirmId(lead.id)}
                               className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -905,7 +889,7 @@ export default function LeadsView() {
             <div className="flex justify-between items-center">
               <span className="text-brand-text/50">Owner</span>
               <div className="flex items-center space-x-1">
-                <Image src={activeLead.ownerAvatar} alt={activeLead.owner} width={18} height={18} className="h-4.5 w-4.5 rounded-full border border-slate-200" unoptimized />
+                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-slate-200" />
                 <span className="text-brand-text">{activeLead.owner}</span>
               </div>
             </div>
@@ -1126,7 +1110,7 @@ export default function LeadsView() {
                   <div className="p-3 border border-brand-border-purple/20 rounded-xl bg-slate-50/50">
                     <h5 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-2 flex items-center space-x-1">
                       <TrendingUp className="h-3.5 w-3.5 text-brand-accent" />
-                      <span>Lead Progression &amp; Score Trend</span>
+                      <span>Lead Progression & Score Trend</span>
                     </h5>
                     <div className="w-full h-32 relative">
                       <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
@@ -1178,65 +1162,156 @@ export default function LeadsView() {
       {/* CREATE LEAD DIALOG MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Add New Lead</h3>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
-            </div>
-            <form onSubmit={handleCreateLead} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Lead Name</label>
-                  <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email</label>
-                  <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone</label>
-                  <input type="text" required placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Status</label>
-                  <select value={leadForm.status} onChange={(e) => setLeadForm({...leadForm, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    <option>New</option>
-                    <option>Contacted</option>
-                    <option>Qualified</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
-                  <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Owner</label>
-                  <select value={leadForm.owner} onChange={(e) => setLeadForm({...leadForm, owner: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    <option>Sarah Johnson</option>
-                    <option>Alex Johnson</option>
-                    <option>Lisa Martinez</option>
-                  </select>
-                </div>
-              </div>
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-gradient-to-r from-slate-50 to-brand-sidebar-hover/20">
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Initial Notes</label>
-                <textarea placeholder="Describe technical requirements, pipeline potential..." value={leadForm.notes} onChange={(e) => setLeadForm({...leadForm, notes: e.target.value})} className="w-full p-2 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 min-h-[60px]" />
+                <h3 className="font-bold text-brand-heading text-sm">Create New Lead</h3>
+                <p className="text-[10px] text-brand-text/50 font-semibold mt-0.5">Capture prospect details across all dimensions</p>
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Create Lead</button>
+              <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer hover:bg-slate-100 rounded transition-colors"><X className="h-4.5 w-4.5" /></button>
+            </div>
+            <form onSubmit={handleCreateLead} className="max-h-[70vh] overflow-y-auto scrollbar-thin">
+              {/* LEAD INFORMATION Section */}
+              <div className="px-5 pt-5 pb-4">
+                <div className="flex items-center space-x-1.5 mb-3">
+                  <User className="h-3.5 w-3.5 text-brand-accent" />
+                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Lead Information</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
+                        Full Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Job Title</label>
+                      <input type="text" placeholder="e.g. VP of Engineering" value={leadForm.jobTitle} onChange={(e) => setLeadForm({...leadForm, jobTitle: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
+                        Email <span className="text-rose-500">*</span>
+                      </label>
+                      <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone Number</label>
+                      <input type="text" placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* COMPANY INFORMATION Section */}
+              <div className="px-5 pb-4 pt-1 border-t border-brand-border-purple/10">
+                <div className="flex items-center space-x-1.5 mb-3 mt-3">
+                  <Building2 className="h-3.5 w-3.5 text-brand-accent" />
+                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Company Information</h4>
+                </div>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
+                        Company Name <span className="text-rose-500">*</span>
+                      </label>
+                      <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
+                        Industry <span className="text-rose-500">*</span>
+                      </label>
+                      <select required value={leadForm.industry} onChange={(e) => setLeadForm({...leadForm, industry: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
+                        <option value="">Select Industry</option>
+                        <option>Software & IT</option>
+                        <option>Healthcare</option>
+                        <option>Finance & Banking</option>
+                        <option>Retail & E-commerce</option>
+                        <option>Manufacturing</option>
+                        <option>Education</option>
+                        <option>Real Estate</option>
+                        <option>Logistics & Transport</option>
+                        <option>Marketing & Advertising</option>
+                        <option>Consulting</option>
+                        <option>Other</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Location</label>
+                      <input type="text" placeholder="e.g. San Francisco, CA" value={leadForm.location} onChange={(e) => setLeadForm({...leadForm, location: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>
+                      <select value={leadForm.numberOfEmployees} onChange={(e) => setLeadForm({...leadForm, numberOfEmployees: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
+                        <option value="">Select Range</option>
+                        <option>1-10</option>
+                        <option>11-50</option>
+                        <option>51-200</option>
+                        <option>201-500</option>
+                        <option>501-1000</option>
+                        <option>1001-5000</option>
+                        <option>5000+</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* LEAD SOURCE Section */}
+              <div className="px-5 pb-4 pt-1 border-t border-brand-border-purple/10">
+                <div className="flex items-center space-x-1.5 mb-3 mt-3">
+                  <Globe className="h-3.5 w-3.5 text-brand-accent" />
+                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Lead Source</h4>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
+                    Source <span className="text-rose-500">*</span>
+                  </label>
+                  <select required value={leadForm.source} onChange={(e) => setLeadForm({...leadForm, source: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
+                    <option value="">Select Source</option>
+                    <option>Website</option>
+                    <option>Referral</option>
+                    <option>LinkedIn</option>
+                    <option>Cold Email</option>
+                    <option>Event</option>
+                    <option>Webinar</option>
+                    <option>Partner</option>
+                    <option>Paid Ads</option>
+                    <option>Organic Search</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* CURRENT SOFTWARE Section */}
+              <div className="px-5 pb-5 pt-1 border-t border-brand-border-purple/10">
+                <div className="flex items-center space-x-1.5 mb-3 mt-3">
+                  <Monitor className="h-3.5 w-3.5 text-brand-accent" />
+                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Current Software</h4>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Current CRM</label>
+                    <input type="text" placeholder="e.g. Salesforce, HubSpot" value={leadForm.currentCRM} onChange={(e) => setLeadForm({...leadForm, currentCRM: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Operational System</label>
+                    <input type="text" placeholder="e.g. SAP, Oracle ERP" value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Footer */}
+              <div className="px-5 py-3.5 border-t border-brand-border-purple/15 bg-slate-50/50 flex items-center justify-between">
+                <p className="text-[9px] text-brand-text/40 font-semibold"><span className="text-rose-500">*</span> Required fields</p>
+                <div className="flex space-x-2.5">
+                  <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-100 cursor-pointer transition-colors">Cancel</button>
+                  <button type="submit" className="px-5 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer transition-colors">Create Lead</button>
+                </div>
               </div>
             </form>
           </div>
@@ -1416,7 +1491,7 @@ export default function LeadsView() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Convert Lead to Account &amp; Deal</h3>
+              <h3 className="font-bold text-brand-heading text-sm">Convert Lead to Account & Deal</h3>
               <button onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleConvertLeadSubmit} className="p-5 space-y-4">
@@ -1469,6 +1544,39 @@ export default function LeadsView() {
           </div>
         </div>
       )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex items-center space-x-2 bg-rose-50/40">
+              <AlertCircle className="h-4.5 w-4.5 text-rose-500" />
+              <h3 className="font-bold text-brand-heading text-sm">Confirm Delete</h3>
+            </div>
+            <div className="p-5">
+              <p className="text-xs text-brand-text/80 leading-relaxed">
+                Are you sure you want to delete this lead? This action <span className="font-extrabold text-rose-600">cannot be undone</span> and will permanently remove all associated data.
+              </p>
+              <div className="flex justify-end space-x-2.5 mt-5">
+                <button 
+                  onClick={() => setDeleteConfirmId(null)} 
+                  className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleDeleteLead} 
+                  className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer transition-colors inline-flex items-center space-x-1.5"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Permanently</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+  
