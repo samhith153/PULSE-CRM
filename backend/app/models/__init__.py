@@ -18,6 +18,8 @@ from app.models.recommendation_feature import RecommendationFeature  # noqa: F40
 from app.models.role import Permission, Role, RolePermission  # noqa: F401
 from app.models.user import User, UserRole  # noqa: F401
 from app.models.ai import AIScore, AIRecommendation, AIConversationSummary  # noqa: F401
+from app.models.ai_summary import AISummary  # noqa: F401
 
 from app.models.webhook import WebhookEndpoint, WebhookDelivery  # noqa: F401
+from app.models.calendar_event import CalendarEvent  # noqa: F401
 
