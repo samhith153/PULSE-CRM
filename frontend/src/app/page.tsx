@@ -130,26 +130,20 @@ export default function DashboardHome() {
   const [showFiltersMenu, setShowFiltersMenu] = useState(false);
   const [selectedPipelineType, setSelectedPipelineType] = useState('All');
   
-  // Simulated loading and empty states
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
 
-  // Trigger loading skeleton on sub-tab change to demo loaders
   const handleSubTabChange = (tabKey: string) => {
     setDashboardSubTab(tabKey);
     setIsLoading(true);
-    
-    // Simulate empty state on Marketing tab for demo
-    if (tabKey === 'marketing') {
-      setIsEmpty(true);
-    } else {
-      setIsEmpty(false);
-    }
-
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 450);
+    setIsEmpty(tabKey === 'marketing');
   };
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => setIsLoading(false), 450);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   // Custom reports state
   const [recentReports, setRecentReports] = useState([
