@@ -174,12 +174,7 @@ export default function DashboardHome() {
   };
 
   // Custom reports state
-  const [recentReports, setRecentReports] = useState([
-    { id: 1, title: "Sales Performance Overview", time: "Generated 2 hours ago" },
-    { id: 2, title: "Pipeline Health Report", time: "Generated 1 day ago" },
-    { id: 3, title: "Revenue Forecast Report", time: "Generated 2 days ago" },
-    { id: 4, title: "Activity Summary", time: "Generated 3 days ago" }
-  ]);
+  const [recentReports, setRecentReports] = useState<{ id: number; title: string; time: string }[]>([]);
 
   const handleSaveReport = (newReport: { title: string; time: string }) => {
     setRecentReports([

@@ -16,13 +16,7 @@ interface Product {
 }
 
 export default function ProductsView() {
-  const [products, setProducts] = useState<Product[]>([
-    { id: 1, name: "Enterprise Database Cloud License", sku: "DB-CLD-ENT", category: "Software Licensing", categoryBg: "bg-blue-50 text-blue-700 border-blue-200/60", price: 15000, status: "Active", dealsCount: 14, description: "Full relational database cloud hosting license with auto-scale capacity." },
-    { id: 2, name: "HIPAA Security Compliance SLA Add-on", sku: "SEC-HIPAA-SLA", category: "Compliance & Security", categoryBg: "bg-purple-50 text-purple-700 border-purple-200/60", price: 4500, status: "Active", dealsCount: 8, description: "End-to-end encryption audit pipeline log sync for health enterprise." },
-    { id: 3, name: "Real-time AI Co-pilot Seat (Annual)", sku: "AI-COP-SEAT", category: "SaaS Subscription", categoryBg: "bg-cyan-50 text-cyan-700 border-cyan-200/60", price: 1200, status: "Active", dealsCount: 22, description: "Access key to real-time sync suggestions and leads scorer pipeline." },
-    { id: 4, name: "Professional Services Migration (Day Rate)", sku: "MIG-PROF-SRV", category: "Professional Services", categoryBg: "bg-amber-50 text-amber-700 border-amber-200/60", price: 2500, status: "Active", dealsCount: 5, description: "Dedicated database architecture integration specialist consultancy." },
-    { id: 5, name: "SSO Identity Integration Gateway", sku: "GW-SSO-OAUTH", category: "Infrastructure", categoryBg: "bg-slate-100 text-slate-700 border-slate-200/60", price: 6000, status: "Archived", dealsCount: 0, description: "Legacy SAML integration engine gateway module." }
-  ]);
+  const [products, setProducts] = useState<Product[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');

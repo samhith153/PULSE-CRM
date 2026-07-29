@@ -48,13 +48,7 @@ interface WorkflowNode {
 }
 
 export default function WorkflowsView() {
-  const [workflows, setWorkflows] = useState<Workflow[]>([
-    { id: 1, name: "Lead Assignment Automation", desc: "Auto-assigns new enterprise leads to regional reps based on geolocation.", triggerType: "creation", triggerLabel: "New Lead Created", totalRuns: 1240, successRate: "99.8%", activeContacts: 24, status: "Active" },
-    { id: 2, name: "SaaS Free Trial Nurture", desc: "Sends a welcome email series and checks product usage milestones.", triggerType: "form_submission", triggerLabel: "Trial Sign-Up Form", totalRuns: 850, successRate: "97.5%", activeContacts: 112, status: "Active" },
-    { id: 3, name: "Stale Deal Slack Alerts", desc: "Notifies account executives when a deal remains in 'Proposal' for over 10 days.", triggerType: "time_delay", triggerLabel: "10 Days Inactivity", totalRuns: 310, successRate: "100%", activeContacts: 15, status: "Active" },
-    { id: 4, name: "Post-Purchase NDA Request", desc: "Sends NDAs and custom contract SLA drafts once a deal moves to Negotiation.", triggerType: "stage_change", triggerLabel: "Stage: Negotiation", totalRuns: 145, successRate: "98.2%", activeContacts: 4, status: "Paused" },
-    { id: 5, name: "Q4 Marketing Inbound Scoring", desc: "Increments lead scores by 15 points when they open high-intent links.", triggerType: "form_submission", triggerLabel: "Pricing Link Clicked", totalRuns: 0, successRate: "--", activeContacts: 0, status: "Draft" }
-  ]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
 
   const [activeTab, setActiveTab] = useState<'Active' | 'Draft' | 'Paused'>('Active');
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);

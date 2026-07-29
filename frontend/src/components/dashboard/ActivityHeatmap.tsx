@@ -26,7 +26,7 @@ export default function ActivityHeatmap() {
     y: number;
   } | null>(null);
 
-  // Generate mock activity data for 16 weeks (112 days)
+  // Generate empty activity data for 16 weeks (112 days)
   const heatmapData = useMemo(() => {
     const data: ActivityCell[] = [];
     const today = new Date();
@@ -34,36 +34,16 @@ export default function ActivityHeatmap() {
     const startDate = new Date();
     startDate.setDate(today.getDate() - 111);
 
-    // Seed repeatable pseudorandom generator so it looks nice and doesn't flicker
-    let seed = 42;
-    const random = () => {
-      const x = Math.sin(seed++) * 10000;
-      return x - Math.floor(x);
-    };
-
     for (let i = 0; i < 112; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
 
-      // Determine typical CRM activity profiles
-      const isWeekend = currentDate.getDay() === 0 || currentDate.getDay() === 6;
-      let emailWeight = isWeekend ? 0 : Math.floor(random() * 8);
-      let callWeight = isWeekend ? 0 : Math.floor(random() * 6);
-      let meetingWeight = isWeekend ? 0 : (random() > 0.7 ? Math.floor(random() * 3) : 0);
-
-      // Occasionally add highly active spike days
-      if (!isWeekend && random() > 0.9) {
-        emailWeight += 8;
-        callWeight += 5;
-        meetingWeight += 2;
-      }
-
       data.push({
         dateStr: currentDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        emails: emailWeight,
-        calls: callWeight,
-        meetings: meetingWeight,
-        allCount: emailWeight + callWeight + meetingWeight
+        emails: 0,
+        calls: 0,
+        meetings: 0,
+        allCount: 0
       });
     }
     return data;

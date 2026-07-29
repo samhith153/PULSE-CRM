@@ -34,60 +34,7 @@ interface ContactItem {
 }
 
 export default function ContactsView() {
-  const [contacts, setContacts] = useState<ContactItem[]>([
-    {
-      id: 1,
-      name: "Alex Rivera",
-      company: "TechCorp Inc.",
-      designation: "VP of Engineering",
-      phone: "+1 (555) 019-2834",
-      email: "alex.rivera@techcorp.com",
-      notes: "Preferred contact method is email. High technical authority.",
-      timeline: [
-        { id: 1, title: "SSO blueprint sent", time: "2 days ago" },
-        { id: 2, title: "Intro call logged", time: "1 week ago" }
-      ],
-      calls: [
-        { id: 1, outcome: "Spoke with Lead", notes: "Discussed cloud migration scope.", time: "1 week ago" }
-      ],
-      meetings: [],
-      emails: [
-        { id: 1, subject: "Cloud migration outline", body: "Shared guidelines and specs document.", time: "2 days ago" }
-      ]
-    },
-    {
-      id: 2,
-      name: "Marcus Aurelius",
-      company: "MedSaaS Solutions",
-      designation: "Director of Compliance",
-      phone: "+1 (555) 304-9843",
-      email: "marcus.aurelius@medsaas.org",
-      notes: "Extremely detail oriented. Highly concerned with security guidelines.",
-      timeline: [
-        { id: 1, title: "Product walkthrough demo", time: "3 days ago" }
-      ],
-      calls: [],
-      meetings: [
-        { id: 1, title: "Security compliance review", date: "2025-05-20", time: "10:00 AM" }
-      ],
-      emails: []
-    },
-    {
-      id: 3,
-      name: "Helena Troy",
-      company: "Sparta Creative",
-      designation: "CEO & Founder",
-      phone: "+1 (555) 834-0192",
-      email: "helena.t@spartacreative.io",
-      notes: "Met at local design panel. Interested in CRM team workflows onboarding.",
-      timeline: [
-        { id: 1, title: "Profile created", time: "10 hours ago" }
-      ],
-      calls: [],
-      meetings: [],
-      emails: []
-    }
-  ]);
+  const [contacts, setContacts] = useState<ContactItem[]>([]);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

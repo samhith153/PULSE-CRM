@@ -9,54 +9,22 @@ interface ChartsProps {
 }
 
 export default function Charts({ loading = false, empty = false }: ChartsProps) {
-  const [revenueHoveredPoint, setRevenueHoveredPoint] = useState<{ x: number; y: number; label: string; value: string } | null>({
-    x: 350,
-    y: 90,
-    label: "May 13, 2025",
-    value: "₹2.45M"
-  });
+  const [revenueHoveredPoint, setRevenueHoveredPoint] = useState<{ x: number; y: number; label: string; value: string } | null>(null);
 
   const [hoveredSourceIdx, setHoveredSourceIdx] = useState<number | null>(null);
   const [hoveredSizeIdx, setHoveredSizeIdx] = useState<number | null>(null);
 
   // Revenue Over Time Line Chart coordinates
-  const revenuePoints = [
-    { name: "May 1", value: "₹0.8M", raw: 0.8, x: 50, y: 170 },
-    { name: "May 4", value: "₹1.2M", raw: 1.2, x: 125, y: 150 },
-    { name: "May 7", value: "₹1.5M", raw: 1.5, x: 200, y: 135 },
-    { name: "May 10", value: "₹1.8M", raw: 1.8, x: 275, y: 120 },
-    { name: "May 13", value: "₹2.45M", raw: 2.45, x: 350, y: 90 },
-    { name: "May 16", value: "₹2.9M", raw: 2.9, x: 425, y: 70 },
-    { name: "May 18", value: "₹3.85M", raw: 3.85, x: 500, y: 30 }
-  ];
+  const revenuePoints: { name: string; value: string; raw: number; x: number; y: number }[] = [];
 
-  // Pipeline stages data: Styled using Medium Blue, Light Blue and Medium Purple for Won stage
-  const pipelineStages = [
-    { name: "New", count: 120, width: "w-full", bg: "bg-brand-blue" },
-    { name: "Qualified", count: 86, width: "w-[85%]", bg: "bg-brand-light-blue" },
-    { name: "Proposal", count: 40, width: "w-[65%]", bg: "bg-brand-blue/80" },
-    { name: "Negotiation", count: 28, width: "w-[45%]", bg: "bg-brand-light-blue/80" },
-    { name: "Won", count: 23, width: "w-[30%]", bg: "bg-brand-accent animate-pulse-slow" }, // Active Won highlighted in Medium Purple
-    { name: "Lost", count: 14, width: "w-[20%]", bg: "bg-brand-light-blue/40" }
-  ];
+  // Pipeline stages data
+  const pipelineStages: { name: string; count: number; width: string; bg: string }[] = [];
 
-  // Source chart percentages using new accents
-  const sources = [
-    { name: "Website", pct: 45, color: "#7957fb", offset: 0, val: "₹1.73M" }, // Medium Purple
-    { name: "Referral", pct: 25, color: "#7e71f9", offset: 45, val: "₹0.96M" }, // Soft Purple
-    { name: "Email", pct: 15, color: "#7e8cf1", offset: 70, val: "₹0.58M" }, // Periwinkle
-    { name: "Social Media", pct: 10, color: "#79a7e8", offset: 85, val: "₹0.39M" }, // Medium Blue
-    { name: "Other", pct: 5, color: "#6ec2de", offset: 95, val: "₹0.19M" } // Light Blue
-  ];
+  // Source chart percentages
+  const sources: { name: string; pct: number; color: string; offset: number; val: string }[] = [];
 
-  // Company size percentages using new accents
-  const companySizes = [
-    { name: "1 - 10 employees", pct: 15, color: "#6ec2de", offset: 0 }, // Light Blue
-    { name: "11 - 50 employees", pct: 25, color: "#7957fb", offset: 15 }, // Medium Purple
-    { name: "51 - 200 employees", pct: 30, color: "#7e71f9", offset: 40 }, // Soft Purple
-    { name: "201 - 1000 employees", pct: 20, color: "#79a7e8", offset: 70 }, // Medium Blue
-    { name: "1000+ employees", pct: 10, color: "#7e8cf1", offset: 90 } // Periwinkle
-  ];
+  // Company size percentages
+  const companySizes: { name: string; pct: number; color: string; offset: number }[] = [];
 
   // Helper to draw donut ring segments
   const getDonutSegments = (data: Array<{ pct: number; color: string }>, radius = 50) => {

@@ -26,17 +26,17 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
   const metrics = [
     {
       title: "Open deals",
-      count: 68,
-      desc: "Value: ₹2.12M",
+      count: 0,
+      desc: "Value: ₹0",
       icon: FolderOpen,
       color: "text-brand-accent",
       bg: "bg-brand-accent/10 border border-brand-accent/20"
     },
     {
       title: "Total pipeline value",
-      count: "₹5.67M",
+      count: "₹0",
       desc: "vs last month",
-      change: "+22%",
+      change: "—",
       isPositive: true,
       icon: IndianRupee,
       color: "text-brand-accent",
@@ -44,9 +44,9 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
     },
     {
       title: "Deals created",
-      count: 45,
+      count: 0,
       desc: "vs last month",
-      change: "+15%",
+      change: "—",
       isPositive: true,
       icon: PlusCircle,
       color: "text-brand-accent",
@@ -54,9 +54,9 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
     },
     {
       title: "Deals lost",
-      count: 4,
+      count: 0,
       desc: "vs last month",
-      change: "-20%",
+      change: "—",
       isPositive: false,
       icon: MinusCircle,
       color: "text-brand-accent",
@@ -64,9 +64,9 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
     },
     {
       title: "Activities logged",
-      count: 521,
+      count: 0,
       desc: "vs last month",
-      change: "+17%",
+      change: "—",
       isPositive: true,
       icon: Activity,
       color: "text-brand-accent",

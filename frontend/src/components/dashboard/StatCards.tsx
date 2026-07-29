@@ -34,53 +34,53 @@ export default function StatCards({ timeFilter, loading = false }: StatCardsProp
   };
 
   const getStats = (): Stat[] => {
-    const prefix = timeFilter === 'all' ? 'All-time' : 'vs. Apr 12 – Apr 18';
+    const prefix = timeFilter === 'all' ? 'All-time' : 'No data yet';
     
     return [
       {
         title: "Total revenue",
-        value: timeFilter === 'sales' ? "₹1.20M" : "₹3.85M",
-        change: "+26%",
+        value: "₹0",
+        change: "—",
         isPositive: true,
         dateRange: prefix,
         icon: IndianRupee,
-        points: [30, 35, 32, 45, 42, 50, 48, 55, 60, 68]
+        points: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       },
       {
         title: "Won deals",
-        value: timeFilter === 'sales' ? "12" : "23",
-        change: "+21%",
+        value: "0",
+        change: "—",
         isPositive: true,
         dateRange: prefix,
         icon: Award,
-        points: [15, 18, 17, 20, 19, 22, 21, 23, 22, 23]
+        points: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       },
       {
         title: "Win rate",
-        value: "32.0%",
-        change: "+4%",
+        value: "0.0%",
+        change: "—",
         isPositive: true,
         dateRange: prefix,
         icon: Target,
-        points: [28, 29, 29, 31, 30, 31, 32, 32, 31, 32]
+        points: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       },
       {
         title: "Avg. deal size",
-        value: "₹32.2K",
-        change: "+14%",
+        value: "₹0",
+        change: "—",
         isPositive: true,
         dateRange: prefix,
         icon: UserCheck,
-        points: [27, 28, 29, 28, 30, 31, 30, 32, 31, 32.2]
+        points: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       },
       {
         title: "Avg. sales cycle",
-        value: "28 days",
-        change: "+3d",
-        isPositive: false,
+        value: "0 days",
+        change: "—",
+        isPositive: true,
         dateRange: prefix,
         icon: Clock,
-        points: [25, 26, 25, 27, 26, 27, 28, 28, 27, 28]
+        points: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
       }
     ];
   };

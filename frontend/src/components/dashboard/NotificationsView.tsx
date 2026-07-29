@@ -23,13 +23,7 @@ interface NotificationItem {
 }
 
 export default function NotificationsView() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    { id: 1, type: 'lead_assigned', title: 'New Lead Assigned', desc: 'Inbound high-priority lead Helena Troy has been assigned to Sarah Johnson.', time: '10 mins ago', read: false },
-    { id: 2, type: 'email_reply', title: 'Email Reply Recieved', desc: 'Alex Rivera: SSO Migration scope specs approved. Scheduled legal sync.', time: '2 hours ago', read: false },
-    { id: 3, type: 'meeting_reminder', title: 'Meeting Countdown Reminder', desc: 'Discovery review sync with Marcus Aurelius in 15 minutes.', time: '15 mins from now', read: false },
-    { id: 4, type: 'task_due', title: 'Task Deadline Imminent', desc: 'Review TechCorp SAML integration setup details is overdue.', time: '3 hours ago', read: false },
-    { id: 5, type: 'ai_alert', title: 'AI Risk Alert', desc: 'At-risk pipeline alert: David Hume has budget mismatch. Refocus on lower tier package.', time: '5 hours ago', read: false }
-  ]);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const handleDismiss = (id: number) => {
     setNotifications(notifications.filter(n => n.id !== id));

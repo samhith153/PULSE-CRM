@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   Plus, 
@@ -15,6 +15,7 @@ import {
   Ban,
   RefreshCw
 } from 'lucide-react';
+import { getUsers } from '@/utils/api';
 
 interface UserItem {
   id: string;
@@ -27,13 +28,31 @@ interface UserItem {
 }
 
 export default function UsersView() {
-  const [users, setUsers] = useState<UserItem[]>([
-    { id: "1", name: "Alex Johnson", email: "alex.johnson@pulse.crm", role: "Sales Manager", department: "Enterprise Acquisition", status: "Active", lastLogin: "12 mins ago" },
-    { id: "2", name: "Sarah Johnson", email: "sarah.johnson@pulse.crm", role: "Sales Representative", department: "SaaS Sales East", status: "Active", lastLogin: "2 hours ago" },
-    { id: "3", name: "David Wilson", email: "david.wilson@pulse.crm", role: "Sales Representative", department: "Enterprise Acquisition", status: "Active", lastLogin: "1 day ago" },
-    { id: "4", name: "System Admin", email: "admin@pulse.crm", role: "Admin", department: "IT Operations", status: "Active", lastLogin: "3 mins ago" },
-    { id: "5", name: "Lisa Martinez", email: "lisa.martinez@pulse.crm", role: "Sales Representative", department: "SaaS Sales West", status: "Disabled", lastLogin: "5 days ago" }
-  ]);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getUsers()
+      .then(data => {
+        const list = Array.isArray(data) ? data : (data?.data ?? []);
+        const mapped = list.map((u: any) => ({
+          id: String(u.id),
+          name: u.full_name || u.name || '',
+          email: u.email || '',
+          role: u.role || 'Sales Representative',
+          department: u.department || 'Enterprise Acquisition',
+          status: u.is_active !== false ? 'Active' : 'Disabled',
+          lastLogin: u.last_login ? new Date(u.last_login).toLocaleDateString() : 'Never'
+        }));
+        setUsers(mapped);
+      })
+      .catch(err => {
+        console.error("Failed to load users:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');

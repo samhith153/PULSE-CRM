@@ -22,13 +22,7 @@ interface Task {
 }
 
 export default function TasksView() {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, title: "Review TechCorp SAML integration setup details", deadline: "2025-05-13", priority: "High", status: "Overdue" },
-    { id: 2, title: "Follow up with Marcus Aurelius on HIPAA files", deadline: "2025-05-15", priority: "High", status: "Pending" },
-    { id: 3, title: "Send Helena Troy volumetric agency pricing tier sheet", deadline: "2025-05-16", priority: "Medium", status: "Pending" },
-    { id: 4, title: "Draft Q3 forecast report template", deadline: "2025-05-18", priority: "Low", status: "Pending" },
-    { id: 5, title: "Sign database security agreement contract", deadline: "2025-05-10", priority: "High", status: "Completed" }
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);

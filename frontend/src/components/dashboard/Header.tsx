@@ -98,12 +98,7 @@ export default function Header({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onOpenCommandPalette]);
 
-  const notifications = [
-    { id: 1, text: "Sarah Johnson won the 'Acme Enterprise' deal!", type: "won", time: "10m ago" },
-    { id: 2, text: "Gmail sync completed: 24 new threads pulled.", type: "sync", time: "1h ago" },
-    { id: 3, text: "High-value lead 'Global Tech' has been idle for 5 days.", type: "warning", time: "3h ago" },
-    { id: 4, text: "New report 'Q3 Sales Forecast' ready for review.", type: "report", time: "5h ago" },
-  ];
+  const notifications: { id: number; text: string; type: string; time: string }[] = [];
 
   // Dynamic profile details mapping
   const getUserProfile = () => {

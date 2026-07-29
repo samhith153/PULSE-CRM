@@ -15,13 +15,7 @@ interface DocumentItem {
 }
 
 export default function DocumentsView() {
-  const [documents, setDocuments] = useState<DocumentItem[]>([
-    { id: 1, name: "TechCorp_Enterprise_SLA_Draft.pdf", type: "SLA", size: "2.4 MB", associatedDeal: "Database Cloud Migration", uploadedBy: "Sarah Johnson", uploadedAt: "2025-05-12", status: "Draft" },
-    { id: 2, name: "MedSaaS_Solutions_ComplianceNDA_Signed.pdf", type: "NDA", size: "1.1 MB", associatedDeal: "Compliance Suite Expansion", uploadedBy: "Alex Johnson", uploadedAt: "2025-05-10", status: "Signed" },
-    { id: 3, name: "SpartaCreative_SSOIntegration_Proposal.pdf", type: "Proposal", size: "3.8 MB", associatedDeal: "SSO Integration Scope", uploadedBy: "Sarah Johnson", uploadedAt: "2025-05-09", status: "Sent" },
-    { id: 4, name: "EmpiricLogistics_GlobalAPI_Contract_Final.pdf", type: "Contract", size: "4.5 MB", associatedDeal: "Global Logistics API", uploadedBy: "David Wilson", uploadedAt: "2025-05-08", status: "Approved" },
-    { id: 5, name: "ByteSized_Co_CustomAnalytics_SLA_Signed.pdf", type: "SLA", size: "2.2 MB", associatedDeal: "Analytics Custom Tier", uploadedBy: "Alex Johnson", uploadedAt: "2025-05-07", status: "Signed" }
-  ]);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');

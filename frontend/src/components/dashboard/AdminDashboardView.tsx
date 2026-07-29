@@ -22,46 +22,46 @@ export default function AdminDashboardView() {
   const kpiCards = [
     {
       title: "Sales",
-      value: "₹45.5k",
-      lastYear: "(₹17.4k Last Year)",
-      change: "142.11%",
+      value: "₹0",
+      lastYear: "(₹0 Last Year)",
+      change: "0%",
       isPositive: true,
-      sparkline: "M 4 28 C 25 28, 40 18, 60 20 C 80 22, 95 8, 116 8",
+      sparkline: "M 4 28 L 116 28",
       color: "#10b981"
     },
     {
       title: "Purchase",
-      value: "₹19.5k",
-      lastYear: "(₹16.4k Last Year)",
-      change: "12.11%",
-      isPositive: false,
-      sparkline: "M 4 8 C 25 8, 40 18, 60 16 C 80 14, 95 28, 116 28",
+      value: "₹0",
+      lastYear: "(₹0 Last Year)",
+      change: "0%",
+      isPositive: true,
+      sparkline: "M 4 28 L 116 28",
       color: "#ef4444"
     },
     {
       title: "Return",
-      value: "₹450",
-      lastYear: "(₹10.4k Last Year)",
-      change: "42.11%",
+      value: "₹0",
+      lastYear: "(₹0 Last Year)",
+      change: "0%",
       isPositive: true,
-      sparkline: "M 4 26 C 25 26, 40 14, 60 18 C 80 20, 95 8, 116 8",
+      sparkline: "M 4 28 L 116 28",
       color: "#10b981"
     },
     {
       title: "Marketing",
-      value: "₹8.5k",
-      lastYear: "(₹11.4k Last Year)",
-      change: "27.11%",
-      isPositive: false,
-      sparkline: "M 4 8 C 25 8, 40 16, 60 14 C 80 12, 95 28, 116 28",
+      value: "₹0",
+      lastYear: "(₹0 Last Year)",
+      change: "0%",
+      isPositive: true,
+      sparkline: "M 4 28 L 116 28",
       color: "#ef4444"
     }
   ];
 
   // 2. Profit & Sales Overview Data
   const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"];
-  const onlineData = [10, 40, 95, 68, 88, 72, 110, 75, 125, 115];
-  const inStoreData = [10, 65, 35, 105, 50, 85, 55, 92, 40, 50];
+  const onlineData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  const inStoreData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   // Helper to calculate Y coordinate for 0-160K range in SVG (viewBox 540x220)
   const getY = (val: number) => 190 - (val / 160) * 125;
@@ -94,12 +94,8 @@ export default function AdminDashboardView() {
     return `${line} L ${lastX} 190 L 50 190 Z`;
   };
 
-  // 3. User Traffic Donut Data (Total = 100%, 3 Distinct Colors)
-  const rawChannels = [
-    { name: "Direct CRM", pct: "35%", raw: 35, color: "#3b82f6" },       // Bright Royal Blue
-    { name: "Inbound Web", pct: "22%", raw: 22, color: "#ec4899" },      // Vibrant Hot Pink
-    { name: "Partner Referral", pct: "43%", raw: 43, color: "#10b981" }   // Emerald Green
-  ];
+  // 3. User Traffic Donut Data
+  const rawChannels: { name: string; pct: string; raw: number; color: string }[] = [];
 
   const CIRCUMFERENCE = 2 * Math.PI * 60; // r = 60 => ~376.991
 
@@ -118,63 +114,25 @@ export default function AdminDashboardView() {
 
   // 4. Overview Bottom Summary Bar Metrics
   const overviewMetrics = [
-    { label: "Account Balance", value: "₹800", icon: Wallet, iconBg: "bg-emerald-50 text-emerald-600" },
-    { label: "Ads Earning", value: "₹400", icon: Target, iconBg: "bg-amber-50 text-amber-600" },
-    { label: "Sales", value: "₹900", icon: ShoppingBag, iconBg: "bg-indigo-50 text-indigo-600" },
-    { label: "Total Earning", value: "₹80", icon: DollarSign, iconBg: "bg-cyan-50 text-cyan-600" }
+    { label: "Account Balance", value: "₹0", icon: Wallet, iconBg: "bg-emerald-50 text-emerald-600" },
+    { label: "Ads Earning", value: "₹0", icon: Target, iconBg: "bg-amber-50 text-amber-600" },
+    { label: "Sales", value: "₹0", icon: ShoppingBag, iconBg: "bg-indigo-50 text-indigo-600" },
+    { label: "Total Earning", value: "₹0", icon: DollarSign, iconBg: "bg-cyan-50 text-cyan-600" }
   ];
 
   // 5. Recent Deals / New Arrivals Table Data
-  const newArrivals = [
-    {
-      id: 1,
-      product: "Enterprise DB License",
-      subtitle: "Pharetra, Nulla, Nec, Aliquet",
-      iconBg: "bg-amber-100 text-amber-700",
-      price: "Paid ₹45,800k",
-      deposit: "Paid ₹45k",
-      agentName: "Sophia",
-      agentSub: "Pharetra",
-      status: "Approved",
-      statusClass: "bg-indigo-50 text-indigo-600 border-indigo-200"
-    },
-    {
-      id: 2,
-      product: "Real-time AI Co-pilot Seats",
-      subtitle: "Pharetra, Nulla, Nec, Aliquet",
-      iconBg: "bg-pink-100 text-pink-700",
-      price: "Paid ₹45,800k",
-      deposit: "Paid ₹45k",
-      agentName: "Sophia",
-      agentSub: "Pharetra",
-      status: "In Progress",
-      statusClass: "bg-amber-50 text-amber-600 border-amber-200"
-    },
-    {
-      id: 3,
-      product: "Compliance & Security SLAs",
-      subtitle: "Pharetra, Nulla, Nec, Aliquet",
-      iconBg: "bg-cyan-100 text-cyan-700",
-      price: "Paid ₹45,800k",
-      deposit: "Paid ₹45k",
-      agentName: "Sophia",
-      agentSub: "Pharetra",
-      status: "Success",
-      statusClass: "bg-emerald-50 text-emerald-600 border-emerald-200"
-    },
-    {
-      id: 4,
-      product: "SSO Migration Portal",
-      subtitle: "Pharetra, Nulla, Nec, Aliquet",
-      iconBg: "bg-slate-200 text-slate-700",
-      price: "Paid ₹45,800k",
-      deposit: "Paid ₹45k",
-      agentName: "Sophia",
-      agentSub: "Pharetra",
-      status: "Rejected",
-      statusClass: "bg-rose-50 text-rose-600 border-rose-200"
-    }
-  ];
+  const newArrivals: {
+    id: number;
+    product: string;
+    subtitle: string;
+    iconBg: string;
+    price: string;
+    deposit: string;
+    agentName: string;
+    agentSub: string;
+    status: string;
+    statusClass: string;
+  }[] = [];
 
   return (
     <div className="space-y-6">

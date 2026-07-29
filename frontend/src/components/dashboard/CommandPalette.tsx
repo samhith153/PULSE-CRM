@@ -78,16 +78,6 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
     
     // Actions
     { id: 'act-report', title: 'Create New Report', description: 'Open the custom report builder dialog', category: 'Actions' as const, icon: Plus, action: () => { onNewReportClick(); onClose(); } },
-    
-    // Mocks / Entities
-    { id: 'lead-acme', title: 'Acme Enterprise (Lead)', description: 'Status: Contacted | ₹120,000 value', category: 'Leads' as const, icon: Users, action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'lead-bigtech', title: 'Big Tech SaaS Upgrade (Lead)', description: 'Status: New | ₹85,000 value', category: 'Leads' as const, icon: Users, action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'contact-bruce', title: 'Bruce Wayne (Contact)', description: 'Wayne Enterprises | bwayne@wayne.com', category: 'Contacts' as const, icon: Contact, action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'contact-sarah', title: 'Sarah Johnson (Contact)', description: 'Acme Corp | sjohnson@acme.com', category: 'Contacts' as const, icon: Contact, action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'company-wayne', title: 'Wayne Enterprises (Company)', description: 'Domain: wayne.com | Gotham City', category: 'Companies' as const, icon: Building2, action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'company-acme', title: 'Acme Corp (Company)', description: 'Domain: acme.com | Manufacturing', category: 'Companies' as const, icon: Building2, action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'deal-saas', title: 'Enterprise SaaS Upgrade (Deal)', description: 'Stage: Qualified | ₹120,000 value', category: 'Deals' as const, icon: Layers, action: () => { setActiveTab('deals'); onClose(); } },
-    { id: 'deal-logistics', title: 'Global Logistics API (Deal)', description: 'Stage: Negotiation | ₹380,000 value', category: 'Deals' as const, icon: Layers, action: () => { setActiveTab('deals'); onClose(); } }
   ];
 
   // Filter items based on search query

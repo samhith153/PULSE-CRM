@@ -24,58 +24,25 @@ export default function Widgets({
   showProductivity = true,
   onTabChange
 }: WidgetsProps) {
-  const teamMembers = [
-    {
-      name: "Alex Johnson",
-      deals: 8,
-      revenue: "₹1.25M",
-      revenueRaw: 1250000,
-      winRate: "40.0%",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
-    },
-    {
-      name: "Sarah Johnson",
-      deals: 6,
-      revenue: "₹980K",
-      revenueRaw: 980000,
-      winRate: "33.0%",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
-    },
-    {
-      name: "David Wilson",
-      deals: 5,
-      revenue: "₹750K",
-      revenueRaw: 750000,
-      winRate: "29.0%",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&q=80"
-    },
-    {
-      name: "Lisa Martinez",
-      deals: 3,
-      revenue: "₹480K",
-      revenueRaw: 480000,
-      winRate: "25.0%",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&fit=crop&q=80"
-    },
-    {
-      name: "Michael Brown",
-      deals: 2,
-      revenue: "₹360K",
-      revenueRaw: 360000,
-      winRate: "20.0%",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
-    }
-  ];
+  const teamMembers: {
+    name: string;
+    deals: number;
+    revenue: string;
+    revenueRaw: number;
+    winRate: string;
+    avatar: string;
+  }[] = [];
 
-  const activities = [
-    { name: "Emails Sent", count: 245, change: "+18%", icon: Mail, color: "text-brand-accent", bg: "bg-brand-accent/10 border border-brand-accent/20" },
-    { name: "Calls Made", count: 120, change: "+12%", icon: Phone, color: "text-brand-accent", bg: "bg-brand-accent/10 border border-brand-accent/20" },
-    { name: "Meetings Held", count: 32, change: "+14%", icon: Calendar, color: "text-brand-accent", bg: "bg-brand-accent/10 border border-brand-accent/20" },
-    { name: "Tasks Completed", count: 68, change: "+15%", icon: CheckSquare, color: "text-brand-accent", bg: "bg-brand-accent/10 border border-brand-accent/20" },
-    { name: "Notes Added", count: 56, change: "+20%", icon: FileText, color: "text-brand-accent", bg: "bg-brand-accent/10 border border-brand-accent/20" }
-  ];
+  const activities: {
+    name: string;
+    count: number;
+    change: string;
+    icon: typeof Mail;
+    color: string;
+    bg: string;
+  }[] = [];
 
-  const maxRevenue = 1250000;
+  const maxRevenue = 1;
 
   if (loading) {
     return (
