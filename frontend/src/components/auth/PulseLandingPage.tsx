@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -468,11 +468,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <div className="marquee-container">
               {/* First set of logos */}
               {[
-                { name: 'TechCorp', icon: '≡ƒÅó', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '≡ƒæñ', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '≡ƒÅ¡', color: '#f97316' },
-                { name: 'Acme Systems', icon: '≡ƒÅù', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '≡ƒÆ╝', color: '#10b981' },
+                { name: 'TechCorp', icon: '🏢', color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: '👤', color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: '🏭', color: '#f97316' },
+                { name: 'Acme Systems', icon: '🏗️', color: '#0ea5e9' },
+                { name: 'Initech Global', icon: '💼', color: '#10b981' },
               ].map((company, i) => (
                 <div key={`${company.name}-1`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <div style={{ 
@@ -494,11 +494,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               ))}
               {/* Duplicate set for seamless loop */}
               {[
-                { name: 'TechCorp', icon: '≡ƒÅó', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '≡ƒæñ', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '≡ƒÅ¡', color: '#f97316' },
-                { name: 'Acme Systems', icon: '≡ƒÅù', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '≡ƒÆ╝', color: '#10b981' },
+                { name: 'TechCorp', icon: '🏢', color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: '👤', color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: '🏭', color: '#f97316' },
+                { name: 'Acme Systems', icon: '🏗️', color: '#0ea5e9' },
+                { name: 'Initech Global', icon: '💼', color: '#10b981' },
               ].map((company, i) => (
                 <div key={`${company.name}-2`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <div style={{ 
