@@ -612,7 +612,6 @@ export async function createActivity(payload: CreateActivityPayload): Promise<Ac
     body: JSON.stringify(payload)
   });
 }
-
 // --- Dashboard KPI API (Admin / Manager / Sales Rep) ---
 
 // Decimal values arrive as strings from the JSON serializer.
@@ -729,7 +728,6 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
 export async function getSalesDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales${toQuery({ period })}`);
 }
-
 export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
   return apiFetch('/api/v1/auth/me');
 }
@@ -801,7 +799,6 @@ export async function createAutomationEvent(payload: {
     body: JSON.stringify(payload)
   });
 }
-
 export async function getWebhookEndpoints(): Promise<WebhookEndpoint[]> {
   return apiFetch<WebhookEndpoint[]>('/api/v1/webhooks/endpoints');
 }
@@ -985,4 +982,85 @@ export async function deleteDocumentAPI(id: string | number): Promise<void> {
   if (!res.ok) {
     throw new Error('Failed to delete document');
   }
+}
+
+// --- Sales Manager Forecast API ---
+
+export interface ManagerForecastData {
+  expected_revenue: {
+    expected_revenue: Decimal;
+    quarter: string;
+    previous_forecast: Decimal;
+    growth_pct: Decimal;
+    target_achievement_pct: Decimal;
+  };
+  best_case_pipeline: {
+    best_case_pipeline: Decimal;
+    active_pipeline_value: Decimal;
+    difference_from_expected: Decimal;
+  };
+  pipeline_coverage: {
+    coverage_ratio: Decimal;
+    coverage_status: string;  // Critical / Moderate / Healthy / Excellent
+  };
+  confidence_score: {
+    score: number;
+    status: string;   // Very High / High / Medium / Low
+    description: string;
+  };
+  monthly_forecast: {
+    month: string;
+    pipeline: Decimal;
+    expected: Decimal;
+    maximum: Decimal;
+  }[];
+  quarterly_projection: {
+    quarter: string;
+    quota_target: Decimal;
+    expected_closed_revenue: Decimal;
+    best_case_close: Decimal;
+    open_pipeline: Decimal;
+    target_achievement_pct: Decimal;
+  }[];
+  forecast_trend: { month: string; forecast: Decimal }[];
+  forecast_accuracy: {
+    current_accuracy_pct: Decimal;
+    previous_accuracy_pct: Decimal;
+    difference_pct: Decimal;
+  };
+  sales_velocity: {
+    sales_velocity: Decimal;
+    previous_velocity: Decimal;
+    growth_pct: Decimal;
+  };
+  forecast_insights: { message: string; type: string }[];
+  forecast_risks: {
+    deal_id: string;
+    deal_name: string;
+    company: string | null;
+    owner_name: string | null;
+    deal_value: Decimal;
+    risk_type: string;
+    risk_description: string;
+    days_overdue: number;
+    probability: number;
+  }[];
+  forecast_recommendations: {
+    priority: string;
+    title: string;
+    description: string;
+    action: string;
+    impact: string;
+  }[];
+  quarter: string;
+  period: string;
+  generated_at: string;
+}
+
+export async function getManagerForecast(
+  period: 'monthly' | 'quarterly' | 'yearly' = 'monthly'
+): Promise<ManagerForecastData> {
+  return apiFetch<ManagerForecastData>(
+    `/api/v1/dashboard/manager/forecast${toQuery({ period })}`
+  );
 }
