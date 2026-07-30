@@ -143,6 +143,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
         Permission.REPORT_VIEW,
+        Permission.REPORT_EXPORT,
     },
 }
 
@@ -156,9 +157,10 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
     """
     Resolve permissions from the loaded user roles.
 
-    Prefer persisted role-permission assignments when available, but fall back
-    to the built-in role catalog for system roles so access checks remain stable
-    even if the database seed is incomplete.
+    Use the persisted role-permission assignments whenever they exist, so
+    custom edits in the admin UI are authoritative. For built-in system
+    roles without any DB permissions assigned, fall back to the built-in
+    permission catalog so authorization remains stable.
     """
     permissions: set[str] = set()
 
@@ -167,11 +169,12 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         if not role:
             continue
 
+        role_db_permissions: set[str] = set()
         for role_permission in getattr(role, "role_permissions", []) or []:
             permission = getattr(role_permission, "permission", None)
             codename = getattr(permission, "codename", None)
             if codename:
-                permissions.add(codename)
+                role_db_permissions.add(codename)
 
         role_name = getattr(role, "name", None)
         try:
@@ -179,8 +182,10 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         except ValueError:
             built_in_role = None
 
-        if built_in_role:
+        if built_in_role and not role_db_permissions:
             permissions.update(get_permissions_for_role(built_in_role))
+        else:
+            permissions.update(role_db_permissions)
 
     return sorted(permissions)
 
