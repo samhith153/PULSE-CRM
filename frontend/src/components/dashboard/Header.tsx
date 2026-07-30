@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { 
   Search, 
   Bell, 
@@ -98,7 +99,12 @@ export default function Header({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onOpenCommandPalette]);
 
-  const notifications: { id: number; text: string; type: string; time: string }[] = [];
+  const notifications = [
+    { id: 1, text: "Sarah Johnson won the 'Acme Enterprise' deal!", type: "won", time: "10m ago" },
+    { id: 2, text: "Gmail sync completed: 24 new threads pulled.", type: "sync", time: "1h ago" },
+    { id: 3, text: "High-value lead 'Global Tech' has been idle for 5 days.", type: "warning", time: "3h ago" },
+    { id: 4, text: "New report 'Q3 Sales Forecast' ready for review.", type: "report", time: "5h ago" },
+  ];
 
   // Dynamic profile details mapping
   const getUserProfile = () => {
@@ -106,21 +112,21 @@ export default function Header({
       case 'admin':
         return {
           name: "System Admin",
-          email: "admin@kalnet-pulse.com",
+          email: "admin@pulse.crm",
           avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80"
         };
       case 'manager':
         return {
-          name: "Sarah Johnson",
-          email: "sarah.johnson@kalnet-demo.com",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
+          name: "Alex Johnson",
+          email: "alex.johnson@pulse.crm",
+          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
         };
       case 'representative':
       default:
         return {
-          name: "Priya Sharma",
-          email: "priya.sharma@kalnet-demo.com",
-          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+          name: "Sarah Johnson",
+          email: "sarah.johnson@pulse.crm",
+          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
         };
     }
   };
@@ -161,7 +167,7 @@ export default function Header({
           />
           <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
             <kbd className="text-[9px] font-sans font-bold text-brand-text/65 bg-slate-50 border border-brand-border-purple/30 px-1.5 py-0.5 rounded shadow-sm/5">
-              ⌘K
+              ΓîÿK
             </kbd>
           </div>
         </div>
@@ -176,6 +182,15 @@ export default function Header({
             {userRole === 'representative' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
           </span>
         </div>
+
+        {/* + New Report CTA in Medium Purple */}
+        <button
+          onClick={onNewReportClick}
+          className="inline-flex items-center space-x-1 px-3.5 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 hover:shadow-sm transition-all duration-200 cursor-pointer"
+        >
+          <Plus className="h-3.5 w-3.5" strokeWidth={2} />
+          <span>New Report</span>
+        </button>
 
         {/* Theme Switcher Button */}
         <button
@@ -259,10 +274,12 @@ export default function Header({
             aria-label="Profile menu"
           >
             <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden border border-brand-border-purple/20">
-              <img 
+              <Image 
                 src={profile.avatar} 
                 alt={`${profile.name} Avatar`} 
+                width={28} height={28}
                 className="h-full w-full object-cover"
+                unoptimized
               />
             </div>
             <span className="text-xs font-bold text-brand-text hidden md:inline-block">{profile.name}</span>

@@ -796,7 +796,7 @@ export default function LeadsView() {
                                 lead.priorityTier === 'Medium' ? 'text-amber-600' :
                                 lead.priorityTier === 'Low' ? 'text-slate-500' : 'text-slate-300'
                               }`}>
-                                ● {lead.priorityTier || lead.priority}
+                                ΓùÅ {lead.priorityTier || lead.priority}
                               </span>
                             </td>
 
@@ -1030,7 +1030,7 @@ export default function LeadsView() {
                 {activeLead.fit_score !== null && activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).length > 0 && (
                   <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-blue-200">
                     {activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).slice(0, 2).map((r, i) => (
-                      <div key={i} className="mb-0.5">• {r}</div>
+                      <div key={i} className="mb-0.5">ΓÇó {r}</div>
                     ))}
                   </div>
                 )}
@@ -1042,7 +1042,7 @@ export default function LeadsView() {
                 {activeLead.engagement_score !== null && activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).length > 0 && (
                   <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-amber-200">
                     {activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).slice(0, 2).map((r, i) => (
-                      <div key={i} className="mb-0.5">• {r}</div>
+                      <div key={i} className="mb-0.5">ΓÇó {r}</div>
                     ))}
                   </div>
                 )}
@@ -1067,7 +1067,7 @@ export default function LeadsView() {
                     <span className="text-[9px] text-brand-text/60 uppercase tracking-wider font-extrabold">Top Reasons</span>
                     <div className="mt-1 text-[9px] text-brand-text/80 leading-relaxed">
                       {activeLead.topReasons.slice(0, 3).map((r, i) => (
-                        <div key={i} className="mb-0.5">• {r}</div>
+                        <div key={i} className="mb-0.5">ΓÇó {r}</div>
                       ))}
                     </div>
                   </div>
@@ -1655,7 +1655,7 @@ export default function LeadsView() {
                   onChange={(e) => setConvertForm({...convertForm, pipelineStageId: e.target.value})} 
                   className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
                 >
-                  <option value="">— Default (New) —</option>
+                  <option value="">ΓÇö Default (New) ΓÇö</option>
                   {pipelineStages.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}

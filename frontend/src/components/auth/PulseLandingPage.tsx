@@ -130,24 +130,24 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     { label: '4 Users Seeded', value: 4, key: 'users', sub: 'Admin, Manager, 2 Sales Reps', icon: Users },
     { label: '11 Tables', value: 11, key: 'tables', sub: 'Full relational schema with FK constraints', icon: Award },
     { label: '33 Permissions', value: 33, key: 'permissions', sub: 'Across all CRM resources', icon: Sparkles },
-    { label: '89 Tests', value: 89, key: 'tests', sub: 'All passing – pytest suite', icon: Zap },
+    { label: '89 Tests', value: 89, key: 'tests', sub: 'All passing ΓÇô pytest suite', icon: Zap },
   ];
 
   const orbitNodes = [
     { label: 'Gmail Sync',  icon: Mail,         color: '#7c3aed', description: 'Connect Gmail via OAuth2. Emails auto-sync per user, grouped into threads, and linked to leads and deals with inbound/outbound tracking.' },
-    { label: 'AI Scoring',  icon: Sparkles,     color: '#7c3aed', description: 'Every lead gets a 0–100 score from our transparent rule-based engine. Fit (60%) + Engagement (40%) → Critical / High / Medium / Low tier.' },
-    { label: 'Analytics',   icon: BarChart2,    color: '#2563eb', description: 'Role-scoped live dashboard at /api/v1/dashboard – leads by status, pipeline value, deal stages, and activity feed.' },
-    { label: 'Pipeline',    icon: Filter,       color: '#16a34a', description: 'FSM deal stages: New → Contacted → Qualified → Proposal Sent → Negotiation → Won / Lost. One-click stage transitions.' },
-    { label: 'Next Action', icon: Trophy,       color: '#ea580c', description: 'Rule-based recommendation engine suggests: Send follow-up, Schedule demo, Send proposal, Escalate to manager – based on score + urgency + reply status.' },
+    { label: 'AI Scoring',  icon: Sparkles,     color: '#7c3aed', description: 'Every lead gets a 0ΓÇô100 score from our transparent rule-based engine. Fit (60%) + Engagement (40%) ΓåÆ Critical / High / Medium / Low tier.' },
+    { label: 'Analytics',   icon: BarChart2,    color: '#2563eb', description: 'Role-scoped live dashboard at /api/v1/dashboard ΓÇô leads by status, pipeline value, deal stages, and activity feed.' },
+    { label: 'Pipeline',    icon: Filter,       color: '#16a34a', description: 'FSM deal stages: New ΓåÆ Contacted ΓåÆ Qualified ΓåÆ Proposal Sent ΓåÆ Negotiation ΓåÆ Won / Lost. One-click stage transitions.' },
+    { label: 'Next Action', icon: Trophy,       color: '#ea580c', description: 'Rule-based recommendation engine suggests: Send follow-up, Schedule demo, Send proposal, Escalate to manager ΓÇô based on score + urgency + reply status.' },
     { label: 'Contacts',    icon: Users,        color: '#0d9488', description: 'Centralise companies, contacts, and leads. Email unique per org, linked to companies, with full validation and soft-delete.' },
   ];
 
   const features = [
-    { icon: LayoutDashboard, title: 'Live Dashboard',        desc: 'Role-scoped KPIs at /api/v1/dashboard – leads by status, pipeline value, open deals, win rate, and live activity feed.', bg: C.violetLighter, fg: C.violet },
-    { icon: Sparkles,        title: 'AI Lead Scoring',       desc: 'Transparent rule-based engine scores leads 0–100 (Fit 60% + Engagement 40%) with human-readable reasons. No black box.', bg: '#eff6ff', fg: C.blue },
-    { icon: TrendingUp,      title: 'FSM Deal Pipeline',     desc: 'Deals follow a strict FSM: New → Contacted → Qualified → Proposal Sent → Negotiation → Won / Lost. One-click transitions.', bg: '#ecfdf5', fg: C.emerald },
+    { icon: LayoutDashboard, title: 'Live Dashboard',        desc: 'Role-scoped KPIs at /api/v1/dashboard ΓÇô leads by status, pipeline value, open deals, win rate, and live activity feed.', bg: C.violetLighter, fg: C.violet },
+    { icon: Sparkles,        title: 'AI Lead Scoring',       desc: 'Transparent rule-based engine scores leads 0ΓÇô100 (Fit 60% + Engagement 40%) with human-readable reasons. No black box.', bg: '#eff6ff', fg: C.blue },
+    { icon: TrendingUp,      title: 'FSM Deal Pipeline',     desc: 'Deals follow a strict FSM: New ΓåÆ Contacted ΓåÆ Qualified ΓåÆ Proposal Sent ΓåÆ Negotiation ΓåÆ Won / Lost. One-click transitions.', bg: '#ecfdf5', fg: C.emerald },
     { icon: Mail,            title: 'Gmail Intelligence',    desc: 'OAuth2 Gmail sync per user. Threads stored, linked to leads/deals. Groq/Llama 3.3 summarises each thread and detects intent.', bg: '#fff7ed', fg: C.orange },
-    { icon: BarChart2,       title: 'Revenue Analytics',     desc: 'Rep leaderboards, forecast views, and pipeline overviews – all RBAC-scoped. Admins see everything; reps see their own data.', bg: '#fdf2f8', fg: '#9333ea' },
+    { icon: BarChart2,       title: 'Revenue Analytics',     desc: 'Rep leaderboards, forecast views, and pipeline overviews ΓÇô all RBAC-scoped. Admins see everything; reps see their own data.', bg: '#fdf2f8', fg: '#9333ea' },
     { icon: Shield,          title: 'Enterprise Security',   desc: '3 roles, 33 granular permissions in resource:action format. JWT access + refresh tokens, bcrypt passwords, soft-delete everywhere.', bg: '#f0fdf4', fg: '#16a34a' },
   ];
 
@@ -184,7 +184,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   return (
     <div style={{ display: 'block', fontFamily: "'Inter', 'Geist', system-ui, -apple-system, sans-serif", backgroundColor: C.white, color: C.black, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
 
-      {/* ══════════ TOAST NOTIFICATIONS ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ TOAST NOTIFICATIONS ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, marginTop: 0 }}>
         {toasts.map(t => (
           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, background: t.type === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${t.type === 'success' ? '#bbf7d0' : '#fecaca'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 280, maxWidth: 360 }}>
@@ -197,13 +197,13 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         ))}
       </div>
 
-      {/* ══════════ AUTH MODAL ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ AUTH MODAL ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultMode="signup" onSuccess={() => { const r = localStorage.getItem('pulse-crm-role'); onLogin((r as any) || 'manager'); }} />
 
-      {/* ══════════ NAVBAR ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ NAVBAR ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <Navbar onOpenModal={openSignIn} onOpenSignUp={openSignUp} />
 
-      {/* ══════════ 1. HERO SECTION ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 1. HERO SECTION ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(160deg, #f5f3ff 0%, #faf8ff 50%, #f0eefe 100%)', paddingTop: 64, paddingBottom: 64, marginTop: 64 }}>
         {/* Background glow blobs */}
         <div style={{ position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)', width: 700, height: 400, background: `radial-gradient(ellipse, ${C.violet}18 0%, transparent 70%)`, pointerEvents: 'none', filter: 'blur(40px)' }} />
@@ -212,7 +212,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
 
         <div style={{ maxWidth: maxW, margin: '0 auto', padding: `0 ${px}`, position: 'relative', zIndex: 1 }}>
 
-          {/* ── Top badge ── */}
+          {/* ΓöÇΓöÇ Top badge ΓöÇΓöÇ */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -224,17 +224,17 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </div>
           </motion.div>
 
-          {/* ── Headline ── */}
+          {/* ΓöÇΓöÇ Headline ΓöÇΓöÇ */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            style={{ textAlign: 'center', marginBottom: 18 }}>
-            <h1 style={{ fontSize: 'clamp(32px, 4.5vw, 56px)', fontWeight: 900, color: C.black, lineHeight: 1.08, letterSpacing: '-0.04em', margin: 0 }}>
+            style={{ textAlign: 'center', marginBottom: 20 }}>
+            <h1 style={{ fontSize: 'clamp(38px, 5.2vw, 62px)', fontWeight: 900, color: C.black, lineHeight: 1.05, letterSpacing: '-0.04em', margin: 0 }}>
               Close More Deals with{' '}
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '1.1em', height: '1.1em', background: `linear-gradient(135deg, ${C.violet} 0%, #9333ea 100%)`, borderRadius: '0.22em', boxShadow: `0 8px 24px ${C.violet}50`, verticalAlign: 'middle', flexShrink: 0 }}>
-                  <Sparkles size={22} color="#fff" strokeWidth={2.5} />
+                  <Sparkles size={24} color="#fff" strokeWidth={2.5} />
                 </span>
                 <span style={{ color: C.violet }}>Smarter</span>
               </span>
@@ -243,22 +243,22 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </h1>
           </motion.div>
 
-          {/* ── Subtext ── */}
+          {/* ΓöÇΓöÇ Subtext ΓöÇΓöÇ */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            style={{ textAlign: 'center', fontSize: 16, color: C.textGray, fontWeight: 400, lineHeight: 1.7, maxWidth: 560, margin: '0 auto 28px' }}>
-            Pulse CRM unifies your leads, deals, and Gmail — scored by transparent AI, managed through an FSM pipeline, and built for real sales teams.
+            style={{ textAlign: 'center', fontSize: 18, color: C.textGray, fontWeight: 400, lineHeight: 1.65, maxWidth: 640, margin: '0 auto 36px' }}>
+            Pulse CRM unifies your leads, deals, and Gmail ΓÇö scored by transparent AI, managed through an FSM pipeline, and built for real sales teams.
           </motion.p>
 
-          {/* ── CTAs ── */}
+          {/* ΓöÇΓöÇ CTAs ΓöÇΓöÇ */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
             className="pulse-hero-btns"
-            style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 64 }}>
+            style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 0 }}>
             <button
               onClick={openSignUp}
               style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer', boxShadow: `0 8px 28px ${C.violet}55`, fontFamily: 'inherit', letterSpacing: '-0.01em', transition: 'all 0.2s' }}
@@ -274,12 +274,17 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               <Activity size={16} color={C.violet} /> Request Demo
             </button>
           </motion.div>
+        </div>
+      </section>
 
-          {/* ── Dashboard Mockup ── */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 1.5. DEMO SHOWCASE FRAME (FLEXCARD) ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+      <section style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: '48px 0 0', overflow: 'hidden' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto', padding: `0 ${px}` }}>
           <motion.div
             initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.45 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2 }}
             style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: '100%', maxWidth: 1000, background: C.white, borderRadius: '20px 20px 0 0', boxShadow: '0 -4px 0 rgba(124,58,237,0.15), 0 32px 80px rgba(124,58,237,0.18), 0 8px 32px rgba(0,0,0,0.08)', border: `1px solid ${C.border}`, borderBottom: 'none', overflow: 'hidden' }}>
 
@@ -341,7 +346,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   {/* 3 stat cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
                     {[
-                      { label: 'Active Sales', value: '₹98,430', change: '+18%', icon: TrendingUp, color: '#7c3aed', trend: [30,40,35,52,48,62,58] },
+                      { label: 'Active Sales', value: 'Γé╣98,430', change: '+18%', icon: TrendingUp, color: '#7c3aed', trend: [30,40,35,52,48,62,58] },
                       { label: 'Open Deals', value: '340', change: '+12%', icon: Target, color: '#0ea5e9', trend: [40,35,45,40,50,48,55] },
                       { label: 'Win Rate', value: '76%', change: '+4%', icon: Activity, color: '#10b981', trend: [50,55,52,60,58,65,68] },
                     ].map((s, i) => {
@@ -360,7 +365,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981' }}>{s.change}</span>
                             <span style={{ fontSize: 10, color: C.textMuted }}>vs last month</span>
-                            <span style={{ fontSize: 10, marginLeft: 4, cursor: 'pointer', color: C.violet }}>See Details →</span>
+                            <span style={{ fontSize: 10, marginLeft: 4, cursor: 'pointer', color: C.violet }}>See Details ΓåÆ</span>
                           </div>
                           <svg viewBox="0 0 80 16" style={{ position: 'absolute', bottom: 0, right: 0, width: 80, height: 16, opacity: 0.15 }}>
                             <polyline points={s.trend.map((v,j)=>`${j*(80/6)},${16-(v/68)*16}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.5" />
@@ -414,7 +419,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ══════════ 4. SOCIAL PROOF / TRUSTED BY ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 4. SOCIAL PROOF / TRUSTED BY ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: `56px ${px}`, overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
         <style>{`
           @keyframes marquee {
@@ -463,11 +468,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <div className="marquee-container">
               {/* First set of logos */}
               {[
-                { name: 'TechCorp', icon: '🏢', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '👤', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '🏭', color: '#f97316' },
-                { name: 'Acme Systems', icon: '🏗', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '💼', color: '#10b981' },
+                { name: 'TechCorp', icon: '≡ƒÅó', color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: '≡ƒæñ', color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: '≡ƒÅ¡', color: '#f97316' },
+                { name: 'Acme Systems', icon: '≡ƒÅù', color: '#0ea5e9' },
+                { name: 'Initech Global', icon: '≡ƒÆ╝', color: '#10b981' },
               ].map((company, i) => (
                 <div key={`${company.name}-1`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <div style={{ 
@@ -489,11 +494,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               ))}
               {/* Duplicate set for seamless loop */}
               {[
-                { name: 'TechCorp', icon: '🏢', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '👤', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '🏭', color: '#f97316' },
-                { name: 'Acme Systems', icon: '🏗', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '💼', color: '#10b981' },
+                { name: 'TechCorp', icon: '≡ƒÅó', color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: '≡ƒæñ', color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: '≡ƒÅ¡', color: '#f97316' },
+                { name: 'Acme Systems', icon: '≡ƒÅù', color: '#0ea5e9' },
+                { name: 'Initech Global', icon: '≡ƒÆ╝', color: '#10b981' },
               ].map((company, i) => (
                 <div key={`${company.name}-2`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <div style={{ 
@@ -518,7 +523,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ══════════ 6. FEATURES GRID ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 6. FEATURES GRID ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="features" style={{ background: C.sectionAlt, padding: `40px ${px}`, borderTop: `1px solid ${C.border}` }}>
         <style>{`
           .feature-card-hover {
@@ -560,7 +565,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.4, delay: 0.15 }}
               style={{ fontSize: 13.5, color: C.textGray, fontWeight: 400, maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
-              Scoring, pipeline, Gmail, RBAC, and analytics — all built and wired together.
+              Scoring, pipeline, Gmail, RBAC, and analytics ΓÇö all built and wired together.
             </motion.p>
           </div>
           <div className="pulse-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
@@ -587,10 +592,10 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ══════════ 7. HOW IT WORKS ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 7. HOW IT WORKS ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="steps" style={{ background: '#eeeafd', padding: `32px ${px}`, position: 'relative', overflow: 'hidden' }}>
         <div style={{ maxWidth: maxW, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          {/* Header — centered */}
+          {/* Header ΓÇö centered */}
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -622,11 +627,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
           {/* Main: Steps Left + Cards Right */}
           <div className="pulse-hiw-grid" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 32, alignItems: 'start' }}>
 
-            {/* ── LEFT: Steps ── */}
+            {/* ΓöÇΓöÇ LEFT: Steps ΓöÇΓöÇ */}
             <div>
               {[
                 { num: '01', icon: Zap, title: 'Connect', desc: 'Import contacts and leads via CSV or REST API. Link Gmail with OAuth.' },
-                { num: '02', icon: Sparkles, title: 'AI Works for You', desc: 'Scores every lead 0–100. Groq/Llama summarises threads and suggests next actions.' },
+                { num: '02', icon: Sparkles, title: 'AI Works for You', desc: 'Scores every lead 0ΓÇô100. Groq/Llama summarises threads and suggests next actions.' },
                 { num: '03', icon: TrendingUp, title: 'Close', desc: 'Move deals through FSM stages. Role-scoped dashboards keep reps aligned.' },
               ].map((step, idx) => {
                 const Icon = step.icon;
@@ -654,7 +659,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               })}
             </div>
 
-            {/* ── RIGHT: Cards Grid ── */}
+            {/* ΓöÇΓöÇ RIGHT: Cards Grid ΓöÇΓöÇ */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
               {/* ROW 1: AI Score | Visual Pipeline | Revenue Analytics */}
@@ -698,7 +703,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                     <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>REVENUE</span>
                   </div>
                   <div style={{ display: 'flex', gap: 10, marginBottom: 7 }}>
-                    <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Revenue</div><div style={{ fontSize: 16, fontWeight: 900, color: C.violet, letterSpacing: '-0.02em' }}>₹1.2L</div></div>
+                    <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Revenue</div><div style={{ fontSize: 16, fontWeight: 900, color: C.violet, letterSpacing: '-0.02em' }}>Γé╣1.2L</div></div>
                     <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Win Rate</div><div style={{ fontSize: 16, fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em' }}>67%</div></div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 22 }}>
@@ -720,7 +725,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   </div>
                   <div style={{ padding: '7px 9px', background: '#f8f7ff', borderRadius: 8, border: `1px solid ${C.violetLight}`, marginBottom: 7 }}>
                     <div style={{ fontSize: 11, color: C.violet, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>"Schedule demo with Acme Corp"</div>
-                    <div style={{ fontSize: 10, color: '#8b5cf6', fontWeight: 500 }}>Positive sentiment • High engagement</div>
+                    <div style={{ fontSize: 10, color: '#8b5cf6', fontWeight: 500 }}>Positive sentiment ΓÇó High engagement</div>
                   </div>
                   <div style={{ display: 'flex', gap: 5 }}>
                     <div style={{ padding: '3px 9px', background: C.violetLighter, borderRadius: 6, fontSize: 10, fontWeight: 600, color: C.violet }}>Demo Ready</div>
@@ -795,7 +800,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ══════════ 7.5. TRUST / FEATURES BAR ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 7.5. TRUST / FEATURES BAR ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="trust" style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: `40px ${px}`, opacity: visibleSections.has('trust') ? 1 : 0, transform: visibleSections.has('trust') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
         <div className="pulse-trust-grid" style={{ maxWidth: maxW, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
           {trustBadges.map(b => {
@@ -817,7 +822,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ══════════ 8. PLATFORM + ORBIT DIAGRAM ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 8. PLATFORM + ORBIT DIAGRAM ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="orbit" style={{ 
         background: '#ffffff', 
         padding: `40px ${px}`, 
@@ -860,11 +865,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               A complete platform<br />to power your{' '}<span style={{ color: C.violet }}>sales pipeline</span>
             </h2>
             <p style={{ fontSize: 14, color: '#64748b', fontWeight: 400, lineHeight: 1.7, maxWidth: 400, margin: 0 }}>
-              One FastAPI backend powers your entire revenue workflow — from lead intake to deal close, with transparent AI scoring at every step.
+              One FastAPI backend powers your entire revenue workflow ΓÇö from lead intake to deal close, with transparent AI scoring at every step.
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                'Rule-based AI scoring – no black box',
+                'Rule-based AI scoring ΓÇô no black box',
                 'Gmail OAuth sync with Groq/Llama summaries',
                 'FSM pipeline with real-time RBAC dashboards',
                 'Close more deals with less admin work'
@@ -912,7 +917,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </div>
           </div>
 
-          {/* Right – Orbit diagram */}
+          {/* Right ΓÇô Orbit diagram */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, position: 'relative' }}>
             <div style={{ position: 'relative', width: 440, height: 440 }}>
               
@@ -1069,7 +1074,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ══════════ 9. TESTIMONIALS ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 9. TESTIMONIALS ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="testimonials" style={{ background: C.white, padding: `40px ${px}`, borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('testimonials') ? 1 : 0, transform: visibleSections.has('testimonials') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
         <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
@@ -1101,7 +1106,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ══════════ 11. BOTTOM CTA BANNER ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 11. BOTTOM CTA BANNER ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="cta" style={{ background: C.sectionAlt, padding: `${sectionPy} ${px}`, opacity: visibleSections.has('cta') ? 1 : 0, transform: visibleSections.has('cta') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
         <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           {/* Floating card */}
@@ -1119,7 +1124,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                 Start your free trial today
               </h2>
               <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.80)', fontWeight: 400, margin: '0 auto 36px', lineHeight: 1.7, maxWidth: 500 }}>
-                Score every lead, sync Gmail, manage your pipeline, and close more deals — all in one place. Set up in 2 minutes, no credit card required.
+                Score every lead, sync Gmail, manage your pipeline, and close more deals ΓÇö all in one place. Set up in 2 minutes, no credit card required.
               </p>
               <button
                 onClick={openSignUp}
@@ -1129,14 +1134,14 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                 Start Free Trial <ArrowRight size={17} />
               </button>
               <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', margin: '20px 0 0', fontWeight: 500 }}>
-                ✓ 14-day free trial &nbsp;·&nbsp; ✓ No credit card &nbsp;·&nbsp; ✓ Cancel anytime
+                Γ£ô 14-day free trial &nbsp;┬╖&nbsp; Γ£ô No credit card &nbsp;┬╖&nbsp; Γ£ô Cancel anytime
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ══════════ 13. FOOTER — DARK ══════════ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 13. FOOTER ΓÇö DARK ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <footer style={{ background: C.darkBg, borderTop: `1px solid ${C.darkBorder}`, padding: `32px ${px} 0` }}>
         <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           <div className="pulse-footer-grid" style={{ display: 'grid', gridTemplateColumns: '200px 1fr 1fr 1fr 220px', gap: 28, marginBottom: 28, alignItems: 'start' }}>
@@ -1208,7 +1213,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
           {/* Bottom legal bar */}
           <div style={{ borderTop: `1px solid ${C.darkBorder}`, padding: '10px 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 400, margin: 0 }}>
-              © {new Date().getFullYear()} Pulse CRM, Inc. All rights reserved.
+              ┬⌐ {new Date().getFullYear()} Pulse CRM, Inc. All rights reserved.
             </p>
             <div style={{ display: 'flex', gap: 16 }}>
               {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Security'].map(link => (
@@ -1278,9 +1283,9 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
 
-        /* ── Responsive layout ── */
+        /* ΓöÇΓöÇ Responsive layout ΓöÇΓöÇ */
 
-        /* 1280px — keep everything as-is, just ensure no overflow */
+        /* 1280px ΓÇö keep everything as-is, just ensure no overflow */
         @media (max-width: 1280px) {
           .pulse-footer-grid { grid-template-columns: 180px 1fr 1fr 1fr 200px !important; gap: 20px !important; }
         }
