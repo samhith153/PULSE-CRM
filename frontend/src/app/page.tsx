@@ -40,8 +40,6 @@ import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2, Plus } from 'lucide-react';
 import { clearToken } from '@/utils/api';
-import SiteSkeleton from '@/components/shared/SiteSkeleton';
-import ViewSkeleton from '@/components/shared/ViewSkeleton';
 
 export default function DashboardHome() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -50,10 +48,6 @@ export default function DashboardHome() {
   useEffect(() => {
     const auth = sessionStorage.getItem('pulse-crm-auth') === 'true';
     setIsAuthenticated(auth);
-    const savedTab = sessionStorage.getItem('pulse-crm-active-tab');
-    if (savedTab) {
-      setActiveTab(savedTab);
-    }
     setIsAuthLoading(false);
   }, []);
 
@@ -62,14 +56,11 @@ export default function DashboardHome() {
     sessionStorage.setItem('pulse-crm-auth', 'true');
     setUserRole(role);
     localStorage.setItem('pulse-crm-role', role);
-    setActiveTab('dashboard');
-    sessionStorage.setItem('pulse-crm-active-tab', 'dashboard');
   };
 
   const handleSignOut = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('pulse-crm-auth');
-    sessionStorage.removeItem('pulse-crm-active-tab');
     clearToken();
   };
 
@@ -84,19 +75,6 @@ export default function DashboardHome() {
   
   // User Role State
   const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
-
-  // Transition loading states
-  const [isViewLoading, setIsViewLoading] = useState(false);
-
-  const handleTabChange = (tab: string) => {
-    if (tab === activeTab) return;
-    setIsViewLoading(true);
-    setActiveTab(tab);
-    sessionStorage.setItem('pulse-crm-active-tab', tab);
-    setTimeout(() => {
-      setIsViewLoading(false);
-    }, 350);
-  };
 
   useEffect(() => {
     const savedRole = localStorage.getItem('pulse-crm-role') as any;
@@ -152,29 +130,28 @@ export default function DashboardHome() {
   const [showFiltersMenu, setShowFiltersMenu] = useState(false);
   const [selectedPipelineType, setSelectedPipelineType] = useState('All');
   
-  // Simulated loading and empty states
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
 
-  // Trigger loading skeleton on sub-tab change to demo loaders
   const handleSubTabChange = (tabKey: string) => {
     setDashboardSubTab(tabKey);
     setIsLoading(true);
-    
-    // Simulate empty state on Marketing tab for demo
-    if (tabKey === 'marketing') {
-      setIsEmpty(true);
-    } else {
-      setIsEmpty(false);
-    }
-
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 450);
+    setIsEmpty(tabKey === 'marketing');
   };
 
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => setIsLoading(false), 450);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
   // Custom reports state
-  const [recentReports, setRecentReports] = useState<{ id: number; title: string; time: string }[]>([]);
+  const [recentReports, setRecentReports] = useState([
+    { id: 1, title: "Sales Performance Overview", time: "Generated 2 hours ago" },
+    { id: 2, title: "Pipeline Health Report", time: "Generated 1 day ago" },
+    { id: 3, title: "Revenue Forecast Report", time: "Generated 2 days ago" },
+    { id: 4, title: "Activity Summary", time: "Generated 3 days ago" }
+  ]);
 
   const handleSaveReport = (newReport: { title: string; time: string }) => {
     setRecentReports([
@@ -195,7 +172,11 @@ export default function DashboardHome() {
   ];
 
   if (isAuthLoading) {
-    return <SiteSkeleton />;
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="h-8 w-8 text-brand-accent animate-spin" />
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -207,7 +188,7 @@ export default function DashboardHome() {
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={handleTabChange} 
+        setActiveTab={setActiveTab} 
         collapsed={sidebarCollapsed} 
         setCollapsed={setSidebarCollapsed} 
         userRole={userRole}
@@ -221,7 +202,7 @@ export default function DashboardHome() {
           collapsed={sidebarCollapsed} 
           setCollapsed={setSidebarCollapsed} 
           onNewReportClick={() => setIsReportModalOpen(true)} 
-          onTabChange={handleTabChange}
+          onTabChange={(tab) => setActiveTab(tab)}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onSignOut={handleSignOut}
           userRole={userRole}
@@ -229,9 +210,7 @@ export default function DashboardHome() {
 
         {/* Dashboard inner scroll view with increased whitespace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-          {isViewLoading ? (
-            <ViewSkeleton tab={activeTab} />
-          ) : activeTab === 'leads' ? (
+          {activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (
             <ContactsView />
@@ -278,7 +257,7 @@ export default function DashboardHome() {
           ) : activeTab === 'audit logs' ? (
             <AuditLogsView />
           ) : activeTab === 'dashboard' && userRole === 'manager' ? (
-            <ManagerDashboardView onTabChange={handleTabChange} />
+            <ManagerDashboardView onTabChange={setActiveTab} />
           ) : activeTab === 'dashboard' && userRole === 'admin' ? (
             <AdminDashboardView />
           ) : (
@@ -335,7 +314,7 @@ export default function DashboardHome() {
                     loading={isLoading} 
                     showLeaderboard={layoutSettings.leaderboard}
                     showProductivity={layoutSettings.productivity}
-                    onTabChange={handleTabChange}
+                    onTabChange={setActiveTab}
                   />
                 )}
 
@@ -471,7 +450,7 @@ export default function DashboardHome() {
       <CommandPalette 
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        setActiveTab={handleTabChange}
+        setActiveTab={setActiveTab}
         onNewReportClick={() => setIsReportModalOpen(true)}
       />
 
