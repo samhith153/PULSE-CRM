@@ -66,23 +66,18 @@ class UserRepository(BaseRepository[User]):
             )
         return await self.get_paginated(stmt, page, page_size)
 
-    async def assign_roles(
+    async def assign_role(
         self,
         user: User,
-        role_ids: List[UUID],
+        role_id: UUID,
         assigned_by: UUID,
     ) -> User:
         from datetime import datetime, timezone
 
-        if role_ids:
-            stmt = select(Role.id).where(Role.id.in_(role_ids))
-            result = await self.db.execute(stmt)
-            existing_role_ids = {row[0] for row in result.all()}
-            missing_role_ids = [
-                str(role_id) for role_id in role_ids if role_id not in existing_role_ids
-            ]
-            if missing_role_ids:
-                raise NotFoundException("Role", missing_role_ids[0])
+        stmt = select(Role.id).where(Role.id == role_id)
+        result = await self.db.execute(stmt)
+        if not result.scalar_one_or_none():
+            raise NotFoundException("Role", str(role_id))
 
         # Remove existing roles
         stmt = select(UserRole).where(UserRole.user_id == user.id)
@@ -90,16 +85,15 @@ class UserRepository(BaseRepository[User]):
         for ur in result.scalars().all():
             await self.db.delete(ur)
 
-        # Assign new roles
+        # Assign new role
         now = datetime.now(timezone.utc)
-        for role_id in role_ids:
-            ur = UserRole(
-                user_id=user.id,
-                role_id=role_id,
-                assigned_by=assigned_by,
-                assigned_at=now,
-            )
-            self.db.add(ur)
+        ur = UserRole(
+            user_id=user.id,
+            role_id=role_id,
+            assigned_by=assigned_by,
+            assigned_at=now,
+        )
+        self.db.add(ur)
 
         await self.db.flush()
         await self.db.refresh(user)

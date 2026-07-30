@@ -7,7 +7,7 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, JSON, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from app.models.contact import Contact
     from app.models.deal import Deal
     from app.models.recommendation_feature import RecommendationFeature
+    from app.models.feature_vector import FeatureVector
+    from app.models.lead_score import LeadScore
     from app.models.user import User
 
 
@@ -32,6 +34,12 @@ class Lead(Base, TenantMixin):
     # ── Identity ──────────────────────────────────────────────────────────────
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    # ── Contact info (stored directly until conversion) ───────────────────────
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    company_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    job_title: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     # ── Pipeline ──────────────────────────────────────────────────────────────
     status: Mapped[str] = mapped_column(
@@ -52,9 +60,6 @@ class Lead(Base, TenantMixin):
         Numeric(15, 2), nullable=True
     )
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
-
-    # ── AI scoring (populated by AI module later) ─────────────────────────────
-    score: Mapped[Optional[int]] = mapped_column(nullable=True)
 
     # ── CRM metadata ─────────────────────────────────────────────────────────
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(
@@ -109,6 +114,22 @@ class Lead(Base, TenantMixin):
         "RecommendationFeature",
         back_populates="lead",
         lazy="select",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    feature_vector: Mapped[Optional["FeatureVector"]] = relationship(
+        "FeatureVector",
+        back_populates="lead",
+        lazy="select",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    lead_score: Mapped[Optional["LeadScore"]] = relationship(
+        "LeadScore",
+        back_populates="lead",
+        lazy="select",
+        uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
     )

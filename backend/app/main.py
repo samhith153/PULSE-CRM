@@ -3,7 +3,7 @@ KALNET PULSE CRM - FastAPI Application Factory
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -15,6 +15,7 @@ from app.core.exceptions import PulseCRMException
 from app.core.logging import get_logger, setup_logging
 from app.middlewares.exception_handler import (
     generic_exception_handler,
+    http_exception_handler,
     pulse_exception_handler,
     validation_exception_handler,
 )
@@ -68,6 +69,7 @@ def create_app() -> FastAPI:
 
     app.add_exception_handler(PulseCRMException, pulse_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)

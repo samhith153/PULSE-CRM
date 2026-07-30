@@ -173,6 +173,7 @@ async def convert_lead(
     industry = payload.industry if payload else None
     revenue = payload.revenue if payload else None
     employee_count = payload.employee_count if payload else None
+    pipeline_stage_id = payload.pipeline_stage_id if payload else None
     deal = await svc.convert_to_deal(
         lead_id,
         current_user.organization_id,
@@ -180,8 +181,9 @@ async def convert_lead(
         industry=industry,
         revenue=revenue,
         employee_count=employee_count,
+        pipeline_stage_id=pipeline_stage_id,
     )
-    return {"success": True, "message": "Lead converted to deal.", "data": DealResponse.model_validate(deal)}
+    return {"success": True, "message": "Lead converted to deal.", "data": DealResponse.from_deal(deal)}
 
 
 @router.delete(

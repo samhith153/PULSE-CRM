@@ -17,6 +17,8 @@ from app.repositories.lead_repository import LeadRepository
 from app.repositories.pipeline_repository import PipelineRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.lead import LeadAssignRequest, LeadCreateRequest, LeadStatusUpdateRequest, LeadUpdateRequest
+from app.services.feature_vector_service import FeatureVectorService
+from app.services.lead_scoring_service import LeadScoringService
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import ActivityEntityType, ActivityType, DealStatus, LeadStatus, PipelineStageSlug
 
@@ -44,6 +46,8 @@ class LeadService:
         self.company_repo = CompanyRepository(db)
         self.contact_repo = ContactRepository(db)
         self.user_repo = UserRepository(db)
+        self.feature_vector_service = FeatureVectorService(db)
+        self.lead_scoring_service = LeadScoringService(db)
 
     async def create(
         self,
@@ -52,21 +56,6 @@ class LeadService:
         created_by: UUID,
     ) -> Lead:
         data = payload.model_dump(exclude_none=True)
-        email = data.pop("email", None)
-        phone = data.pop("phone", None)
-
-        if email:
-            contact = await self.contact_repo.get_by_email_in_org(email, organization_id)
-            if not contact:
-                contact = await self.contact_repo.create(
-                    first_name=payload.title,
-                    last_name="",
-                    email=email,
-                    phone=phone or "",
-                    organization_id=organization_id,
-                    created_by=created_by,
-                )
-            data["contact_id"] = contact.id
 
         await self._validate_relations(
             organization_id,
@@ -80,6 +69,8 @@ class LeadService:
             organization_id=organization_id,
             created_by=created_by,
         )
+        lead = await self.repo.get_active_by_id(lead.id, organization_id)
+
         await self.timeline.record_activity(
             organization_id=organization_id,
             created_by=created_by,
@@ -103,6 +94,20 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "owner_id": str(lead.owner_id)},
                 topic="lead",
             )
+        # Auto-compute feature vector
+        try:
+            await self.feature_vector_service.compute_and_store_for_lead(
+                lead.id, organization_id, created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to compute feature vector on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Auto-compute lead scores
+        try:
+            await self.lead_scoring_service.compute_and_store_scores(
+                lead.id, organization_id, created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to compute lead scores on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
         logger.info("Lead created", extra={"lead_id": str(lead.id)})
         return lead
 
@@ -130,21 +135,6 @@ class LeadService:
     async def update(self, lead_id: UUID, organization_id: UUID, payload: LeadUpdateRequest) -> Lead:
         lead = await self.get(lead_id, organization_id)
         update_data = payload.model_dump(exclude_none=True)
-        email = update_data.pop("email", None)
-        phone = update_data.pop("phone", None)
-
-        if email:
-            contact = await self.contact_repo.get_by_email_in_org(email, organization_id)
-            if not contact:
-                contact = await self.contact_repo.create(
-                    first_name=update_data.get("title", lead.title),
-                    last_name="",
-                    email=email,
-                    phone=phone or "",
-                    organization_id=organization_id,
-                    created_by=lead.created_by,
-                )
-            update_data["contact_id"] = contact.id
 
         await self._validate_relations(
             organization_id,
@@ -169,7 +159,21 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "changes": list(update_data.keys())},
                 topic="lead",
             )
-        return lead
+        # Auto-compute feature vector on update
+        try:
+            await self.feature_vector_service.compute_and_store_for_lead(
+                lead.id, organization_id, lead.created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to compute feature vector on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Auto-compute lead scores on update
+        try:
+            await self.lead_scoring_service.compute_and_store_scores(
+                lead.id, organization_id, lead.created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to compute lead scores on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
+        return await self.get(lead_id, organization_id)
 
     async def update_status(
         self,
@@ -237,8 +241,13 @@ class LeadService:
 
     async def delete(self, lead_id: UUID, organization_id: UUID) -> None:
         lead = await self.get(lead_id, organization_id)
-        await self.repo.delete(lead)
-        logger.info("Lead hard-deleted", extra={"lead_id": str(lead_id)})
+
+        if lead.status == LeadStatus.CONVERTED.value:
+            await self.repo.soft_delete(lead)
+            logger.info("Lead archived", extra={"lead_id": str(lead_id)})
+        else:
+            await self.repo.delete(lead)
+            logger.info("Lead hard-deleted", extra={"lead_id": str(lead_id)})
 
     async def convert_to_deal(
         self,
@@ -246,8 +255,9 @@ class LeadService:
         organization_id: UUID,
         created_by: UUID,
         industry: Optional[str] = None,
-        revenue: Optional[str] = None,
+        revenue: Optional[float] = None,
         employee_count: Optional[int] = None,
+        pipeline_stage_id: Optional[str] = None,
     ) -> Deal:
         tx_context = self.db.begin_nested() if self.db.in_transaction() else self.db.begin()
         async with tx_context:
@@ -260,42 +270,93 @@ class LeadService:
             if existing:
                 raise ConflictException("Lead has already been converted into a deal.")
 
-            stage = await self.pipeline_repo.get_by_slug(PipelineStageSlug.NEW.value, organization_id)
+            # ── Resolve / create Company ──────────────────────────────────────
+            company_id = lead.company_id
+            if not company_id and lead.company_name:
+                existing_company = await self.company_repo.get_by_name_in_org(
+                    lead.company_name, organization_id
+                )
+                if existing_company:
+                    company_id = existing_company.id
+                else:
+                    company = await self.company_repo.create(
+                        name=lead.company_name,
+                        industry=industry or lead.industry,
+                        employee_count=employee_count or lead.employee_count,
+                         annual_revenue=str(revenue) if revenue is not None else None,
+                        organization_id=organization_id,
+                        created_by=created_by,
+                    )
+                    company_id = company.id
+
+            # ── Resolve / create Contact ──────────────────────────────────────
+            contact_id = lead.contact_id
+            if not contact_id and lead.email:
+                existing_contact = await self.contact_repo.get_by_email_in_org(
+                    lead.email, organization_id
+                )
+                if existing_contact:
+                    contact_id = existing_contact.id
+                else:
+                    parts = (lead.title or "").strip().split(None, 1)
+                    first_name = parts[0] if parts else lead.title or ""
+                    last_name = parts[1] if len(parts) > 1 else ""
+                    contact = await self.contact_repo.create(
+                        first_name=first_name,
+                        last_name=last_name,
+                        email=lead.email,
+                        phone=lead.phone or "",
+                        job_title=lead.job_title,
+                        company_id=company_id,
+                        organization_id=organization_id,
+                        created_by=created_by,
+                    )
+                    contact_id = contact.id
+
+            # ── Find pipeline stage ───────────────────────────────────────────
+            if pipeline_stage_id:
+                stage = await self.pipeline_repo.get_by_id(UUID(pipeline_stage_id))
+            else:
+                stage = await self.pipeline_repo.get_by_slug(PipelineStageSlug.NEW.value, organization_id)
             if not stage:
                 from app.services.pipeline_service import PipelineService
 
                 stage = (await PipelineService(self.db).ensure_default_stages(organization_id, created_by))[0]
 
+            # ── Create Deal ───────────────────────────────────────────────────
             deal = await self.deal_repo.create(
                 name=lead.title,
                 description=lead.description,
                 status=DealStatus.OPEN.value,
-                amount=lead.estimated_value,
+                amount=revenue or lead.estimated_value,
                 currency=lead.currency,
-                probability=min(max((lead.score or 50), 0), 100),
+                probability=min(max((lead.lead_score.overall_score if lead.lead_score else 50), 0), 100),
                 notes=lead.notes,
                 owner_id=lead.owner_id,
-                company_id=lead.company_id,
-                contact_id=lead.contact_id,
+                company_id=company_id,
+                contact_id=contact_id,
                 lead_id=lead.id,
                 pipeline_stage_id=stage.id,
                 organization_id=organization_id,
                 created_by=created_by,
             )
+            deal = await self.deal_repo.get_active_by_id(deal.id, organization_id)
 
-            if lead.company_id:
-                company = await self.company_repo.get_active_by_id(lead.company_id, organization_id)
+            # ── Update company with conversion details ────────────────────────
+            if company_id:
+                company = await self.company_repo.get_active_by_id(company_id, organization_id)
                 if company:
                     comp_updates = {}
                     if industry is not None:
                         comp_updates["industry"] = industry
                     if revenue is not None:
-                        comp_updates["annual_revenue"] = revenue
+                        comp_updates["annual_revenue"] = str(revenue)
                     if employee_count is not None:
                         comp_updates["employee_count"] = employee_count
                     if comp_updates:
                         await self.company_repo.update(company, **comp_updates)
 
+            # ── Mark lead as converted ────────────────────────────────────────
             lead_updates = {"status": LeadStatus.CONVERTED.value}
             if industry is not None:
                 lead_updates["industry"] = industry

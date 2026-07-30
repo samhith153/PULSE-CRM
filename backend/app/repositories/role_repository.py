@@ -16,12 +16,22 @@ class RoleRepository(BaseRepository[Role]):
 
     def __init__(self, db: AsyncSession) -> None:
         super().__init__(Role, db)
+        self.permission_repo = PermissionRepository(db)
 
     async def get_by_name(self, name: str) -> Optional[Role]:
         stmt = (
             select(Role)
             .options(selectinload(Role.role_permissions).selectinload(RolePermission.permission))
             .where(Role.name == name)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_id_with_permissions(self, role_id: UUID) -> Optional[Role]:
+        stmt = (
+            select(Role)
+            .options(selectinload(Role.role_permissions).selectinload(RolePermission.permission))
+            .where(Role.id == role_id)
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()

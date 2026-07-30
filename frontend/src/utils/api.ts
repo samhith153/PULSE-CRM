@@ -1,3 +1,5 @@
+import { toast } from '@/lib/toast';
+
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
@@ -34,6 +36,10 @@ export interface Lead {
   estimated_value: number | null;
   currency: string;
   score: number | null;
+  fit_score: number | null;
+  engagement_score: number | null;
+  top_reasons: string[] | null;
+  priority: string | null;
   notes: string | null;
   close_reason: string | null;
   company_id: string | null;
@@ -44,6 +50,7 @@ export interface Lead {
   created_at: string;
   updated_at: string;
   company_name: string | null;
+  job_title: string | null;
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
@@ -51,45 +58,84 @@ export interface Lead {
 }
 
 export interface Contact {
-  id: number | string;
-  name: string;
-  company: string;
-  designation: string;
-  phone: string;
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
   email: string;
-  notes: string;
-  timeline: { id: number; title: string; time: string }[];
-  calls: { id: number; outcome: string; notes: string; time: string }[];
-  meetings: { id: number; title: string; date: string; time: string }[];
-  emails: { id: number; subject: string; body: string; time: string }[];
+  phone: string | null;
+  mobile: string | null;
+  job_title: string | null;
+  department: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  notes: string | null;
+  company_id: string | null;
+  owner_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  company_name: string | null;
 }
 
 export interface Company {
-  id: number | string;
+  id: string;
   name: string;
-  industry: string;
-  revenue: string;
-  employees: number;
-  contacts: string[];
-  openDeals: number;
-  owner: string;
-  ownerAvatar: string;
-  notes: string;
-  domain?: string;
-  timeline: { id: number; title: string; time: string }[];
-  emails: { id: number; subject: string; time: string }[];
-  files: { id: number; name: string; size: string }[];
+  domain: string | null;
+  website: string | null;
+  description: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  zip_code: string | null;
+  industry: string | null;
+  current_crm: string | null;
+  operational_system: string | null;
+  company_type: string | null;
+  employee_count: number | null;
+  annual_revenue: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
+  owner_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  owner_name: string | null;
 }
 
 export interface Deal {
-  id: number | string;
-  title: string;
-  company: string;
-  value: number;
-  stage: 'Qualified' | 'Proposal' | 'Under Review' | 'Won' | 'Lost';
-  priority: 'High' | 'Medium' | 'Low';
-  owner: string;
-  closeDate: string;
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  amount: number | null;
+  currency: string;
+  expected_close_date: string | null;
+  probability: number;
+  priority: string | null;
+  notes: string | null;
+  close_reason: string | null;
+  closed_at: string | null;
+  owner_id: string | null;
+  pipeline_stage_id: string | null;
+  company_id: string | null;
+  contact_id: string | null;
+  lead_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  company_name: string | null;
+  contact_name: string | null;
+  owner_name: string | null;
 }
 
 export async function register(fullName: string, email: string, password: string, organizationName: string): Promise<{ access_token: string; refresh_token: string }> {
@@ -101,20 +147,16 @@ export async function register(fullName: string, email: string, password: string
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     let message = `Registration failed (${res.status})`;
-    const detail = err?.detail;
-    if (Array.isArray(detail) && detail.length) {
-      const first = detail[0];
-      const field = String(first?.loc ? Array.isArray(first.loc) ? first.loc.join(' ') : first.loc : first?.field || '').replace('body -> ', '').replace(/->/g, ' ').trim();
-      const msg = String(first?.msg || first?.message || '');
-      if (/password/i.test(field) || /password/i.test(msg)) {
-        message = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
-      } else if (/organization with name/i.test(msg) || /already exists/i.test(msg)) {
-        message = 'An organization with this name already exists. Please choose a different name.';
-      } else {
-        message = field ? `${field}: ${msg}` : msg;
+    if (err?.details && Array.isArray(err.details) && err.details.length > 0) {
+      const d = err.details[0];
+      if (d?.message && /password/i.test(d?.field || '')) {
+        message = d.message.replace(/^Value error,\s*/i, '');
+      } else if (d?.message) {
+        message = d.message;
       }
-    } else if (typeof detail === 'string') {
-      message = detail;
+    } else if (err?.message) {
+      const weakMatch = err.message.match(/^Password is too weak:\s*(.*)$/i);
+      message = weakMatch ? `Password ${weakMatch[1].trim()}` : err.message;
     }
     throw new Error(message);
   }
@@ -130,7 +172,7 @@ export async function login(email: string, password: string): Promise<{ access_t
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).detail || `Login failed (${res.status})`);
+    throw new Error((err as any).message || `Login failed (${res.status})`);
   }
   const json = await res.json();
   return json.data ?? json;
@@ -146,7 +188,22 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     }
   });
   if (!res.ok) {
-    throw new Error(`API error ${res.status}`);
+    let message = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.message) message = body.message;
+      else if (body?.detail) message = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+      if (body?.details && Array.isArray(body.details) && body.details.length > 0) {
+        const d = body.details[0];
+        if (d?.field && d?.message && /password/.test(d.field)) {
+          message = d.message.replace(/^Value error,\s*/i, '');
+        } else if (d?.message && d.message !== message) {
+          message = d.message;
+        }
+      }
+    } catch {
+    }
+    throw new Error(message);
   }
   if (res.status === 204) {
     return undefined as T;
@@ -186,7 +243,7 @@ export async function deleteLead(leadId: string): Promise<void> {
 
 export async function convertLead(
   leadId: string,
-  payload: { industry?: string; revenue?: string; employee_count?: number }
+  payload: { industry?: string; revenue?: number; employee_count?: number; pipeline_stage_id?: string }
 ): Promise<any> {
   return apiFetch(`/api/v1/leads/${leadId}/convert`, {
     method: 'POST',
@@ -210,7 +267,7 @@ export async function getContacts(): Promise<Contact[]> {
     calls: [],
     meetings: [],
     emails: [],
-  }));
+  })) as unknown as Contact[];
 }
 
 export async function createContact(contactData: any): Promise<any> {
@@ -236,7 +293,7 @@ export async function getCompanies(): Promise<Company[]> {
       id: dc.id,
       name: dc.name || `Company ${dc.id}`,
       industry: dc.industry || '',
-      revenue: String(dc.revenue || ''),
+      revenue: String(dc.annual_revenue || ''),
       employees: dc.employee_count || 0,
       contacts: [],
       openDeals: dc.open_deals ?? 0,
@@ -247,12 +304,19 @@ export async function getCompanies(): Promise<Company[]> {
       emails: [],
       files: [],
     };
-  });
+  }) as unknown as Company[];
 }
 
 export async function createCompany(companyData: any): Promise<any> {
   return apiFetch('/api/v1/companies', {
     method: 'POST',
+    body: JSON.stringify(companyData)
+  });
+}
+
+export async function updateCompany(companyId: string | number, companyData: any): Promise<any> {
+  return apiFetch(`/api/v1/companies/${companyId}`, {
+    method: 'PUT',
     body: JSON.stringify(companyData)
   });
 }
@@ -266,23 +330,44 @@ export async function getDeals(): Promise<Deal[]> {
       id: dd.id,
       title: dd.name || `Deal ${dd.id}`,
       company: dd.company_name || dd.company?.name || '',
-      value: Number(dd.value || 0),
-      stage: dd.stage_id === 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918' ? 'Qualified' :
-             dd.stage_id === 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919' ? 'Proposal' :
-             dd.stage_id === 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920' ? 'Under Review' :
-             dd.stage_id === 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921' ? 'Won' : 'Lost',
-      priority: dd.priority || 'Medium',
+      value: Number(dd.amount || 0),
+      stage: dd.stage_name || dd.stage_slug || 'New',
+      priority: dd.priority || '',
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
     };
-  });
+  }) as unknown as Deal[];
 }
 
 export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
-  return apiFetch(`/api/v1/deals/${dealId}/stage`, {
-    method: 'PUT',
-    body: JSON.stringify({ stage_id: stageId })
+  return apiFetch(`/api/v1/pipeline/move`, {
+    method: 'PATCH',
+    body: JSON.stringify({ deal_id: dealId, stage_id: stageId })
   });
+}
+
+export async function createDeal(dealData: any): Promise<any> {
+  return apiFetch('/api/v1/deals', {
+    method: 'POST',
+    body: JSON.stringify(dealData)
+  });
+}
+
+export async function updateDeal(dealId: string | number, dealData: any): Promise<any> {
+  return apiFetch(`/api/v1/deals/${dealId}`, {
+    method: 'PUT',
+    body: JSON.stringify(dealData)
+  });
+}
+
+export async function deleteDeal(dealId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/deals/${dealId}`, { method: 'DELETE' });
+}
+
+export async function getPipelineStages(): Promise<any[]> {
+  const dbResult = await apiFetch<any>('/api/v1/pipeline/stages');
+  const stages: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
+  return stages;
 }
 
 // --- Conversation Intelligence (Bhavani Summarization API) ---
@@ -326,7 +411,11 @@ export async function summarizeThread(threadId: string, messages: SummaryMessage
       deal_id: dealId
     })
   });
-  if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
+  if (!res.ok) {
+    let message = `Summarization failed (${res.status})`;
+    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
+    throw new Error(message);
+  }
   return res.json() as Promise<ConversationSummary>;
 }
 
@@ -334,7 +423,11 @@ export async function getSummaryByThread(threadId: string): Promise<Conversation
   const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
     headers: { ...getAuthHeaders() }
   });
-  if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
+  if (!res.ok) {
+    let message = `Failed to load summary (${res.status})`;
+    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
+    throw new Error(message);
+  }
   return res.json() as Promise<ConversationSummary>;
 }
 
@@ -617,4 +710,179 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
 
 export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
   return apiFetch('/api/v1/auth/me');
+}
+
+// --- Automation / Events API ---
+
+export interface AutomationEvent {
+  id: string;
+  event_type: string;
+  event_name: string;
+  aggregate_type?: string | null;
+  aggregate_id?: string | null;
+  organization_id?: string | null;
+  actor_id?: string | null;
+  source?: string | null;
+  correlation_id?: string | null;
+  payload: Record<string, unknown>;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface AutomationEventList {
+  items: AutomationEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  name: string;
+  target_url: string;
+  event_types: string[];
+  max_attempts: number;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  endpoint_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  status: string;
+  attempts: number;
+  next_attempt_at?: string | null;
+  last_status_code?: number | null;
+  last_error?: string | null;
+  delivered_at?: string | null;
+  created_at: string;
+}
+
+export async function getAutomationEvents(limit = 25): Promise<AutomationEventList> {
+  return apiFetch<AutomationEventList>(`/api/v1/events${toQuery({ limit })}`);
+}
+
+export async function getWebhookEndpoints(): Promise<WebhookEndpoint[]> {
+  return apiFetch<WebhookEndpoint[]>('/api/v1/webhooks/endpoints');
+}
+
+export async function triggerAutomationDelivery(eventType: string, payload: Record<string, unknown> = {}): Promise<WebhookDelivery[]> {
+  return apiFetch<WebhookDelivery[]>('/api/v1/webhooks/deliveries', {
+    method: 'POST',
+    body: JSON.stringify({ event_type: eventType, payload })
+  });
+}
+
+// --- User Management API ---
+
+export interface UserData {
+  id: string;
+  email: string;
+  full_name: string;
+  phone: string | null;
+  job_title: string | null;
+  avatar_url: string | null;
+  organization_id: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_superuser: boolean;
+  roles: string[];
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
+  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users${toQuery({ page, page_size: pageSize, search })}`);
+}
+
+export async function getUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}`);
+}
+
+export async function createUser(data: { full_name: string; email: string; password: string; role_id?: string | null }): Promise<UserData> {
+  return apiFetch<UserData>('/api/v1/users', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function updateUser(userId: string, data: { full_name?: string; phone?: string; job_title?: string }): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/users/${userId}`, { method: 'DELETE' });
+}
+
+export async function activateUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/activate`, { method: 'POST' });
+}
+
+export async function deactivateUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/deactivate`, { method: 'POST' });
+}
+
+export async function assignUserRole(userId: string, roleId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/roles`, {
+    method: 'POST',
+    body: JSON.stringify({ role_id: roleId })
+  });
+}
+
+export async function resetUserPassword(userId: string): Promise<{ new_password: string }> {
+  return apiFetch<{ new_password: string }>(`/api/v1/users/${userId}/reset-password`, { method: 'POST' });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await apiFetch<void>('/api/v1/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+  });
+}
+
+// --- Roles & Permissions API ---
+
+export interface RoleData {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string | null;
+  is_system: boolean;
+  permissions: string[];
+}
+
+export interface PermissionData {
+  id: string;
+  codename: string;
+  name: string;
+  description: string | null;
+  resource: string;
+  action: string;
+}
+
+export async function getRoles(): Promise<RoleData[]> {
+  return apiFetch<RoleData[]>('/api/v1/roles');
+}
+
+export async function getRole(roleId: string): Promise<RoleData> {
+  return apiFetch<RoleData>(`/api/v1/roles/${roleId}`);
+}
+
+export async function getPermissions(): Promise<PermissionData[]> {
+  return apiFetch<PermissionData[]>('/api/v1/roles/permissions/all');
+}
+
+export async function updateRolePermissions(roleId: string, permissionCodenames: string[]): Promise<RoleData> {
+  return apiFetch<RoleData>(`/api/v1/roles/${roleId}/permissions`, {
+    method: 'PUT',
+    body: JSON.stringify({ permission_codenames: permissionCodenames })
+  });
 }

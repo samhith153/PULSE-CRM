@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import TasksView from './TasksView';
+import { getAutomationEvents, triggerAutomationDelivery, type AutomationEvent } from '@/utils/api';
 import { 
   GitBranch, 
   Play, 
@@ -27,7 +28,7 @@ import {
 } from 'lucide-react';
 
 interface Workflow {
-  id: number;
+  id: number | string;
   name: string;
   desc: string;
   triggerType: 'form_submission' | 'stage_change' | 'time_delay' | 'creation';
@@ -47,14 +48,54 @@ interface WorkflowNode {
   config: string;
 }
 
-export default function WorkflowsView() {
-  const [workflows, setWorkflows] = useState<Workflow[]>([
+function titleCaseEvent(value?: string | null): string {
+  if (!value) return 'CRM Event';
+  return value
+    .toLowerCase()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function eventToWorkflow(event: AutomationEvent): Workflow {
+  const type = event.event_type || event.event_name || 'CRM_EVENT';
+  const payloadStatus = String(event.payload?.status ?? '').toLowerCase();
+  const triggerType: Workflow['triggerType'] = type.includes('EMAIL')
+    ? 'form_submission'
+    : type.includes('DEAL')
+      ? 'stage_change'
+      : type.includes('ACTIVITY')
+        ? 'time_delay'
+        : 'creation';
+
+  return {
+    id: event.id,
+    name: `${titleCaseEvent(type)} Workflow`,
+    desc: event.aggregate_type
+      ? `Live ${titleCaseEvent(event.aggregate_type)} automation event from the backend event stream.`
+      : 'Live automation event from the backend event stream.',
+    triggerType,
+    triggerLabel: titleCaseEvent(event.event_name || type),
+    totalRuns: Number(event.payload?.total_runs ?? event.payload?.runs ?? 1),
+    successRate: payloadStatus.includes('fail') || payloadStatus.includes('error') ? '0%' : '100%',
+    activeContacts: Number(event.payload?.active_contacts ?? event.payload?.contact_count ?? 0),
+    status: payloadStatus.includes('draft') ? 'Draft' : payloadStatus.includes('pause') ? 'Paused' : 'Active'
+  };
+}
+
+const fallbackWorkflows: Workflow[] = [
     { id: 1, name: "Lead Assignment Automation", desc: "Auto-assigns new enterprise leads to regional reps based on geolocation.", triggerType: "creation", triggerLabel: "New Lead Created", totalRuns: 1240, successRate: "99.8%", activeContacts: 24, status: "Active" },
     { id: 2, name: "SaaS Free Trial Nurture", desc: "Sends a welcome email series and checks product usage milestones.", triggerType: "form_submission", triggerLabel: "Trial Sign-Up Form", totalRuns: 850, successRate: "97.5%", activeContacts: 112, status: "Active" },
     { id: 3, name: "Stale Deal Slack Alerts", desc: "Notifies account executives when a deal remains in 'Proposal' for over 10 days.", triggerType: "time_delay", triggerLabel: "10 Days Inactivity", totalRuns: 310, successRate: "100%", activeContacts: 15, status: "Active" },
     { id: 4, name: "Post-Purchase NDA Request", desc: "Sends NDAs and custom contract SLA drafts once a deal moves to Negotiation.", triggerType: "stage_change", triggerLabel: "Stage: Negotiation", totalRuns: 145, successRate: "98.2%", activeContacts: 4, status: "Paused" },
     { id: 5, name: "Q4 Marketing Inbound Scoring", desc: "Increments lead scores by 15 points when they open high-intent links.", triggerType: "form_submission", triggerLabel: "Pricing Link Clicked", totalRuns: 0, successRate: "--", activeContacts: 0, status: "Draft" }
-  ]);
+  ];
+
+export default function WorkflowsView() {
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [loadingWorkflows, setLoadingWorkflows] = useState(true);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
 
   const [activeTab, setActiveTab] = useState<'Active' | 'Draft' | 'Paused'>('Active');
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
@@ -100,7 +141,34 @@ export default function WorkflowsView() {
     }
   ];
 
-  const handleToggleStatus = (id: number) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadWorkflows() {
+      setLoadingWorkflows(true);
+      setWorkflowError(null);
+      try {
+        const result = await getAutomationEvents(50);
+        if (!cancelled) {
+          setWorkflows(result.items.length ? result.items.map(eventToWorkflow) : fallbackWorkflows);
+        }
+      } catch {
+        if (!cancelled) {
+          setWorkflows(fallbackWorkflows);
+          setWorkflowError('Live workflows could not be loaded. Showing fallback recipes.');
+        }
+      } finally {
+        if (!cancelled) setLoadingWorkflows(false);
+      }
+    }
+
+    loadWorkflows();
+    return () => { cancelled = true; };
+  }, []);
+
+  const visibleWorkflows = useMemo(() => workflows.filter(w => w.status === activeTab), [workflows, activeTab]);
+
+  const handleToggleStatus = (id: number | string) => {
     setWorkflows(workflows.map(w => {
       if (w.id === id) {
         const nextStatus = w.status === 'Active' ? 'Paused' : 'Active';
@@ -110,7 +178,7 @@ export default function WorkflowsView() {
     }));
   };
 
-  const handleDeleteWorkflow = (id: number) => {
+  const handleDeleteWorkflow = (id: number | string) => {
     setWorkflows(workflows.filter(w => w.id !== id));
   };
 
@@ -153,7 +221,7 @@ export default function WorkflowsView() {
     setCanvasNodes([...canvasNodes, { id: newId, type, category, label, desc, config: "Draft Setup" }]);
   };
 
-  const handleSaveWorkflow = () => {
+  const handleSaveWorkflow = async () => {
     if (!newWorkflowName.trim()) return;
 
     const firstTrigger = canvasNodes.find(n => n.type === 'trigger');
@@ -168,6 +236,16 @@ export default function WorkflowsView() {
       activeContacts: 0,
       status: "Draft"
     };
+
+    try {
+      await triggerAutomationDelivery('WORKFLOW_DRAFT_CREATED', {
+        workflow_name: newWorkflowName,
+        description: newWorkflowDesc,
+        nodes: canvasNodes
+      });
+    } catch {
+      // Keep the existing local draft flow even if webhook delivery is unavailable.
+    }
 
     setWorkflows([newWf, ...workflows]);
     setIsBuilderOpen(false);
@@ -208,6 +286,9 @@ export default function WorkflowsView() {
 
             {/* Categorized Tabs */}
             <div className="flex space-x-1.5 p-1 bg-brand-sidebar-hover/15 border border-brand-border-purple/20 rounded-xl w-fit mb-5">
+              {loadingWorkflows && (
+                <span className="px-3 py-1.5 text-xs font-extrabold text-brand-text/60">Loading live data...</span>
+              )}
               {(['Active', 'Draft', 'Paused'] as const).map((tab) => (
                 <button
                   key={tab}
@@ -222,6 +303,12 @@ export default function WorkflowsView() {
                 </button>
               ))}
             </div>
+
+            {workflowError && (
+              <div className="mb-4 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">
+                {workflowError}
+              </div>
+            )}
 
             {/* Workflow List Table */}
             <div className="overflow-x-auto">
@@ -238,10 +325,8 @@ export default function WorkflowsView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                  {workflows.filter(w => w.status === activeTab).length > 0 ? (
-                    workflows
-                      .filter(w => w.status === activeTab)
-                      .map((wf) => (
+                  {visibleWorkflows.length > 0 ? (
+                    visibleWorkflows.map((wf) => (
                         <tr key={wf.id} className="hover:bg-slate-50/30 transition-colors">
                           <td className="py-3.5 pr-4 max-w-[280px]">
                             <div className="font-extrabold text-brand-heading flex items-center gap-1.5">

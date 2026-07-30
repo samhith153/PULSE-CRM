@@ -15,7 +15,18 @@ import {
   User,
   ArrowRight
 } from 'lucide-react';
-import { getLeads, getDeals, Lead, Deal } from '@/utils/api';
+import { getLeads, getDeals, Lead } from '@/utils/api';
+
+interface DealItem {
+  id: string;
+  title: string;
+  company: string;
+  value: number;
+  stage: string;
+  priority: string;
+  owner: string;
+  closeDate: string;
+}
 
 interface Message {
   id: string;
@@ -43,7 +54,7 @@ export default function AICopilotChat() {
 
   // Loaded data for real-time computations
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [deals, setDeals] = useState<Deal[]>([]);
+  const [deals, setDeals] = useState<DealItem[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +67,7 @@ export default function AICopilotChat() {
           getDeals()
         ]);
         setLeads(fetchedLeads);
-        setDeals(fetchedDeals);
+        setDeals(fetchedDeals as any);
       } catch (err) {
         console.error('Error fetching data for AI Copilot:', err);
       }

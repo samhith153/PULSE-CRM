@@ -25,6 +25,7 @@ class LeadRepository(BaseRepository[Lead]):
                 selectinload(Lead.company),
                 selectinload(Lead.contact),
                 selectinload(Lead.owner),
+                selectinload(Lead.lead_score),
             )
             .where(
                 Lead.organization_id == organization_id,

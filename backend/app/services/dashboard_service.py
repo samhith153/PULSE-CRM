@@ -16,6 +16,7 @@ from app.models.contact import Contact
 from app.models.deal import Deal
 from app.models.email import Email
 from app.models.lead import Lead
+from app.models.lead_score import LeadScore
 from app.models.user import User
 from app.repositories.pipeline_repository import PipelineRepository
 from app.schemas.dashboard import (
@@ -686,7 +687,12 @@ class DashboardService:
         ]
 
         # ── 15. Notifications Summary ────────────────────────────────────────
-        high_priority_leads = await _count(Lead, Lead.score >= 70)
+        high_priority_leads_stmt = (
+            select(func.count(Lead.id))
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
+            .where(*_base(Lead), LeadScore.overall_score >= 70)
+        )
+        high_priority_leads = int((await self.db.execute(high_priority_leads_stmt)).scalar_one() or 0)
 
         notifications = AdminNotificationSummary(
             overdue_tasks=overdue_tasks,

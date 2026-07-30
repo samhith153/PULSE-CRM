@@ -22,6 +22,7 @@ from app.models.company import Company
 from app.models.deal import Deal
 from app.models.email import Email
 from app.models.lead import Lead
+from app.models.lead_score import LeadScore
 from app.models.pipeline import PipelineStage
 from app.models.user import User
 from app.utils.enums import DealStatus
@@ -202,7 +203,7 @@ class GoingColdRepository:
             select(
                 Lead.id.label("lead_id"),
                 Lead.title.label("lead_name"),
-                Lead.score.label("lead_score"),
+                LeadScore.overall_score.label("lead_score"),
                 Lead.owner_id,
                 Lead.company_id,
                 Lead.industry,
@@ -230,6 +231,7 @@ class GoingColdRepository:
             )
             .outerjoin(owner_alias, owner_alias.id == Lead.owner_id)
             .outerjoin(Company, Company.id == Lead.company_id)
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .outerjoin(Deal, Deal.lead_id == Lead.id)
             .outerjoin(PipelineStage, PipelineStage.id == Deal.pipeline_stage_id)
             .outerjoin(last_act_sub, last_act_sub.c.entity_id == Lead.id)

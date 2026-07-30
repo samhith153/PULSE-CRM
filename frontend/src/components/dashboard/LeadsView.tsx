@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -53,14 +53,18 @@ function backendToLocal(b: BackendLead): Lead {
     email: b.contact_email || '',
     phone: b.contact_phone || '',
     score: b.score ?? 0,
+    fit_score: b.fit_score ?? null,
+    engagement_score: b.engagement_score ?? null,
+    priorityTier: b.priority ?? null,
+    topReasons: b.top_reasons ?? [],
     status: STATUS_UNMAP[b.status] || 'New',
-    priority: 'Medium',
+    priority: (b.priority as Lead['priority']) ?? 'Low',
     owner: b.owner_name || 'Unassigned',
     ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
     notes: b.notes || '',
     source: mappedSource,
     industry: b.industry || undefined,
-    jobTitle: undefined,
+    jobTitle: b.job_title || undefined,
     location: b.location || undefined,
     numberOfEmployees: b.employee_count?.toString() || undefined,
     currentCRM: b.current_crm || undefined,
@@ -112,8 +116,12 @@ interface Lead {
   email: string;
   phone: string;
   score: number;
+  fit_score: number | null;
+  engagement_score: number | null;
+  priorityTier: string | null;
+  topReasons: string[];
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
-  priority: 'High' | 'Medium' | 'Low';
+  priority: 'Critical' | 'High' | 'Medium' | 'Low';
   owner: string;
   ownerAvatar: string;
   notes: string;
@@ -153,6 +161,10 @@ export default function LeadsView() {
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [gmailConnectionId, setGmailConnectionId] = useState<string | null>(null);
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
@@ -164,25 +176,8 @@ export default function LeadsView() {
   const [emailForm, setEmailForm] = useState({ subject: '', body: '' });
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
   const [meetingForm, setMeetingForm] = useState({ title: '', date: '', time: '', desc: '' });
-  const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employeeCount: '' });
-
-  const getFitScore = (lead: Lead) => {
-    let score = 45;
-    if (lead.company) score += 15;
-    if (lead.email) score += 10;
-    if (lead.phone) score += 10;
-    if (lead.source && lead.source !== 'Cold Email') score += 10;
-    if (lead.priority === 'High') score += 10;
-    return Math.min(100, score);
-  };
-
-  const getEngagementScore = (lead: Lead) => {
-    let score = 30;
-    if (lead.emails && lead.emails.length > 0) score += Math.min(30, lead.emails.length * 10);
-    if (lead.calls && lead.calls.length > 0) score += Math.min(20, lead.calls.length * 10);
-    if (lead.meetings && lead.meetings.length > 0) score += Math.min(20, lead.meetings.length * 15);
-    return Math.min(100, score);
-  };
+  const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employeeCount: '', pipelineStageId: '' });
+  const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string; slug: string }[]>([]);
 
   const getProgressPoints = (score: number) => {
     const p1 = { x: 10, y: 80 };
@@ -202,6 +197,17 @@ export default function LeadsView() {
       const mapped = (data ?? []).map(backendToLocal);
       setLeads(mapped);
     });
+    getGmailStatus().then(status => {
+      setGmailConnected(status.connected);
+      if (status.connection) {
+        setGmailConnectionId(status.connection.id);
+      }
+    }).catch(() => {
+      setGmailConnected(false);
+    });
+    getPipelineStages().then(data => {
+      setPipelineStages(data as any);
+    }).catch(() => {});
   }, []);
 
   // Get currently active lead object
@@ -320,6 +326,7 @@ export default function LeadsView() {
     const payload: Record<string, unknown> = {
       title: leadForm.name,
       company_name: leadForm.company,
+      job_title: leadForm.jobTitle || undefined,
       email: leadForm.email || undefined,
       phone: leadForm.phone || undefined,
       source: SOURCE_MAP[leadForm.source as string] || leadForm.source || undefined,
@@ -354,6 +361,7 @@ export default function LeadsView() {
     const payload: Record<string, unknown> = {
       title: leadForm.name,
       company_name: leadForm.company,
+      job_title: leadForm.jobTitle || undefined,
       email: leadForm.email || undefined,
       phone: leadForm.phone || undefined,
       status: STATUS_MAP[leadForm.status as string] || leadForm.status,
@@ -395,7 +403,8 @@ export default function LeadsView() {
     setConvertForm({
       industry: lead?.industry || '',
       revenue: lead?.value ? String(lead.value) : '',
-      employeeCount: lead?.employee_count ? String(lead.employee_count) : ''
+      employeeCount: lead?.employee_count ? String(lead.employee_count) : '',
+      pipelineStageId: '',
     });
     setIsConvertModalOpen(true);
   };
@@ -406,8 +415,9 @@ export default function LeadsView() {
     try {
       const payload = {
         industry: convertForm.industry || undefined,
-        revenue: convertForm.revenue || undefined,
-        employee_count: convertForm.employeeCount ? Number(convertForm.employeeCount) : undefined
+        revenue: convertForm.revenue ? Number(convertForm.revenue.replace(/[^0-9.]/g, '')) : undefined,
+        employee_count: convertForm.employeeCount ? Number(convertForm.employeeCount) : undefined,
+        pipeline_stage_id: convertForm.pipelineStageId || undefined,
       };
       await convertLead(convertingLeadId, payload);
       
@@ -453,34 +463,58 @@ export default function LeadsView() {
   };
 
   // Action: Send Email Submit
-  const handleSendEmail = (e: React.FormEvent) => {
+  const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeLead) return;
-    setLeads(leads.map(l => {
-      if (l.id === activeLead.id) {
-        const newEmail: EmailItem = {
-          id: Date.now(),
-          subject: emailForm.subject,
-          body: emailForm.body,
-          time: 'Just now'
-        };
-        const newActivity: ActivityItem = {
-          id: Date.now() + 1,
-          type: 'email',
-          title: `Email Sent: ${emailForm.subject}`,
-          desc: `Sent by CRM. Content summary: ${emailForm.body.substring(0, 40)}...`,
-          time: 'Just now'
-        };
-        return {
-          ...l,
-          emails: [newEmail, ...l.emails],
-          timeline: [newActivity, ...l.timeline]
-        };
-      }
-      return l;
-    }));
-    setIsEmailModalOpen(false);
-    setEmailForm({ subject: '', body: '' });
+    if (!gmailConnectionId || !gmailConnected) {
+      setEmailError('Gmail is not connected. Please connect Gmail in Integrations settings first.');
+      return;
+    }
+    if (!activeLead.email) {
+      setEmailError('This lead has no email address. Edit the lead to add an email first.');
+      return;
+    }
+    setEmailSending(true);
+    setEmailError(null);
+    try {
+      const result = await sendGmailEmail({
+        gmail_connection_id: gmailConnectionId,
+        receiver: activeLead.email,
+        subject: emailForm.subject,
+        html_body: emailForm.body,
+        external_entity_type: 'lead',
+        external_entity_id: activeLead.id,
+      });
+      const newEmail: EmailItem = {
+        id: Date.now(),
+        subject: emailForm.subject,
+        body: emailForm.body,
+        time: 'Just now'
+      };
+      const newActivity: ActivityItem = {
+        id: Date.now() + 1,
+        type: 'email',
+        title: `Email Sent: ${emailForm.subject}`,
+        desc: `Sent to ${activeLead.email}. ${emailForm.body.substring(0, 40)}...`,
+        time: 'Just now'
+      };
+      setLeads(leads.map(l => {
+        if (l.id === activeLead.id) {
+          return {
+            ...l,
+            emails: [newEmail, ...l.emails],
+            timeline: [newActivity, ...l.timeline]
+          };
+        }
+        return l;
+      }));
+      setIsEmailModalOpen(false);
+      setEmailForm({ subject: '', body: '' });
+    } catch (err: any) {
+      setEmailError(err?.message || 'Failed to send email. Please try again.');
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   // Action: Log Call Submit
@@ -618,12 +652,9 @@ export default function LeadsView() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text/80 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent/20 cursor-pointer"
               >
-                <option value="All">All Statuses</option>
+                <option value="All">All</option>
                 <option value="New">New</option>
-                <option value="Contacted">Contacted</option>
-                <option value="Qualified">Qualified</option>
                 <option value="Converted">Converted</option>
-                <option value="Lost">Lost</option>
               </select>
             </div>
 
@@ -635,6 +666,7 @@ export default function LeadsView() {
                 className="w-full px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text/80 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent/20 cursor-pointer"
               >
                 <option value="All">All Priorities</option>
+                <option value="Critical">Critical Priority</option>
                 <option value="High">High Priority</option>
                 <option value="Medium">Medium Priority</option>
                 <option value="Low">Low Priority</option>
@@ -698,13 +730,13 @@ export default function LeadsView() {
                             {/* Fit Score */}
                             <td className="py-3 text-center">
                               <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
-                                {getFitScore(lead)}%
+                                {lead.fit_score ?? 0}%
                               </span>
                             </td>
                             {/* Engagement Score */}
                             <td className="py-3 text-center">
                               <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-slate-100 text-black">
-                                {getEngagementScore(lead)}%
+                                {lead.engagement_score ?? 0}%
                               </span>
                             </td>
                             {/* Overall Score */}
@@ -759,10 +791,12 @@ export default function LeadsView() {
                             {/* Priority Badge */}
                             <td className="py-3">
                               <span className={`text-[9px] font-bold ${
-                                lead.priority === 'High' ? 'text-rose-600' :
-                                lead.priority === 'Medium' ? 'text-amber-600' : 'text-slate-500'
+                                lead.priorityTier === 'Critical' ? 'text-emerald-600' :
+                                lead.priorityTier === 'High' ? 'text-rose-600' :
+                                lead.priorityTier === 'Medium' ? 'text-amber-600' :
+                                lead.priorityTier === 'Low' ? 'text-slate-500' : 'text-slate-300'
                               }`}>
-                                ● {lead.priority}
+                                ● {lead.priorityTier || lead.priority}
                               </span>
                             </td>
 
@@ -876,7 +910,12 @@ export default function LeadsView() {
             </div>
             <div className="flex justify-between">
               <span className="text-brand-text/50">Priority</span>
-              <span className="text-brand-text">{activeLead.priority}</span>
+              <span className={`font-bold ${
+                activeLead.priorityTier === 'Critical' ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'High' ? 'text-amber-700 bg-amber-50 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'Medium' ? 'text-blue-700 bg-blue-50 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'Low' ? 'text-slate-500 bg-slate-50 px-1.5 py-0.25 rounded' : ''
+              }`}>{activeLead.priorityTier || activeLead.priority}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-brand-text/50">Email</span>
@@ -975,6 +1014,67 @@ export default function LeadsView() {
               <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-bold">{getAIRecommendation(activeLead)}</p>
             </div>
           </div>
+
+          {/* Priority View - Advanced Scoring Details (toggled on/off) */}
+          {isPriorityView && (
+            <div className="mt-4 border border-brand-border-purple/30 rounded-xl p-3.5">
+              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider flex items-center space-x-1 mb-3">
+                <Award className="h-4 w-4 text-brand-accent" />
+                <span>Priority Scoring Details</span>
+              </h4>
+              <div className="space-y-2.5 text-[10px] font-bold">
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-text/60">Fit Score</span>
+                  <span className="font-extrabold text-brand-heading">{activeLead.fit_score ?? 0}%</span>
+                </div>
+                {activeLead.fit_score !== null && activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).length > 0 && (
+                  <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-blue-200">
+                    {activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).slice(0, 2).map((r, i) => (
+                      <div key={i} className="mb-0.5">• {r}</div>
+                    ))}
+                  </div>
+                )}
+                <div className="border-t border-brand-border-purple/10" />
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-text/60">Engagement Score</span>
+                  <span className="font-extrabold text-brand-heading">{activeLead.engagement_score ?? 0}%</span>
+                </div>
+                {activeLead.engagement_score !== null && activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).length > 0 && (
+                  <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-amber-200">
+                    {activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).slice(0, 2).map((r, i) => (
+                      <div key={i} className="mb-0.5">• {r}</div>
+                    ))}
+                  </div>
+                )}
+                <div className="border-t border-brand-border-purple/10" />
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-text/60">Overall Score</span>
+                  <span className={`font-extrabold tabular-nums ${
+                    activeLead.score >= 80 ? 'text-emerald-600' : activeLead.score >= 60 ? 'text-amber-600' : 'text-rose-600'
+                  }`}>{activeLead.score}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-text/60">Tier</span>
+                  <span className={`font-extrabold ${
+                    activeLead.priorityTier === 'Critical' ? 'text-emerald-600' :
+                    activeLead.priorityTier === 'High' ? 'text-amber-600' :
+                    activeLead.priorityTier === 'Medium' ? 'text-blue-600' :
+                    activeLead.priorityTier === 'Low' ? 'text-slate-500' : 'text-slate-300'
+                  }`}>{activeLead.priorityTier || activeLead.priority}</span>
+                </div>
+                {activeLead.topReasons.length > 0 && (
+                  <div className="border-t border-brand-border-purple/10 pt-2">
+                    <span className="text-[9px] text-brand-text/60 uppercase tracking-wider font-extrabold">Top Reasons</span>
+                    <div className="mt-1 text-[9px] text-brand-text/80 leading-relaxed">
+                      {activeLead.topReasons.slice(0, 3).map((r, i) => (
+                        <div key={i} className="mb-0.5">• {r}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Live Notes block */}
           <div className="mt-4">
@@ -1223,19 +1323,31 @@ export default function LeadsView() {
                       <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
                         Industry <span className="text-rose-500">*</span>
                       </label>
-                      <select required value={leadForm.industry} onChange={(e) => setLeadForm({...leadForm, industry: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
-                        <option value="">Select Industry</option>
-                        <option>Software & IT</option>
-                        <option>Healthcare</option>
-                        <option>Finance & Banking</option>
-                        <option>Retail & E-commerce</option>
-                        <option>Manufacturing</option>
-                        <option>Education</option>
-                        <option>Real Estate</option>
-                        <option>Logistics & Transport</option>
-                        <option>Marketing & Advertising</option>
-                        <option>Consulting</option>
-                        <option>Other</option>
+                      <select
+                      required
+                      value={leadForm.industry}
+                      onChange={(e) =>
+                        setLeadForm({ ...leadForm, industry: e.target.value })
+                      }
+                      className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
+                      <option value="">Select Industry</option>
+                      <option value="Manufacturing">Manufacturing</option>
+                      <option value="Healthcare">Healthcare</option>
+                      <option value="Pharma">Pharma</option>
+                      <option value="Logistics">Logistics</option>
+                      <option value="Construction">Construction</option>
+                      <option value="Education">Education</option>
+                      <option value="Finance">Finance</option>
+                      <option value="Insurance">Insurance</option>
+                      <option value="Hospitality">Hospitality</option>
+                      <option value="Real Estate">Real Estate</option>
+                      <option value="Agriculture">Agriculture</option>
+                      <option value="Legal">Legal</option>
+                      <option value="Retail">Retail</option>
+                      <option value="Media">Media</option>
+                      <option value="Consulting">Consulting</option>
+                      <option value="IT">IT</option>
+
                       </select>
                     </div>
                   </div>
@@ -1248,13 +1360,12 @@ export default function LeadsView() {
                       <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>
                       <select value={leadForm.numberOfEmployees} onChange={(e) => setLeadForm({...leadForm, numberOfEmployees: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
                         <option value="">Select Range</option>
-                        <option>1-10</option>
-                        <option>11-50</option>
-                        <option>51-200</option>
-                        <option>201-500</option>
-                        <option>501-1000</option>
-                        <option>1001-5000</option>
-                        <option>5000+</option>
+                        <option>1</option>
+                        <option>10</option>
+                        <option>50</option>
+                        <option>200</option>
+                        <option>500</option>
+                        <option>1001</option>
                       </select>
                     </div>
                   </div>
@@ -1340,11 +1451,11 @@ export default function LeadsView() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email</label>
-                  <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <input type="email" placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone</label>
-                  <input type="text" required placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <input type="text" placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -1361,6 +1472,7 @@ export default function LeadsView() {
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
                   <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                    <option>Critical</option>
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
@@ -1390,9 +1502,30 @@ export default function LeadsView() {
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead?.name}</h3>
-              <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+              <button onClick={() => { setIsEmailModalOpen(false); setEmailError(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">
+              {!gmailConnected && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                  <strong>Gmail not connected.</strong> Go to <strong>Integrations</strong> in the sidebar to connect your Gmail account, then try again.
+                </div>
+              )}
+              {activeLead?.email && (
+                <div className="p-2.5 bg-slate-50 border border-brand-border-purple/20 rounded-lg">
+                  <span className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">To:</span>
+                  <span className="ml-2 text-xs text-brand-text">{activeLead.email}</span>
+                </div>
+              )}
+              {!activeLead?.email && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+                  <strong>No email address.</strong> Edit this lead to add an email address first.
+                </div>
+              )}
+              {emailError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+                  {emailError}
+                </div>
+              )}
               <div>
                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Subject</label>
                 <input type="text" required placeholder="Subject line" value={emailForm.subject} onChange={(e) => setEmailForm({...emailForm, subject: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
@@ -1402,10 +1535,10 @@ export default function LeadsView() {
                 <textarea required placeholder="Write your message here..." value={emailForm.body} onChange={(e) => setEmailForm({...emailForm, body: e.target.value})} className="w-full p-3 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none min-h-[120px] leading-relaxed" />
               </div>
               <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsEmailModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">
+                <button type="button" onClick={() => { setIsEmailModalOpen(false); setEmailError(null); }} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                <button type="submit" disabled={emailSending || !gmailConnected || !activeLead?.email} className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                   <Send className="h-3.5 w-3.5" />
-                  <span>Send Email</span>
+                  <span>{emailSending ? 'Sending...' : 'Send Email'}</span>
                 </button>
               </div>
             </form>
@@ -1506,14 +1639,27 @@ export default function LeadsView() {
                 />
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue</label>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue ($)</label>
                 <input 
-                  type="text" 
-                  placeholder="e.g. $1,200,000" 
+                  type="number" 
+                  placeholder="e.g. 1200000" 
                   value={convertForm.revenue} 
                   onChange={(e) => setConvertForm({...convertForm, revenue: e.target.value})} 
                   className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" 
                 />
+              </div>
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Pipeline Stage</label>
+                <select 
+                  value={convertForm.pipelineStageId} 
+                  onChange={(e) => setConvertForm({...convertForm, pipelineStageId: e.target.value})} 
+                  className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
+                >
+                  <option value="">— Default (New) —</option>
+                  {pipelineStages.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>
