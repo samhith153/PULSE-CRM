@@ -29,6 +29,7 @@ import {
   Monitor,
   Users
 } from 'lucide-react';
+import SkeletonLoader from './SkeletonLoader';
 
 // Mapping helpers
 const STATUS_MAP: Record<string, string> = {
@@ -143,6 +144,7 @@ interface Lead {
 export default function LeadsView() {
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Selections & Filters State
   const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
@@ -193,9 +195,12 @@ export default function LeadsView() {
   };
 
   useEffect(() => {
+    setLoading(true);
     getLeads().then(data => {
       const mapped = (data ?? []).map(backendToLocal);
       setLeads(mapped);
+    }).finally(() => {
+      setLoading(false);
     });
     getGmailStatus().then(status => {
       setGmailConnected(status.connected);
@@ -675,8 +680,9 @@ export default function LeadsView() {
           </div>
 
           {/* Lead Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
+          <SkeletonLoader isLoading={loading} count={5}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
               <thead>
                 {isPriorityView ? (
                   <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
@@ -868,6 +874,7 @@ export default function LeadsView() {
               </tbody>
             </table>
           </div>
+          </SkeletonLoader>
         </div>
       </div>
 

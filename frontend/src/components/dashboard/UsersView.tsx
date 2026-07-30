@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Loader2
 } from 'lucide-react';
+import SkeletonLoader from './SkeletonLoader';
 import { 
   UserData, RoleData, 
   getUsers, createUser, updateUser, deleteUser,
@@ -222,19 +223,15 @@ export default function UsersView() {
           {loading && <Loader2 className="h-3.5 w-3.5 ml-2 animate-spin text-slate-400" />}
         </h3>
 
-        {loading && users.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-slate-400 text-xs font-medium">
-            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            Loading users...
-          </div>
-        ) : users.length === 0 ? (
+        {(!loading && users.length === 0) ? (
           <div className="text-center py-12 text-slate-400 text-xs font-medium">
             No users found. Create one to get started.
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+            <SkeletonLoader isLoading={loading} count={5}>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
                     <th className="py-2.5">User</th>
@@ -308,8 +305,9 @@ export default function UsersView() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
-            </div>
+                </table>
+              </div>
+            </SkeletonLoader>
 
             {totalPages > 1 && (
               <div className="flex items-center justify-between pt-3 border-t border-slate-100">

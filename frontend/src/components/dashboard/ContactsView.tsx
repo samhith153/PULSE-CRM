@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getContacts, createContact, updateContact } from '@/utils/api';
+import SkeletonLoader from './SkeletonLoader';
 import { 
   Contact, 
   Search, 
@@ -63,7 +64,6 @@ export default function ContactsView() {
       if (!cancelled) {
         setContacts(data as any);
         setLoading(false);
-        if (data.length && !selectedId) setSelectedId((data as any)[0].id);
       }
     }).catch(() => {
       if (!cancelled) setLoading(false);
@@ -71,7 +71,7 @@ export default function ContactsView() {
     return () => { cancelled = true; };
   }, []);
 
-  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : (contacts.length > 0 ? contacts[0] : null);
+  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : null;
 
   const filtered = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -218,65 +218,67 @@ export default function ContactsView() {
             />
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
-                  <th className="pb-2">Contact Name</th>
-                  <th className="pb-2">Company</th>
-                  <th className="pb-2">Designation</th>
-                  <th className="pb-2">Phone</th>
-                  <th className="pb-2">Email</th>
-                  <th className="pb-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                {filtered.map((con) => (
-                  <tr 
-                    key={con.id}
-                    onClick={() => setSelectedId(con.id)}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedId(prevId => prevId === con.id ? null : prevId);
-                    }}
-                    className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${con.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
-                  >
-                    <td className="py-3 font-extrabold text-brand-heading truncate max-w-[150px]">{con.name}</td>
-                    <td className="py-3 text-brand-text/80 truncate max-w-[130px]">{con.company}</td>
-                    <td className="py-3 truncate max-w-[120px]">{con.designation}</td>
-                    <td className="py-3 tabular-nums">{con.phone}</td>
-                    <td className="py-3 truncate max-w-[120px]">{con.email}</td>
-                    <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
-                      <div className="flex justify-end space-x-1">
-                        <button 
-                          onClick={() => {
-                            setForm({
-                              name: con.name,
-                              company: con.company,
-                              designation: con.designation,
-                              phone: con.phone,
-                              email: con.email,
-                              notes: con.notes
-                            });
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(con.id)}
-                          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
+          <SkeletonLoader isLoading={loading} count={5}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
+                    <th className="pb-2">Contact Name</th>
+                    <th className="pb-2">Company</th>
+                    <th className="pb-2">Designation</th>
+                    <th className="pb-2">Phone</th>
+                    <th className="pb-2">Email</th>
+                    <th className="pb-2 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
+                  {filtered.map((con) => (
+                    <tr 
+                      key={con.id}
+                      onClick={() => setSelectedId(con.id)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(prevId => prevId === con.id ? null : prevId);
+                      }}
+                      className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${con.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
+                    >
+                      <td className="py-3 font-extrabold text-brand-heading truncate max-w-[150px]">{con.name}</td>
+                      <td className="py-3 text-brand-text/80 truncate max-w-[130px]">{con.company}</td>
+                      <td className="py-3 truncate max-w-[120px]">{con.designation}</td>
+                      <td className="py-3 tabular-nums">{con.phone}</td>
+                      <td className="py-3 truncate max-w-[120px]">{con.email}</td>
+                      <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-end space-x-1">
+                          <button 
+                            onClick={() => {
+                              setForm({
+                                name: con.name,
+                                company: con.company,
+                                designation: con.designation,
+                                phone: con.phone,
+                                email: con.email,
+                                notes: con.notes
+                              });
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(con.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SkeletonLoader>
         </div>
       </div>
 

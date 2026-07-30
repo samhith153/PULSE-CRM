@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getCompanies, updateCompany } from '@/utils/api';
+import SkeletonLoader from './SkeletonLoader';
 import { 
   Building2, 
   Search, 
@@ -15,9 +16,9 @@ import {
   Clock, 
   Paperclip, 
   Mail, 
-  PlusCircle,
-  X,
-  Check
+  PlusCircle, 
+  X, 
+  Check 
 } from 'lucide-react';
 
 interface Company {
@@ -38,6 +39,7 @@ interface Company {
 
 export default function CompaniesView() {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,8 +53,12 @@ export default function CompaniesView() {
   const [contactName, setContactName] = useState('');
 
   useEffect(() => {
+    setLoading(true);
     getCompanies().then(data => {
       setCompanies(data as any);
+      setLoading(false);
+    }).catch(() => {
+      setLoading(false);
     });
   }, []);
 
@@ -133,16 +139,6 @@ export default function CompaniesView() {
               <h2 className="font-sans text-2xl text-brand-heading font-bold">Companies</h2>
               <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Monitor accounts, track revenue sizes, and view contact chains.</p>
             </div>
-            <button 
-              onClick={() => {
-                setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
-                setIsAddModalOpen(true);
-              }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Company</span>
-            </button>
           </div>
 
           <div className="relative mb-4">
@@ -158,59 +154,61 @@ export default function CompaniesView() {
             />
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
-                  <th className="pb-2">Company Name</th>
-                  <th className="pb-2">Industry</th>
-                  <th className="pb-2">Revenue</th>
-                  <th className="pb-2 text-center">Employees</th>
-                  <th className="pb-2 text-center">Open Deals</th>
-                  <th className="pb-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                {filtered.map((comp) => (
-                  <tr 
-                    key={comp.id}
-                    onClick={() => setSelectedId(comp.id)}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedId(prevId => prevId === comp.id ? null : prevId);
-                    }}
-                    className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${comp.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
-                  >
-                    <td className="py-3 font-extrabold text-brand-heading truncate max-w-[160px]">{comp.name}</td>
-                    <td className="py-3 text-brand-text/80 truncate max-w-[120px]">{comp.industry}</td>
-                    <td className="py-3 tabular-nums">{comp.revenue || 'ΓÇö'}</td>
-                    <td className="py-3 text-center tabular-nums">{comp.employees}</td>
-                    <td className="py-3 text-center tabular-nums">{comp.openDeals}</td>
-                    <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
-                      <div className="flex justify-end space-x-1">
-                        <button 
-                          onClick={() => {
-                            setForm({
-                              name: comp.name,
-                              industry: comp.industry,
-                              revenue: comp.revenue,
-                              employees: comp.employees,
-                              owner: comp.owner,
-                              notes: comp.notes
-                            });
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
+          <SkeletonLoader isLoading={loading} count={5}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
+                    <th className="pb-2">Company Name</th>
+                    <th className="pb-2">Industry</th>
+                    <th className="pb-2">Revenue</th>
+                    <th className="pb-2 text-center">Employees</th>
+                    <th className="pb-2 text-center">Open Deals</th>
+                    <th className="pb-2 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
+                  {filtered.map((comp) => (
+                    <tr 
+                      key={comp.id}
+                      onClick={() => setSelectedId(comp.id)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(prevId => prevId === comp.id ? null : prevId);
+                      }}
+                      className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${comp.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
+                    >
+                      <td className="py-3 font-extrabold text-brand-heading truncate max-w-[160px]">{comp.name}</td>
+                      <td className="py-3 text-brand-text/80 truncate max-w-[120px]">{comp.industry}</td>
+                      <td className="py-3 tabular-nums">{comp.revenue || '—'}</td>
+                      <td className="py-3 text-center tabular-nums">{comp.employees}</td>
+                      <td className="py-3 text-center tabular-nums">{comp.openDeals}</td>
+                      <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-end space-x-1">
+                          <button 
+                            onClick={() => {
+                              setForm({
+                                name: comp.name,
+                                industry: comp.industry,
+                                revenue: comp.revenue,
+                                employees: comp.employees,
+                                owner: comp.owner,
+                                notes: comp.notes
+                              });
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </SkeletonLoader>
         </div>
       </div>
 
