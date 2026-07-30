@@ -160,6 +160,11 @@ export default function PipelineView() {
   };
 
   const handleDelete = async (id: number | string) => {
+    const deal = deals.find(d => d.id === id);
+    const confirmed = window.confirm(
+      `Delete "${deal?.title || 'this deal'}"? The linked contact and company will also be removed if they have no other active deals.`
+    );
+    if (!confirmed) return;
     try {
       await deleteDeal(id);
       setDeals(deals.filter(d => d.id !== id));
@@ -288,7 +293,7 @@ export default function PipelineView() {
                         <button 
                           onClick={() => handleDelete(deal.id)}
                           className="p-0.5 text-slate-400 hover:text-rose-600 rounded"
-                          title="Delete Deal"
+                           title="Delete Deal (cascades to contact and company if no other active deals)"
                         >
                           <Trash2 className="h-3 w-3" />
                         </button>

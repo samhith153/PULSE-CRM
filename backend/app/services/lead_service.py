@@ -17,6 +17,7 @@ from app.repositories.lead_repository import LeadRepository
 from app.repositories.pipeline_repository import PipelineRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.lead import LeadAssignRequest, LeadCreateRequest, LeadStatusUpdateRequest, LeadUpdateRequest
+from app.services.feature_vector_service import FeatureVectorService
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import ActivityEntityType, ActivityType, DealStatus, LeadStatus, PipelineStageSlug
 
@@ -44,6 +45,7 @@ class LeadService:
         self.company_repo = CompanyRepository(db)
         self.contact_repo = ContactRepository(db)
         self.user_repo = UserRepository(db)
+        self.feature_vector_service = FeatureVectorService(db)
 
     async def create(
         self,
@@ -90,6 +92,13 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "owner_id": str(lead.owner_id)},
                 topic="lead",
             )
+        # Auto-compute feature vector
+        try:
+            await self.feature_vector_service.compute_and_store_for_lead(
+                lead.id, organization_id, created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to compute feature vector on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
         logger.info("Lead created", extra={"lead_id": str(lead.id)})
         return lead
 
@@ -141,6 +150,13 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "changes": list(update_data.keys())},
                 topic="lead",
             )
+        # Auto-compute feature vector on update
+        try:
+            await self.feature_vector_service.compute_and_store_for_lead(
+                lead.id, organization_id, lead.created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to compute feature vector on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
         return await self.get(lead_id, organization_id)
 
     async def update_status(

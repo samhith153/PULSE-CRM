@@ -662,12 +662,9 @@ export default function LeadsView() {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="w-full px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text/80 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent/20 cursor-pointer"
               >
-                <option value="All">All Statuses</option>
+                <option value="All">All</option>
                 <option value="New">New</option>
-                <option value="Contacted">Contacted</option>
-                <option value="Qualified">Qualified</option>
                 <option value="Converted">Converted</option>
-                <option value="Lost">Lost</option>
               </select>
             </div>
 
@@ -1267,19 +1264,31 @@ export default function LeadsView() {
                       <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
                         Industry <span className="text-rose-500">*</span>
                       </label>
-                      <select required value={leadForm.industry} onChange={(e) => setLeadForm({...leadForm, industry: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
-                        <option value="">Select Industry</option>
-                        <option>Software & IT</option>
-                        <option>Healthcare</option>
-                        <option>Finance & Banking</option>
-                        <option>Retail & E-commerce</option>
-                        <option>Manufacturing</option>
-                        <option>Education</option>
-                        <option>Real Estate</option>
-                        <option>Logistics & Transport</option>
-                        <option>Marketing & Advertising</option>
-                        <option>Consulting</option>
-                        <option>Other</option>
+                      <select
+                      required
+                      value={leadForm.industry}
+                      onChange={(e) =>
+                        setLeadForm({ ...leadForm, industry: e.target.value })
+                      }
+                      className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
+                      <option value="">Select Industry</option>
+                      <option value="Manufacturing">Manufacturing</option>
+                      <option value="Healthcare">Healthcare</option>
+                      <option value="Pharma">Pharma</option>
+                      <option value="Logistics">Logistics</option>
+                      <option value="Construction">Construction</option>
+                      <option value="Education">Education</option>
+                      <option value="Finance">Finance</option>
+                      <option value="Insurance">Insurance</option>
+                      <option value="Hospitality">Hospitality</option>
+                      <option value="Real Estate">Real Estate</option>
+                      <option value="Agriculture">Agriculture</option>
+                      <option value="Legal">Legal</option>
+                      <option value="Retail">Retail</option>
+                      <option value="Media">Media</option>
+                      <option value="Consulting">Consulting</option>
+                      <option value="IT">IT</option>
+
                       </select>
                     </div>
                   </div>
@@ -1292,13 +1301,12 @@ export default function LeadsView() {
                       <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>
                       <select value={leadForm.numberOfEmployees} onChange={(e) => setLeadForm({...leadForm, numberOfEmployees: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
                         <option value="">Select Range</option>
-                        <option>1-10</option>
-                        <option>11-50</option>
-                        <option>51-200</option>
-                        <option>201-500</option>
-                        <option>501-1000</option>
-                        <option>1001-5000</option>
-                        <option>5000+</option>
+                        <option>1</option>
+                        <option>10</option>
+                        <option>50</option>
+                        <option>200</option>
+                        <option>500</option>
+                        <option>1001</option>
                       </select>
                     </div>
                   </div>

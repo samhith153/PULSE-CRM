@@ -12,6 +12,7 @@ from app.models.email import GmailConnection, Email  # noqa: F401
 from app.models.event import DomainEvent  # noqa: F401
 from app.models.event_outbox import EventOutbox  # noqa: F401
 from app.models.lead import Lead  # noqa: F401
+from app.models.feature_vector import FeatureVector  # noqa: F401
 from app.models.organization import Organization  # noqa: F401
 from app.models.pipeline import PipelineStage  # noqa: F401
 from app.models.recommendation_feature import RecommendationFeature  # noqa: F401

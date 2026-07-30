@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from app.models.contact import Contact
     from app.models.deal import Deal
     from app.models.recommendation_feature import RecommendationFeature
+    from app.models.feature_vector import FeatureVector
     from app.models.user import User
 
 
@@ -123,6 +124,14 @@ class Lead(Base, TenantMixin):
         "RecommendationFeature",
         back_populates="lead",
         lazy="select",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    feature_vector: Mapped[Optional["FeatureVector"]] = relationship(
+        "FeatureVector",
+        back_populates="lead",
+        lazy="select",
+        uselist=False,
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
