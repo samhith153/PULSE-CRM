@@ -682,3 +682,376 @@ export async function getActivities(params: ActivityListParams = {}): Promise<Pa
     `/api/v1/activities${toQuery({ ...rest, action: activity_type })}`
   );
 }
+
+// --- Dashboard KPI API (Admin / Manager / Sales Rep) ---
+
+// Decimal values arrive as strings from the JSON serializer.
+export type Decimal = string | number;
+
+export function asNumber(v: Decimal | undefined | null): number {
+  if (v === undefined || v === null || v === '') return 0;
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/,/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+export function formatINR(v: Decimal | undefined | null): string {
+  const n = asNumber(v);
+  if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(2)}L`;
+  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
+  return `₹${n.toLocaleString('en-IN')}`;
+}
+
+export function formatNum(v: Decimal | undefined | null): string {
+  const n = asNumber(v);
+  if (n >= 1_00_00_000) return `${(n / 1_00_00_000).toFixed(2)}Cr`;
+  if (n >= 1_00_000) return `${(n / 1_00_000).toFixed(2)}L`;
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toLocaleString('en-IN');
+}
+
+export function formatPct(v: Decimal | undefined | null, digits = 1): string {
+  const n = asNumber(v);
+  const sign = n > 0 ? '+' : '';
+  return `${sign}${n.toFixed(digits)}%`;
+}
+
+export interface AdminDashboardData {
+  summary: {
+    organizations: { total: number; added_this_month: number; monthly_growth_pct: Decimal };
+    users: { total: number; active: number; inactive: number; new_this_month: number };
+    companies: { total: number; added_this_month: number; monthly_growth_pct: Decimal };
+    contacts: { total: number; new_this_month: number; monthly_growth_pct: Decimal };
+    leads: { total: number; new_today: number; new_this_month: number; monthly_growth_pct: Decimal; converted: number; conversion_rate: Decimal };
+    revenue: { today: Decimal; this_week: Decimal; this_month: Decimal; this_year: Decimal; growth_pct: Decimal };
+    tasks: { pending: number; overdue: number; due_today: number };
+  };
+  monthly_sales: { month: string; leads_created: number; leads_converted: number; revenue: Decimal }[];
+  lead_sources: { source: string; count: number; percentage: Decimal }[];
+  lead_funnel: { stage: string; count: number; percentage: Decimal }[];
+  top_sales_reps: { user_id: string; full_name: string; deals_closed: number; revenue: Decimal; conversion_rate: Decimal }[];
+  top_companies: { company_id: string; name: string; revenue: Decimal; lead_count: number; contact_count: number }[];
+  recent_activities: { id: string; action: string; title: string; entity_type: string; created_at: string; created_by: string | null }[];
+  notifications: { overdue_tasks: number; todays_meetings: number; pending_approvals: number; high_priority_leads: number; system_alerts: number };
+}
+
+export interface ManagerDashboardData {
+  summary: {
+    team_revenue: Decimal;
+    forecast_projection: Decimal;
+    pipeline_value: Decimal;
+    quota_achievement: Decimal;
+    team_members: number;
+    conversion_rate: Decimal;
+    win_rate: Decimal;
+    average_sales_cycle: Decimal;
+  };
+  revenue_stats: { team_revenue_won: Decimal; team_target: Decimal; achievement_pct: Decimal; monthly_growth_pct: Decimal };
+  forecast: { projected_revenue: Decimal; forecast_accuracy: Decimal; confidence_score: Decimal; expected_quarter_revenue: Decimal };
+  pipeline_health: {
+    active_pipeline_value: Decimal;
+    total_deals: number;
+    health_score: Decimal;
+    stage_distribution: { stage: string; deal_count: number; total_value: Decimal; percentage: Decimal }[];
+  };
+  rep_quota_attainment: { user_id: string; full_name: string; assigned_target: Decimal; revenue_generated: Decimal; quota_achievement_pct: Decimal; rank: number }[];
+  monthly_revenue_trend: { month: string; revenue: Decimal; target: Decimal; growth_pct: Decimal }[];
+  top_reps: { user_id: string; full_name: string; revenue: Decimal; deals_closed: number; conversion_rate: Decimal; quota_achievement_pct: Decimal }[];
+  deals_at_risk: { deal_id: string; deal_name: string; company: string | null; owner_name: string | null; deal_value: Decimal; risk_reason: string; days_since_last_activity: number }[];
+  alerts: { severity: string; message: string; timestamp: string }[];
+  recent_activities: { id: string; action: string; title: string; entity_type: string; created_at: string; created_by: string | null }[];
+  team_metrics: {
+    total_members: number;
+    active_reps: number;
+    avg_deal_size: Decimal;
+    avg_sales_cycle_days: Decimal;
+    team_conversion_rate: Decimal;
+    win_rate: Decimal;
+    forecast_accuracy: Decimal;
+  };
+}
+
+export interface SalesRepDashboardData {
+  summary: { total_revenue: Decimal; won_deals: number; win_rate: Decimal; average_deal_size: Decimal; average_sales_cycle: Decimal };
+  revenue_stat: { total: Decimal; previous_period: Decimal; growth_pct: Decimal };
+  won_deals_stat: { count: number; previous_period: number; growth_pct: Decimal };
+  win_rate_stat: { win_rate: Decimal; previous_win_rate: Decimal; growth_pct: Decimal };
+  avg_deal_size_stat: { avg_deal_value: Decimal; previous_avg: Decimal; growth_pct: Decimal };
+  avg_sales_cycle_stat: { avg_days: Decimal; previous_avg_days: Decimal; difference_days: Decimal };
+  revenue_trend: { period: string; revenue: Decimal }[];
+  deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
+  deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
+  key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
+}
+
+export async function getAdminDashboard(): Promise<AdminDashboardData> {
+  return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
+}
+
+export async function getManagerDashboard(): Promise<ManagerDashboardData> {
+  return apiFetch<ManagerDashboardData>('/api/v1/dashboard/manager');
+}
+
+export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
+  return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
+}
+
+export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
+  return apiFetch('/api/v1/auth/me');
+}
+
+// --- Automation / Events API ---
+
+export interface AutomationEvent {
+  id: string;
+  event_type: string;
+  event_name: string;
+  aggregate_type?: string | null;
+  aggregate_id?: string | null;
+  organization_id?: string | null;
+  actor_id?: string | null;
+  source?: string | null;
+  correlation_id?: string | null;
+  payload: Record<string, unknown>;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface AutomationEventList {
+  items: AutomationEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  name: string;
+  target_url: string;
+  event_types: string[];
+  max_attempts: number;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  endpoint_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  status: string;
+  attempts: number;
+  next_attempt_at?: string | null;
+  last_status_code?: number | null;
+  last_error?: string | null;
+  delivered_at?: string | null;
+  created_at: string;
+}
+
+export async function getAutomationEvents(limit = 25): Promise<AutomationEventList> {
+  return apiFetch<AutomationEventList>(`/api/v1/events${toQuery({ limit })}`);
+}
+
+export async function getWebhookEndpoints(): Promise<WebhookEndpoint[]> {
+  return apiFetch<WebhookEndpoint[]>('/api/v1/webhooks/endpoints');
+}
+
+export async function triggerAutomationDelivery(eventType: string, payload: Record<string, unknown> = {}): Promise<WebhookDelivery[]> {
+  return apiFetch<WebhookDelivery[]>('/api/v1/webhooks/deliveries', {
+    method: 'POST',
+    body: JSON.stringify({ event_type: eventType, payload })
+  });
+}
+
+// --- User Management API ---
+
+export interface UserData {
+  id: string;
+  email: string;
+  full_name: string;
+  phone: string | null;
+  job_title: string | null;
+  avatar_url: string | null;
+  organization_id: string;
+  is_active: boolean;
+  is_verified: boolean;
+  is_superuser: boolean;
+  roles: string[];
+  last_login_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
+  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users${toQuery({ page, page_size: pageSize, search })}`);
+}
+
+export async function getUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}`);
+}
+
+export async function createUser(data: { full_name: string; email: string; password: string; role_id?: string | null }): Promise<UserData> {
+  return apiFetch<UserData>('/api/v1/users', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function updateUser(userId: string, data: { full_name?: string; phone?: string; job_title?: string }): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  });
+}
+
+export async function deleteUser(userId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/users/${userId}`, { method: 'DELETE' });
+}
+
+export async function activateUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/activate`, { method: 'POST' });
+}
+
+export async function deactivateUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/deactivate`, { method: 'POST' });
+}
+
+export async function assignUserRole(userId: string, roleId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/roles`, {
+    method: 'POST',
+    body: JSON.stringify({ role_id: roleId })
+  });
+}
+
+export async function resetUserPassword(userId: string): Promise<{ new_password: string }> {
+  return apiFetch<{ new_password: string }>(`/api/v1/users/${userId}/reset-password`, { method: 'POST' });
+}
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await apiFetch<void>('/api/v1/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+  });
+}
+
+// --- Roles & Permissions API ---
+
+export interface RoleData {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string | null;
+  is_system: boolean;
+  permissions: string[];
+}
+
+export interface PermissionData {
+  id: string;
+  codename: string;
+  name: string;
+  description: string | null;
+  resource: string;
+  action: string;
+}
+
+export async function getRoles(): Promise<RoleData[]> {
+  return apiFetch<RoleData[]>('/api/v1/roles');
+}
+
+export async function getRole(roleId: string): Promise<RoleData> {
+  return apiFetch<RoleData>(`/api/v1/roles/${roleId}`);
+}
+
+export async function getPermissions(): Promise<PermissionData[]> {
+  return apiFetch<PermissionData[]>('/api/v1/roles/permissions/all');
+}
+
+export async function updateRolePermissions(roleId: string, permissionCodenames: string[]): Promise<RoleData> {
+  return apiFetch<RoleData>(`/api/v1/roles/${roleId}/permissions`, {
+    method: 'PUT',
+    body: JSON.stringify({ permission_codenames: permissionCodenames })
+  });
+}
+
+// --- Sales Manager Forecast API ---
+
+export interface ManagerForecastData {
+  expected_revenue: {
+    expected_revenue: Decimal;
+    quarter: string;
+    previous_forecast: Decimal;
+    growth_pct: Decimal;
+    target_achievement_pct: Decimal;
+  };
+  best_case_pipeline: {
+    best_case_pipeline: Decimal;
+    active_pipeline_value: Decimal;
+    difference_from_expected: Decimal;
+  };
+  pipeline_coverage: {
+    coverage_ratio: Decimal;
+    coverage_status: string;  // Critical / Moderate / Healthy / Excellent
+  };
+  confidence_score: {
+    score: number;
+    status: string;   // Very High / High / Medium / Low
+    description: string;
+  };
+  monthly_forecast: {
+    month: string;
+    pipeline: Decimal;
+    expected: Decimal;
+    maximum: Decimal;
+  }[];
+  quarterly_projection: {
+    quarter: string;
+    quota_target: Decimal;
+    expected_closed_revenue: Decimal;
+    best_case_close: Decimal;
+    open_pipeline: Decimal;
+    target_achievement_pct: Decimal;
+  }[];
+  forecast_trend: { month: string; forecast: Decimal }[];
+  forecast_accuracy: {
+    current_accuracy_pct: Decimal;
+    previous_accuracy_pct: Decimal;
+    difference_pct: Decimal;
+  };
+  sales_velocity: {
+    sales_velocity: Decimal;
+    previous_velocity: Decimal;
+    growth_pct: Decimal;
+  };
+  forecast_insights: { message: string; type: string }[];
+  forecast_risks: {
+    deal_id: string;
+    deal_name: string;
+    company: string | null;
+    owner_name: string | null;
+    deal_value: Decimal;
+    risk_type: string;
+    risk_description: string;
+    days_overdue: number;
+    probability: number;
+  }[];
+  forecast_recommendations: {
+    priority: string;
+    title: string;
+    description: string;
+    action: string;
+    impact: string;
+  }[];
+  quarter: string;
+  period: string;
+  generated_at: string;
+}
+
+export async function getManagerForecast(
+  period: 'monthly' | 'quarterly' | 'yearly' = 'monthly'
+): Promise<ManagerForecastData> {
+  return apiFetch<ManagerForecastData>(
+    `/api/v1/dashboard/manager/forecast${toQuery({ period })}`
+  );
+}
