@@ -96,7 +96,7 @@ class CompanyService:
                 payload={"company_id": str(company.id), "changes": list(update_data.keys())},
                 topic="company",
             )
-        return company
+        return await self.get(company_id, organization_id)
 
     async def delete(self, company_id: UUID, organization_id: UUID) -> None:
         company = await self.get(company_id, organization_id)

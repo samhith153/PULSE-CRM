@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -153,6 +153,10 @@ export default function LeadsView() {
   const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
   const [convertingLeadId, setConvertingLeadId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [gmailConnectionId, setGmailConnectionId] = useState<string | null>(null);
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
@@ -201,6 +205,14 @@ export default function LeadsView() {
     getLeads().then(data => {
       const mapped = (data ?? []).map(backendToLocal);
       setLeads(mapped);
+    });
+    getGmailStatus().then(status => {
+      setGmailConnected(status.connected);
+      if (status.connection) {
+        setGmailConnectionId(status.connection.id);
+      }
+    }).catch(() => {
+      setGmailConnected(false);
     });
   }, []);
 
@@ -453,34 +465,58 @@ export default function LeadsView() {
   };
 
   // Action: Send Email Submit
-  const handleSendEmail = (e: React.FormEvent) => {
+  const handleSendEmail = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeLead) return;
-    setLeads(leads.map(l => {
-      if (l.id === activeLead.id) {
-        const newEmail: EmailItem = {
-          id: Date.now(),
-          subject: emailForm.subject,
-          body: emailForm.body,
-          time: 'Just now'
-        };
-        const newActivity: ActivityItem = {
-          id: Date.now() + 1,
-          type: 'email',
-          title: `Email Sent: ${emailForm.subject}`,
-          desc: `Sent by CRM. Content summary: ${emailForm.body.substring(0, 40)}...`,
-          time: 'Just now'
-        };
-        return {
-          ...l,
-          emails: [newEmail, ...l.emails],
-          timeline: [newActivity, ...l.timeline]
-        };
-      }
-      return l;
-    }));
-    setIsEmailModalOpen(false);
-    setEmailForm({ subject: '', body: '' });
+    if (!gmailConnectionId || !gmailConnected) {
+      setEmailError('Gmail is not connected. Please connect Gmail in Integrations settings first.');
+      return;
+    }
+    if (!activeLead.email) {
+      setEmailError('This lead has no email address. Edit the lead to add an email first.');
+      return;
+    }
+    setEmailSending(true);
+    setEmailError(null);
+    try {
+      const result = await sendGmailEmail({
+        gmail_connection_id: gmailConnectionId,
+        receiver: activeLead.email,
+        subject: emailForm.subject,
+        html_body: emailForm.body,
+        external_entity_type: 'lead',
+        external_entity_id: activeLead.id,
+      });
+      const newEmail: EmailItem = {
+        id: Date.now(),
+        subject: emailForm.subject,
+        body: emailForm.body,
+        time: 'Just now'
+      };
+      const newActivity: ActivityItem = {
+        id: Date.now() + 1,
+        type: 'email',
+        title: `Email Sent: ${emailForm.subject}`,
+        desc: `Sent to ${activeLead.email}. ${emailForm.body.substring(0, 40)}...`,
+        time: 'Just now'
+      };
+      setLeads(leads.map(l => {
+        if (l.id === activeLead.id) {
+          return {
+            ...l,
+            emails: [newEmail, ...l.emails],
+            timeline: [newActivity, ...l.timeline]
+          };
+        }
+        return l;
+      }));
+      setIsEmailModalOpen(false);
+      setEmailForm({ subject: '', body: '' });
+    } catch (err: any) {
+      setEmailError(err?.message || 'Failed to send email. Please try again.');
+    } finally {
+      setEmailSending(false);
+    }
   };
 
   // Action: Log Call Submit
@@ -1390,9 +1426,30 @@ export default function LeadsView() {
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead?.name}</h3>
-              <button onClick={() => setIsEmailModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+              <button onClick={() => { setIsEmailModalOpen(false); setEmailError(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">
+              {!gmailConnected && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                  <strong>Gmail not connected.</strong> Go to <strong>Integrations</strong> in the sidebar to connect your Gmail account, then try again.
+                </div>
+              )}
+              {activeLead?.email && (
+                <div className="p-2.5 bg-slate-50 border border-brand-border-purple/20 rounded-lg">
+                  <span className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">To:</span>
+                  <span className="ml-2 text-xs text-brand-text">{activeLead.email}</span>
+                </div>
+              )}
+              {!activeLead?.email && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+                  <strong>No email address.</strong> Edit this lead to add an email address first.
+                </div>
+              )}
+              {emailError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+                  {emailError}
+                </div>
+              )}
               <div>
                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Subject</label>
                 <input type="text" required placeholder="Subject line" value={emailForm.subject} onChange={(e) => setEmailForm({...emailForm, subject: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
@@ -1402,10 +1459,10 @@ export default function LeadsView() {
                 <textarea required placeholder="Write your message here..." value={emailForm.body} onChange={(e) => setEmailForm({...emailForm, body: e.target.value})} className="w-full p-3 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none min-h-[120px] leading-relaxed" />
               </div>
               <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsEmailModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">
+                <button type="button" onClick={() => { setIsEmailModalOpen(false); setEmailError(null); }} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                <button type="submit" disabled={emailSending || !gmailConnected || !activeLead?.email} className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                   <Send className="h-3.5 w-3.5" />
-                  <span>Send Email</span>
+                  <span>{emailSending ? 'Sending...' : 'Send Email'}</span>
                 </button>
               </div>
             </form>

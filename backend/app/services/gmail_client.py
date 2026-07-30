@@ -79,6 +79,25 @@ class GmailClient:
     async def get_message(self, access_token: str, message_id: str) -> dict[str, Any]:
         return await self._get(f"messages/{message_id}", access_token, params={"format": "full"})
 
+    async def send_message(self, access_token: str, raw_mime: str) -> dict[str, Any]:
+        encoded = base64.urlsafe_b64encode(raw_mime.encode("utf-8")).decode("utf-8")
+        return await self._post("messages/send", access_token, json={"raw": encoded})
+
+    async def _post(self, path: str, access_token: str, json: dict[str, Any] | None = None) -> dict[str, Any]:
+        async with httpx.AsyncClient(timeout=settings.AI_TIMEOUT) as client:
+            response = await client.post(
+                f"{self.api_base}/{path}",
+                headers={"Authorization": f"Bearer {access_token}"},
+                json=json,
+            )
+        if response.status_code >= 400:
+            raise ValidationException(
+                "Gmail API request failed.",
+                {"google_status": response.status_code, "body": response.text[:500]},
+            )
+        data = response.json()
+        return data
+
     async def _token_request(self, payload: dict[str, Any]) -> dict[str, Any]:
         payload = {**payload, "client_id": settings.GOOGLE_CLIENT_ID, "client_secret": settings.GOOGLE_CLIENT_SECRET}
         async with httpx.AsyncClient(timeout=settings.AI_TIMEOUT) as client:

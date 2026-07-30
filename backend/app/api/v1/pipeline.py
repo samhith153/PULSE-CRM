@@ -140,7 +140,7 @@ async def list_stage_deals(
     svc = PipelineService(db)
     deals, total = await svc.list_deals_by_stage(current_user.organization_id, stage_id, page, page_size, search)
     paginated = PaginatedResponse.create(
-        data=[DealResponse.model_validate(deal) for deal in deals],
+        data=[DealResponse.from_deal(deal) for deal in deals],
         total=total,
         page=page,
         page_size=page_size,

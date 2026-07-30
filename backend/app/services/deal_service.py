@@ -195,7 +195,7 @@ class DealService:
                 payload={"deal_id": str(deal.id), "changes": list(update_data.keys())},
                 topic="deal",
             )
-        return deal
+        return await self.get(deal_id, organization_id)
 
     async def delete(self, deal_id: UUID, organization_id: UUID) -> None:
         deal = await self.get(deal_id, organization_id)

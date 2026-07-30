@@ -181,7 +181,7 @@ async def convert_lead(
         revenue=revenue,
         employee_count=employee_count,
     )
-    return {"success": True, "message": "Lead converted to deal.", "data": DealResponse.model_validate(deal)}
+    return {"success": True, "message": "Lead converted to deal.", "data": DealResponse.from_deal(deal)}
 
 
 @router.delete(

@@ -111,7 +111,7 @@ class ContactService:
                 payload={"contact_id": str(contact.id), "changes": list(update_data.keys())},
                 topic="contact",
             )
-        return contact
+        return await self.get(contact_id, organization_id)
 
     async def delete(self, contact_id: UUID, organization_id: UUID) -> None:
         contact = await self.get(contact_id, organization_id)

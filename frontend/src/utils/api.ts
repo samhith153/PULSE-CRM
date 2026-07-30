@@ -289,7 +289,7 @@ export async function getCompanies(): Promise<Company[]> {
       id: dc.id,
       name: dc.name || `Company ${dc.id}`,
       industry: dc.industry || '',
-      revenue: String(dc.revenue || ''),
+      revenue: String(dc.annual_revenue || ''),
       employees: dc.employee_count || 0,
       contacts: [],
       openDeals: dc.open_deals ?? 0,
@@ -310,6 +310,13 @@ export async function createCompany(companyData: any): Promise<any> {
   });
 }
 
+export async function updateCompany(companyId: string | number, companyData: any): Promise<any> {
+  return apiFetch(`/api/v1/companies/${companyId}`, {
+    method: 'PUT',
+    body: JSON.stringify(companyData)
+  });
+}
+
 // --- Deals API ---
 export async function getDeals(): Promise<Deal[]> {
   const dbResult = await apiFetch<any>('/api/v1/deals');
@@ -320,10 +327,10 @@ export async function getDeals(): Promise<Deal[]> {
       title: dd.name || `Deal ${dd.id}`,
       company: dd.company_name || dd.company?.name || '',
       value: Number(dd.amount || 0),
-      stage: dd.stage_id === 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918' ? 'Qualified' :
-             dd.stage_id === 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919' ? 'Proposal' :
-             dd.stage_id === 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920' ? 'Under Review' :
-             dd.stage_id === 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921' ? 'Won' : 'Lost',
+      stage: dd.pipeline_stage_id === 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918' ? 'Qualified' :
+             dd.pipeline_stage_id === 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919' ? 'Proposal' :
+             dd.pipeline_stage_id === 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920' ? 'Under Review' :
+             dd.pipeline_stage_id === 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921' ? 'Won' : 'Lost',
       priority: dd.priority || 'Medium',
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',

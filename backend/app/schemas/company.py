@@ -7,6 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.models.company import Company
 from app.utils.validators import validate_url, validate_phone
 
 
@@ -103,3 +104,34 @@ class CompanyResponse(BaseModel):
     owner_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+    @staticmethod
+    def from_company(company: Company) -> "CompanyResponse":
+        return CompanyResponse(
+            id=company.id,
+            name=company.name,
+            domain=company.domain,
+            website=company.website,
+            description=company.description,
+            email=company.email,
+            phone=company.phone,
+            address=company.address,
+            city=company.city,
+            state=company.state,
+            country=company.country,
+            zip_code=company.zip_code,
+            industry=company.industry,
+            current_crm=company.current_crm,
+            operational_system=company.operational_system,
+            company_type=company.company_type,
+            employee_count=company.employee_count,
+            annual_revenue=company.annual_revenue,
+            linkedin_url=company.linkedin_url,
+            twitter_url=company.twitter_url,
+            owner_id=company.owner_id,
+            organization_id=company.organization_id,
+            is_active=company.is_active,
+            created_at=company.created_at,
+            updated_at=company.updated_at,
+            owner_name=company.owner.full_name if company.owner else None,
+        )

@@ -141,7 +141,7 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "changes": list(update_data.keys())},
                 topic="lead",
             )
-        return lead
+        return await self.get(lead_id, organization_id)
 
     async def update_status(
         self,
@@ -290,7 +290,7 @@ class LeadService:
                 name=lead.title,
                 description=lead.description,
                 status=DealStatus.OPEN.value,
-                amount=lead.estimated_value,
+                amount=revenue or lead.estimated_value,
                 currency=lead.currency,
                 probability=min(max((lead.score or 50), 0), 100),
                 notes=lead.notes,
@@ -302,6 +302,7 @@ class LeadService:
                 organization_id=organization_id,
                 created_by=created_by,
             )
+            deal = await self.deal_repo.get_active_by_id(deal.id, organization_id)
 
             # ── Update company with conversion details ────────────────────────
             if company_id:
