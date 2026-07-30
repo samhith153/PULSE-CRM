@@ -1,6 +1,6 @@
 ﻿"""
 User Management Service
-All user business logic â€” create, update, activate, deactivate, assign roles.
+All user business logic — create, update, activate, deactivate, assign roles.
 """
 from typing import List, Optional, Tuple
 from uuid import UUID
@@ -37,24 +37,32 @@ class UserService:
         organization_id: UUID,
         created_by: UUID,
     ) -> User:
-        existing = await self.user_repo.get_by_email(payload.email.lower())
-        if existing:
-            raise DuplicateException("User", "email", payload.email)
-
-        user = await self.user_repo.create(
-            email=payload.email.lower(),
-            full_name=payload.full_name.strip(),
-            hashed_password=hash_password(payload.password),
-            phone=payload.phone,
-            job_title=payload.job_title,
-            timezone=payload.timezone,
-            locale=payload.locale,
-            organization_id=organization_id,
-            is_verified=True,
-        )
+        try:
+            user = await self.user_repo.create(
+                email=payload.email.lower(),
+                full_name=payload.full_name.strip(),
+                hashed_password=hash_password(payload.password),
+                phone=payload.phone,
+                job_title=payload.job_title,
+                timezone=payload.timezone,
+                locale=payload.locale,
+                organization_id=organization_id,
+                is_verified=True,
+            )
+        except Exception as exc:
+            raised = self._normalize_create_db_error(exc, payload.email)
+            if raised:
+                raise raised
+            raise
 
         if payload.role_id:
-            await self.user_repo.assign_role(user, payload.role_id, created_by)
+            try:
+                await self.user_repo.assign_role(user, payload.role_id, created_by)
+            except Exception as exc:
+                raised = self._normalize_role_db_error(exc, user.id)
+                if raised:
+                    raise raised
+                raise
 
         user = await self.user_repo.get_by_id_with_roles(user.id)
         logger.info("User created", extra={"user_id": str(user.id), "created_by": str(created_by)})
@@ -73,6 +81,44 @@ class UserService:
             },
         )
         return user
+
+    def _is_integrity_error(self, exc: BaseException) -> bool:
+        try:
+            from sqlalchemy.exc import IntegrityError
+
+            return isinstance(exc, IntegrityError)
+        except ImportError:
+            return False
+
+    def _is_unique_violation(self, exc: BaseException) -> bool:
+        try:
+            message = str(exc).lower()
+            if "unique constraint" in message or "unique violation" in message:
+                return True
+
+            integrity = exc.__cause__
+            if integrity is None:
+                return False
+            if integrity.__class__.__name__ == "UniqueViolationError":
+                return True
+            cause_message = str(integrity).lower()
+            return "unique constraint" in cause_message or "unique violation" in cause_message
+        except AttributeError:
+            return False
+
+    def _normalize_create_db_error(self, exc: BaseException, email: str):
+        if not self._is_integrity_error(exc):
+            return None
+        if self._is_unique_violation(exc):
+            return DuplicateException("User", "email", email)
+        return None
+
+    def _normalize_role_db_error(self, exc: BaseException, user_id: UUID):
+        if not self._is_integrity_error(exc):
+            return None
+        if self._is_unique_violation(exc):
+            return ConflictException("Failed to assign role: role/user combination already exists.")
+        return None
 
     async def list_users(
         self,
@@ -176,7 +222,7 @@ class UserService:
         if user_id == requestor_id:
             raise ForbiddenException("You cannot delete your own account.")
         user = await self.get_user(user_id, organization_id)
-        await self.user_repo.soft_delete(user)
+        await self.user_repo.delete(user)
         logger.info("User soft-deleted", extra={"user_id": str(user_id)})
         await self.events.record_event(
             "USER_DELETED",

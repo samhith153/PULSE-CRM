@@ -84,7 +84,7 @@ export default function UsersView() {
       full_name: user.full_name,
       email: user.email,
       password: '',
-      role_id: user.roles.length > 0 ? '' : ''
+      role_id: user.roles?.length ? String(user.roles[0]) : ''
     });
     setEditingUserId(user.id);
     setIsModalOpen(true);
