@@ -255,13 +255,6 @@ export default function CompaniesView() {
           <div className="py-3 border-b border-brand-border-purple/15">
             <div className="flex items-center justify-between mb-2">
               <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Company Contacts</h4>
-              <button 
-                onClick={() => setIsAddContactModalOpen(true)}
-                className="text-brand-accent hover:text-brand-accent-hover inline-flex items-center space-x-0.5 text-[10px] font-bold cursor-pointer"
-              >
-                <PlusCircle className="h-3 w-3" />
-                <span>Add Link</span>
-              </button>
             </div>
             <div className="space-y-1.5">
               {active.contacts.length > 0 ? (

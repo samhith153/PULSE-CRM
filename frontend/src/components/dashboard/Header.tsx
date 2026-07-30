@@ -183,14 +183,6 @@ export default function Header({
           </span>
         </div>
 
-        {/* + New Report CTA in Medium Purple */}
-        <button
-          onClick={onNewReportClick}
-          className="inline-flex items-center space-x-1 px-3.5 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 hover:shadow-sm transition-all duration-200 cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-          <span>New Report</span>
-        </button>
 
         {/* Theme Switcher Button */}
         <button
