@@ -26,6 +26,7 @@ export default function DocumentsView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [form, setForm] = useState({ name: '', type: 'SLA' as DocumentItem['type'], associatedDeal: '', status: 'Draft' as DocumentItem['status'] });
 
   const documentTypes: DocumentItem['type'][] = ['SLA', 'Proposal', 'Contract', 'NDA'];
@@ -38,11 +39,13 @@ export default function DocumentsView() {
 
   const handleUploadSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const fileSize = selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : `${(Math.random() * 3 + 1).toFixed(1)} MB`;
+    const docName = selectedFile ? selectedFile.name : (form.name.endsWith('.pdf') ? form.name : `${form.name}.pdf`);
     const newDoc: DocumentItem = {
       id: Date.now(),
-      name: form.name.endsWith('.pdf') ? form.name : `${form.name}.pdf`,
+      name: docName,
       type: form.type,
-      size: `${(Math.random() * 3 + 1).toFixed(1)} MB`,
+      size: fileSize,
       associatedDeal: form.associatedDeal || 'General / Unlinked',
       uploadedBy: "Alex Johnson",
       uploadedAt: new Date().toISOString().split('T')[0],
@@ -50,6 +53,7 @@ export default function DocumentsView() {
     };
     setDocuments([newDoc, ...documents]);
     setIsUploadOpen(false);
+    setSelectedFile(null);
     setForm({ name: '', type: 'SLA', associatedDeal: '', status: 'Draft' });
   };
 
@@ -106,7 +110,7 @@ export default function DocumentsView() {
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-brand-heading pb-2">
+              <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
                 <th className="pb-2">Document Name</th>
                 <th className="pb-2">Type</th>
                 <th className="pb-2">Size</th>
@@ -189,6 +193,21 @@ export default function DocumentsView() {
               <button onClick={() => setIsUploadOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleUploadSubmit} className="p-5 space-y-4">
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Upload File</label>
+                <div className="flex items-center gap-2">
+                  <input type="file" id="doc-file" onChange={e => { const f = e.target.files?.[0] || null; setSelectedFile(f); if (f) setForm({...form, name: f.name.replace(/\.[^/.]+$/, '') }); }} className="hidden" />
+                  <label htmlFor="doc-file" className="flex-1 flex items-center gap-2 px-3 py-2 border border-dashed border-brand-border-purple/40 rounded-lg text-xs text-brand-text/60 bg-slate-50/50 hover:bg-slate-100/50 cursor-pointer transition-colors">
+                    <UploadCloud className="h-4 w-4 text-brand-accent" />
+                    <span>{selectedFile ? selectedFile.name : 'Click to select a PDF file...'}</span>
+                  </label>
+                  {selectedFile && (
+                    <button type="button" onClick={() => { setSelectedFile(null); }} className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
               <div>
                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Document Name (without extension)</label>
                 <input type="text" required placeholder="e.g., TechCorp_SLA_Signed" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />

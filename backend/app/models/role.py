@@ -89,5 +89,5 @@ class RolePermission(Base):
     # ── Relationships ─────────────────────────────────────────────────────────
     role: Mapped["Role"] = relationship("Role", back_populates="role_permissions")
     permission: Mapped["Permission"] = relationship(
-        "Permission", back_populates="role_permissions"
+        "Permission", back_populates="role_permissions", lazy="selectin"
     )

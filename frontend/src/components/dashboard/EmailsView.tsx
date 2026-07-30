@@ -1,898 +1,178 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Inbox, 
-  Send, 
-  FileText, 
-  Mail, 
-  Search, 
-  Plus, 
-  CornerUpLeft, 
-  CornerUpRight, 
-  Paperclip, 
-  Sparkles, 
-  X, 
-  Check,
-  ChevronRight,
-  User,
-  Star,
-  Trash2,
-  Archive,
-  RefreshCw,
-  MoreVertical,
-  ChevronLeft,
-  ArrowLeft,
-  CornerDownLeft,
-  MailOpen,
-  SendHorizontal,
-  Loader2,
-  BrainCircuit,
-  TrendingUp,
-  AlertCircle,
-  MessageSquare,
-  Target
-} from 'lucide-react';
-import { summarizeThread, ConversationSummary, SummaryMessage } from '@/utils/api';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search } from 'lucide-react';
+import { getEmail, getEmails, SyncedEmail } from '@/utils/api';
 
-interface EmailThread {
-  id: number;
-  sender: string;
-  senderEmail: string;
-  subject: string;
-  body: string;
-  time: string;
-  folder: 'inbox' | 'sent' | 'drafts';
-  aiSummary: string;
-  unread: boolean;
-  starred: boolean;
-  attachments: { name: string; size: string }[];
+type MailboxFilter = 'all' | 'inbound' | 'outbound' | 'unread';
+
+const pageSize = 12;
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+}
+
+function formatSize(bytes?: number | null) {
+  if (!bytes) return 'Unknown size';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export default function EmailsView() {
-  const [threads, setThreads] = useState<EmailThread[]>([
-    {
-      id: 1,
-      sender: "Alex Rivera",
-      senderEmail: "alex.rivera@techcorp.com",
-      subject: "SSO Config Approved & Security Review",
-      body: "Hi Sarah,\n\nWe reviewed the SSO guidelines you sent. Our compliance team approved the SAML setup but they have some questions regarding custom SLAs and liability limits. Can we schedule a quick call tomorrow to clarify these items?\n\nBest,\nAlex",
-      time: "10:15 AM",
-      folder: "inbox",
-      aiSummary: "Prospect approved SAML config specs but has questions about liability limits and SLAs. Recommends arranging clarification call.",
-      unread: true,
-      starred: true,
-      attachments: [{ name: "SAML_Approval.docx", size: "110 KB" }]
-    },
-    {
-      id: 2,
-      sender: "Helena Troy",
-      senderEmail: "helena.t@spartacreative.io",
-      subject: "Pricing Inquiry - Custom Enterprise Tier",
-      body: "Hello Sarah,\n\nI was looking over the custom analytics dashboard tiers on your pricing page. We have around 40 designers who need priority SLA support. Do you support volumetric discounts for design agencies? Let me know.\n\nThanks,\nHelena",
-      time: "Yesterday",
-      folder: "inbox",
-      aiSummary: "Helena inquires about agency volume pricing tiers for 40 seats. Needs response regarding custom priority SLA.",
-      unread: false,
-      starred: false,
-      attachments: []
-    },
-    {
-      id: 3,
-      sender: "Sarah Johnson",
-      senderEmail: "sarah.j@pulse.crm",
-      subject: "Re: Security compliance review",
-      body: "Hi Marcus,\n\nI have attached our HIPAA and SOC2 compliance audit folders. Let me know if you need our lead architect on the sandbox review call.\n\nSarah Johnson",
-      time: "2 days ago",
-      folder: "sent",
-      aiSummary: "Sent compliance audit folders (HIPAA/SOC2) to Marcus to coordinate sandbox reviews.",
-      unread: false,
-      starred: false,
-      attachments: [{ name: "Pulse_SOC2_HIPAA.zip", size: "4.5 MB" }]
-    }
-  ]);
-
-  const [activeFolder, setActiveFolder] = useState<'inbox' | 'sent' | 'drafts' | 'starred'>('inbox');
-  const [selectedThreadId, setSelectedThreadId] = useState<number | null>(null);
-  const [currentView, setCurrentView] = useState<'list' | 'reader'>('list');
+  const [emails, setEmails] = useState<SyncedEmail[]>([]);
+  const [selectedEmail, setSelectedEmail] = useState<SyncedEmail | null>(null);
+  const [filter, setFilter] = useState<MailboxFilter>('all');
   const [search, setSearch] = useState('');
-  
-  // Selection state
-  const [selectedThreads, setSelectedThreads] = useState<number[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Modals / forms state
-  const [isComposeOpen, setIsComposeOpen] = useState(false);
-  const [composeForm, setComposeForm] = useState({ to: '', subject: '', body: '' });
+  const direction = filter === 'inbound' ? 'inbound' : filter === 'outbound' ? 'outbound' : '';
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  // Inline replies
-  const [inlineComposerMode, setInlineComposerMode] = useState<'reply' | 'forward' | null>(null);
-  const [inlineBody, setInlineBody] = useState('');
-  const [inlineTo, setInlineTo] = useState('');
+  const loadEmails = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const result = await getEmails({ page, page_size: pageSize, search, direction, sort_order: 'desc' });
+      const rows = filter === 'unread' ? result.data.filter(item => !item.is_read) : result.data;
+      setEmails(rows);
+      setTotal(filter === 'unread' ? rows.length : result.total);
+      if (selectedEmail && !rows.some(item => item.id === selectedEmail.id)) setSelectedEmail(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load emails.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  // AI Summarization state
-  const [aiSummaryResult, setAiSummaryResult] = useState<ConversationSummary | null>(null);
-  const [isSummarizing, setIsSummarizing] = useState(false);
-
-  // Summarize thread when selected
   useEffect(() => {
-    if (!selectedThreadId) {
-      setAiSummaryResult(null);
-      return;
+    loadEmails();
+  }, [page, filter]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setPage(1);
+      loadEmails();
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, [search]);
+
+  const unreadCount = useMemo(() => emails.filter(email => !email.is_read).length, [emails]);
+
+  const openEmail = async (email: SyncedEmail) => {
+    setSelectedEmail(email);
+    setIsDetailLoading(true);
+    setError(null);
+    try {
+      setSelectedEmail(await getEmail(email.id));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load email details.');
+    } finally {
+      setIsDetailLoading(false);
     }
-    const thread = threads.find(t => t.id === selectedThreadId);
-    if (!thread) return;
-
-    setIsSummarizing(true);
-    setAiSummaryResult(null);
-
-    const messages: SummaryMessage[] = [{
-      sender: thread.senderEmail,
-      recipients: ['sarah.j@pulse.crm'],
-      subject: thread.subject,
-      body: thread.body,
-      timestamp: new Date().toISOString(),
-      direction: thread.folder === 'sent' ? 'outgoing' : 'incoming'
-    }];
-
-    summarizeThread(`thread-${thread.id}`, messages)
-      .then(result => {
-        if (result) setAiSummaryResult(result);
-        setIsSummarizing(false);
-      })
-      .catch(() => setIsSummarizing(false));
-  }, [selectedThreadId]);
-
-  // Active thread helper
-  const activeThread = selectedThreadId ? threads.find(t => t.id === selectedThreadId) || null : null;
-
-  // Folder filtering
-  const folderThreads = threads.filter(t => {
-    if (activeFolder === 'starred') return t.starred;
-    return t.folder === activeFolder;
-  });
-
-  // Search filtering
-  const filteredThreads = folderThreads.filter(t => 
-    t.sender.toLowerCase().includes(search.toLowerCase()) || 
-    t.subject.toLowerCase().includes(search.toLowerCase()) || 
-    t.body.toLowerCase().includes(search.toLowerCase())
-  );
-
-  // Folder thread unread counts
-  const inboxUnreadCount = threads.filter(t => t.folder === 'inbox' && t.unread).length;
-  const starredCount = threads.filter(t => t.starred).length;
-
-  const handleCompose = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newMail: EmailThread = {
-      id: Date.now(),
-      sender: "Sarah Johnson",
-      senderEmail: "sarah.j@pulse.crm",
-      subject: composeForm.subject,
-      body: composeForm.body,
-      time: "10:15 AM", // Mock standard time
-      folder: "sent",
-      aiSummary: `Sent message to ${composeForm.to}. Subject: ${composeForm.subject}`,
-      unread: false,
-      starred: false,
-      attachments: []
-    };
-    setThreads([newMail, ...threads]);
-    setIsComposeOpen(false);
-    setComposeForm({ to: '', subject: '', body: '' });
-  };
-
-  const handleSendInline = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inlineBody.trim() || !activeThread) return;
-
-    const newMail: EmailThread = {
-      id: Date.now(),
-      sender: "Sarah Johnson",
-      senderEmail: "sarah.j@pulse.crm",
-      subject: inlineComposerMode === 'reply' ? `Re: ${activeThread.subject}` : `Fwd: ${activeThread.subject}`,
-      body: inlineComposerMode === 'reply' 
-        ? inlineBody 
-        : `---------- Forwarded message ----------\nFrom: ${activeThread.sender} <${activeThread.senderEmail}>\n\n${inlineBody}`,
-      time: "10:15 AM",
-      folder: "sent",
-      aiSummary: inlineComposerMode === 'reply' 
-        ? `Replied to ${activeThread.sender}.` 
-        : `Forwarded thread to ${inlineTo}`,
-      unread: false,
-      starred: false,
-      attachments: inlineComposerMode === 'forward' ? activeThread.attachments : []
-    };
-
-    setThreads([newMail, ...threads]);
-    setInlineComposerMode(null);
-    setInlineBody('');
-    setInlineTo('');
-    setCurrentView('list');
-    setSelectedThreadId(null);
-  };
-
-  const handleToggleStar = (e: React.MouseEvent, id: number) => {
-    e.stopPropagation();
-    setThreads(threads.map(t => t.id === id ? { ...t, starred: !t.starred } : t));
-  };
-
-  const handleSelectThread = (e: React.ChangeEvent<HTMLInputElement>, id: number) => {
-    e.stopPropagation();
-    if (e.target.checked) {
-      setSelectedThreads([...selectedThreads, id]);
-    } else {
-      setSelectedThreads(selectedThreads.filter(tid => tid !== id));
-    }
-  };
-
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.checked) {
-      setSelectedThreads(filteredThreads.map(t => t.id));
-    } else {
-      setSelectedThreads([]);
-    }
-  };
-
-  const handleMarkSelectedRead = (unreadState: boolean) => {
-    setThreads(threads.map(t => selectedThreads.includes(t.id) ? { ...t, unread: unreadState } : t));
-    setSelectedThreads([]);
-  };
-
-  const handleDeleteSelected = () => {
-    setThreads(threads.filter(t => !selectedThreads.includes(t.id)));
-    setSelectedThreads([]);
-  };
-
-  const handleRowDelete = (e: React.MouseEvent, id: number) => {
-    e.stopPropagation();
-    setThreads(threads.filter(t => t.id !== id));
-    if (selectedThreadId === id) {
-      setSelectedThreadId(null);
-      setCurrentView('list');
-    }
-  };
-
-  const handleRowToggleRead = (e: React.MouseEvent, id: number) => {
-    e.stopPropagation();
-    setThreads(threads.map(t => t.id === id ? { ...t, unread: !t.unread } : t));
   };
 
   return (
-    <div className="flex border border-brand-border-purple/20 rounded-xl overflow-hidden bg-white h-[650px] shadow-sm/5 relative">
-      
-      {/* 1. Gmail Left Sidebar */}
-      <div className="w-56 shrink-0 border-r border-brand-border-purple/15 bg-slate-50/50 p-3 flex flex-col justify-between">
-        <div className="space-y-4">
-          {/* Large Compose Button */}
-          <button 
-            onClick={() => setIsComposeOpen(true)}
-            className="flex items-center space-x-3 bg-white hover:bg-slate-50 border border-brand-border-purple/35 text-brand-text py-3 px-5 rounded-2xl text-xs font-bold shadow-sm transition-all hover:shadow-md cursor-pointer shrink-0"
-          >
-            <Plus className="h-4.5 w-4.5 text-brand-accent" strokeWidth={2.5} />
-            <span>Compose</span>
-          </button>
-
-          {/* Sidebar Folders */}
-          <nav className="space-y-0.5">
-            {[
-              { id: 'inbox', label: 'Inbox', icon: Inbox, count: inboxUnreadCount },
-              { id: 'starred', label: 'Starred', icon: Star, count: starredCount },
-              { id: 'sent', label: 'Sent', icon: Send, count: 0 },
-              { id: 'drafts', label: 'Drafts', icon: FileText, count: 0 }
-            ].map((fol) => {
-              const Icon = fol.icon;
-              const isSelected = activeFolder === fol.id;
-              return (
-                <button
-                  key={fol.id}
-                  onClick={() => {
-                    setActiveFolder(fol.id as any);
-                    setSelectedThreadId(null);
-                    setCurrentView('list');
-                  }}
-                  className={`w-full flex items-center justify-between px-4 py-2 rounded-r-full text-xs font-bold transition-all cursor-pointer ${
-                    isSelected 
-                      ? 'bg-brand-accent/10 text-brand-accent border-l-3 border-brand-accent' 
-                      : 'hover:bg-slate-100/70 text-brand-text/75 hover:text-brand-text'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
-                    <Icon className={`h-4.5 w-4.5 shrink-0 ${isSelected ? 'text-brand-accent' : 'text-slate-450'}`} strokeWidth={1.75} />
-                    <span>{fol.label}</span>
-                  </div>
-                  {fol.count > 0 && (
-                    <span className="text-[10px] font-extrabold bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded-full tabular-nums">
-                      {fol.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        {/* Info label */}
-        <div className="text-[9px] font-bold text-slate-400 p-3 leading-relaxed border-t border-brand-border-purple/10">
-          Sync Status: <span className="text-emerald-500 font-extrabold">Active</span>
-          <p className="mt-0.5 font-medium">Synced with CRM Workspace</p>
-        </div>
-      </div>
-
-      {/* 2. Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 bg-white">
-        
-        {/* VIEW 1: INBOX THREADS LIST */}
-        {currentView === 'list' && (
-          <div className="flex-1 flex flex-col min-w-0 h-full">
-            
-            {/* Top Toolbar controls */}
-            <div className="h-12 border-b border-brand-border-purple/15 px-4 flex items-center justify-between bg-slate-50/30 shrink-0">
-              <div className="flex items-center space-x-4">
-                {/* Select All Checkbox */}
-                <input 
-                  type="checkbox" 
-                  onChange={handleSelectAll}
-                  checked={filteredThreads.length > 0 && selectedThreads.length === filteredThreads.length}
-                  className="cursor-pointer rounded border-slate-350 text-brand-accent focus:ring-brand-accent/25"
-                />
-
-                {/* Bulk Action Buttons (Appear when items are selected) */}
-                {selectedThreads.length > 0 ? (
-                  <div className="flex items-center space-x-2 animate-in fade-in slide-in-from-left-2 duration-150">
-                    <button 
-                      onClick={() => handleMarkSelectedRead(false)}
-                      className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors cursor-pointer"
-                      title="Mark as Read"
-                    >
-                      <MailOpen className="h-4.5 w-4.5" />
-                    </button>
-                    <button 
-                      onClick={() => handleMarkSelectedRead(true)}
-                      className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors cursor-pointer"
-                      title="Mark as Unread"
-                    >
-                      <Mail className="h-4.5 w-4.5" />
-                    </button>
-                    <button 
-                      onClick={handleDeleteSelected}
-                      className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4.5 w-4.5" />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-1 text-slate-400">
-                    <button className="p-1.5 hover:bg-slate-100 rounded hover:text-brand-text transition-colors cursor-pointer">
-                      <RefreshCw className="h-4 w-4" />
-                    </button>
-                    <button className="p-1.5 hover:bg-slate-100 rounded hover:text-brand-text transition-colors cursor-pointer">
-                      <MoreVertical className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Pagination and Search bar */}
-              <div className="flex items-center space-x-4">
-                {/* Embedded Search bar */}
-                <div className="relative w-48 lg:w-60">
-                  <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
-                    <Search className="h-3.5 w-3.5" />
-                  </span>
-                  <input 
-                    type="text" 
-                    placeholder="Search mail..." 
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-8 pr-3 py-1 border border-brand-border-purple/35 rounded-lg text-[11px] text-brand-text focus:outline-none focus:bg-white bg-slate-100/50"
-                  />
-                </div>
-
-                {/* Pagination */}
-                <div className="flex items-center space-x-2 text-[10px] text-slate-400 font-extrabold select-none">
-                  <span>1-{filteredThreads.length} of {filteredThreads.length}</span>
-                  <div className="flex space-x-0.5 border border-brand-border-purple/20 rounded-md bg-white">
-                    <button className="p-1 hover:bg-slate-100 text-slate-400 hover:text-brand-text disabled:opacity-40 cursor-pointer" disabled>
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </button>
-                    <button className="p-1 hover:bg-slate-100 text-slate-400 hover:text-brand-text disabled:opacity-40 cursor-pointer" disabled>
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Email list body */}
-            <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
-              {filteredThreads.length > 0 ? (
-                filteredThreads.map((thread) => {
-                  const isChecked = selectedThreads.includes(thread.id);
-                  return (
-                    <div
-                      key={thread.id}
-                      onClick={() => {
-                        setSelectedThreadId(thread.id);
-                        setCurrentView('reader');
-                        setInlineComposerMode(null);
-                        if (thread.unread) {
-                          setThreads(threads.map(t => t.id === thread.id ? { ...t, unread: false } : t));
-                        }
-                      }}
-                      className={`flex items-center justify-between border-b border-slate-100 py-3.5 px-4 hover:bg-slate-50/70 hover:shadow-[inset_2px_0_0_#7957fb] transition-all cursor-pointer group text-xs text-brand-text ${
-                        thread.unread ? 'bg-slate-50/40' : 'bg-white'
-                      }`}
-                    >
-                      {/* Left Controls & Sender */}
-                      <div className="flex items-center space-x-3 shrink-0 min-w-0 mr-4">
-                        <input 
-                          type="checkbox" 
-                          checked={isChecked}
-                          onChange={(e) => handleSelectThread(e, thread.id)}
-                          onClick={e => e.stopPropagation()}
-                          className="cursor-pointer rounded border-slate-350 text-brand-accent focus:ring-brand-accent/25"
-                        />
-                        <button 
-                          onClick={(e) => handleToggleStar(e, thread.id)}
-                          className={`cursor-pointer ${thread.starred ? 'text-amber-400' : 'text-slate-300 hover:text-slate-400'}`}
-                        >
-                          <Star className="h-4.5 w-4.5" fill={thread.starred ? "currentColor" : "none"} />
-                        </button>
-                        <span className={`w-28 truncate leading-tight ${thread.unread ? 'font-extrabold text-brand-heading' : 'font-semibold text-brand-text/75'}`}>
-                          {thread.sender}
-                        </span>
-                      </div>
-
-                      {/* Middle: Subject & body snippet */}
-                      <div className="flex-1 min-w-0 flex items-center justify-between mx-4">
-                        <div className="min-w-0 flex-1 pr-4">
-                          <p className="truncate text-left leading-normal text-xs">
-                            <span className={thread.unread ? 'font-extrabold text-brand-heading' : 'font-bold text-brand-text/95'}>
-                              {thread.subject}
-                            </span>
-                            <span className="text-slate-400 font-medium font-sans">
-                              {` — ${thread.body.replace(/\n/g, ' ')}`}
-                            </span>
-                          </p>
-                        </div>
-
-                        {/* Attachment indicator badge */}
-                        {thread.attachments.length > 0 && (
-                          <div className="flex items-center space-x-1 shrink-0 bg-slate-50 border border-brand-border-purple/20 px-1.5 py-0.5 rounded text-[9px] font-bold text-slate-500">
-                            <Paperclip className="h-2.5 w-2.5" />
-                            <span>{thread.attachments.length}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Right: Date / Hover actions */}
-                      <div className="shrink-0 ml-4 pl-2 min-w-16 text-right">
-                        {/* Time label (Visible when NOT hovered) */}
-                        <span className="text-[10px] text-slate-400 font-bold group-hover:hidden tabular-nums">
-                          {thread.time}
-                        </span>
-
-                        {/* Quick actions (Visible on Hover) */}
-                        <div className="hidden group-hover:flex items-center space-x-1.5 justify-end">
-                          <button 
-                            onClick={(e) => handleRowToggleRead(e, thread.id)}
-                            className="p-1 hover:bg-slate-200 text-slate-500 rounded transition-all cursor-pointer"
-                            title={thread.unread ? "Mark as Read" : "Mark as Unread"}
-                          >
-                            {thread.unread ? <MailOpen className="h-3.5 w-3.5" /> : <Mail className="h-3.5 w-3.5" />}
-                          </button>
-                          <button 
-                            onClick={(e) => handleRowDelete(e, thread.id)}
-                            className="p-1 hover:bg-slate-200 text-slate-500 hover:text-rose-600 rounded transition-all cursor-pointer"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="py-12 flex flex-col items-center justify-center text-center space-y-2">
-                  <Mail className="h-8 w-8 text-slate-300" strokeWidth={1.5} />
-                  <p className="text-slate-400 text-xs font-semibold">No mail threads found in {activeFolder}.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* VIEW 2: GMAIL THREAD READER */}
-        {currentView === 'reader' && activeThread && (
-          <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-            
-            {/* Top Toolbar actions */}
-            <div className="h-12 border-b border-brand-border-purple/15 px-4 flex items-center justify-between bg-slate-50/30 shrink-0">
-              <div className="flex items-center space-x-3.5">
-                <button 
-                  onClick={() => {
-                    setCurrentView('list');
-                    setSelectedThreadId(null);
-                  }}
-                  className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors cursor-pointer"
-                  title="Back to List"
-                >
-                  <ArrowLeft className="h-4.5 w-4.5 text-brand-accent" strokeWidth={2.25} />
-                </button>
-                <div className="h-4 w-px bg-brand-border-purple/20" />
-                <button 
-                  onClick={() => {
-                    setThreads(threads.map(t => t.id === activeThread.id ? { ...t, starred: !t.starred } : t));
-                  }}
-                  className={`p-1.5 hover:bg-slate-100 rounded transition-colors cursor-pointer ${
-                    activeThread.starred ? 'text-amber-400' : 'text-slate-500 hover:text-brand-text'
-                  }`}
-                  title="Star Thread"
-                >
-                  <Star className="h-4.5 w-4.5" fill={activeThread.starred ? "currentColor" : "none"} />
-                </button>
-                <button 
-                  onClick={(e) => {
-                    setThreads(threads.map(t => t.id === activeThread.id ? { ...t, unread: true } : t));
-                    setCurrentView('list');
-                    setSelectedThreadId(null);
-                  }}
-                  className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors cursor-pointer"
-                  title="Mark as Unread"
-                >
-                  <Mail className="h-4.5 w-4.5" />
-                </button>
-                <button 
-                  onClick={(e) => handleRowDelete(e, activeThread.id)}
-                  className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
-                  title="Delete Thread"
-                >
-                  <Trash2 className="h-4.5 w-4.5" />
-                </button>
-              </div>
-
-              {/* Pagination */}
-              <div className="flex items-center space-x-2 text-[10px] text-slate-400 font-extrabold select-none">
-                <span>Thread Reader</span>
-              </div>
-            </div>
-
-            {/* Reader view body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              
-              {/* Subject Title */}
-              <div>
-                <h3 className="text-base font-extrabold text-brand-heading leading-tight">{activeThread.subject}</h3>
-              </div>
-
-              {/* Sender Details row */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="h-9 w-9 rounded-full bg-brand-accent/10 border border-brand-border-purple/20 flex items-center justify-center text-brand-accent shrink-0 font-bold text-xs">
-                    {activeThread.sender.charAt(0)}
-                  </div>
-                  <div>
-                    <div className="flex items-center space-x-1.5 text-xs">
-                      <span className="font-extrabold text-brand-heading">{activeThread.sender}</span>
-                      <span className="text-[10px] text-slate-400 font-semibold">&lt;{activeThread.senderEmail}&gt;</span>
-                    </div>
-                    <p className="text-[9px] text-slate-400 font-bold mt-0.5">to me</p>
-                  </div>
-                </div>
-                <span className="text-[10px] text-slate-450 font-bold tabular-nums">{activeThread.time}</span>
-              </div>
-
-              {/* AI Summary Banner - Bhavani Conversation Intelligence */}
-              <div className="bg-brand-sidebar-hover/15 border border-brand-border-purple/25 rounded-xl p-4 shrink-0">
-                <div className="flex items-start space-x-3">
-                  <div className="p-1 bg-brand-accent/10 rounded-lg text-brand-accent shrink-0">
-                    <BrainCircuit className="h-4.5 w-4.5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">Conversation Intelligence</h4>
-                      {aiSummaryResult && (
-                        <span className="text-[9px] text-slate-400 font-semibold">{aiSummaryResult.processing_time_ms}ms</span>
-                      )}
-                    </div>
-                    {isSummarizing ? (
-                      <div className="flex items-center space-x-2 mt-2">
-                        <Loader2 className="h-3.5 w-3.5 text-brand-accent animate-spin" />
-                        <span className="text-[10px] text-slate-500 font-bold">Analysing conversation...</span>
-                      </div>
-                    ) : aiSummaryResult ? (
-                      <div className="mt-2 space-y-2.5">
-                        <p className="text-[11px] text-brand-text/80 leading-relaxed font-bold">{aiSummaryResult.summary}</p>
-
-                        {/* Badge row: sentiment, intent, category, confidence */}
-                        <div className="flex flex-wrap gap-1.5">
-                          <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
-                            aiSummaryResult.sentiment === 'positive' ? 'bg-emerald-50 text-emerald-700' :
-                            aiSummaryResult.sentiment === 'negative' ? 'bg-rose-50 text-rose-700' :
-                            'bg-slate-100 text-slate-600'
-                          }`}>
-                            <TrendingUp className="h-3 w-3" />
-                            <span>{aiSummaryResult.sentiment}</span>
-                          </span>
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[9px] font-extrabold">
-                            <Target className="h-3 w-3" />
-                            <span>{aiSummaryResult.intent}</span>
-                          </span>
-                          {aiSummaryResult.category && (
-                            <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-extrabold ${
-                              aiSummaryResult.category === 'urgent' ? 'bg-rose-50 text-rose-700' :
-                              aiSummaryResult.category === 'sales' ? 'bg-emerald-50 text-emerald-700' :
-                              aiSummaryResult.category === 'support' ? 'bg-amber-50 text-amber-700' :
-                              'bg-slate-100 text-slate-600'
-                            }`}>
-                              <MessageSquare className="h-3 w-3" />
-                              <span>{aiSummaryResult.category}</span>
-                            </span>
-                          )}
-                          <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 text-[9px] font-extrabold">
-                            <MessageSquare className="h-3 w-3" />
-                            <span>{(aiSummaryResult.confidence * 100).toFixed(0)}% confidence</span>
-                          </span>
-                        </div>
-
-                        {/* Key Points */}
-                        {aiSummaryResult.key_points && aiSummaryResult.key_points.length > 0 && (
-                          <div className="border-t border-brand-border-purple/15 pt-2">
-                            <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-1">Key Points</p>
-                            <ul className="space-y-0.5">
-                              {aiSummaryResult.key_points.map((point, i) => (
-                                <li key={i} className="text-[10px] text-brand-text/70 font-semibold flex items-start space-x-1.5">
-                                  <span className="text-brand-accent mt-0.5">•</span>
-                                  <span>{point}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* Action Items */}
-                        {aiSummaryResult.action_items && aiSummaryResult.action_items.length > 0 && (
-                          <div className="border-t border-brand-border-purple/15 pt-2">
-                            <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-1">Action Items</p>
-                            <ul className="space-y-0.5">
-                              {aiSummaryResult.action_items.map((item, i) => (
-                                <li key={i} className="text-[10px] text-brand-text/70 font-semibold flex items-start space-x-1.5">
-                                  <span className="text-amber-500 mt-0.5">◆</span>
-                                  <span>{item}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {/* Draft Reply */}
-                        {aiSummaryResult.draft_reply && (
-                          <div className="border-t border-brand-border-purple/15 pt-2">
-                            <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-1">Draft Reply</p>
-                            <div className="bg-white border border-brand-border-purple/10 rounded-lg p-2.5 text-[10px] text-brand-text/80 font-medium leading-relaxed italic">
-                              "{aiSummaryResult.draft_reply}"
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Follow-up Suggestion */}
-                        {aiSummaryResult.follow_up_suggestion && (
-                          <div className="border-t border-brand-border-purple/15 pt-2 flex items-start space-x-2">
-                            <span className="text-amber-500 text-[10px] mt-0.5">⏰</span>
-                            <div>
-                              <p className="text-[8px] font-extrabold text-brand-heading/60 uppercase tracking-wider mb-0.5">Follow-up</p>
-                              <p className="text-[10px] text-brand-text/80 font-semibold">{aiSummaryResult.follow_up_suggestion}</p>
-                              {aiSummaryResult.follow_up_timing && (
-                                <span className={`inline-block mt-1 text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
-                                  aiSummaryResult.follow_up_timing === 'immediate' ? 'bg-rose-50 text-rose-700' :
-                                  aiSummaryResult.follow_up_timing === 'today' ? 'bg-amber-50 text-amber-700' :
-                                  aiSummaryResult.follow_up_timing === 'no_followup' ? 'bg-slate-100 text-slate-500' :
-                                  'bg-blue-50 text-blue-700'
-                                }`}>
-                                  {aiSummaryResult.follow_up_timing.replace('_', ' ')}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="text-[10px] text-slate-400 font-semibold mt-1">Unable to generate summary</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Message Body */}
-              <div className="text-xs text-brand-text font-semibold leading-relaxed whitespace-pre-line border-b border-slate-100 pb-6 min-h-[120px]">
-                {activeThread.body}
-              </div>
-
-              {/* Attachments */}
-              {activeThread.attachments && activeThread.attachments.length > 0 && (
-                <div className="space-y-2.5">
-                  <h4 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">Attachments</h4>
-                  <div className="flex flex-wrap gap-2.5">
-                    {activeThread.attachments.map((file, idx) => (
-                      <div key={idx} className="p-2.5 border border-brand-border-purple/15 rounded-lg bg-slate-50/50 flex items-center text-[10px] font-bold">
-                        <Paperclip className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
-                        <span className="text-brand-heading mr-2">{file.name}</span>
-                        <span className="text-slate-400 font-semibold">({file.size})</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Reader Action Triggers */}
-              {inlineComposerMode === null ? (
-                <div className="flex space-x-3 pt-2">
-                  <button 
-                    onClick={() => {
-                      setInlineComposerMode('reply');
-                      setInlineTo(activeThread.senderEmail);
-                    }}
-                    className="inline-flex items-center space-x-1.5 px-4 py-2 border border-brand-border-purple/35 hover:border-brand-border-purple text-brand-text/80 text-xs font-bold rounded-lg cursor-pointer bg-white transition-colors"
-                  >
-                    <CornerUpLeft className="h-4 w-4 text-brand-accent" strokeWidth={2.25} />
-                    <span>Reply</span>
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setInlineComposerMode('forward');
-                      setInlineTo('');
-                    }}
-                    className="inline-flex items-center space-x-1.5 px-4 py-2 border border-brand-border-purple/35 hover:border-brand-border-purple text-brand-text/80 text-xs font-bold rounded-lg cursor-pointer bg-white transition-colors"
-                  >
-                    <CornerUpRight className="h-4 w-4 text-slate-450" />
-                    <span>Forward</span>
-                  </button>
-                </div>
-              ) : (
-                /* 3. Inline Composer (Gmail style inline reply editor) */
-                <form 
-                  onSubmit={handleSendInline}
-                  className="border border-brand-border-purple/30 rounded-xl p-4 bg-slate-50/40 space-y-4 animate-in slide-in-from-bottom-3 duration-250 mt-4"
-                >
-                  <div className="flex items-center justify-between border-b border-brand-border-purple/10 pb-2">
-                    <div className="flex items-center space-x-1.5 text-xs text-brand-text">
-                      <CornerDownLeft className="h-4 w-4 text-brand-accent shrink-0" />
-                      <span className="font-bold">
-                        {inlineComposerMode === 'reply' ? 'Reply to' : 'Forward to'}
-                      </span>
-                      {inlineComposerMode === 'reply' ? (
-                        <span className="font-extrabold text-brand-heading">{activeThread.senderEmail}</span>
-                      ) : (
-                        <input 
-                          type="email" 
-                          required 
-                          placeholder="recipient@company.com" 
-                          value={inlineTo}
-                          onChange={e => setInlineTo(e.target.value)}
-                          className="px-2 py-0.5 border border-brand-border-purple/20 bg-white rounded text-[11px] font-semibold text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-accent/20 w-48"
-                        />
-                      )}
-                    </div>
-                    <button 
-                      type="button" 
-                      onClick={() => setInlineComposerMode(null)} 
-                      className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-brand-text cursor-pointer"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                  <div>
-                    <textarea 
-                      required 
-                      placeholder={inlineComposerMode === 'reply' ? 'Write email response...' : 'Forward message notes...'} 
-                      value={inlineBody}
-                      onChange={e => setInlineBody(e.target.value)}
-                      className="w-full p-3 border border-brand-border-purple/25 bg-white rounded-lg text-xs font-semibold text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-accent/20 min-h-[140px] resize-y leading-relaxed"
-                    />
-                  </div>
-                  <div className="flex justify-between items-center pt-2">
-                    <div className="flex items-center space-x-2 text-slate-400">
-                      <button type="button" className="p-2 hover:bg-slate-100 rounded hover:text-brand-text cursor-pointer">
-                        <Paperclip className="h-4.5 w-4.5" />
-                      </button>
-                    </div>
-                    <div className="flex items-center space-x-2.5">
-                      <button 
-                        type="button" 
-                        onClick={() => setInlineComposerMode(null)} 
-                        className="px-3.5 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-white cursor-pointer"
-                      >
-                        Discard
-                      </button>
-                      <button 
-                        type="submit" 
-                        className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer"
-                      >
-                        <SendHorizontal className="h-3.5 w-3.5" />
-                        <span>Send</span>
-                      </button>
-                    </div>
-                  </div>
-                </form>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* 3. Floating Compose Window (Bottom Right corner, Gmail style!) */}
-      {isComposeOpen && (
-        <div 
-          className="absolute bottom-0 right-12 w-96 bg-white border border-brand-border-purple/35 rounded-t-xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-[400px] animate-in slide-in-from-bottom duration-250"
-          onClick={e => e.stopPropagation()}
-        >
-          {/* Composer Header */}
-          <div className="px-4 py-2.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-[#00004f] text-white">
-            <span className="font-extrabold text-[11px] tracking-wide uppercase">New Message</span>
-            <button 
-              onClick={() => setIsComposeOpen(false)} 
-              className="text-slate-300 hover:text-white p-0.5 cursor-pointer"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Composer Form */}
-          <form onSubmit={handleCompose} className="p-4 flex-1 flex flex-col space-y-3 justify-between">
-            <div className="space-y-2.5">
-              <input 
-                type="email" 
-                required 
-                placeholder="To" 
-                value={composeForm.to} 
-                onChange={e => setComposeForm({...composeForm, to: e.target.value})} 
-                className="w-full border-b border-brand-border-purple/15 py-1 text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:border-brand-accent"
-              />
-              <input 
-                type="text" 
-                required 
-                placeholder="Subject" 
-                value={composeForm.subject} 
-                onChange={e => setComposeForm({...composeForm, subject: e.target.value})} 
-                className="w-full border-b border-brand-border-purple/15 py-1 text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:border-brand-accent"
-              />
-              <textarea 
-                required 
-                placeholder="Write message..." 
-                value={composeForm.body} 
-                onChange={e => setComposeForm({...composeForm, body: e.target.value})} 
-                className="w-full py-2 text-xs font-semibold text-brand-text placeholder-slate-400 focus:outline-none min-h-[140px] resize-none leading-relaxed" 
-              />
-            </div>
-
-            {/* Composer Footer toolbar */}
-            <div className="pt-2 border-t border-brand-border-purple/10 flex justify-between items-center shrink-0">
-              <button type="button" className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-brand-text cursor-pointer">
-                <Paperclip className="h-4 w-4" />
+    <div className="flex border border-brand-border-purple/20 rounded-xl overflow-hidden bg-white h-[650px] shadow-sm/5">
+      <aside className="w-56 shrink-0 border-r border-brand-border-purple/15 bg-slate-50/50 p-3 flex flex-col gap-4">
+        <nav className="space-y-0.5">
+          {[
+            { id: 'all', label: 'All Mail', icon: Mail, count: total },
+            { id: 'inbound', label: 'Inbox', icon: Inbox, count: unreadCount },
+            { id: 'outbound', label: 'Sent', icon: MailOpen, count: 0 },
+            { id: 'unread', label: 'Unread', icon: MailOpen, count: unreadCount }
+          ].map(item => {
+            const Icon = item.icon;
+            const active = filter === item.id;
+            return (
+              <button key={item.id} onClick={() => { setFilter(item.id as MailboxFilter); setPage(1); }} className={`w-full flex items-center justify-between px-4 py-2 rounded-r-full text-xs font-bold transition-all cursor-pointer ${active ? 'bg-brand-accent/10 text-brand-accent border-l-3 border-brand-accent' : 'hover:bg-slate-100/70 text-brand-text/75 hover:text-brand-text'}`}>
+                <span className="flex items-center gap-3"><Icon className="h-4.5 w-4.5" />{item.label}</span>
+                {item.count > 0 && <span className="text-[10px] font-extrabold bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded-full tabular-nums">{item.count}</span>}
               </button>
-              <div className="flex space-x-2">
-                <button 
-                  type="button" 
-                  onClick={() => setIsComposeOpen(false)} 
-                  className="px-3 py-1.5 border border-brand-border-purple/30 rounded-lg text-[10px] font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer"
-                >
-                  Discard
-                </button>
-                <button 
-                  type="submit" 
-                  className="inline-flex items-center space-x-1 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-[10px] font-bold shadow-sm/10 cursor-pointer"
-                >
-                  <SendHorizontal className="h-3.5 w-3.5" />
-                  <span>Send</span>
-                </button>
-              </div>
-            </div>
-          </form>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <section className="w-[46%] min-w-[360px] border-r border-brand-border-purple/15 flex flex-col">
+        <div className="h-12 border-b border-brand-border-purple/15 px-4 flex items-center justify-between bg-slate-50/30 shrink-0 gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search sender, subject, preview..." className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-[11px] text-brand-text focus:outline-none focus:bg-white bg-white" />
+          </div>
+          <button onClick={loadEmails} disabled={isLoading} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors disabled:opacity-50" title="Refresh emails">
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
-      )}
+
+        {error && <div className="m-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}
+
+        <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+          {isLoading ? (
+            <div className="h-full flex items-center justify-center text-slate-400 text-xs font-bold"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading emails...</div>
+          ) : emails.length === 0 ? (
+            <div className="h-full flex items-center justify-center text-slate-400 text-xs font-bold">No emails found.</div>
+          ) : emails.map(email => (
+            <button key={email.id} onClick={() => openEmail(email)} className={`w-full text-left px-4 py-3.5 hover:bg-slate-50 transition-colors ${selectedEmail?.id === email.id ? 'bg-brand-accent/5' : !email.is_read ? 'bg-slate-50/50' : 'bg-white'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <p className={`truncate text-xs ${!email.is_read ? 'font-extrabold text-brand-heading' : 'font-bold text-brand-text/80'}`}>{email.direction === 'outbound' ? email.receiver || 'Recipient' : email.sender}</p>
+                <span className="text-[10px] text-slate-400 font-bold shrink-0">{formatDate(email.sent_at)}</span>
+              </div>
+              <p className="text-xs font-extrabold text-brand-heading truncate mt-1">{email.subject}</p>
+              <p className="text-[11px] text-brand-text/60 font-semibold truncate mt-0.5">{email.body_preview || 'No preview available'}</p>
+              <div className="flex items-center gap-2 mt-2 text-[10px] text-slate-400 font-bold">
+                {email.thread_id && <span>Thread {email.thread_id}</span>}
+                {email.attachment_metadata?.length > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="h-3 w-3" />{email.attachment_metadata.length}</span>}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="h-11 border-t border-brand-border-purple/15 px-4 flex items-center justify-between text-[10px] text-slate-400 font-extrabold">
+          <span>{total === 0 ? '0' : `${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)}`} of {total}</span>
+          <div className="flex border border-brand-border-purple/20 rounded-md bg-white">
+            <button onClick={() => setPage(value => Math.max(1, value - 1))} disabled={page <= 1} className="p-1 hover:bg-slate-100 disabled:opacity-40"><ChevronLeft className="h-3.5 w-3.5" /></button>
+            <button onClick={() => setPage(value => Math.min(totalPages, value + 1))} disabled={page >= totalPages} className="p-1 hover:bg-slate-100 disabled:opacity-40"><ChevronRight className="h-3.5 w-3.5" /></button>
+          </div>
+        </div>
+      </section>
+
+      <section className="flex-1 min-w-0 bg-white">
+        {!selectedEmail ? (
+          <div className="h-full flex items-center justify-center text-slate-400 text-xs font-bold">Select an email to view details.</div>
+        ) : isDetailLoading ? (
+          <div className="h-full flex items-center justify-center text-slate-400 text-xs font-bold"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading details...</div>
+        ) : (
+          <div className="h-full overflow-y-auto p-6 space-y-5">
+            <div>
+              <h3 className="text-base font-extrabold text-brand-heading leading-tight">{selectedEmail.subject}</h3>
+              <p className="text-[10px] font-bold text-slate-400 mt-1">{formatDate(selectedEmail.sent_at)} - {selectedEmail.is_read ? 'Read' : 'Unread'}</p>
+            </div>
+            <div className="rounded-xl border border-brand-border-purple/15 bg-slate-50/50 p-4 space-y-2 text-xs font-semibold text-brand-text/80">
+              <p><span className="font-extrabold text-brand-heading">From:</span> {selectedEmail.sender}</p>
+              <p><span className="font-extrabold text-brand-heading">To:</span> {selectedEmail.receiver || 'Not provided'}</p>
+              {selectedEmail.thread_id && <p><span className="font-extrabold text-brand-heading">Thread:</span> {selectedEmail.thread_id}</p>}
+            </div>
+            <div className="text-xs text-brand-text font-semibold leading-relaxed whitespace-pre-line border-b border-slate-100 pb-6 min-h-[140px]">{selectedEmail.body_preview || 'No message body was provided by the backend response.'}</div>
+            <div className="space-y-2.5">
+              <h4 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">Attachments</h4>
+              {selectedEmail.attachment_metadata?.length ? selectedEmail.attachment_metadata.map(file => (
+                <div key={file.attachment_id || file.filename} className="p-2.5 border border-brand-border-purple/15 rounded-lg bg-slate-50/50 flex items-center text-[10px] font-bold w-fit">
+                  <Paperclip className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+                  <span className="text-brand-heading mr-2">{file.filename}</span>
+                  <span className="text-slate-400 font-semibold">{formatSize(file.size_bytes)}</span>
+                </div>
+              )) : <p className="text-xs text-slate-400 font-semibold">No attachments.</p>}
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

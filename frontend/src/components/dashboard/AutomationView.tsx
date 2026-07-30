@@ -158,7 +158,7 @@ export default function AutomationView() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-slate-400">
+              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
                 <th className="py-2.5">Log ID</th>
                 <th className="py-2.5">Workflow Name</th>
                 <th className="py-2.5">Fired Trigger</th>
@@ -169,7 +169,7 @@ export default function AutomationView() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs font-semibold text-brand-text">
               {logs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/50">
+                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="py-3 font-extrabold text-slate-450 uppercase text-[10px] tracking-wide">{log.id}</td>
                   <td className="py-3 font-extrabold">{log.workflow}</td>
                   <td className="py-3 text-slate-500">{log.trigger}</td>

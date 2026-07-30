@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { BarChart2, TrendingUp, Users, Target } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, Statistics, CTASection } from '@/components/shared/PageTemplates';
 import { motion } from 'framer-motion';
@@ -30,8 +30,6 @@ const AnalyticsScreenshot = () => (
 );
 
 export default function RevenueAnalyticsPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -40,7 +38,6 @@ export default function RevenueAnalyticsPage() {
         title={<>Real-time revenue data,<br /><span style={{ color: '#7c3aed' }}>not last week's exports.</span></>}
         description="Live dashboards with pipeline metrics, funnel analysis, rep leaderboards, and AI forecasting — updated every second."
         screenshot={<AnalyticsScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       {/* Feature Highlight */}
@@ -49,7 +46,7 @@ export default function RevenueAnalyticsPage() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.6 }}
             style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #fff 100%)', padding: 32, borderRadius: 16, border: '1px solid #ede9fe' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed', marginBottom: 16 }}>Rep Leaderboard — Live</div>
@@ -71,7 +68,7 @@ export default function RevenueAnalyticsPage() {
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.6, delay: 0.2 }}>
             <h2 style={{ fontSize: 36, fontWeight: 900, color: '#0f172a', marginBottom: 16, letterSpacing: '-0.02em' }}>Every metric, always current</h2>
             <p style={{ fontSize: 16, color: '#64748b', lineHeight: 1.7, marginBottom: 24 }}>
@@ -98,16 +95,15 @@ export default function RevenueAnalyticsPage() {
 
       <Statistics
         stats={[
-          { value: '94%', label: 'Forecast Accuracy', description: 'Predicts quarterly revenue within 6%' },
-          { value: '< 1s', label: 'Dashboard Load', description: 'Live aggregations in under one second' },
-          { value: '40+', label: 'API Endpoints', description: 'Full REST API for custom integrations' },
+          { value: '/api/v1', label: 'Dashboard endpoint', description: 'Role-scoped KPIs returned in a single async query' },
+          { value: '40+', label: 'REST endpoints', description: 'Full API for custom integrations via Swagger UI' },
+          { value: 'RBAC', label: 'Scoped views', description: 'Reps see their data; managers see the full team' },
         ]}
       />
 
       <CTASection
         title="See your revenue clearly."
         description="14-day free trial. Full access to dashboards, forecasting, and leaderboards."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

@@ -10,10 +10,8 @@ import {
   FileText, 
   GitPullRequest,
   Search,
-  CheckSquare,
   ListFilter
 } from 'lucide-react';
-import TasksView from './TasksView';
 import CalendarView from './CalendarView';
 
 interface ActivityLog {
@@ -27,7 +25,7 @@ interface ActivityLog {
 }
 
 export default function ActivitiesView() {
-  const [activeSubTab, setActiveSubTab] = useState<'audit' | 'tasks' | 'calendar'>('audit');
+  const [activeSubTab, setActiveSubTab] = useState<'audit' | 'calendar'>('audit');
   
   const [logs] = useState<ActivityLog[]>([
     { id: 1, type: 'note', title: 'Internal Note Added', desc: 'Alex Rivera: Interested in enterprise migration plan.', user: 'Sarah Johnson', time: '10 mins ago', dateKey: 'today' },
@@ -75,17 +73,6 @@ export default function ActivitiesView() {
         >
           <ListFilter className="h-3.5 w-3.5" />
           <span>Audit Logs</span>
-        </button>
-        <button
-          onClick={() => setActiveSubTab('tasks')}
-          className={`py-1.5 px-4 rounded-lg font-extrabold text-xs transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
-            activeSubTab === 'tasks' 
-              ? 'bg-brand-accent text-white shadow-sm' 
-              : 'text-brand-text/75 hover:text-brand-heading hover:bg-brand-sidebar-hover/20'
-          }`}
-        >
-          <CheckSquare className="h-3.5 w-3.5" />
-          <span>Tasks Workspace</span>
         </button>
         <button
           onClick={() => setActiveSubTab('calendar')}
@@ -175,7 +162,6 @@ export default function ActivitiesView() {
         </div>
       )}
 
-      {activeSubTab === 'tasks' && <TasksView />}
       {activeSubTab === 'calendar' && <CalendarView />}
     </div>
   );

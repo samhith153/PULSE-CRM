@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Index, String, JSON, func
+from sqlalchemy import DateTime, Index, Integer, JSON, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PGUUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -18,6 +18,7 @@ class EventOutbox(Base):
         Index("ix_event_outbox_organization_occurred_at", "organization_id", "occurred_at"),
         Index("ix_event_outbox_event_type_occurred_at", "event_type", "occurred_at"),
         Index("ix_event_outbox_aggregate_lookup", "aggregate_type", "aggregate_id"),
+        Index("ix_event_outbox_processing_status", "processing_status", "next_attempt_at"),
     )
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -30,6 +31,11 @@ class EventOutbox(Base):
     source: Mapped[str | None] = mapped_column(String(120), nullable=True)
     correlation_id: Mapped[str | None] = mapped_column(String(120), nullable=True, index=True)
     payload: Mapped[dict[str, Any]] = mapped_column(JSON().with_variant(JSONB, "postgresql"), nullable=False, default=dict)
+    processing_status: Mapped[str] = mapped_column(String(30), nullable=False, default="pending")
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
@@ -42,3 +48,4 @@ class EventOutbox(Base):
             f"aggregate_id={self.aggregate_id!r}"
             ")"
         )
+

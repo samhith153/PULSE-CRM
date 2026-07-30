@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { Users, Sparkles, Mail, Target, TrendingUp, Zap } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, Statistics, CTASection } from '@/components/shared/PageTemplates';
 import { motion } from 'framer-motion';
@@ -35,8 +35,6 @@ const RepScreenshot = () => (
 );
 
 export default function SalesRepsPage() {
-  const [modalOpen, setModalOpen] = useState(false);
-
   return (
     <PageContainer>
       <HeroWithScreenshot
@@ -45,7 +43,6 @@ export default function SalesRepsPage() {
         title={<>Close more deals.<br /><span style={{ color: '#7c3aed' }}>In less time. Every day.</span></>}
         description="AI-drafted emails, AI lead scores, and a crystal-clear pipeline mean you spend your day selling — not updating spreadsheets."
         screenshot={<RepScreenshot />}
-        onCTA={() => setModalOpen(true)}
       />
 
       {/* Feature Highlight */}
@@ -54,7 +51,7 @@ export default function SalesRepsPage() {
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "0px" }}
             style={{ fontSize: 36, fontWeight: 900, color: '#0f172a', textAlign: 'center', marginBottom: 48, letterSpacing: '-0.02em' }}>
             Built for how reps actually work
           </motion.h2>
@@ -73,7 +70,7 @@ export default function SalesRepsPage() {
                   key={i}
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
+                  viewport={{ once: true, margin: "0px" }}
                   transition={{ delay: i * 0.1 }}
                   style={{ padding: 24, background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0' }}>
                   <div style={{ height: 40, width: 40, borderRadius: 10, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
@@ -90,16 +87,15 @@ export default function SalesRepsPage() {
 
       <Statistics
         stats={[
-          { value: '2.1×', label: 'More Deals Closed', description: 'Reps with AI close twice as many deals' },
-          { value: '45min', label: 'Admin Saved Daily', description: 'Automated logging eliminates busywork' },
-          { value: '8.2h', label: 'Saved Per Week', description: 'Total time savings from automation' },
+          { value: '0–100', label: 'AI Lead Score', description: 'Every lead scored with a transparent, explainable reason' },
+          { value: 'Gmail', label: 'OAuth2 Sync', description: 'Full thread history synced and linked to your deals' },
+          { value: 'Groq', label: 'Email Summaries', description: 'Llama 3.3-70B analyses threads and suggests next steps' },
         ]}
       />
 
       <CTASection
         title="Give your reps an unfair advantage."
         description="Start free. Full AI Copilot, Visual Pipeline, and Email Intelligence from day one."
-        onCTA={() => setModalOpen(true)}
       />
     </PageContainer>
   );

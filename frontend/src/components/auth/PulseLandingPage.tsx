@@ -10,6 +10,7 @@ import {
   Target, Lock
 } from 'lucide-react';
 import Navbar from '@/components/navigation/Navbar';
+import AuthModal from '@/components/shared/AuthModal';
 
 interface PulseLandingPageProps {
   onLogin: (role: 'representative' | 'manager' | 'admin') => void;
@@ -44,11 +45,9 @@ interface Toast {
 
 export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [newsEmail, setNewsEmail] = useState('');
-  const [selectedRole, setSelectedRole] = useState<Role>('manager');
+  const openSignUp = () => setIsModalOpen(true);
+  const openSignIn = () => setIsModalOpen(true);
   const [orbitAngle, setOrbitAngle] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [activeOrbitNode, setActiveOrbitNode] = useState<string | null>(null);
@@ -117,20 +116,6 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3500);
   };
 
-  const handleLogin = () => {
-    if (!email || !password) { addToast('Please fill in all fields.', 'error'); return; }
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsModalOpen(false);
-      setEmail('');
-      setPassword('');
-      onLogin(selectedRole);
-    }, 1200);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); handleLogin(); };
-
   const handleNewsletter = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newsEmail)) {
@@ -145,25 +130,25 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     { label: '4 Users Seeded', value: 4, key: 'users', sub: 'Admin, Manager, 2 Sales Reps', icon: Users },
     { label: '11 Tables', value: 11, key: 'tables', sub: 'Full relational schema with FK constraints', icon: Award },
     { label: '33 Permissions', value: 33, key: 'permissions', sub: 'Across all CRM resources', icon: Sparkles },
-    { label: '89 Tests', value: 89, key: 'tests', sub: 'All passing — pytest suite', icon: Zap },
+    { label: '89 Tests', value: 89, key: 'tests', sub: 'All passing – pytest suite', icon: Zap },
   ];
 
   const orbitNodes = [
-    { label: 'Email Sync', icon: Mail, color: '#7c3aed', description: 'Sync Gmail and Outlook emails automatically. Track opens, clicks, and reply rates in real-time.' },
-    { label: 'AI Copilot', icon: Sparkles, color: '#7c3aed', description: 'Get AI-powered lead scoring and recommendations. Automate email drafts and deal summaries.' },
-    { label: 'Reports', icon: BarChart2, color: '#2563eb', description: 'Real-time dashboards with pipeline analytics. Track team performance and forecast revenue.' },
-    { label: 'Pipeline', icon: Filter, color: '#16a34a', description: 'Visual deal stages with drag-and-drop. Move deals from lead to close with clear workflows.' },
-    { label: 'Leaderboard', icon: Trophy, color: '#ea580c', description: 'Track top performers and celebrate wins. Motivate your team with gamified sales metrics.' },
-    { label: 'Contacts', icon: Users, color: '#0d9488', description: 'Centralize all customer data in one place. Track interactions, notes, and relationship history.' },
+    { label: 'Gmail Sync',  icon: Mail,         color: '#7c3aed', description: 'Connect Gmail via OAuth2. Emails auto-sync per user, grouped into threads, and linked to leads and deals with inbound/outbound tracking.' },
+    { label: 'AI Scoring',  icon: Sparkles,     color: '#7c3aed', description: 'Every lead gets a 0–100 score from our transparent rule-based engine. Fit (60%) + Engagement (40%) → Critical / High / Medium / Low tier.' },
+    { label: 'Analytics',   icon: BarChart2,    color: '#2563eb', description: 'Role-scoped live dashboard at /api/v1/dashboard – leads by status, pipeline value, deal stages, and activity feed.' },
+    { label: 'Pipeline',    icon: Filter,       color: '#16a34a', description: 'FSM deal stages: New → Contacted → Qualified → Proposal Sent → Negotiation → Won / Lost. One-click stage transitions.' },
+    { label: 'Next Action', icon: Trophy,       color: '#ea580c', description: 'Rule-based recommendation engine suggests: Send follow-up, Schedule demo, Send proposal, Escalate to manager – based on score + urgency + reply status.' },
+    { label: 'Contacts',    icon: Users,        color: '#0d9488', description: 'Centralise companies, contacts, and leads. Email unique per org, linked to companies, with full validation and soft-delete.' },
   ];
 
   const features = [
-    { icon: LayoutDashboard, title: 'Live Dashboards', desc: 'Real-time KPIs at /api/v1/dashboard — leads by status, pipeline value, and activity feed.', bg: C.violetLighter, fg: C.violet },
-    { icon: Sparkles, title: 'AI Deal Copilot', desc: 'GPT-4o powered lead scoring (0-100), deal summaries, and next-best-action at /api/v1/ai.', bg: '#eff6ff', fg: C.blue },
-    { icon: TrendingUp, title: 'Visual Pipeline', desc: 'FSM-based deal stages: New → Discovery → Proposal → Negotiation → Closed Won with drag-drop.', bg: '#ecfdf5', fg: C.emerald },
-    { icon: Mail, title: 'Email Intelligence', desc: 'Gmail OAuth integration with per-user sync, thread logging, and email-to-deal linking.', bg: '#fff7ed', fg: C.orange },
-    { icon: BarChart2, title: 'Revenue Analytics', desc: 'Custom reports, rep leaderboards, forecast views — all role-scoped by RBAC permissions.', bg: '#fdf2f8', fg: '#9333ea' },
-    { icon: Shield, title: 'Enterprise Security', desc: '33 granular permissions, JWT with RBAC, bcrypt passwords, SOC 2 compliant schema.', bg: '#f0fdf4', fg: '#16a34a' },
+    { icon: LayoutDashboard, title: 'Live Dashboard',        desc: 'Role-scoped KPIs at /api/v1/dashboard – leads by status, pipeline value, open deals, win rate, and live activity feed.', bg: C.violetLighter, fg: C.violet },
+    { icon: Sparkles,        title: 'AI Lead Scoring',       desc: 'Transparent rule-based engine scores leads 0–100 (Fit 60% + Engagement 40%) with human-readable reasons. No black box.', bg: '#eff6ff', fg: C.blue },
+    { icon: TrendingUp,      title: 'FSM Deal Pipeline',     desc: 'Deals follow a strict FSM: New → Contacted → Qualified → Proposal Sent → Negotiation → Won / Lost. One-click transitions.', bg: '#ecfdf5', fg: C.emerald },
+    { icon: Mail,            title: 'Gmail Intelligence',    desc: 'OAuth2 Gmail sync per user. Threads stored, linked to leads/deals. Groq/Llama 3.3 summarises each thread and detects intent.', bg: '#fff7ed', fg: C.orange },
+    { icon: BarChart2,       title: 'Revenue Analytics',     desc: 'Rep leaderboards, forecast views, and pipeline overviews – all RBAC-scoped. Admins see everything; reps see their own data.', bg: '#fdf2f8', fg: '#9333ea' },
+    { icon: Shield,          title: 'Enterprise Security',   desc: '3 roles, 33 granular permissions in resource:action format. JWT access + refresh tokens, bcrypt passwords, soft-delete everywhere.', bg: '#f0fdf4', fg: '#16a34a' },
   ];
 
   const steps = [
@@ -173,29 +158,34 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   ];
 
   const testimonials = [
-    { initials: 'MC', name: 'Marcus Chen', role: 'VP Sales, TechCorp', quote: "Pulse CRM's lead FSM is a game-changer. We go from 'New' to 'Won' with clear pipeline stages and AI scoring.", color: C.violet },
-    { initials: 'SR', name: 'Sarah Reynolds', role: 'CTO, Sparta Creative', quote: 'The REST API is clean and well-documented. We integrated our existing tools in a weekend using the OpenAPI spec.', color: C.blue },
-    { initials: 'AP', name: 'Anita Patel', role: 'Head of RevOps, Acme Systems', quote: 'With 33 granular permissions and RBAC, we give each sales rep exactly the right access. Compliance team loves it.', color: C.emerald },
+    { initials: 'MC', name: 'Marcus Chen', role: 'VP Sales, TechCorp', quote: "The FSM pipeline is exactly what we needed. Every deal has a clear stage and the AI score tells us instantly which ones to prioritise this week.", color: C.violet },
+    { initials: 'SR', name: 'Sarah Reynolds', role: 'CTO, Sparta Creative', quote: 'The FastAPI backend is clean and well-structured. We had our first integration running against the Swagger UI in under an hour.', color: C.blue },
+    { initials: 'AP', name: 'Anita Patel', role: 'Head of RevOps, Acme Systems', quote: 'With 33 resource-level permissions and RBAC, every rep sees only their own pipeline while managers get the full picture. Our compliance team is happy.', color: C.emerald },
   ];
 
   const trustBadges = [
-    { icon: Lock, title: 'SOC 2 Secure', desc: 'Enterprise-grade encryption' },
-    { icon: RefreshCw, title: 'Easy Integration', desc: '100+ native connectors' },
-    { icon: Headphones, title: '24/7 Support', desc: 'Real humans, always on' },
-    { icon: Sparkles, title: 'Always Improving', desc: 'Weekly feature releases' },
+    { icon: Lock,       title: 'JWT + RBAC',           desc: 'Access & refresh tokens, bcrypt, 33 permissions' },
+    { icon: RefreshCw,  title: 'REST API Ready',        desc: '40+ endpoints, Swagger UI at /docs' },
+    { icon: Headphones, title: 'Async FastAPI',         desc: 'SQLAlchemy 2.0 async + PostgreSQL' },
+    { icon: Sparkles,   title: 'Groq/Llama 3.3',       desc: 'LLM email summaries + intent scoring' },
   ];
 
   const footerLinks: Record<string, string[]> = {
-    Product: ['Dashboard', 'Pipeline', 'AI Copilot', 'Email Sync', 'Analytics', 'Contacts'],
+    Product: ['Dashboard', 'AI Scoring', 'Pipeline', 'Gmail Sync', 'Analytics', 'Security & RBAC'],
     Company: ['About', 'Careers', 'Blog', 'Contact'],
-    Resources: ['Help Center', 'API Docs', 'Community', 'Changelog'],
+    Resources: ['API Docs (/docs)', 'ReDoc (/redoc)', 'Implementation Guide', 'Changelog'],
   };
+
+  // Shared layout constants
+  const maxW = 1280;
+  const px = 'clamp(24px, 5vw, 80px)';
+  const sectionPy = '48px';
 
   return (
     <div style={{ display: 'block', fontFamily: "'Inter', 'Geist', system-ui, -apple-system, sans-serif", backgroundColor: C.white, color: C.black, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
 
       {/* ══════════ TOAST NOTIFICATIONS ══════════ */}
-      <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ position: 'fixed', top: 20, right: 20, zIndex: 9999, display: 'flex', flexDirection: 'column', gap: 10, marginTop: 0 }}>
         {toasts.map(t => (
           <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderRadius: 12, background: t.type === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${t.type === 'success' ? '#bbf7d0' : '#fecaca'}`, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 280, maxWidth: 360 }}>
             {t.type === 'success' ? <CheckCircle2 size={18} color={C.emerald} /> : <X size={18} color="#dc2626" />}
@@ -207,220 +197,225 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         ))}
       </div>
 
-      {/* ══════════ LOGIN MODAL ══════════ */}
-      {isModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(6px)' }}
-          onClick={() => setIsModalOpen(false)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: C.white, borderRadius: 24, width: '100%', maxWidth: 440, padding: '40px 40px 36px', boxShadow: '0 32px 80px rgba(0,0,0,0.22)', position: 'relative' }}>
-            <button onClick={() => setIsModalOpen(false)} style={{ position: 'absolute', top: 18, right: 18, background: C.sectionAlt, border: `1px solid ${C.border}`, borderRadius: 10, width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <X size={16} color={C.textGray} />
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-              <div style={{ height: 36, width: 36, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Activity size={17} color={C.white} strokeWidth={2.5} />
-              </div>
-              <span style={{ fontSize: 18, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
-            </div>
-            <h2 style={{ fontSize: 24, fontWeight: 800, color: C.black, margin: '0 0 4px', letterSpacing: '-0.02em' }}>Welcome back</h2>
-            <p style={{ fontSize: 14, color: C.textMuted, fontWeight: 500, margin: '0 0 24px' }}>Sign in to your account to continue.</p>
-            <p style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>Select your role</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 22 }}>
-              {(['admin', 'manager', 'representative'] as Role[]).map(r => (
-                <button key={r} onClick={() => setSelectedRole(r)}
-                  style={{ padding: '9px 4px', borderRadius: 10, border: `2px solid ${selectedRole === r ? C.violet : C.border}`, background: selectedRole === r ? C.violetLighter : C.white, cursor: 'pointer', fontSize: 11, fontWeight: 700, color: selectedRole === r ? C.violet : C.textGray, textTransform: 'capitalize', transition: 'all 0.15s', fontFamily: 'inherit' }}>
-                  {r === 'representative' ? 'Sales Rep' : r.charAt(0).toUpperCase() + r.slice(1)}
-                </button>
-              ))}
-            </div>
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: C.textGray, marginBottom: 6 }}>Email address</label>
-                <div style={{ position: 'relative' }}>
-                  <Mail size={15} color={C.textMuted} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                  <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" required
-                    style={{ width: '100%', padding: '11px 14px 11px 40px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, fontFamily: 'inherit', color: C.black, outline: 'none', boxSizing: 'border-box', background: C.white }} />
-                </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: C.textGray, marginBottom: 6 }}>Password</label>
-                <div style={{ position: 'relative' }}>
-                  <Lock size={15} color={C.textMuted} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
-                    style={{ width: '100%', padding: '11px 14px 11px 40px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, fontFamily: 'inherit', color: C.black, outline: 'none', boxSizing: 'border-box', background: C.white }} />
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                <button type="button" style={{ fontSize: 12, fontWeight: 600, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
-              </div>
-              <button type="submit" disabled={isLoading}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', background: isLoading ? '#9b72f0' : C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: isLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all 0.15s', boxShadow: `0 6px 20px ${C.violet}44` }}>
-                {isLoading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Signing in...</> : 'Sign In'}
-              </button>
-            </form>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '18px 0' }}>
-              <div style={{ flex: 1, height: 1, background: C.border }} />
-              <span style={{ fontSize: 12, color: C.textMuted, fontWeight: 500 }}>or continue with</span>
-              <div style={{ flex: 1, height: 1, background: C.border }} />
-            </div>
-            <button onClick={() => setIsModalOpen(false)}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '12px', background: C.white, border: `1.5px solid ${C.border}`, borderRadius: 12, fontSize: 14, fontWeight: 700, color: C.black, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-              Continue with Google
-            </button>
-            <p style={{ textAlign: 'center', fontSize: 12, color: C.textMuted, margin: '18px 0 0' }}>
-              No account?{' '}
-              <button onClick={() => setIsModalOpen(false)} style={{ fontSize: 12, fontWeight: 700, color: C.violet, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Sign up free</button>
-            </p>
-          </div>
-        </div>
-      )}
+      {/* ══════════ AUTH MODAL ══════════ */}
+      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultMode="signup" onSuccess={() => { const r = localStorage.getItem('pulse-crm-role'); onLogin((r as any) || 'manager'); }} />
 
       {/* ══════════ NAVBAR ══════════ */}
-      <Navbar onOpenModal={() => setIsModalOpen(true)} />
+      <Navbar onOpenModal={openSignIn} onOpenSignUp={openSignUp} />
 
       {/* ══════════ 1. HERO SECTION ══════════ */}
-      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(180deg, #f5f3ff 0%, #faf9ff 40%, #ffffff 100%)', padding: '72px 48px 80px', marginTop: 64 }}>
-        <div style={{ position: 'absolute', top: -40, right: -40, width: 560, height: 560, background: 'radial-gradient(circle at center, rgba(124,58,237,0.09) 0%, transparent 70%)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(160deg, #f5f3ff 0%, #faf8ff 50%, #f0eefe 100%)', paddingTop: 64, paddingBottom: 64, marginTop: 64 }}>
+        {/* Background glow blobs */}
+        <div style={{ position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)', width: 700, height: 400, background: `radial-gradient(ellipse, ${C.violet}18 0%, transparent 70%)`, pointerEvents: 'none', filter: 'blur(40px)' }} />
+        <div style={{ position: 'absolute', top: 60, left: '15%', width: 300, height: 300, background: 'radial-gradient(circle, #a78bfa18 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
+        <div style={{ position: 'absolute', top: 60, right: '15%', width: 300, height: 300, background: 'radial-gradient(circle, #7c3aed14 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
 
-          {/* Left — hero copy */}
-          <div className="hero-left" style={{ display: 'flex', flexDirection: 'column', gap: 26 }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto', padding: `0 ${px}`, position: 'relative', zIndex: 1 }}>
 
-            {/* Headline */}
-            <h1 style={{ fontSize: 64, fontWeight: 900, color: C.black, lineHeight: 1.04, letterSpacing: '-0.04em', margin: 0, fontFamily: "'Inter', system-ui, sans-serif" }}>
-              The CRM your{' '}
-              <span style={{ color: C.violet }}>sales<br />team</span>
-              <br />will actually use.
-            </h1>
-
-            {/* Subtext */}
-            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 400, lineHeight: 1.8, maxWidth: 480, margin: 0 }}>
-              Pulse CRM unifies contacts, leads, deals, and email —{' '}
-              powered by AI scoring and a clean REST API. Built for real sales teams.
-            </p>
-
-            {/* CTAs */}
-            <div className="hero-btns" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit', letterSpacing: '-0.01em' }}>
-                Start Free Trial <ArrowRight size={16} />
-              </button>
+          {/* ── Top badge ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '7px 16px', background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', border: `1px solid ${C.violetLight}`, borderRadius: 100, boxShadow: `0 2px 12px ${C.violet}14` }}>
+              <Sparkles size={13} color={C.violet} />
+              <span style={{ fontSize: 12, fontWeight: 600, color: C.violet }}>The future of sales is here</span>
             </div>
+          </motion.div>
 
-            {/* Trust badges */}
-            <div className="hero-trust" style={{ display: 'flex', gap: 22, flexWrap: 'wrap', paddingTop: 4 }}>
-              {['14-day free trial', 'No credit card required', '2-minute setup'].map(t => (
-                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 500, color: C.textMuted }}>
-                  <CheckCircle2 size={14} color={C.violet} /> {t}
+          {/* ── Headline ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            style={{ textAlign: 'center', marginBottom: 18 }}>
+            <h1 style={{ fontSize: 'clamp(32px, 4.5vw, 56px)', fontWeight: 900, color: C.black, lineHeight: 1.08, letterSpacing: '-0.04em', margin: 0 }}>
+              Close More Deals with{' '}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '1.1em', height: '1.1em', background: `linear-gradient(135deg, ${C.violet} 0%, #9333ea 100%)`, borderRadius: '0.22em', boxShadow: `0 8px 24px ${C.violet}50`, verticalAlign: 'middle', flexShrink: 0 }}>
+                  <Sparkles size={22} color="#fff" strokeWidth={2.5} />
                 </span>
-              ))}
-            </div>
-          </div>
+                <span style={{ color: C.violet }}>Smarter</span>
+              </span>
+              <br />
+              <span style={{ color: C.violet }}>AI-Powered</span> CRM.
+            </h1>
+          </motion.div>
 
-          {/* Right — Dashboard Mockup (Real project data) */}
-          <div className="hero-right" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-            <div className="mockup-float" style={{ width: '100%', maxWidth: 460, background: C.white, borderRadius: 16, boxShadow: '0 32px 80px rgba(124,58,237,0.15), 0 8px 32px rgba(0,0,0,0.08)', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+          {/* ── Subtext ── */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            style={{ textAlign: 'center', fontSize: 16, color: C.textGray, fontWeight: 400, lineHeight: 1.7, maxWidth: 560, margin: '0 auto 28px' }}>
+            Pulse CRM unifies your leads, deals, and Gmail — scored by transparent AI, managed through an FSM pipeline, and built for real sales teams.
+          </motion.p>
 
-              {/* Browser chrome */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${C.border}`, background: '#f8f8f8' }}>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#ff5f57' }} />
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#ffbd2e' }} />
-                  <div style={{ height: 11, width: 11, borderRadius: '50%', background: '#28c941' }} />
+          {/* ── CTAs ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="pulse-hero-btns"
+            style={{ display: 'flex', gap: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 64 }}>
+            <button
+              onClick={openSignUp}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '15px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: 'pointer', boxShadow: `0 8px 28px ${C.violet}55`, fontFamily: 'inherit', letterSpacing: '-0.01em', transition: 'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 12px 36px ${C.violet}66`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 8px 28px ${C.violet}55`; }}>
+              Start Free Trial
+            </button>
+            <button
+              onClick={() => { alert('Thanks for your interest! We will get back to you soon.'); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#f8fafc', color: '#475569', fontSize: 15, fontWeight: 700, borderRadius: 12, border: '1.5px solid #e2e8f0', cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '-0.01em', transition: 'all 0.2s', boxShadow: `0 2px 12px ${C.violet}14` }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.violetLighter; e.currentTarget.style.borderColor = C.violet; }}
+              onMouseLeave={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
+              <Activity size={16} color={C.violet} /> Request Demo
+            </button>
+          </motion.div>
+
+          {/* ── Dashboard Mockup ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 60 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.45 }}
+            style={{ display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '100%', maxWidth: 1000, background: C.white, borderRadius: '20px 20px 0 0', boxShadow: '0 -4px 0 rgba(124,58,237,0.15), 0 32px 80px rgba(124,58,237,0.18), 0 8px 32px rgba(0,0,0,0.08)', border: `1px solid ${C.border}`, borderBottom: 'none', overflow: 'hidden' }}>
+
+              {/* App top bar */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', borderBottom: `1px solid ${C.border}`, background: '#fafbff' }}>
+                {/* Logo + title */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ height: 28, width: 28, borderRadius: 8, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Activity size={14} color={C.white} strokeWidth={2.5} />
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
                 </div>
-                <div style={{ flex: 1, margin: '0 16px', height: 20, background: '#ececec', borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 9, color: '#999', fontWeight: 500 }}>app.pulsecrm.io/dashboard</span>
+                {/* Search bar */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: '#f1f5f9', borderRadius: 8, minWidth: 200 }}>
+                  <Filter size={13} color="#94a3b8" />
+                  <span style={{ fontSize: 12, color: '#94a3b8' }}>Search...</span>
                 </div>
-                <div style={{ height: 20, width: 20, borderRadius: 5, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Activity size={10} color={C.violet} strokeWidth={2.5} />
+                {/* User */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.white, fontSize: 11, fontWeight: 700 }}>AK</div>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: C.black }}>Alex K.</div>
+                    <div style={{ fontSize: 10, color: '#94a3b8' }}>Admin</div>
+                  </div>
                 </div>
               </div>
 
-              {/* App layout */}
-              <div style={{ display: 'flex', height: 320 }}>
-
-                {/* Sidebar — real project modules */}
-                <div style={{ width: 100, background: '#fafafa', borderRight: `1px solid ${C.border}`, padding: '10px 6px', display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <div style={{ padding: '3px 7px', marginBottom: 6 }}>
-                    <span style={{ fontSize: 9, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
-                  </div>
+              {/* Main layout */}
+              <div style={{ display: 'flex', height: 440 }}>
+                {/* Sidebar */}
+                <div style={{ width: 180, background: '#fafbff', borderRight: `1px solid ${C.border}`, padding: '20px 12px', flexShrink: 0 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0 8px', marginBottom: 10 }}>Main Menu</div>
                   {[
                     { icon: LayoutDashboard, label: 'Dashboard', active: true },
-                    { icon: Target, label: 'Leads' },
-                    { icon: Users, label: 'Contacts' },
-                    { icon: TrendingUp, label: 'Pipeline' },
-                    { icon: BarChart2, label: 'Analytics' },
-                    { icon: Sparkles, label: 'AI Copilot' },
-                    { icon: Settings, label: 'Settings' },
+                    { icon: Target,          label: 'Leads' },
+                    { icon: Users,           label: 'Contacts' },
+                    { icon: TrendingUp,      label: 'Pipeline' },
+                    { icon: Activity,        label: 'Activities' },
+                    { icon: BarChart2,       label: 'Analytics' },
+                    { icon: Sparkles,        label: 'AI Scoring' },
+                    { icon: Mail,            label: 'Email' },
+                    { icon: Settings,        label: 'Settings' },
                   ].map(({ icon: Icon, label, active }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 7px', borderRadius: 7, background: active ? C.violet : 'transparent', cursor: 'pointer', transition: 'background 0.15s' }}>
-                      <Icon size={10} color={active ? C.white : '#adb5bd'} />
-                      <span style={{ fontSize: 9.5, fontWeight: active ? 700 : 500, color: active ? C.white : '#adb5bd' }}>{label}</span>
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', borderRadius: 8, background: active ? C.violet : 'transparent', marginBottom: 2, cursor: 'pointer' }}>
+                      <Icon size={14} color={active ? C.white : '#94a3b8'} strokeWidth={2} />
+                      <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? C.white : '#64748b' }}>{label}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Main content — real project metrics */}
-                <div style={{ flex: 1, padding: 14, background: C.white, overflowY: 'auto' }}>
-                  <p style={{ fontSize: 11, fontWeight: 700, color: C.black, margin: '0 0 1px' }}>Good morning, Team 👋</p>
-                  <p style={{ fontSize: 8.5, color: C.textMuted, margin: '0 0 14px' }}>Here's your pipeline snapshot for today.</p>
+                {/* Dashboard content */}
+                <div style={{ flex: 1, padding: '22px 24px', background: C.white, overflowY: 'hidden' }}>
+                  {/* Header */}
+                  <div style={{ marginBottom: 20 }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 900, color: C.black, margin: '0 0 2px', letterSpacing: '-0.02em' }}>Dashboard</h2>
+                    <p style={{ fontSize: 11, color: C.textMuted, margin: 0 }}>Welcome back to Pulse CRM</p>
+                  </div>
 
-                  {/* Real project stat cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 7, marginBottom: 12 }}>
+                  {/* 3 stat cards */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
                     {[
-                      { l: 'New Deals', v: '128', s: '+24% this week', c: '#16a34a' },
-                      { l: 'Emails Sent', v: '842', s: '+14% this week', c: '#2563eb' },
-                      { l: 'Revenue', v: '₹98K', s: '+31% this week', c: C.violet },
-                    ].map(s => (
-                      <div key={s.l} style={{ background: '#fafafa', borderRadius: 8, padding: '8px 8px', border: `1px solid #f0f0f0` }}>
-                        <p style={{ fontSize: 7.5, color: '#94a3b8', fontWeight: 600, margin: '0 0 3px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{s.l}</p>
-                        <p style={{ fontSize: 16, fontWeight: 900, color: C.black, margin: '0 0 2px', letterSpacing: '-0.03em' }}>{s.v}</p>
-                        <p style={{ fontSize: 7.5, fontWeight: 700, color: s.c, margin: 0 }}>{s.s}</p>
+                      { label: 'Active Sales', value: '₹98,430', change: '+18%', icon: TrendingUp, color: '#7c3aed', trend: [30,40,35,52,48,62,58] },
+                      { label: 'Open Deals', value: '340', change: '+12%', icon: Target, color: '#0ea5e9', trend: [40,35,45,40,50,48,55] },
+                      { label: 'Win Rate', value: '76%', change: '+4%', icon: Activity, color: '#10b981', trend: [50,55,52,60,58,65,68] },
+                    ].map((s, i) => {
+                      const Icon = s.icon;
+                      return (
+                        <div key={i} style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px', position: 'relative', overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                            <div>
+                              <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
+                              <div style={{ fontSize: 20, fontWeight: 900, color: C.black, letterSpacing: '-0.02em' }}>{s.value}</div>
+                            </div>
+                            <div style={{ width: 30, height: 30, borderRadius: 8, background: `${s.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon size={14} color={s.color} />
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981' }}>{s.change}</span>
+                            <span style={{ fontSize: 10, color: C.textMuted }}>vs last month</span>
+                            <span style={{ fontSize: 10, marginLeft: 4, cursor: 'pointer', color: C.violet }}>See Details →</span>
+                          </div>
+                          <svg viewBox="0 0 80 16" style={{ position: 'absolute', bottom: 0, right: 0, width: 80, height: 16, opacity: 0.15 }}>
+                            <polyline points={s.trend.map((v,j)=>`${j*(80/6)},${16-(v/68)*16}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.5" />
+                          </svg>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Bottom 2 panels */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 14 }}>
+                    {/* Analytics panel */}
+                    <div style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.black, marginBottom: 12 }}>Powerful CRM analytics for growth.</div>
+                      <div style={{ fontSize: 13, fontWeight: 900, color: C.black, marginBottom: 10 }}>Analytics</div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 60 }}>
+                        {[35,48,42,60,55,72,65,80,75,88].map((h,i) => (
+                          <div key={i} style={{ flex: 1, height: `${h}%`, background: i >= 6 ? C.violet : '#ddd6fe', borderRadius: '3px 3px 0 0', opacity: i >= 6 ? 1 : 0.6 }} />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </div>
 
-                  {/* Pipeline chart */}
-                  <div style={{ background: '#fafafa', borderRadius: 9, padding: '9px 10px 8px', border: `1px solid #f0f0f0`, marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-                      <p style={{ fontSize: 8.5, fontWeight: 700, color: C.textGray, margin: 0 }}>Pipeline Overview</p>
-                      <span style={{ fontSize: 7.5, fontWeight: 700, color: '#16a34a', background: '#dcfce7', padding: '2px 7px', borderRadius: 20 }}>↑ 31% MoM</span>
+                    {/* Pipeline panel */}
+                    <div style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: C.black, marginBottom: 12 }}>Sales Pipeline Tracking</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, justifyContent: 'center' }}>
+                        <div style={{ position: 'relative', width: 90, height: 90 }}>
+                          <svg viewBox="0 0 90 90" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                            <circle cx="45" cy="45" r="36" fill="none" stroke="#e2e8f0" strokeWidth="14" />
+                            <circle cx="45" cy="45" r="36" fill="none" stroke={C.violet} strokeWidth="14" strokeDasharray="68 226" strokeLinecap="round" />
+                            <circle cx="45" cy="45" r="36" fill="none" stroke="#8b5cf6" strokeWidth="14" strokeDasharray="54 226" strokeDashoffset="-68" strokeLinecap="round" />
+                            <circle cx="45" cy="45" r="36" fill="none" stroke="#10b981" strokeWidth="14" strokeDasharray="56 226" strokeDashoffset="-122" strokeLinecap="round" />
+                          </svg>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                          {[{ label: 'New', pct: '30%', color: C.violet }, { label: 'Active', pct: '24%', color: '#8b5cf6' }, { label: 'Won', pct: '25%', color: '#10b981' }].map((item, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color }} />
+                              <span style={{ fontSize: 11, color: C.textGray, fontWeight: 500 }}>{item.label}</span>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: C.black, marginLeft: 'auto' }}>{item.pct}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                    <svg viewBox="0 0 200 44" style={{ width: '100%', height: 38 }}>
-                      <defs>
-                        <linearGradient id="heroGrad2" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor={C.violet} stopOpacity="0.2" />
-                          <stop offset="100%" stopColor={C.violet} stopOpacity="0.01" />
-                        </linearGradient>
-                      </defs>
-                      <path d="M0,40 C30,34 55,26 80,18 C105,10 130,20 155,10 C170,5 185,4 200,2 L200,44 L0,44Z" fill="url(#heroGrad2)" />
-                      <path d="M0,40 C30,34 55,26 80,18 C105,10 130,20 155,10 C170,5 185,4 200,2" fill="none" stroke={C.violet} strokeWidth="1.8" strokeLinecap="round" />
-                      {[[0,40],[80,18],[155,10],[200,2]].map(([x,y],i) => (
-                        <circle key={i} cx={x} cy={y} r="2.2" fill={C.violet} />
-                      ))}
-                    </svg>
-                  </div>
-
-                  {/* AI Copilot insight */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f5f3ff', borderRadius: 8, padding: '8px 10px', border: '1px solid #ede9fe', cursor: 'pointer' }}>
-                    <div style={{ height: 24, width: 24, borderRadius: 7, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Sparkles size={11} color={C.white} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontSize: 9, fontWeight: 700, color: '#5b21b6', margin: '0 0 1px' }}>AI Copilot Insight</p>
-                      <p style={{ fontSize: 8, color: C.violet, margin: 0 }}>3 deals likely to close this week</p>
-                    </div>
-                    <ChevronRight size={10} color={C.violet} />
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* ══════════ 4. SOCIAL PROOF / TRUSTED BY ══════════ */}
-      <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: '56px 48px', overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+      <section data-reveal="trusted" style={{ background: C.sectionAlt, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: `56px ${px}`, overflow: 'hidden', opacity: visibleSections.has('trusted') ? 1 : 0, transform: visibleSections.has('trusted') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
         <style>{`
           @keyframes marquee {
             0% { transform: translateX(0); }
@@ -460,7 +455,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             }
           }
         `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           <p style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 48 }}>
             TRUSTED BY FAST-GROWING SALES TEAMS & ENTERPRISE ORGANIZATIONS
           </p>
@@ -468,11 +463,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <div className="marquee-container">
               {/* First set of logos */}
               {[
-                { name: 'TechCorp', icon: '📦', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '⚫', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '🔶', color: '#f97316' },
-                { name: 'Acme Systems', icon: '🔺', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '🟢', color: '#10b981' },
+                { name: 'TechCorp', icon: '🏢', color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: '👤', color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: '🏭', color: '#f97316' },
+                { name: 'Acme Systems', icon: '🏗', color: '#0ea5e9' },
+                { name: 'Initech Global', icon: '💼', color: '#10b981' },
               ].map((company, i) => (
                 <div key={`${company.name}-1`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <div style={{ 
@@ -494,11 +489,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               ))}
               {/* Duplicate set for seamless loop */}
               {[
-                { name: 'TechCorp', icon: '📦', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '⚫', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '🔶', color: '#f97316' },
-                { name: 'Acme Systems', icon: '🔺', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '🟢', color: '#10b981' },
+                { name: 'TechCorp', icon: '🏢', color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: '👤', color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: '🏭', color: '#f97316' },
+                { name: 'Acme Systems', icon: '🏗', color: '#0ea5e9' },
+                { name: 'Initech Global', icon: '💼', color: '#10b981' },
               ].map((company, i) => (
                 <div key={`${company.name}-2`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <div style={{ 
@@ -523,71 +518,15 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ══════════ 5. STATS ROW ══════════ */}
-      <section data-reveal="stats" style={{ background: C.white, padding: '80px 48px', opacity: visibleSections.has('stats') ? 1 : 0, transform: visibleSections.has('stats') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
-        <style>{`
-          @keyframes fadeUpCard {
-            from {
-              opacity: 0;
-              transform: translateY(30px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          .stat-card {
-            animation: fadeUpCard 0.6s ease-out forwards;
-            opacity: 0;
-          }
-          .stat-card:nth-child(1) { animation-delay: 0.1s; }
-          .stat-card:nth-child(2) { animation-delay: 0.2s; }
-          .stat-card:nth-child(3) { animation-delay: 0.3s; }
-          .stat-card:nth-child(4) { animation-delay: 0.4s; }
-          .stat-card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 40px rgba(124, 58, 237, 0.15) !important;
-          }
-          .stat-icon {
-            transition: transform 0.3s ease;
-          }
-          .stat-card:hover .stat-icon {
-            transform: rotate(10deg);
-          }
-        `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 52 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>By the numbers</p>
-            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: 0 }}>What's inside the project</h2>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
-            {stats.map(s => {
-              const Icon = s.icon;
-              const displayValue = statCounts[s.key as keyof typeof statCounts] || 0;
-              return (
-                <div key={s.label} className="stat-card" style={{ padding: '30px 26px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', textAlign: 'center', transition: 'all 0.3s ease', cursor: 'pointer' }}>
-                  <div className="stat-icon" style={{ height: 48, width: 48, borderRadius: 14, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px' }}>
-                    <Icon size={20} color={C.violet} />
-                  </div>
-                  <p style={{ fontSize: 44, fontWeight: 900, color: C.black, letterSpacing: '-0.04em', margin: '0 0 6px', lineHeight: 1 }}>{displayValue}</p>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 6px' }}>{s.label}</p>
-                  <p style={{ fontSize: 12, color: C.textMuted, fontWeight: 500, margin: 0 }}>{s.sub}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* ══════════ 6. FEATURES GRID ══════════ */}
-      <section data-reveal="features" style={{ background: C.sectionAlt, padding: '96px 48px', borderTop: `1px solid ${C.border}` }}>
+      <section data-reveal="features" style={{ background: C.sectionAlt, padding: `40px ${px}`, borderTop: `1px solid ${C.border}` }}>
         <style>{`
           .feature-card-hover {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           }
           .feature-card-hover:hover {
-            transform: translateY(-8px) scale(1.02);
-            box-shadow: 0 20px 60px rgba(124, 58, 237, 0.2) !important;
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 12px 32px rgba(124, 58, 237, 0.15) !important;
             border-color: #7c3aed !important;
           }
           .feature-icon-hover {
@@ -597,54 +536,50 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             transform: scale(1.1) rotate(5deg);
           }
         `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.4 }}
-              style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
+              style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 8px' }}>
               Features
             </motion.p>
             <motion.h2
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
+              transition={{ duration: 0.4, delay: 0.1 }}
+              style={{ fontSize: 26, fontWeight: 800, color: C.black, letterSpacing: '-0.02em', margin: '0 0 8px' }}>
               Everything you need to close more deals
             </motion.h2>
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 560, margin: '0 auto', lineHeight: 1.7 }}>
-              All your sales tools unified — no tab-switching, no data silos, no guesswork.
+              transition={{ duration: 0.4, delay: 0.15 }}
+              style={{ fontSize: 13.5, color: C.textGray, fontWeight: 400, maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
+              Scoring, pipeline, Gmail, RBAC, and analytics — all built and wired together.
             </motion.p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+          <div className="pulse-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             {features.map((f, idx) => {
               const Icon = f.icon;
               return (
                 <motion.div
                   key={f.title}
-                  initial={{ opacity: 0, y: 40 }}
+                  initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: "0px" }}
-                  transition={{ 
-                    duration: 0.5, 
-                    delay: idx * 0.1,
-                    ease: [0.4, 0, 0.2, 1]
-                  }}
+                  transition={{ duration: 0.4, delay: idx * 0.06, ease: [0.4, 0, 0.2, 1] }}
                   className="feature-card-hover"
-                  style={{ padding: '32px 28px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
-                  <div className="feature-icon-hover" style={{ height: 52, width: 52, borderRadius: 16, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-                    <Icon size={24} color={f.fg} />
+                  style={{ padding: '18px 16px', borderRadius: 14, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 1px 6px rgba(0,0,0,0.04)', cursor: 'pointer' }}>
+                  <div className="feature-icon-hover" style={{ height: 36, width: 36, borderRadius: 10, background: f.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Icon size={17} color={f.fg} />
                   </div>
-                  <h3 style={{ fontSize: 17, fontWeight: 800, color: C.black, margin: '0 0 10px', letterSpacing: '-0.01em' }}>{f.title}</h3>
-                  <p style={{ fontSize: 14, color: C.textGray, fontWeight: 500, lineHeight: 1.7, margin: 0 }}>{f.desc}</p>
+                  <h3 style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 5px', letterSpacing: '-0.01em' }}>{f.title}</h3>
+                  <p style={{ fontSize: 12, color: C.textGray, fontWeight: 400, lineHeight: 1.55, margin: 0 }}>{f.desc}</p>
                 </motion.div>
               );
             })}
@@ -653,154 +588,239 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 7. HOW IT WORKS ══════════ */}
-      <section data-reveal="steps" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}` }}>
-        <style>{`
-          @keyframes pulse {
-            0%, 100% {
-              box-shadow: 0 12px 36px rgba(124, 58, 237, 0.35), 0 0 0 0 rgba(124, 58, 237, 0.4);
-            }
-            50% {
-              box-shadow: 0 16px 48px rgba(124, 58, 237, 0.45), 0 0 0 8px rgba(124, 58, 237, 0);
-            }
-          }
-          .cta-button-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-          }
-          .cta-button-hover:hover {
-            transform: scale(1.05);
-            box-shadow: 0 12px 32px rgba(124, 58, 237, 0.5) !important;
-          }
-          .cta-button-hover:hover .arrow-icon {
-            transform: translateX(4px);
-          }
-          .arrow-icon {
-            transition: transform 0.3s ease;
-            display: inline-block;
-          }
-        `}</style>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 64 }}>
-            <motion.p
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.4 }}
-              style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>
-              How it works
-            </motion.p>
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
+      <section data-reveal="steps" style={{ background: '#eeeafd', padding: `32px ${px}`, position: 'relative', overflow: 'hidden' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto', position: 'relative', zIndex: 1 }}>
+          {/* Header — centered */}
+          <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>
+              viewport={{ once: true }}
+              transition={{ duration: 0.4 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 10px', background: 'rgba(255,255,255,0.7)', border: `1px solid ${C.violetLight}`, borderRadius: 100, marginBottom: 10 }}>
+              <Zap size={10} color={C.violet} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em' }}>HOW IT WORKS</span>
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 12 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: 0.07 }}
+              style={{ fontSize: 26, fontWeight: 800, color: C.black, letterSpacing: '-0.025em', margin: '0 0 7px', lineHeight: 1.15 }}>
               Up and running in minutes
             </motion.h2>
             <motion.p
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 480, margin: '0 auto', lineHeight: 1.7 }}>
-              No complex setup. No migration headaches. Start closing deals faster on day one.
+              viewport={{ once: true }}
+              transition={{ duration: 0.4, delay: 0.12 }}
+              style={{ fontSize: 13.5, color: C.textGray, fontWeight: 400, maxWidth: 400, margin: '0 auto', lineHeight: 1.55 }}>
+              No complex setup. Start closing deals faster on day one.
             </motion.p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40, position: 'relative' }}>
-            <motion.div
-              initial={{ scaleX: 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true, margin: "0px" }}
-              transition={{ duration: 1.2, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              style={{ position: 'absolute', top: 48, left: '16.66%', right: '16.66%', height: 2, background: `linear-gradient(90deg, ${C.violetLight}, ${C.violet}, ${C.violetLight})`, zIndex: 0, transformOrigin: 'left' }} />
-            {steps.map((step, idx) => {
-              const Icon = step.icon;
-              const isActive = idx === 1;
-              return (
-                <motion.div
-                  key={step.num}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "0px" }}
-                  transition={{ 
-                    duration: 0.5, 
-                    delay: 0.4 + (idx * 0.2),
-                    ease: [0.4, 0, 0.2, 1]
-                  }}
-                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', position: 'relative', zIndex: 1 }}>
+
+          {/* Main: Steps Left + Cards Right */}
+          <div className="pulse-hiw-grid" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 32, alignItems: 'start' }}>
+
+            {/* ── LEFT: Steps ── */}
+            <div>
+              {[
+                { num: '01', icon: Zap, title: 'Connect', desc: 'Import contacts and leads via CSV or REST API. Link Gmail with OAuth.' },
+                { num: '02', icon: Sparkles, title: 'AI Works for You', desc: 'Scores every lead 0–100. Groq/Llama summarises threads and suggests next actions.' },
+                { num: '03', icon: TrendingUp, title: 'Close', desc: 'Move deals through FSM stages. Role-scoped dashboards keep reps aligned.' },
+              ].map((step, idx) => {
+                const Icon = step.icon;
+                return (
                   <motion.div
-                    initial={{ scale: 0.8 }}
-                    whileInView={{ scale: 1 }}
-                    viewport={{ once: true, margin: "0px" }}
-                    transition={{ 
-                      duration: 0.5, 
-                      delay: 0.5 + (idx * 0.2),
-                      type: "spring",
-                      stiffness: 200,
-                      damping: 15
-                    }}
-                    style={{ 
-                      height: 96, 
-                      width: 96, 
-                      borderRadius: '50%', 
-                      background: isActive ? C.violet : C.white, 
-                      border: `3px solid ${isActive ? C.violet : C.violetLight}`, 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      marginBottom: 28, 
-                      boxShadow: isActive ? `0 12px 36px ${C.violet}55, 0 0 0 0 rgba(124, 58, 237, 0.4)` : '0 4px 20px rgba(0,0,0,0.08)',
-                      animation: isActive ? 'pulse 2s ease-in-out infinite' : 'none'
-                    }}>
-                    <Icon size={32} color={isActive ? C.white : C.violet} />
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    whileInView={{ opacity: 1, x: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: idx * 0.1 }}
+                    style={{ display: 'flex', gap: 10, marginBottom: idx < 2 ? 20 : 0, position: 'relative' }}>
+                    {idx < 2 && (
+                      <div style={{ position: 'absolute', left: 17, top: 34, width: 2, height: 'calc(100% + 20px)', background: `linear-gradient(180deg, ${C.violet}50 0%, ${C.violet}15 100%)`, transform: 'translateX(-50%)' }} />
+                    )}
+                    <div style={{ width: 34, height: 34, borderRadius: '50%', background: C.white, border: `1.5px solid ${C.violetLight}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative', zIndex: 1, boxShadow: `0 3px 10px ${C.violet}15` }}>
+                      <Icon size={15} color={C.violet} strokeWidth={2.5} />
+                    </div>
+                    <div style={{ paddingTop: 1 }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 2 }}>STEP {step.num}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: C.black, marginBottom: 3, letterSpacing: '-0.01em' }}>{step.title}</div>
+                      <div style={{ fontSize: 11.5, color: C.textGray, lineHeight: 1.5, fontWeight: 400 }}>{step.desc}</div>
+                    </div>
                   </motion.div>
-                  <motion.span
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true, margin: "0px" }}
-                    transition={{ duration: 0.4, delay: 0.6 + (idx * 0.2) }}
-                    style={{ fontSize: 11, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10, display: 'block' }}>
-                    Step {step.num}
-                  </motion.span>
-                  <motion.h3
-                    initial={{ opacity: 0, y: 10 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "0px" }}
-                    transition={{ duration: 0.4, delay: 0.7 + (idx * 0.2) }}
-                    style={{ fontSize: 20, fontWeight: 800, color: C.black, margin: '0 0 14px', letterSpacing: '-0.01em' }}>
-                    {step.title}
-                  </motion.h3>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true, margin: "0px" }}
-                    transition={{ duration: 0.4, delay: 0.8 + (idx * 0.2) }}
-                    style={{ fontSize: 15, color: C.textGray, fontWeight: 500, lineHeight: 1.75, margin: 0 }}>
-                    {step.desc}
-                  </motion.p>
+                );
+              })}
+            </div>
+
+            {/* ── RIGHT: Cards Grid ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              {/* ROW 1: AI Score | Visual Pipeline | Revenue Analytics */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.35fr 1.2fr', gap: 10 }}>
+                {/* AI Score */}
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.2 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 13px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 5 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI SCORE</span>
+                    <Sparkles size={9} color={C.violet} />
+                  </div>
+                  <div style={{ fontSize: 32, fontWeight: 900, color: '#10b981', lineHeight: 1, letterSpacing: '-0.04em', marginBottom: 1 }}>89</div>
+                  <div style={{ fontSize: 10, color: '#64748b', fontWeight: 500, marginBottom: 6 }}>Hot Lead</div>
+                  <svg viewBox="0 0 100 20" style={{ width: '100%', height: 20 }}>
+                    <defs><linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity="0.2"/><stop offset="100%" stopColor="#10b981" stopOpacity="0"/></linearGradient></defs>
+                    <polyline points="0,18 14,15 28,16 38,11 50,12 62,7 74,5 86,3 100,1" fill="none" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                    <polygon points="0,18 14,15 28,16 38,11 50,12 62,7 74,5 86,3 100,1 100,20 0,20" fill="url(#sparkGrad)"/>
+                  </svg>
                 </motion.div>
-              );
-            })}
+                {/* Visual Pipeline */}
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.27 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 11px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                    <LayoutDashboard size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>VISUAL PIPELINE</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[{l:'New',n:12,bg:'#ede9fe',a:false},{l:'Qualified',n:8,bg:'#ede9fe',a:false},{l:'Demo',n:5,bg:C.white,a:true},{l:'Proposal',n:3,bg:'#fef9c3',a:false},{l:'Won',n:7,bg:'#dcfce7',a:false}].map((s,i)=>(
+                      <div key={i} style={{ flex:1, textAlign:'center' }}>
+                        <div style={{ height:26, background:s.a?C.white:s.bg, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:12, color:s.a?C.violet:C.black, border:s.a?`2px solid ${C.violet}`:'2px solid transparent', marginBottom:3 }}>{s.n}</div>
+                        <div style={{ fontSize:8, color:'#94a3b8', fontWeight:600 }}>{s.l}</div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+                {/* Revenue Analytics */}
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.34 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 11px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                    <BarChart2 size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>REVENUE</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 7 }}>
+                    <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Revenue</div><div style={{ fontSize: 16, fontWeight: 900, color: C.violet, letterSpacing: '-0.02em' }}>₹1.2L</div></div>
+                    <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Win Rate</div><div style={{ fontSize: 16, fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em' }}>67%</div></div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 22 }}>
+                    {[30,38,35,42,45,40,55,65,70,68].map((h,i)=>(
+                      <div key={i} style={{ flex:1, background:i>=6?C.violet:'#ddd6fe', borderRadius:'2px 2px 0 0', height:`${h}%` }} />
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
+
+              {/* ROW 2: AI Copilot | Import Contacts | Email Activity */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                {/* AI Copilot */}
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.4 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 13px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                    <Sparkles size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>AI COPILOT</span>
+                  </div>
+                  <div style={{ padding: '7px 9px', background: '#f8f7ff', borderRadius: 8, border: `1px solid ${C.violetLight}`, marginBottom: 7 }}>
+                    <div style={{ fontSize: 11, color: C.violet, fontWeight: 600, marginBottom: 2, lineHeight: 1.3 }}>"Schedule demo with Acme Corp"</div>
+                    <div style={{ fontSize: 10, color: '#8b5cf6', fontWeight: 500 }}>Positive sentiment • High engagement</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 5 }}>
+                    <div style={{ padding: '3px 9px', background: C.violetLighter, borderRadius: 6, fontSize: 10, fontWeight: 600, color: C.violet }}>Demo Ready</div>
+                    <div style={{ padding: '3px 9px', background: C.violetLighter, borderRadius: 6, fontSize: 10, fontWeight: 600, color: C.violet }}>High Priority</div>
+                  </div>
+                </motion.div>
+
+                {/* Import Contacts */}
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.47 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 13px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                    <Users size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>IMPORT CONTACTS</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '8px', background: '#fafbff', borderRadius: 9, border: `2px dashed ${C.violetLight}`, gap: 5 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${C.violet}40` }}>
+                      <ChevronRight size={14} color={C.white} strokeWidth={2.5} style={{ transform: 'rotate(-90deg)' }} />
+                    </div>
+                    <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 600 }}>CSV, Gmail, CRM</div>
+                  </div>
+                </motion.div>
+
+                {/* Email Activity */}
+                <motion.div initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.35, delay: 0.54 }}
+                  style={{ background: C.white, borderRadius: 12, padding: '11px 13px', border: `1px solid ${C.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 7 }}>
+                    <Mail size={10} color={C.violet} />
+                    <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>EMAIL ACTIVITY</span>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {[{sender:'John @ Acme',time:'2m ago'},{sender:'Sarah @ TechCo',time:'1h ago'},{sender:'Mike @ StartupX',time:'3h ago'}].map((email,i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', flexShrink: 0 }} />
+                          <span style={{ fontSize: 11, fontWeight: 600, color: C.black }}>{email.sender}</span>
+                        </div>
+                        <span style={{ fontSize: 10, color: '#94a3b8', fontWeight: 500, flexShrink: 0 }}>{email.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              </div>
+            </div>
           </div>
+
+          {/* CTA */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "0px" }}
-            transition={{ duration: 0.5, delay: 1.2 }}
-            style={{ textAlign: 'center', marginTop: 56 }}>
-            <button 
-              onClick={() => setIsModalOpen(true)} 
-              className="cta-button-hover"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 32px', background: C.violet, color: C.white, fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 8px 24px ${C.violet}44`, fontFamily: 'inherit' }}>
-              Get started free <span className="arrow-icon"><ArrowRight size={16} /></span>
+            viewport={{ once: true }}
+            transition={{ duration: 0.4, delay: 0.6 }}
+            style={{ textAlign: 'center', marginTop: 20 }}>
+            <button
+              onClick={openSignUp}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 26px', background: C.violet, color: C.white, fontSize: 13, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: `0 6px 20px ${C.violet}50`, fontFamily: 'inherit', transition: 'all 0.2s', letterSpacing: '-0.01em' }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = `0 10px 28px ${C.violet}60`; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = `0 6px 20px ${C.violet}50`; }}>
+              Get started free <ArrowRight size={14} strokeWidth={2.5} />
             </button>
+            <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+              {[
+                { icon: Shield, text: '14-day free trial' },
+                { icon: CheckCircle2, text: 'No credit card required' },
+                { icon: Zap, text: '2-minute setup' },
+              ].map(item => (
+                <span key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, fontWeight: 600, color: '#64748b' }}>
+                  <item.icon size={12} color={C.violet} strokeWidth={2} /> {item.text}
+                </span>
+              ))}
+            </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* ══════════ 7.5. TRUST / FEATURES BAR ══════════ */}
+      <section data-reveal="trust" style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: `40px ${px}`, opacity: visibleSections.has('trust') ? 1 : 0, transform: visibleSections.has('trust') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+        <div className="pulse-trust-grid" style={{ maxWidth: maxW, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
+          {trustBadges.map(b => {
+            const Icon = b.icon;
+            return (
+              <div key={b.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 10, padding: '18px 14px', borderRadius: 16, border: `1px solid ${C.border}`, background: C.white, transition: 'all 0.25s ease', cursor: 'default' }}
+                onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = `0 8px 24px ${C.violet}14`; el.style.borderColor = C.violetLight; el.style.transform = 'translateY(-3px)'; }}
+                onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = C.border; el.style.transform = 'translateY(0)'; }}>
+                <div style={{ height: 40, width: 40, borderRadius: 12, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={18} color={C.violet} />
+                </div>
+                <div>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: C.black, margin: '0 0 3px' }}>{b.title}</p>
+                  <p style={{ fontSize: 11.5, color: C.textMuted, fontWeight: 400, margin: 0 }}>{b.desc}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
       {/* ══════════ 8. PLATFORM + ORBIT DIAGRAM ══════════ */}
       <section data-reveal="orbit" style={{ 
         background: '#ffffff', 
-        padding: '96px 48px 110px', 
+        padding: `40px ${px}`, 
         position: 'relative', 
         overflow: 'hidden', 
         opacity: visibleSections.has('orbit') ? 1 : 0, 
@@ -831,27 +851,27 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
           </svg>
         </div>
 
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'center', position: 'relative', zIndex: 1 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <p style={{ fontSize: 12, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
+        <div className="pulse-orbit-grid" style={{ maxWidth: maxW, margin: '0 auto', display: 'grid', gridTemplateColumns: '5fr 7fr', gap: 48, alignItems: 'center', position: 'relative', zIndex: 1 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingLeft: 'clamp(0px, 4vw, 64px)' }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>
               ALL-IN-ONE PLATFORM
             </p>
-            <h2 style={{ fontSize: 46, fontWeight: 900, color: C.black, lineHeight: 1.15, letterSpacing: '-0.025em', margin: 0 }}>
-              A complete platform<br />to power your<br /><span style={{ color: C.violet }}>revenue engine</span>
+            <h2 style={{ fontSize: 30, fontWeight: 800, color: C.black, lineHeight: 1.2, letterSpacing: '-0.02em', margin: 0 }}>
+              A complete platform<br />to power your{' '}<span style={{ color: C.violet }}>sales pipeline</span>
             </h2>
-            <p style={{ fontSize: 16, color: '#64748b', fontWeight: 500, lineHeight: 1.75, maxWidth: 440, margin: 0 }}>
-              Consolidate your tools into one cohesive solution. Pulse connects every stage of your customer journey from lead intake to deal closing.
+            <p style={{ fontSize: 14, color: '#64748b', fontWeight: 400, lineHeight: 1.7, maxWidth: 400, margin: 0 }}>
+              One FastAPI backend powers your entire revenue workflow — from lead intake to deal close, with transparent AI scoring at every step.
             </p>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                'Unify your sales tools',
-                'Automate repetitive tasks',
-                'Get real-time insights',
-                'Close more deals, faster'
+                'Rule-based AI scoring – no black box',
+                'Gmail OAuth sync with Groq/Llama summaries',
+                'FSM pipeline with real-time RBAC dashboards',
+                'Close more deals with less admin work'
               ].map(item => (
-                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 15, fontWeight: 700, color: '#1e293b' }}>
-                  <div style={{ height: 22, width: 22, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <CheckCircle2 size={15} color={C.violet} strokeWidth={2.5} />
+                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
+                  <div style={{ height: 20, width: 20, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <CheckCircle2 size={13} color={C.violet} strokeWidth={2.5} />
                   </div>
                   {item}
                 </li>
@@ -859,15 +879,15 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </ul>
             <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
               <button 
-                onClick={() => setIsModalOpen(true)} 
+                onClick={openSignUp} 
                 style={{ 
                   display: 'inline-flex', 
                   alignItems: 'center', 
                   gap: 10, 
-                  padding: '14px 28px', 
+                  padding: '11px 22px', 
                   background: C.white, 
                   color: C.violet, 
-                  fontSize: 15, 
+                  fontSize: 13, 
                   fontWeight: 700, 
                   borderRadius: 100, 
                   border: `1.5px solid ${C.violet}`, 
@@ -892,7 +912,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </div>
           </div>
 
-          {/* Right — Orbit diagram */}
+          {/* Right – Orbit diagram */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, position: 'relative' }}>
             <div style={{ position: 'relative', width: 440, height: 440 }}>
               
@@ -1050,18 +1070,18 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 9. TESTIMONIALS ══════════ */}
-      <section data-reveal="testimonials" style={{ background: C.white, padding: '96px 48px', borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('testimonials') ? 1 : 0, transform: visibleSections.has('testimonials') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <p style={{ fontSize: 12, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 14px' }}>Customer stories</p>
-            <h2 style={{ fontSize: 42, fontWeight: 900, color: C.black, letterSpacing: '-0.025em', margin: '0 0 16px' }}>Teams that love Pulse CRM</h2>
-            <p style={{ fontSize: 17, color: C.textGray, fontWeight: 500, maxWidth: 460, margin: '0 auto', lineHeight: 1.7 }}>
-              Join thousands of sales teams who have transformed their pipeline with Pulse.
+      <section data-reveal="testimonials" style={{ background: C.white, padding: `40px ${px}`, borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('testimonials') ? 1 : 0, transform: visibleSections.has('testimonials') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: 24 }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 8px' }}>Customer stories</p>
+            <h2 style={{ fontSize: 26, fontWeight: 800, color: C.black, letterSpacing: '-0.02em', margin: '0 0 8px' }}>Teams that love Pulse CRM</h2>
+            <p style={{ fontSize: 13.5, color: C.textGray, fontWeight: 400, maxWidth: 400, margin: '0 auto', lineHeight: 1.55 }}>
+              Real feedback from dev teams and sales leaders using Pulse CRM.
             </p>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 28 }}>
+          <div className="pulse-testimonials-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
             {testimonials.map(t => (
-              <div key={t.name} className="testimonial-card" style={{ padding: '32px 28px', borderRadius: 22, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 4px 20px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div key={t.name} className="testimonial-card" style={{ padding: '20px 18px', borderRadius: 16, border: `1px solid ${C.border}`, background: C.white, boxShadow: '0 2px 10px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ display: 'flex', gap: 4 }}>
                   {[1, 2, 3, 4, 5].map(n => <Star key={n} size={15} color="#f59e0b" fill="#f59e0b" />)}
                 </div>
@@ -1082,112 +1102,83 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 11. BOTTOM CTA BANNER ══════════ */}
-      <section data-reveal="cta" style={{ background: `linear-gradient(135deg, ${C.violet} 0%, ${C.violetDark} 100%)`, padding: '88px 48px', position: 'relative', overflow: 'hidden', opacity: visibleSections.has('cta') ? 1 : 0, transform: visibleSections.has('cta') ? 'scale(1)' : 'scale(0.97)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
-        <div style={{ position: 'absolute', top: -120, left: -120, width: 360, height: 360, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-        <div style={{ position: 'absolute', bottom: -80, right: -80, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,0,0,0.1)', pointerEvents: 'none' }} />
-        <div style={{ maxWidth: 1280, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-          <div style={{ height: 68, width: 68, borderRadius: 22, background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
-            <Zap size={32} color={C.white} />
-          </div>
-          <h2 style={{ fontSize: 48, fontWeight: 900, color: C.white, margin: '0 0 16px', letterSpacing: '-0.025em', lineHeight: 1.1 }}>
-            Start your free trial today
-          </h2>
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.78)', fontWeight: 500, margin: '0 auto 40px', lineHeight: 1.7, maxWidth: 520 }}>
-            Join over 14,000 teams already growing with Pulse. Set up in 2 minutes, no credit card required.
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-            <button onClick={() => setIsModalOpen(true)} className="cta-btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '16px 36px', background: C.white, color: C.violetDark, fontSize: 16, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 10px 32px rgba(0,0,0,0.22)', fontFamily: 'inherit' }}>
-              Start Free Trial <ArrowRight size={17} />
-            </button>
-          </div>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', margin: '22px 0 0', fontWeight: 500 }}>
-            ✓ 14-day free trial &nbsp;·&nbsp; ✓ No credit card &nbsp;·&nbsp; ✓ Cancel anytime
-          </p>
-        </div>
-      </section>
+      <section data-reveal="cta" style={{ background: C.sectionAlt, padding: `${sectionPy} ${px}`, opacity: visibleSections.has('cta') ? 1 : 0, transform: visibleSections.has('cta') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
+          {/* Floating card */}
+          <div style={{ background: `linear-gradient(135deg, ${C.violet} 0%, #6d28d9 100%)`, borderRadius: 28, padding: '64px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: `0 24px 64px ${C.violet}40` }}>
+            {/* Decorative blobs inside card */}
+            <div style={{ position: 'absolute', top: -60, left: -60, width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', bottom: -80, right: -60, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,0,0,0.08)', pointerEvents: 'none' }} />
+            <div style={{ position: 'absolute', top: '30%', right: '10%', width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
 
-      {/* ══════════ 12. TRUST / FEATURES BAR ══════════ */}
-      <section data-reveal="trust" style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: '56px 48px', opacity: visibleSections.has('trust') ? 1 : 0, transform: visibleSections.has('trust') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
-          {trustBadges.map(b => {
-            const Icon = b.icon;
-            return (
-              <div key={b.title} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, padding: '28px 20px', borderRadius: 20, border: `1px solid ${C.border}`, background: C.white, transition: 'all 0.25s ease', cursor: 'default' }}
-                onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = `0 12px 36px ${C.violet}14`; el.style.borderColor = C.violetLight; el.style.transform = 'translateY(-4px)'; }}
-                onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.boxShadow = 'none'; el.style.borderColor = C.border; el.style.transform = 'translateY(0)'; }}>
-                <div style={{ height: 58, width: 58, borderRadius: 18, background: C.violetLighter, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={24} color={C.violet} />
-                </div>
-                <div>
-                  <p style={{ fontSize: 15, fontWeight: 800, color: C.black, margin: '0 0 6px' }}>{b.title}</p>
-                  <p style={{ fontSize: 13, color: C.textMuted, fontWeight: 500, margin: 0 }}>{b.desc}</p>
-                </div>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ height: 60, width: 60, borderRadius: 18, background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', backdropFilter: 'blur(10px)' }}>
+                <Zap size={28} color={C.white} strokeWidth={2.5} />
               </div>
-            );
-          })}
+              <h2 style={{ fontSize: 46, fontWeight: 900, color: C.white, margin: '0 0 14px', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                Start your free trial today
+              </h2>
+              <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.80)', fontWeight: 400, margin: '0 auto 36px', lineHeight: 1.7, maxWidth: 500 }}>
+                Score every lead, sync Gmail, manage your pipeline, and close more deals — all in one place. Set up in 2 minutes, no credit card required.
+              </p>
+              <button
+                onClick={openSignUp}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 10, padding: '15px 38px', background: C.white, color: C.violetDark, fontSize: 16, fontWeight: 800, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 28px rgba(0,0,0,0.20)', fontFamily: 'inherit', transition: 'all 0.2s', letterSpacing: '-0.01em' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 14px 36px rgba(0,0,0,0.28)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.20)'; }}>
+                Start Free Trial <ArrowRight size={17} />
+              </button>
+              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', margin: '20px 0 0', fontWeight: 500 }}>
+                ✓ 14-day free trial &nbsp;·&nbsp; ✓ No credit card &nbsp;·&nbsp; ✓ Cancel anytime
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ══════════ 13. FOOTER — DARK ══════════ */}
-      <footer style={{ background: C.darkBg, borderTop: `1px solid ${C.darkBorder}`, padding: '72px 48px 0' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1.6fr', gap: 48, marginBottom: 56 }}>
+      <footer style={{ background: C.darkBg, borderTop: `1px solid ${C.darkBorder}`, padding: `32px ${px} 0` }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto' }}>
+          <div className="pulse-footer-grid" style={{ display: 'grid', gridTemplateColumns: '200px 1fr 1fr 1fr 220px', gap: 28, marginBottom: 28, alignItems: 'start' }}>
 
             {/* Brand column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ height: 36, width: 36, borderRadius: 10, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 14px ${C.violet}44` }}>
-                  <Activity size={17} color={C.white} strokeWidth={2.5} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ height: 26, width: 26, borderRadius: 7, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 3px 10px ${C.violet}44` }}>
+                  <Activity size={12} color={C.white} strokeWidth={2.5} />
                 </div>
-                <span style={{ fontSize: 18, fontWeight: 900, color: C.white }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
+                <span style={{ fontSize: 13, fontWeight: 900, color: C.white }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
               </div>
-              <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', fontWeight: 500, lineHeight: 1.75, margin: 0, maxWidth: 280 }}>
-                The AI-powered CRM built for high-growth sales teams. Close more deals, faster.
+              <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', fontWeight: 400, lineHeight: 1.65, margin: 0, maxWidth: 220 }}>
+                FastAPI + PostgreSQL CRM with transparent AI scoring, Gmail sync, and 40+ REST endpoints. Built for real sales teams.
               </p>
-              {/* Real SVG social icons */}
-              <div style={{ display: 'flex', gap: 10 }}>
-                {/* GitHub */}
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                  </svg>
-                </a>
-                {/* Twitter / X */}
-                <a href="https://twitter.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                  </svg>
-                </a>
-                {/* LinkedIn */}
-                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer"
-                  style={{ height: 38, width: 38, borderRadius: 10, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
-                  onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                  onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)">
-                    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                  </svg>
-                </a>
+              <div style={{ display: 'flex', gap: 7 }}>
+                {[
+                  { href: 'https://github.com', svg: <svg width="13" height="13" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg> },
+                  { href: 'https://twitter.com', svg: <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg> },
+                  { href: 'https://linkedin.com', svg: <svg width="12" height="12" viewBox="0 0 24 24" fill="rgba(255,255,255,0.55)"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg> },
+                ].map(({ href, svg }, i) => (
+                  <a key={i} href={href} target="_blank" rel="noopener noreferrer"
+                    style={{ height: 28, width: 28, borderRadius: 7, border: `1px solid ${C.darkBorder}`, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', textDecoration: 'none', transition: 'all 0.15s' }}
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'rgba(255,255,255,0.08)'; el.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLAnchorElement; el.style.background = 'transparent'; el.style.borderColor = C.darkBorder; }}>
+                    {svg}
+                  </a>
+                ))}
               </div>
             </div>
 
             {/* Link columns */}
             {Object.entries(footerLinks).map(([category, links]) => (
-              <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <p style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{category}</p>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 11 }}>
+              <div key={category} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ fontSize: 9.5, fontWeight: 800, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>{category}</p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {links.map(link => (
                     <li key={link}>
-                      <button onClick={() => setIsModalOpen(true)} className="footer-link"
-                        style={{ fontSize: 14, fontWeight: 500, color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
+                      <button onClick={openSignUp} className="footer-link"
+                        style={{ fontSize: 12, fontWeight: 400, color: 'rgba(255,255,255,0.5)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
                         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.55)'; }}>
+                        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.5)'; }}>
                         {link}
                       </button>
                     </li>
@@ -1197,41 +1188,34 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             ))}
 
             {/* Newsletter */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <p style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Stay Updated</p>
-              <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', fontWeight: 500, lineHeight: 1.65, margin: 0 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <p style={{ fontSize: 9.5, fontWeight: 800, color: 'rgba(255,255,255,0.38)', textTransform: 'uppercase', letterSpacing: '0.1em', margin: 0 }}>Stay Updated</p>
+              <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.55)', fontWeight: 400, lineHeight: 1.6, margin: 0 }}>
                 Get weekly sales insights and Pulse product updates.
               </p>
-              <form onSubmit={handleNewsletter} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <input
-                  type="email"
-                  value={newsEmail}
-                  onChange={e => setNewsEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  style={{ padding: '11px 14px', borderRadius: 10, border: `1.5px solid rgba(255,255,255,0.12)`, fontSize: 13, fontFamily: 'inherit', color: C.white, outline: 'none', background: '#1e293b', boxSizing: 'border-box', width: '100%' }}
-                />
+              <form onSubmit={handleNewsletter} style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                <input type="email" value={newsEmail} onChange={e => setNewsEmail(e.target.value)} placeholder="your@email.com"
+                  style={{ padding: '8px 11px', borderRadius: 8, border: `1.5px solid rgba(255,255,255,0.12)`, fontSize: 12, fontFamily: 'inherit', color: C.white, outline: 'none', background: '#1e293b', boxSizing: 'border-box', width: '100%' }} />
                 <button type="submit"
-                  style={{ padding: '11px', background: C.violet, color: C.white, fontSize: 13, fontWeight: 700, borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}>
-                  <Mail size={14} /> Subscribe
+                  style={{ padding: '8px', background: C.violet, color: C.white, fontSize: 12, fontWeight: 700, borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                  <Mail size={12} /> Subscribe
                 </button>
               </form>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 500, margin: 0 }}>
-                No spam. Unsubscribe anytime.
-              </p>
+              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 400, margin: 0 }}>No spam. Unsubscribe anytime.</p>
             </div>
           </div>
 
           {/* Bottom legal bar */}
-          <div style={{ borderTop: `1px solid ${C.darkBorder}`, padding: '22px 0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 14 }}>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, margin: 0 }}>
+          <div style={{ borderTop: `1px solid ${C.darkBorder}`, padding: '10px 0 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 400, margin: 0 }}>
               © {new Date().getFullYear()} Pulse CRM, Inc. All rights reserved.
             </p>
-            <div style={{ display: 'flex', gap: 20 }}>
+            <div style={{ display: 'flex', gap: 16 }}>
               {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Security'].map(link => (
-                <button key={link} onClick={() => setIsModalOpen(true)}
-                  style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, transition: 'color 0.15s' }}
+                <button key={link} onClick={openSignUp}
+                  style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 400, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, transition: 'color 0.15s' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = C.white; }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)'; }}>
+                  onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.35)'; }}>
                   {link}
                 </button>
               ))}
@@ -1293,6 +1277,50 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
 
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
+
+        /* ── Responsive layout ── */
+
+        /* 1280px — keep everything as-is, just ensure no overflow */
+        @media (max-width: 1280px) {
+          .pulse-footer-grid { grid-template-columns: 180px 1fr 1fr 1fr 200px !important; gap: 20px !important; }
+        }
+
+        /* 1024px tablet landscape */
+        @media (max-width: 1024px) {
+          .pulse-features-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .pulse-trust-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .pulse-footer-grid { grid-template-columns: 1fr 1fr 1fr !important; gap: 24px !important; }
+          .pulse-orbit-grid { grid-template-columns: 1fr !important; gap: 48px !important; }
+          .pulse-testimonials-grid { grid-template-columns: 1fr 1fr !important; }
+          .pulse-hiw-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+        }
+
+        /* 768px tablet portrait */
+        @media (max-width: 768px) {
+          .pulse-features-grid { grid-template-columns: 1fr 1fr !important; }
+          .pulse-trust-grid { grid-template-columns: 1fr 1fr !important; }
+          .pulse-footer-grid { grid-template-columns: 1fr 1fr !important; gap: 20px !important; }
+          .pulse-testimonials-grid { grid-template-columns: 1fr !important; }
+          .pulse-hero-btns { flex-direction: column !important; align-items: center !important; }
+          .pulse-hero-btns > button, .pulse-hero-btns > a { width: 100% !important; max-width: 320px !important; justify-content: center !important; }
+        }
+
+        /* 480px mobile */
+        @media (max-width: 480px) {
+          .pulse-features-grid { grid-template-columns: 1fr !important; }
+          .pulse-trust-grid { grid-template-columns: 1fr 1fr !important; }
+          .pulse-footer-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* 375px small mobile */
+        @media (max-width: 375px) {
+          .pulse-trust-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* Prevent horizontal scroll at any breakpoint */
+        @media (max-width: 1280px) {
+          body { overflow-x: hidden; }
+        }
       `}</style>
 
     </div>

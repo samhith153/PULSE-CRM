@@ -59,14 +59,18 @@ from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.deals import router as deals_router
 from app.api.v1.emails import router as emails_router
 from app.api.v1.events import router as events_router
+from app.api.v1.webhooks import router as webhooks_router
+from app.api.v1.uploads import router as uploads_router
 from app.api.v1.gmail import router as gmail_router
 from app.api.v1.health import router as health_router
 from app.api.v1.leads import router as leads_router
 from app.api.v1.organizations import router as orgs_router
 from app.api.v1.pipeline import router as pipeline_router
+from app.api.v1.recommendation_features import router as recommendation_features_router
 from app.api.v1.timeline import router as timeline_router
 from app.api.v1.users import router as users_router
 from app.api.v1.smtp import router as smtp_router
+from app.api.v1.summarization import router as summarization_router
 from app.api.v1.brevo import router as brevo_router
 api_router = APIRouter()
 
@@ -87,9 +91,22 @@ api_router.include_router(smtp_router, prefix="/smtp", tags=["SMTP"])
 api_router.include_router(emails_router, prefix="/emails", tags=["Emails"])
 api_router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(ai_router, prefix="/ai", tags=["AI"])
+api_router.include_router(
+    recommendation_features_router,
+    prefix="/recommendation-features",
+    tags=["Recommendation Features"],
+)
 api_router.include_router(events_router, prefix="/events", tags=["Events"])
+api_router.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])
+api_router.include_router(uploads_router, prefix="/uploads", tags=["Uploads"])
 api_router.include_router(
     brevo_router,
     prefix="/brevo",
     tags=["Brevo"],
 )
+api_router.include_router(
+    summarization_router,
+    prefix="/summarization",
+    tags=["Conversation Intelligence"],
+)
+

@@ -46,11 +46,14 @@ def run_migrations_offline():
 
 
 async def run():
+    connect_args = {}
+    if "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATABASE_URL:
+        connect_args["ssl"] = ssl_context
 
     engine = create_async_engine(
         settings.DATABASE_URL,
         poolclass=pool.NullPool,
-        connect_args={"ssl": ssl_context},
+        connect_args=connect_args,
     )
 
     async with engine.connect() as conn:

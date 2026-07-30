@@ -1,106 +1,628 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { PageContainer } from '@/components/shared/PageTemplates';
-import { Code, CheckCircle } from 'lucide-react';
+import {
+  Code2, Users, User, DollarSign,
+  CalendarCheck, Sparkles, Building2, Copy, Check,
+  Activity,
+} from 'lucide-react';
+import { useState } from 'react';
 
-const ENDPOINTS = [
-  { method: 'GET', path: '/api/v1/dashboard', desc: 'KPI metrics for current user', tag: 'Dashboard' },
-  { method: 'GET', path: '/api/v1/companies', desc: 'List all companies (paginated)', tag: 'Companies' },
-  { method: 'POST', path: '/api/v1/companies', desc: 'Create a new company', tag: 'Companies' },
-  { method: 'GET', path: '/api/v1/contacts', desc: 'List all contacts (paginated)', tag: 'Contacts' },
-  { method: 'POST', path: '/api/v1/contacts', desc: 'Create a new contact', tag: 'Contacts' },
-  { method: 'GET', path: '/api/v1/leads', desc: 'List leads with AI scores', tag: 'Leads' },
-  { method: 'POST', path: '/api/v1/leads', desc: 'Create lead and trigger AI', tag: 'Leads' },
-  { method: 'GET', path: '/api/v1/deals', desc: 'List all pipeline deals', tag: 'Deals' },
-  { method: 'POST', path: '/api/v1/deals', desc: 'Create new deal', tag: 'Deals' },
-  { method: 'GET', path: '/api/v1/activities', desc: 'List logged activities', tag: 'Activities' },
-  { method: 'POST', path: '/api/v1/ai/score/{id}', desc: 'Get AI lead score', tag: 'AI' },
-  { method: 'POST', path: '/api/v1/ai/draft-email', desc: 'Generate email draft', tag: 'AI' },
+/* ─────────────────────────────────────────────────
+   "What you can do" feature cards
+───────────────────────────────────────────────── */
+const FEATURES = [
+  {
+    icon: Users,
+    title: 'Manage Leads',
+    desc: 'Create, update and track leads.',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+  },
+  {
+    icon: Building2,
+    title: 'Companies',
+    desc: 'Manage customer companies.',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+  },
+  {
+    icon: User,
+    title: 'Contacts',
+    desc: 'Store and organize contacts.',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+  },
+  {
+    icon: DollarSign,
+    title: 'Deals',
+    desc: 'Track sales opportunities.',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+  },
+  {
+    icon: CalendarCheck,
+    title: 'Activities',
+    desc: 'Manage follow-ups and meetings.',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+  },
+  {
+    icon: Sparkles,
+    title: 'AI Scoring',
+    desc: 'Get AI lead scores and insights.',
+    color: '#7c3aed',
+    bg: '#f5f3ff',
+  },
 ];
 
-const METHOD_COLORS: Record<string, { bg: string; color: string }> = {
-  GET: { bg: '#eff6ff', color: '#2563eb' },
-  POST: { bg: '#f0fdf4', color: '#059669' },
-  PUT: { bg: '#fffbeb', color: '#d97706' },
-  DELETE: { bg: '#fef2f2', color: '#dc2626' },
-};
+/* ─────────────────────────────────────────────────
+   Quick Start steps
+───────────────────────────────────────────────── */
+const QUICK_STEPS = [
+  {
+    num: 1,
+    title: 'Generate API Token',
+    desc: 'Go to Settings → API & Integrations and generate your API token.',
+    code: 'pk_live_************************',
+  },
+  {
+    num: 2,
+    title: 'Copy Base URL',
+    desc: 'All API requests should be made to the base URL below.',
+    code: 'https://api.pulsecrm.com',
+  },
+  {
+    num: 3,
+    title: 'Make Your First Request',
+    desc: 'Start with a simple request to check your connection.',
+    code: 'GET /api/v1/health',
+  },
+];
 
-export default function APIReferencePage() {
-  const [modalOpen, setModalOpen] = useState(false);
+/* ─────────────────────────────────────────────────
+   API Flow Illustration (hero right side)
+───────────────────────────────────────────────── */
+function ApiIllustration() {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 0,
+      width: '100%',
+      padding: '8px 0',
+    }}>
 
+      {/* Your App card */}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        style={{
+          width: 110, minHeight: 110,
+          background: '#fff',
+          borderRadius: 16,
+          border: '1px solid #e8ecf0',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.07)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 10, padding: 16,
+        }}
+      >
+        <div style={{
+          height: 44, width: 44, borderRadius: 12,
+          background: '#f5f3ff',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Code2 size={22} color="#7c3aed" strokeWidth={1.8} />
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>Your App</span>
+      </motion.div>
+
+      {/* Arrow: Request */}
+      <motion.div
+        initial={{ opacity: 0, scaleX: 0 }}
+        animate={{ opacity: 1, scaleX: 1 }}
+        transition={{ delay: 0.55, duration: 0.4 }}
+        style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', gap: 2,
+          width: 80, flexShrink: 0,
+        }}
+      >
+        <span style={{ fontSize: 10, fontWeight: 600, color: '#7c3aed', letterSpacing: '0.04em' }}>Request</span>
+        <div style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative' }}>
+          {/* dashed line */}
+          <div style={{
+            flex: 1, height: 1,
+            borderTop: '2px dashed #c4b5fd',
+          }} />
+          {/* arrowhead */}
+          <div style={{
+            width: 0, height: 0,
+            borderTop: '5px solid transparent',
+            borderBottom: '5px solid transparent',
+            borderLeft: '7px solid #7c3aed',
+          }} />
+        </div>
+      </motion.div>
+
+      {/* Pulse CRM API — centre hero card */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+        style={{
+          width: 110, minHeight: 130,
+          background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+          borderRadius: 20,
+          boxShadow: '0 12px 36px rgba(124,58,237,0.45)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 10, padding: 16,
+          zIndex: 2,
+        }}
+      >
+        <motion.div
+          animate={{ scale: [1, 1.08, 1] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+        >
+          <Activity size={32} color="#fff" strokeWidth={2} />
+        </motion.div>
+        <div style={{ textAlign: 'center' }}>
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: '#fff', display: 'block', lineHeight: 1.3 }}>
+            Pulse <span style={{ color: '#c4b5fd' }}>CRM</span>
+          </span>
+          <span style={{ fontSize: 11.5, fontWeight: 800, color: '#fff', display: 'block' }}>API</span>
+        </div>
+      </motion.div>
+
+      {/* Arrow: Response */}
+      <motion.div
+        initial={{ opacity: 0, scaleX: 0 }}
+        animate={{ opacity: 1, scaleX: 1 }}
+        transition={{ delay: 0.55, duration: 0.4 }}
+        style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', gap: 2,
+          width: 80, flexShrink: 0,
+        }}
+      >
+        <span style={{ fontSize: 10, fontWeight: 600, color: '#10b981', letterSpacing: '0.04em' }}>Response</span>
+        <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+          {/* arrowhead pointing left-to-right toward response card */}
+          <div style={{
+            width: 0, height: 0,
+            borderTop: '5px solid transparent',
+            borderBottom: '5px solid transparent',
+            borderLeft: '7px solid #10b981',
+          }} />
+          <div style={{
+            flex: 1, height: 1,
+            borderTop: '2px dashed #6ee7b7',
+          }} />
+        </div>
+      </motion.div>
+
+      {/* Response card */}
+      <motion.div
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        style={{
+          width: 110, minHeight: 110,
+          background: '#fff',
+          borderRadius: 16,
+          border: '1px solid #e8ecf0',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.07)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center',
+          gap: 10, padding: 16,
+        }}
+      >
+        <div style={{
+          height: 44, width: 44, borderRadius: 12,
+          background: '#ecfdf5',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 18, fontWeight: 700, color: '#10b981',
+          fontFamily: 'monospace',
+        }}>
+          {'{ }'}
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>Response</span>
+      </motion.div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────
+   Feature Card
+───────────────────────────────────────────────── */
+function FeatureCard({ feat, index }: { feat: typeof FEATURES[0]; index: number }) {
+  const [hovered, setHovered] = useState(false);
+  const Icon = feat.icon;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.32, delay: index * 0.06 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '22px 18px 20px',
+        background: '#ffffff',
+        borderRadius: 16,
+        border: `1px solid ${hovered ? '#ddd6fe' : '#eaecef'}`,
+        cursor: 'pointer',
+        transition: 'all 0.18s ease',
+        transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+        boxShadow: hovered
+          ? '0 10px 28px rgba(124,58,237,0.10)'
+          : '0 1px 4px rgba(0,0,0,0.04)',
+      }}
+    >
+      <div style={{
+        height: 40, width: 40, borderRadius: 10,
+        background: feat.bg,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        marginBottom: 14,
+      }}>
+        <Icon size={18} color={feat.color} strokeWidth={1.8} />
+      </div>
+      <p style={{
+        fontSize: 13.5, fontWeight: 700, color: '#111827',
+        marginBottom: 5, letterSpacing: '-0.01em',
+      }}>
+        {feat.title}
+      </p>
+      <p style={{ fontSize: 12, color: '#6b7280', lineHeight: 1.55 }}>
+        {feat.desc}
+      </p>
+    </motion.div>
+  );
+}
+
+/* ─────────────────────────────────────────────────
+   Copy button (inline)
+───────────────────────────────────────────────── */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const handle = () => {
+    navigator.clipboard.writeText(text).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+  return (
+    <button
+      onClick={handle}
+      title="Copy"
+      style={{
+        background: 'none', border: 'none', cursor: 'pointer',
+        padding: '2px 4px', display: 'flex', alignItems: 'center',
+        color: copied ? '#10b981' : '#9ca3af',
+        transition: 'color 0.15s',
+        flexShrink: 0,
+      }}
+    >
+      {copied ? <Check size={14} /> : <Copy size={14} />}
+    </button>
+  );
+}
+
+/* ─────────────────────────────────────────────────
+   Quick Start Card
+───────────────────────────────────────────────── */
+function QuickCard({
+  step, index, isLast,
+}: {
+  step: typeof QUICK_STEPS[0];
+  index: number;
+  isLast: boolean;
+}) {
+  return (
+    <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', gap: 0, minWidth: 0 }}>
+      {/* Card */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.38, delay: index * 0.1 }}
+        style={{
+          flex: 1,
+          background: '#fff',
+          borderRadius: 16,
+          border: '1px solid #eaecef',
+          padding: '24px 22px 20px',
+          boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          minWidth: 0,
+        }}
+      >
+        {/* Step badge + title row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            height: 28, width: 28, borderRadius: '50%',
+            background: '#7c3aed',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 12, fontWeight: 800, color: '#fff',
+            boxShadow: '0 3px 10px rgba(124,58,237,0.38)',
+            flexShrink: 0,
+          }}>
+            {step.num}
+          </div>
+          <p style={{
+            fontSize: 14, fontWeight: 700, color: '#111827',
+            letterSpacing: '-0.01em', margin: 0,
+          }}>
+            {step.title}
+          </p>
+        </div>
+
+        {/* Description */}
+        <p style={{ fontSize: 12.5, color: '#6b7280', lineHeight: 1.6, margin: 0 }}>
+          {step.desc}
+        </p>
+
+        {/* Code field */}
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          background: '#f8f9fb',
+          border: '1px solid #e5e7eb',
+          borderRadius: 8,
+          padding: '8px 12px',
+          marginTop: 4,
+          gap: 8,
+          minWidth: 0,
+        }}>
+          <span style={{
+            fontSize: 12, fontFamily: 'monospace', color: '#374151',
+            flex: 1, overflow: 'hidden', textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap', minWidth: 0,
+          }}>
+            {step.code}
+          </span>
+          <CopyButton text={step.code} />
+        </div>
+      </motion.div>
+
+      {/* Dashed arrow connector */}
+      {!isLast && (
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          width: 52, flexShrink: 0, paddingBottom: 20,
+        }}>
+          <div style={{ flex: 1, borderTop: '2px dashed #c4b5fd' }} />
+          <div style={{
+            width: 0, height: 0,
+            borderTop: '5px solid transparent',
+            borderBottom: '5px solid transparent',
+            borderLeft: '7px solid #7c3aed',
+          }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────
+   Page
+───────────────────────────────────────────────── */
+export default function ApiReferencePage() {
   return (
     <PageContainer>
-      <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #f5f3ff 0%, #fff 100%)' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+
+      {/* ── HERO ──────────────────────────────────────────────────── */}
+      <section style={{
+        marginTop: 64,
+        padding: '72px 48px 80px',
+        background: 'linear-gradient(160deg, #f5f3ff 0%, #faf9ff 60%, #fff 100%)',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Bg blobs */}
+        <div style={{
+          position: 'absolute', top: -100, right: -100, width: 480, height: 480,
+          background: 'radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 65%)',
+          pointerEvents: 'none',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: -60, left: -60, width: 360, height: 360,
+          background: 'radial-gradient(circle, rgba(139,92,246,0.05) 0%, transparent 65%)',
+          pointerEvents: 'none',
+        }} />
+
+        <div style={{
+          maxWidth: 1200, margin: '0 auto',
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: 56,
+          alignItems: 'center',
+          position: 'relative',
+        }}>
+
+          {/* Left */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 100, marginBottom: 20 }}>
-            <Code size={13} color="#7c3aed" />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em' }}>REST API</span>
+            initial={{ opacity: 0, x: -28 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '5px 14px',
+                background: '#f5f3ff',
+                border: '1.5px solid #ede9fe',
+                borderRadius: 100,
+                marginBottom: 22,
+              }}
+            >
+              <Code2 size={11} color="#7c3aed" />
+              <span style={{
+                fontSize: 11, fontWeight: 800, color: '#7c3aed',
+                textTransform: 'uppercase', letterSpacing: '0.09em',
+              }}>
+                API Reference
+              </span>
+            </motion.div>
+
+            {/* Heading */}
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.6 }}
+              style={{
+                fontSize: 'clamp(34px, 4.2vw, 52px)',
+                fontWeight: 900, lineHeight: 1.1,
+                letterSpacing: '-0.03em', color: '#0f172a',
+                marginBottom: 18,
+              }}
+            >
+              Build with{' '}
+              <span style={{
+                background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}>
+                Pulse CRM
+              </span>{' '}
+              APIs
+            </motion.h1>
+
+            {/* Description */}
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              style={{
+                fontSize: 16, color: '#64748b',
+                lineHeight: 1.75, maxWidth: 460,
+              }}
+            >
+              Easily integrate, automate and extend Pulse CRM
+              <br />using our powerful REST APIs.
+            </motion.p>
           </motion.div>
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
+
+          {/* Right — API flow illustration */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            style={{ fontSize: 'clamp(36px,5vw,56px)', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 16 }}>
-            API Reference
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            style={{ fontSize: 18, color: '#475569', lineHeight: 1.7, maxWidth: 640, marginBottom: 32 }}>
-            40+ REST endpoints. JWT authentication. OpenAPI 3.0 spec.
-          </motion.p>
+            transition={{ delay: 0.3, duration: 0.6 }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '20px 0',
+            }}
+          >
+            <ApiIllustration />
+          </motion.div>
         </div>
       </section>
 
-      <section style={{ padding: '60px 48px 80px', background: '#fff' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 16, overflow: 'hidden' }}>
-            {ENDPOINTS.map((ep, i) => {
-              const mc = METHOD_COLORS[ep.method] ?? { bg: '#f8fafc', color: '#475569' };
-              return (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  whileHover={{ background: '#fff' }}
-                  style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1.2fr', padding: '16px 24px', borderBottom: i < ENDPOINTS.length - 1 ? '1px solid #e2e8f0' : 'none', alignItems: 'center', cursor: 'pointer', background: '#fff', transition: 'background 0.2s' }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: mc.color, background: mc.bg, padding: '5px 10px', borderRadius: 8, width: 'fit-content', letterSpacing: '0.04em', border: `1px solid ${mc.color}22` }}>{ep.method}</span>
-                  <code style={{ fontSize: 13, color: '#0f172a', fontFamily: 'monospace', fontWeight: 600 }}>{ep.path}</code>
-                  <span style={{ fontSize: 13, color: '#64748b' }}>{ep.desc}</span>
-                </motion.div>
-              );
-            })}
-          </div>
+      {/* ── WHAT YOU CAN DO ───────────────────────────────────────── */}
+      <section style={{
+        padding: '56px 48px 64px',
+        background: '#f8f9fb',
+      }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
-          <div style={{ marginTop: 48, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-            {[
-              { icon: CheckCircle, title: 'Interactive Swagger', desc: 'Try endpoints live at /api/docs' },
-              { icon: Code, title: 'OpenAPI 3.0 Spec', desc: 'Download spec to generate SDKs' },
-              { icon: CheckCircle, title: 'Webhook Events', desc: 'Real-time event subscriptions' },
-            ].map(({ icon: Icon, title, desc }, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + i * 0.1 }}
-                whileHover={{ y: -4 }}
-                style={{ padding: 24, background: '#f8fafc', borderRadius: 14, border: '1px solid #e2e8f0' }}>
-                <div style={{ height: 40, width: 40, borderRadius: 10, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-                  <Icon size={18} color="#7c3aed" />
-                </div>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{title}</h3>
-                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{desc}</p>
-              </motion.div>
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+            style={{ marginBottom: 28 }}
+          >
+            <h2 style={{
+              fontSize: 20, fontWeight: 800, color: '#111827',
+              letterSpacing: '-0.02em', marginBottom: 0,
+            }}>
+              What you can do
+            </h2>
+          </motion.div>
+
+          {/* 6-column grid */}
+          <div
+            className="api-feat-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(6, 1fr)',
+              gap: 12,
+            }}
+          >
+            {FEATURES.map((feat, i) => (
+              <FeatureCard key={i} feat={feat} index={i} />
             ))}
           </div>
+
+          <style>{`
+            @media (max-width: 1100px) { .api-feat-grid { grid-template-columns: repeat(3, 1fr) !important; } }
+            @media (max-width: 720px)  { .api-feat-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+            @media (max-width: 460px)  { .api-feat-grid { grid-template-columns: 1fr !important; } }
+          `}</style>
         </div>
       </section>
+
+      {/* ── QUICK START ───────────────────────────────────────────── */}
+      <section style={{
+        padding: '0 48px 72px',
+        background: '#f8f9fb',
+      }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.4 }}
+            style={{ marginBottom: 24 }}
+          >
+            <h2 style={{
+              fontSize: 20, fontWeight: 800, color: '#111827',
+              letterSpacing: '-0.02em', marginBottom: 4,
+            }}>
+              Quick Start
+            </h2>
+            <p style={{ fontSize: 13, color: '#9ca3af' }}>
+              Get up and running in 3 simple steps.
+            </p>
+          </motion.div>
+
+          {/* 3 cards with dashed arrow connectors */}
+          <div
+            className="api-qs-grid"
+            style={{
+              display: 'flex',
+              alignItems: 'stretch',
+              gap: 0,
+            }}
+          >
+            {QUICK_STEPS.map((step, i) => (
+              <QuickCard
+                key={i}
+                step={step}
+                index={i}
+                isLast={i === QUICK_STEPS.length - 1}
+              />
+            ))}
+          </div>
+
+          <style>{`
+            @media (max-width: 780px) {
+              .api-qs-grid { flex-direction: column !important; }
+              .api-qs-grid > div { width: 100% !important; }
+            }
+          `}</style>
+        </div>
+      </section>
+
     </PageContainer>
   );
 }

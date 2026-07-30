@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from app.api.deps import CurrentUser, DBSession, require_permission
+from app.api.deps import CurrentUser, DBSession, require_permission, require_role
 from app.schemas.common import StandardResponse
 from app.schemas.dashboard import (
     DashboardAnalyticsResponse,
@@ -14,6 +14,9 @@ from app.schemas.dashboard import (
     DashboardSummaryResponse,
     DashboardTrendResponse,
     TopSalesRepresentativeResponse,
+    AdminDashboardResponse,
+    ManagerDashboardResponse,
+    SalesRepDashboardResponse,
 )
 from app.services.dashboard_service import DashboardService
 
@@ -102,3 +105,83 @@ async def get_dashboard_trends(current_user: CurrentUser, db: DBSession) -> dict
     svc = DashboardService(db)
     trends = await svc.trends(current_user.organization_id)
     return {"success": True, "message": "OK", "data": trends}
+
+
+@router.get(
+    "/admin",
+    response_model=StandardResponse[AdminDashboardResponse],
+    summary="Admin Dashboard KPIs",
+    description=(
+        "Returns all Admin Dashboard KPIs including organization stats, user counts, "
+        "revenue breakdown, lead funnel, top sales reps, top companies, recent "
+        "activities, and notification summary. **Admin role required.**"
+    ),
+    dependencies=[Depends(require_role("admin"))],
+    tags=["Dashboard"],
+)
+async def get_admin_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+    """
+    GET /api/v1/dashboard/admin
+
+    Secured: JWT required + `admin` role.
+    Scoped to the caller's organization_id.
+    """
+    svc = DashboardService(db)
+    data = await svc.admin_kpi(current_user.organization_id)
+    return {"success": True, "message": "Admin KPIs retrieved successfully.", "data": data}
+
+
+@router.get(
+    "/manager",
+    response_model=StandardResponse[ManagerDashboardResponse],
+    summary="Manager Dashboard KPIs",
+    description=(
+        "Returns all Sales Manager Dashboard KPIs: team revenue, forecast, "
+        "pipeline health, rep quota attainment, monthly trends, top reps, "
+        "deals at risk, alerts, and team performance metrics. "
+        "**Manager or Admin role required.**"
+    ),
+    dependencies=[Depends(require_role("manager", "admin"))],
+    tags=["Dashboard"],
+)
+async def get_manager_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+    """
+    GET /api/v1/dashboard/manager
+
+    Secured: JWT required + `manager` or `admin` role.
+    Scoped to the caller's organization_id; team = all users in the same org.
+    """
+    svc = DashboardService(db)
+    data = await svc.manager_kpi(current_user.id, current_user.organization_id)
+    return {"success": True, "message": "Manager KPIs retrieved successfully.", "data": data}
+
+
+@router.get(
+    "/sales-rep",
+    response_model=StandardResponse[SalesRepDashboardResponse],
+    summary="Sales Representative Dashboard KPIs",
+    description=(
+        "Returns all Sales Rep KPIs scoped to the logged-in user: revenue, "
+        "won deals, win rate, avg deal size, sales cycle, revenue trend, "
+        "deals by stage/source, activity heatmap, team performance table, "
+        "activity overview, key metrics, recent reports, and report templates. "
+        "**Sales Rep, Manager, or Admin role required.**"
+    ),
+    dependencies=[Depends(require_role("sales_rep", "manager", "admin"))],
+    tags=["Dashboard"],
+)
+async def get_sales_rep_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+    period: str = "month",
+) -> dict:
+    """
+    GET /api/v1/dashboard/sales-rep?period=month
+
+    period options: week | month | quarter | year  (default: month)
+    Secured: JWT required + sales_rep / manager / admin role.
+    All data scoped to owner_id == current_user.id.
+    """
+    svc = DashboardService(db)
+    data = await svc.sales_rep_kpi(current_user.id, current_user.organization_id, period)
+    return {"success": True, "message": "Sales rep KPIs retrieved successfully.", "data": data}

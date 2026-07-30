@@ -123,3 +123,23 @@ class OrgPlan(str, Enum):
     STARTER = "starter"
     PROFESSIONAL = "professional"
     ENTERPRISE = "enterprise"
+
+
+class MeetingAttendanceStatus(str, Enum):
+    ATTENDED = "ATTENDED"
+    NO_SHOW = "NO_SHOW"
+    RESCHEDULED = "RESCHEDULED"
+
+
+class BestContactTimeSlot(str, Enum):
+    MORNING_08_10 = "08:00-10:00"
+    MORNING_10_12 = "10:00-12:00"
+    AFTERNOON_14_16 = "14:00-16:00"
+    AFTERNOON_16_18 = "16:00-18:00"
+
+
+class RecommendationActionStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    COMPLETED = "COMPLETED"
+    DISMISSED = "DISMISSED"
+    EXPIRED = "EXPIRED"

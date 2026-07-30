@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import TasksView from './TasksView';
 import { 
   GitBranch, 
   Play, 
@@ -187,6 +188,8 @@ export default function WorkflowsView() {
       {!isBuilderOpen ? (
         // ----------------- LANDING SCREEN -----------------
         <div className="space-y-6">
+          <TasksView />
+
           <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
@@ -224,7 +227,7 @@ export default function WorkflowsView() {
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-brand-heading pb-2">
+                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
                     <th className="pb-2">Workflow Name & Scope</th>
                     <th className="pb-2">Trigger Event</th>
                     <th className="pb-2 text-center">Total Runs</th>

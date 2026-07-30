@@ -14,9 +14,13 @@ logger = logging.getLogger(__name__)
 
 def apply_schema_updates():
     statements = [
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS current_crm VARCHAR(100)",
+        "ALTER TABLE companies ADD COLUMN IF NOT EXISTS operational_system VARCHAR(100)",
         "ALTER TABLE leads ADD COLUMN IF NOT EXISTS industry VARCHAR(100)",
         "ALTER TABLE leads ADD COLUMN IF NOT EXISTS current_crm VARCHAR(100)",
         "ALTER TABLE leads ADD COLUMN IF NOT EXISTS operational_system VARCHAR(100)",
+        "ALTER TABLE leads ADD COLUMN IF NOT EXISTS location VARCHAR(150)",
+        "ALTER TABLE leads ADD COLUMN IF NOT EXISTS operational_systems VARCHAR(255)",
         "ALTER TABLE emails ADD COLUMN IF NOT EXISTS brevo_message_id VARCHAR(255)",
         "ALTER TABLE emails ADD COLUMN IF NOT EXISTS status VARCHAR(50) NOT NULL DEFAULT 'sent'",
         "ALTER TABLE emails ADD COLUMN IF NOT EXISTS delivered_at TIMESTAMP",
