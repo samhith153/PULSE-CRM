@@ -10,7 +10,6 @@ import {
   FileText, 
   GitPullRequest,
   Search,
-  CheckSquare,
   ListFilter
 } from 'lucide-react';
 import CalendarView from './CalendarView';

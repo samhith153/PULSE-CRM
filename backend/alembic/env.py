@@ -47,7 +47,7 @@ def run_migrations_offline():
 
 async def run():
     connect_args = {}
-    if "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATABASE_URL and "@db:" not in settings.DATABASE_URL:
+    if "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATABASE_URL:
         connect_args["ssl"] = ssl_context
 
     engine = create_async_engine(

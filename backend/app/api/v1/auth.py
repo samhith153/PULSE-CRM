@@ -9,7 +9,7 @@ POST /api/v1/auth/reset-password
 POST /api/v1/auth/change-password
 GET  /api/v1/auth/me
 """
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.deps import CurrentUser, DBSession
 from app.core.permissions import resolve_permissions_for_user
@@ -44,10 +44,17 @@ async def register(
     request: Request,
     db: DBSession,
 ) -> dict:
-    client_ip = request.client.host if request.client else ""
-    svc = AuthService(db)
-    tokens = await svc.register(payload, client_ip)
-    return {"success": True, "message": "Registration successful.", "data": tokens}
+    try:
+        client_ip = request.client.host if request.client else ""
+        svc = AuthService(db)
+        tokens = await svc.register(payload, client_ip)
+        return {"success": True, "message": "Registration successful.", "data": tokens}
+    except Exception as exc:
+        status_code = getattr(exc, "status_code", None)
+        if status_code is None:
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+        detail = getattr(exc, "detail", str(exc))
+        raise HTTPException(status_code=status_code, detail=detail) from exc
 
 
 @router.post(

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { 
   LayoutDashboard, 
   Users, 
@@ -121,7 +122,6 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
               { name: 'Contacts', icon: Contact, tab: 'contacts' },
               { name: 'Companies', icon: Building2, tab: 'companies' },
               { name: 'Deals', icon: Layers, tab: 'deals' },
-              { name: 'Pipeline', icon: TrendingUp, tab: 'pipeline' },
               { name: 'Products', icon: Package, tab: 'products' },
             ]
           },
@@ -221,20 +221,20 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
           <div className="space-y-1">
             <button
               onClick={() => handleTabClick('dashboard')}
-              className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group relative ${
+              className={`w-full flex items-center ${collapsed ? 'justify-center px-1.5 py-2.5 mx-auto max-w-[48px]' : 'space-x-3 px-3 py-2.5'} rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group relative ${
                 isTabActive('dashboard')
                   ? collapsed 
-                    ? 'bg-brand-secondary-accent/15 text-brand-accent border-l-2 border-brand-secondary-accent shadow-sm' 
+                    ? 'bg-brand-accent text-white shadow-md rounded-xl scale-95' 
                     : 'bg-brand-secondary-accent/15 text-brand-accent border-l-4 border-brand-secondary-accent shadow-sm/5 font-extrabold' 
                   : collapsed
-                    ? 'hover:bg-slate-100 text-brand-text/70 hover:text-brand-text'
+                    ? 'hover:bg-slate-150 text-brand-text/70 hover:text-brand-text'
                     : 'hover:bg-slate-50 text-brand-text/80 hover:text-brand-text border-l-4 border-transparent'
               }`}
               title={collapsed ? 'Dashboard (Your analytical home base)' : undefined}
             >
               <LayoutDashboard 
                 className={`h-5 w-5 shrink-0 transition-colors ${
-                  isTabActive('dashboard') ? (collapsed ? 'text-brand-accent' : 'text-brand-heading') : 'text-brand-text/70 group-hover:text-brand-text'
+                  isTabActive('dashboard') ? (collapsed ? 'text-white' : 'text-brand-heading') : 'text-brand-text/70 group-hover:text-brand-text'
                 }`}
                 strokeWidth={2}
               />
@@ -272,20 +272,20 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
                   <button
                     key={item.name}
                     onClick={() => handleTabClick(item.tab)}
-                    className={`w-full flex items-center ${collapsed ? 'justify-center' : 'space-x-3'} px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group relative ${
+                    className={`w-full flex items-center ${collapsed ? 'justify-center px-1.5 py-2 mx-auto max-w-[48px]' : 'space-x-3 px-3 py-2'} rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group relative ${
                       active 
                         ? collapsed
-                          ? 'bg-brand-secondary-accent/15 text-brand-accent border-l-2 border-brand-secondary-accent shadow-sm'
+                          ? 'bg-brand-accent text-white shadow-md rounded-xl scale-95'
                           : 'bg-brand-secondary-accent/15 text-brand-accent border-l-4 border-brand-secondary-accent shadow-sm/5 font-extrabold'
                         : collapsed
-                          ? 'hover:bg-slate-100 text-brand-text/70 hover:text-brand-text'
+                          ? 'hover:bg-slate-150 text-brand-text/70 hover:text-brand-text'
                           : 'hover:bg-slate-50 text-brand-text/80 hover:text-brand-text border-l-4 border-transparent'
                     }`}
                     title={collapsed ? item.name : undefined}
                   >
                     <Icon 
                       className={`h-5 w-5 shrink-0 transition-colors ${
-                        active ? (collapsed ? 'text-brand-accent' : 'text-brand-heading') : 'text-brand-text/70 group-hover:text-brand-text'
+                        active ? (collapsed ? 'text-white' : 'text-brand-heading') : 'text-brand-text/70 group-hover:text-brand-text'
                       }`}
                       strokeWidth={2}
                     />
@@ -312,10 +312,12 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
         >
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-              <img 
+              <Image 
                 src={profile.avatar} 
                 alt={`${profile.name} Profile`} 
+                width={32} height={32}
                 className="h-full w-full object-cover"
+                unoptimized
               />
             </div>
             {!collapsed && (

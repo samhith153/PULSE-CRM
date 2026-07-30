@@ -2,15 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-if (typeof globalThis !== 'undefined' && !(globalThis as any).isEmpty) {
-  (globalThis as any).isEmpty = function(obj: any): boolean {
-    if (obj == null) return true;
-    if (Array.isArray(obj) || typeof obj === 'string') return obj.length === 0;
-    if (typeof obj === 'object') return Object.keys(obj).length === 0;
-    return false;
-  };
-}
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

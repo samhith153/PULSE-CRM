@@ -1,4 +1,4 @@
-﻿"""Provider interfaces and rule-based AI implementations."""
+"""Provider interfaces and rule-based AI implementations."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -56,7 +56,7 @@ class ConversationSummaryProvider(Protocol):
     def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult: ...
 
 
-# ── Helper utilities for new features ─────────────────────────────────────
+# -- Helper utilities for new features -------------------------------------
 
 def compute_email_opened_no_reply_flag(email_open_count: int, reply_received: bool) -> bool:
     """Detect interested-but-stuck leads: opened emails but never replied."""
@@ -100,15 +100,16 @@ def compute_best_contact_time(activities: list[ActivityTimeline] | None = None, 
 
 
 def compute_deal_value_from_lead(lead: Lead) -> float:
-    """Get the deal value from a lead's associated deal or estimated value."""
-    if lead.deal and lead.deal.amount is not None:
-        return float(lead.deal.amount)
+    """Get the deal value without triggering async lazy relationship loads."""
+    deal = lead.__dict__.get("deal")
+    if deal and deal.amount is not None:
+        return float(deal.amount)
     if lead.estimated_value is not None:
         return float(lead.estimated_value)
     return 0.0
 
 
-# ── Feature Extraction ────────────────────────────────────────────────────
+# -- Feature Extraction ----------------------------------------------------
 
 class FeatureExtractionService:
     def lead_features(self, lead: Lead, emails: list[Email]) -> FeatureSet:
@@ -153,7 +154,7 @@ class FeatureExtractionService:
         )
 
 
-# ── Scorers ───────────────────────────────────────────────────────────────
+# -- Scorers ---------------------------------------------------------------
 
 class RuleBasedScorer:
     provider_name = "rule_based"
@@ -267,7 +268,7 @@ class RuleBasedScorer:
         return ScoreResult(score=max(0, min(100, score)), confidence=75, factors=factors, metadata=dict(values))
 
 
-# ── Recommendation Providers ──────────────────────────────────────────────
+# -- Recommendation Providers ----------------------------------------------
 
 class RuleBasedRecommendationProvider:
     provider_name = "rule_based"

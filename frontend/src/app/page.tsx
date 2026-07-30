@@ -13,7 +13,6 @@ import LeadsView from '@/components/dashboard/LeadsView';
 import CompaniesView from '@/components/dashboard/CompaniesView';
 import ContactsView from '@/components/dashboard/ContactsView';
 import PipelineView from '@/components/dashboard/PipelineView';
-import DealsView from '@/components/dashboard/DealsView';
 import ActivitiesView from '@/components/dashboard/ActivitiesView';
 import EmailsView from '@/components/dashboard/EmailsView';
 import AIInsightsView from '@/components/dashboard/AIInsightsView';
@@ -39,7 +38,7 @@ import IntegrationsView from '@/components/dashboard/IntegrationsView';
 import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
-import { Settings2, Loader2 } from 'lucide-react';
+import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2, Plus } from 'lucide-react';
 import { clearToken } from '@/utils/api';
 
 export default function DashboardHome() {
@@ -66,25 +65,23 @@ export default function DashboardHome() {
   };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | string>('dashboard');
-  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('representative');
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [dashboardSubTab, setDashboardSubTab] = useState('overview');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [reportType, setReportType] = useState('Sales Funnel');
+  const [primaryMetric, setPrimaryMetric] = useState('Deal Value');
+  const [groupBy, setGroupBy] = useState('Stage');
+  
+  // User Role State
+  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
 
   useEffect(() => {
     const savedRole = localStorage.getItem('pulse-crm-role') as any;
     if (savedRole && ['representative', 'manager', 'admin'].includes(savedRole)) {
       setUserRole(savedRole);
     }
-    const savedTab = localStorage.getItem('pulse-crm-active-tab');
-    if (savedTab) {
-      setActiveTab(savedTab);
-    }
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('pulse-crm-active-tab', activeTab);
-  }, [activeTab]);
 
   const handleSetUserRole = (role: 'representative' | 'manager' | 'admin') => {
     setUserRole(role);
@@ -130,9 +127,23 @@ export default function DashboardHome() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
+  const [showFiltersMenu, setShowFiltersMenu] = useState(false);
+  const [selectedPipelineType, setSelectedPipelineType] = useState('All');
   
-  // Simulated loading state
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEmpty, setIsEmpty] = useState(false);
+
+  const handleSubTabChange = (tabKey: string) => {
+    setDashboardSubTab(tabKey);
+    setIsLoading(true);
+    setIsEmpty(tabKey === 'marketing');
+  };
+
+  useEffect(() => {
+    if (!isLoading) return;
+    const timer = setTimeout(() => setIsLoading(false), 450);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   // Custom reports state
   const [recentReports, setRecentReports] = useState([
@@ -151,26 +162,19 @@ export default function DashboardHome() {
 
   const subTabs = [
     { name: 'Overview', key: 'overview' },
+    { name: 'Sales', key: 'sales' },
+    { name: 'Pipeline', key: 'pipeline' },
+    { name: 'Activity', key: 'activity' },
+    { name: 'Marketing', key: 'marketing' }, // will show empty state
+    { name: 'Team', key: 'team' },
+    { name: 'Forecasting', key: 'forecasting' },
+    { name: 'Custom Reports', key: 'custom' },
   ];
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen w-full flex bg-slate-50 antialiased">
-        <div className="w-16 shrink-0 bg-white border-r border-slate-100" />
-        <div className="flex-1 p-6 md:p-8 space-y-6">
-          <div className="h-10 bg-slate-100 rounded-xl w-48 animate-pulse" />
-          <div className="h-px bg-slate-100" />
-          <div className="grid grid-cols-12 gap-6">
-            <div className="col-span-12 lg:col-span-9 space-y-6">
-              <div className="h-32 bg-slate-100 rounded-xl animate-pulse" />
-              <div className="h-48 bg-slate-100 rounded-xl animate-pulse" />
-            </div>
-            <div className="col-span-12 lg:col-span-3 space-y-6">
-              <div className="h-40 bg-slate-100 rounded-xl animate-pulse" />
-              <div className="h-40 bg-slate-100 rounded-xl animate-pulse" />
-            </div>
-          </div>
-        </div>
+      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="h-8 w-8 text-brand-accent animate-spin" />
       </div>
     );
   }
@@ -206,29 +210,13 @@ export default function DashboardHome() {
 
         {/* Dashboard inner scroll view with increased whitespace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-          {isLoading ? (
-            <div className="space-y-6 animate-pulse">
-              <div className="h-10 bg-slate-100 rounded-xl w-56" />
-              <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-12 lg:col-span-9 space-y-6">
-                  <div className="h-40 bg-slate-100 rounded-xl" />
-                  <div className="h-56 bg-slate-100 rounded-xl" />
-                </div>
-                <div className="col-span-12 lg:col-span-3 space-y-6">
-                  <div className="h-36 bg-slate-100 rounded-xl" />
-                  <div className="h-36 bg-slate-100 rounded-xl" />
-                </div>
-              </div>
-            </div>
-          ) : activeTab === 'leads' ? (
+          {activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (
             <ContactsView />
           ) : activeTab === 'companies' ? (
             <CompaniesView />
-          ) : activeTab === 'deals' ? (
-            <DealsView />
-          ) : (activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
+          ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
             <PipelineView />
           ) : activeTab === 'products' ? (
             <ProductsView />
@@ -284,65 +272,167 @@ export default function DashboardHome() {
                     Track performance, analyze trends, and make data-driven decisions.
                   </p>
                 </div>
-              </div>
+                
+                {/* Datepicker and Layout Customization (Tactile and premium style) */}
+                <div className="flex items-center space-x-2 shrink-0 self-start md:self-auto">
+                  <button className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5">
+                    <Calendar className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
+                    <span className="tabular-nums">May 12 – May 18, 2025</span>
+                  </button>
 
-              {/* Toolbar */}
-              <div className="flex items-center justify-end">
-                <button 
-                  onClick={() => setIsCustomizerOpen(true)}
-                  className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5"
-                >
-                  <Settings2 className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
-                  <span>Customize Layout</span>
-                </button>
+                  <button 
+                    onClick={() => setIsCustomizerOpen(true)}
+                    className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5"
+                  >
+                    <Settings2 className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
+                    <span>Customize Layout</span>
+                  </button>
+                </div>
               </div>
 
               {/* KPI Stat Cards (Spans full horizontal width above grid split) */}
               {layoutSettings.statCards && (
-                <StatCards timeFilter="overview" loading={isLoading} />
+                <StatCards timeFilter={dashboardSubTab} loading={isLoading} />
               )}
 
-              {/* 12-Column Dashboard Grid Layout */}
-              <div className="grid grid-cols-12 gap-6">
+              {/* Stacked Dashboard Row Layout */}
+              <div className="space-y-6">
                 
-                {/* Left section (9 Columns of 12): Charts & Widgets */}
-                {(layoutSettings.charts || layoutSettings.heatmap || layoutSettings.leaderboard || layoutSettings.productivity) && (
-                  <div className={`col-span-12 ${layoutSettings.rightPanel ? 'lg:col-span-9' : 'col-span-12'} space-y-6`}>
-                    
-                    {/* Charts (Revenue, stage funnel, source donuts) */}
-                    {layoutSettings.charts && (
-                      <Charts loading={isLoading} empty={isEmpty} />
-                    )}
-
-                    {/* Sales Activity Heatmap */}
-                    {layoutSettings.heatmap && (
-                      <ActivityHeatmap />
-                    )}
-
-                    {/* Widgets (Leaderboard & Activity Logs) */}
-                    {(layoutSettings.leaderboard || layoutSettings.productivity) && (
-                      <Widgets 
-                        loading={isLoading} 
-                        showLeaderboard={layoutSettings.leaderboard}
-                        showProductivity={layoutSettings.productivity}
-                        onTabChange={setActiveTab}
-                      />
-                    )}
-
-                  </div>
+                {/* Charts (Revenue, stage funnel, source donuts) */}
+                {layoutSettings.charts && (
+                  <Charts loading={isLoading} empty={isEmpty} />
                 )}
 
-                {/* Right section (3 Columns of 12): Report Builder, Key Metrics, Recent Reports */}
+                {/* Sales Activity Heatmap */}
+                {layoutSettings.heatmap && (
+                  <ActivityHeatmap />
+                )}
+
+                {/* Widgets (Leaderboard & Activity Logs) */}
+                {(layoutSettings.leaderboard || layoutSettings.productivity) && (
+                  <Widgets 
+                    loading={isLoading} 
+                    showLeaderboard={layoutSettings.leaderboard}
+                    showProductivity={layoutSettings.productivity}
+                    onTabChange={setActiveTab}
+                  />
+                )}
+
+                {/* Right Panel Cards (Key Metrics Summary & Recent Reports) */}
                 {layoutSettings.rightPanel && (
-                  <div className={`col-span-12 ${(layoutSettings.charts || layoutSettings.heatmap || layoutSettings.leaderboard || layoutSettings.productivity) ? 'lg:col-span-3' : 'col-span-12'} space-y-6`}>
-                    <RightPanel 
-                      onNewReportClick={() => setIsReportModalOpen(true)} 
-                      recentReports={recentReports}
-                      loading={isLoading}
-                    />
-                  </div>
+                  <RightPanel 
+                    onNewReportClick={() => setIsReportModalOpen(true)} 
+                    recentReports={recentReports}
+                    loading={isLoading}
+                  />
                 )}
 
+              </div>
+              {/* Report Builder Control Panel at the bottom of the page */}
+              <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300 mt-6">
+                <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+                  <div>
+                    <h3 className="font-bold text-brand-heading text-sm">Report builder</h3>
+                    <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                      Configure template, metrics, and grouping to dynamically compile custom reports.
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-brand-accent/10 text-brand-accent uppercase tracking-wider">
+                    Customizer
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {/* Selection Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {/* Report Type */}
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">
+                        Report Template
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={reportType}
+                          onChange={(e) => setReportType(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-brand-border-purple/35 bg-white rounded-lg text-xs text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent transition-all duration-200 cursor-pointer appearance-none pr-8 font-semibold"
+                        >
+                          <option value="Sales Funnel">Sales Funnel Analysis</option>
+                          <option value="Lead Conversion">Lead Conversion Rate</option>
+                          <option value="Activity Log">Rep Activity Metrics</option>
+                          <option value="Revenue Projection">Revenue Forecast Q3</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                          <ChevronDown className="h-3 w-3" strokeWidth={2} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Primary Metric */}
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">
+                        Primary Metric
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={primaryMetric}
+                          onChange={(e) => setPrimaryMetric(e.target.value)}
+                          className="w-full px-2.5 py-1.5 border border-brand-border-purple/35 bg-white rounded-lg text-xs text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent transition-all duration-200 cursor-pointer appearance-none pr-8 font-semibold"
+                        >
+                          <option value="Deal Value">Deal Value (INR)</option>
+                          <option value="Lead Score">AI Lead Score</option>
+                          <option value="Conversion Rate">Conversion Rate (%)</option>
+                          <option value="Task Count">Total Activities</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-450">
+                          <ChevronDown className="h-3 w-3" strokeWidth={2} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Group By Selector */}
+                    <div>
+                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">
+                        Group By
+                      </label>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {['Stage', 'Source', 'Owner'].map((group) => {
+                          const isActive = groupBy === group;
+                          return (
+                            <button
+                              key={group}
+                              type="button"
+                              onClick={() => setGroupBy(group)}
+                              className={`py-1.5 rounded-lg text-[10px] font-extrabold border transition-all duration-200 cursor-pointer ${
+                                isActive 
+                                  ? 'border-brand-accent bg-brand-accent/5 text-brand-accent shadow-sm/5' 
+                                  : 'border-brand-border-purple/30 hover:border-brand-border-purple text-brand-text/75 hover:bg-slate-50'
+                              }`}
+                            >
+                              {group}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Schema Preview & Button Row */}
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50 border border-brand-border-purple/15 rounded-xl p-3.5 mt-2">
+                    <div className="flex items-center space-x-2 text-xs text-brand-text font-semibold overflow-hidden w-full sm:w-auto">
+                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] shrink-0">Output Schema:</span>
+                      <span className="font-mono bg-white px-2.5 py-1 rounded border border-brand-border-purple/20 text-brand-accent font-bold truncate max-w-full sm:max-w-md">
+                        {`${reportType.toLowerCase().replace(/\s+/g, '_')}_by_${groupBy.toLowerCase()}.csv`}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setIsReportModalOpen(true)}
+                      className="inline-flex items-center justify-center space-x-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white py-2 px-5 rounded-lg text-xs font-extrabold shadow-sm/10 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer w-full sm:w-auto shrink-0"
+                    >
+                      <Plus className="h-4 w-4" strokeWidth={2.5} />
+                      <span>Generate Custom Report</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </>
           )}
