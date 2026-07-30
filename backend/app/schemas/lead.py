@@ -25,10 +25,6 @@ class LeadCreateRequest(BaseModel):
     operational_systems: Optional[str] = Field(default=None, max_length=255)
     estimated_value: Optional[Decimal] = Field(default=None, ge=0)
     currency: str = Field(default="USD", max_length=3)
-    priority: Optional[str] = Field(default=None, max_length=20)
-    fit_score: Optional[int] = None
-    engagement_score: Optional[int] = None
-    top_reasons: Optional[list[str]] = None
     notes: Optional[str] = None
     email: Optional[str] = Field(default=None, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=30)
@@ -52,10 +48,6 @@ class LeadUpdateRequest(BaseModel):
     operational_systems: Optional[str] = Field(default=None, max_length=255)
     estimated_value: Optional[Decimal] = Field(default=None, ge=0)
     currency: Optional[str] = None
-    priority: Optional[str] = Field(default=None, max_length=20)
-    fit_score: Optional[int] = None
-    engagement_score: Optional[int] = None
-    top_reasons: Optional[list[str]] = None
     notes: Optional[str] = None
     close_reason: Optional[str] = None
     email: Optional[str] = Field(default=None, max_length=255)
@@ -100,11 +92,6 @@ class LeadResponse(BaseModel):
     operational_systems: Optional[str]
     estimated_value: Optional[Decimal]
     currency: str
-    score: Optional[int]
-    fit_score: Optional[int] = None
-    engagement_score: Optional[int] = None
-    top_reasons: Optional[list[str]] = None
-    priority: Optional[str] = None
     notes: Optional[str]
     close_reason: Optional[str]
     company_id: Optional[UUID]
@@ -120,6 +107,11 @@ class LeadResponse(BaseModel):
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     owner_name: Optional[str] = None
+    score: Optional[int] = None
+    fit_score: Optional[int] = None
+    engagement_score: Optional[int] = None
+    top_reasons: Optional[list[str]] = None
+    priority: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -139,11 +131,11 @@ class LeadResponse(BaseModel):
             operational_systems=lead.operational_systems,
             estimated_value=lead.estimated_value,
             currency=lead.currency,
-            score=lead.score,
-            fit_score=lead.fit_score,
-            engagement_score=lead.engagement_score,
-            top_reasons=lead.top_reasons,
-            priority=lead.priority,
+            score=lead.lead_score.overall_score if lead.lead_score else None,
+            fit_score=lead.lead_score.fit_score if lead.lead_score else None,
+            engagement_score=lead.lead_score.engagement_score if lead.lead_score else None,
+            top_reasons=lead.lead_score.top_reasons if lead.lead_score else None,
+            priority=lead.lead_score.priority_tier if lead.lead_score else None,
             notes=lead.notes,
             close_reason=lead.close_reason,
             company_id=lead.company_id,

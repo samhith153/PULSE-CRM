@@ -329,7 +329,7 @@ export async function getDeals(): Promise<Deal[]> {
       company: dd.company_name || dd.company?.name || '',
       value: Number(dd.amount || 0),
       stage: dd.stage_name || dd.stage_slug || 'New',
-      priority: dd.priority || 'Medium',
+      priority: dd.priority || '',
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
     };

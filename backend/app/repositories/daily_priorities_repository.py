@@ -19,6 +19,7 @@ from app.models.activity import ActivityTimeline
 from app.models.company import Company
 from app.models.deal import Deal
 from app.models.lead import Lead
+from app.models.lead_score import LeadScore
 from app.models.pipeline import PipelineStage
 from app.models.user import User
 from app.utils.enums import DealStatus
@@ -139,7 +140,7 @@ class DailyPrioritiesRepository:
             select(
                 Lead.id.label("lead_id"),
                 Lead.title.label("lead_name"),
-                Lead.score.label("lead_score"),
+                LeadScore.overall_score.label("lead_score"),
                 Lead.owner_id,
                 Lead.created_at.label("lead_created_at"),
                 Lead.status.label("lead_status"),
@@ -159,6 +160,7 @@ class DailyPrioritiesRepository:
                 func.coalesce(email_cnt.c.email_count, 0).label("email_count"),
                 func.coalesce(email_cnt.c.email_replies, 0).label("email_replies"),
             )
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .outerjoin(owner_alias,  owner_alias.id   == Lead.owner_id)
             .outerjoin(Company,      Company.id        == Lead.company_id)
             .outerjoin(Deal,         Deal.lead_id      == Lead.id)

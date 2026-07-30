@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from app.models.deal import Deal
     from app.models.recommendation_feature import RecommendationFeature
     from app.models.feature_vector import FeatureVector
+    from app.models.lead_score import LeadScore
     from app.models.user import User
 
 
@@ -59,17 +60,6 @@ class Lead(Base, TenantMixin):
         Numeric(15, 2), nullable=True
     )
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
-
-    # ── AI scoring (populated by AI module later) ─────────────────────────────
-    score: Mapped[Optional[int]] = mapped_column(nullable=True)
-    fit_score: Mapped[Optional[int]] = mapped_column(nullable=True)
-    engagement_score: Mapped[Optional[int]] = mapped_column(nullable=True)
-    top_reasons: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
-
-    # ── Priority (High / Medium / Low) ────────────────────────────────────────
-    priority: Mapped[Optional[str]] = mapped_column(
-        "priority_tier", String(20), nullable=True
-    )
 
     # ── CRM metadata ─────────────────────────────────────────────────────────
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(
@@ -129,6 +119,14 @@ class Lead(Base, TenantMixin):
     )
     feature_vector: Mapped[Optional["FeatureVector"]] = relationship(
         "FeatureVector",
+        back_populates="lead",
+        lazy="select",
+        uselist=False,
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    lead_score: Mapped[Optional["LeadScore"]] = relationship(
+        "LeadScore",
         back_populates="lead",
         lazy="select",
         uselist=False,

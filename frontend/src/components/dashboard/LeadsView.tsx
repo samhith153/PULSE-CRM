@@ -53,8 +53,12 @@ function backendToLocal(b: BackendLead): Lead {
     email: b.contact_email || '',
     phone: b.contact_phone || '',
     score: b.score ?? 0,
+    fit_score: b.fit_score ?? null,
+    engagement_score: b.engagement_score ?? null,
+    priorityTier: b.priority ?? null,
+    topReasons: b.top_reasons ?? [],
     status: STATUS_UNMAP[b.status] || 'New',
-    priority: 'Medium',
+    priority: 'Medium', // Default to Medium if not provided
     owner: b.owner_name || 'Unassigned',
     ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
     notes: b.notes || '',
@@ -112,6 +116,10 @@ interface Lead {
   email: string;
   phone: string;
   score: number;
+  fit_score: number | null;
+  engagement_score: number | null;
+  priorityTier: string | null;
+  topReasons: string[];
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
   priority: 'High' | 'Medium' | 'Low';
   owner: string;
@@ -170,24 +178,6 @@ export default function LeadsView() {
   const [meetingForm, setMeetingForm] = useState({ title: '', date: '', time: '', desc: '' });
   const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employeeCount: '', pipelineStageId: '' });
   const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string; slug: string }[]>([]);
-
-  const getFitScore = (lead: Lead) => {
-    let score = 45;
-    if (lead.company) score += 15;
-    if (lead.email) score += 10;
-    if (lead.phone) score += 10;
-    if (lead.source && lead.source !== 'Cold Email') score += 10;
-    if (lead.priority === 'High') score += 10;
-    return Math.min(100, score);
-  };
-
-  const getEngagementScore = (lead: Lead) => {
-    let score = 30;
-    if (lead.emails && lead.emails.length > 0) score += Math.min(30, lead.emails.length * 10);
-    if (lead.calls && lead.calls.length > 0) score += Math.min(20, lead.calls.length * 10);
-    if (lead.meetings && lead.meetings.length > 0) score += Math.min(20, lead.meetings.length * 15);
-    return Math.min(100, score);
-  };
 
   const getProgressPoints = (score: number) => {
     const p1 = { x: 10, y: 80 };
@@ -739,13 +729,13 @@ export default function LeadsView() {
                             {/* Fit Score */}
                             <td className="py-3 text-center">
                               <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
-                                {getFitScore(lead)}%
+                                {lead.fit_score ?? 0}%
                               </span>
                             </td>
                             {/* Engagement Score */}
                             <td className="py-3 text-center">
                               <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-slate-100 text-black">
-                                {getEngagementScore(lead)}%
+                                {lead.engagement_score ?? 0}%
                               </span>
                             </td>
                             {/* Overall Score */}
@@ -917,7 +907,12 @@ export default function LeadsView() {
             </div>
             <div className="flex justify-between">
               <span className="text-brand-text/50">Priority</span>
-              <span className="text-brand-text">{activeLead.priority}</span>
+              <span className={`font-bold ${
+                activeLead.priorityTier === 'Critical' ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'High' ? 'text-amber-700 bg-amber-50 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'Medium' ? 'text-blue-700 bg-blue-50 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'Low' ? 'text-slate-500 bg-slate-50 px-1.5 py-0.25 rounded' : ''
+              }`}>{activeLead.priorityTier || activeLead.priority}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-brand-text/50">Email</span>
@@ -1016,6 +1011,66 @@ export default function LeadsView() {
               <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-bold">{getAIRecommendation(activeLead)}</p>
             </div>
           </div>
+
+          {/* Priority View - Advanced Scoring Details (toggled on/off) */}
+          {isPriorityView && (
+            <div className="mt-4 border border-brand-border-purple/30 rounded-xl p-3.5">
+              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider flex items-center space-x-1 mb-3">
+                <Award className="h-4 w-4 text-brand-accent" />
+                <span>Priority Scoring Details</span>
+              </h4>
+              <div className="space-y-2.5 text-[10px] font-bold">
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-text/60">Fit Score</span>
+                  <span className="font-extrabold text-brand-heading">{activeLead.fit_score ?? 0}%</span>
+                </div>
+                {activeLead.fit_score !== null && activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).length > 0 && (
+                  <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-blue-200">
+                    {activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).slice(0, 2).map((r, i) => (
+                      <div key={i} className="mb-0.5">• {r}</div>
+                    ))}
+                  </div>
+                )}
+                <div className="border-t border-brand-border-purple/10" />
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-text/60">Engagement Score</span>
+                  <span className="font-extrabold text-brand-heading">{activeLead.engagement_score ?? 0}%</span>
+                </div>
+                {activeLead.engagement_score !== null && activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).length > 0 && (
+                  <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-amber-200">
+                    {activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).slice(0, 2).map((r, i) => (
+                      <div key={i} className="mb-0.5">• {r}</div>
+                    ))}
+                  </div>
+                )}
+                <div className="border-t border-brand-border-purple/10" />
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-text/60">Overall Score</span>
+                  <span className={`font-extrabold tabular-nums ${
+                    activeLead.score >= 80 ? 'text-emerald-600' : activeLead.score >= 60 ? 'text-amber-600' : 'text-rose-600'
+                  }`}>{activeLead.score}%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-brand-text/60">Tier</span>
+                  <span className={`font-extrabold ${
+                    activeLead.priorityTier === 'Critical' ? 'text-emerald-600' :
+                    activeLead.priorityTier === 'High' ? 'text-amber-600' :
+                    activeLead.priorityTier === 'Medium' ? 'text-blue-600' : 'text-slate-500'
+                  }`}>{activeLead.priorityTier || 'N/A'}</span>
+                </div>
+                {activeLead.topReasons.length > 0 && (
+                  <div className="border-t border-brand-border-purple/10 pt-2">
+                    <span className="text-[9px] text-brand-text/60 uppercase tracking-wider font-extrabold">Top Reasons</span>
+                    <div className="mt-1 text-[9px] text-brand-text/80 leading-relaxed">
+                      {activeLead.topReasons.slice(0, 3).map((r, i) => (
+                        <div key={i} className="mb-0.5">• {r}</div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Live Notes block */}
           <div className="mt-4">

@@ -1,7 +1,7 @@
 """
 Lead Scoring Service
 Computes fit, engagement, and overall priority scores by feeding feature vector data
-through the AI scoring pipeline, and persists results onto the Lead model.
+through the AI scoring pipeline, and persists results onto the LeadScore table.
 """
 import sys
 import os
@@ -10,9 +10,10 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.lead import Lead
+from app.models.lead_score import LeadScore
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.feature_vector_repository import FeatureVectorRepository
+from app.repositories.lead_score_repository import LeadScoreRepository
 from app.core.logging import get_logger
 
 # Add root directory to sys.path so we can import from ai.scoring
@@ -33,10 +34,16 @@ class LeadScoringService:
         self.db = db
         self.lead_repo = LeadRepository(db)
         self.feature_vector_repo = FeatureVectorRepository(db)
+        self.lead_score_repo = LeadScoreRepository(db)
+
+    async def get_by_lead_id(
+        self, lead_id: UUID, organization_id: UUID
+    ) -> Optional[LeadScore]:
+        return await self.lead_score_repo.get_by_lead_id(lead_id, organization_id)
 
     async def compute_and_store_scores(
         self, lead_id: UUID, organization_id: UUID, created_by: Optional[UUID] = None
-    ) -> Optional[Lead]:
+    ) -> Optional[LeadScore]:
         lead = await self.lead_repo.get_active_by_id(lead_id, organization_id)
         if not lead:
             return None
@@ -98,7 +105,7 @@ class LeadScoringService:
                 logger.error("Error computing lead scores", extra={"error": str(e)})
         else:
             logger.warning("ai.scoring.scoring_service not available")
-            return lead
+            return None
 
         # ── Console output: RESULTS ──────────────────────────────────────────
         print(f"SCORING RESULTS:")
@@ -111,14 +118,18 @@ class LeadScoringService:
         print(f"  top_reasons: {result['overall']['top_reasons']}")
         print(f"{'='*60}\n")
 
-        # ── Persist onto Lead model ──────────────────────────────────────────
-        update_data = {
+        # ── Persist onto LeadScore table ────────────────────────────────────
+        scores_data = {
             "fit_score": int(round(result["fit"]["score"])),
+            "fit_reasons": result["fit"]["reasons"],
             "engagement_score": int(round(result["engagement"]["score"])),
-            "score": int(round(result["overall"]["score"])),
+            "engagement_reasons": result["engagement"]["reasons"],
+            "overall_score": int(round(result["overall"]["score"])),
             "priority_tier": result["overall"]["tier"],
             "top_reasons": result["overall"]["top_reasons"],
         }
-        await self.lead_repo.update(lead, **update_data)
+        ls = await self.lead_score_repo.upsert_for_lead(
+            lead_id, organization_id, created_by, scores_data
+        )
 
-        return await self.lead_repo.get_active_by_id(lead_id, organization_id)
+        return ls

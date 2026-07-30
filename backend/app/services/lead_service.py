@@ -330,7 +330,7 @@ class LeadService:
                 status=DealStatus.OPEN.value,
                 amount=revenue or lead.estimated_value,
                 currency=lead.currency,
-                probability=min(max((lead.score or 50), 0), 100),
+                probability=min(max((lead.lead_score.overall_score if lead.lead_score else 50), 0), 100),
                 notes=lead.notes,
                 owner_id=lead.owner_id,
                 company_id=company_id,
