@@ -100,5 +100,6 @@ class CompanyResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    owner_name: Optional[str] = None
 
     model_config = {"from_attributes": True}

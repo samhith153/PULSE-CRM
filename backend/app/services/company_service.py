@@ -4,9 +4,10 @@ Company Management Service
 from typing import List, Optional, Tuple
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import DuplicateException, NotFoundException
+from app.core.exceptions import DuplicateException, NotFoundException, BusinessRuleException
 from app.core.logging import get_logger
 from app.models.company import Company
 from app.repositories.company_repository import CompanyRepository
@@ -99,6 +100,51 @@ class CompanyService:
 
     async def delete(self, company_id: UUID, organization_id: UUID) -> None:
         company = await self.get(company_id, organization_id)
+
+        from app.models.contact import Contact
+        from app.models.deal import Deal
+        from app.models.lead import Lead
+
+        active_contacts = (
+            await self.db.execute(
+                select(func.count()).select_from(Contact).where(
+                    Contact.company_id == company_id,
+                    Contact.is_deleted == False,
+                )
+            )
+        ).scalar() or 0
+
+        active_leads = (
+            await self.db.execute(
+                select(func.count()).select_from(Lead).where(
+                    Lead.company_id == company_id,
+                    Lead.is_deleted == False,
+                )
+            )
+        ).scalar() or 0
+
+        active_deals = (
+            await self.db.execute(
+                select(func.count()).select_from(Deal).where(
+                    Deal.company_id == company_id,
+                    Deal.is_deleted == False,
+                )
+            )
+        ).scalar() or 0
+
+        if active_contacts > 0 or active_leads > 0 or active_deals > 0:
+            parts = []
+            if active_contacts:
+                parts.append(f"{active_contacts} contact{'s' if active_contacts != 1 else ''}")
+            if active_leads:
+                parts.append(f"{active_leads} lead{'s' if active_leads != 1 else ''}")
+            if active_deals:
+                parts.append(f"{active_deals} deal{'s' if active_deals != 1 else ''}")
+            raise BusinessRuleException(
+                f"Cannot delete company '{company.name}': linked to {', '.join(parts)}. "
+                "Remove the company from these records first, or delete them first."
+            )
+
         await self.repo.soft_delete(company)
         await self.timeline.record_activity(
             organization_id=organization_id,

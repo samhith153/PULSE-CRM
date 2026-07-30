@@ -7,6 +7,7 @@ from uuid import UUID
 
 from sqlalchemy import asc, desc, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.deal import Deal
 from app.repositories.base import BaseRepository
@@ -18,9 +19,17 @@ class DealRepository(BaseRepository[Deal]):
         super().__init__(Deal, db)
 
     def _base_query(self, organization_id: UUID):
-        return select(Deal).where(
-            Deal.organization_id == organization_id,
-            Deal.is_deleted.is_(False),
+        return (
+            select(Deal)
+            .where(
+                Deal.organization_id == organization_id,
+                Deal.is_deleted.is_(False),
+            )
+            .options(
+                selectinload(Deal.company),
+                selectinload(Deal.contact),
+                selectinload(Deal.owner),
+            )
         )
 
     async def get_active_by_id(self, deal_id: UUID, organization_id: UUID) -> Optional[Deal]:

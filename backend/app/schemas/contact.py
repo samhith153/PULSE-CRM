@@ -86,5 +86,6 @@ class ContactResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    company_name: Optional[str] = None
 
     model_config = {"from_attributes": True}

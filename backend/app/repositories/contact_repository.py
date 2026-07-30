@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.contact import Contact
 from app.repositories.base import BaseRepository
@@ -23,6 +24,7 @@ class ContactRepository(BaseRepository[Contact]):
                 Contact.organization_id == organization_id,
                 Contact.is_deleted == False,
             )
+            .options(selectinload(Contact.company))
         )
 
     async def get_by_email_in_org(
@@ -39,7 +41,7 @@ class ContactRepository(BaseRepository[Contact]):
     ) -> Optional[Contact]:
         stmt = self._base_query(organization_id).where(
             Contact.id == contact_id
-        )
+        ).options(selectinload(Contact.company))
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 

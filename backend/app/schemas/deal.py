@@ -19,6 +19,7 @@ class DealCreateRequest(BaseModel):
     currency: str = Field(default="USD", max_length=3)
     expected_close_date: Optional[date] = None
     probability: int = Field(default=50, ge=0, le=100)
+    priority: Optional[str] = Field(default=None, max_length=20)
     notes: Optional[str] = None
     owner_id: Optional[UUID] = None
     pipeline_stage_id: Optional[UUID] = None
@@ -35,6 +36,7 @@ class DealUpdateRequest(BaseModel):
     currency: Optional[str] = Field(default=None, max_length=3)
     expected_close_date: Optional[date] = None
     probability: Optional[int] = Field(default=None, ge=0, le=100)
+    priority: Optional[str] = Field(default=None, max_length=20)
     notes: Optional[str] = None
     owner_id: Optional[UUID] = None
     pipeline_stage_id: Optional[UUID] = None
@@ -52,6 +54,7 @@ class DealResponse(BaseModel):
     currency: str
     expected_close_date: Optional[date]
     probability: int
+    priority: Optional[str] = None
     notes: Optional[str]
     close_reason: Optional[str]
     closed_at: Optional[datetime]
@@ -64,5 +67,8 @@ class DealResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    company_name: Optional[str] = None
+    contact_name: Optional[str] = None
+    owner_name: Optional[str] = None
 
     model_config = {"from_attributes": True}

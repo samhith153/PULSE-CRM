@@ -37,66 +37,7 @@ interface Company {
 }
 
 export default function CompaniesView() {
-  const [companies, setCompanies] = useState<Company[]>([
-    {
-      id: 1,
-      name: "TechCorp Inc.",
-      industry: "Software & IT",
-      revenue: "₹12,400,000",
-      employees: 320,
-      contacts: ["Alex Rivera (VP Eng)", "Jane Doe (Product Manager)"],
-      openDeals: 2,
-      owner: "Sarah Johnson",
-      ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-      notes: "Expanding cloud migration contracts. Security SLA signed in Q1.",
-      timeline: [
-        { id: 1, title: "SSO Config Approved", time: "2 days ago" },
-        { id: 2, title: "Discovery meeting logged", time: "1 week ago" }
-      ],
-      emails: [
-        { id: 1, subject: "SSO integration guidelines", time: "3 days ago" }
-      ],
-      files: [
-        { id: 1, name: "Migration_Blueprint.pdf", size: "2.4 MB" }
-      ]
-    },
-    {
-      id: 2,
-      name: "MedSaaS Solutions",
-      industry: "Healthcare tech",
-      revenue: "₹4,500,000",
-      employees: 85,
-      contacts: ["Marcus Aurelius (Director)"],
-      openDeals: 1,
-      owner: "Alex Johnson",
-      ownerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
-      notes: "Evaluating compliance guidelines. Demo was well received.",
-      timeline: [
-        { id: 1, title: "Product Demo Scheduled", time: "3 days ago" }
-      ],
-      emails: [
-        { id: 1, subject: "Sandbox login requests", time: "4 days ago" }
-      ],
-      files: []
-    },
-    {
-      id: 3,
-      name: "Sparta Creative",
-      industry: "Marketing & Design",
-      revenue: "₹1,200,000",
-      employees: 24,
-      contacts: ["Helena Troy (CEO)"],
-      openDeals: 0,
-      owner: "Sarah Johnson",
-      ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-      notes: "SSO and custom branding design requirements are priority.",
-      timeline: [
-        { id: 1, title: "Form Ingestion", time: "10 hours ago" }
-      ],
-      emails: [],
-      files: []
-    }
-  ]);
+  const [companies, setCompanies] = useState<Company[]>([]);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

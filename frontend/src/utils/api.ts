@@ -1,3 +1,5 @@
+import { toast } from '@/lib/toast';
+
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
@@ -34,6 +36,10 @@ export interface Lead {
   estimated_value: number | null;
   currency: string;
   score: number | null;
+  fit_score: number | null;
+  engagement_score: number | null;
+  top_reasons: string[] | null;
+  priority: string | null;
   notes: string | null;
   close_reason: string | null;
   company_id: string | null;
@@ -51,45 +57,84 @@ export interface Lead {
 }
 
 export interface Contact {
-  id: number | string;
-  name: string;
-  company: string;
-  designation: string;
-  phone: string;
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
   email: string;
-  notes: string;
-  timeline: { id: number; title: string; time: string }[];
-  calls: { id: number; outcome: string; notes: string; time: string }[];
-  meetings: { id: number; title: string; date: string; time: string }[];
-  emails: { id: number; subject: string; body: string; time: string }[];
+  phone: string | null;
+  mobile: string | null;
+  job_title: string | null;
+  department: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  notes: string | null;
+  company_id: string | null;
+  owner_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  company_name: string | null;
 }
 
 export interface Company {
-  id: number | string;
+  id: string;
   name: string;
-  industry: string;
-  revenue: string;
-  employees: number;
-  contacts: string[];
-  openDeals: number;
-  owner: string;
-  ownerAvatar: string;
-  notes: string;
-  domain?: string;
-  timeline: { id: number; title: string; time: string }[];
-  emails: { id: number; subject: string; time: string }[];
-  files: { id: number; name: string; size: string }[];
+  domain: string | null;
+  website: string | null;
+  description: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  zip_code: string | null;
+  industry: string | null;
+  current_crm: string | null;
+  operational_system: string | null;
+  company_type: string | null;
+  employee_count: number | null;
+  annual_revenue: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
+  owner_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  owner_name: string | null;
 }
 
 export interface Deal {
-  id: number | string;
-  title: string;
-  company: string;
-  value: number;
-  stage: 'Qualified' | 'Proposal' | 'Under Review' | 'Won' | 'Lost';
-  priority: 'High' | 'Medium' | 'Low';
-  owner: string;
-  closeDate: string;
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  amount: number | null;
+  currency: string;
+  expected_close_date: string | null;
+  probability: number;
+  priority: string | null;
+  notes: string | null;
+  close_reason: string | null;
+  closed_at: string | null;
+  owner_id: string | null;
+  pipeline_stage_id: string | null;
+  company_id: string | null;
+  contact_id: string | null;
+  lead_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  company_name: string | null;
+  contact_name: string | null;
+  owner_name: string | null;
 }
 
 export async function register(fullName: string, email: string, password: string, organizationName: string): Promise<{ access_token: string; refresh_token: string }> {
@@ -146,7 +191,15 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     }
   });
   if (!res.ok) {
-    throw new Error(`API error ${res.status}`);
+    let message = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.message) message = body.message;
+      else if (body?.detail) message = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+    } catch {
+    }
+    toast.error(message);
+    throw new Error(message);
   }
   if (res.status === 204) {
     return undefined as T;
@@ -210,7 +263,7 @@ export async function getContacts(): Promise<Contact[]> {
     calls: [],
     meetings: [],
     emails: [],
-  }));
+  })) as unknown as Contact[];
 }
 
 export async function createContact(contactData: any): Promise<any> {
@@ -247,7 +300,7 @@ export async function getCompanies(): Promise<Company[]> {
       emails: [],
       files: [],
     };
-  });
+  }) as unknown as Company[];
 }
 
 export async function createCompany(companyData: any): Promise<any> {
@@ -266,7 +319,7 @@ export async function getDeals(): Promise<Deal[]> {
       id: dd.id,
       title: dd.name || `Deal ${dd.id}`,
       company: dd.company_name || dd.company?.name || '',
-      value: Number(dd.value || 0),
+      value: Number(dd.amount || 0),
       stage: dd.stage_id === 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918' ? 'Qualified' :
              dd.stage_id === 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919' ? 'Proposal' :
              dd.stage_id === 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920' ? 'Under Review' :
@@ -275,7 +328,7 @@ export async function getDeals(): Promise<Deal[]> {
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
     };
-  });
+  }) as unknown as Deal[];
 }
 
 export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
@@ -326,7 +379,12 @@ export async function summarizeThread(threadId: string, messages: SummaryMessage
       deal_id: dealId
     })
   });
-  if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
+  if (!res.ok) {
+    let message = `Summarization failed (${res.status})`;
+    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
+    toast.error(message);
+    throw new Error(message);
+  }
   return res.json() as Promise<ConversationSummary>;
 }
 
@@ -334,7 +392,12 @@ export async function getSummaryByThread(threadId: string): Promise<Conversation
   const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
     headers: { ...getAuthHeaders() }
   });
-  if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
+  if (!res.ok) {
+    let message = `Failed to load summary (${res.status})`;
+    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
+    toast.error(message);
+    throw new Error(message);
+  }
   return res.json() as Promise<ConversationSummary>;
 }
 

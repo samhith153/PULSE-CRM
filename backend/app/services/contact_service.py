@@ -4,6 +4,7 @@ Contact Management Service
 from typing import List, Optional, Tuple
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import DuplicateException, NotFoundException, BusinessRuleException
@@ -114,6 +115,39 @@ class ContactService:
 
     async def delete(self, contact_id: UUID, organization_id: UUID) -> None:
         contact = await self.get(contact_id, organization_id)
+
+        from app.models.deal import Deal
+        from app.models.lead import Lead
+
+        active_deals = (
+            await self.db.execute(
+                select(func.count()).select_from(Deal).where(
+                    Deal.contact_id == contact_id,
+                    Deal.is_deleted == False,
+                )
+            )
+        ).scalar() or 0
+
+        active_leads = (
+            await self.db.execute(
+                select(func.count()).select_from(Lead).where(
+                    Lead.contact_id == contact_id,
+                    Lead.is_deleted == False,
+                )
+            )
+        ).scalar() or 0
+
+        if active_deals > 0 or active_leads > 0:
+            parts = []
+            if active_deals:
+                parts.append(f"{active_deals} deal{'s' if active_deals != 1 else ''}")
+            if active_leads:
+                parts.append(f"{active_leads} lead{'s' if active_leads != 1 else ''}")
+            raise BusinessRuleException(
+                f"Cannot delete contact '{contact.full_name}': linked to {', '.join(parts)}. "
+                "Remove the contact from these records first, or delete them first."
+            )
+
         await self.repo.soft_delete(contact)
         await self.timeline.record_activity(
             organization_id=organization_id,

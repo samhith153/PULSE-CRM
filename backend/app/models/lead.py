@@ -7,7 +7,7 @@ import uuid
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, ForeignKey, Integer, JSON, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -33,6 +33,11 @@ class Lead(Base, TenantMixin):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
+    # ── Contact info (stored directly until conversion) ───────────────────────
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    company_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
     # ── Pipeline ──────────────────────────────────────────────────────────────
     status: Mapped[str] = mapped_column(
         String(50), default="new", nullable=False, index=True
@@ -55,6 +60,14 @@ class Lead(Base, TenantMixin):
 
     # ── AI scoring (populated by AI module later) ─────────────────────────────
     score: Mapped[Optional[int]] = mapped_column(nullable=True)
+    fit_score: Mapped[Optional[int]] = mapped_column(nullable=True)
+    engagement_score: Mapped[Optional[int]] = mapped_column(nullable=True)
+    top_reasons: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+
+    # ── Priority (High / Medium / Low) ────────────────────────────────────────
+    priority: Mapped[Optional[str]] = mapped_column(
+        "priority_tier", String(20), nullable=True
+    )
 
     # ── CRM metadata ─────────────────────────────────────────────────────────
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(
