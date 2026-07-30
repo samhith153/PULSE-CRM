@@ -594,119 +594,67 @@ export async function getActivities(params: ActivityListParams = {}): Promise<Pa
   );
 }
 
-// --- Dashboard KPI API (Admin / Manager / Sales Rep) ---
+// --- Automation / Events API ---
 
-// Decimal values arrive as strings from the JSON serializer.
-export type Decimal = string | number;
-
-export function asNumber(v: Decimal | undefined | null): number {
-  if (v === undefined || v === null || v === '') return 0;
-  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/,/g, ''));
-  return Number.isFinite(n) ? n : 0;
+export interface AutomationEvent {
+  id: string;
+  event_type: string;
+  event_name: string;
+  aggregate_type?: string | null;
+  aggregate_id?: string | null;
+  organization_id?: string | null;
+  actor_id?: string | null;
+  source?: string | null;
+  correlation_id?: string | null;
+  payload: Record<string, unknown>;
+  occurred_at: string;
+  created_at: string;
 }
 
-export function formatINR(v: Decimal | undefined | null): string {
-  const n = asNumber(v);
-  if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(2)}L`;
-  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
-  return `₹${n.toLocaleString('en-IN')}`;
+export interface AutomationEventList {
+  items: AutomationEvent[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
-export function formatNum(v: Decimal | undefined | null): string {
-  const n = asNumber(v);
-  if (n >= 1_00_00_000) return `${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000) return `${(n / 1_00_000).toFixed(2)}L`;
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
-  return n.toLocaleString('en-IN');
+export interface WebhookEndpoint {
+  id: string;
+  name: string;
+  target_url: string;
+  event_types: string[];
+  max_attempts: number;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
-export function formatPct(v: Decimal | undefined | null, digits = 1): string {
-  const n = asNumber(v);
-  const sign = n > 0 ? '+' : '';
-  return `${sign}${n.toFixed(digits)}%`;
+export interface WebhookDelivery {
+  id: string;
+  endpoint_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  status: string;
+  attempts: number;
+  next_attempt_at?: string | null;
+  last_status_code?: number | null;
+  last_error?: string | null;
+  delivered_at?: string | null;
+  created_at: string;
 }
 
-export interface AdminDashboardData {
-  summary: {
-    organizations: { total: number; added_this_month: number; monthly_growth_pct: Decimal };
-    users: { total: number; active: number; inactive: number; new_this_month: number };
-    companies: { total: number; added_this_month: number; monthly_growth_pct: Decimal };
-    contacts: { total: number; new_this_month: number; monthly_growth_pct: Decimal };
-    leads: { total: number; new_today: number; new_this_month: number; monthly_growth_pct: Decimal; converted: number; conversion_rate: Decimal };
-    revenue: { today: Decimal; this_week: Decimal; this_month: Decimal; this_year: Decimal; growth_pct: Decimal };
-    tasks: { pending: number; overdue: number; due_today: number };
-  };
-  monthly_sales: { month: string; leads_created: number; leads_converted: number; revenue: Decimal }[];
-  lead_sources: { source: string; count: number; percentage: Decimal }[];
-  lead_funnel: { stage: string; count: number; percentage: Decimal }[];
-  top_sales_reps: { user_id: string; full_name: string; deals_closed: number; revenue: Decimal; conversion_rate: Decimal }[];
-  top_companies: { company_id: string; name: string; revenue: Decimal; lead_count: number; contact_count: number }[];
-  recent_activities: { id: string; action: string; title: string; entity_type: string; created_at: string; created_by: string | null }[];
-  notifications: { overdue_tasks: number; todays_meetings: number; pending_approvals: number; high_priority_leads: number; system_alerts: number };
+export async function getAutomationEvents(limit = 25): Promise<AutomationEventList> {
+  return apiFetch<AutomationEventList>(`/api/v1/events${toQuery({ limit })}`);
 }
 
-export interface ManagerDashboardData {
-  summary: {
-    team_revenue: Decimal;
-    forecast_projection: Decimal;
-    pipeline_value: Decimal;
-    quota_achievement: Decimal;
-    team_members: number;
-    conversion_rate: Decimal;
-    win_rate: Decimal;
-    average_sales_cycle: Decimal;
-  };
-  revenue_stats: { team_revenue_won: Decimal; team_target: Decimal; achievement_pct: Decimal; monthly_growth_pct: Decimal };
-  forecast: { projected_revenue: Decimal; forecast_accuracy: Decimal; confidence_score: Decimal; expected_quarter_revenue: Decimal };
-  pipeline_health: {
-    active_pipeline_value: Decimal;
-    total_deals: number;
-    health_score: Decimal;
-    stage_distribution: { stage: string; deal_count: number; total_value: Decimal; percentage: Decimal }[];
-  };
-  rep_quota_attainment: { user_id: string; full_name: string; assigned_target: Decimal; revenue_generated: Decimal; quota_achievement_pct: Decimal; rank: number }[];
-  monthly_revenue_trend: { month: string; revenue: Decimal; target: Decimal; growth_pct: Decimal }[];
-  top_reps: { user_id: string; full_name: string; revenue: Decimal; deals_closed: number; conversion_rate: Decimal; quota_achievement_pct: Decimal }[];
-  deals_at_risk: { deal_id: string; deal_name: string; company: string | null; owner_name: string | null; deal_value: Decimal; risk_reason: string; days_since_last_activity: number }[];
-  alerts: { severity: string; message: string; timestamp: string }[];
-  recent_activities: { id: string; action: string; title: string; entity_type: string; created_at: string; created_by: string | null }[];
-  team_metrics: {
-    total_members: number;
-    active_reps: number;
-    avg_deal_size: Decimal;
-    avg_sales_cycle_days: Decimal;
-    team_conversion_rate: Decimal;
-    win_rate: Decimal;
-    forecast_accuracy: Decimal;
-  };
+export async function getWebhookEndpoints(): Promise<WebhookEndpoint[]> {
+  return apiFetch<WebhookEndpoint[]>('/api/v1/webhooks/endpoints');
 }
 
-export interface SalesRepDashboardData {
-  summary: { total_revenue: Decimal; won_deals: number; win_rate: Decimal; average_deal_size: Decimal; average_sales_cycle: Decimal };
-  revenue_stat: { total: Decimal; previous_period: Decimal; growth_pct: Decimal };
-  won_deals_stat: { count: number; previous_period: number; growth_pct: Decimal };
-  win_rate_stat: { win_rate: Decimal; previous_win_rate: Decimal; growth_pct: Decimal };
-  avg_deal_size_stat: { avg_deal_value: Decimal; previous_avg: Decimal; growth_pct: Decimal };
-  avg_sales_cycle_stat: { avg_days: Decimal; previous_avg_days: Decimal; difference_days: Decimal };
-  revenue_trend: { period: string; revenue: Decimal }[];
-  deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
-  deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
-  key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
-}
-
-export async function getAdminDashboard(): Promise<AdminDashboardData> {
-  return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
-}
-
-export async function getManagerDashboard(): Promise<ManagerDashboardData> {
-  return apiFetch<ManagerDashboardData>('/api/v1/dashboard/manager');
-}
-
-export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
-  return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
-}
-
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
-  return apiFetch('/api/v1/auth/me');
+export async function triggerAutomationDelivery(eventType: string, payload: Record<string, unknown> = {}): Promise<WebhookDelivery[]> {
+  return apiFetch<WebhookDelivery[]>('/api/v1/webhooks/deliveries', {
+    method: 'POST',
+    body: JSON.stringify({ event_type: eventType, payload })
+  });
 }
