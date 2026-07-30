@@ -62,7 +62,7 @@ async def list_deals(
         page_size,
     )
     paginated = PaginatedResponse.create(
-        data=[DealResponse.model_validate(d) for d in deals],
+        data=[DealResponse.from_deal(d) for d in deals],
         total=total,
         page=page,
         page_size=page_size,
@@ -80,7 +80,7 @@ async def list_deals(
 async def create_deal(payload: DealCreateRequest, current_user: CurrentUser, db: DBSession) -> dict:
     svc = DealService(db)
     deal = await svc.create(payload, current_user.organization_id, current_user.id)
-    return {"success": True, "message": "Deal created.", "data": DealResponse.model_validate(deal)}
+    return {"success": True, "message": "Deal created.", "data": DealResponse.from_deal(deal)}
 
 
 @router.get(
@@ -92,7 +92,7 @@ async def create_deal(payload: DealCreateRequest, current_user: CurrentUser, db:
 async def get_deal(deal_id: UUID, current_user: CurrentUser, db: DBSession) -> dict:
     svc = DealService(db)
     deal = await svc.get(deal_id, current_user.organization_id)
-    return {"success": True, "message": "OK", "data": DealResponse.model_validate(deal)}
+    return {"success": True, "message": "OK", "data": DealResponse.from_deal(deal)}
 
 
 @router.put(
@@ -104,7 +104,7 @@ async def get_deal(deal_id: UUID, current_user: CurrentUser, db: DBSession) -> d
 async def update_deal(deal_id: UUID, payload: DealUpdateRequest, current_user: CurrentUser, db: DBSession) -> dict:
     svc = DealService(db)
     deal = await svc.update(deal_id, current_user.organization_id, payload)
-    return {"success": True, "message": "Deal updated.", "data": DealResponse.model_validate(deal)}
+    return {"success": True, "message": "Deal updated.", "data": DealResponse.from_deal(deal)}
 
 
 @router.delete(

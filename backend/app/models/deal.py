@@ -82,6 +82,8 @@ class Deal(Base, TenantMixin):
         nullable=True,
         index=True,
     )
+    priority: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default=None)
+
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     organization: Mapped["Organization"] = relationship(

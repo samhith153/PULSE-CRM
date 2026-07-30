@@ -21,7 +21,7 @@ class UserBase(BaseModel):
 
 class UserCreateRequest(UserBase):
     password: str = Field(min_length=8)
-    role_ids: List[UUID] = Field(default_factory=list)
+    role_id: Optional[UUID] = Field(default=None)
 
     @field_validator("password")
     @classmethod
@@ -42,7 +42,7 @@ class UserUpdateRequest(BaseModel):
 
 
 class UserRoleAssignRequest(BaseModel):
-    role_ids: List[UUID]
+    role_id: UUID
 
 
 class UserResponse(BaseModel):

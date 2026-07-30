@@ -94,7 +94,6 @@ class AIService:
             regenerated_from_id=previous.id if previous else None,
             generated_at=datetime.now(timezone.utc),
         )
-        lead.score = result.score
         await self.db.flush()
         recommendation = self.recommender.recommend("lead", lead, features, result.score)
         return AILeadScoreResponse(

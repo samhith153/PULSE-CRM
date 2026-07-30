@@ -450,12 +450,14 @@ class EmailService:
         external_entity_id: UUID | None = None,
     ):
         """
-        Send an email through Gmail and persist it in the CRM.
+        Send an email through Gmail API and persist it in the CRM.
         """
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
 
         connection = await self.connection_repo.get_by_id_in_org(
-        organization_id,
-        gmail_connection_id,
+            organization_id,
+            gmail_connection_id,
         )
 
         if not connection:
@@ -464,17 +466,25 @@ class EmailService:
                 gmail_connection_id,
             )
 
-        message = self._build_message(
-            subject=subject,
-            to_email=receiver,
-            html_body=html_body,
-            text_body=html_body,
+        access_token = await self._access_token_for_connection(
+            organization_id, created_by, connection
         )
 
-        await self._send_smtp_message(message)
-        message_id = str(uuid4())
-        thread_id = message_id
-    
+        sender_email = connection.email_address
+
+        msg = MIMEMultipart("alternative")
+        msg["From"] = sender_email
+        msg["To"] = receiver
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(html_body, "plain"))
+
+        raw_mime = msg.as_string()
+
+        gmail_response = await self.gmail_client.send_message(access_token, raw_mime)
+
+        message_id = gmail_response.get("id", str(uuid4()))
+        thread_id = gmail_response.get("threadId", message_id)
 
         email, _ = await self.ingest_email(
             organization_id=organization_id,
@@ -483,15 +493,17 @@ class EmailService:
             gmail_message_id=message_id,
             thread_id=thread_id,
             direction=EmailDirection.OUTBOUND,
-            sender=settings.SMTP_FROM_EMAIL,
+            sender=sender_email,
             receiver=receiver,
             subject=subject,
             body_preview=html_body[:500],
             sent_at=datetime.now(timezone.utc),
             attachment_metadata=[],
             raw_payload={
-                "provider": "brevo_smtp",
+                "provider": "gmail_api",
                 "status": "sent",
+                "gmail_message_id": message_id,
+                "gmail_thread_id": thread_id,
                 "events": [
                     {
                         "event": "sent",
