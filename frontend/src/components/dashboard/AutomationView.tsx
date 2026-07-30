@@ -10,12 +10,13 @@ import {
   Activity,
   CheckCircle,
   AlertTriangle,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import {
+  createAutomationEvent,
   getAutomationEvents,
   getWebhookEndpoints,
-  triggerAutomationDelivery,
   type AutomationEvent,
   type WebhookEndpoint
 } from '@/utils/api';
@@ -110,11 +111,17 @@ export default function AutomationView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [savingWorkflow, setSavingWorkflow] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [workflowForm, setWorkflowForm] = useState({
+    name: '',
+    description: '',
+    trigger: 'CRM Activity Event',
+    status: 'Draft' as 'Active' | 'Draft' | 'Paused'
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadAutomationData() {
+  const loadAutomationData = async (cancelled = false) => {
       setLoading(true);
       setError(null);
       try {
@@ -137,9 +144,11 @@ export default function AutomationView() {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }
+  };
 
-    loadAutomationData();
+  useEffect(() => {
+    let cancelled = false;
+    loadAutomationData(cancelled);
     return () => { cancelled = true; };
   }, []);
 
@@ -158,15 +167,49 @@ export default function AutomationView() {
   const primaryTrigger = triggers[0] ?? fallbackTriggers[0];
   const primaryAction = actions[0] ?? fallbackActions[0];
 
-  const handleTestWorkflow = async (name: string) => {
-    try {
-      const deliveries = await triggerAutomationDelivery('AUTOMATION_TEST', { workflow_name: name, source: 'admin_automation_dashboard' });
-      setToast(`Test execution queued for ${deliveries.length} endpoint${deliveries.length === 1 ? '' : 's'}.`);
-    } catch {
-      setToast(`Test execution could not be queued for workflow: "${name}".`);
+  const handleCreateWorkflow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = workflowForm.name.trim();
+    if (!name) {
+      setCreateError('Workflow name is required.');
+      return;
     }
-    setTimeout(() => setToast(null), 3000);
+
+    setSavingWorkflow(true);
+    setCreateError(null);
+    try {
+      await createAutomationEvent({
+        event_type: 'WORKFLOW_DRAFT_CREATED',
+        aggregate_type: 'workflow',
+        aggregate_id: crypto.randomUUID(),
+        source: 'admin_automation_dashboard',
+        payload: {
+          workflow_name: name,
+          description: workflowForm.description.trim(),
+          trigger: workflowForm.trigger,
+          status: workflowForm.status.toLowerCase(),
+          nodes: [
+            { type: 'trigger', label: workflowForm.trigger },
+            { type: 'action', label: 'CRM automation action' }
+          ],
+          total_runs: 0,
+          active_contacts: 0
+        }
+      });
+      await loadAutomationData(false);
+      setIsCreateOpen(false);
+      setWorkflowForm({ name: '', description: '', trigger: 'CRM Activity Event', status: 'Draft' });
+      setToast('Workflow created successfully.');
+    } catch (e: any) {
+      const message = e?.message || 'Failed to create workflow.';
+      setCreateError(message);
+      setToast(message);
+    } finally {
+      setSavingWorkflow(false);
+      setTimeout(() => setToast(null), 3000);
+    }
   };
+
 
   return (
     <div className="space-y-6">
@@ -177,6 +220,48 @@ export default function AutomationView() {
         </div>
       )}
 
+      {isCreateOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-brand-heading text-sm">Create Workflow</h3>
+              <button onClick={() => setIsCreateOpen(false)} disabled={savingWorkflow} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer disabled:opacity-50"><X className="h-4.5 w-4.5" /></button>
+            </div>
+            <form onSubmit={handleCreateWorkflow} className="p-5 space-y-4">
+              {createError && <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">{createError}</div>}
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Workflow Name</label>
+                <input type="text" required value={workflowForm.name} onChange={e => setWorkflowForm({...workflowForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Description</label>
+                <textarea rows={3} value={workflowForm.description} onChange={e => setWorkflowForm({...workflowForm, description: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none resize-none" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Trigger</label>
+                  <select value={workflowForm.trigger} onChange={e => setWorkflowForm({...workflowForm, trigger: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                    {triggers.map(trigger => <option key={trigger.id} value={trigger.name}>{trigger.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Status</label>
+                  <select value={workflowForm.status} onChange={e => setWorkflowForm({...workflowForm, status: e.target.value as 'Active' | 'Draft' | 'Paused'})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                    <option>Draft</option><option>Active</option><option>Paused</option>
+                  </select>
+                </div>
+              </div>
+              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
+                <button type="button" disabled={savingWorkflow} onClick={() => setIsCreateOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={savingWorkflow} className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer disabled:opacity-60 inline-flex items-center gap-1.5">
+                  {savingWorkflow && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{savingWorkflow ? 'Creating...' : 'Create Workflow'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">
@@ -188,7 +273,7 @@ export default function AutomationView() {
         </div>
 
         <button
-          onClick={() => handleTestWorkflow('New Custom Flow')}
+          onClick={() => { setCreateError(null); setWorkflowForm({ name: '', description: '', trigger: primaryTrigger.name, status: 'Draft' }); setIsCreateOpen(true); }}
           className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm self-start sm:self-center"
         >
           <Plus className="h-4 w-4" />
@@ -333,3 +418,4 @@ export default function AutomationView() {
     </div>
   );
 }
+
