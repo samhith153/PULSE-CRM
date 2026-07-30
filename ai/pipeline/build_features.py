@@ -1,4 +1,4 @@
-from load_features import save_feature_vectors
+from load_features import save_feature_vectors_csv
 from data_source import (
     get_leads,
     get_companies,
@@ -19,7 +19,7 @@ from build_fit_features import build_fit_features
 from build_engagement_features import build_engagement_features
 import pandas as pd
 
-SOURCE = "database"  # Change to "mock" for mock data
+SOURCE = "mock"  # Change to "mock" for mock data
 def build_feature_vectors(source=SOURCE):
 
     leads = get_leads(source)
@@ -135,7 +135,7 @@ if __name__ == "__main__":
     print("\n===== FEATURE VECTORS =====\n")
     print(features_df.to_string(index=False))
 
-    save_feature_vectors(features_df)
+    save_feature_vectors_csv(features_df)
 
     # -----------------------------------
     # Build Fit Features

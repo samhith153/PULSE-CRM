@@ -45,26 +45,22 @@ for lead_id, group in emails.groupby("lead_id"):
         "lead_id": lead_id,
         "organization_id": ORG_ID,
         "feature_version": "v1_real",
-        "generated_at": pd.Timestamp.now(),
+        "created_by": None,
 
         "company_size_score": size_score,
         "industry_complexity_score": industry_score,
-        "operational_system_score": opsys_score,
         "software_gap_score": gap_score,
+        "operational_system_score": opsys_score,
         "customization_potential_score": custom_score,
 
         "average_response_time": avg_resp,
         "response_time_score": response_time_score(avg_resp),
-        "reply_recency_score": reply_recency_score(group),
         "days_since_last_outbound": days_idle,
         "engagement_decay_penalty": engagement_decay_penalty(days_idle),
-        "customer_initiative_score": customer_initiative_score(group),
-        "buying_stage_score": buying_stage_score(stage),
-        "intent_strength_score": intent_strength_score(stage),
-        "engagement_trend_score": engagement_trend_score(None, None),
-
-        "ai_intent_category": None,
         "ai_intent_category_score": None,
+        "buying_stage_score": buying_stage_score(stage),
+        "customer_initiative_score": customer_initiative_score(group),
+        "engagement_trend_score": engagement_trend_score(None, None),
     })
 
 out = pd.DataFrame(rows)

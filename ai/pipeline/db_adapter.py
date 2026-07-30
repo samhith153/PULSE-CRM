@@ -33,7 +33,7 @@ def load_real_leads(organization_id: str) -> pd.DataFrame:
             COALESCE(c.industry, l.industry) AS industry,
             COALESCE(c.current_crm, l.current_crm) AS current_crm,
             COALESCE(c.operational_system, l.operational_systems) AS operational_system,
-            c.employee_count
+            COALESCE(c.employee_count, l.employee_count) AS employee_count
         FROM leads l
         LEFT JOIN companies c ON c.id = l.company_id
         WHERE l.organization_id = %(org_id)s

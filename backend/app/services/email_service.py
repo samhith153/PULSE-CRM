@@ -57,6 +57,10 @@ from googleapiclient.errors import HttpError
 from email.utils import parseaddr
 from sqlalchemy import func
 
+import httpx
+ 
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+
 logger = get_logger(__name__)
 
 
@@ -74,28 +78,99 @@ class EmailService:
         safe_context = {key: escape(str(value)) for key, value in context.items()}
         return template.safe_substitute(safe_context)
 
+ 
+
     async def _send_smtp_message(self, message: EmailMessage) -> None:
-        if not settings.SMTP_HOST:
-            raise RuntimeError("SMTP_HOST is not configured")
+        if not settings.BREVO_API_KEY:
+            raise RuntimeError("BREVO_API_KEY is not configured")
+ 
+        # Pull the html part back out of the EmailMessage (built by _build_message,
+        # which does msg.set_content(text) then msg.add_alternative(html, "html"))
+        html_part = message.get_body(preferencelist=("html",))
+        text_part = message.get_body(preferencelist=("plain",))
+        html_content = html_part.get_content() if html_part else None
+        text_content = text_part.get_content() if text_part else ""
+ 
+        to_addr = message["To"]
+        subject = message["Subject"]
+ 
+        payload: dict = {
+            "sender": {
+                "name": settings.SMTP_FROM_NAME,
+                "email": settings.SMTP_FROM_EMAIL,
+            },
+            "to": [{"email": to_addr}],
+            "subject": subject,
+            "htmlContent": html_content or f"<p>{escape(text_content)}</p>",
+        }
+        if text_content:
+            payload["textContent"] = text_content
+ 
+        # Preserve your Message-ID for reply-matching (fetch_from_gmail's
+        # In-Reply-To lookup depends on this surviving the relay)
+        message_id_header = message["Message-ID"]
+        if message_id_header:
+            payload["headers"] = {"Message-Id": message_id_header}
+ 
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            resp = await client.post(
+                BREVO_API_URL,
+                json=payload,
+                headers={
+                    "api-key": settings.BREVO_API_KEY,
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
+            )
+ 
+        if resp.status_code not in (200, 201):
+            logger.error(
+                "Brevo API send failed",
+                extra={"status_code": resp.status_code, "body": resp.text, "to": to_addr},
+            )
+            resp.raise_for_status()
 
-        def _deliver() -> None:
-            if settings.SMTP_TLS:
-                context = ssl.create_default_context()
-                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
-                    smtp.ehlo()
-                    smtp.starttls(context=context)
-                    smtp.ehlo()
-                    if settings.SMTP_USER and settings.SMTP_PASSWORD:
-                        smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-                    smtp.send_message(message)
-            else:
-                with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=20) as smtp:
-                    smtp.ehlo()
-                    if settings.SMTP_USER and settings.SMTP_PASSWORD:
-                        smtp.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-                    smtp.send_message(message)
+    async def _send_via_gmail(
+        self,
+        connection: GmailConnection,
+        receiver: str,
+        subject: str,
+        html_body: str,
+        text_body: str | None = None,
+    ) -> tuple[str, str]:
+        """Send through the connected Gmail account (no SMTP / IP whitelist required)."""
+        token_before = connection.access_token_encrypted
 
-        await asyncio.to_thread(_deliver)
+        def _deliver() -> tuple[str, str]:
+            service = self._get_gmail_client(connection)
+            msg = EmailMessage()
+            msg["Subject"] = subject
+            msg["To"] = receiver
+            msg["From"] = connection.email_address
+            msg.set_content(text_body or html_body)
+            msg.add_alternative(html_body, subtype="html")
+            raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+            sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+            return sent["id"], sent.get("threadId", sent["id"])
+
+        try:
+            result = await asyncio.to_thread(_deliver)
+        except HttpError as exc:
+            logger.error(
+                "Gmail send failed",
+                extra={"connection_id": str(connection.id), "error": str(exc)},
+            )
+            raise BusinessRuleException(
+                "Failed to send email through Gmail. Reconnect Gmail or verify OAuth scopes include send access.",
+                details={"reason": str(exc)},
+            ) from exc
+
+        if connection.access_token_encrypted != token_before:
+            await self.connection_repo.update(
+                connection,
+                access_token_encrypted=connection.access_token_encrypted,
+            )
+        return result
 
     def _build_message(self, subject: str, to_email: str, html_body: str, text_body: str, message_id: str | None = None) -> EmailMessage:
         msg = EmailMessage()
@@ -148,8 +223,8 @@ class EmailService:
                 },
             )
             return True
-        except smtplib.SMTPAuthenticationError as exc:
-            logger.error("SMTP authentication failed", extra={"email": user.email, "error": str(exc)})
+        except httpx.HTTPStatusError as exc:
+            logger.error("Brevo API authentication/send failed", extra={"email": user.email, "error": str(exc)})
         except Exception as exc:  # pragma: no cover - network/runtime dependent
             logger.error("Password reset email failed", extra={"email": user.email, "error": str(exc)})
         return False
@@ -461,7 +536,25 @@ class EmailService:
             },
             topic = "gmail" if gmail_connection_id else "smtp",
         )
-        if is_read:
+        if direction == EmailDirection.INBOUND:
+            await self.events.record_event(
+                EventType.EMAIL_RECEIVED,
+                organization_id=organization_id,
+                actor_id=created_by,
+                aggregate_type="email",
+                aggregate_id=str(email.id),
+                source="gmail" if gmail_connection_id else "smtp",
+                payload={
+                    "email_id": str(email.id),
+                    "gmail_message_id": gmail_message_id,
+                    "thread_id": thread_id,
+                    "subject": subject,
+                    "body_preview": body_preview,
+                    "external_entity_type": external_entity_type,
+                    "external_entity_id": str(external_entity_id) if external_entity_id else None,
+                },
+            )
+        elif is_read:
             await self.events.record_event(
                 EventType.EMAIL_READ,
                 organization_id=organization_id,
@@ -494,30 +587,20 @@ class EmailService:
         Send an email through Gmail and persist it in the CRM.
         """
 
-        connection = await self.connection_repo.get_by_id_in_org(
-        organization_id,
-        gmail_connection_id,
-        )
-
-        if not connection:
-            raise NotFoundException(
-                "GmailConnection",
-                gmail_connection_id,
-            )
-
         message_id = str(uuid4())
         thread_id = message_id
-
         message = self._build_message(
-            subject=subject,
-            to_email=receiver,
-            html_body=html_body,
-            text_body=html_body,
+            subject,
+            receiver,
+            html_body,
+            html_body,
             message_id=message_id,
         )
 
         await self._send_smtp_message(message)
-    
+
+        sent_at = datetime.now(timezone.utc)
+        body_preview = html_body[:500]
 
         email, _ = await self.ingest_email(
             organization_id=organization_id,
@@ -529,8 +612,8 @@ class EmailService:
             sender=settings.SMTP_FROM_EMAIL,
             receiver=receiver,
             subject=subject,
-            body_preview=html_body[:500],
-            sent_at=datetime.now(timezone.utc),
+            body_preview=body_preview,
+            sent_at=sent_at,
             attachment_metadata=[],
             raw_payload={
                 "provider": "brevo_smtp",
@@ -538,13 +621,32 @@ class EmailService:
                 "events": [
                     {
                         "event": "sent",
-                        "timestamp": datetime.now(timezone.utc).isoformat()
+                        "timestamp": sent_at.isoformat(),
                     }
-                ]
+                ],
             },
             external_entity_type=external_entity_type,
             external_entity_id=external_entity_id,
-            is_read=True,
+            is_read=False,
+        )
+
+        await self.events.record_event(
+            EventType.EMAIL_SENT,
+            organization_id=organization_id,
+            actor_id=created_by,
+            aggregate_type="email",
+            aggregate_id=str(email.id),
+            source="smtp",
+            payload={
+                "email_id": str(email.id),
+                "gmail_message_id": message_id,
+                "thread_id": thread_id,
+                "subject": subject,
+                "body_preview": body_preview,
+                "receiver": receiver,
+                "external_entity_type": external_entity_type,
+                "external_entity_id": str(external_entity_id) if external_entity_id else None,
+            },
         )
 
         return EmailResponse.model_validate(email)
