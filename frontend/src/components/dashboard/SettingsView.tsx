@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Settings, 
   User, 
@@ -11,37 +11,108 @@ import {
   Mail, 
   ShieldCheck,
   ToggleLeft,
-  ToggleRight
+  ToggleRight,
+  Loader2,
+  XCircle
 } from 'lucide-react';
-
-const ROLE_DEFAULTS = {
-  representative: { name: 'Priya Sharma', role: 'Sales Representative', email: 'priya.sharma@pulse.crm' },
-  manager: { name: 'Alex Johnson', role: 'Sales Manager', email: 'alex.johnson@pulse.crm' },
-  admin: { name: 'Dr. Rajesh Mehta', role: 'Administrator', email: 'rajesh.mehta@pulse.crm' }
-};
+import { getCurrentUser, changePassword, updateUser } from '@/utils/api';
 
 export default function SettingsView({ userRole = 'manager' }: { userRole?: string }) {
-  const defaults = ROLE_DEFAULTS[userRole as keyof typeof ROLE_DEFAULTS] || ROLE_DEFAULTS.manager;
-  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'notifications' | 'integrations'>('profile');
+  const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'notifications' | 'integrations'>('password');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // States for forms
-  const [profileForm, setProfileForm] = useState(defaults);
+  const [profileForm, setProfileForm] = useState({ full_name: '', email: '', job_title: '' });
   const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' });
-  const [notifPreferences, setNotifPreferences] = useState({ leadAssigned: true, emailReply: true, meetingReminder: true, taskDue: false });
-  const [gmailSync, setGmailSync] = useState(true);
-  const [calendarSync, setCalendarSync] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    getCurrentUser()
+      .then(user => {
+        setProfileForm({
+          full_name: user.full_name || '',
+          email: user.email || '',
+          job_title: (user as any).job_title || '',
+        });
+        setUserId(user.id);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (saveSuccess || saveError) {
+      const t = setTimeout(() => { setSaveSuccess(false); setSaveError(null); }, 4000);
+      return () => clearTimeout(t);
+    }
+  }, [saveSuccess, saveError]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    if (activeSubTab === 'password') {
+      if (!passwordForm.current || !passwordForm.next || !passwordForm.confirm) {
+        setSaveError('All password fields are required.');
+        return;
+      }
+      if (passwordForm.next !== passwordForm.confirm) {
+        setSaveError('New passwords do not match.');
+        return;
+      }
+      if (passwordForm.next.length < 8) {
+        setSaveError('New password must be at least 8 characters.');
+        return;
+      }
+
+      setSaving(true);
+      try {
+        await changePassword(passwordForm.current, passwordForm.next);
+        setPasswordForm({ current: '', next: '', confirm: '' });
+        setSaveSuccess(true);
+      } catch (err: any) {
+        setSaveError(err?.message || 'Failed to change password.');
+      } finally {
+        setSaving(false);
+      }
+    } else if (activeSubTab === 'profile') {
+      if (!profileForm.full_name.trim()) {
+        setSaveError('Full name is required.');
+        return;
+      }
+      if (!userId) {
+        setSaveError('User not loaded.');
+        return;
+      }
+      setSaving(true);
+      try {
+        await updateUser(userId, { full_name: profileForm.full_name.trim() });
+        setSaveSuccess(true);
+      } catch (err: any) {
+        setSaveError(err?.message || 'Failed to update profile.');
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      setSaveSuccess(true);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex items-center justify-center py-12">
+        <Loader2 className="h-5 w-5 mr-2 animate-spin text-slate-400" />
+        <span className="text-xs text-slate-400 font-medium">Loading settings...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
       
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 border-b border-brand-border-purple/15 pb-4">
         <div>
           <h2 className="font-sans text-2xl text-brand-heading font-bold">System Settings</h2>
@@ -54,16 +125,20 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
             <span>Settings saved successfully</span>
           </div>
         )}
+        {saveError && (
+          <div className="bg-rose-50 text-rose-700 text-xs font-bold px-3.5 py-1.5 rounded-lg border border-rose-200 flex items-center space-x-1.5 animate-in fade-in duration-200">
+            <XCircle className="h-4 w-4" />
+            <span>{saveError}</span>
+          </div>
+        )}
       </div>
 
-      {/* Sub tabs and Form content */}
       <div className="grid grid-cols-12 gap-6 items-start">
         
-        {/* Left Side: Settings navigation (Col 3) */}
         <div className="col-span-12 md:col-span-3 space-y-1">
           {[
-            { id: 'profile', label: 'Profile Settings', icon: User },
             { id: 'password', label: 'Password & Security', icon: Lock },
+            { id: 'profile', label: 'Profile Settings', icon: User },
             { id: 'notifications', label: 'Notification Rules', icon: Bell },
             { id: 'integrations', label: 'Integrations Sync', icon: GitBranch }
           ].map((item) => {
@@ -86,46 +161,83 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
           })}
         </div>
 
-        {/* Right Side: Form details (Col 9) */}
         <div className="col-span-12 md:col-span-9 bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-5">
           <form onSubmit={handleSave} className="space-y-4">
             
+            {activeSubTab === 'password' && (
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Password Update</h3>
+                <div>
+                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Current Password</label>
+                  <input
+                    type="password"
+                    placeholder="••••••••"
+                    value={passwordForm.current}
+                    onChange={e => setPasswordForm({...passwordForm, current: e.target.value})}
+                    className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">New Password</label>
+                    <input
+                      type="password"
+                      placeholder="Min 8 characters"
+                      value={passwordForm.next}
+                      onChange={e => setPasswordForm({...passwordForm, next: e.target.value})}
+                      className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none"
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Confirm New Password</label>
+                    <input
+                      type="password"
+                      placeholder="Min 8 characters"
+                      value={passwordForm.confirm}
+                      onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})}
+                      className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none"
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeSubTab === 'profile' && (
               <div className="space-y-4">
                 <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Profile Setup</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Full Name</label>
-                    <input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none" />
+                    <input
+                      type="text"
+                      value={profileForm.full_name}
+                      onChange={e => setProfileForm({...profileForm, full_name: e.target.value})}
+                      className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none"
+                    />
                   </div>
                   <div>
                     <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Role Title</label>
-                    <input type="text" readOnly value={profileForm.role} className="w-full px-3 py-1.5 border border-brand-border-purple/20 rounded-lg text-xs bg-slate-100/50 text-brand-text/60 focus:outline-none cursor-not-allowed" />
+                    <input
+                      type="text"
+                      readOnly
+                      value={profileForm.job_title || profileForm.email}
+                      className="w-full px-3 py-1.5 border border-brand-border-purple/20 rounded-lg text-xs bg-slate-100/50 text-brand-text/60 focus:outline-none cursor-not-allowed"
+                    />
                   </div>
                 </div>
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Contact Email</label>
-                  <input type="email" value={profileForm.email} onChange={e => setProfileForm({...profileForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none" />
-                </div>
-              </div>
-            )}
-
-            {activeSubTab === 'password' && (
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Password Update</h3>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Current Password</label>
-                  <input type="password" placeholder="••••••••" value={passwordForm.current} onChange={e => setPasswordForm({...passwordForm, current: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">New Password</label>
-                    <input type="password" placeholder="Min 8 characters" value={passwordForm.next} onChange={e => setPasswordForm({...passwordForm, next: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Confirm New Password</label>
-                    <input type="password" placeholder="Min 8 characters" value={passwordForm.confirm} onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none" />
-                  </div>
+                  <input
+                    type="email"
+                    readOnly
+                    value={profileForm.email}
+                    className="w-full px-3 py-1.5 border border-brand-border-purple/20 rounded-lg text-xs bg-slate-100/50 text-brand-text/60 focus:outline-none cursor-not-allowed"
+                  />
                 </div>
               </div>
             )}
@@ -133,24 +245,7 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
             {activeSubTab === 'notifications' && (
               <div className="space-y-4">
                 <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Notification Preferences</h3>
-                <div className="space-y-3 font-semibold text-brand-text text-xs">
-                  {[
-                    { key: 'leadAssigned', label: 'Email me when a new lead is assigned to my name' },
-                    { key: 'emailReply', label: 'Notify me when a prospect replies to my email logs' },
-                    { key: 'meetingReminder', label: 'Display push meeting countdown alerts (15 mins prior)' },
-                    { key: 'taskDue', label: 'Send alerts when tasks approach overdue deadlines' }
-                  ].map((pref) => (
-                    <label key={pref.key} className="flex items-center space-x-3 cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={(notifPreferences as any)[pref.key]}
-                        onChange={(e) => setNotifPreferences({...notifPreferences, [pref.key]: e.target.checked})}
-                        className="h-4 w-4 rounded border-brand-border-purple/35 text-brand-accent focus:ring-brand-accent/20 cursor-pointer"
-                      />
-                      <span>{pref.label}</span>
-                    </label>
-                  ))}
-                </div>
+                <p className="text-[10px] text-slate-400 italic">Notification preferences will be available in a future update.</p>
               </div>
             )}
 
@@ -159,7 +254,6 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
                 <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Integrations Sync</h3>
                 
                 <div className="space-y-4 font-semibold text-brand-text text-xs">
-                  {/* Gmail integration switch */}
                   <div className="flex items-center justify-between p-3 border border-brand-border-purple/15 bg-white rounded-xl">
                     <div className="flex items-center space-x-3">
                       <Mail className="h-5 w-5 text-indigo-600" />
@@ -168,16 +262,9 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
                         <p className="text-[10px] text-slate-450 mt-0.5">Sync sent emails and inbox replies history with prospects timeline.</p>
                       </div>
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => setGmailSync(!gmailSync)}
-                      className="text-brand-accent cursor-pointer"
-                    >
-                      {gmailSync ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8 text-slate-300" />}
-                    </button>
+                    <div className="text-[10px] text-slate-400 font-medium">Managed from Gmail Sync page</div>
                   </div>
 
-                  {/* Calendar integration switch */}
                   <div className="flex items-center justify-between p-3 border border-brand-border-purple/15 bg-white rounded-xl">
                     <div className="flex items-center space-x-3">
                       <ShieldCheck className="h-5 w-5 text-purple-600" />
@@ -186,21 +273,20 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
                         <p className="text-[10px] text-slate-450 mt-0.5">Coordinate calls and client briefs calendar dates directly inside Pulse calendar.</p>
                       </div>
                     </div>
-                    <button 
-                      type="button" 
-                      onClick={() => setCalendarSync(!calendarSync)}
-                      className="text-brand-accent cursor-pointer"
-                    >
-                      {calendarSync ? <ToggleRight className="h-8 w-8" /> : <ToggleLeft className="h-8 w-8 text-slate-300" />}
-                    </button>
+                    <div className="text-[10px] text-slate-400 font-medium">Coming soon</div>
                   </div>
                 </div>
               </div>
             )}
 
             <div className="pt-4 border-t border-brand-border-purple/15 flex justify-end">
-              <button type="submit" className="px-5 py-2 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">
-                Save Settings Preferences
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-5 py-2 bg-brand-accent hover:bg-brand-accent-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer inline-flex items-center space-x-1.5"
+              >
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <span>{saving ? 'Saving...' : 'Save Settings Preferences'}</span>
               </button>
             </div>
 

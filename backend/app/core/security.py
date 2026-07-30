@@ -1,17 +1,17 @@
 """
 Security Utilities
 - JWT creation / verification
-- Password hashing / verification
+- Password hashing / verification via bcrypt directly
 - Secure token generation (password-reset, email verify)
 """
-import secrets
 import hashlib
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 from uuid import UUID
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 from app.core.exceptions import InvalidTokenException, TokenExpiredException
@@ -19,23 +19,28 @@ from app.core.logging import get_logger
 
 logger = get_logger(__name__)
 
-# ── Password hashing ──────────────────────────────────────────────────────────
-# bcrypt with cost factor 12 (good balance of security vs. latency)
-pwd_context = CryptContext(
-    schemes=["bcrypt"],
-    deprecated="auto",
-    bcrypt__rounds=12,
-)
+# ------------------------------------------------------------------
+# Password hashing (bcrypt direct to avoid passlib backend conflicts)
+# ------------------------------------------------------------------
+BCRYPT_ROUNDS = 12
 
 
 def hash_password(plain_password: str) -> str:
     """Return bcrypt hash of the plain-text password."""
-    return pwd_context.hash(plain_password)
+    password = plain_password.encode("utf-8")
+    hashed = bcrypt.hashpw(password, bcrypt.gensalt(rounds=BCRYPT_ROUNDS))
+    return hashed.decode("utf-8")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Return True if the plain-text password matches the stored hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            hashed_password.encode("utf-8"),
+        )
+    except Exception:
+        return False
 
 
 def check_password_strength(password: str) -> tuple[bool, str]:
@@ -63,6 +68,7 @@ def check_password_strength(password: str) -> tuple[bool, str]:
 
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
+
 
 def _build_payload(
     subject: str,
@@ -148,6 +154,7 @@ def decode_refresh_token(token: str) -> Dict[str, Any]:
 
 
 # ── One-time secure tokens (password reset / email verification) ──────────────
+
 
 def generate_secure_token() -> str:
     """Return a URL-safe 48-character secure random token."""

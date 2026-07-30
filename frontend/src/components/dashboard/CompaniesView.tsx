@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getCompanies } from '@/utils/api';
+import { getCompanies, updateCompany } from '@/utils/api';
 import { 
   Building2, 
   Search, 
@@ -96,19 +96,29 @@ export default function CompaniesView() {
     setIsAddModalOpen(false);
   };
 
-  const handleEdit = (e: React.FormEvent) => {
+  const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!active) return;
-    setCompanies(companies.map(c => c.id === active.id ? {
-      ...c,
-      name: form.name,
-      industry: form.industry,
-      revenue: form.revenue,
-      employees: Number(form.employees),
-      owner: form.owner,
-      notes: form.notes
-    } : c));
-    setIsEditModalOpen(false);
+    try {
+      await updateCompany(active.id, {
+        name: form.name,
+        industry: form.industry,
+        annual_revenue: form.revenue || null,
+        employee_count: Number(form.employees),
+        notes: form.notes || null,
+      });
+      setCompanies(companies.map(c => c.id === active.id ? {
+        ...c,
+        name: form.name,
+        industry: form.industry,
+        revenue: form.revenue,
+        employees: Number(form.employees),
+        owner: form.owner,
+        notes: form.notes
+      } : c));
+      setIsEditModalOpen(false);
+    } catch {
+    }
   };
 
   const handleAddContact = (e: React.FormEvent) => {

@@ -221,8 +221,8 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
         }}
       >
         <div style={{
-          maxWidth: 1380, margin: '0 auto',
-          padding: '0 32px', height: 64,
+          maxWidth: 1280, margin: '0 auto',
+          padding: '0 clamp(24px, 4vw, 48px)', height: 64,
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           position: 'relative',
         }}>

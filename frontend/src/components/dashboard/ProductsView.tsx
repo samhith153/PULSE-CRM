@@ -41,7 +41,7 @@ export default function ProductsView() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleAddProduct = (e: React.FormEvent) => {
+  const handleAddProduct = (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const newProduct: Product = {
       id: Date.now(),

@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.company import Company
 from app.repositories.base import BaseRepository
@@ -23,6 +24,7 @@ class CompanyRepository(BaseRepository[Company]):
                 Company.organization_id == organization_id,
                 Company.is_deleted == False,
             )
+            .options(selectinload(Company.owner))
         )
 
     async def get_by_name_in_org(

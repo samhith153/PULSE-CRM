@@ -13,7 +13,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -191,3 +190,6 @@ yarn-error.log*
 # Playwright
 .test-results/
 playwright-report/
+test-results/
+test-results.json
+test-seed-data.json

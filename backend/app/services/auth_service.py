@@ -97,7 +97,7 @@ class AuthService:
         )
 
         if admin_role:
-            await self.user_repo.assign_roles(user, [admin_role.id], user.id)
+            await self.user_repo.assign_role(user, admin_role.id, user.id)
             user = await self.user_repo.get_by_id_with_roles(user.id)
 
         logger.info("New user registered", extra={"user_id": str(user.id), "org": org_name})

@@ -73,7 +73,8 @@ class Settings(BaseSettings):
     GMAIL_TOKEN_ENCRYPTION_KEY: Optional[str] = None
     GOOGLE_OAUTH_SCOPES: str = (
         "https://www.googleapis.com/auth/gmail.readonly,"
-        "https://www.googleapis.com/auth/gmail.modify"
+        "https://www.googleapis.com/auth/gmail.modify,"
+        "https://www.googleapis.com/auth/gmail.send"
     )
 
     ENABLE_AI: bool = True

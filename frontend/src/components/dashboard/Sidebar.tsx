@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { 
   LayoutDashboard, 
   Users, 
@@ -59,9 +60,11 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
           {
             name: 'Productivity & AI',
             items: [
+              { name: 'Leads', icon: Users, tab: 'leads' },
               { name: 'Activities', icon: Activity, tab: 'activities' },
               { name: 'Calendar', icon: Calendar, tab: 'calendar' },
               { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
+              { name: 'Integrations', icon: Link2, tab: 'integrations' },
             ]
           },
           {
@@ -115,20 +118,15 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
       default:
         return [
           {
-            name: 'Sales',
+            name: 'Productivity',
             items: [
               { name: 'Leads', icon: Users, tab: 'leads' },
               { name: 'Contacts', icon: Contact, tab: 'contacts' },
               { name: 'Companies', icon: Building2, tab: 'companies' },
               { name: 'Deals', icon: Layers, tab: 'deals' },
-              { name: 'Products', icon: Package, tab: 'products' },
-            ]
-          },
-          {
-            name: 'Productivity',
-            items: [
               { name: 'Activities', icon: Activity, tab: 'activities' },
               { name: 'Emails', icon: Mail, tab: 'emails' },
+              { name: 'Integrations', icon: Link2, tab: 'integrations' },
             ]
           },
           {
@@ -311,10 +309,12 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
         >
           <div className="flex items-center space-x-3 overflow-hidden">
             <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-              <img 
+              <Image 
                 src={profile.avatar} 
                 alt={`${profile.name} Profile`} 
+                width={32} height={32}
                 className="h-full w-full object-cover"
+                unoptimized
               />
             </div>
             {!collapsed && (

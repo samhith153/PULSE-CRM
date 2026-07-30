@@ -9,7 +9,7 @@ POST /api/v1/auth/reset-password
 POST /api/v1/auth/change-password
 GET  /api/v1/auth/me
 """
-from fastapi import APIRouter, Depends, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.deps import CurrentUser, DBSession
 from app.core.permissions import resolve_permissions_for_user

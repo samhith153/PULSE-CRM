@@ -15,7 +15,18 @@ import {
   User,
   ArrowRight
 } from 'lucide-react';
-import { getLeads, getDeals, Lead, Deal } from '@/utils/api';
+import { getLeads, getDeals, Lead } from '@/utils/api';
+
+interface DealItem {
+  id: string;
+  title: string;
+  company: string;
+  value: number;
+  stage: string;
+  priority: string;
+  owner: string;
+  closeDate: string;
+}
 
 interface Message {
   id: string;
@@ -43,7 +54,7 @@ export default function AICopilotChat() {
 
   // Loaded data for real-time computations
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [deals, setDeals] = useState<Deal[]>([]);
+  const [deals, setDeals] = useState<DealItem[]>([]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -56,7 +67,7 @@ export default function AICopilotChat() {
           getDeals()
         ]);
         setLeads(fetchedLeads);
-        setDeals(fetchedDeals);
+        setDeals(fetchedDeals as any);
       } catch (err) {
         console.error('Error fetching data for AI Copilot:', err);
       }
@@ -119,14 +130,14 @@ export default function AICopilotChat() {
         };
       } else if (textLower.includes('lead') || textLower.includes('recommend') || textLower.includes('score')) {
         // Sort leads by AI Score
-        const sortedLeads = [...leads].sort((a, b) => b.score - a.score).slice(0, 3);
+        const sortedLeads = [...leads].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3);
         botMessage.text = "Based on activity velocity and lead scores, here are the top 3 high-priority leads you should follow up with:";
         botMessage.type = 'leads';
         botMessage.data = sortedLeads;
       } else if (textLower.includes('email') || textLower.includes('draft') || textLower.includes('follow up') || textLower.includes('follow-up')) {
         // Grab a lead name if available
-        const leadName = leads[0]?.name || "Alex Rivera";
-        const companyName = leads[0]?.company || "TechCorp Inc.";
+        const leadName = leads[0]?.title || "Alex Rivera";
+        const companyName = leads[0]?.company_name || leads[0]?.company_id || "TechCorp Inc.";
         const emailTemplate = `Subject: Quick follow up - Pulse CRM
 
 Hi ${leadName.split(' ')[0]},
@@ -277,11 +288,11 @@ Sales Manager, Pulse CRM`;
                           {m.data.map((lead: Lead) => (
                             <div key={lead.id} className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg flex items-center justify-between gap-1">
                               <div className="min-w-0">
-                                <p className="text-[11px] font-extrabold text-brand-heading truncate">{lead.name}</p>
-                                <p className="text-[9px] text-brand-accent font-bold truncate mt-0.5">{lead.company}</p>
+                                <p className="text-[11px] font-extrabold text-brand-heading truncate">{lead.title}</p>
+                                <p className="text-[9px] text-brand-accent font-bold truncate mt-0.5">{lead.company_name || ''}</p>
                               </div>
                               <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded tabular-nums shrink-0">
-                                Score: {lead.score}
+                                Score: {lead.score ?? 0}
                               </span>
                             </div>
                           ))}

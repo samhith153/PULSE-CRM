@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { 
   Search, 
   Bell, 
@@ -259,10 +260,12 @@ export default function Header({
             aria-label="Profile menu"
           >
             <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden border border-brand-border-purple/20">
-              <img 
+              <Image 
                 src={profile.avatar} 
                 alt={`${profile.name} Avatar`} 
+                width={28} height={28}
                 className="h-full w-full object-cover"
+                unoptimized
               />
             </div>
             <span className="text-xs font-bold text-brand-text hidden md:inline-block">{profile.name}</span>
