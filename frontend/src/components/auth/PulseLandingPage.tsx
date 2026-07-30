@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -130,24 +130,24 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     { label: '4 Users Seeded', value: 4, key: 'users', sub: 'Admin, Manager, 2 Sales Reps', icon: Users },
     { label: '11 Tables', value: 11, key: 'tables', sub: 'Full relational schema with FK constraints', icon: Award },
     { label: '33 Permissions', value: 33, key: 'permissions', sub: 'Across all CRM resources', icon: Sparkles },
-    { label: '89 Tests', value: 89, key: 'tests', sub: 'All passing ΓÇô pytest suite', icon: Zap },
+    { label: '89 Tests', value: 89, key: 'tests', sub: 'All passing - pytest suite', icon: Zap },
   ];
 
   const orbitNodes = [
     { label: 'Gmail Sync',  icon: Mail,         color: '#7c3aed', description: 'Connect Gmail via OAuth2. Emails auto-sync per user, grouped into threads, and linked to leads and deals with inbound/outbound tracking.' },
-    { label: 'AI Scoring',  icon: Sparkles,     color: '#7c3aed', description: 'Every lead gets a 0ΓÇô100 score from our transparent rule-based engine. Fit (60%) + Engagement (40%) ΓåÆ Critical / High / Medium / Low tier.' },
-    { label: 'Analytics',   icon: BarChart2,    color: '#2563eb', description: 'Role-scoped live dashboard at /api/v1/dashboard ΓÇô leads by status, pipeline value, deal stages, and activity feed.' },
-    { label: 'Pipeline',    icon: Filter,       color: '#16a34a', description: 'FSM deal stages: New ΓåÆ Contacted ΓåÆ Qualified ΓåÆ Proposal Sent ΓåÆ Negotiation ΓåÆ Won / Lost. One-click stage transitions.' },
-    { label: 'Next Action', icon: Trophy,       color: '#ea580c', description: 'Rule-based recommendation engine suggests: Send follow-up, Schedule demo, Send proposal, Escalate to manager ΓÇô based on score + urgency + reply status.' },
+    { label: 'AI Scoring',  icon: Sparkles,     color: '#7c3aed', description: 'Every lead gets a 0-100 score from our transparent rule-based engine. Fit (60%) + Engagement (40%) -> Critical / High / Medium / Low tier.' },
+    { label: 'Analytics',   icon: BarChart2,    color: '#2563eb', description: 'Role-scoped live dashboard at /api/v1/dashboard - leads by status, pipeline value, deal stages, and activity feed.' },
+    { label: 'Pipeline',    icon: Filter,       color: '#16a34a', description: 'FSM deal stages: New -> Contacted -> Qualified -> Proposal Sent -> Negotiation -> Won / Lost. One-click stage transitions.' },
+    { label: 'Next Action', icon: Trophy,       color: '#ea580c', description: 'Rule-based recommendation engine suggests: Send follow-up, Schedule demo, Send proposal, Escalate to manager - based on score + urgency + reply status.' },
     { label: 'Contacts',    icon: Users,        color: '#0d9488', description: 'Centralise companies, contacts, and leads. Email unique per org, linked to companies, with full validation and soft-delete.' },
   ];
 
   const features = [
-    { icon: LayoutDashboard, title: 'Live Dashboard',        desc: 'Role-scoped KPIs at /api/v1/dashboard ΓÇô leads by status, pipeline value, open deals, win rate, and live activity feed.', bg: C.violetLighter, fg: C.violet },
-    { icon: Sparkles,        title: 'AI Lead Scoring',       desc: 'Transparent rule-based engine scores leads 0ΓÇô100 (Fit 60% + Engagement 40%) with human-readable reasons. No black box.', bg: '#eff6ff', fg: C.blue },
-    { icon: TrendingUp,      title: 'FSM Deal Pipeline',     desc: 'Deals follow a strict FSM: New ΓåÆ Contacted ΓåÆ Qualified ΓåÆ Proposal Sent ΓåÆ Negotiation ΓåÆ Won / Lost. One-click transitions.', bg: '#ecfdf5', fg: C.emerald },
+    { icon: LayoutDashboard, title: 'Live Dashboard',        desc: 'Role-scoped KPIs at /api/v1/dashboard - leads by status, pipeline value, open deals, win rate, and live activity feed.', bg: C.violetLighter, fg: C.violet },
+    { icon: Sparkles,        title: 'AI Lead Scoring',       desc: 'Transparent rule-based engine scores leads 0-100 (Fit 60% + Engagement 40%) with human-readable reasons. No black box.', bg: '#eff6ff', fg: C.blue },
+    { icon: TrendingUp,      title: 'FSM Deal Pipeline',     desc: 'Deals follow a strict FSM: New -> Contacted -> Qualified -> Proposal Sent -> Negotiation -> Won / Lost. One-click transitions.', bg: '#ecfdf5', fg: C.emerald },
     { icon: Mail,            title: 'Gmail Intelligence',    desc: 'OAuth2 Gmail sync per user. Threads stored, linked to leads/deals. Groq/Llama 3.3 summarises each thread and detects intent.', bg: '#fff7ed', fg: C.orange },
-    { icon: BarChart2,       title: 'Revenue Analytics',     desc: 'Rep leaderboards, forecast views, and pipeline overviews ΓÇô all RBAC-scoped. Admins see everything; reps see their own data.', bg: '#fdf2f8', fg: '#9333ea' },
+    { icon: BarChart2,       title: 'Revenue Analytics',     desc: 'Rep leaderboards, forecast views, and pipeline overviews - all RBAC-scoped. Admins see everything; reps see their own data.', bg: '#fdf2f8', fg: '#9333ea' },
     { icon: Shield,          title: 'Enterprise Security',   desc: '3 roles, 33 granular permissions in resource:action format. JWT access + refresh tokens, bcrypt passwords, soft-delete everywhere.', bg: '#f0fdf4', fg: '#16a34a' },
   ];
 
@@ -365,7 +365,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                             <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981' }}>{s.change}</span>
                             <span style={{ fontSize: 10, color: C.textMuted }}>vs last month</span>
-                            <span style={{ fontSize: 10, marginLeft: 4, cursor: 'pointer', color: C.violet }}>See Details ΓåÆ</span>
+                            <span style={{ fontSize: 10, marginLeft: 4, cursor: 'pointer', color: C.violet }}>See Details -></span>
                           </div>
                           <svg viewBox="0 0 80 16" style={{ position: 'absolute', bottom: 0, right: 0, width: 80, height: 16, opacity: 0.15 }}>
                             <polyline points={s.trend.map((v,j)=>`${j*(80/6)},${16-(v/68)*16}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.5" />
@@ -631,7 +631,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <div>
               {[
                 { num: '01', icon: Zap, title: 'Connect', desc: 'Import contacts and leads via CSV or REST API. Link Gmail with OAuth.' },
-                { num: '02', icon: Sparkles, title: 'AI Works for You', desc: 'Scores every lead 0ΓÇô100. Groq/Llama summarises threads and suggests next actions.' },
+                { num: '02', icon: Sparkles, title: 'AI Works for You', desc: 'Scores every lead 0-100. Groq/Llama summarises threads and suggests next actions.' },
                 { num: '03', icon: TrendingUp, title: 'Close', desc: 'Move deals through FSM stages. Role-scoped dashboards keep reps aligned.' },
               ].map((step, idx) => {
                 const Icon = step.icon;
@@ -869,7 +869,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
-                'Rule-based AI scoring ΓÇô no black box',
+                'Rule-based AI scoring - no black box',
                 'Gmail OAuth sync with Groq/Llama summaries',
                 'FSM pipeline with real-time RBAC dashboards',
                 'Close more deals with less admin work'
@@ -917,7 +917,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             </div>
           </div>
 
-          {/* Right ΓÇô Orbit diagram */}
+          {/* Right - Orbit diagram */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, position: 'relative' }}>
             <div style={{ position: 'relative', width: 440, height: 440 }}>
               

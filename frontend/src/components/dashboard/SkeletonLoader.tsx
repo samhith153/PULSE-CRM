@@ -24,16 +24,16 @@ export default function SkeletonLoader({ isLoading, children, count = 3 }: Skele
           <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-slate-100/10 to-transparent" />
           
           {/* Circular avatar placeholder */}
-          <div className="h-12 w-12 rounded-full bg-slate-100 dark:bg-slate-700 shrink-0" />
+          <div className="h-12 w-12 rounded-full bg-slate-100 shrink-0" />
           
           {/* Text lines container */}
           <div className="flex-1 space-y-2.5">
             {/* Wide title line */}
-            <div className="h-4 bg-slate-100 dark:bg-slate-700 rounded w-3/4" />
+            <div className="h-4 bg-slate-100 rounded w-3/4" />
             {/* Shorter text line 1 */}
-            <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded w-1/2" />
+            <div className="h-3 bg-slate-100 rounded w-1/2" />
             {/* Shorter text line 2 */}
-            <div className="h-3 bg-slate-100 dark:bg-slate-700 rounded w-1/3" />
+            <div className="h-3 bg-slate-100 rounded w-1/3" />
           </div>
         </div>
       ))}

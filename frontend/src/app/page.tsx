@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Sidebar from '@/components/dashboard/Sidebar';
@@ -277,7 +277,7 @@ export default function DashboardHome() {
                 <div className="flex items-center space-x-2 shrink-0 self-start md:self-auto">
                   <button className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5">
                     <Calendar className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
-                    <span className="tabular-nums">May 12 ΓÇô May 18, 2025</span>
+                    <span className="tabular-nums">May 12 - May 18, 2025</span>
                   </button>
 
                   <button 
