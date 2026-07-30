@@ -64,6 +64,7 @@ from app.api.v1.uploads import router as uploads_router
 from app.api.v1.gmail import router as gmail_router
 from app.api.v1.health import router as health_router
 from app.api.v1.leads import router as leads_router
+from app.api.v1.roles import router as roles_router
 from app.api.v1.lead_scores import router as lead_scores_router
 from app.api.v1.organizations import router as orgs_router
 from app.api.v1.pipeline import router as pipeline_router
@@ -125,4 +126,5 @@ api_router.include_router(
 )
 api_router.include_router(calendar_router, prefix="/calendar", tags=["Calendar"])
 api_router.include_router(ai_insights_router, prefix="/ai-insights", tags=["AI Insights"])
+api_router.include_router(roles_router, prefix="/roles", tags=["Roles & Permissions"])
 

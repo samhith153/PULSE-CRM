@@ -100,7 +100,6 @@ jobs:
           HOST: 0.0.0.0
           PORT: 8000
         run: uvicorn app.main:app --host 0.0.0.0 --port 8000 &
-        &
 
       - name: Wait for backend to be ready
         run: |
