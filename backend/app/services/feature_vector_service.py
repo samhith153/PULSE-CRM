@@ -41,7 +41,7 @@ class FeatureVectorService:
             return None
 
         lead_dict = {
-            "employee_count": lead.employee_count,
+            "employees": lead.employee_count,
             "industry": lead.industry,
             "operational_system": lead.operational_systems or getattr(lead, "operational_system", None),
             "current_crm": lead.current_crm,
@@ -52,7 +52,7 @@ class FeatureVectorService:
         print(f"FEATURE VECTOR COMPUTATION FOR LEAD: {lead_id}")
         print(f"{'='*60}")
         print(f"INPUT VALUES:")
-        print(f"  employee_count: {lead_dict['employee_count']}")
+        print(f"  employees: {lead_dict['employees']}")
         print(f"  industry: {lead_dict['industry']}")
         print(f"  operational_system: {lead_dict['operational_system']}")
         print(f"  current_crm: {lead_dict['current_crm']}")
