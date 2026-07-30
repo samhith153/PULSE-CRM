@@ -682,3 +682,68 @@ export async function getActivities(params: ActivityListParams = {}): Promise<Pa
     `/api/v1/activities${toQuery({ ...rest, action: activity_type })}`
   );
 }
+
+// --- Automation / Events API ---
+
+export interface AutomationEvent {
+  id: string;
+  event_type: string;
+  event_name: string;
+  aggregate_type?: string | null;
+  aggregate_id?: string | null;
+  organization_id?: string | null;
+  actor_id?: string | null;
+  source?: string | null;
+  correlation_id?: string | null;
+  payload: Record<string, unknown>;
+  occurred_at: string;
+  created_at: string;
+}
+
+export interface AutomationEventList {
+  items: AutomationEvent[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface WebhookEndpoint {
+  id: string;
+  name: string;
+  target_url: string;
+  event_types: string[];
+  max_attempts: number;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  endpoint_id: string;
+  event_type: string;
+  payload: Record<string, unknown>;
+  status: string;
+  attempts: number;
+  next_attempt_at?: string | null;
+  last_status_code?: number | null;
+  last_error?: string | null;
+  delivered_at?: string | null;
+  created_at: string;
+}
+
+export async function getAutomationEvents(limit = 25): Promise<AutomationEventList> {
+  return apiFetch<AutomationEventList>(`/api/v1/events${toQuery({ limit })}`);
+}
+
+export async function getWebhookEndpoints(): Promise<WebhookEndpoint[]> {
+  return apiFetch<WebhookEndpoint[]>('/api/v1/webhooks/endpoints');
+}
+
+export async function triggerAutomationDelivery(eventType: string, payload: Record<string, unknown> = {}): Promise<WebhookDelivery[]> {
+  return apiFetch<WebhookDelivery[]>('/api/v1/webhooks/deliveries', {
+    method: 'POST',
+    body: JSON.stringify({ event_type: eventType, payload })
+  });
+}
