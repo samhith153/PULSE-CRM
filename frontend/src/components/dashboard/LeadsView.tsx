@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -60,7 +60,7 @@ function backendToLocal(b: BackendLead): Lead {
     notes: b.notes || '',
     source: mappedSource,
     industry: b.industry || undefined,
-    jobTitle: undefined,
+    jobTitle: b.job_title || undefined,
     location: b.location || undefined,
     numberOfEmployees: b.employee_count?.toString() || undefined,
     currentCRM: b.current_crm || undefined,
@@ -168,7 +168,8 @@ export default function LeadsView() {
   const [emailForm, setEmailForm] = useState({ subject: '', body: '' });
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
   const [meetingForm, setMeetingForm] = useState({ title: '', date: '', time: '', desc: '' });
-  const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employeeCount: '' });
+  const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employeeCount: '', pipelineStageId: '' });
+  const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string; slug: string }[]>([]);
 
   const getFitScore = (lead: Lead) => {
     let score = 45;
@@ -214,6 +215,9 @@ export default function LeadsView() {
     }).catch(() => {
       setGmailConnected(false);
     });
+    getPipelineStages().then(data => {
+      setPipelineStages(data as any);
+    }).catch(() => {});
   }, []);
 
   // Get currently active lead object
@@ -332,6 +336,7 @@ export default function LeadsView() {
     const payload: Record<string, unknown> = {
       title: leadForm.name,
       company_name: leadForm.company,
+      job_title: leadForm.jobTitle || undefined,
       email: leadForm.email || undefined,
       phone: leadForm.phone || undefined,
       source: SOURCE_MAP[leadForm.source as string] || leadForm.source || undefined,
@@ -366,6 +371,7 @@ export default function LeadsView() {
     const payload: Record<string, unknown> = {
       title: leadForm.name,
       company_name: leadForm.company,
+      job_title: leadForm.jobTitle || undefined,
       email: leadForm.email || undefined,
       phone: leadForm.phone || undefined,
       status: STATUS_MAP[leadForm.status as string] || leadForm.status,
@@ -407,7 +413,8 @@ export default function LeadsView() {
     setConvertForm({
       industry: lead?.industry || '',
       revenue: lead?.value ? String(lead.value) : '',
-      employeeCount: lead?.employee_count ? String(lead.employee_count) : ''
+      employeeCount: lead?.employee_count ? String(lead.employee_count) : '',
+      pipelineStageId: '',
     });
     setIsConvertModalOpen(true);
   };
@@ -418,8 +425,9 @@ export default function LeadsView() {
     try {
       const payload = {
         industry: convertForm.industry || undefined,
-        revenue: convertForm.revenue || undefined,
-        employee_count: convertForm.employeeCount ? Number(convertForm.employeeCount) : undefined
+        revenue: convertForm.revenue ? Number(convertForm.revenue.replace(/[^0-9.]/g, '')) : undefined,
+        employee_count: convertForm.employeeCount ? Number(convertForm.employeeCount) : undefined,
+        pipeline_stage_id: convertForm.pipelineStageId || undefined,
       };
       await convertLead(convertingLeadId, payload);
       
@@ -1376,11 +1384,11 @@ export default function LeadsView() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email</label>
-                  <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <input type="email" placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone</label>
-                  <input type="text" required placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <input type="text" placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -1563,14 +1571,27 @@ export default function LeadsView() {
                 />
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue</label>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue ($)</label>
                 <input 
-                  type="text" 
-                  placeholder="e.g. $1,200,000" 
+                  type="number" 
+                  placeholder="e.g. 1200000" 
                   value={convertForm.revenue} 
                   onChange={(e) => setConvertForm({...convertForm, revenue: e.target.value})} 
                   className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" 
                 />
+              </div>
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Pipeline Stage</label>
+                <select 
+                  value={convertForm.pipelineStageId} 
+                  onChange={(e) => setConvertForm({...convertForm, pipelineStageId: e.target.value})} 
+                  className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
+                >
+                  <option value="">— Default (New) —</option>
+                  {pipelineStages.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>

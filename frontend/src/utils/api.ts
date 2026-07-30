@@ -50,6 +50,7 @@ export interface Lead {
   created_at: string;
   updated_at: string;
   company_name: string | null;
+  job_title: string | null;
   contact_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
@@ -239,7 +240,7 @@ export async function deleteLead(leadId: string): Promise<void> {
 
 export async function convertLead(
   leadId: string,
-  payload: { industry?: string; revenue?: string; employee_count?: number }
+  payload: { industry?: string; revenue?: number; employee_count?: number; pipeline_stage_id?: string }
 ): Promise<any> {
   return apiFetch(`/api/v1/leads/${leadId}/convert`, {
     method: 'POST',
@@ -327,10 +328,7 @@ export async function getDeals(): Promise<Deal[]> {
       title: dd.name || `Deal ${dd.id}`,
       company: dd.company_name || dd.company?.name || '',
       value: Number(dd.amount || 0),
-      stage: dd.pipeline_stage_id === 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918' ? 'Qualified' :
-             dd.pipeline_stage_id === 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919' ? 'Proposal' :
-             dd.pipeline_stage_id === 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920' ? 'Under Review' :
-             dd.pipeline_stage_id === 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921' ? 'Won' : 'Lost',
+      stage: dd.stage_name || dd.stage_slug || 'New',
       priority: dd.priority || 'Medium',
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
@@ -339,10 +337,34 @@ export async function getDeals(): Promise<Deal[]> {
 }
 
 export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
-  return apiFetch(`/api/v1/deals/${dealId}/stage`, {
-    method: 'PUT',
-    body: JSON.stringify({ stage_id: stageId })
+  return apiFetch(`/api/v1/pipeline/move`, {
+    method: 'PATCH',
+    body: JSON.stringify({ deal_id: dealId, stage_id: stageId })
   });
+}
+
+export async function createDeal(dealData: any): Promise<any> {
+  return apiFetch('/api/v1/deals', {
+    method: 'POST',
+    body: JSON.stringify(dealData)
+  });
+}
+
+export async function updateDeal(dealId: string | number, dealData: any): Promise<any> {
+  return apiFetch(`/api/v1/deals/${dealId}`, {
+    method: 'PUT',
+    body: JSON.stringify(dealData)
+  });
+}
+
+export async function deleteDeal(dealId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/deals/${dealId}`, { method: 'DELETE' });
+}
+
+export async function getPipelineStages(): Promise<any[]> {
+  const dbResult = await apiFetch<any>('/api/v1/pipeline/stages');
+  const stages: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
+  return stages;
 }
 
 // --- Conversation Intelligence (Bhavani Summarization API) ---

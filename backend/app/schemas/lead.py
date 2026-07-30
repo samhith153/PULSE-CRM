@@ -33,6 +33,7 @@ class LeadCreateRequest(BaseModel):
     email: Optional[str] = Field(default=None, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=30)
     company_name: Optional[str] = Field(default=None, max_length=255)
+    job_title: Optional[str] = Field(default=None, max_length=100)
     company_id: Optional[UUID] = None
     contact_id: Optional[UUID] = None
     owner_id: Optional[UUID] = None
@@ -60,6 +61,7 @@ class LeadUpdateRequest(BaseModel):
     email: Optional[str] = Field(default=None, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=30)
     company_name: Optional[str] = Field(default=None, max_length=255)
+    job_title: Optional[str] = Field(default=None, max_length=100)
     company_id: Optional[UUID] = None
     contact_id: Optional[UUID] = None
     owner_id: Optional[UUID] = None
@@ -79,8 +81,9 @@ class LeadStatusUpdateRequest(BaseModel):
 
 class LeadConvertRequest(BaseModel):
     industry: Optional[str] = Field(default=None, max_length=100)
-    revenue: Optional[str] = Field(default=None, max_length=50)
+    revenue: Optional[float] = Field(default=None, ge=0)
     employee_count: Optional[int] = Field(default=None, ge=0)
+    pipeline_stage_id: Optional[str] = Field(default=None, description="Pipeline stage ID for the new deal")
 
 
 class LeadResponse(BaseModel):
@@ -112,6 +115,7 @@ class LeadResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     company_name: Optional[str] = None
+    job_title: Optional[str] = None
     contact_name: Optional[str] = None
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
@@ -150,6 +154,7 @@ class LeadResponse(BaseModel):
             created_at=lead.created_at,
             updated_at=lead.updated_at,
             company_name=lead.company_name or (lead.company.name if lead.company else None),
+            job_title=lead.job_title,
             contact_name=(
                 f"{lead.contact.first_name} {lead.contact.last_name}".strip()
                 if lead.contact else None

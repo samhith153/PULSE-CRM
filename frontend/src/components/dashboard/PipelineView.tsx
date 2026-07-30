@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getDeals, updateDealStage } from '@/utils/api';
+import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages } from '@/utils/api';
 import { 
   Plus, 
   IndianRupee, 
@@ -10,10 +10,7 @@ import {
   X, 
   Edit, 
   Trash2, 
-  MoveRight,
-  AlertCircle,
   Building2,
-  Calendar
 } from 'lucide-react';
 
 interface Deal {
@@ -21,53 +18,64 @@ interface Deal {
   title: string;
   company: string;
   value: number;
-  stage: 'Qualified' | 'Proposal' | 'Under Review' | 'Won' | 'Lost';
+  stage: string;
   priority: 'High' | 'Medium' | 'Low';
   owner: string;
   closeDate: string;
 }
 
+interface PipelineStage {
+  id: string;
+  name: string;
+  slug: string;
+  sort_order: number;
+  probability: number;
+}
+
 export default function PipelineView() {
   const [deals, setDeals] = useState<Deal[]>([]);
+  const [stages, setStages] = useState<PipelineStage[]>([]);
 
   useEffect(() => {
+    getPipelineStages().then(data => {
+      const sorted = (data as any[]).sort((a: any, b: any) => a.sort_order - b.sort_order);
+      setStages(sorted);
+    }).catch(() => {});
     getDeals().then(data => {
       setDeals(data as any);
     });
   }, []);
 
-  const stages: Deal['stage'][] = ['Qualified', 'Proposal', 'Under Review', 'Won', 'Lost'];
+  const stageNames = stages.map(s => s.name);
 
-  const stageProbabilities: Record<Deal['stage'], number> = {
-    'Qualified': 0.1,
-    'Proposal': 0.4,
-    'Under Review': 0.7,
-    'Won': 1.0,
-    'Lost': 0.0
-  };
+  const stageProbabilities: Record<string, number> = {};
+  stages.forEach(s => { stageProbabilities[s.name] = s.probability / 100; });
 
-  // State for modals
+  const stageIdByName: Record<string, string> = {};
+  stages.forEach(s => { stageIdByName[s.name] = s.id; });
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 
-  // Form state
   const [form, setForm] = useState({
-    title: '', company: '', value: 0, stage: 'Qualified' as Deal['stage'], priority: 'Medium' as Deal['priority'], owner: 'Sarah Johnson', closeDate: ''
+    title: '', company: '', value: 0, stage: '', priority: 'Medium' as Deal['priority'], owner: '', closeDate: ''
   });
 
-  // Drag and drop states
   const [draggedId, setDraggedId] = useState<number | string | null>(null);
 
-  // Calculating pipeline statistics
-  const totalValue = deals.reduce((acc, d) => d.stage !== 'Lost' ? acc + d.value : acc, 0);
-  const weightedForecast = deals.reduce((acc, d) => acc + (d.value * stageProbabilities[d.stage]), 0);
+  const totalValue = deals.reduce((acc, d) => {
+    const stage = stages.find(s => s.name === d.stage);
+    if (stage && stage.slug !== 'lost') return acc + d.value;
+    return acc;
+  }, 0);
+  const weightedForecast = deals.reduce((acc, d) => acc + (d.value * (stageProbabilities[d.stage] || 0)), 0);
 
   const getAISuggestion = (deal: Deal) => {
     if (deal.stage === 'Proposal' && deal.priority === 'High') {
       return "Critical Deal: Proposal sent 3 days ago. Schedule a proposal review session immediately.";
     }
-    if (deal.stage === 'Under Review') {
+    if (deal.stage === 'Negotiation') {
       return "Close Date approaching. Send the contract agreement link to confirm legal alignment.";
     }
     if (deal.priority === 'Low' && deal.stage === 'Qualified') {
@@ -76,7 +84,6 @@ export default function PipelineView() {
     return "Check in with stakeholders to maintain deal velocity.";
   };
 
-  // HTML5 Drag handlers
   const handleDragStart = (id: number | string) => {
     setDraggedId(id);
   };
@@ -85,66 +92,84 @@ export default function PipelineView() {
     e.preventDefault();
   };
 
-  const handleDrop = (stage: Deal['stage']) => {
+  const handleDrop = (stageName: string) => {
     if (draggedId === null) return;
-    setDeals(deals.map(d => d.id === draggedId ? { ...d, stage } : d));
-    
-    // Commit update to backend if stage maps to seeded UUIDs
-    const stageIds: Record<string, string> = {
-      'Qualified': 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918',
-      'Proposal': 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919',
-      'Under Review': 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920',
-      'Won': 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921',
-      'Lost': 'b5f20c42-b0c6-4767-88ea-d4b68e9f2922'
-    };
-    const stageId = stageIds[stage];
+    const stageId = stageIdByName[stageName];
+    setDeals(deals.map(d => d.id === draggedId ? { ...d, stage: stageName } : d));
     if (stageId) {
-      updateDealStage(draggedId, stageId).catch(err => console.warn("Failed to update deal stage in backend", err));
+      updateDealStage(draggedId, stageId).catch(err => console.warn("Failed to update deal stage", err));
     }
-    
     setDraggedId(null);
   };
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newDeal: Deal = {
-      id: Date.now(),
-      title: form.title,
-      company: form.company,
-      value: Number(form.value),
-      stage: form.stage,
-      priority: form.priority,
-      owner: form.owner,
-      closeDate: form.closeDate || '2025-06-30'
-    };
-    setDeals([...deals, newDeal]);
+    try {
+      const stageId = stageIdByName[form.stage];
+      const created = await createDeal({
+        name: form.title,
+        amount: form.value,
+        pipeline_stage_id: stageId || undefined,
+        priority: form.priority,
+        expected_close_date: form.closeDate || undefined,
+      });
+      const newDeal: Deal = {
+        id: created?.id || Date.now(),
+        title: form.title,
+        company: form.company,
+        value: Number(form.value),
+        stage: form.stage,
+        priority: form.priority,
+        owner: form.owner,
+        closeDate: form.closeDate
+      };
+      setDeals([...deals, newDeal]);
+    } catch (err) {
+      console.error("Failed to create deal:", err);
+    }
     setIsAddModalOpen(false);
   };
 
-  const handleEdit = (e: React.FormEvent) => {
+  const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDeal) return;
-    setDeals(deals.map(d => d.id === selectedDeal.id ? {
-      ...d,
-      title: form.title,
-      company: form.company,
-      value: Number(form.value),
-      stage: form.stage,
-      priority: form.priority,
-      owner: form.owner,
-      closeDate: form.closeDate
-    } : d));
+    try {
+      const stageId = stageIdByName[form.stage];
+      await updateDeal(selectedDeal.id, {
+        name: form.title,
+        amount: form.value,
+        pipeline_stage_id: stageId || undefined,
+        priority: form.priority,
+        expected_close_date: form.closeDate || undefined,
+      });
+      setDeals(deals.map(d => d.id === selectedDeal.id ? {
+        ...d,
+        title: form.title,
+        company: form.company,
+        value: Number(form.value),
+        stage: form.stage,
+        priority: form.priority,
+        owner: form.owner,
+        closeDate: form.closeDate
+      } : d));
+    } catch (err) {
+      console.error("Failed to update deal:", err);
+    }
     setIsEditModalOpen(false);
     setSelectedDeal(null);
   };
 
-  const handleDelete = (id: number | string) => {
-    setDeals(deals.filter(d => d.id !== id));
+  const handleDelete = async (id: number | string) => {
+    try {
+      await deleteDeal(id);
+      setDeals(deals.filter(d => d.id !== id));
+    } catch (err) {
+      console.error("Failed to delete deal:", err);
+    }
   };
 
   return (
     <div className="space-y-6">
-      {/* Metrics Row */}
       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
@@ -153,7 +178,7 @@ export default function PipelineView() {
           </div>
           <button 
             onClick={() => {
-              setForm({ title: '', company: '', value: 10000, stage: 'Qualified', priority: 'Medium', owner: 'Sarah Johnson', closeDate: '' });
+              setForm({ title: '', company: '', value: 10000, stage: stageNames[0] || 'Qualified', priority: 'Medium', owner: '', closeDate: '' });
               setIsAddModalOpen(true);
             }}
             className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
@@ -163,7 +188,6 @@ export default function PipelineView() {
           </button>
         </div>
 
-        {/* Stats and Forecasting cards summary */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 pt-4 border-t border-brand-border-purple/15">
           <div className="flex items-center space-x-3 bg-slate-50/50 p-3 rounded-lg border border-brand-border-purple/15">
             <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/10 flex items-center justify-center text-brand-accent border border-brand-border-purple/20">
@@ -195,23 +219,21 @@ export default function PipelineView() {
         </div>
       </div>
 
-      {/* Kanban Stages Horizontal scroll container */}
       <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-brand-border-purple/20 scrollbar-track-transparent">
         {stages.map((stage) => {
-          const stageDeals = deals.filter(d => d.stage === stage);
+          const stageDeals = deals.filter(d => d.stage === stage.name);
           const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
 
           return (
             <div 
-              key={stage}
+              key={stage.id}
               onDragOver={handleDragOver}
-              onDrop={() => handleDrop(stage)}
+              onDrop={() => handleDrop(stage.name)}
               className="bg-slate-50/50 border border-brand-border-purple/20 rounded-xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
             >
-              {/* Stage Header */}
               <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
                 <div>
-                  <h3 className="text-[11px] font-extrabold text-brand-heading uppercase tracking-wider">{stage}</h3>
+                  <h3 className="text-[11px] font-extrabold text-brand-heading uppercase tracking-wider">{stage.name}</h3>
                   <p className="text-[10px] text-slate-400 font-bold mt-0.5 tabular-nums">${stageSum.toLocaleString()}</p>
                 </div>
                 <span className="text-[9px] font-extrabold bg-brand-secondary-accent/15 text-brand-accent px-1.5 py-0.5 rounded-full tabular-nums">
@@ -219,7 +241,6 @@ export default function PipelineView() {
                 </span>
               </div>
 
-              {/* Deal Cards Container */}
               <div className="flex-1 space-y-3 overflow-y-auto pr-1">
                 {stageDeals.map((deal) => (
                   <div 
@@ -244,7 +265,6 @@ export default function PipelineView() {
                     <div className="mt-3.5 pt-2.5 border-t border-brand-border-purple/10 flex justify-between items-center">
                       <span className="text-[11px] font-extrabold text-brand-heading tabular-nums">${deal.value.toLocaleString()}</span>
                       
-                      {/* Control buttons */}
                       <div className="flex space-x-1">
                         <button 
                           onClick={() => {
@@ -275,17 +295,21 @@ export default function PipelineView() {
                       </div>
                     </div>
 
-                    {/* Stage shift trigger for responsive/mobile layouts */}
                     <div className="mt-2 flex justify-between items-center text-[9px] font-bold text-brand-accent/80 border-t border-brand-border-purple/10 pt-1.5">
                       <span>Shift Stage:</span>
                       <select 
                         value={deal.stage}
                         onChange={(e) => {
-                          setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: e.target.value as any } : d));
+                          const newStage = e.target.value;
+                          const stageId = stageIdByName[newStage];
+                          setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));
+                          if (stageId) {
+                            updateDealStage(deal.id, stageId).catch(() => {});
+                          }
                         }}
                         className="bg-transparent text-brand-accent focus:outline-none cursor-pointer"
                       >
-                        {stages.map(st => (
+                        {stageNames.map(st => (
                           <option key={st} value={st}>{st}</option>
                         ))}
                       </select>
@@ -298,7 +322,6 @@ export default function PipelineView() {
         })}
       </div>
 
-      {/* Add Deal Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -324,8 +347,8 @@ export default function PipelineView() {
                 </div>
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Stage</label>
-                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    {stages.map(st => <option key={st}>{st}</option>)}
+                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                    {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
                 </div>
               </div>
@@ -352,7 +375,6 @@ export default function PipelineView() {
         </div>
       )}
 
-      {/* Edit Deal Modal */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -378,8 +400,8 @@ export default function PipelineView() {
                 </div>
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Stage</label>
-                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    {stages.map(st => <option key={st}>{st}</option>)}
+                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                    {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
                 </div>
               </div>

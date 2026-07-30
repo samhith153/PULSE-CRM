@@ -29,6 +29,7 @@ class DealRepository(BaseRepository[Deal]):
                 selectinload(Deal.company),
                 selectinload(Deal.contact),
                 selectinload(Deal.owner),
+                selectinload(Deal.pipeline_stage),
             )
         )
 

@@ -37,6 +37,7 @@ class Lead(Base, TenantMixin):
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, index=True)
     phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     company_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    job_title: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     # ── Pipeline ──────────────────────────────────────────────────────────────
     status: Mapped[str] = mapped_column(

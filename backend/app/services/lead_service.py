@@ -223,8 +223,9 @@ class LeadService:
         organization_id: UUID,
         created_by: UUID,
         industry: Optional[str] = None,
-        revenue: Optional[str] = None,
+        revenue: Optional[float] = None,
         employee_count: Optional[int] = None,
+        pipeline_stage_id: Optional[str] = None,
     ) -> Deal:
         tx_context = self.db.begin_nested() if self.db.in_transaction() else self.db.begin()
         async with tx_context:
@@ -250,7 +251,7 @@ class LeadService:
                         name=lead.company_name,
                         industry=industry or lead.industry,
                         employee_count=employee_count or lead.employee_count,
-                        annual_revenue=revenue,
+                         annual_revenue=str(revenue) if revenue is not None else None,
                         organization_id=organization_id,
                         created_by=created_by,
                     )
@@ -273,13 +274,18 @@ class LeadService:
                         last_name=last_name,
                         email=lead.email,
                         phone=lead.phone or "",
+                        job_title=lead.job_title,
+                        company_id=company_id,
                         organization_id=organization_id,
                         created_by=created_by,
                     )
                     contact_id = contact.id
 
             # ── Find pipeline stage ───────────────────────────────────────────
-            stage = await self.pipeline_repo.get_by_slug(PipelineStageSlug.NEW.value, organization_id)
+            if pipeline_stage_id:
+                stage = await self.pipeline_repo.get_by_id(UUID(pipeline_stage_id))
+            else:
+                stage = await self.pipeline_repo.get_by_slug(PipelineStageSlug.NEW.value, organization_id)
             if not stage:
                 from app.services.pipeline_service import PipelineService
 
@@ -312,7 +318,7 @@ class LeadService:
                     if industry is not None:
                         comp_updates["industry"] = industry
                     if revenue is not None:
-                        comp_updates["annual_revenue"] = revenue
+                        comp_updates["annual_revenue"] = str(revenue)
                     if employee_count is not None:
                         comp_updates["employee_count"] = employee_count
                     if comp_updates:
