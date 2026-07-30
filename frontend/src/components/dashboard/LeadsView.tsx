@@ -58,7 +58,7 @@ function backendToLocal(b: BackendLead): Lead {
     priorityTier: b.priority ?? null,
     topReasons: b.top_reasons ?? [],
     status: STATUS_UNMAP[b.status] || 'New',
-    priority: 'Medium', // Default to Medium if not provided
+    priority: (b.priority as Lead['priority']) ?? 'Low',
     owner: b.owner_name || 'Unassigned',
     ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
     notes: b.notes || '',
@@ -121,7 +121,7 @@ interface Lead {
   priorityTier: string | null;
   topReasons: string[];
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
-  priority: 'High' | 'Medium' | 'Low';
+  priority: 'Critical' | 'High' | 'Medium' | 'Low';
   owner: string;
   ownerAvatar: string;
   notes: string;
@@ -666,6 +666,7 @@ export default function LeadsView() {
                 className="w-full px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text/80 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent/20 cursor-pointer"
               >
                 <option value="All">All Priorities</option>
+                <option value="Critical">Critical Priority</option>
                 <option value="High">High Priority</option>
                 <option value="Medium">Medium Priority</option>
                 <option value="Low">Low Priority</option>
@@ -790,10 +791,12 @@ export default function LeadsView() {
                             {/* Priority Badge */}
                             <td className="py-3">
                               <span className={`text-[9px] font-bold ${
-                                lead.priority === 'High' ? 'text-rose-600' :
-                                lead.priority === 'Medium' ? 'text-amber-600' : 'text-slate-500'
+                                lead.priorityTier === 'Critical' ? 'text-emerald-600' :
+                                lead.priorityTier === 'High' ? 'text-rose-600' :
+                                lead.priorityTier === 'Medium' ? 'text-amber-600' :
+                                lead.priorityTier === 'Low' ? 'text-slate-500' : 'text-slate-300'
                               }`}>
-                                ● {lead.priority}
+                                ● {lead.priorityTier || lead.priority}
                               </span>
                             </td>
 
@@ -1055,8 +1058,9 @@ export default function LeadsView() {
                   <span className={`font-extrabold ${
                     activeLead.priorityTier === 'Critical' ? 'text-emerald-600' :
                     activeLead.priorityTier === 'High' ? 'text-amber-600' :
-                    activeLead.priorityTier === 'Medium' ? 'text-blue-600' : 'text-slate-500'
-                  }`}>{activeLead.priorityTier || 'N/A'}</span>
+                    activeLead.priorityTier === 'Medium' ? 'text-blue-600' :
+                    activeLead.priorityTier === 'Low' ? 'text-slate-500' : 'text-slate-300'
+                  }`}>{activeLead.priorityTier || activeLead.priority}</span>
                 </div>
                 {activeLead.topReasons.length > 0 && (
                   <div className="border-t border-brand-border-purple/10 pt-2">
@@ -1468,6 +1472,7 @@ export default function LeadsView() {
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
                   <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                    <option>Critical</option>
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
