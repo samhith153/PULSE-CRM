@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages } from '@/utils/api';
@@ -1662,7 +1662,7 @@ export default function LeadsView() {
                   onChange={(e) => setConvertForm({...convertForm, pipelineStageId: e.target.value})} 
                   className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
                 >
-                  <option value="">ΓÇö Default (New) ΓÇö</option>
+                  <option value="">— Default (New) —</option>
                   {pipelineStages.map((s) => (
                     <option key={s.id} value={s.id}>{s.name}</option>
                   ))}

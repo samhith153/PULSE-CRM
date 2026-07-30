@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { getCompanies, updateCompany } from '@/utils/api';
@@ -243,7 +243,7 @@ export default function CompaniesView() {
             </div>
             <div className="flex justify-between">
               <span className="text-brand-text/50">Revenue Size</span>
-              <span className="text-brand-text tabular-nums">{active.revenue || 'ΓÇö'}</span>
+              <span className="text-brand-text tabular-nums">{active.revenue || '—'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-brand-text/50">Employees</span>
@@ -334,7 +334,7 @@ export default function CompaniesView() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue</label>
-                  <input type="text" placeholder="e.g. Γé╣5,000,000" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <input type="text" placeholder="e.g. ₹5,000,000" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Employees</label>

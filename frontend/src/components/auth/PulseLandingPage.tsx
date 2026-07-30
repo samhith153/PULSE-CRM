@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
@@ -249,7 +249,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             style={{ textAlign: 'center', fontSize: 18, color: C.textGray, fontWeight: 400, lineHeight: 1.65, maxWidth: 640, margin: '0 auto 36px' }}>
-            Pulse CRM unifies your leads, deals, and Gmail ΓÇö scored by transparent AI, managed through an FSM pipeline, and built for real sales teams.
+            Pulse CRM unifies your leads, deals, and Gmail — scored by transparent AI, managed through an FSM pipeline, and built for real sales teams.
           </motion.p>
 
           {/* ΓöÇΓöÇ CTAs ΓöÇΓöÇ */}
@@ -346,7 +346,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   {/* 3 stat cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
                     {[
-                      { label: 'Active Sales', value: 'Γé╣98,430', change: '+18%', icon: TrendingUp, color: '#7c3aed', trend: [30,40,35,52,48,62,58] },
+                      { label: 'Active Sales', value: '₹98,430', change: '+18%', icon: TrendingUp, color: '#7c3aed', trend: [30,40,35,52,48,62,58] },
                       { label: 'Open Deals', value: '340', change: '+12%', icon: Target, color: '#0ea5e9', trend: [40,35,45,40,50,48,55] },
                       { label: 'Win Rate', value: '76%', change: '+4%', icon: Activity, color: '#10b981', trend: [50,55,52,60,58,65,68] },
                     ].map((s, i) => {
@@ -565,7 +565,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.4, delay: 0.15 }}
               style={{ fontSize: 13.5, color: C.textGray, fontWeight: 400, maxWidth: 480, margin: '0 auto', lineHeight: 1.6 }}>
-              Scoring, pipeline, Gmail, RBAC, and analytics ΓÇö all built and wired together.
+              Scoring, pipeline, Gmail, RBAC, and analytics — all built and wired together.
             </motion.p>
           </div>
           <div className="pulse-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
@@ -595,7 +595,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 7. HOW IT WORKS ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <section data-reveal="steps" style={{ background: '#eeeafd', padding: `32px ${px}`, position: 'relative', overflow: 'hidden' }}>
         <div style={{ maxWidth: maxW, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-          {/* Header ΓÇö centered */}
+          {/* Header — centered */}
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
@@ -703,7 +703,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                     <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>REVENUE</span>
                   </div>
                   <div style={{ display: 'flex', gap: 10, marginBottom: 7 }}>
-                    <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Revenue</div><div style={{ fontSize: 16, fontWeight: 900, color: C.violet, letterSpacing: '-0.02em' }}>Γé╣1.2L</div></div>
+                    <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Revenue</div><div style={{ fontSize: 16, fontWeight: 900, color: C.violet, letterSpacing: '-0.02em' }}>₹1.2L</div></div>
                     <div><div style={{ fontSize: 9, color: '#94a3b8', fontWeight: 600, marginBottom: 1 }}>Win Rate</div><div style={{ fontSize: 16, fontWeight: 900, color: '#10b981', letterSpacing: '-0.02em' }}>67%</div></div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 22 }}>
@@ -865,7 +865,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               A complete platform<br />to power your{' '}<span style={{ color: C.violet }}>sales pipeline</span>
             </h2>
             <p style={{ fontSize: 14, color: '#64748b', fontWeight: 400, lineHeight: 1.7, maxWidth: 400, margin: 0 }}>
-              One FastAPI backend powers your entire revenue workflow ΓÇö from lead intake to deal close, with transparent AI scoring at every step.
+              One FastAPI backend powers your entire revenue workflow — from lead intake to deal close, with transparent AI scoring at every step.
             </p>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
@@ -1124,7 +1124,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                 Start your free trial today
               </h2>
               <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.80)', fontWeight: 400, margin: '0 auto 36px', lineHeight: 1.7, maxWidth: 500 }}>
-                Score every lead, sync Gmail, manage your pipeline, and close more deals ΓÇö all in one place. Set up in 2 minutes, no credit card required.
+                Score every lead, sync Gmail, manage your pipeline, and close more deals — all in one place. Set up in 2 minutes, no credit card required.
               </p>
               <button
                 onClick={openSignUp}
@@ -1141,7 +1141,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         </div>
       </section>
 
-      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 13. FOOTER ΓÇö DARK ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
+      {/* ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ 13. FOOTER — DARK ΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉΓòÉ */}
       <footer style={{ background: C.darkBg, borderTop: `1px solid ${C.darkBorder}`, padding: `32px ${px} 0` }}>
         <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           <div className="pulse-footer-grid" style={{ display: 'grid', gridTemplateColumns: '200px 1fr 1fr 1fr 220px', gap: 28, marginBottom: 28, alignItems: 'start' }}>
@@ -1285,7 +1285,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
 
         /* ΓöÇΓöÇ Responsive layout ΓöÇΓöÇ */
 
-        /* 1280px ΓÇö keep everything as-is, just ensure no overflow */
+        /* 1280px — keep everything as-is, just ensure no overflow */
         @media (max-width: 1280px) {
           .pulse-footer-grid { grid-template-columns: 180px 1fr 1fr 1fr 200px !important; gap: 20px !important; }
         }

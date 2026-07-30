@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
@@ -399,7 +399,7 @@ export default function UsersView() {
                   onChange={(e) => setForm({ ...form, role_id: e.target.value })}
                   className="w-full px-3 py-2 border border-brand-border-purple/35 rounded-lg text-xs bg-slate-50/50 text-brand-text focus:outline-none focus:border-brand-accent transition-colors"
                 >
-                  <option value="">{modalType === 'create' ? 'ΓÇö Select Role ΓÇö' : 'ΓÇö Keep current role ΓÇö'}</option>
+                  <option value="">{modalType === 'create' ? '— Select Role —' : '— Keep current role —'}</option>
                   {roles.map(r => (
                     <option key={r.id} value={r.id}>{r.display_name}</option>
                   ))}
