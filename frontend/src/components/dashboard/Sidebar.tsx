@@ -164,16 +164,16 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
         };
       case 'manager':
         return {
-          name: "Alex Johnson",
+          name: "Sarah Johnson",
           role: "Sales Manager",
-          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
         };
       case 'representative':
       default:
         return {
-          name: "Sarah Johnson",
+          name: "Priya Sharma",
           role: "Sales Representative",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
+          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
         };
     }
   };

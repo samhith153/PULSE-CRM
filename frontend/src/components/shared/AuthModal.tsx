@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { X, Mail, Lock, Loader2, Activity, AlertCircle } from 'lucide-react';
-import { login, register, setToken } from '@/utils/api';
+import { login, register, setToken, getCurrentUser } from '@/utils/api';
 
 type Role = 'representative' | 'manager' | 'admin';
 type ModalMode = 'signin' | 'signup';
@@ -44,10 +44,29 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
         setToken(result.access_token);
       }
 
+      // Fetch the actual user profile to get their true role from the database
+      const profileData = await getCurrentUser().catch(() => null);
+      let resolvedRole: Role = role;
+      let resolvedName = name;
+
+      if (profileData) {
+        resolvedName = profileData.full_name;
+        if (profileData.roles && profileData.roles.length > 0) {
+          const mainRole = profileData.roles[0];
+          if (mainRole === 'admin') {
+            resolvedRole = 'admin';
+          } else if (mainRole === 'manager') {
+            resolvedRole = 'manager';
+          } else if (mainRole === 'sales_rep') {
+            resolvedRole = 'representative';
+          }
+        }
+      }
+
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pulse-crm-auth', 'true');
-        localStorage.setItem('pulse-crm-role', role);
-        localStorage.setItem('pulse-crm-user', name || role);
+        localStorage.setItem('pulse-crm-role', resolvedRole);
+        localStorage.setItem('pulse-crm-user', resolvedName || resolvedRole);
       }
 
       onClose();

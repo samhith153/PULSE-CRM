@@ -1,6 +1,17 @@
 ﻿"""
 KALNET PULSE CRM - FastAPI Application Factory
 """
+import os
+import sys
+
+# Monorepo layout: the `ai` package lives at the repository root, while this
+# service is run from `backend/` (Render uses rootDir: backend). Ensure the
+# repository root is on sys.path so `import ai...` resolves both locally and
+# in production, instead of failing with ModuleNotFoundError at import time.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException

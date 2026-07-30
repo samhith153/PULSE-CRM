@@ -11,6 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, DBSession, require_permission
@@ -129,25 +130,36 @@ async def update_role_permissions(
         raise HTTPException(status_code=404, detail="Role not found")
 
     perm_repo = repo.permission_repo
-    permissions = await perm_repo.get_by_codenames(payload.permission_codenames)
+    requested = list(dict.fromkeys(payload.permission_codenames))
+    permissions = await perm_repo.get_by_codenames(requested)
     found = {p.codename for p in permissions}
-    requested = set(payload.permission_codenames)
-    if missing := requested - found:
+    requested_set = set(requested)
+    if missing := requested_set - found:
         raise HTTPException(
             status_code=400,
             detail=f"Permissions not found: {', '.join(sorted(missing))}",
         )
 
-    stmt = select(RolePermission).where(RolePermission.role_id == role_id)
-    result = await db.execute(stmt)
-    for rp in result.scalars().all():
-        await db.delete(rp)
+    existing = {rp.permission_id: rp for rp in (role.role_permissions or []) if rp.permission_id}
+    selected_permission_ids = {p.id for p in permissions}
 
-    for perm in permissions:
-        rp = RolePermission(role_id=role_id, permission_id=perm.id)
-        db.add(rp)
+    to_remove = [rp for perm_id, rp in existing.items() if perm_id not in selected_permission_ids]
+    to_add = [RolePermission(role_id=role_id, permission_id=perm.id) for perm in permissions if perm.id not in existing]
 
-    await db.flush()
+    if to_remove:
+        for rp in to_remove:
+            await db.delete(rp)
+        await db.flush()
+
+    if to_add:
+        for rp in to_add:
+            db.add(rp)
+        try:
+            await db.flush()
+        except IntegrityError as exc:
+            message = _friendly_role_permission_error(exc)
+            raise HTTPException(status_code=409, detail=message) from exc
+
     role = await repo.get_by_id_with_permissions(role_id)
 
     perms = [
@@ -167,6 +179,13 @@ async def update_role_permissions(
             permissions=perms,
         ),
     }
+
+
+def _friendly_role_permission_error(exc: IntegrityError) -> str:
+    message = str(exc)
+    if "uq_role_permission" in message or "role_permissions" in message:
+        return "A permission conflict occurred while saving."
+    return "Failed to update permissions."
 
 
 @router.get(

@@ -112,21 +112,21 @@ export default function Header({
       case 'admin':
         return {
           name: "System Admin",
-          email: "admin@pulse.crm",
+          email: "admin@kalnet-pulse.com",
           avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80"
         };
       case 'manager':
         return {
-          name: "Alex Johnson",
-          email: "alex.johnson@pulse.crm",
-          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+          name: "Sarah Johnson",
+          email: "sarah.johnson@kalnet-demo.com",
+          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
         };
       case 'representative':
       default:
         return {
-          name: "Sarah Johnson",
-          email: "sarah.johnson@pulse.crm",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
+          name: "Priya Sharma",
+          email: "priya.sharma@kalnet-demo.com",
+          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
         };
     }
   };
@@ -182,15 +182,6 @@ export default function Header({
             {userRole === 'representative' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
           </span>
         </div>
-
-        {/* + New Report CTA in Medium Purple */}
-        <button
-          onClick={onNewReportClick}
-          className="inline-flex items-center space-x-1 px-3.5 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 hover:shadow-sm transition-all duration-200 cursor-pointer"
-        >
-          <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-          <span>New Report</span>
-        </button>
 
         {/* Theme Switcher Button */}
         <button
