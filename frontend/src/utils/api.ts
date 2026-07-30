@@ -757,3 +757,14 @@ export async function downloadDocumentFile(id: string | number): Promise<Blob> {
   }
   return res.blob();
 }
+
+export async function deleteDocumentAPI(id: string | number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+  
+  if (!res.ok) {
+    throw new Error('Failed to delete document');
+  }
+}

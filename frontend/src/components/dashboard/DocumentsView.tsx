@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, FileText, Download, UploadCloud, X, Calendar, User, Eye } from 'lucide-react';
-import { uploadDocument, getDocuments, downloadDocumentFile, DocumentResponse } from '../../utils/api';
+import { uploadDocument, getDocuments, downloadDocumentFile, deleteDocumentAPI, DocumentResponse } from '../../utils/api';
 
 interface DocumentItem {
   id: number | string;
@@ -115,17 +115,11 @@ export default function DocumentsView() {
 
   const handleDelete = async (id: number | string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
-
+    
     try {
-      const response = await fetch(`/api/documents/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setDocuments(documents.filter(d => d.id !== id));
-      } else {
-        alert('Failed to delete document');
-      }
+      await deleteDocumentAPI(id);
+      // Remove it from the UI instantly if the backend deletion succeeds
+      setDocuments(documents.filter(d => d.id !== id));
     } catch (error) {
       console.error('Error deleting document:', error);
       alert('Failed to delete document');
