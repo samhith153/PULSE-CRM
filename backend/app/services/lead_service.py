@@ -18,6 +18,7 @@ from app.repositories.pipeline_repository import PipelineRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.lead import LeadAssignRequest, LeadCreateRequest, LeadStatusUpdateRequest, LeadUpdateRequest
 from app.services.feature_vector_service import FeatureVectorService
+from app.services.lead_scoring_service import LeadScoringService
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import ActivityEntityType, ActivityType, DealStatus, LeadStatus, PipelineStageSlug
 
@@ -46,6 +47,7 @@ class LeadService:
         self.contact_repo = ContactRepository(db)
         self.user_repo = UserRepository(db)
         self.feature_vector_service = FeatureVectorService(db)
+        self.lead_scoring_service = LeadScoringService(db)
 
     async def create(
         self,
@@ -99,6 +101,13 @@ class LeadService:
             )
         except Exception as e:
             logger.warning("Failed to compute feature vector on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Auto-compute lead scores
+        try:
+            await self.lead_scoring_service.compute_and_store_scores(
+                lead.id, organization_id, created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to compute lead scores on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
         logger.info("Lead created", extra={"lead_id": str(lead.id)})
         return lead
 
@@ -157,6 +166,13 @@ class LeadService:
             )
         except Exception as e:
             logger.warning("Failed to compute feature vector on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Auto-compute lead scores on update
+        try:
+            await self.lead_scoring_service.compute_and_store_scores(
+                lead.id, organization_id, lead.created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to compute lead scores on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
         return await self.get(lead_id, organization_id)
 
     async def update_status(
