@@ -578,17 +578,90 @@ class EmailService:
         if not connection:
             raise NotFoundException("GmailConnection", connection_id)
         access_token = await self._access_token_for_connection(organization_id, created_by, connection)
-        listed = await self.gmail_client.list_messages(access_token, page_token=connection.sync_cursor, max_results=25)
+
+        cursor = connection.sync_cursor
+        if not cursor:
+            return await self._backfill_from_gmail(organization_id, created_by, connection, access_token)
+        return await self._incremental_sync_from_gmail(organization_id, created_by, connection, access_token, cursor)
+
+    async def _backfill_from_gmail(
+        self,
+        organization_id: UUID,
+        created_by: Optional[UUID],
+        connection: GmailConnection,
+        access_token: str,
+    ) -> EmailSyncResultResponse:
+        """First-time sync: walk recent messages and store a historyId cursor."""
+        message_ids: list[str] = []
+        history_id: Optional[str] = None
+        page_token: Optional[str] = None
+        while True:
+            listed = await self.gmail_client.list_messages(access_token, page_token=page_token, max_results=25)
+            history_id = listed.get("historyId") or history_id
+            for item in listed.get("messages", []):
+                message_ids.append(item["id"])
+            page_token = listed.get("nextPageToken")
+            if not page_token:
+                break
+            if len(message_ids) >= 500:
+                logger.info("Initial Gmail backfill capped at 500 messages", extra={"connection_id": str(connection.id)})
+                break
+
         messages = []
-        for item in listed.get("messages", []):
+        for message_id in message_ids:
             try:
-                raw_message = await self.gmail_client.get_message(access_token, item["id"])
+                raw_message = await self.gmail_client.get_message(access_token, message_id)
                 messages.append(self._gmail_message_to_sync(connection, raw_message))
             except Exception as exc:
-                logger.warning("Skipping Gmail message after fetch failure", extra={"message_id": item.get("id"), "error": str(exc)})
+                logger.warning("Skipping Gmail message after fetch failure", extra={"message_id": message_id, "error": str(exc)})
+
         payload = EmailSyncRequest(
             gmail_connection_id=connection.id,
-            sync_cursor=listed.get("nextPageToken") or listed.get("historyId") or connection.sync_cursor,
+            sync_cursor=history_id,
+            messages=messages,
+        )
+        return await self.sync_messages(organization_id, created_by, payload)
+
+    async def _incremental_sync_from_gmail(
+        self,
+        organization_id: UUID,
+        created_by: Optional[UUID],
+        connection: GmailConnection,
+        access_token: str,
+        start_history_id: str,
+    ) -> EmailSyncResultResponse:
+        """Incremental sync via the Gmail users.history API since the stored cursor."""
+        message_ids: list[str] = []
+        history_id: Optional[str] = None
+        page_token: Optional[str] = None
+        while True:
+            history = await self.gmail_client.list_history(
+                access_token,
+                start_history_id=start_history_id,
+                page_token=page_token,
+            )
+            history_id = history.get("historyId") or history_id
+            for entry in history.get("history", []) or []:
+                for group in ("messagesAdded", "messageUpdated"):
+                    for item in entry.get(group, []) or []:
+                        for message in item.get("messages", []) or []:
+                            if message.get("id"):
+                                message_ids.append(message["id"])
+            page_token = history.get("nextPageToken")
+            if not page_token:
+                break
+
+        messages = []
+        for message_id in dict.fromkeys(message_ids):
+            try:
+                raw_message = await self.gmail_client.get_message(access_token, message_id)
+                messages.append(self._gmail_message_to_sync(connection, raw_message))
+            except Exception as exc:
+                logger.warning("Skipping Gmail message after fetch failure", extra={"message_id": message_id, "error": str(exc)})
+
+        payload = EmailSyncRequest(
+            gmail_connection_id=connection.id,
+            sync_cursor=history_id or start_history_id,
             messages=messages,
         )
         return await self.sync_messages(organization_id, created_by, payload)
@@ -623,6 +696,7 @@ class EmailService:
         page: int,
         page_size: int,
         sort_order: SortOrder = SortOrder.DESC,
+        is_read: Optional[bool] = None,
     ) -> Tuple[list[Email], int]:
         return await self.email_repo.list_by_organization(
             organization_id,
@@ -634,6 +708,7 @@ class EmailService:
             page,
             page_size,
             sort_order=sort_order,
+            is_read=is_read,
         )
 
     async def get_contact_history(

@@ -10,7 +10,7 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMode?: ModalMode;
-  onSuccess?: () => void;
+  onSuccess?: (role?: Role) => void;
 }
 
 export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onSuccess }: AuthModalProps) {
@@ -19,7 +19,6 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [orgName, setOrgName] = useState('');
-  const [role, setRole] = useState<Role>('manager');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -44,22 +43,21 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
         setToken(result.access_token);
       }
 
-      // Fetch the actual user profile to get their true role from the database
+      // Fetch the actual user profile to get their true role from the database.
+      // Registration always creates an admin; existing users keep their assigned role.
       const profileData = await getCurrentUser().catch(() => null);
-      let resolvedRole: Role = role;
+      let resolvedRole: Role = mode === 'signup' ? 'admin' : 'manager';
       let resolvedName = name;
 
       if (profileData) {
         resolvedName = profileData.full_name;
-        if (profileData.roles && profileData.roles.length > 0) {
-          const mainRole = profileData.roles[0];
-          if (mainRole === 'admin') {
-            resolvedRole = 'admin';
-          } else if (mainRole === 'manager') {
-            resolvedRole = 'manager';
-          } else if (mainRole === 'sales_rep') {
-            resolvedRole = 'representative';
-          }
+        const mainRole = profileData.roles && profileData.roles.length > 0 ? profileData.roles[0] : '';
+        if (mainRole === 'admin') {
+          resolvedRole = 'admin';
+        } else if (mainRole === 'manager') {
+          resolvedRole = 'manager';
+        } else if (mainRole === 'sales_rep') {
+          resolvedRole = 'representative';
         }
       }
 
@@ -71,7 +69,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
 
       onClose();
       if (onSuccess) {
-        onSuccess();
+        onSuccess(resolvedRole);
       } else {
         window.location.href = '/';
       }
@@ -81,12 +79,6 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
       setLoading(false);
     }
   };
-
-  const ROLES: { value: Role; label: string }[] = [
-    { value: 'admin', label: 'Admin' },
-    { value: 'manager', label: 'Manager' },
-    { value: 'representative', label: 'Sales Rep' },
-  ];
 
   const isSignin = mode === 'signin';
 
@@ -169,17 +161,6 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
                 style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#faf9ff' }}
                 onFocus={e => e.target.style.borderColor = '#7c3aed'}
                 onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>I am a</p>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {ROLES.map(r => (
-                <button key={r.value} type="button" onClick={() => setRole(r.value)}
-                  style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${role === r.value ? '#7c3aed' : '#e2e8f0'}`, background: role === r.value ? '#f5f3ff' : 'transparent', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: role === r.value ? '#7c3aed' : '#64748b', fontFamily: 'inherit', transition: 'all 0.15s' }}>
-                  {r.label}
-                </button>
-              ))}
             </div>
           </div>
           {isSignin && (

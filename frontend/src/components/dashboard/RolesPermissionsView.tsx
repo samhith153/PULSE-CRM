@@ -9,6 +9,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { RoleData, PermissionData, getRoles, getPermissions, updateRolePermissions } from '@/utils/api';
+import { toast } from '@/lib/toast';
 
 interface PermissionRow {
   key: string;
@@ -91,14 +92,6 @@ export default function RolesPermissionsView() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [matrix, setMatrix] = useState<Record<string, Record<string, boolean>>>({});
-  const [toast, setToast] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (toast) {
-      const t = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [toast]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -131,7 +124,7 @@ export default function RolesPermissionsView() {
         codename: p.codename,
       })));
     } catch {
-      setToast('Failed to load roles and permissions.');
+      toast.error('Failed to load roles and permissions.');
     } finally {
       setLoading(false);
     }
@@ -160,9 +153,9 @@ export default function RolesPermissionsView() {
           .map(([k]) => k);
         await updateRolePermissions(role.id, codenames);
       }
-      setToast('Permission matrix saved successfully.');
+      toast.success('Permission matrix saved successfully.');
     } catch (err: any) {
-      setToast(err?.message || 'Failed to save permissions.');
+      toast.error(err?.message || 'Failed to save permissions.');
     } finally {
       setSaving(false);
     }
@@ -174,13 +167,6 @@ export default function RolesPermissionsView() {
 
   return (
     <div className="space-y-6 font-sans">
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center space-x-2.5 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300 border border-slate-800">
-          <Check className="h-4 w-4 text-emerald-400" />
-          <span>{toast}</span>
-        </div>
-      )}
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-extrabold">

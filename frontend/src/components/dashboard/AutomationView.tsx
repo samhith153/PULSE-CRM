@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Plus,
   Activity,
-  CheckCircle,
   AlertTriangle,
   Loader2,
   X
@@ -20,6 +19,7 @@ import {
   type AutomationEvent,
   type WebhookEndpoint
 } from '@/utils/api';
+import { toast } from '@/lib/toast';
 
 type AutomationLog = {
   id: string;
@@ -110,7 +110,6 @@ export default function AutomationView() {
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [savingWorkflow, setSavingWorkflow] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -199,27 +198,19 @@ export default function AutomationView() {
       await loadAutomationData(false);
       setIsCreateOpen(false);
       setWorkflowForm({ name: '', description: '', trigger: 'CRM Activity Event', status: 'Draft' });
-      setToast('Workflow created successfully.');
+      toast.success('Workflow created successfully.');
     } catch (e: any) {
       const message = e?.message || 'Failed to create workflow.';
       setCreateError(message);
-      setToast(message);
+      toast.error(message);
     } finally {
       setSavingWorkflow(false);
-      setTimeout(() => setToast(null), 3000);
     }
   };
 
 
   return (
     <div className="space-y-6">
-      {toast && (
-        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 dark:bg-brand-accent text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <CheckCircle className="h-4 w-4 text-emerald-400" />
-          <span>{toast}</span>
-        </div>
-      )}
-
       {isCreateOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">

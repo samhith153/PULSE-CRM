@@ -11,15 +11,18 @@ from app.core.config import settings
 
 router = APIRouter()
 
-# Initialize Supabase client
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables.")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 BUCKET_NAME = "documents"
+
+
+def get_supabase() -> Client:
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="Supabase is not configured. Set SUPABASE_URL and SUPABASE_KEY."
+        )
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 @router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
@@ -36,7 +39,7 @@ async def upload_document(
     
     try:
         # Stream directly into Supabase Storage
-        supabase.storage.from_(BUCKET_NAME).upload(
+        get_supabase().storage.from_(BUCKET_NAME).upload(
             path=safe_filename,
             file=file_bytes,
             file_options={"content-type": file.content_type}
@@ -82,7 +85,7 @@ async def download_document(doc_id: UUID, current_user: CurrentUser, db: DBSessi
         
     try:
         # Fetch file bytes from cloud storage securely
-        file_bytes = supabase.storage.from_(BUCKET_NAME).download(doc.file_path)
+        file_bytes = get_supabase().storage.from_(BUCKET_NAME).download(doc.file_path)
         return Response(content=file_bytes, media_type=doc.file_type)
     except Exception:
         raise HTTPException(status_code=404, detail="File missing from cloud storage")
@@ -102,7 +105,7 @@ async def delete_document(doc_id: UUID, current_user: CurrentUser, db: DBSession
         
     try:
         # Delete from cloud storage bucket
-        supabase.storage.from_(BUCKET_NAME).remove([doc.file_path])
+        get_supabase().storage.from_(BUCKET_NAME).remove([doc.file_path])
     except Exception as e:
         print(f"Warning: Failed to delete cloud file: {e}")
         

@@ -79,8 +79,11 @@ class EmailRepository(BaseRepository[Email]):
         sort_order: SortOrder = SortOrder.DESC,
         from_date: Optional[datetime] = None,
         to_date: Optional[datetime] = None,
+        is_read: Optional[bool] = None,
     ) -> Tuple[List[Email], int]:
         stmt = self._base_query(organization_id)
+        if is_read is not None:
+            stmt = stmt.where(Email.is_read.is_(is_read))
         if direction:
             stmt = stmt.where(Email.direction == direction)
         if thread_id:

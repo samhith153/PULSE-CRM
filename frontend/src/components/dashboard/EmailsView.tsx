@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search } from 'lucide-react';
-import { getEmail, getEmails, SyncedEmail } from '@/utils/api';
+import { getEmail, getEmails, getGmailConnections, syncGmail, SyncedEmail } from '@/utils/api';
 
 type MailboxFilter = 'all' | 'inbound' | 'outbound' | 'unread';
 
@@ -31,6 +31,8 @@ export default function EmailsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [counts, setCounts] = useState({ all: 0, inbound: 0, outbound: 0, unread: 0 });
 
   const direction = filter === 'inbound' ? 'inbound' : filter === 'outbound' ? 'outbound' : '';
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -39,11 +41,17 @@ export default function EmailsView() {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await getEmails({ page, page_size: pageSize, search, direction, sort_order: 'desc' });
-      const rows = filter === 'unread' ? result.data.filter(item => !item.is_read) : result.data;
-      setEmails(rows);
-      setTotal(filter === 'unread' ? rows.length : result.total);
-      if (selectedEmail && !rows.some(item => item.id === selectedEmail.id)) setSelectedEmail(null);
+      const result = await getEmails({
+        page,
+        page_size: pageSize,
+        search,
+        direction,
+        is_read: filter === 'unread' ? false : undefined,
+        sort_order: 'desc'
+      });
+      setEmails(result.data);
+      setTotal(result.total);
+      if (selectedEmail && !result.data.some(item => item.id === selectedEmail.id)) setSelectedEmail(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load emails.');
     } finally {
@@ -51,7 +59,52 @@ export default function EmailsView() {
     }
   };
 
+  const loadCounts = async () => {
+    try {
+      const [allRes, inboundRes, outboundRes, unreadRes] = await Promise.all([
+        getEmails({ page: 1, page_size: 1 }),
+        getEmails({ page: 1, page_size: 1, direction: 'inbound' }),
+        getEmails({ page: 1, page_size: 1, direction: 'outbound' }),
+        getEmails({ page: 1, page_size: 1, is_read: false }),
+      ]);
+      setCounts({
+        all: allRes.total,
+        inbound: inboundRes.total,
+        outbound: outboundRes.total,
+        unread: unreadRes.total
+      });
+    } catch {
+      // Counts are cosmetic; keep last known values on failure.
+    }
+  };
+
+  const runSync = async () => {
+    try {
+      const connections = await getGmailConnections();
+      const connection = connections.find(item => item.is_active) ?? connections[0];
+      if (!connection) return;
+      setIsSyncing(true);
+      await syncGmail(connection.id);
+    } catch {
+      // Fall through to listing already-synced emails.
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const refresh = async () => {
+    await runSync();
+    await Promise.all([loadCounts(), loadEmails()]);
+  };
+
+  const hasLoadedOnceRef = useRef(false);
+
   useEffect(() => {
+    if (!hasLoadedOnceRef.current) {
+      hasLoadedOnceRef.current = true;
+      refresh();
+      return;
+    }
     loadEmails();
   }, [page, filter]);
 
@@ -62,8 +115,6 @@ export default function EmailsView() {
     }, 350);
     return () => window.clearTimeout(timeout);
   }, [search]);
-
-  const unreadCount = useMemo(() => emails.filter(email => !email.is_read).length, [emails]);
 
   const openEmail = async (email: SyncedEmail) => {
     setSelectedEmail(email);
@@ -83,10 +134,10 @@ export default function EmailsView() {
       <aside className="w-56 shrink-0 border-r border-brand-border-purple/15 bg-slate-50/50 p-3 flex flex-col gap-4">
         <nav className="space-y-0.5">
           {[
-            { id: 'all', label: 'All Mail', icon: Mail, count: total },
-            { id: 'inbound', label: 'Inbox', icon: Inbox, count: unreadCount },
-            { id: 'outbound', label: 'Sent', icon: MailOpen, count: 0 },
-            { id: 'unread', label: 'Unread', icon: MailOpen, count: unreadCount }
+            { id: 'all', label: 'All Mail', icon: Mail, count: counts.all },
+            { id: 'inbound', label: 'Inbox', icon: Inbox, count: counts.inbound },
+            { id: 'outbound', label: 'Sent', icon: MailOpen, count: counts.outbound },
+            { id: 'unread', label: 'Unread', icon: MailOpen, count: counts.unread }
           ].map(item => {
             const Icon = item.icon;
             const active = filter === item.id;
@@ -106,8 +157,8 @@ export default function EmailsView() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search sender, subject, preview..." className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-[11px] text-brand-text focus:outline-none focus:bg-white bg-white" />
           </div>
-          <button onClick={loadEmails} disabled={isLoading} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors disabled:opacity-50" title="Refresh emails">
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <button onClick={refresh} disabled={isLoading || isSyncing} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors disabled:opacity-50" title="Sync Gmail and refresh emails">
+            <RefreshCw className={`h-4 w-4 ${isLoading || isSyncing ? 'animate-spin' : ''}`} />
           </button>
         </div>
 

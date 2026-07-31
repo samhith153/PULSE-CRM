@@ -198,7 +198,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </div>
 
       {/* ══════════ AUTH MODAL ══════════ */}
-      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultMode="signup" onSuccess={() => { const r = localStorage.getItem('pulse-crm-role'); onLogin((r as any) || 'manager'); }} />
+      <AuthModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} defaultMode="signup" onSuccess={(role) => { onLogin((role as any) || 'manager'); }} />
 
       {/* ══════════ NAVBAR ══════════ */}
       <Navbar onOpenModal={openSignIn} onOpenSignUp={openSignUp} />

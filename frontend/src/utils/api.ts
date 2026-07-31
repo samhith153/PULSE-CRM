@@ -517,6 +517,7 @@ export interface EmailListParams {
   search?: string;
   direction?: 'inbound' | 'outbound' | '';
   thread_id?: string;
+  is_read?: boolean;
   sort_order?: 'asc' | 'desc';
 }
 
