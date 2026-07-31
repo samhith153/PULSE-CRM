@@ -439,6 +439,17 @@ class EmailService:
             for tid in inbound_threads:
                 asyncio.create_task(self._safe_summarize(organization_id, tid))
 
+            # Background engagement feature computation for inbound threads
+            inbound_with_lead = {
+                (e.thread_id, e.external_entity_id)
+                for e in ingested
+                if e.thread_id
+                and e.direction == EmailDirection.INBOUND.value
+                and e.external_entity_id
+            }
+            for tid, lid in inbound_with_lead:
+                asyncio.create_task(self._safe_engagement_for_lead(organization_id, tid, lid))
+
         return EmailSyncResultResponse(
             gmail_connection_id=connection.id,
             synced_count=len(ingested),
@@ -536,6 +547,18 @@ class EmailService:
                     "external_entity_id": str(external_entity_id) if external_entity_id else None,
                 },
             )
+            # Recompute engagement features for the linked lead so scores stay
+            # fresh on inbound mail (the 5-min batch job remains the fallback).
+            # Best-effort: never let a recompute failure break email storage.
+            if external_entity_type == "lead" and external_entity_id is not None:
+                try:
+                    from app.services.feature_recompute_service import recompute_lead_features
+                    recompute_lead_features(str(organization_id), str(external_entity_id))
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(
+                        "Engagement recompute skipped for lead %s: %s",
+                        external_entity_id, exc,
+                    )
         elif is_read:
             await self.events.record_event(
                 EventType.EMAIL_READ,
@@ -564,6 +587,54 @@ class EmailService:
                 await db.commit()
         except Exception:
             logger.exception("Email summarization failed for thread %s", thread_id)
+
+        await self._safe_engagement(organization_id, thread_id)
+
+    async def _safe_engagement(self, organization_id: UUID, thread_id: str) -> None:
+        try:
+            from app.database.connection import AsyncSessionFactory
+            from app.services.feature_vector_service import FeatureVectorService
+            from app.models.email import Email
+
+            lead_id = None
+            async with AsyncSessionFactory() as db:
+                from sqlalchemy import select as sa_select
+                stmt = (
+                    sa_select(Email.external_entity_id)
+                    .where(
+                        Email.organization_id == organization_id,
+                        Email.thread_id == thread_id,
+                        Email.external_entity_type == "lead",
+                        Email.is_active.is_(True),
+                    )
+                    .limit(1)
+                )
+                result = await db.execute(stmt)
+                row = result.scalar_one_or_none()
+                if row:
+                    lead_id = row
+
+            if not lead_id:
+                return
+
+            async with AsyncSessionFactory() as db:
+                svc = FeatureVectorService(db)
+                await svc.compute_engagement_features(organization_id, thread_id, lead_id)
+                await db.commit()
+        except Exception:
+            logger.exception("Engagement feature computation failed for thread %s", thread_id)
+
+    async def _safe_engagement_for_lead(self, organization_id: UUID, thread_id: str, lead_id: UUID) -> None:
+        try:
+            from app.database.connection import AsyncSessionFactory
+            from app.services.feature_vector_service import FeatureVectorService
+
+            async with AsyncSessionFactory() as db:
+                svc = FeatureVectorService(db)
+                await svc.compute_engagement_features(organization_id, thread_id, lead_id)
+                await db.commit()
+        except Exception:
+            logger.exception("Engagement feature computation failed for thread %s lead %s", thread_id, lead_id)
 
     async def send_email(
         self,
@@ -900,6 +971,17 @@ class EmailService:
             }
             for tid in inbound_threads:
                 asyncio.create_task(self._safe_summarize(organization_id, tid))
+
+            # Background engagement feature computation for inbound threads
+            inbound_with_lead = {
+                (e.thread_id, e.external_entity_id)
+                for e in ingested
+                if e.thread_id
+                and e.direction == EmailDirection.INBOUND.value
+                and e.external_entity_id
+            }
+            for tid, lid in inbound_with_lead:
+                asyncio.create_task(self._safe_engagement_for_lead(organization_id, tid, lid))
 
         return EmailSyncResultResponse(
             gmail_connection_id=connection.id,

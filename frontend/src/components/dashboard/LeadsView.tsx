@@ -55,6 +55,7 @@ function backendToLocal(b: BackendLead): Lead {
     score: b.score ?? 0,
     fit_score: b.fit_score ?? null,
     engagement_score: b.engagement_score ?? null,
+    engagementReasons: b.engagement_reasons ?? [],
     priorityTier: b.priority ?? null,
     topReasons: b.top_reasons ?? [],
     status: STATUS_UNMAP[b.status] || 'New',
@@ -118,6 +119,7 @@ interface Lead {
   score: number;
   fit_score: number | null;
   engagement_score: number | null;
+  engagementReasons: string[];
   priorityTier: string | null;
   topReasons: string[];
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
@@ -219,6 +221,17 @@ export default function LeadsView() {
     getPipelineStages().then(data => {
       setPipelineStages(data as any);
     }).catch(() => {});
+  }, []);
+
+  // Poll for lead score updates every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      getLeads().then(data => {
+        const mapped = (data ?? []).map(backendToLocal);
+        setLeads(mapped);
+      }).catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   // Get currently active lead object
@@ -1053,9 +1066,9 @@ export default function LeadsView() {
                   <span className="text-brand-text/60">Engagement Score</span>
                   <span className="font-extrabold text-brand-heading">{activeLead.engagement_score ?? 0}%</span>
                 </div>
-                {activeLead.engagement_score !== null && activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).length > 0 && (
+                {activeLead.engagementReasons.length > 0 && (
                   <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-amber-200">
-                    {activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).slice(0, 2).map((r, i) => (
+                    {activeLead.engagementReasons.slice(0, 2).map((r, i) => (
                       <div key={i} className="mb-0.5">• {r}</div>
                     ))}
                   </div>

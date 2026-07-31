@@ -41,7 +41,6 @@ setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
 logger = get_logger(__name__)
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import subprocess
 import sys
 import os
 
@@ -58,16 +57,29 @@ async def process_event_outbox():
         print("Event outbox processing failed:", exc)
 
 def recompute_features():
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    result = subprocess.run(
-        [sys.executable, os.path.join(project_root, "..", "ai", "pipeline", "export_real_features.py"),
-         "--org-id", "2122315f-b7d3-4628-8dfd-4be3a7e905b9"],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        print("Feature recompute failed:", result.stderr)
-    else:
-        print("Feature recompute completed.")
+    from app.services.feature_recompute_service import recompute_lead_features
+
+    try:
+        from app.database.connection import engine
+        from sqlalchemy import text
+        import asyncio
+
+        async def _get_org_ids():
+            async with engine.connect() as conn:
+                result = await conn.execute(text("SELECT DISTINCT id FROM organizations"))
+                return [str(row[0]) for row in result]
+
+        org_ids = asyncio.get_event_loop().run_until_complete(_get_org_ids())
+    except Exception as exc:
+        print("Failed to fetch organization IDs:", exc)
+        return
+
+    for org_id in org_ids:
+        ok = recompute_lead_features(org_id)
+        if not ok:
+            print(f"Feature recompute failed for org {org_id}.")
+        else:
+            print(f"Feature recompute completed for org {org_id}.")
 
 async def poll_gmail_replies():
     """Poll connected Gmail accounts for new inbound messages / replies."""

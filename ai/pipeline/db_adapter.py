@@ -6,8 +6,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _sync_db_url() -> str:
+    """Return a synchronous DB URL for pandas.read_sql.
+
+    `DATABASE_URL` is async (postgresql+asyncpg://). pandas/psycopg2 needs a
+    sync driver, so derive it from DATABASE_URL when DATABASE_URL_SYNC is unset.
+    """
+    sync = os.environ.get("DATABASE_URL_SYNC")
+    if sync:
+        return sync
+    async_url = os.environ.get("DATABASE_URL", "")
+    if not async_url:
+        raise RuntimeError("DATABASE_URL is not configured")
+    # postgresql+asyncpg:// -> postgresql+psycopg:// (or postgresql://)
+    if "+asyncpg" in async_url:
+        return async_url.replace("+asyncpg", "+psycopg")
+    if async_url.startswith("postgresql://"):
+        return async_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    return async_url
+
+
 def load_real_emails(organization_id: str) -> pd.DataFrame:
-    engine = create_engine(os.environ["DATABASE_URL_SYNC"])
+    engine = create_engine(_sync_db_url())
     query = """
         SELECT
             external_entity_id AS lead_id,
@@ -25,7 +45,7 @@ def load_real_emails(organization_id: str) -> pd.DataFrame:
 
 
 def load_real_leads(organization_id: str) -> pd.DataFrame:
-    engine = create_engine(os.environ["DATABASE_URL_SYNC"])
+    engine = create_engine(_sync_db_url())
     query = """
         SELECT
             l.id AS lead_id,
@@ -43,7 +63,7 @@ def load_real_leads(organization_id: str) -> pd.DataFrame:
     return df
 
 def load_email_activity_signals(organization_id: str) -> pd.DataFrame:
-    engine = create_engine(os.environ["DATABASE_URL_SYNC"])
+    engine = create_engine(_sync_db_url())
     query = """
         SELECT
             external_entity_id AS lead_id,

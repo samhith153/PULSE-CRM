@@ -39,6 +39,7 @@ export interface Lead {
   score: number | null;
   fit_score: number | null;
   engagement_score: number | null;
+  engagement_reasons: string[] | null;
   top_reasons: string[] | null;
   priority: string | null;
   notes: string | null;
