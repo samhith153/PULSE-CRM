@@ -114,11 +114,13 @@ class LeadResponse(BaseModel):
     fit_reasons: Optional[list[str]] = None
     engagement_reasons: Optional[list[str]] = None
     priority: Optional[str] = None
+    next_best_action: Optional[str] = None
+    next_best_action_reason: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
     @staticmethod
-    def from_lead(lead: Lead) -> "LeadResponse":
+    def from_lead(lead: Lead, recommendation: Optional[dict] = None) -> "LeadResponse":
         return LeadResponse(
             id=lead.id,
             title=lead.title,
@@ -140,6 +142,8 @@ class LeadResponse(BaseModel):
             fit_reasons=lead.lead_score.fit_reasons if lead.lead_score else None,
             engagement_reasons=lead.lead_score.engagement_reasons if lead.lead_score else None,
             priority=lead.lead_score.priority_tier if lead.lead_score else None,
+            next_best_action=recommendation.get("recommended_action") if recommendation else None,
+            next_best_action_reason=recommendation.get("reason") if recommendation else None,
             notes=lead.notes,
             close_reason=lead.close_reason,
             company_id=lead.company_id,

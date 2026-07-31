@@ -37,6 +37,19 @@ class AIRecommendationRepository(BaseRepository[AIRecommendation]):
     def __init__(self, db: AsyncSession) -> None:
         super().__init__(AIRecommendation, db)
 
+    async def latest_for_lead(self, organization_id: UUID, lead_id: UUID) -> AIRecommendation | None:
+        result = await self.db.execute(
+            select(AIRecommendation)
+            .where(
+                AIRecommendation.organization_id == organization_id,
+                AIRecommendation.lead_id == lead_id,
+                AIRecommendation.is_active.is_(True),
+            )
+            .order_by(desc(AIRecommendation.generated_at))
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
     async def latest_for_entity(self, organization_id: UUID, entity_type: str, entity_id: UUID | None) -> list[AIRecommendation]:
         stmt = select(AIRecommendation).where(
             AIRecommendation.organization_id == organization_id,

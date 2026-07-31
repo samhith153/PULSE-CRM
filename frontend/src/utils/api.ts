@@ -42,6 +42,8 @@ export interface Lead {
   top_reasons: string[] | null;
   fit_reasons: string[] | null;
   engagement_reasons: string[] | null;
+  next_best_action: string | null;
+  next_best_action_reason: string | null;
   priority: string | null;
   notes: string | null;
   close_reason: string | null;

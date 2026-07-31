@@ -59,6 +59,8 @@ function backendToLocal(b: BackendLead): Lead {
     topReasons: b.top_reasons ?? [],
     fitReasons: b.fit_reasons ?? [],
     engagementReasons: b.engagement_reasons ?? [],
+    nextBestAction: b.next_best_action ?? null,
+    nextBestActionReason: b.next_best_action_reason ?? null,
     status: STATUS_UNMAP[b.status] || 'New',
     priority: (b.priority as Lead['priority']) ?? 'Low',
     owner: b.owner_name || 'Unassigned',
@@ -124,6 +126,8 @@ interface Lead {
   topReasons: string[];
   fitReasons: string[];
   engagementReasons: string[];
+  nextBestAction: string | null;
+  nextBestActionReason: string | null;
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
   priority: 'Critical' | 'High' | 'Medium' | 'Low';
   owner: string;
@@ -228,18 +232,19 @@ export default function LeadsView() {
   // Get currently active lead object
   const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
 
-  // AI Recommendation engine
+  // AI Recommendation - uses backend engine data with fallback
   const getAIRecommendation = (lead: Lead) => {
+    if (lead.nextBestAction) return lead.nextBestAction;
     if (lead.status === 'New' && lead.priority === 'High') {
-      return `High-priority inbound lead. Send an introductory email with custom SSO/SLA details and schedule a 15-minute briefing within 2 hours.`;
+      return `High-priority inbound lead. Send an introductory email and schedule a briefing within 2 hours.`;
     }
     if (lead.status === 'Contacted' && lead.score > 70) {
-      return `Lead score is high (${lead.score}). Call back to schedule a formal sandbox product walkthrough and invite their engineering stakeholders.`;
+      return `Lead score is high (${lead.score}). Call back to schedule a product walkthrough.`;
     }
     if (lead.status === 'Qualified') {
-      return `Migration budget is set. Draft and send the custom enterprise SLA pricing proposal. Next touchpoint deadline: 24 hours.`;
+      return `Draft and send the pricing proposal. Next touchpoint deadline: 24 hours.`;
     }
-    return `Monitor lead activity. Log notes on their technical requirements stack when they open the next pricing link.`;
+    return `Monitor lead activity and log notes on their technical requirements.`;
   };
 
   // ML Pipeline Feature Engineering Helpers
@@ -768,9 +773,14 @@ export default function LeadsView() {
                             </td>
                             {/* Recommendation */}
                             <td className="py-3">
-                              <div className="text-[10px] text-brand-heading font-bold max-w-[220px] truncate" title={getAIRecommendation(lead)}>
+                              <div className="text-[10px] text-brand-heading font-bold max-w-[220px] truncate" title={getAIRecommendation(lead) + (lead.nextBestActionReason ? '\n\n' + lead.nextBestActionReason : '')}>
                                 {getAIRecommendation(lead)}
                               </div>
+                              {lead.nextBestActionReason && (
+                                <div className="text-[8px] text-brand-text/50 max-w-[220px] truncate mt-0.5 leading-tight" title={lead.nextBestActionReason}>
+                                  {lead.nextBestActionReason.length > 60 ? lead.nextBestActionReason.substring(0, 60) + '...' : lead.nextBestActionReason}
+                                </div>
+                              )}
                             </td>
                           </>
                         ) : (
@@ -1030,6 +1040,9 @@ export default function LeadsView() {
             <div>
               <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">AI Next Best Action</h4>
               <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-bold">{getAIRecommendation(activeLead)}</p>
+              {activeLead.nextBestActionReason && (
+                <p className="text-[9px] text-brand-text/55 mt-1 leading-relaxed font-semibold">{activeLead.nextBestActionReason}</p>
+              )}
             </div>
           </div>
 

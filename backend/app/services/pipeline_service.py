@@ -389,6 +389,17 @@ class PipelineService:
                     "Failed to recompute lead scores on deal stage move",
                     extra={"deal_id": str(deal.id), "lead_id": str(deal.lead_id), "error": str(e)},
                 )
+            # Auto-generate recommendation for linked lead
+            try:
+                from app.services.recommendation_service import RecommendationService
+                await RecommendationService(self.db).generate_for_lead(
+                    deal.lead_id, organization_id
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to generate recommendation on deal stage move",
+                    extra={"deal_id": str(deal.id), "lead_id": str(deal.lead_id), "error": str(e)},
+                )
 
         return deal
 

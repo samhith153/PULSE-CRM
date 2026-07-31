@@ -535,6 +535,15 @@ class EmailService:
                     "external_entity_id": str(external_entity_id) if external_entity_id else None,
                 },
             )
+            # Auto-generate recommendation for linked lead on inbound email
+            if external_entity_type == "lead" and external_entity_id:
+                try:
+                    from app.services.recommendation_service import RecommendationService
+                    await RecommendationService(self.db).generate_for_lead(
+                        external_entity_id, organization_id
+                    )
+                except Exception as e:
+                    print(f"Failed to generate recommendation on inbound email: {e}")
         elif is_read:
             await self.events.record_event(
                 EventType.EMAIL_READ,

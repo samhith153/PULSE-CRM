@@ -26,6 +26,7 @@ from app.schemas.lead import (
 )
 from app.schemas.deal import DealResponse
 from app.services.lead_service import LeadService
+from app.repositories.ai_repository import AIRecommendationRepository
 from app.utils.enums import LeadStatus
 
 router = APIRouter()
@@ -54,8 +55,34 @@ async def list_leads(
         search, status, owner_id, company_id, contact_id,
         page, page_size,
     )
+    # Batch-load latest recommendations for all leads in this page
+    rec_repo = AIRecommendationRepository(db)
+    rec_map = {}
+    missing_lead_ids = []
+    for lead in leads:
+        rec = await rec_repo.latest_for_lead(current_user.organization_id, lead.id)
+        if rec:
+            rec_map[lead.id] = {
+                "recommended_action": rec.recommendation,
+                "reason": rec.reasoning,
+            }
+        else:
+            missing_lead_ids.append(lead.id)
+    # Auto-generate recommendations for leads that don't have one yet
+    if missing_lead_ids:
+        try:
+            from app.services.recommendation_service import RecommendationService
+            rec_svc = RecommendationService(db)
+            generated = await rec_svc.batch_generate_for_leads(missing_lead_ids, current_user.organization_id)
+            for lead_id, rec_data in generated.items():
+                rec_map[lead_id] = {
+                    "recommended_action": rec_data.get("recommended_action", ""),
+                    "reason": rec_data.get("reason", ""),
+                }
+        except Exception as e:
+            pass
     paginated = PaginatedResponse.create(
-        data=[LeadResponse.from_lead(l) for l in leads],
+        data=[LeadResponse.from_lead(l, rec_map.get(l.id)) for l in leads],
         total=total,
         page=page,
         page_size=page_size,
@@ -93,7 +120,21 @@ async def get_lead(
 ) -> dict:
     svc = LeadService(db)
     lead = await svc.get(lead_id, current_user.organization_id)
-    return {"success": True, "message": "OK", "data": LeadResponse.from_lead(lead)}
+    rec_repo = AIRecommendationRepository(db)
+    rec = await rec_repo.latest_for_lead(current_user.organization_id, lead_id)
+    rec_dict = None
+    if rec:
+        rec_dict = {"recommended_action": rec.recommendation, "reason": rec.reasoning}
+    else:
+        try:
+            from app.services.recommendation_service import RecommendationService
+            rec_svc = RecommendationService(db)
+            generated = await rec_svc.generate_for_lead(lead_id, current_user.organization_id)
+            if generated:
+                rec_dict = {"recommended_action": generated.get("recommended_action", ""), "reason": generated.get("reason", "")}
+        except Exception:
+            pass
+    return {"success": True, "message": "OK", "data": LeadResponse.from_lead(lead, rec_dict)}
 
 
 @router.put(

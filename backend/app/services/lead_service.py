@@ -108,6 +108,12 @@ class LeadService:
             )
         except Exception as e:
             logger.warning("Failed to compute lead scores on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Auto-generate recommendation
+        try:
+            from app.services.recommendation_service import RecommendationService
+            await RecommendationService(self.db).generate_for_lead(lead.id, organization_id)
+        except Exception as e:
+            logger.warning("Failed to generate recommendation on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
         logger.info("Lead created", extra={"lead_id": str(lead.id)})
         return lead
 
@@ -173,6 +179,12 @@ class LeadService:
             )
         except Exception as e:
             logger.warning("Failed to compute lead scores on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Auto-generate recommendation on update
+        try:
+            from app.services.recommendation_service import RecommendationService
+            await RecommendationService(self.db).generate_for_lead(lead.id, organization_id)
+        except Exception as e:
+            logger.warning("Failed to generate recommendation on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
         return await self.get(lead_id, organization_id)
 
     async def update_status(
@@ -211,6 +223,12 @@ class LeadService:
             payload={"lead_id": str(lead.id), "status": new_status.value},
             topic="lead",
         )
+        # Auto-generate recommendation on status change
+        try:
+            from app.services.recommendation_service import RecommendationService
+            await RecommendationService(self.db).generate_for_lead(lead.id, organization_id)
+        except Exception as e:
+            logger.warning("Failed to generate recommendation on status change", extra={"lead_id": str(lead.id), "error": str(e)})
         logger.info("Lead status updated", extra={"lead_id": str(lead_id), "new_status": new_status.value})
         return lead
 
