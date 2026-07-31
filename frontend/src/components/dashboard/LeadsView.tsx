@@ -851,6 +851,7 @@ export default function LeadsView() {
                             )}
                             <button 
                               onClick={() => {
+                                setSelectedLeadId(lead.id);
                                 setLeadForm({
                                   name: lead.name,
                                   jobTitle: lead.jobTitle || '',
