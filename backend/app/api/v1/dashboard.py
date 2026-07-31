@@ -190,6 +190,36 @@ async def get_sales_rep_dashboard(
 
 
 @router.get(
+    "/sales",
+    response_model=StandardResponse[SalesRepDashboardResponse],
+    summary="Sales Representative Dashboard KPIs (canonical route)",
+    description=(
+        "Canonical Sales Rep dashboard endpoint. Returns the same data as "
+        "/sales-rep but is gated to the sales_rep role only, matching the "
+        "per-role dashboard pattern used by /admin and /manager. "
+        "**Sales Rep role required.**"
+    ),
+    dependencies=[Depends(require_role("sales_rep"))],
+    tags=["Dashboard"],
+)
+async def get_sales_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+    period: str = "month",
+) -> dict:
+    """
+    GET /api/v1/dashboard/sales?period=month
+
+    period options: week | month | quarter | year  (default: month)
+    Secured: JWT required + sales_rep role.
+    All data scoped to owner_id == current_user.id.
+    """
+    svc = DashboardService(db)
+    data = await svc.sales_rep_kpi(current_user.id, current_user.organization_id, period)
+    return {"success": True, "message": "Sales rep KPIs retrieved successfully.", "data": data}
+
+
+@router.get(
     "/manager/forecast",
     response_model=StandardResponse[ManagerForecastResponse],
     summary="Sales Manager Forecast KPIs",

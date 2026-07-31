@@ -32,6 +32,7 @@ import ManagerDashboardView from '@/components/dashboard/ManagerDashboardView';
 import ForecastView from '@/components/dashboard/ForecastView';
 import TeamPerformanceView from '@/components/dashboard/TeamPerformanceView';
 import AdminDashboardView from '@/components/dashboard/AdminDashboardView';
+import SalesRepDashboardView from '@/components/dashboard/SalesRepDashboardView';
 import UsersView from '@/components/dashboard/UsersView';
 import RolesPermissionsView from '@/components/dashboard/RolesPermissionsView';
 import IntegrationsView from '@/components/dashboard/IntegrationsView';
@@ -39,7 +40,7 @@ import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2, Plus } from 'lucide-react';
-import { clearToken } from '@/utils/api';
+import { getToken, getCurrentUser, clearToken } from '@/utils/api';
 
 export default function DashboardHome() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -73,14 +74,45 @@ export default function DashboardHome() {
   const [primaryMetric, setPrimaryMetric] = useState('Deal Value');
   const [groupBy, setGroupBy] = useState('Stage');
   
-  // User Role State
+  // User Role State — derived from the authenticated user's real roles.
   const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
 
+  // Map backend role names -> UI role. Backend uses "sales_rep", "manager", "admin".
+  const mapBackendRole = (roles: string[]): 'representative' | 'manager' | 'admin' => {
+    if (roles.includes('admin')) return 'admin';
+    if (roles.includes('manager')) return 'manager';
+    if (roles.includes('sales_rep') || roles.includes('representative')) return 'representative';
+    // Fallback: a user without a recognized role defaults to representative (least privilege).
+    return 'representative';
+  };
+
+  // Resolve the real role from the API once the token is present; only fall back
+  // to a stale localStorage value if /auth/me is unavailable.
   useEffect(() => {
-    const savedRole = localStorage.getItem('pulse-crm-role') as any;
-    if (savedRole && ['representative', 'manager', 'admin'].includes(savedRole)) {
-      setUserRole(savedRole);
-    }
+    const token = getToken();
+    if (!token) return;
+    let cancelled = false;
+    getCurrentUser()
+      .then((me) => {
+        if (cancelled) return;
+        const role = mapBackendRole(me.roles || []);
+        setUserRole(role);
+        localStorage.setItem('pulse-crm-role', role);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        const savedRole = localStorage.getItem('pulse-crm-role') as
+          | 'representative'
+          | 'manager'
+          | 'admin'
+          | null;
+        if (savedRole && ['representative', 'manager', 'admin'].includes(savedRole)) {
+          setUserRole(savedRole);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleSetUserRole = (role: 'representative' | 'manager' | 'admin') => {
@@ -256,6 +288,8 @@ export default function DashboardHome() {
             <AIModelsView />
           ) : activeTab === 'audit logs' ? (
             <AuditLogsView />
+          ) : activeTab === 'dashboard' && userRole === 'representative' ? (
+            <SalesRepDashboardView />
           ) : activeTab === 'dashboard' && userRole === 'manager' ? (
             <ManagerDashboardView onTabChange={setActiveTab} />
           ) : activeTab === 'dashboard' && userRole === 'admin' ? (
