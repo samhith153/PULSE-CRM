@@ -48,6 +48,43 @@ function activityToTask(activity: ActivityTimelineItem): Task {
   };
 }
 
+function getSourceTaskId(activity: ActivityTimelineItem): string | null {
+  const source = activity.payload?.source_task_id;
+  return typeof source === 'string' && source ? source : null;
+}
+
+function getTaskRootId(activity: ActivityTimelineItem, byId: Map<string, ActivityTimelineItem>): string {
+  const seen = new Set<string>();
+  let current = activity;
+
+  while (!seen.has(current.id)) {
+    seen.add(current.id);
+    const sourceId = getSourceTaskId(current);
+    const source = sourceId ? byId.get(sourceId) : null;
+    if (!source) return sourceId || current.id;
+    current = source;
+  }
+
+  return current.id;
+}
+
+function latestTasksFromActivities(items: ActivityTimelineItem[]): Task[] {
+  const byId = new Map(items.map(item => [item.id, item]));
+  const latestByRoot = new Map<string, ActivityTimelineItem>();
+
+  items.forEach((item) => {
+    const rootId = getTaskRootId(item, byId);
+    const existing = latestByRoot.get(rootId);
+    if (!existing || new Date(item.created_at).getTime() >= new Date(existing.created_at).getTime()) {
+      latestByRoot.set(rootId, item);
+    }
+  });
+
+  return Array.from(latestByRoot.values())
+    .map(activityToTask)
+    .sort((a, b) => a.deadline.localeCompare(b.deadline));
+}
+
 export default function TasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +128,7 @@ export default function TasksView() {
     const nextStatus: Task['status'] = task.status === 'Completed' ? 'Pending' : 'Completed';
     setSaving(true);
     try {
-      await createActivity({
+      const updated = await createActivity({
         entity_type: 'task',
         entity_id: crypto.randomUUID(),
         action: nextStatus === 'Completed' ? 'task_completed' : 'task',
@@ -104,6 +141,7 @@ export default function TasksView() {
           status: nextStatus
         }
       });
+      setTasks(current => [activityToTask(updated), ...current.filter(item => item.id !== task.id)]);
       await loadTasks();
       toast.success(nextStatus === 'Completed' ? 'Task marked complete.' : 'Task reopened.');
     } catch (e: any) {
@@ -286,4 +324,5 @@ export default function TasksView() {
     </div>
   );
 }
+
 
