@@ -1,4 +1,5 @@
-import { toast } from '@/lib/toast';
+import { toast } from '../lib/toast';
+export { toast };
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
@@ -889,4 +890,68 @@ export async function updateRolePermissions(roleId: string, permissionCodenames:
     method: 'PUT',
     body: JSON.stringify({ permission_codenames: permissionCodenames })
   });
+}
+
+export interface DocumentResponse {
+  id: string;
+  organization_id: string;
+  uploaded_by?: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size_bytes: number;
+  created_at: string;
+}
+
+export async function uploadDocument(file: File): Promise<DocumentResponse | null> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    // This now uses the API_BASE_URL that is already defined in your file
+    const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: formData
+    });
+
+    if (!res.ok) {
+        console.error('Upload failed with status:', res.status);
+        return null;
+    }
+    return (await res.json()) as DocumentResponse;
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    return null;
+  }
+}
+
+export async function getDocuments(): Promise<DocumentResponse[]> {
+  const dbResult = await apiFetch<any>('/api/v1/documents');
+  const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
+  return items as DocumentResponse[];
+}
+
+export async function downloadDocumentFile(id: string | number): Promise<Blob> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/${id}/download`, {
+    headers: getAuthHeaders()
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to download document');
+  }
+  return res.blob();
+}
+
+export async function deleteDocumentAPI(id: string | number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to delete document');
+  }
 }

@@ -76,6 +76,8 @@ from app.api.v1.smtp import router as smtp_router
 from app.api.v1.brevo import router as brevo_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.ai_insights import router as ai_insights_router
+
+from app.api.v1.documents import router as documents_router
 api_router = APIRouter()
 
 api_router.include_router(health_router, prefix="/health", tags=["Health"])
@@ -120,3 +122,4 @@ api_router.include_router(
 )
 
 
+api_router.include_router(documents_router, prefix="/documents", tags=["documents"])
