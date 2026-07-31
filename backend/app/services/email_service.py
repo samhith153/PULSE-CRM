@@ -884,6 +884,14 @@ class EmailService:
         )
         await self.email_repo.save()
 
+        if ingested:
+            inbound_threads = {
+                e.thread_id for e in ingested
+                if e.thread_id and e.direction == EmailDirection.INBOUND.value
+            }
+            for tid in inbound_threads:
+                asyncio.create_task(self._safe_summarize(organization_id, tid))
+
         return EmailSyncResultResponse(
             gmail_connection_id=connection.id,
             synced_count=len(ingested),
