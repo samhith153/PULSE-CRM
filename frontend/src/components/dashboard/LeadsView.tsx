@@ -27,7 +27,8 @@ import {
   Briefcase,
   Globe,
   Monitor,
-  Users
+  Users,
+  ChevronDown
 } from 'lucide-react';
 
 // Mapping helpers
@@ -156,7 +157,9 @@ export default function LeadsView() {
 
   // Modal Open/Close States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateIndustryOpen, setIsCreateIndustryOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditIndustryOpen, setIsEditIndustryOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
@@ -1290,8 +1293,8 @@ export default function LeadsView() {
       {/* CREATE LEAD DIALOG MODAL */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-gradient-to-r from-slate-50 to-brand-sidebar-hover/20">
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-gradient-to-r from-slate-50 to-brand-sidebar-hover/20 rounded-t-xl">
               <div>
                 <h3 className="font-bold text-brand-heading text-sm">Create New Lead</h3>
                 <p className="text-[10px] text-brand-text/50 font-semibold mt-0.5">Capture prospect details across all dimensions</p>
@@ -1347,36 +1350,44 @@ export default function LeadsView() {
                       </label>
                       <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
                     </div>
-                    <div>
+                    <div className="relative">
                       <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
                         Industry <span className="text-rose-500">*</span>
                       </label>
-                      <select
-                      required
-                      value={leadForm.industry}
-                      onChange={(e) =>
-                        setLeadForm({ ...leadForm, industry: e.target.value })
-                      }
-                      className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
-                      <option value="">Select Industry</option>
-                      <option value="Manufacturing">Manufacturing</option>
-                      <option value="Healthcare">Healthcare</option>
-                      <option value="Pharma">Pharma</option>
-                      <option value="Logistics">Logistics</option>
-                      <option value="Construction">Construction</option>
-                      <option value="Education">Education</option>
-                      <option value="Finance">Finance</option>
-                      <option value="Insurance">Insurance</option>
-                      <option value="Hospitality">Hospitality</option>
-                      <option value="Real Estate">Real Estate</option>
-                      <option value="Agriculture">Agriculture</option>
-                      <option value="Legal">Legal</option>
-                      <option value="Retail">Retail</option>
-                      <option value="Media">Media</option>
-                      <option value="Consulting">Consulting</option>
-                      <option value="IT">IT</option>
-
-                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateIndustryOpen(!isCreateIndustryOpen)}
+                        className="w-full flex items-center justify-between px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors text-left"
+                      >
+                        <span>{leadForm.industry || "Select Industry"}</span>
+                        <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                      </button>
+                      {isCreateIndustryOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setIsCreateIndustryOpen(false)} />
+                          <div className="absolute left-0 right-0 mt-1 max-h-36 overflow-y-auto bg-white border border-brand-border-purple/30 rounded-lg shadow-lg z-20 scrollbar-thin">
+                            {[
+                              "Manufacturing", "Healthcare", "Pharma", "Logistics", "Construction", 
+                              "Education", "Finance", "Insurance", "Hospitality", "Real Estate", 
+                              "Agriculture", "Legal", "Retail", "Media", "Consulting", "IT"
+                            ].map((ind) => (
+                              <button
+                                key={ind}
+                                type="button"
+                                onClick={() => {
+                                  setLeadForm({ ...leadForm, industry: ind });
+                                  setIsCreateIndustryOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors font-semibold ${
+                                  leadForm.industry === ind ? 'bg-brand-secondary-accent/10 text-brand-heading font-extrabold' : 'text-brand-text'
+                                }`}
+                              >
+                                {ind}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1445,7 +1456,7 @@ export default function LeadsView() {
               </div>
 
               {/* Submit Footer */}
-              <div className="px-5 py-3.5 border-t border-brand-border-purple/15 bg-slate-50/50 flex items-center justify-between">
+              <div className="px-5 py-3.5 border-t border-brand-border-purple/15 bg-slate-50/50 flex items-center justify-between rounded-b-xl">
                 <p className="text-[9px] text-brand-text/40 font-semibold"><span className="text-rose-500">*</span> Required fields</p>
                 <div className="flex space-x-2.5">
                   <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-100 cursor-pointer transition-colors">Cancel</button>
@@ -1460,8 +1471,8 @@ export default function LeadsView() {
       {/* EDIT LEAD DIALOG MODAL */}
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-gradient-to-r from-slate-50 to-brand-sidebar-hover/20">
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-gradient-to-r from-slate-50 to-brand-sidebar-hover/20 rounded-t-xl">
               <div>
                 <h3 className="font-bold text-brand-heading text-sm">Edit Lead Details</h3>
                 <p className="text-[10px] text-brand-text/50 font-semibold mt-0.5">Update prospect details across all dimensions</p>
@@ -1552,30 +1563,42 @@ export default function LeadsView() {
                       <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company Name</label>
                       <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
                     </div>
-                    <div>
+                    <div className="relative">
                       <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
-                      <select
-                        value={leadForm.industry}
-                        onChange={(e) => setLeadForm({ ...leadForm, industry: e.target.value })}
-                        className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
-                        <option value="">Select Industry</option>
-                        <option value="Manufacturing">Manufacturing</option>
-                        <option value="Healthcare">Healthcare</option>
-                        <option value="Pharma">Pharma</option>
-                        <option value="Logistics">Logistics</option>
-                        <option value="Construction">Construction</option>
-                        <option value="Education">Education</option>
-                        <option value="Finance">Finance</option>
-                        <option value="Insurance">Insurance</option>
-                        <option value="Hospitality">Hospitality</option>
-                        <option value="Real Estate">Real Estate</option>
-                        <option value="Agriculture">Agriculture</option>
-                        <option value="Legal">Legal</option>
-                        <option value="Retail">Retail</option>
-                        <option value="Media">Media</option>
-                        <option value="Consulting">Consulting</option>
-                        <option value="IT">IT</option>
-                      </select>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditIndustryOpen(!isEditIndustryOpen)}
+                        className="w-full flex items-center justify-between px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors text-left"
+                      >
+                        <span>{leadForm.industry || "Select Industry"}</span>
+                        <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                      </button>
+                      {isEditIndustryOpen && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setIsEditIndustryOpen(false)} />
+                          <div className="absolute left-0 right-0 mt-1 max-h-36 overflow-y-auto bg-white border border-brand-border-purple/30 rounded-lg shadow-lg z-20 scrollbar-thin">
+                            {[
+                              "Manufacturing", "Healthcare", "Pharma", "Logistics", "Construction", 
+                              "Education", "Finance", "Insurance", "Hospitality", "Real Estate", 
+                              "Agriculture", "Legal", "Retail", "Media", "Consulting", "IT"
+                            ].map((ind) => (
+                              <button
+                                key={ind}
+                                type="button"
+                                onClick={() => {
+                                  setLeadForm({ ...leadForm, industry: ind });
+                                  setIsEditIndustryOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors font-semibold ${
+                                  leadForm.industry === ind ? 'bg-brand-secondary-accent/10 text-brand-heading font-extrabold' : 'text-brand-text'
+                                }`}
+                              >
+                                {ind}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1642,7 +1665,7 @@ export default function LeadsView() {
               </div>
 
               {/* Submit Footer */}
-              <div className="px-5 py-3.5 border-t border-brand-border-purple/15 bg-slate-50/50 flex items-center justify-end space-x-2.5">
+              <div className="px-5 py-3.5 border-t border-brand-border-purple/15 bg-slate-50/50 flex items-center justify-end space-x-2.5 rounded-b-xl">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-100 cursor-pointer transition-colors">Cancel</button>
                 <button type="submit" className="px-5 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer transition-colors">Save Changes</button>
               </div>
@@ -1704,8 +1727,8 @@ export default function LeadsView() {
       {/* LOG CALL DIALOG MODAL */}
       {isCallModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50 rounded-t-xl">
               <h3 className="font-bold text-brand-heading text-sm">Log Call Outcome</h3>
               <button onClick={() => setIsCallModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
@@ -1723,7 +1746,7 @@ export default function LeadsView() {
                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Call Notes</label>
                 <textarea required placeholder="Summarize prospect comments, next scheduling options..." value={callForm.notes} onChange={(e) => setCallForm({...callForm, notes: e.target.value})} className="w-full p-3 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none min-h-[80px]" />
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
+              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5 rounded-b-xl bg-slate-50/20 px-5 pb-5">
                 <button type="button" onClick={() => setIsCallModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
                 <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">
                   <PhoneCall className="h-3.5 w-3.5" />
@@ -1738,8 +1761,8 @@ export default function LeadsView() {
       {/* SCHEDULE MEETING DIALOG MODAL */}
       {isMeetingModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50 rounded-t-xl">
               <h3 className="font-bold text-brand-heading text-sm">Schedule Meeting</h3>
               <button onClick={() => setIsMeetingModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
@@ -1762,7 +1785,7 @@ export default function LeadsView() {
                 <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Agenda / Details</label>
                 <textarea required placeholder="Discuss compliance guidelines and db sizing outline..." value={meetingForm.desc} onChange={(e) => setMeetingForm({...meetingForm, desc: e.target.value})} className="w-full p-3 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none min-h-[80px]" />
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
+              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5 rounded-b-xl bg-slate-50/20 px-5 pb-5">
                 <button type="button" onClick={() => setIsMeetingModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
                 <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">
                   <Calendar className="h-3.5 w-3.5" strokeWidth={2} />

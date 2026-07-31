@@ -38,6 +38,7 @@ import IntegrationsView from '@/components/dashboard/IntegrationsView';
 import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
+import SkeletonLoader from '@/components/dashboard/SkeletonLoader';
 import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2, Plus } from 'lucide-react';
 import { getToken, getCurrentUser, clearToken } from '@/utils/api';
 import { ROLE_HOME, ROLE_TABS, Role } from '@/lib/roles';
@@ -177,6 +178,42 @@ export default function DashboardHome() {
     const timer = setTimeout(() => setIsLoading(false), 450);
     return () => clearTimeout(timer);
   }, [isLoading]);
+
+  // Trigger loading when activeTab changes
+  useEffect(() => {
+    setIsLoading(true);
+  }, [activeTab]);
+
+  // Trigger loading when userRole changes
+  useEffect(() => {
+    setIsLoading(true);
+  }, [userRole]);
+
+  // Determine skeleton loader layout based on active tab
+  const getSkeletonLayout = (tab: string) => {
+    switch (tab) {
+      case 'dashboard':
+        return 'dashboard';
+      case 'leads':
+      case 'contacts':
+      case 'companies':
+      case 'products':
+      case 'users':
+      case 'audit logs':
+        return 'table';
+      case 'deals':
+      case 'pipeline':
+      case 'team pipeline':
+        return 'kanban';
+      case 'settings':
+      case 'profile':
+        return 'form';
+      case 'calendar':
+        return 'calendar';
+      default:
+        return 'list';
+    }
+  };
 
   // Custom reports state
   const [recentReports, setRecentReports] = useState([
@@ -423,65 +460,69 @@ export default function DashboardHome() {
 
         {/* Dashboard inner scroll view with increased whitespace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-          {!ROLE_TABS[userRole].has(activeTab) ? (
-            userRole === 'representative' ? (
-              {genericDashboard}
-            ) : userRole === 'manager' ? (
+          <SkeletonLoader isLoading={isLoading} layout={getSkeletonLayout(activeTab)}>
+            {!ROLE_TABS[userRole].has(activeTab) ? (
+              userRole === 'representative' ? (
+                genericDashboard
+              ) : userRole === 'manager' ? (
+                <ManagerDashboardView onTabChange={navigate} />
+              ) : (
+                <AdminDashboardView />
+              )
+            ) : activeTab === 'leads' ? (
+              <LeadsView />
+            ) : activeTab === 'contacts' ? (
+              <ContactsView />
+            ) : activeTab === 'companies' ? (
+              <CompaniesView />
+            ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
+              <PipelineView />
+            ) : activeTab === 'products' ? (
+              <ProductsView />
+            ) : activeTab === 'activities' ? (
+              <ActivitiesView />
+            ) : activeTab === 'emails' ? (
+              <EmailsView />
+            ) : activeTab === 'documents' ? (
+              <DocumentsView />
+            ) : activeTab === 'reports' ? (
+              <ReportsView userRole={userRole} />
+            ) : activeTab === 'workflows' ? (
+              <WorkflowsView />
+            ) : activeTab === 'ai insights' ? (
+              <AIInsightsView />
+            ) : activeTab === 'settings' ? (
+              <SettingsView userRole={userRole} />
+            ) : activeTab === 'profile' ? (
+              <ProfileView userRole={userRole} />
+            ) : activeTab === 'notifications' ? (
+              <NotificationsView />
+            ) : activeTab === 'calendar' ? (
+              <CalendarView />
+            ) : activeTab === 'forecast' ? (
+              <ForecastView />
+            ) : activeTab === 'team performance' ? (
+              <TeamPerformanceView userRole={userRole} />
+            ) : activeTab === 'users' ? (
+              <UsersView />
+            ) : activeTab === 'roles & permissions' ? (
+              <RolesPermissionsView />
+            ) : activeTab === 'integrations' ? (
+              <IntegrationsView />
+            ) : activeTab === 'automation' ? (
+              <AutomationView />
+            ) : activeTab === 'ai models' ? (
+              <AIModelsView />
+            ) : activeTab === 'audit logs' ? (
+              <AuditLogsView />
+            ) : activeTab === 'dashboard' && userRole === 'manager' ? (
               <ManagerDashboardView onTabChange={navigate} />
-            ) : (
+            ) : activeTab === 'dashboard' && userRole === 'admin' ? (
               <AdminDashboardView />
-            )
-          ) : activeTab === 'leads' ? (
-            <LeadsView />
-          ) : activeTab === 'contacts' ? (
-            <ContactsView />
-          ) : activeTab === 'companies' ? (
-            <CompaniesView />
-          ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
-            <PipelineView />
-          ) : activeTab === 'products' ? (
-            <ProductsView />
-          ) : activeTab === 'activities' ? (
-            <ActivitiesView />
-          ) : activeTab === 'emails' ? (
-            <EmailsView />
-          ) : activeTab === 'documents' ? (
-            <DocumentsView />
-          ) : activeTab === 'reports' ? (
-            <ReportsView userRole={userRole} />
-          ) : activeTab === 'workflows' ? (
-            <WorkflowsView />
-          ) : activeTab === 'ai insights' ? (
-            <AIInsightsView />
-          ) : activeTab === 'settings' ? (
-            <SettingsView userRole={userRole} />
-          ) : activeTab === 'profile' ? (
-            <ProfileView userRole={userRole} />
-          ) : activeTab === 'notifications' ? (
-            <NotificationsView />
-          ) : activeTab === 'calendar' ? (
-            <CalendarView />
-          ) : activeTab === 'forecast' ? (
-            <ForecastView />
-          ) : activeTab === 'team performance' ? (
-            <TeamPerformanceView userRole={userRole} />
-          ) : activeTab === 'users' ? (
-            <UsersView />
-          ) : activeTab === 'roles & permissions' ? (
-            <RolesPermissionsView />
-          ) : activeTab === 'integrations' ? (
-            <IntegrationsView />
-          ) : activeTab === 'automation' ? (
-            <AutomationView />
-          ) : activeTab === 'ai models' ? (
-            <AIModelsView />
-          ) : activeTab === 'audit logs' ? (
-            <AuditLogsView />
-          ) : activeTab === 'dashboard' && userRole === 'manager' ? (
-            <ManagerDashboardView onTabChange={navigate} />
-          ) : activeTab === 'dashboard' && userRole === 'admin' ? (
-            <AdminDashboardView />
-          ) : (genericDashboard)}
+            ) : (
+              genericDashboard
+            )}
+          </SkeletonLoader>
         </main>
       </div>
 

@@ -328,5 +328,5 @@ input, select, textarea {
 }
 
 .animate-shimmer {
-  animation: shimmer 2s infinite linear;
+  animation: shimmer 1.4s infinite linear;
 }

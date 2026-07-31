@@ -63,7 +63,6 @@ export default function ContactsView() {
       if (!cancelled) {
         setContacts(data as any);
         setLoading(false);
-        if (data.length && !selectedId) setSelectedId((data as any)[0].id);
       }
     }).catch(() => {
       if (!cancelled) setLoading(false);
@@ -71,7 +70,7 @@ export default function ContactsView() {
     return () => { cancelled = true; };
   }, []);
 
-  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : (contacts.length > 0 ? contacts[0] : null);
+  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : null;
 
   const filtered = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 

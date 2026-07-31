@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import Navbar from '@/components/navigation/Navbar';
 import AuthModal from '@/components/shared/AuthModal';
+import SkeletonLoader from '@/components/dashboard/SkeletonLoader';
 
 interface PulseLandingPageProps {
   onLogin: (role: 'representative' | 'manager' | 'admin') => void;
@@ -59,6 +60,12 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
     'tests': 89
   });
   const [hasAnimated, setHasAnimated] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setPageLoading(false), 450);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Orbit rotation animation
   useEffect(() => {
@@ -181,6 +188,10 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   const px = 'clamp(24px, 5vw, 80px)';
   const sectionPy = '48px';
 
+  if (pageLoading) {
+    return <SkeletonLoader isLoading={true} layout="landing" />;
+  }
+
   return (
     <div style={{ display: 'block', fontFamily: "'Inter', 'Geist', system-ui, -apple-system, sans-serif", backgroundColor: C.white, color: C.black, minHeight: '100vh', overflowX: 'hidden', width: '100%', boxSizing: 'border-box' }}>
 
@@ -274,44 +285,61 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               <Activity size={16} color={C.violet} /> Request Demo
             </button>
           </motion.div>
+        </div>
+      </section>
 
-          {/* ── Dashboard Mockup ── */}
+      {/* ══════════ 2. INTERACTIVE PLATFORM PREVIEW ══════════ */}
+      <section style={{ position: 'relative', overflow: 'hidden', background: '#f8fafc', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, paddingTop: 64, paddingBottom: 64 }}>
+        <div style={{ maxWidth: maxW, margin: '0 auto', padding: `0 ${px}`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          
+          {/* Header block inside the preview frame */}
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+              Interactive Platform Preview
+            </span>
+            <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, color: C.black, letterSpacing: '-0.02em', marginTop: 8 }}>
+              Explore the Pulse CRM Interface
+            </h2>
+          </div>
+
+          {/* ── Dashboard Mockup (Zoomed Out & Fully Rounded) ── */}
           <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.45 }}
-            style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: '100%', maxWidth: 1000, background: C.white, borderRadius: '20px 20px 0 0', boxShadow: '0 -4px 0 rgba(124,58,237,0.15), 0 32px 80px rgba(124,58,237,0.18), 0 8px 32px rgba(0,0,0,0.08)', border: `1px solid ${C.border}`, borderBottom: 'none', overflow: 'hidden' }}>
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            style={{ width: '100%', maxWidth: 920, display: 'flex', justifyContent: 'center' }}>
+            <div style={{ width: '100%', background: C.white, borderRadius: '16px', boxShadow: '0 20px 50px rgba(124,58,237,0.12), 0 8px 24px rgba(0,0,0,0.06)', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
 
               {/* App top bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 24px', borderBottom: `1px solid ${C.border}`, background: '#fafbff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: `1px solid ${C.border}`, background: '#fafbff' }}>
                 {/* Logo + title */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ height: 28, width: 28, borderRadius: 8, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Activity size={14} color={C.white} strokeWidth={2.5} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ height: 24, width: 24, borderRadius: 6, background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Activity size={12} color={C.white} strokeWidth={2.5} />
                   </div>
-                  <span style={{ fontSize: 14, fontWeight: 900, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
+                  <span style={{ fontSize: 13, fontWeight: 950, color: C.black }}>Pulse<span style={{ color: C.violet }}>CRM</span></span>
                 </div>
                 {/* Search bar */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', background: '#f1f5f9', borderRadius: 8, minWidth: 200 }}>
-                  <Filter size={13} color="#94a3b8" />
-                  <span style={{ fontSize: 12, color: '#94a3b8' }}>Search...</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', background: '#f1f5f9', borderRadius: 6, minWidth: 180 }}>
+                  <Filter size={11} color="#94a3b8" />
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Search...</span>
                 </div>
                 {/* User */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 30, height: 30, borderRadius: '50%', background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.white, fontSize: 11, fontWeight: 700 }}>AK</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ width: 26, height: 26, borderRadius: '50%', background: C.violet, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.white, fontSize: 10, fontWeight: 700 }}>AK</div>
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: C.black }}>Alex K.</div>
-                    <div style={{ fontSize: 10, color: '#94a3b8' }}>Admin</div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: C.black, lineHeight: 1 }}>Alex K.</div>
+                    <div style={{ fontSize: 9, color: '#94a3b8' }}>Admin</div>
                   </div>
                 </div>
               </div>
 
               {/* Main layout */}
-              <div style={{ display: 'flex', height: 440 }}>
+              <div style={{ display: 'flex', height: 390 }}>
                 {/* Sidebar */}
-                <div style={{ width: 180, background: '#fafbff', borderRight: `1px solid ${C.border}`, padding: '20px 12px', flexShrink: 0 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0 8px', marginBottom: 10 }}>Main Menu</div>
+                <div style={{ width: 160, background: '#fafbff', borderRight: `1px solid ${C.border}`, padding: '16px 8px', flexShrink: 0 }}>
+                  <div style={{ fontSize: 8.5, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '0 6px', marginBottom: 8 }}>Main Menu</div>
                   {[
                     { icon: LayoutDashboard, label: 'Dashboard', active: true },
                     { icon: Target,          label: 'Leads' },
@@ -323,23 +351,23 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                     { icon: Mail,            label: 'Email' },
                     { icon: Settings,        label: 'Settings' },
                   ].map(({ icon: Icon, label, active }) => (
-                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', borderRadius: 8, background: active ? C.violet : 'transparent', marginBottom: 2, cursor: 'pointer' }}>
-                      <Icon size={14} color={active ? C.white : '#94a3b8'} strokeWidth={2} />
-                      <span style={{ fontSize: 12, fontWeight: active ? 700 : 500, color: active ? C.white : '#64748b' }}>{label}</span>
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '7px 8px', borderRadius: 6, background: active ? C.violet : 'transparent', marginBottom: 2, cursor: 'pointer' }}>
+                      <Icon size={12} color={active ? C.white : '#94a3b8'} strokeWidth={2} />
+                      <span style={{ fontSize: 11, fontWeight: active ? 700 : 500, color: active ? C.white : '#64748b' }}>{label}</span>
                     </div>
                   ))}
                 </div>
 
                 {/* Dashboard content */}
-                <div style={{ flex: 1, padding: '22px 24px', background: C.white, overflowY: 'hidden' }}>
+                <div style={{ flex: 1, padding: '18px 20px', background: C.white, overflowY: 'hidden' }}>
                   {/* Header */}
-                  <div style={{ marginBottom: 20 }}>
-                    <h2 style={{ fontSize: 18, fontWeight: 900, color: C.black, margin: '0 0 2px', letterSpacing: '-0.02em' }}>Dashboard</h2>
-                    <p style={{ fontSize: 11, color: C.textMuted, margin: 0 }}>Welcome back to Pulse CRM</p>
+                  <div style={{ marginBottom: 14 }}>
+                    <h2 style={{ fontSize: 16, fontWeight: 900, color: C.black, margin: '0 0 2px', letterSpacing: '-0.02em' }}>Dashboard</h2>
+                    <p style={{ fontSize: 10, color: C.textMuted, margin: 0 }}>Welcome back to Pulse CRM</p>
                   </div>
 
                   {/* 3 stat cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 18 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
                     {[
                       { label: 'Active Sales', value: '₹98,430', change: '+18%', icon: TrendingUp, color: '#7c3aed', trend: [30,40,35,52,48,62,58] },
                       { label: 'Open Deals', value: '340', change: '+12%', icon: Target, color: '#0ea5e9', trend: [40,35,45,40,50,48,55] },
@@ -347,22 +375,21 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                     ].map((s, i) => {
                       const Icon = s.icon;
                       return (
-                        <div key={i} style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px', position: 'relative', overflow: 'hidden' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                        <div key={i} style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px', position: 'relative', overflow: 'hidden' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
                             <div>
-                              <div style={{ fontSize: 10, color: C.textMuted, fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
-                              <div style={{ fontSize: 20, fontWeight: 900, color: C.black, letterSpacing: '-0.02em' }}>{s.value}</div>
+                              <div style={{ fontSize: 9, color: C.textMuted, fontWeight: 650, marginBottom: 2 }}>{s.label}</div>
+                              <div style={{ fontSize: 17, fontWeight: 900, color: C.black, letterSpacing: '-0.02em', lineHeight: 1 }}>{s.value}</div>
                             </div>
-                            <div style={{ width: 30, height: 30, borderRadius: 8, background: `${s.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Icon size={14} color={s.color} />
+                            <div style={{ width: 24, height: 24, borderRadius: 6, background: `${s.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Icon size={11} color={s.color} />
                             </div>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981' }}>{s.change}</span>
-                            <span style={{ fontSize: 10, color: C.textMuted }}>vs last month</span>
-                            <span style={{ fontSize: 10, marginLeft: 4, cursor: 'pointer', color: C.violet }}>See Details →</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <span style={{ fontSize: 9, fontWeight: 700, color: '#10b981' }}>{s.change}</span>
+                            <span style={{ fontSize: 9, color: C.textMuted }}>vs last month</span>
                           </div>
-                          <svg viewBox="0 0 80 16" style={{ position: 'absolute', bottom: 0, right: 0, width: 80, height: 16, opacity: 0.15 }}>
+                          <svg viewBox="0 0 80 16" style={{ position: 'absolute', bottom: 0, right: 0, width: 64, height: 12, opacity: 0.15 }}>
                             <polyline points={s.trend.map((v,j)=>`${j*(80/6)},${16-(v/68)*16}`).join(' ')} fill="none" stroke={s.color} strokeWidth="1.5" />
                           </svg>
                         </div>
@@ -371,23 +398,23 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   </div>
 
                   {/* Bottom 2 panels */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 14 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 10 }}>
                     {/* Analytics panel */}
-                    <div style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.black, marginBottom: 12 }}>Powerful CRM analytics for growth.</div>
-                      <div style={{ fontSize: 13, fontWeight: 900, color: C.black, marginBottom: 10 }}>Analytics</div>
-                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 60 }}>
+                    <div style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: C.black, marginBottom: 8 }}>Powerful CRM analytics for growth.</div>
+                      <div style={{ fontSize: 11, fontWeight: 900, color: C.black, marginBottom: 6 }}>Analytics</div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 45 }}>
                         {[35,48,42,60,55,72,65,80,75,88].map((h,i) => (
-                          <div key={i} style={{ flex: 1, height: `${h}%`, background: i >= 6 ? C.violet : '#ddd6fe', borderRadius: '3px 3px 0 0', opacity: i >= 6 ? 1 : 0.6 }} />
+                          <div key={i} style={{ flex: 1, height: `${h}%`, background: i >= 6 ? C.violet : '#ddd6fe', borderRadius: '2px 2px 0 0', opacity: i >= 6 ? 1 : 0.6 }} />
                         ))}
                       </div>
                     </div>
 
                     {/* Pipeline panel */}
-                    <div style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 10, padding: '14px 16px' }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: C.black, marginBottom: 12 }}>Sales Pipeline Tracking</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, justifyContent: 'center' }}>
-                        <div style={{ position: 'relative', width: 90, height: 90 }}>
+                    <div style={{ background: '#fafbff', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 12px' }}>
+                      <div style={{ fontSize: 10.5, fontWeight: 700, color: C.black, marginBottom: 8 }}>Sales Pipeline Tracking</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'center' }}>
+                        <div style={{ position: 'relative', width: 72, height: 72 }}>
                           <svg viewBox="0 0 90 90" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
                             <circle cx="45" cy="45" r="36" fill="none" stroke="#e2e8f0" strokeWidth="14" />
                             <circle cx="45" cy="45" r="36" fill="none" stroke={C.violet} strokeWidth="14" strokeDasharray="68 226" strokeLinecap="round" />
@@ -395,12 +422,12 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                             <circle cx="45" cy="45" r="36" fill="none" stroke="#10b981" strokeWidth="14" strokeDasharray="56 226" strokeDashoffset="-122" strokeLinecap="round" />
                           </svg>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                           {[{ label: 'New', pct: '30%', color: C.violet }, { label: 'Active', pct: '24%', color: '#8b5cf6' }, { label: 'Won', pct: '25%', color: '#10b981' }].map((item, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                              <div style={{ width: 8, height: 8, borderRadius: '50%', background: item.color }} />
-                              <span style={{ fontSize: 11, color: C.textGray, fontWeight: 500 }}>{item.label}</span>
-                              <span style={{ fontSize: 11, fontWeight: 700, color: C.black, marginLeft: 'auto' }}>{item.pct}</span>
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                              <div style={{ width: 6, height: 6, borderRadius: '50%', background: item.color }} />
+                              <span style={{ fontSize: 9.5, color: C.textGray, fontWeight: 500 }}>{item.label}</span>
+                              <span style={{ fontSize: 9.5, fontWeight: 700, color: C.black, marginLeft: 'auto' }}>{item.pct}</span>
                             </div>
                           ))}
                         </div>
