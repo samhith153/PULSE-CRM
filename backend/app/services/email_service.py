@@ -341,6 +341,15 @@ class EmailService:
             sync_status=EmailSyncStatus.ACTIVE.value,
         )
 
+        # Background email summarization for inbound threads
+        if ingested:
+            inbound_threads = {
+                e.thread_id for e in ingested
+                if e.thread_id and e.direction == EmailDirection.INBOUND.value
+            }
+            for tid in inbound_threads:
+                asyncio.create_task(self._safe_summarize(organization_id, tid))
+
         return EmailSyncResultResponse(
             gmail_connection_id=connection.id,
             synced_count=len(ingested),
@@ -436,7 +445,14 @@ class EmailService:
                 },
             )
         return email, True
-    
+
+    async def _safe_summarize(self, organization_id: UUID, thread_id: str) -> None:
+        try:
+            from app.services.email_summary_service import EmailSummaryService
+            svc = EmailSummaryService(self.db)
+            await svc.summarize_thread(organization_id, thread_id)
+        except Exception:
+            logger.exception("Email summarization failed for thread %s", thread_id)
 
     async def send_email(
         self,

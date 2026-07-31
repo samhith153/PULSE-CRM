@@ -73,7 +73,6 @@ from app.api.v1.feature_vectors import router as feature_vectors_router
 from app.api.v1.timeline import router as timeline_router
 from app.api.v1.users import router as users_router
 from app.api.v1.smtp import router as smtp_router
-from app.api.v1.summarization import router as summarization_router
 from app.api.v1.brevo import router as brevo_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.ai_insights import router as ai_insights_router
@@ -119,12 +118,5 @@ api_router.include_router(
     prefix="/brevo",
     tags=["Brevo"],
 )
-api_router.include_router(
-    summarization_router,
-    prefix="/summarization",
-    tags=["Conversation Intelligence"],
-)
-api_router.include_router(calendar_router, prefix="/calendar", tags=["Calendar"])
-api_router.include_router(ai_insights_router, prefix="/ai-insights", tags=["AI Insights"])
-api_router.include_router(roles_router, prefix="/roles", tags=["Roles & Permissions"])
+
 
