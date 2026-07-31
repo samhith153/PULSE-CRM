@@ -60,9 +60,11 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
           {
             name: 'Productivity & AI',
             items: [
+              { name: 'Leads', icon: Users, tab: 'leads' },
               { name: 'Activities', icon: Activity, tab: 'activities' },
               { name: 'Calendar', icon: Calendar, tab: 'calendar' },
               { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
+              { name: 'Integrations', icon: Link2, tab: 'integrations' },
             ]
           },
           {
@@ -116,20 +118,15 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
       default:
         return [
           {
-            name: 'Sales',
+            name: 'Productivity',
             items: [
               { name: 'Leads', icon: Users, tab: 'leads' },
               { name: 'Contacts', icon: Contact, tab: 'contacts' },
               { name: 'Companies', icon: Building2, tab: 'companies' },
               { name: 'Deals', icon: Layers, tab: 'deals' },
-              { name: 'Products', icon: Package, tab: 'products' },
-            ]
-          },
-          {
-            name: 'Productivity',
-            items: [
               { name: 'Activities', icon: Activity, tab: 'activities' },
               { name: 'Emails', icon: Mail, tab: 'emails' },
+              { name: 'Integrations', icon: Link2, tab: 'integrations' },
             ]
           },
           {

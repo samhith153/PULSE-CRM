@@ -118,7 +118,6 @@ export default function ContactsView() {
       setIsAddModalOpen(false);
       setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
     } catch {
-      alert('Failed to add contact.');
     }
   };
 
@@ -149,7 +148,6 @@ export default function ContactsView() {
       } : c));
       setIsEditModalOpen(false);
     } catch {
-      alert('Failed to save contact.');
     }
   };
 

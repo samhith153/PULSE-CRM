@@ -2,7 +2,7 @@
 Global Exception Handler
 Maps domain exceptions → HTTP responses with the standard error envelope.
 """
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from pydantic import ValidationError
@@ -106,14 +106,34 @@ async def validation_exception_handler(
     ))
 
 
+async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+    """FastAPI HTTPException → standard error envelope."""
+    logger.warning("HTTPException: %s | detail=%s", exc.status_code, exc.detail)
+    detail = exc.detail
+    details = []
+    if isinstance(detail, list):
+        details = [ErrorDetail(message=str(d)) for d in detail]
+        detail = "Request validation failed."
+    elif isinstance(detail, dict):
+        details = [ErrorDetail(field=k, message=str(v)) for k, v in detail.items()]
+        detail = detail.get("message", str(detail))
+    return _add_cors_headers(JSONResponse(
+        status_code=exc.status_code,
+        content=_error_body(
+            "HTTP_ERROR",
+            str(detail) if detail else "An error occurred.",
+            details,
+        ),
+    ))
+
+
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unexpected server errors."""
     logger.exception("Unexpected error on %s %s", request.method, request.url.path)
-    response = JSONResponse(
+    return _add_cors_headers(JSONResponse(
         status_code=500,
         content=_error_body(
             "INTERNAL_SERVER_ERROR",
             "An unexpected error occurred. Please try again later.",
         ),
-    )
-    return _add_cors_headers(response)
+    ))

@@ -38,7 +38,7 @@ async def list_contacts(
         current_user.organization_id, search, company_id, page, page_size
     )
     paginated = PaginatedResponse.create(
-        data=[ContactResponse.model_validate(c) for c in contacts],
+        data=[ContactResponse.from_contact(c) for c in contacts],
         total=total,
         page=page,
         page_size=page_size,
@@ -60,7 +60,7 @@ async def create_contact(
 ) -> dict:
     svc = ContactService(db)
     contact = await svc.create(payload, current_user.organization_id, current_user.id)
-    return {"success": True, "message": "Contact created.", "data": ContactResponse.model_validate(contact)}
+    return {"success": True, "message": "Contact created.", "data": ContactResponse.from_contact(contact)}
 
 
 @router.get(
@@ -76,7 +76,7 @@ async def get_contact(
 ) -> dict:
     svc = ContactService(db)
     contact = await svc.get(contact_id, current_user.organization_id)
-    return {"success": True, "message": "OK", "data": ContactResponse.model_validate(contact)}
+    return {"success": True, "message": "OK", "data": ContactResponse.from_contact(contact)}
 
 
 @router.put(
@@ -93,7 +93,7 @@ async def update_contact(
 ) -> dict:
     svc = ContactService(db)
     contact = await svc.update(contact_id, current_user.organization_id, payload)
-    return {"success": True, "message": "Contact updated.", "data": ContactResponse.model_validate(contact)}
+    return {"success": True, "message": "Contact updated.", "data": ContactResponse.from_contact(contact)}
 
 
 @router.delete(

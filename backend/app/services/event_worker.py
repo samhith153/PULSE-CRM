@@ -12,7 +12,13 @@ from app.database.connection import AsyncSessionFactory
 from app.models.event_outbox import EventOutbox
 from app.repositories.event_repository import EventRepository
 from app.services.event_bus import EventBus, EventEnvelope, event_bus
-from app.services.event_consumers import EmailProjectionConsumer, LoggingConsumer, TimelineProjectionConsumer, parse_aggregate_uuid
+from app.services.event_consumers import (
+    EmailProjectionConsumer,
+    LoggingConsumer,
+    NotificationProjectionConsumer,
+    TimelineProjectionConsumer,
+    parse_aggregate_uuid,
+)
 
 
 class EventWorker:
@@ -28,16 +34,33 @@ class EventWorker:
 
     async def run_once(self, batch_size: int = 50) -> int:
         processed = 0
-        async with self.session_factory() as db:
-            repository = EventRepository(db)
-            for event in await repository.list_pending(limit=batch_size):
+
+        # Step 1: figure out which events are pending, in a short-lived session.
+        async with self.session_factory() as list_db:
+            pending_ids = [e.id for e in await EventRepository(list_db).list_pending(limit=batch_size)]
+
+        # Step 2: process each event in its OWN fresh session/transaction.
+        for event_id in pending_ids:
+            async with self.session_factory() as db:
+                repository = EventRepository(db)
+                event = await repository.get_by_id(event_id)
+                if event is None:
+                    continue
                 try:
                     await self._dispatch_outbox_event(db, event)
                     await repository.mark_processed(event)
+                    await db.commit()
                     processed += 1
                 except Exception as exc:
-                    await repository.mark_retry(event, str(exc), max_attempts=self.max_attempts)
-            await db.commit()
+                    await db.rollback()
+                    try:
+                        retry_event = await repository.get_by_id(event_id)
+                        if retry_event is not None:
+                            await repository.mark_retry(retry_event, str(exc), max_attempts=self.max_attempts)
+                            await db.commit()
+                    except Exception:
+                        await db.rollback()
+
         await self.bus.dispatch_once()
         return processed
 
@@ -50,6 +73,7 @@ class EventWorker:
         envelope = self._to_envelope(event)
         consumers = [
             TimelineProjectionConsumer(db),
+            NotificationProjectionConsumer(db),
             EmailProjectionConsumer(),
             LoggingConsumer(),
         ]
@@ -75,4 +99,5 @@ class EventWorker:
             source=event.source,
             status=event.processing_status,
             created_at=event.created_at or event.occurred_at or datetime.utcnow(),
+            actor_id=event.actor_id
         )

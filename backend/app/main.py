@@ -3,7 +3,7 @@ KALNET PULSE CRM - FastAPI Application Factory
 """
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -15,6 +15,7 @@ from app.core.exceptions import PulseCRMException
 from app.core.logging import get_logger, setup_logging
 from app.middlewares.exception_handler import (
     generic_exception_handler,
+    http_exception_handler,
     pulse_exception_handler,
     validation_exception_handler,
 )
@@ -23,6 +24,7 @@ from app.middlewares.private_network import PrivateNetworkAccessMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
+from app.services.event_worker import EventWorker
 
 setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
 logger = get_logger(__name__)
@@ -33,6 +35,16 @@ import sys
 import os
 
 scheduler = AsyncIOScheduler()
+event_worker = EventWorker()
+
+
+async def process_event_outbox():
+    try:
+        processed = await event_worker.run_once(batch_size=100)
+        if processed:
+            print(f"Event outbox: processed {processed} event(s).")
+    except Exception as exc:
+        print("Event outbox processing failed:", exc)
 
 def recompute_features():
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -51,6 +63,7 @@ async def lifespan(app: FastAPI):
     logger.info(...)  # your existing startup lines stay here
 
     scheduler.add_job(recompute_features, "interval", minutes=5)
+    scheduler.add_job(process_event_outbox, "interval", seconds=15)
     scheduler.start()
 
     yield
@@ -86,6 +99,7 @@ def create_app() -> FastAPI:
 
     app.add_exception_handler(PulseCRMException, pulse_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(HTTPException, http_exception_handler)
     app.add_exception_handler(Exception, generic_exception_handler)
 
     app.include_router(api_router, prefix=settings.API_V1_PREFIX)

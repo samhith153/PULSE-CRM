@@ -7,6 +7,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.models.contact import Contact
 from app.utils.validators import validate_url, validate_phone
 
 
@@ -86,5 +87,33 @@ class ContactResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    company_name: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+    @staticmethod
+    def from_contact(contact: Contact) -> "ContactResponse":
+        return ContactResponse(
+            id=contact.id,
+            first_name=contact.first_name,
+            last_name=contact.last_name,
+            full_name=contact.full_name,
+            email=contact.email,
+            phone=contact.phone,
+            mobile=contact.mobile,
+            job_title=contact.job_title,
+            department=contact.department,
+            linkedin_url=contact.linkedin_url,
+            twitter_url=contact.twitter_url,
+            address=contact.address,
+            city=contact.city,
+            country=contact.country,
+            notes=contact.notes,
+            company_id=contact.company_id,
+            owner_id=contact.owner_id,
+            organization_id=contact.organization_id,
+            is_active=contact.is_active,
+            created_at=contact.created_at,
+            updated_at=contact.updated_at,
+            company_name=contact.company.name if contact.company else None,
+        )

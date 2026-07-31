@@ -35,7 +35,7 @@ async def list_companies(
     svc = CompanyService(db)
     companies, total = await svc.list(current_user.organization_id, search, page, page_size)
     paginated = PaginatedResponse.create(
-        data=[CompanyResponse.model_validate(c) for c in companies],
+        data=[CompanyResponse.from_company(c) for c in companies],
         total=total,
         page=page,
         page_size=page_size,
@@ -57,7 +57,7 @@ async def create_company(
 ) -> dict:
     svc = CompanyService(db)
     company = await svc.create(payload, current_user.organization_id, current_user.id)
-    return {"success": True, "message": "Company created.", "data": CompanyResponse.model_validate(company)}
+    return {"success": True, "message": "Company created.", "data": CompanyResponse.from_company(company)}
 
 
 @router.get(
@@ -73,7 +73,7 @@ async def get_company(
 ) -> dict:
     svc = CompanyService(db)
     company = await svc.get(company_id, current_user.organization_id)
-    return {"success": True, "message": "OK", "data": CompanyResponse.model_validate(company)}
+    return {"success": True, "message": "OK", "data": CompanyResponse.from_company(company)}
 
 
 @router.put(
@@ -90,7 +90,7 @@ async def update_company(
 ) -> dict:
     svc = CompanyService(db)
     company = await svc.update(company_id, current_user.organization_id, payload)
-    return {"success": True, "message": "Company updated.", "data": CompanyResponse.model_validate(company)}
+    return {"success": True, "message": "Company updated.", "data": CompanyResponse.from_company(company)}
 
 
 @router.delete(

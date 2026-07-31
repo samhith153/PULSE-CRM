@@ -64,14 +64,20 @@ from app.api.v1.uploads import router as uploads_router
 from app.api.v1.gmail import router as gmail_router
 from app.api.v1.health import router as health_router
 from app.api.v1.leads import router as leads_router
+from app.api.v1.roles import router as roles_router
+from app.api.v1.lead_scores import router as lead_scores_router
 from app.api.v1.organizations import router as orgs_router
 from app.api.v1.pipeline import router as pipeline_router
 from app.api.v1.recommendation_features import router as recommendation_features_router
+from app.api.v1.feature_vectors import router as feature_vectors_router
 from app.api.v1.timeline import router as timeline_router
 from app.api.v1.users import router as users_router
 from app.api.v1.smtp import router as smtp_router
 from app.api.v1.summarization import router as summarization_router
 from app.api.v1.brevo import router as brevo_router
+from app.api.v1.calendar import router as calendar_router
+from app.api.v1.ai_insights import router as ai_insights_router
+from app.api.v1.notifications import router as notifications_router
 api_router = APIRouter()
 
 api_router.include_router(health_router, prefix="/health", tags=["Health"])
@@ -92,9 +98,19 @@ api_router.include_router(emails_router, prefix="/emails", tags=["Emails"])
 api_router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(ai_router, prefix="/ai", tags=["AI"])
 api_router.include_router(
+    lead_scores_router,
+    prefix="/lead-scores",
+    tags=["Lead Scores"],
+)
+api_router.include_router(
     recommendation_features_router,
     prefix="/recommendation-features",
     tags=["Recommendation Features"],
+)
+api_router.include_router(
+    feature_vectors_router,
+    prefix="/feature-vectors",
+    tags=["Feature Vectors"],
 )
 api_router.include_router(events_router, prefix="/events", tags=["Events"])
 api_router.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])
@@ -109,4 +125,8 @@ api_router.include_router(
     prefix="/summarization",
     tags=["Conversation Intelligence"],
 )
+api_router.include_router(calendar_router, prefix="/calendar", tags=["Calendar"])
+api_router.include_router(ai_insights_router, prefix="/ai-insights", tags=["AI Insights"])
+api_router.include_router(roles_router, prefix="/roles", tags=["Roles & Permissions"])
+api_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])
 

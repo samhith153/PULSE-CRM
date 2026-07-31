@@ -1,2 +1,0 @@
-lead_id,organization_id,created_by,company_size_score,industry_complexity_score,software_gap_score,operational_system_score,customization_potential_score,average_response_time,response_time_score,days_since_last_outbound,engagement_decay_penalty,ai_intent_category_score,buying_stage_score,customer_initiative_score,engagement_trend_score
-59f1c0cd-a60c-4289-990a-fbbab4fb41b7,2122315f-b7d3-4628-8dfd-4be3a7e905b9,,0,95,100,80,52,,0,0,0,,50,30,50

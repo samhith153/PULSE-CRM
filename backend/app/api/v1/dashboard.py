@@ -3,9 +3,10 @@ Dashboard routes.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import CurrentUser, DBSession, require_permission, require_role
+from app.controllers.forecast_controller import ForecastController
 from app.schemas.common import StandardResponse
 from app.schemas.dashboard import (
     DashboardAnalyticsResponse,
@@ -18,6 +19,7 @@ from app.schemas.dashboard import (
     ManagerDashboardResponse,
     SalesRepDashboardResponse,
 )
+from app.schemas.forecast import ManagerForecastResponse
 from app.services.dashboard_service import DashboardService
 
 router = APIRouter()
@@ -185,3 +187,44 @@ async def get_sales_rep_dashboard(
     svc = DashboardService(db)
     data = await svc.sales_rep_kpi(current_user.id, current_user.organization_id, period)
     return {"success": True, "message": "Sales rep KPIs retrieved successfully.", "data": data}
+
+
+@router.get(
+    "/manager/forecast",
+    response_model=StandardResponse[ManagerForecastResponse],
+    summary="Sales Manager Forecast KPIs",
+    description=(
+        "Returns all forecast KPIs for the Sales Manager dashboard: "
+        "expected revenue, best case pipeline, pipeline coverage, AI confidence score, "
+        "monthly breakdown, quarterly projection matrix, forecast trend, "
+        "forecast accuracy, sales velocity, and dynamic insights. "
+        "**Manager or Admin role required.**"
+    ),
+    dependencies=[Depends(require_role("manager", "admin"))],
+    tags=["Dashboard"],
+)
+async def get_manager_forecast(
+    current_user: CurrentUser,
+    db: DBSession,
+    period: str = Query(
+        default="monthly",
+        description="Aggregation period: monthly | quarterly | yearly",
+    ),
+) -> dict:
+    """
+    GET /api/v1/dashboard/manager/forecast?period=monthly
+
+    Secured: JWT required + manager / admin role.
+    All data is scoped to the caller's organization_id.
+    Zero values are returned when no forecast data exists — never 500.
+    """
+    controller = ForecastController(db)
+    data = await controller.get_manager_forecast(
+        organization_id=current_user.organization_id,
+        period=period,
+    )
+    return {
+        "success": True,
+        "message": "Forecast KPIs retrieved successfully.",
+        "data": data,
+    }
