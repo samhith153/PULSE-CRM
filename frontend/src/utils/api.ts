@@ -529,6 +529,15 @@ export interface ActivityListParams {
   search?: string;
 }
 
+export interface CreateActivityPayload {
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  title: string;
+  description?: string | null;
+  payload?: Record<string, unknown>;
+}
+
 export async function startGmailOAuth(): Promise<GmailOAuthLogin> {
   return apiFetch<GmailOAuthLogin>('/api/v1/gmail/oauth/login');
 }
@@ -594,6 +603,13 @@ export async function getActivities(params: ActivityListParams = {}): Promise<Pa
   return apiFetch<PaginatedResult<ActivityTimelineItem>>(
     `/api/v1/activities${toQuery({ ...rest, action: activity_type })}`
   );
+}
+
+export async function createActivity(payload: CreateActivityPayload): Promise<ActivityTimelineItem> {
+  return apiFetch<ActivityTimelineItem>('/api/v1/activities', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 }
 
 // --- Dashboard KPI API (Admin / Manager / Sales Rep) ---
@@ -769,6 +785,20 @@ export interface WebhookDelivery {
 
 export async function getAutomationEvents(limit = 25): Promise<AutomationEventList> {
   return apiFetch<AutomationEventList>(`/api/v1/events${toQuery({ limit })}`);
+}
+
+export async function createAutomationEvent(payload: {
+  event_type: string;
+  aggregate_type?: string | null;
+  aggregate_id?: string | null;
+  source?: string | null;
+  correlation_id?: string | null;
+  payload?: Record<string, unknown>;
+}): Promise<AutomationEvent> {
+  return apiFetch<AutomationEvent>('/api/v1/events', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
 }
 
 export async function getWebhookEndpoints(): Promise<WebhookEndpoint[]> {
