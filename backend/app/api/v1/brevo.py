@@ -30,6 +30,7 @@ async def verify_webhook():
 
 @router.post("/webhook")
 async def webhook(
+    
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):

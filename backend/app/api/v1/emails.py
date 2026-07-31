@@ -34,6 +34,7 @@ async def list_emails(
     thread_id: Optional[str] = Query(default=None),
     contact_id: Optional[UUID] = Query(default=None),
     deal_id: Optional[UUID] = Query(default=None),
+    is_read: Optional[bool] = Query(default=None),
     sort_order: SortOrder = Query(default=SortOrder.DESC),
 ) -> dict:
     service = EmailService(db)
@@ -56,6 +57,7 @@ async def list_emails(
         page,
         page_size,
         sort_order=sort_order,
+        is_read=is_read,
     )
     paginated = PaginatedResponse.create(
         data=[EmailResponse.model_validate(email) for email in emails],

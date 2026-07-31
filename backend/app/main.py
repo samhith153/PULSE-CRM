@@ -35,21 +35,51 @@ from app.middlewares.private_network import PrivateNetworkAccessMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
+from app.services.event_worker import EventWorker
 
 setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
 logger = get_logger(__name__)
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import subprocess
+import sys
+import os
 
+scheduler = AsyncIOScheduler()
+event_worker = EventWorker()
+
+
+async def process_event_outbox():
+    try:
+        processed = await event_worker.run_once(batch_size=100)
+        if processed:
+            print(f"Event outbox: processed {processed} event(s).")
+    except Exception as exc:
+        print("Event outbox processing failed:", exc)
+
+def recompute_features():
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    result = subprocess.run(
+        [sys.executable, os.path.join(project_root, "..", "ai", "pipeline", "export_real_features.py"),
+         "--org-id", "2122315f-b7d3-4628-8dfd-4be3a7e905b9"],
+        capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        print("Feature recompute failed:", result.stderr)
+    else:
+        print("Feature recompute completed.")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     register_default_consumers()
-    logger.info(
-        "Starting %s v%s [%s]",
-        settings.APP_NAME,
-        settings.APP_VERSION,
-        settings.ENVIRONMENT,
-    )
+    logger.info(...)  # your existing startup lines stay here
+
+    scheduler.add_job(recompute_features, "interval", minutes=5)
+    scheduler.add_job(process_event_outbox, "interval", seconds=15)
+    scheduler.start()
+
     yield
+
+    scheduler.shutdown()
     logger.info("Application shutdown complete.")
 
 

@@ -2,20 +2,22 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { 
+import {
   Search, 
   Bell, 
   Plus, 
   Menu, 
-  FileText,
   TrendingUp,
   User,
   ShieldAlert,
   Settings,
   LogOut,
   Sun,
-  Moon
+  Moon,
+  UserPlus,
+  Sparkles
 } from 'lucide-react';
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface HeaderProps {
   collapsed: boolean;
@@ -99,12 +101,26 @@ export default function Header({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onOpenCommandPalette]);
 
-  const notifications = [
-    { id: 1, text: "Sarah Johnson won the 'Acme Enterprise' deal!", type: "won", time: "10m ago" },
-    { id: 2, text: "Gmail sync completed: 24 new threads pulled.", type: "sync", time: "1h ago" },
-    { id: 3, text: "High-value lead 'Global Tech' has been idle for 5 days.", type: "warning", time: "3h ago" },
-    { id: 4, text: "New report 'Q3 Sales Forecast' ready for review.", type: "report", time: "5h ago" },
-  ];
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications(5);
+
+  const formatRelativeTime = (iso: string) => {
+    const diffMs = Date.now() - new Date(iso).getTime();
+    const minutes = Math.floor(diffMs / 60000);
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  };
+
+  const getNotificationIcon = (type: string) => {
+    if (type === 'deal_won') return <TrendingUp className="h-3.5 w-3.5 text-emerald-600" strokeWidth={1.75} />;
+    if (type === 'deal_lost') return <ShieldAlert className="h-3.5 w-3.5 text-rose-500" strokeWidth={1.75} />;
+    if (type === 'lead_assigned') return <UserPlus className="h-3.5 w-3.5 text-brand-accent" strokeWidth={1.75} />;
+    if (type === 'lead_converted') return <Sparkles className="h-3.5 w-3.5 text-amber-500" strokeWidth={1.75} />;
+    return <Bell className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />;
+  };
 
   // Dynamic profile details mapping
   const getUserProfile = () => {
@@ -205,39 +221,51 @@ export default function Header({
             aria-label="View notifications"
           >
             <Bell className="h-4.5 w-4.5" strokeWidth={1.75} />
-            <span className="absolute top-1 right-1 h-3.5 w-3.5 bg-brand-accent text-[9px] font-bold text-white rounded-full flex items-center justify-center border border-white">
-              4
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 h-3.5 w-3.5 bg-brand-accent text-[9px] font-bold text-white rounded-full flex items-center justify-center border border-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 bg-white border border-brand-border-purple/35 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
               <div className="px-4 py-3 bg-slate-50 border-b border-brand-border-purple/15 flex justify-between items-center">
                 <span className="font-bold text-brand-heading text-xs">Notifications</span>
-                <span className="text-[9px] bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded-full font-bold">
-                  4 New
-                </span>
+                {unreadCount > 0 && (
+                  <span className="text-[9px] bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded-full font-bold">
+                    {unreadCount} New
+                  </span>
+                )}
               </div>
               <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
-                {notifications.map((n) => (
-                  <div key={n.id} className="p-3 hover:bg-slate-50/50 transition-colors flex items-start space-x-2.5 text-[11px]">
-                    <div className="mt-0.5">
-                      {n.type === 'won' && <TrendingUp className="h-3.5 w-3.5 text-emerald-600" strokeWidth={1.75} />}
-                      {n.type === 'warning' && <ShieldAlert className="h-3.5 w-3.5 text-rose-500" strokeWidth={1.75} />}
-                      {n.type === 'report' && <FileText className="h-3.5 w-3.5 text-brand-accent" strokeWidth={1.75} />}
-                      {!['won', 'warning', 'report'].includes(n.type) && <Bell className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-600 leading-relaxed">{n.text}</p>
-                      <span className="text-[9px] text-slate-400 mt-0.5 block">{n.time}</span>
-                    </div>
-                  </div>
-                ))}
+                {notifications.length === 0 ? (
+                  <div className="p-6 text-center text-[11px] text-slate-400">No notifications yet.</div>
+                ) : (
+                  notifications.map((n) => (
+                    <button
+                      key={n.id}
+                      type="button"
+                      onClick={() => !n.is_read && markRead(n.id)}
+                      className={`w-full text-left p-3 hover:bg-slate-50/50 transition-colors flex items-start space-x-2.5 text-[11px] ${n.is_read ? 'opacity-60' : ''}`}
+                    >
+                      <div className="mt-0.5">{getNotificationIcon(n.type)}</div>
+                      <div className="flex-1">
+                        <p className="text-slate-600 leading-relaxed">{n.message || n.title}</p>
+                        <span className="text-[9px] text-slate-400 mt-0.5 block">{formatRelativeTime(n.created_at)}</span>
+                      </div>
+                      {!n.is_read && <span className="h-1.5 w-1.5 rounded-full bg-brand-accent mt-1.5 shrink-0" />}
+                    </button>
+                  ))
+                )}
               </div>
               <div className="p-2 border-t border-brand-border-purple/15 bg-slate-50 text-center flex justify-between px-4">
                 <button 
                   type="button"
-                  onClick={() => setShowNotifications(false)}
+                  onClick={() => {
+                    markAllRead();
+                    setShowNotifications(false);
+                  }}
                   className="text-[10px] font-bold text-slate-500 hover:text-brand-text transition-colors py-1 cursor-pointer"
                 >
                   Mark all read

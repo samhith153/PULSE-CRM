@@ -32,6 +32,7 @@ import ManagerDashboardView from '@/components/dashboard/ManagerDashboardView';
 import ForecastView from '@/components/dashboard/ForecastView';
 import TeamPerformanceView from '@/components/dashboard/TeamPerformanceView';
 import AdminDashboardView from '@/components/dashboard/AdminDashboardView';
+import SalesRepDashboardView from '@/components/dashboard/SalesRepDashboardView';
 import UsersView from '@/components/dashboard/UsersView';
 import RolesPermissionsView from '@/components/dashboard/RolesPermissionsView';
 import IntegrationsView from '@/components/dashboard/IntegrationsView';
@@ -39,7 +40,8 @@ import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2, Plus } from 'lucide-react';
-import { clearToken } from '@/utils/api';
+import { getToken, getCurrentUser, clearToken } from '@/utils/api';
+import { ROLE_HOME, ROLE_TABS, Role } from '@/lib/roles';
 
 export default function DashboardHome() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -55,13 +57,16 @@ export default function DashboardHome() {
     setIsAuthenticated(true);
     sessionStorage.setItem('pulse-crm-auth', 'true');
     setUserRole(role);
-    localStorage.setItem('pulse-crm-role', role);
+    setToken(getToken());
   };
 
   const handleSignOut = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('pulse-crm-auth');
     clearToken();
+    setToken(null);
+    localStorage.removeItem('pulse-crm-role');
+    localStorage.removeItem('pulse-crm-user');
   };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -73,20 +78,49 @@ export default function DashboardHome() {
   const [primaryMetric, setPrimaryMetric] = useState('Deal Value');
   const [groupBy, setGroupBy] = useState('Stage');
   
-  // User Role State
+  // User Role State — derived from the authenticated user's real roles.
   const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
+  const [token, setToken] = useState<string | null>(() => getToken());
 
-  useEffect(() => {
-    const savedRole = localStorage.getItem('pulse-crm-role') as any;
-    if (savedRole && ['representative', 'manager', 'admin'].includes(savedRole)) {
-      setUserRole(savedRole);
-    }
-  }, []);
-
-  const handleSetUserRole = (role: 'representative' | 'manager' | 'admin') => {
-    setUserRole(role);
-    localStorage.setItem('pulse-crm-role', role);
+  // Map backend role names -> UI role. Backend uses "sales_rep", "manager", "admin".
+  const mapBackendRole = (roles: string[]): 'representative' | 'manager' | 'admin' => {
+    if (roles.includes('admin')) return 'admin';
+    if (roles.includes('manager')) return 'manager';
+    if (roles.includes('sales_rep') || roles.includes('representative')) return 'representative';
+    // Fallback: a user without a recognized role defaults to representative (least privilege).
+    return 'representative';
   };
+
+  // Resolve the real role from the API whenever the token changes. Each run is
+  // cancelled on the next, so a stale-token response can never override the
+  // logged-in user's role (e.g. signing in as manager right after an admin session).
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    getCurrentUser()
+      .then((me) => {
+        if (cancelled) return;
+        const role = mapBackendRole(me.roles || []);
+        setUserRole(role);
+        localStorage.setItem('pulse-crm-role', role);
+      })
+      .catch(() => {
+        if (cancelled) return;
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // Role-scoped navigation: never let a tab the current role cannot access win.
+  const navigate = (tab: string) => {
+    setActiveTab(ROLE_TABS[userRole].has(tab) ? tab : ROLE_HOME[userRole]);
+  };
+
+  // Re-sanitize the active tab whenever the resolved role changes.
+  useEffect(() => {
+    setActiveTab(prev => (ROLE_TABS[userRole].has(prev) ? prev : ROLE_HOME[userRole]));
+  }, [userRole]);
 
   // Layout Customization States
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
@@ -188,7 +222,7 @@ export default function DashboardHome() {
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={navigate} 
         collapsed={sidebarCollapsed} 
         setCollapsed={setSidebarCollapsed} 
         userRole={userRole}
@@ -202,7 +236,7 @@ export default function DashboardHome() {
           collapsed={sidebarCollapsed} 
           setCollapsed={setSidebarCollapsed} 
           onNewReportClick={() => setIsReportModalOpen(true)} 
-          onTabChange={(tab) => setActiveTab(tab)}
+          onTabChange={(tab) => navigate(tab)}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onSignOut={handleSignOut}
           userRole={userRole}
@@ -210,7 +244,15 @@ export default function DashboardHome() {
 
         {/* Dashboard inner scroll view with increased whitespace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-          {activeTab === 'leads' ? (
+          {!ROLE_TABS[userRole].has(activeTab) ? (
+            userRole === 'representative' ? (
+              <SalesRepDashboardView />
+            ) : userRole === 'manager' ? (
+              <ManagerDashboardView onTabChange={navigate} />
+            ) : (
+              <AdminDashboardView />
+            )
+          ) : activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (
             <ContactsView />
@@ -256,8 +298,10 @@ export default function DashboardHome() {
             <AIModelsView />
           ) : activeTab === 'audit logs' ? (
             <AuditLogsView />
+          ) : activeTab === 'dashboard' && userRole === 'representative' ? (
+            <SalesRepDashboardView />
           ) : activeTab === 'dashboard' && userRole === 'manager' ? (
-            <ManagerDashboardView onTabChange={setActiveTab} />
+            <ManagerDashboardView onTabChange={navigate} />
           ) : activeTab === 'dashboard' && userRole === 'admin' ? (
             <AdminDashboardView />
           ) : (
@@ -314,7 +358,7 @@ export default function DashboardHome() {
                     loading={isLoading} 
                     showLeaderboard={layoutSettings.leaderboard}
                     showProductivity={layoutSettings.productivity}
-                    onTabChange={setActiveTab}
+                    onTabChange={navigate}
                   />
                 )}
 
@@ -450,7 +494,8 @@ export default function DashboardHome() {
       <CommandPalette 
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        setActiveTab={setActiveTab}
+        setActiveTab={navigate}
+        userRole={userRole}
         onNewReportClick={() => setIsReportModalOpen(true)}
       />
 
