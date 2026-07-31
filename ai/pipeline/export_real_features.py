@@ -21,12 +21,17 @@ from load_features import save_feature_vectors_csv, upsert_feature_vectors_db
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--org-id", required=True)
+parser.add_argument("--lead-id", default=None, help="Recompute a single lead instead of the whole org")
 args = parser.parse_args()
 ORG_ID = args.org_id
 
 emails = load_real_emails(ORG_ID)
 leads = load_real_leads(ORG_ID)
 leads_lookup = leads.set_index("lead_id").to_dict(orient="index")
+
+if args.lead_id:
+    emails = emails[emails["lead_id"] == str(args.lead_id)]
+    leads_lookup = {str(args.lead_id): leads_lookup.get(str(args.lead_id), {})}
 
 rows = []
 for lead_id, group in emails.groupby("lead_id"):
@@ -60,7 +65,10 @@ for lead_id, group in emails.groupby("lead_id"):
         "ai_intent_category_score": None,
         "buying_stage_score": buying_stage_score(stage),
         "customer_initiative_score": customer_initiative_score(group),
-        "engagement_trend_score": engagement_trend_score(None, None),
+        # Trend requires historical intent; until LLM intent is plumbed, use the
+        # current buying-stage score as both endpoints -> stable (50) rather than
+        # a fake "None" that always mapped to 50 anyway.
+        "engagement_trend_score": engagement_trend_score(buying_stage_score(stage), buying_stage_score(stage)),
     })
 
 out = pd.DataFrame(rows)

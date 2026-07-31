@@ -55,11 +55,17 @@ export default function UsersView() {
   }, [page]);
 
   const loadRoles = useCallback(async () => {
+    const FALLBACK: RoleData[] = [
+      { id: 'admin', name: 'admin', display_name: 'Administrator', description: null, is_system: true, permissions: [] },
+      { id: 'manager', name: 'manager', display_name: 'Sales Manager', description: null, is_system: true, permissions: [] },
+      { id: 'sales_rep', name: 'sales_rep', display_name: 'Sales Representative', description: null, is_system: true, permissions: [] },
+    ];
     try {
       const data = await getRoles();
-      setRoles(Array.isArray(data) ? data : []);
+      setRoles(Array.isArray(data) && data.length ? data : FALLBACK);
     } catch {
-      toast.error('Failed to load roles.');
+      // Network/permission failure shouldn't block user creation — show safe defaults.
+      setRoles(FALLBACK);
     }
   }, []);
 

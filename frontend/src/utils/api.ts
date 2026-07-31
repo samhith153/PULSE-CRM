@@ -39,6 +39,7 @@ export interface Lead {
   score: number | null;
   fit_score: number | null;
   engagement_score: number | null;
+  engagement_reasons: string[] | null;
   top_reasons: string[] | null;
   priority: string | null;
   notes: string | null;
@@ -371,67 +372,6 @@ export async function getPipelineStages(): Promise<any[]> {
   return stages;
 }
 
-// --- Conversation Intelligence (Bhavani Summarization API) ---
-export interface SummaryMessage {
-  sender: string;
-  recipients: string[];
-  subject: string;
-  body: string;
-  timestamp: string;
-  direction: 'incoming' | 'outgoing';
-}
-
-export interface ConversationSummary {
-  thread_id: string;
-  summary: string;
-  summary_word: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  intent: 'demo' | 'buy' | 'negotiate' | 'followup' | 'decline' | 'other';
-  confidence: number;
-  key_points: string[];
-  action_items: string[];
-  category?: 'sales' | 'support' | 'general' | 'urgent';
-  draft_reply?: string;
-  follow_up_suggestion?: string;
-  follow_up_timing?: 'immediate' | 'today' | 'tomorrow' | '2_days' | '3_days' | '1_week' | '2_weeks' | 'no_followup';
-  processing_time_ms?: number;
-  model_version?: string;
-}
-
-export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders()
-    },
-    body: JSON.stringify({
-      thread_id: threadId,
-      messages,
-      contact_id: contactId,
-      deal_id: dealId
-    })
-  });
-  if (!res.ok) {
-    let message = `Summarization failed (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
-export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
-    headers: { ...getAuthHeaders() }
-  });
-  if (!res.ok) {
-    let message = `Failed to load summary (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
 
 function toQuery(params: Record<string, string | number | boolean | null | undefined>): string {
   const search = new URLSearchParams();
@@ -599,6 +539,30 @@ export async function getEmail(id: string): Promise<SyncedEmail> {
   return apiFetch<SyncedEmail>(`/api/v1/emails/${id}`);
 }
 
+export interface ThreadSummary {
+  summary: string | null;
+  summary_word: string | null;
+  sentiment: string | null;
+  intent: string | null;
+  confidence: number | null;
+  key_points: string[];
+  action_items: string[];
+  category: string | null;
+  draft_reply: string | null;
+  follow_up_suggestion: string | null;
+  follow_up_timing: string | null;
+}
+
+export interface ThreadResult {
+  thread_id: string;
+  emails: SyncedEmail[];
+  summary: ThreadSummary | null;
+}
+
+export async function getThread(threadId: string): Promise<ThreadResult> {
+  return apiFetch<ThreadResult>(`/api/v1/gmail/threads/${encodeURIComponent(threadId)}`);
+}
+
 export async function getActivities(params: ActivityListParams = {}): Promise<PaginatedResult<ActivityTimelineItem>> {
   const { activity_type, ...rest } = params;
   return apiFetch<PaginatedResult<ActivityTimelineItem>>(
@@ -728,6 +692,24 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
 export async function getSalesDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales${toQuery({ period })}`);
 }
+// Fetch the dashboard KPIs for a given UI role. Each role hits its own
+// RBAC-scoped endpoint so a sales rep / manager never calls /dashboard/admin.
+export async function getRoleDashboard(
+  role: 'representative' | 'manager' | 'admin',
+  period: 'week' | 'month' | 'quarter' | 'year' = 'month',
+): Promise<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData> {
+  switch (role) {
+    case 'admin':
+      return getAdminDashboard();
+    case 'manager':
+      return getManagerDashboard();
+    case 'representative':
+    default:
+      // Prefer the canonical /dashboard/sales; fall back to the /sales-rep alias.
+      return getSalesDashboard(period).catch(() => getSalesRepDashboard(period));
+  }
+}
+
 export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
   return apiFetch('/api/v1/auth/me');
 }
@@ -1109,4 +1091,31 @@ export async function markAllNotificationsRead(): Promise<{ updated: number }> {
 
 export async function dismissNotification(notificationId: string): Promise<Notification> {
   return apiFetch<Notification>(`/api/v1/notifications/${notificationId}`, { method: 'DELETE' });
+}
+// --- AI Insights API ---
+
+export interface AIActionCenterData {
+  immediateActions: Array<{
+    id: string;
+    lead_name?: string;
+    deal_name?: string;
+    score: number;
+    priority: string;
+    reason: string;
+    deal_value?: number;
+    probability?: number;
+    owner_name?: string;
+    last_activity_at?: string | null;
+  }>;
+  followUps?: any[];
+  pipeline_health?: any;
+  highValueDeals?: any[];
+  riskItems?: any[];
+  opportunityScores?: any[];
+  recommendations?: any[];
+  notifications?: any[];
+}
+
+export async function getAIActionCenter(): Promise<AIActionCenterData> {
+  return apiFetch<AIActionCenterData>('/api/v1/ai-insights/immediate-actions');
 }

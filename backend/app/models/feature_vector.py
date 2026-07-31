@@ -3,9 +3,10 @@ FeatureVector Model
 Stores engineered features and scores for leads.
 """
 import uuid
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -48,6 +49,10 @@ class FeatureVector(Base, TenantMixin):
     buying_stage_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     customer_initiative_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     engagement_trend_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # ── Response Time Accumulators ───────────────────────────────────────────
+    num_response_pairs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    last_processed_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # ── Fit Feature Scores ────────────────────────────────────────────────────
     company_size_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)

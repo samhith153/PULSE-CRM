@@ -19,7 +19,7 @@ import {
   Lightbulb,
   Loader2,
 } from 'lucide-react';
-import { getAdminDashboard, asNumber, formatINR, formatNum, formatPct, AdminDashboardData } from '@/utils/api';
+import { getRoleDashboard, asNumber, formatINR, formatNum, formatPct, AdminDashboardData, ManagerDashboardData, SalesRepDashboardData } from '@/utils/api';
 
 interface KPI {
   title: string;
@@ -30,8 +30,8 @@ interface KPI {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export default function ReportsView() {
-  const [data, setData] = useState<AdminDashboardData | null>(null);
+export default function ReportsView({ userRole = 'admin' }: { userRole?: 'representative' | 'manager' | 'admin' }) {
+  const [data, setData] = useState<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leaderboardMetric, setLeaderboardMetric] = useState<'revenue' | 'deals'>('revenue');
@@ -39,12 +39,14 @@ export default function ReportsView() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getAdminDashboard()
+    // Each role hits its own RBAC-scoped endpoint — a sales rep / manager
+    // must never call /api/v1/dashboard/admin (would 403).
+    getRoleDashboard(userRole)
       .then((d) => { if (!cancelled) { setData(d); setError(null); } })
       .catch((e) => { if (!cancelled) setError(e?.message || 'Failed to load reports'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [userRole]);
 
   if (loading) {
     return (
@@ -58,34 +60,84 @@ export default function ReportsView() {
     return <div className="py-24 text-center text-rose-600 text-xs font-semibold">{error || 'No report data.'}</div>;
   }
 
-  const s = data.summary;
-  const totalLeads = asNumber(s.leads?.total);
-  const converted = asNumber(s.leads?.converted);
+  // Role-aware KPI extraction. The three dashboard payloads use different
+  // shapes, so pull whatever each role actually has.
+  let totalLeads = 0, converted = 0, winRate = 0, revenueWon = 0, revenueGrowth = 0, leadsGrowth = 0;
+  let funnelStages: { stage: string; count: number; percentage: number; conversion_rate: string }[] = [];
+  let reps: { name: string; revenue: number; revenueStr: string; deals: number; activities: number }[] = [];
+
+  if (userRole === 'admin' && 'summary' in data && 'top_sales_reps' in data) {
+    const s = (data as AdminDashboardData).summary;
+    totalLeads = asNumber(s.leads?.total);
+    converted = asNumber(s.leads?.converted);
+    winRate = asNumber(s.leads?.conversion_rate) || (totalLeads ? (converted / totalLeads) * 100 : 0);
+    revenueWon = asNumber(s.revenue?.this_year);
+    revenueGrowth = asNumber(s.revenue?.growth_pct);
+    leadsGrowth = asNumber(s.leads?.monthly_growth_pct);
+    funnelStages = (data as AdminDashboardData).lead_funnel?.length
+      ? (data as AdminDashboardData).lead_funnel.map((f) => ({
+          stage: f.stage,
+          count: asNumber(f.count),
+          percentage: asNumber(f.percentage),
+          conversion_rate: String(asNumber(f.percentage)),
+        }))
+      : [
+          { stage: 'Leads', count: totalLeads, percentage: 100, conversion_rate: '100' },
+          { stage: 'Converted', count: converted, percentage: totalLeads ? (converted / totalLeads) * 100 : 0, conversion_rate: String(totalLeads ? (converted / totalLeads) * 100 : 0) },
+          { stage: 'Lost', count: Math.max(0, totalLeads - converted), percentage: totalLeads ? ((totalLeads - converted) / totalLeads) * 100 : 0, conversion_rate: String(totalLeads ? ((totalLeads - converted) / totalLeads) * 100 : 0) },
+        ];
+    reps = ((data as AdminDashboardData).top_sales_reps ?? []).map((r) => ({
+      name: r.full_name,
+      revenue: asNumber(r.revenue),
+      revenueStr: formatINR(r.revenue),
+      deals: asNumber(r.deals_closed),
+      activities: 0,
+    }));
+  } else if (userRole === 'manager' && 'summary' in data) {
+    const s = (data as ManagerDashboardData).summary;
+    revenueWon = asNumber(s.team_revenue);
+    revenueGrowth = asNumber(s.quota_achievement);
+    winRate = asNumber(s.win_rate);
+    totalLeads = asNumber(s.team_members);
+    const stageDist = (data as ManagerDashboardData).pipeline_health?.stage_distribution ?? [];
+    funnelStages = stageDist.map((st) => ({
+      stage: st.stage,
+      count: asNumber(st.deal_count),
+      percentage: asNumber(st.percentage),
+      conversion_rate: String(asNumber(st.percentage)),
+    }));
+    reps = ((data as ManagerDashboardData).top_reps ?? []).map((r) => ({
+      name: r.full_name,
+      revenue: asNumber(r.revenue),
+      revenueStr: formatINR(r.revenue),
+      deals: asNumber(r.deals_closed),
+      activities: 0,
+    }));
+  } else {
+    // sales rep
+    const s = (data as SalesRepDashboardData).summary;
+    revenueWon = asNumber(s.total_revenue);
+    revenueGrowth = asNumber(s.average_deal_size ? s.win_rate : 0);
+    winRate = asNumber(s.win_rate);
+    const stageDist = (data as SalesRepDashboardData).deals_by_stage ?? [];
+    funnelStages = stageDist.map((st) => ({
+      stage: st.stage,
+      count: asNumber(st.count),
+      percentage: asNumber(st.percentage),
+      conversion_rate: String(asNumber(st.conversion_rate ?? st.percentage)),
+    }));
+    reps = [];
+  }
+
   const lost = Math.max(0, totalLeads - converted);
-  const winRate = asNumber(s.leads?.conversion_rate) || (totalLeads ? (converted / totalLeads) * 100 : 0);
 
   const kpis: KPI[] = [
-    { title: 'Total Revenue Won', value: formatINR(s.revenue?.this_year), change: formatPct(asNumber(s.revenue?.growth_pct)), isPositive: asNumber(s.revenue?.growth_pct) >= 0, timeframe: 'this year', icon: IndianRupee },
-    { title: 'New Leads Created', value: `${formatNum(totalLeads)} leads`, change: formatPct(asNumber(s.leads?.monthly_growth_pct)), isPositive: asNumber(s.leads?.monthly_growth_pct) >= 0, timeframe: 'vs last month', icon: Users },
+    { title: 'Total Revenue Won', value: formatINR(revenueWon), change: formatPct(revenueGrowth), isPositive: revenueGrowth >= 0, timeframe: 'period', icon: IndianRupee },
+    { title: 'New Leads Created', value: `${formatNum(totalLeads)} leads`, change: formatPct(leadsGrowth), isPositive: leadsGrowth >= 0, timeframe: 'vs last period', icon: Users },
     { title: 'Lead Conversion', value: `${winRate.toFixed(1)}%`, change: formatPct(winRate), isPositive: winRate >= 0, timeframe: 'overall', icon: Target },
     { title: 'Avg Sales Cycle', value: '—', change: 'live data n/a', isPositive: true, timeframe: 'from deals', icon: Clock },
   ];
 
-  const funnelStages = data.lead_funnel?.length
-    ? data.lead_funnel
-    : [
-        { stage: 'Leads', count: totalLeads, percentage: 100, conversion_rate: '100' },
-        { stage: 'Converted', count: converted, percentage: totalLeads ? (converted / totalLeads) * 100 : 0, conversion_rate: totalLeads ? (converted / totalLeads) * 100 : 0 },
-        { stage: 'Lost', count: lost, percentage: totalLeads ? (lost / totalLeads) * 100 : 0, conversion_rate: totalLeads ? (lost / totalLeads) * 100 : 0 },
-      ];
-
-  const reps = (data.top_sales_reps ?? []).map((r) => ({
-    name: r.full_name,
-    revenue: asNumber(r.revenue),
-    revenueStr: formatINR(r.revenue),
-    deals: asNumber(r.deals_closed),
-    activities: 0,
-  }));
   const maxRevenue = Math.max(1, ...reps.map((r) => r.revenue));
   const maxDeals = Math.max(1, ...reps.map((r) => r.deals));
 

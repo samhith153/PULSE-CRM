@@ -1,0 +1,213 @@
+======================================================================
+  ENGAGEMENT FEATURES — INCREMENTAL RUNNING AVERAGE TEST
+======================================================================
+  Thread ID: test_thread_de94a228
+  Timestamp: 2026-07-31T13:20:57.938873+00:00
+
+[INFO] Using organization: 32c47f0b-ba38-4287-b4b5-a5e5616cd3b2
+[SETUP] Created lead: 4adce0a3-2177-4e57-8a15-292cc5deef38
+[SETUP] Created 4 base emails in thread: test_thread_de94a228
+  Email 1: outbound (3 days ago)
+  Email 2: inbound  (2 days ago) — ~24h response
+  Email 3: outbound (1 day ago)
+  Email 4: inbound  (6 hours ago) — ~18h response
+[SETUP] Created email summary for thread: test_thread_de94a228
+
+======================================================================
+  TEST: ENGAGEMENT FEATURES — PASS 1 — 4 emails, 2 response pairs
+======================================================================
+
+[RESULT] FeatureVector computed and stored!
+----------------------------------------------------------------------
+  ID:                          38b0499f-2f81-42ed-b50a-6bdd8cce0917
+  Lead ID:                     4adce0a3-2177-4e57-8a15-292cc5deef38
+  --- Engagement Features ---
+  average_response_time:       21.0 hours
+  response_time_score:         75.0
+  num_response_pairs:          2
+  last_processed_sent_at:      2026-07-31 07:20:58.758424+00:00
+  days_since_last_outbound:    1
+  engagement_decay_penalty:    0.0
+  customer_initiative_score:   100.0
+  buying_stage_score:          30.0
+  ai_intent_category_score:    85.0
+  engagement_trend_score:      50.0
+  --- Fit Features ---
+  company_size_score:          None
+  industry_complexity_score:   None
+  software_gap_score:          None
+  operational_system_score:    None
+  customization_potential_score: None
+----------------------------------------------------------------------
+
+[VERIFY] Response pairs:
+  Expected: 2
+  Got:      2
+  STATUS:   PASS
+
+[VERIFY] Average response time:
+  Expected: 19.0–23.0 hours
+  Got:      21.0 hours
+  STATUS:   PASS
+
+[INFO] Stored last_processed_sent_at: 2026-07-31 07:20:58.758424+00:00
+[INFO] Stored num_response_pairs: 2
+
+
+######################################################################
+#  ADDING 5TH EMAIL (inbound, 2h ago)
+######################################################################
+[SETUP] Added new inbound email (label=email5, sent_at=2026-07-31 11:21:02.763697+00:00)
+
+======================================================================
+  TEST: ENGAGEMENT FEATURES — PASS 2 — 5 emails, 3 response pairs, incremental update
+======================================================================
+
+[RESULT] FeatureVector computed and stored!
+----------------------------------------------------------------------
+  ID:                          38b0499f-2f81-42ed-b50a-6bdd8cce0917
+  Lead ID:                     4adce0a3-2177-4e57-8a15-292cc5deef38
+  --- Engagement Features ---
+  average_response_time:       21.33 hours
+  response_time_score:         75.0
+  num_response_pairs:          3
+  last_processed_sent_at:      2026-07-31 11:21:02.763697+00:00
+  days_since_last_outbound:    1
+  engagement_decay_penalty:    0.0
+  customer_initiative_score:   100.0
+  buying_stage_score:          30.0
+  ai_intent_category_score:    85.0
+  engagement_trend_score:      50.0
+  --- Fit Features ---
+  company_size_score:          None
+  industry_complexity_score:   None
+  software_gap_score:          None
+  operational_system_score:    None
+  customization_potential_score: None
+----------------------------------------------------------------------
+
+[VERIFY] Response pairs:
+  Expected: 3
+  Got:      3
+  STATUS:   PASS
+
+[VERIFY] Average response time:
+  Expected: 20.0–23.0 hours
+  Got:      21.33 hours
+  STATUS:   PASS
+
+
+######################################################################
+#  RECOMPUTE (no new emails) — should be idempotent
+######################################################################
+
+======================================================================
+  TEST: ENGAGEMENT FEATURES — PASS 3 — idempotent recompute
+======================================================================
+
+[RESULT] FeatureVector computed and stored!
+----------------------------------------------------------------------
+  ID:                          38b0499f-2f81-42ed-b50a-6bdd8cce0917
+  Lead ID:                     4adce0a3-2177-4e57-8a15-292cc5deef38
+  --- Engagement Features ---
+  average_response_time:       21.33 hours
+  response_time_score:         75.0
+  num_response_pairs:          3
+  last_processed_sent_at:      2026-07-31 11:21:02.763697+00:00
+  days_since_last_outbound:    1
+  engagement_decay_penalty:    0.0
+  customer_initiative_score:   100.0
+  buying_stage_score:          30.0
+  ai_intent_category_score:    85.0
+  engagement_trend_score:      50.0
+  --- Fit Features ---
+  company_size_score:          None
+  industry_complexity_score:   None
+  software_gap_score:          None
+  operational_system_score:    None
+  customization_potential_score: None
+----------------------------------------------------------------------
+
+[VERIFY] Response pairs:
+  Expected: 3
+  Got:      3
+  STATUS:   PASS
+
+[VERIFY] Average response time:
+  Expected: 20.0–23.0 hours
+  Got:      21.33 hours
+  STATUS:   PASS
+
+======================================================================
+  TEST: LEAD SCORING PIPELINE
+======================================================================
+
+[INPUT] Fit Features:
+  company_size_score: 0
+  industry_complexity_score: 0
+  software_gap_score: 0
+  operational_system_score: 0
+  customization_potential_score: 0
+  company_size: 250
+  industry: Technology
+  current_crm: HubSpot
+  operational_system: None
+
+[INPUT] Engagement Features:
+  intent_category_score: 85.0
+  buying_stage_score: 30.0
+  response_time_score: 75.0
+  engagement_trend_score: 50.0
+  customer_initiative_score: 100.0
+  decay_penalty: 0
+  days_since_last_outbound: 1
+  average_response_time_hours: 21.33
+  intent_today: demo_request
+  buying_stage: contacted
+  intent_today_score: 85
+  intent_7_days_ago_score: None
+
+----------------------------------------------------------------------
+[RESULT] SCORING OUTPUT:
+----------------------------------------------------------------------
+  Fit Score:         0.0
+  Fit Reasons:
+    - 👥 Small company - 250 employees → Lower complexity
+    - ✔️ Good software - Using HubSpot → May not need replacement
+    - 📦 Standard solution likely sufficient
+  Engagement Score:  66.0
+  Engagement Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📧 EARLY STAGE - Pipeline: contacted → Just started (score: 30.0)
+    - ✅ RESPONSIVE - Average: 21.33h → Good engagement (score: 75.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 1 days ago → Still hot
+  Overall Score:     26.4
+  Tier:              Low
+  Raw Score:         26.4
+  Top Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📧 EARLY STAGE - Pipeline: contacted → Just started (score: 30.0)
+----------------------------------------------------------------------
+
+[VERIFY] Score ranges:
+  Fit score 0-100:        PASS
+  Engagement score 0-100: PASS
+  Overall score 0-100:    PASS
+  Tier is valid:          PASS
+  Has engagement reasons: PASS
+  Has fit reasons:        PASS
+  Has top reasons:        PASS
+
+======================================================================
+  ALL TESTS PASSED ✓
+  Pass 1 (2 pairs):  PASS
+  Pass 2 (3 pairs):  PASS
+  Pass 3 (idempotent): PASS
+======================================================================
+
+[CLEANUP] Removing test data...
+[CLEANUP] Done.
+
+Results written to: D:\programs\Python\Kalnet\PULSE\PULSE-CRM\backend\test_engagement_results.txt
