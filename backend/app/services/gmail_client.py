@@ -86,7 +86,7 @@ class GmailClient:
         params = {
             "startHistoryId": start_history_id,
             "maxResults": max_results,
-            "historyTypes": "messageAdded,messageUpdated,labelAdded,labelRemoved",
+            "historyTypes": ["messageAdded", "messageUpdated", "labelAdded", "labelRemoved"],
         }
         if page_token:
             params["pageToken"] = page_token

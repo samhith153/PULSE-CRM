@@ -17,7 +17,7 @@ from uuid import UUID, uuid4
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.exceptions import ConflictException, NotFoundException
+from app.core.exceptions import ConflictException, NotFoundException, ValidationException
 from app.core.logging import get_logger
 from app.models.email import Email, GmailConnection
 from app.models.user import User
@@ -561,6 +561,7 @@ class EmailService:
             async with AsyncSessionFactory() as db:
                 svc = EmailSummaryService(db)
                 await svc.summarize_thread(organization_id, thread_id)
+                await db.commit()
         except Exception:
             logger.exception("Email summarization failed for thread %s", thread_id)
 
@@ -724,7 +725,15 @@ class EmailService:
         cursor = connection.sync_cursor
         if not cursor:
             return await self._backfill_from_gmail(organization_id, created_by, connection, access_token)
-        return await self._incremental_sync_from_gmail(organization_id, created_by, connection, access_token, cursor)
+        try:
+            return await self._incremental_sync_from_gmail(organization_id, created_by, connection, access_token, cursor)
+        except ValidationException as exc:
+            logger.warning("Incremental sync failed (stale cursor?), falling back to full backfill",
+                           extra={"connection_id": str(connection.id), "cursor": cursor, "error": str(exc)})
+            connection.sync_cursor = None
+            await self.connection_repo.update(connection, sync_cursor=None)
+            await self.email_repo.save()
+            return await self._backfill_from_gmail(organization_id, created_by, connection, access_token)
 
     async def _backfill_from_gmail(
         self,
@@ -996,10 +1005,38 @@ class EmailService:
         )
 
     async def get_thread_history(self, organization_id: UUID, thread_id: str) -> EmailThreadResponse:
+        from sqlalchemy import select as sa_select
+        from app.models.email_summary import EmailSummary
+
         emails = await self.email_repo.list_thread_history(organization_id, thread_id)
+
+        summary = None
+        stmt = sa_select(EmailSummary).where(
+            EmailSummary.thread_id == thread_id,
+            EmailSummary.organization_id == organization_id,
+        )
+        result = await self.db.execute(stmt)
+        record = result.scalar_one_or_none()
+        if record:
+            from app.schemas.email import EmailThreadSummary
+            summary = EmailThreadSummary(
+                summary=record.summary,
+                summary_word=record.summary_word,
+                sentiment=record.sentiment,
+                intent=record.intent,
+                confidence=record.confidence,
+                key_points=record.key_points or [],
+                action_items=record.action_items or [],
+                category=record.category,
+                draft_reply=record.draft_reply,
+                follow_up_suggestion=record.follow_up_suggestion,
+                follow_up_timing=record.follow_up_timing,
+            )
+
         return EmailThreadResponse(
             thread_id=thread_id,
             emails=[EmailResponse.model_validate(email) for email in emails],
+            summary=summary,
         )
 
     async def email_history_page(

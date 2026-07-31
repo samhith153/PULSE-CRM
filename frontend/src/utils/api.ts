@@ -371,67 +371,6 @@ export async function getPipelineStages(): Promise<any[]> {
   return stages;
 }
 
-// --- Conversation Intelligence (Bhavani Summarization API) ---
-export interface SummaryMessage {
-  sender: string;
-  recipients: string[];
-  subject: string;
-  body: string;
-  timestamp: string;
-  direction: 'incoming' | 'outgoing';
-}
-
-export interface ConversationSummary {
-  thread_id: string;
-  summary: string;
-  summary_word: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  intent: 'demo' | 'buy' | 'negotiate' | 'followup' | 'decline' | 'other';
-  confidence: number;
-  key_points: string[];
-  action_items: string[];
-  category?: 'sales' | 'support' | 'general' | 'urgent';
-  draft_reply?: string;
-  follow_up_suggestion?: string;
-  follow_up_timing?: 'immediate' | 'today' | 'tomorrow' | '2_days' | '3_days' | '1_week' | '2_weeks' | 'no_followup';
-  processing_time_ms?: number;
-  model_version?: string;
-}
-
-export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders()
-    },
-    body: JSON.stringify({
-      thread_id: threadId,
-      messages,
-      contact_id: contactId,
-      deal_id: dealId
-    })
-  });
-  if (!res.ok) {
-    let message = `Summarization failed (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
-export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
-    headers: { ...getAuthHeaders() }
-  });
-  if (!res.ok) {
-    let message = `Failed to load summary (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
 
 function toQuery(params: Record<string, string | number | boolean | null | undefined>): string {
   const search = new URLSearchParams();
@@ -597,6 +536,30 @@ export async function getEmails(params: EmailListParams = {}): Promise<Paginated
 
 export async function getEmail(id: string): Promise<SyncedEmail> {
   return apiFetch<SyncedEmail>(`/api/v1/emails/${id}`);
+}
+
+export interface ThreadSummary {
+  summary: string | null;
+  summary_word: string | null;
+  sentiment: string | null;
+  intent: string | null;
+  confidence: number | null;
+  key_points: string[];
+  action_items: string[];
+  category: string | null;
+  draft_reply: string | null;
+  follow_up_suggestion: string | null;
+  follow_up_timing: string | null;
+}
+
+export interface ThreadResult {
+  thread_id: string;
+  emails: SyncedEmail[];
+  summary: ThreadSummary | null;
+}
+
+export async function getThread(threadId: string): Promise<ThreadResult> {
+  return apiFetch<ThreadResult>(`/api/v1/gmail/threads/${encodeURIComponent(threadId)}`);
 }
 
 export async function getActivities(params: ActivityListParams = {}): Promise<PaginatedResult<ActivityTimelineItem>> {
