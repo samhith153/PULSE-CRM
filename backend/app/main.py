@@ -87,7 +87,12 @@ async def poll_gmail_replies():
                 return
             svc = EmailService(db)
             for organization_id in {c.organization_id for c in connections}:
-                await svc.sync_all_connections(organization_id, None)
+                try:
+                    await svc.sync_all_connections(organization_id, None)
+                    await db.commit()
+                except Exception as exc:
+                    await db.rollback()
+                    print("Gmail polling failed for org", organization_id, ":", exc)
     except Exception as exc:
         print("Gmail polling failed:", exc)
 
