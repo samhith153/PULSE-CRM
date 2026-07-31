@@ -555,9 +555,12 @@ class EmailService:
 
     async def _safe_summarize(self, organization_id: UUID, thread_id: str) -> None:
         try:
+            from app.database.connection import AsyncSessionFactory
             from app.services.email_summary_service import EmailSummaryService
-            svc = EmailSummaryService(self.db)
-            await svc.summarize_thread(organization_id, thread_id)
+
+            async with AsyncSessionFactory() as db:
+                svc = EmailSummaryService(db)
+                await svc.summarize_thread(organization_id, thread_id)
         except Exception:
             logger.exception("Email summarization failed for thread %s", thread_id)
 
