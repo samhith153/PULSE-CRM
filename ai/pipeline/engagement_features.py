@@ -213,7 +213,7 @@ def ai_intent_category_score(intent_category):
 # new, contacted, qualified, proposal_sent, negotiation, won, lost, converted
 _STAGE_SCORE_MAP = {
     "new": 10, "contacted": 30, "qualified": 50, "proposal_sent": 70,
-    "negotiation": 90, "won": 100, "lost": 0, "converted": 100,
+    "negotiation": 90, "won": 100, "lost": 0, "converted": 50,
 }
 
 

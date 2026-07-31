@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search } from 'lucide-react';
-import { getEmail, getEmails, getGmailConnections, syncGmail, SyncedEmail } from '@/utils/api';
+import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { getEmail, getEmails, getGmailConnections, getThread, syncGmail, SyncedEmail, ThreadSummary } from '@/utils/api';
 
 type MailboxFilter = 'all' | 'inbound' | 'outbound' | 'unread';
 
@@ -24,6 +24,8 @@ function formatSize(bytes?: number | null) {
 export default function EmailsView() {
   const [emails, setEmails] = useState<SyncedEmail[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<SyncedEmail | null>(null);
+  const [threadEmails, setThreadEmails] = useState<SyncedEmail[]>([]);
+  const [threadSummary, setThreadSummary] = useState<ThreadSummary | null>(null);
   const [filter, setFilter] = useState<MailboxFilter>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -118,10 +120,22 @@ export default function EmailsView() {
 
   const openEmail = async (email: SyncedEmail) => {
     setSelectedEmail(email);
+    setThreadEmails([]);
+    setThreadSummary(null);
     setIsDetailLoading(true);
     setError(null);
     try {
-      setSelectedEmail(await getEmail(email.id));
+      const fullEmail = await getEmail(email.id);
+      setSelectedEmail(fullEmail);
+      if (fullEmail.thread_id) {
+        try {
+          const thread = await getThread(fullEmail.thread_id);
+          setThreadEmails(thread.emails);
+          setThreadSummary(thread.summary);
+        } catch {
+          // Thread fetch failed; show single email only.
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load email details.');
     } finally {
@@ -203,14 +217,60 @@ export default function EmailsView() {
           <div className="h-full overflow-y-auto p-6 space-y-5">
             <div>
               <h3 className="text-base font-extrabold text-brand-heading leading-tight">{selectedEmail.subject}</h3>
-              <p className="text-[10px] font-bold text-slate-400 mt-1">{formatDate(selectedEmail.sent_at)} - {selectedEmail.is_read ? 'Read' : 'Unread'}</p>
+              <p className="text-[10px] font-bold text-slate-400 mt-1">{selectedEmail.thread_id && `Thread: ${selectedEmail.thread_id}`}</p>
             </div>
-            <div className="rounded-xl border border-brand-border-purple/15 bg-slate-50/50 p-4 space-y-2 text-xs font-semibold text-brand-text/80">
-              <p><span className="font-extrabold text-brand-heading">From:</span> {selectedEmail.sender}</p>
-              <p><span className="font-extrabold text-brand-heading">To:</span> {selectedEmail.receiver || 'Not provided'}</p>
-              {selectedEmail.thread_id && <p><span className="font-extrabold text-brand-heading">Thread:</span> {selectedEmail.thread_id}</p>}
-            </div>
-            <div className="text-xs text-brand-text font-semibold leading-relaxed whitespace-pre-line border-b border-slate-100 pb-6 min-h-[140px]">{selectedEmail.body_preview || 'No message body was provided by the backend response.'}</div>
+            {threadSummary && (
+              <div className="rounded-xl border border-brand-accent/20 bg-brand-accent/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-brand-accent" />
+                  <h4 className="text-xs font-extrabold text-brand-accent uppercase tracking-wider">AI Summary</h4>
+                  {threadSummary.confidence != null && (
+                    <span className="text-[9px] font-bold text-slate-400 ml-auto">{Math.round(threadSummary.confidence * 100)}% confidence</span>
+                  )}
+                </div>
+                <p className="text-xs font-semibold text-brand-text leading-relaxed">{threadSummary.summary}</p>
+                <div className="flex flex-wrap gap-2">
+                  {threadSummary.sentiment && (
+                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${threadSummary.sentiment === 'positive' ? 'bg-emerald-100 text-emerald-700' : threadSummary.sentiment === 'negative' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {threadSummary.sentiment}
+                    </span>
+                  )}
+                  {threadSummary.category && (
+                    <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{threadSummary.category}</span>
+                  )}
+                  {threadSummary.intent && (
+                    <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{threadSummary.intent}</span>
+                  )}
+                </div>
+                {threadSummary.follow_up_suggestion && (
+                  <div className="flex items-start gap-1.5 pt-1 border-t border-brand-accent/10">
+                    <span className="text-[9px] font-extrabold text-brand-accent shrink-0 mt-0.5">Follow-up:</span>
+                    <span className="text-[10px] font-semibold text-brand-text/70">{threadSummary.follow_up_suggestion}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {threadEmails.length > 0 ? (
+              <div className="space-y-4">
+                {threadEmails.map((msg) => (
+                  <div key={msg.id} className="rounded-xl border border-brand-border-purple/15 bg-slate-50/50 p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-extrabold text-brand-heading">{msg.direction === 'outbound' ? `To: ${msg.receiver}` : `From: ${msg.sender}`}</p>
+                      <span className="text-[10px] font-bold text-slate-400">{formatDate(msg.sent_at)}</span>
+                    </div>
+                    <div className="text-xs text-brand-text font-semibold leading-relaxed whitespace-pre-line">{msg.body_preview || 'No message body.'}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="rounded-xl border border-brand-border-purple/15 bg-slate-50/50 p-4 space-y-2 text-xs font-semibold text-brand-text/80">
+                  <p><span className="font-extrabold text-brand-heading">From:</span> {selectedEmail.sender}</p>
+                  <p><span className="font-extrabold text-brand-heading">To:</span> {selectedEmail.receiver || 'Not provided'}</p>
+                </div>
+                <div className="text-xs text-brand-text font-semibold leading-relaxed whitespace-pre-line border-b border-slate-100 pb-6 min-h-[140px]">{selectedEmail.body_preview || 'No message body was provided by the backend response.'}</div>
+              </>
+            )}
             <div className="space-y-2.5">
               <h4 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">Attachments</h4>
               {selectedEmail.attachment_metadata?.length ? selectedEmail.attachment_metadata.map(file => (

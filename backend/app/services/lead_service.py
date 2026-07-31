@@ -211,6 +211,13 @@ class LeadService:
             payload={"lead_id": str(lead.id), "status": new_status.value},
             topic="lead",
         )
+        # ── Recompute scores (buying_stage changed) ──────────────────────
+        try:
+            await self.lead_scoring_service.compute_and_store_scores(
+                lead.id, organization_id, lead.created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to recompute lead scores on status change", extra={"lead_id": str(lead.id), "error": str(e)})
         logger.info("Lead status updated", extra={"lead_id": str(lead_id), "new_status": new_status.value})
         return lead
 
@@ -363,6 +370,14 @@ class LeadService:
             if employee_count is not None:
                 lead_updates["employee_count"] = employee_count
             await self.repo.update(lead, **lead_updates)
+
+            # ── Recompute scores (buying_stage changed to converted) ────────
+            try:
+                await self.lead_scoring_service.compute_and_store_scores(
+                    lead.id, organization_id, created_by
+                )
+            except Exception as e:
+                logger.warning("Failed to recompute lead scores on convert", extra={"lead_id": str(lead.id), "error": str(e)})
 
             await self.timeline.record_activity(
                 organization_id=organization_id,

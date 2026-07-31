@@ -66,6 +66,41 @@ class EmailRepository(BaseRepository[Email]):
         stmt = select(Email).where(Email.gmail_message_id == gmail_message_id)
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def get_outbound_by_thread(self, organization_id: UUID, thread_id: str) -> Optional[Email]:
+        """Find the most recent outbound email belonging to a Gmail thread.
+
+        Replies share the same Gmail threadId as the message they answer, so this
+        is the most reliable way to link an inbound reply to its original email.
+        """
+        stmt = (
+            select(Email)
+            .where(
+                Email.organization_id == organization_id,
+                Email.thread_id == thread_id,
+                Email.direction == EmailDirection.OUTBOUND,
+                Email.is_active.is_(True),
+            )
+            .order_by(desc(Email.sent_at))
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    async def get_by_raw_message_id_local(self, message_id_local: str) -> Optional[Email]:
+        """Look up an email by the RFC 5322 Message-ID local part stored in raw_payload.
+
+        The reply's In-Reply-To header references the original's Message-ID, so this
+        matches replies sent to the Brevo relay (whose Message-ID we control on send).
+        """
+        stmt = select(Email).where(
+            Email.is_active.is_(True),
+            or_(
+                Email.raw_payload["message_id"].as_string() == message_id_local,
+                Email.raw_payload["brevo_message_id"].as_string() == message_id_local,
+            ),
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
     
     async def get_by_id_in_org(self, organization_id: UUID, email_id: UUID) -> Optional[Email]:
         stmt = self._base_query(organization_id).where(Email.id == email_id)

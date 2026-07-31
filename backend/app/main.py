@@ -41,7 +41,6 @@ setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
 logger = get_logger(__name__)
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import subprocess
 import sys
 import os
 
@@ -58,16 +57,57 @@ async def process_event_outbox():
         print("Event outbox processing failed:", exc)
 
 def recompute_features():
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    result = subprocess.run(
-        [sys.executable, os.path.join(project_root, "..", "ai", "pipeline", "export_real_features.py"),
-         "--org-id", "2122315f-b7d3-4628-8dfd-4be3a7e905b9"],
-        capture_output=True, text=True,
-    )
-    if result.returncode != 0:
-        print("Feature recompute failed:", result.stderr)
-    else:
-        print("Feature recompute completed.")
+    from app.services.feature_recompute_service import recompute_lead_features
+
+    try:
+        from app.database.connection import engine
+        from sqlalchemy import text
+        import asyncio
+
+        async def _get_org_ids():
+            async with engine.connect() as conn:
+                result = await conn.execute(text("SELECT DISTINCT id FROM organizations"))
+                return [str(row[0]) for row in result]
+
+        org_ids = asyncio.get_event_loop().run_until_complete(_get_org_ids())
+    except Exception as exc:
+        print("Failed to fetch organization IDs:", exc)
+        return
+
+    for org_id in org_ids:
+        ok = recompute_lead_features(org_id)
+        if not ok:
+            print(f"Feature recompute failed for org {org_id}.")
+        else:
+            print(f"Feature recompute completed for org {org_id}.")
+
+async def poll_gmail_replies():
+    """Poll connected Gmail accounts for new inbound messages / replies."""
+    from sqlalchemy import select
+
+    from app.database.connection import AsyncSessionFactory
+    from app.models.email import GmailConnection
+    from app.services.email_service import EmailService
+
+    try:
+        async with AsyncSessionFactory() as db:
+            result = await db.execute(
+                select(GmailConnection).where(GmailConnection.is_active.is_(True))
+            )
+            connections = list(result.scalars().all())
+            if not connections:
+                return
+            svc = EmailService(db)
+            for organization_id in {c.organization_id for c in connections}:
+                try:
+                    await svc.sync_all_connections(organization_id, None)
+                    await db.commit()
+                except Exception as exc:
+                    await db.rollback()
+                    print("Gmail polling failed for org", organization_id, ":", exc)
+    except Exception as exc:
+        print("Gmail polling failed:", exc)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     register_default_consumers()
@@ -75,6 +115,7 @@ async def lifespan(app: FastAPI):
 
     scheduler.add_job(recompute_features, "interval", minutes=5)
     scheduler.add_job(process_event_outbox, "interval", seconds=15)
+    scheduler.add_job(poll_gmail_replies, "interval", minutes=2)
     scheduler.start()
 
     yield
