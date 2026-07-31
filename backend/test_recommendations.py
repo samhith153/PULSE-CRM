@@ -1,9 +1,9 @@
-"""Quick test of the recommendation engine — prints results to console."""
+"""Test recommendation engine — imports from ai/recommendation/ module."""
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from ai.recommendation.ai_recommendation_engine_enhanced import generate_recommendation
+from ai.recommendation import generate_recommendation, is_terminal, STAGE_MAP
 
 tests = [
     {
@@ -47,7 +47,6 @@ tests = [
             "current_stage": "Contacted",
             "days_since_last_activity": 1,
             "reply_received": True,
-            "email_open_count": 3,
             "outbound_email_count": 2,
             "inbound_email_count": 2,
         },
@@ -61,7 +60,6 @@ tests = [
             "days_since_last_activity": 2,
             "reply_received": True,
             "deal_value": 120000,
-            "email_open_count": 8,
             "outbound_email_count": 5,
             "inbound_email_count": 4,
             "meeting_attendance_status": "ATTENDED",
@@ -132,21 +130,17 @@ tests = [
         },
     },
     {
-        "label": "Demo Scheduled, no-show, 8 days stale",
+        "label": "Won lead (terminal)",
         "data": {
             "lead_id": "test-11",
-            "current_score": 72.0,
-            "current_stage": "Demo Scheduled",
-            "days_since_last_activity": 8,
-            "reply_received": False,
-            "deal_value": 60000,
-            "outbound_email_count": 2,
-            "inbound_email_count": 0,
-            "meeting_attendance_status": "NO_SHOW",
+            "current_score": 95.0,
+            "current_stage": "Won",
+            "days_since_last_activity": 0,
+            "reply_received": True,
         },
     },
     {
-        "label": "Negotiation, $300K deal, attended meeting",
+        "label": "Negotiation, $300K, attended",
         "data": {
             "lead_id": "test-12",
             "current_score": 88.0,
@@ -161,14 +155,25 @@ tests = [
 
 print("=" * 80)
 print("  PULSE CRM - AI RECOMMENDATION ENGINE TEST")
+print("  (imported from ai/recommendation/ module)")
 print("=" * 80)
+print(f"\n  STAGE_MAP: {STAGE_MAP}")
+print(f"  is_terminal('won'): {is_terminal('won')}")
+print(f"  is_terminal('new'): {is_terminal('new')}")
 
 for i, test in enumerate(tests, 1):
+    stage = test["data"]["current_stage"]
+    if is_terminal(stage.lower()):
+        print(f"\n[{i:2d}] {test['label']}")
+        print("-" * 60)
+        print(f"  SKIP: terminal stage '{stage}'")
+        continue
+
     print(f"\n[{i:2d}] {test['label']}")
     print("-" * 60)
     result = generate_recommendation(test["data"])
     if result.get("error"):
-        print(f"  SKIP: {result['error']}")
+        print(f"  ERROR: {result['error']}")
     else:
         print(f"  ACTION: {result['recommended_action']}")
         print(f"  REASON: {result['reason']}")
@@ -178,5 +183,5 @@ for i, test in enumerate(tests, 1):
         ))
 
 print("\n" + "=" * 80)
-print("  DONE - All scenarios tested")
+print("  DONE")
 print("=" * 80)

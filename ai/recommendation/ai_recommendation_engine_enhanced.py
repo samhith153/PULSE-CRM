@@ -24,7 +24,7 @@ from ai.recommendation.ai_recommendation_models import (
     RecommendationResult,
     RecommendationResponse,
 )
-from ai.recommendation.rules import ActionRule, actions_for_stage
+from ai.recommendation.rules import actions_for_stage
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -47,24 +47,17 @@ def _normalize_inputs(features: LeadFeatures) -> dict[str, float]:
     """Convert raw features into 0-1 normalized values."""
 
     score_norm = features.current_score / 100
-
-    # Urgency: 0 days = 0.0, 7+ days = 1.0
     urgency = min(features.days_since_last_activity / 7, 1.0)
-
-    # Reply: binary
     reply_factor = 1.0 if features.reply_received else 0.0
 
-    # Deal value: $0 = 0.0, $200k+ = 1.0
     deal_value_norm = 0.0
     if features.deal_value is not None and features.deal_value > 0:
         deal_value_norm = min(features.deal_value / 200000, 1.0)
 
-    # Email opens: 0 = 0.0, 5+ = 1.0
     email_open_norm = 0.0
     if features.email_open_count is not None:
         email_open_norm = min(features.email_open_count / 5, 1.0)
 
-    # Meeting attendance
     meeting_factor = 0.0
     if features.meeting_attendance_status == "ATTENDED":
         meeting_factor = 1.0
@@ -73,13 +66,11 @@ def _normalize_inputs(features: LeadFeatures) -> dict[str, float]:
     elif features.meeting_attendance_status == "RESCHEDULED":
         meeting_factor = 0.5
 
-    # Rep workload: 0 items = 0.0, 15+ items = 1.0
     rep_workload_norm = 0.0
     if features.rep_active_action_count is not None:
         rep_workload_norm = min(features.rep_active_action_count / 15, 1.0)
 
-    # Contact time
-    contact_time_factor = 0.5  # default
+    contact_time_factor = 0.5
     if features.best_contact_time_slot:
         preferred_slots = {
             "10:00-12:00": 1.0,
@@ -148,26 +139,21 @@ def score_candidates(features: LeadFeatures) -> list[RecommendationResult]:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# REASON BUILDER — explains WHY this action was chosen
+# REASON BUILDER
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
 def _build_reason(features: LeadFeatures, winning_action: str, top_factor: str) -> str:
-    """
-    Build a reason that explains WHY this specific action was recommended,
-    based on the lead's actual data signals.
-    """
+    """Build a reason that explains WHY this action was recommended."""
 
     stage = features.current_stage
     score = features.current_score
     days = features.days_since_last_activity
     has_reply = features.reply_received
     deal_val = features.deal_value
-    emails_sent = getattr(features, "outbound_email_count", None) or 0
-    emails_received = getattr(features, "inbound_email_count", None) or 0
+    emails_sent = features.outbound_email_count
+    emails_received = features.inbound_email_count
     meeting = features.meeting_attendance_status
-
-    # ── Build the reason based on the winning action ──
 
     if winning_action == "Send introductory email":
         if deal_val and deal_val >= 50000:
@@ -255,7 +241,7 @@ def _build_reason(features: LeadFeatures, winning_action: str, top_factor: str) 
         return "Deal is close to closing. Send the final contract and set a signature deadline."
 
     if winning_action == "Offer value-add services":
-        return f"Negotiating on price? Offer onboarding, training, or extended support as value-adds instead of discounts."
+        return "Negotiating on price? Offer onboarding, training, or extended support as value-adds instead of discounts."
 
     if winning_action == "Escalate to manager for approval":
         if deal_val and deal_val >= 100000:
@@ -270,7 +256,6 @@ def _build_reason(features: LeadFeatures, winning_action: str, top_factor: str) 
     if winning_action == "Add to nurture campaign":
         return f"Lead isn't ready to buy now (score {score}/100). Add to automated drip sequence for long-term nurturing."
 
-    # Fallback
     return f"Based on the lead's score ({score}/100) and stage ({stage}), this is the most appropriate next action."
 
 
@@ -280,12 +265,7 @@ def _build_reason(features: LeadFeatures, winning_action: str, top_factor: str) 
 
 
 def recommend(features: LeadFeatures) -> RecommendationResponse:
-    """
-    Generate recommendation for a lead.
-
-    Input: LeadFeatures with lead data
-    Output: RecommendationResponse with action + reason
-    """
+    """Generate recommendation for a lead."""
 
     candidates = score_candidates(features)
 
@@ -337,6 +317,8 @@ def generate_recommendation(lead_dict: dict) -> dict:
             meeting_attendance_status=lead_dict.get("meeting_attendance_status"),
             rep_active_action_count=lead_dict.get("rep_active_action_count"),
             best_contact_time_slot=lead_dict.get("best_contact_time_slot"),
+            outbound_email_count=lead_dict.get("outbound_email_count", 0),
+            inbound_email_count=lead_dict.get("inbound_email_count", 0),
         )
 
         recommendation = recommend(features)
