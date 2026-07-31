@@ -63,6 +63,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
               { name: 'Leads', icon: Users, tab: 'leads' },
               { name: 'Activities', icon: Activity, tab: 'activities' },
               { name: 'Calendar', icon: Calendar, tab: 'calendar' },
+              { name: 'Emails', icon: Mail, tab: 'emails' },
               { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
               { name: 'Integrations', icon: Link2, tab: 'integrations' },
             ]
@@ -97,6 +98,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
             items: [
               { name: 'Integrations', icon: Link2, tab: 'integrations' },
               { name: 'Automation', icon: GitBranch, tab: 'automation' },
+              { name: 'Emails', icon: Mail, tab: 'emails' },
             ]
           },
           {

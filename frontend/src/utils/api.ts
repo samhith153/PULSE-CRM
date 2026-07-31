@@ -728,6 +728,24 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
 export async function getSalesDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales${toQuery({ period })}`);
 }
+// Fetch the dashboard KPIs for a given UI role. Each role hits its own
+// RBAC-scoped endpoint so a sales rep / manager never calls /dashboard/admin.
+export async function getRoleDashboard(
+  role: 'representative' | 'manager' | 'admin',
+  period: 'week' | 'month' | 'quarter' | 'year' = 'month',
+): Promise<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData> {
+  switch (role) {
+    case 'admin':
+      return getAdminDashboard();
+    case 'manager':
+      return getManagerDashboard();
+    case 'representative':
+    default:
+      // Prefer the canonical /dashboard/sales; fall back to the /sales-rep alias.
+      return getSalesDashboard(period).catch(() => getSalesRepDashboard(period));
+  }
+}
+
 export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
   return apiFetch('/api/v1/auth/me');
 }

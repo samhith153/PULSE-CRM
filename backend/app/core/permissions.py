@@ -161,6 +161,11 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
     custom edits in the admin UI are authoritative. For built-in system
     roles without any DB permissions assigned, fall back to the built-in
     permission catalog so authorization remains stable.
+
+    The built-in `admin` role is always granted the full permission set.
+    This prevents an incomplete DB permission assignment from accidentally
+    locking admins out of core actions (e.g. loading the role list needed to
+    create users).
     """
     permissions: set[str] = set()
 
@@ -181,6 +186,11 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
             built_in_role = Role(role_name) if role_name else None
         except ValueError:
             built_in_role = None
+
+        # Admin always has every permission — never stripped by DB edits.
+        if built_in_role is Role.ADMIN:
+            permissions.update(get_permissions_for_role(Role.ADMIN))
+            continue
 
         if built_in_role and not role_db_permissions:
             permissions.update(get_permissions_for_role(built_in_role))
