@@ -388,6 +388,20 @@ class LeadService:
             )
 
             logger.info("Lead converted to deal", extra={"lead_id": str(lead.id), "deal_id": str(deal.id)})
+
+            if created_by:
+                from app.services.notification_service import NotificationService
+
+                await NotificationService(self.db).create_for_user(
+                    organization_id=organization_id,
+                    user_id=lead.owner_id or created_by,
+                    notif_type="lead_converted",
+                    title="Lead converted",
+                    message=f"Lead '{lead.title}' was converted into a deal.",
+                    entity_type="deal",
+                    entity_id=deal.id,
+                )
+
             return deal
 
     async def _validate_relations(

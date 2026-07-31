@@ -1064,3 +1064,49 @@ export async function getManagerForecast(
     `/api/v1/dashboard/manager/forecast${toQuery({ period })}`
   );
 }
+
+// --- Notifications API ---
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  payload: Record<string, unknown> | null;
+  is_read: boolean;
+  read_at: string | null;
+  is_dismissed: boolean;
+  created_at: string;
+}
+
+export interface NotificationList {
+  items: Notification[];
+  total: number;
+  unread_count: number;
+}
+
+export async function getNotifications(params: { page?: number; pageSize?: number; unreadOnly?: boolean } = {}): Promise<NotificationList> {
+  const query = new URLSearchParams();
+  query.set('page', String(params.page ?? 1));
+  query.set('page_size', String(params.pageSize ?? 20));
+  if (params.unreadOnly) query.set('unread_only', 'true');
+  return apiFetch<NotificationList>(`/api/v1/notifications?${query.toString()}`);
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const result = await apiFetch<{ unread_count: number }>('/api/v1/notifications/unread-count');
+  return result.unread_count;
+}
+
+export async function markNotificationRead(notificationId: string): Promise<Notification> {
+  return apiFetch<Notification>(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead(): Promise<{ updated: number }> {
+  return apiFetch<{ updated: number }>('/api/v1/notifications/read-all', { method: 'POST' });
+}
+
+export async function dismissNotification(notificationId: string): Promise<Notification> {
+  return apiFetch<Notification>(`/api/v1/notifications/${notificationId}`, { method: 'DELETE' });
+}

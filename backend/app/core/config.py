@@ -88,6 +88,7 @@ class Settings(BaseSettings):
     SMTP_FROM_NAME: str = "KALNET PULSE CRM"
     SMTP_TLS: bool = True
     FRONTEND_BASE_URL: str = "http://localhost:3000"
+    BREVO_API_KEY: str = ""
 
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None

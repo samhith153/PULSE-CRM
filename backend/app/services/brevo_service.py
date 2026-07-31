@@ -35,14 +35,14 @@ class BrevoEventError(Exception):
 
 
 class BrevoService:
-
     def __init__(self, db):
         self.db = db
         self.email_repo = EmailRepository(db)
 
     async def process_event(self, payload: dict) -> dict:
         """
-        Process an incoming Brevo webhook event.
+        Process an incoming Brevo webhook event and persist it against
+        the matching email record.
 
         Brevo sends events in this format:
         {
@@ -50,7 +50,7 @@ class BrevoService:
             "email": "recipient@example.com",
             "id": 12345,              // Brevo message ID
             "date": "2025-01-01T12:00:00+00:00",
-            "ts": 1234567890,         // Unix timestamp
+            "ts": 1234567890,
             "subject": "Re: ...",
             "message-id": "<...>",     // SMTP Message-ID
             "tag": "my-tag",
@@ -59,9 +59,8 @@ class BrevoService:
         """
         event_type = payload.get("event", "")
         recipient = payload.get("email", "")
-        message_id = payload.get("message-id") or payload.get("id")
-        ts = payload.get("ts")
-        event_date = payload.get("date")
+        message_id_raw = payload.get("message-id", "")
+        message_id = message_id_raw.strip("<>").split("@")[0] if message_id_raw else str(payload.get("id", ""))
 
         logger.info(
             "Brevo event: type=%s recipient=%s message_id=%s",
@@ -70,7 +69,6 @@ class BrevoService:
             message_id,
         )
 
-        # Validate required fields
         if not event_type:
             logger.error("Brevo payload missing 'event' field: %s", payload)
             raise BrevoEventError("Missing 'event' field in payload")
@@ -82,16 +80,17 @@ class BrevoService:
                 list(payload.keys()),
             )
 
-        # TODO: Persist event to event_outbox / email_events table
-        # Once the email events model is set up, add something like:
-        #
-        #   await self.email_repo.create_event(
-        #       event_type=event_type,
-        #       recipient=recipient,
-        #       message_id=message_id,
-        #       event_date=event_date,
-        #       raw_payload=payload,
-        #   )
+        email = await self.email_repo.get_by_message_id_global(message_id)
+        if not email:
+            logger.info("No matching email row for message_id=%s, skipping", message_id)
+            return {"event": event_type, "recipient": recipient, "status": "no_match"}
+
+        merged = dict(email.raw_payload or {})
+        merged["status"] = event_type
+        merged.setdefault("events", []).append(payload)
+        email.raw_payload = merged
+
+        await self.email_repo.save()
 
         logger.debug("Brevo event processed successfully: %s", event_type)
 
