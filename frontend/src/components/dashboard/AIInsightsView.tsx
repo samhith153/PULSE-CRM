@@ -129,8 +129,8 @@ export default function AIInsightsView() {
                       <p className="text-[10px] text-slate-400 p-2">Loading live actions...</p>
                     ) : error ? (
                       <p className="text-[10px] text-rose-500 p-2">Failed to load actions</p>
-                    ) : actionCenter?.immediateActions && actionCenter.immediateActions.length > 0 ? (
-                      actionCenter.immediateActions.map((item) => (
+                    ) : actionCenter?.immediate_actions && actionCenter.immediate_actions.length > 0 ? (
+                      actionCenter.immediate_actions.map((item: any) => (
                         <div key={item.id} className="p-2.5 bg-white border border-rose-100 rounded-lg">
                           <div className="flex justify-between items-center">
                             <span className="text-[10px] font-extrabold text-brand-heading">
@@ -152,7 +152,7 @@ export default function AIInsightsView() {
                 </div>
               </div>
 
-              {/* Follow Up Due */}
+              {/* Follow Up Due - Live Backend Data */}
               <div className="bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
                   <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
@@ -165,25 +165,28 @@ export default function AIInsightsView() {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-2.5 bg-white border border-amber-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Sparta Creative</span>
-                        <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Overdue 3d</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Missed scheduled demo call. Immediate rescheduling required.</p>
-                    </div>
-                    <div className="p-2.5 bg-white border border-amber-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">TechCorp Inc.</span>
-                        <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Overdue 5d</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">No response to final pricing quote sent last week.</p>
-                    </div>
+                    {actionCenter?.follow_ups && actionCenter.follow_ups.length > 0 ? (
+                      actionCenter.follow_ups.map((item: any) => (
+                        <div key={item.id} className="p-2.5 bg-white border border-amber-100 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-extrabold text-brand-heading">{item.title}</span>
+                            <span className="text-[9px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">
+                              Due: {new Date(item.due_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">
+                            {item.status || 'Pending follow-up required.'}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 p-2">No pending follow-ups.</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Rising Interest */}
+              {/* Rising Interest - Live Backend Data */}
               <div className="bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
                   <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
@@ -196,25 +199,30 @@ export default function AIInsightsView() {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-2.5 bg-white border border-emerald-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Marcus Aurelius</span>
-                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Score 78</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Engagement spiked 45%. Reviewing integrations documentation.</p>
-                    </div>
-                    <div className="p-2.5 bg-white border border-emerald-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Empire Group</span>
-                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">Score 74</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Opened product proposal email 5 times in the last 24h.</p>
-                    </div>
+                    {actionCenter?.opportunity_scores && actionCenter.opportunity_scores.length > 0 ? (
+                      actionCenter.opportunity_scores.map((item: any) => (
+                        <div key={item.id} className="p-2.5 bg-white border border-emerald-100 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-extrabold text-brand-heading">
+                              {item.lead_name || item.company_name || 'Unnamed Lead'}
+                            </span>
+                            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                              Score {item.opportunity_score || item.score || 0}
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">
+                            {item.reason || 'High engagement metrics detected.'}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 p-2">No rising interest detected.</p>
+                    )}
                   </div>
                 </div>
               </div>
 
-              {/* Going Cold */}
+              {/* Going Cold - Live Backend Data */}
               <div className="bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
                   <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
@@ -227,20 +235,25 @@ export default function AIInsightsView() {
                     </span>
                   </div>
                   <div className="space-y-3">
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">David Hume</span>
-                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Score 41</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">No response to follow-ups in 14d. Budget constraints cited.</p>
-                    </div>
-                    <div className="p-2.5 bg-white border border-slate-200 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Liberty Corp</span>
-                        <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">Score 35</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">Inbound lead inactive for 21 days since discovery call.</p>
-                    </div>
+                    {actionCenter?.going_cold?.items && actionCenter.going_cold.items.length > 0 ? (
+                      actionCenter.going_cold.items.map((item: any) => (
+                        <div key={item.id} className="p-2.5 bg-white border border-slate-200 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-extrabold text-brand-heading">
+                              {item.name || item.company_name}
+                            </span>
+                            <span className="text-[9px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                              Score {item.cold_score}
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">
+                            Inactive for {item.days_inactive} days. {item.risk_level} risk.
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 p-2">No cold leads detected.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -251,7 +264,7 @@ export default function AIInsightsView() {
         {/* Right Side: Health Index & Priorities (4 columns) */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
 
-          {/* Health Index */}
+          {/* Health Index - Live Backend Data */}
           <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
             <h3 className="font-extrabold text-brand-heading text-sm mb-3.5 flex items-center">
               <ShieldCheck className="h-4.5 w-4.5 mr-2 text-brand-accent" />
@@ -259,8 +272,13 @@ export default function AIInsightsView() {
             </h3>
 
             <div className="text-center py-4 bg-slate-50/50 border border-brand-border-purple/15 rounded-xl">
-              <span className="text-4xl font-serif text-brand-heading font-normal tabular-nums">94<span className="text-sm font-sans text-brand-text/50">/100</span></span>
-              <p className="text-[10px] text-emerald-600 font-extrabold mt-1.5">▲ Excellent Velocity (+3% vs yesterday)</p>
+              <span className="text-4xl font-serif text-brand-heading font-normal tabular-nums">
+                {actionCenter?.pipeline_health?.score ?? 0}
+                <span className="text-sm font-sans text-brand-text/50">/100</span>
+              </span>
+              <p className="text-[10px] text-emerald-600 font-extrabold mt-1.5">
+                Velocity Index: {actionCenter?.pipeline_health?.velocity_change_pct ?? 0}%
+              </p>
             </div>
             <p className="text-[9px] text-slate-400 font-bold mt-3 leading-relaxed">
               Calculated using meeting logs frequency, contract proposal response times, and target ratios.

@@ -1094,28 +1094,81 @@ export async function dismissNotification(notificationId: string): Promise<Notif
 }
 // --- AI Insights API ---
 
+export interface ImmediateActionItem {
+  id: string;
+  lead_name?: string;
+  deal_name?: string;
+  score: number;
+  priority: string;
+  reason: string;
+  deal_value?: number;
+  probability?: number;
+  owner_name?: string;
+  last_activity_at?: string | null;
+}
+
+export interface FollowUpDueItem {
+  id: string;
+  title: string;
+  company_name?: string;
+  owner_name?: string;
+  due_date: string;
+  status: string;
+  days_overdue?: number;
+}
+
+export interface GoingColdItem {
+  id: string;
+  name: string;
+  company_name?: string;
+  owner_name?: string;
+  cold_score: number;
+  risk_level: string;
+  days_inactive: number;
+  deal_value?: number;
+}
+
+export interface PipelineHealthData {
+  score: number;
+  status: string;
+  velocity_change_pct: number;
+  breakdown: Record<string, any>;
+}
+
 export interface AIActionCenterData {
-  immediateActions: Array<{
-    id: string;
-    lead_name?: string;
-    deal_name?: string;
-    score: number;
-    priority: string;
-    reason: string;
-    deal_value?: number;
-    probability?: number;
-    owner_name?: string;
-    last_activity_at?: string | null;
-  }>;
-  followUps?: any[];
-  pipeline_health?: any;
-  highValueDeals?: any[];
-  riskItems?: any[];
-  opportunityScores?: any[];
+  pipeline_health?: PipelineHealthData;
+  immediate_actions?: ImmediateActionItem[];
+  follow_ups?: FollowUpDueItem[];
+  going_cold?: { items: GoingColdItem[]; total: number };
+  high_value_deals?: any[];
+  risk_items?: any[];
+  opportunity_scores?: any[];
   recommendations?: any[];
   notifications?: any[];
 }
 
-export async function getAIActionCenter(): Promise<AIActionCenterData> {
-  return apiFetch<AIActionCenterData>('/api/v1/ai-insights/immediate-actions');
+// Fixed endpoint pointing to the full action-center route defined in backend
+export async function getAIActionCenter(dateFilter?: string, priority?: string): Promise<AIActionCenterData> {
+  const query = toQuery({ date_filter: dateFilter, priority });
+  return apiFetch<AIActionCenterData>(`/api/v1/ai-insights/action-center${query}`);
+}
+
+export async function getPipelineHealth(): Promise<PipelineHealthData> {
+  return apiFetch<PipelineHealthData>('/api/v1/ai-insights/pipeline-health');
+}
+
+export async function getImmediateActions(): Promise<ImmediateActionItem[]> {
+  return apiFetch<ImmediateActionItem[]>('/api/v1/ai-insights/immediate-actions');
+}
+
+export async function getFollowUps(): Promise<FollowUpDueItem[]> {
+  return apiFetch<FollowUpDueItem[]>('/api/v1/ai-insights/follow-ups');
+}
+
+export async function getGoingColdLeads(params: { limit?: number; minimum_risk?: string } = {}): Promise<any> {
+  return apiFetch<any>(`/api/v1/ai-insights/going-cold${toQuery(params)}`);
+}
+
+export async function getDailyPriorities(params: { limit?: number; priority?: string } = {}): Promise<any> {
+  return apiFetch<any>(`/api/v1/ai-insights/daily-priorities${toQuery(params)}`);
 }

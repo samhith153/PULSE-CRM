@@ -33,7 +33,7 @@ if not getattr(StarletteRouter.__init__, "__pulse_compat__", False):
             redirect_slashes=redirect_slashes,
             default=default,
             lifespan=lifespan,
-            middleware=middleware,
+            
             **kwargs,
         )
         # Recreate the older FastAPI router attributes that include_router reads.
