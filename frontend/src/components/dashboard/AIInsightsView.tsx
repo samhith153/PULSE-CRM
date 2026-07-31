@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   Award, 
@@ -20,6 +20,7 @@ import {
   Clock,
   TrendingDown
 } from 'lucide-react';
+import { getAIActionCenter, AIActionCenterData } from '../../utils/api';
 
 interface AILead {
   name: string;
@@ -37,6 +38,22 @@ interface ActionItem {
 }
 
 export default function AIInsightsView() {
+  const [actionCenter, setActionCenter] = useState<AIActionCenterData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAIActionCenter()
+      .then((res) => {
+        setActionCenter(res);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError(err.message);
+        setLoading(false);
+      });
+  }, []);
+
   const [topLeads] = useState<AILead[]>([
     { name: "Helena Troy", company: "Sparta Creative", score: 95, reason: "Inbound request has high seat potential and priority SLA requirements." },
     { name: "Alex Rivera", company: "TechCorp Inc.", score: 88, reason: "SAML SSO setup cleared by engineering. Ready for legal contract." }
@@ -83,10 +100,10 @@ export default function AIInsightsView() {
 
       {/* Main Grid split */}
       <div className="grid grid-cols-12 gap-6">
-        
+
         {/* Left Side: AI Action Center 4-Grid (8 columns) */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          
+
           <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
             <h3 className="font-extrabold text-brand-heading text-sm mb-4 flex items-center">
               <BrainCircuit className="h-4.5 w-4.5 mr-2 text-brand-accent" />
@@ -94,7 +111,7 @@ export default function AIInsightsView() {
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Immediate Action */}
+              {/* Immediate Action - Live Backend Data */}
               <div className="bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
                   <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
@@ -106,21 +123,31 @@ export default function AIInsightsView() {
                       P1 Urgent
                     </span>
                   </div>
+                  
                   <div className="space-y-3">
-                    <div className="p-2.5 bg-white border border-rose-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Helena Troy</span>
-                        <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">95 Score</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">High seat potential. Priority SLA requirements.</p>
-                    </div>
-                    <div className="p-2.5 bg-white border border-rose-100 rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] font-extrabold text-brand-heading">Alex Rivera</span>
-                        <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">88 Score</span>
-                      </div>
-                      <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">SSO setup complete. Ready for NDA/Legal contract.</p>
-                    </div>
+                    {loading ? (
+                      <p className="text-[10px] text-slate-400 p-2">Loading live actions...</p>
+                    ) : error ? (
+                      <p className="text-[10px] text-rose-500 p-2">Failed to load actions</p>
+                    ) : actionCenter?.immediateActions && actionCenter.immediateActions.length > 0 ? (
+                      actionCenter.immediateActions.map((item) => (
+                        <div key={item.id} className="p-2.5 bg-white border border-rose-100 rounded-lg">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-extrabold text-brand-heading">
+                              {item.deal_name || item.lead_name}
+                            </span>
+                            <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
+                              ₹{item.deal_value?.toLocaleString() || 0}
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-brand-text/75 mt-1 font-semibold leading-relaxed">
+                            {item.reason}
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 p-2">No urgent actions required.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -223,7 +250,7 @@ export default function AIInsightsView() {
 
         {/* Right Side: Health Index & Priorities (4 columns) */}
         <div className="col-span-12 lg:col-span-4 space-y-6">
-          
+
           {/* Health Index */}
           <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
             <h3 className="font-extrabold text-brand-heading text-sm mb-3.5 flex items-center">

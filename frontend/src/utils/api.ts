@@ -1092,3 +1092,30 @@ export async function markAllNotificationsRead(): Promise<{ updated: number }> {
 export async function dismissNotification(notificationId: string): Promise<Notification> {
   return apiFetch<Notification>(`/api/v1/notifications/${notificationId}`, { method: 'DELETE' });
 }
+// --- AI Insights API ---
+
+export interface AIActionCenterData {
+  immediateActions: Array<{
+    id: string;
+    lead_name?: string;
+    deal_name?: string;
+    score: number;
+    priority: string;
+    reason: string;
+    deal_value?: number;
+    probability?: number;
+    owner_name?: string;
+    last_activity_at?: string | null;
+  }>;
+  followUps?: any[];
+  pipeline_health?: any;
+  highValueDeals?: any[];
+  riskItems?: any[];
+  opportunityScores?: any[];
+  recommendations?: any[];
+  notifications?: any[];
+}
+
+export async function getAIActionCenter(): Promise<AIActionCenterData> {
+  return apiFetch<AIActionCenterData>('/api/v1/ai-insights/immediate-actions');
+}
