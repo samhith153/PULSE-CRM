@@ -64,6 +64,15 @@ export default function PipelineView() {
 
   const [draggedId, setDraggedId] = useState<number | string | null>(null);
 
+  const [isCloseReasonModalOpen, setIsCloseReasonModalOpen] = useState(false);
+  const [pendingStageChange, setPendingStageChange] = useState<{ dealId: number | string; stageId: string } | null>(null);
+  const [closeReason, setCloseReason] = useState('');
+
+  const isTerminalStage = (stageName: string): boolean => {
+    const stage = stages.find(s => s.name === stageName);
+    return stage?.slug === 'won' || stage?.slug === 'lost';
+  };
+
   const totalValue = deals.reduce((acc, d) => {
     const stage = stages.find(s => s.name === d.stage);
     if (stage && stage.slug !== 'lost') return acc + d.value;
@@ -95,11 +104,45 @@ export default function PipelineView() {
   const handleDrop = (stageName: string) => {
     if (draggedId === null) return;
     const stageId = stageIdByName[stageName];
+    if (stageId && isTerminalStage(stageName)) {
+      setPendingStageChange({ dealId: draggedId, stageId });
+      setCloseReason('');
+      setIsCloseReasonModalOpen(true);
+      setDraggedId(null);
+      return;
+    }
     setDeals(deals.map(d => d.id === draggedId ? { ...d, stage: stageName } : d));
     if (stageId) {
       updateDealStage(draggedId, stageId).catch(err => console.warn("Failed to update deal stage", err));
     }
     setDraggedId(null);
+  };
+
+  const handleStageChange = (dealId: number | string, stageName: string) => {
+    const stageId = stageIdByName[stageName];
+    if (stageId && isTerminalStage(stageName)) {
+      setPendingStageChange({ dealId, stageId });
+      setCloseReason('');
+      setIsCloseReasonModalOpen(true);
+      return;
+    }
+    setDeals(deals.map(d => d.id === dealId ? { ...d, stage: stageName } : d));
+    if (stageId) {
+      updateDealStage(dealId, stageId).catch(() => {});
+    }
+  };
+
+  const confirmStageChange = () => {
+    if (!pendingStageChange) return;
+    const targetStage = stages.find(s => s.id === pendingStageChange.stageId);
+    if (targetStage) {
+      setDeals(deals.map(d => d.id === pendingStageChange.dealId ? { ...d, stage: targetStage.name } : d));
+    }
+    updateDealStage(pendingStageChange.dealId, pendingStageChange.stageId, closeReason)
+      .catch(err => console.warn("Failed to update deal stage", err));
+    setIsCloseReasonModalOpen(false);
+    setPendingStageChange(null);
+    setCloseReason('');
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -304,14 +347,7 @@ export default function PipelineView() {
                       <span>Shift Stage:</span>
                       <select 
                         value={deal.stage}
-                        onChange={(e) => {
-                          const newStage = e.target.value;
-                          const stageId = stageIdByName[newStage];
-                          setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));
-                          if (stageId) {
-                            updateDealStage(deal.id, stageId).catch(() => {});
-                          }
-                        }}
+                        onChange={(e) => handleStageChange(deal.id, e.target.value)}
                         className="bg-transparent text-brand-accent focus:outline-none cursor-pointer"
                       >
                         {stageNames.map(st => (
@@ -438,6 +474,34 @@ export default function PipelineView() {
                 <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Save Changes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {isCloseReasonModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-brand-heading text-sm">Close Reason Required</h3>
+              <button onClick={() => { setIsCloseReasonModalOpen(false); setPendingStageChange(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-brand-text/80 font-bold">Please provide a reason for closing this deal as Won or Lost.</p>
+              <div>
+                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Reason</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={closeReason}
+                  onChange={e => setCloseReason(e.target.value)}
+                  placeholder="e.g. Client chose competitor, budget constraints, successful demo..."
+                  className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none resize-none"
+                />
+              </div>
+              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
+                <button type="button" onClick={() => { setIsCloseReasonModalOpen(false); setPendingStageChange(null); }} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
+                <button type="button" onClick={confirmStageChange} disabled={!closeReason.trim()} className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">Confirm</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

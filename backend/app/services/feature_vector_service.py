@@ -95,3 +95,32 @@ class FeatureVectorService:
         self, lead_id: UUID, organization_id: UUID
     ) -> Optional[FeatureVector]:
         return await self.repo.get_by_lead_id(lead_id, organization_id)
+
+    async def update_stage_features_for_lead(
+        self, lead_id: UUID, organization_id: UUID, stage_slug: str, created_by: Optional[UUID] = None
+    ) -> Optional[FeatureVector]:
+        from ai.pipeline.engagement_features import get_stage_engagement_features
+
+        stage_features = get_stage_engagement_features(stage_slug)
+
+        fv = await self.repo.get_by_lead_id(lead_id, organization_id)
+        if not fv:
+            fv = await self.compute_and_store_for_lead(lead_id, organization_id, created_by)
+
+        features_data = {
+            "buying_stage_score": stage_features["buying_stage_score"],
+        }
+
+        print(f"\n{'='*60}")
+        print(f"PIPELINE STAGE UPDATE FOR LEAD: {lead_id}")
+        print(f"  stage_slug: {stage_slug}")
+        print(f"  buying_stage_score: {stage_features['buying_stage_score']}")
+        print(f"  reason: {stage_features['buying_stage_reason']}")
+        print(f"{'='*60}\n")
+
+        return await self.repo.upsert_for_lead(
+            lead_id=lead_id,
+            organization_id=organization_id,
+            created_by=created_by,
+            features=features_data,
+        )

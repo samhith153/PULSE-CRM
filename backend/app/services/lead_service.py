@@ -402,6 +402,21 @@ class LeadService:
                     entity_id=deal.id,
                 )
 
+            # ── Recompute lead scores with pipeline stage features ──────────
+            try:
+                stage_slug_for_score = stage.slug if stage else "new"
+                await self.feature_vector_service.update_stage_features_for_lead(
+                    lead.id, organization_id, stage_slug_for_score, created_by
+                )
+                await self.lead_scoring_service.recompute_for_lead(
+                    lead.id, organization_id, created_by
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to recompute scores on lead conversion",
+                    extra={"lead_id": str(lead.id), "error": str(e)},
+                )
+
             return deal
 
     async def _validate_relations(

@@ -326,3 +326,50 @@ def reply_recency_score(emails):
     else:
         return 20
 
+
+# ── Pipeline Stage -> Engagement Feature Mapping ─────────────────────────────
+# Maps pipeline stage slugs (from PipelineStageSlug enum) to buying_stage_score.
+# Used when a deal moves stages to update the linked lead's feature vector.
+
+_PIPELINE_STAGE_BUYING_SCORE = {
+    "new": 10,
+    "qualified": 30,
+    "proposal": 55,
+    "negotiation": 80,
+    "won": 100,
+    "lost": 0,
+}
+
+_PIPELINE_STAGE_REASONS = {
+    "new": "New stage - Early pipeline, initial qualification",
+    "qualified": "Qualified stage - Lead validated, moving forward",
+    "proposal": "Proposal stage - Solution presented, awaiting decision",
+    "negotiation": "Negotiation stage - Terms being finalized, close is near",
+    "won": "Won - Deal successfully closed",
+    "lost": "Lost - Deal closed unsuccessfully",
+}
+
+
+def get_buying_stage_score_for_pipeline(stage_slug: str) -> int:
+    """Return the buying_stage_score (0-100) for a pipeline stage slug."""
+    return _PIPELINE_STAGE_BUYING_SCORE.get(str(stage_slug).lower(), 0)
+
+
+def get_stage_reason(stage_slug: str) -> str:
+    """Return a human-readable reason string for a pipeline stage."""
+    return _PIPELINE_STAGE_REASONS.get(
+        str(stage_slug).lower(), f"Unknown stage '{stage_slug}'"
+    )
+
+
+def get_stage_engagement_features(stage_slug: str) -> dict:
+    """
+    Return a dict of engagement features derived from the pipeline stage.
+    Used to populate feature_vector.buying_stage_score when a deal moves stages.
+    """
+    slug = str(stage_slug).lower()
+    return {
+        "buying_stage_score": get_buying_stage_score_for_pipeline(slug),
+        "buying_stage_reason": get_stage_reason(slug),
+    }
+

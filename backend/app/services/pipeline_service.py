@@ -28,6 +28,9 @@ from app.schemas.pipeline import (
 from app.services.event_service import EventService
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import ActivityType, DealStatus, PipelineStageSlug
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 DEFAULT_STAGES = [
@@ -368,6 +371,24 @@ class PipelineService:
                 entity_type="deal",
                 entity_id=deal.id,
             )
+
+        # ── Recompute linked lead's scores with new stage features ──────
+        if deal.lead_id:
+            try:
+                from app.services.feature_vector_service import FeatureVectorService
+                from app.services.lead_scoring_service import LeadScoringService
+
+                await FeatureVectorService(self.db).update_stage_features_for_lead(
+                    deal.lead_id, organization_id, stage.slug, created_by
+                )
+                await LeadScoringService(self.db).recompute_for_lead(
+                    deal.lead_id, organization_id, created_by
+                )
+            except Exception as e:
+                logger.warning(
+                    "Failed to recompute lead scores on deal stage move",
+                    extra={"deal_id": str(deal.id), "lead_id": str(deal.lead_id), "error": str(e)},
+                )
 
         return deal
 

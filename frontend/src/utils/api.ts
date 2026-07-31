@@ -40,6 +40,8 @@ export interface Lead {
   fit_score: number | null;
   engagement_score: number | null;
   top_reasons: string[] | null;
+  fit_reasons: string[] | null;
+  engagement_reasons: string[] | null;
   priority: string | null;
   notes: string | null;
   close_reason: string | null;
@@ -340,10 +342,10 @@ export async function getDeals(): Promise<Deal[]> {
   }) as unknown as Deal[];
 }
 
-export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
+export async function updateDealStage(dealId: string | number, stageId: string, closeReason?: string): Promise<any> {
   return apiFetch(`/api/v1/pipeline/move`, {
     method: 'PATCH',
-    body: JSON.stringify({ deal_id: dealId, stage_id: stageId })
+    body: JSON.stringify({ deal_id: dealId, stage_id: stageId, ...(closeReason ? { close_reason: closeReason } : {}) })
   });
 }
 

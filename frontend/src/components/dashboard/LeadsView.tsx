@@ -57,6 +57,8 @@ function backendToLocal(b: BackendLead): Lead {
     engagement_score: b.engagement_score ?? null,
     priorityTier: b.priority ?? null,
     topReasons: b.top_reasons ?? [],
+    fitReasons: b.fit_reasons ?? [],
+    engagementReasons: b.engagement_reasons ?? [],
     status: STATUS_UNMAP[b.status] || 'New',
     priority: (b.priority as Lead['priority']) ?? 'Low',
     owner: b.owner_name || 'Unassigned',
@@ -120,6 +122,8 @@ interface Lead {
   engagement_score: number | null;
   priorityTier: string | null;
   topReasons: string[];
+  fitReasons: string[];
+  engagementReasons: string[];
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
   priority: 'Critical' | 'High' | 'Medium' | 'Low';
   owner: string;
@@ -1041,9 +1045,9 @@ export default function LeadsView() {
                   <span className="text-brand-text/60">Fit Score</span>
                   <span className="font-extrabold text-brand-heading">{activeLead.fit_score ?? 0}%</span>
                 </div>
-                {activeLead.fit_score !== null && activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).length > 0 && (
+                {activeLead.fitReasons && activeLead.fitReasons.length > 0 && (
                   <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-blue-200">
-                    {activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).slice(0, 2).map((r, i) => (
+                    {activeLead.fitReasons.slice(0, 2).map((r, i) => (
                       <div key={i} className="mb-0.5">• {r}</div>
                     ))}
                   </div>
@@ -1053,9 +1057,9 @@ export default function LeadsView() {
                   <span className="text-brand-text/60">Engagement Score</span>
                   <span className="font-extrabold text-brand-heading">{activeLead.engagement_score ?? 0}%</span>
                 </div>
-                {activeLead.engagement_score !== null && activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).length > 0 && (
+                {activeLead.engagementReasons && activeLead.engagementReasons.length > 0 && (
                   <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-amber-200">
-                    {activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).slice(0, 2).map((r, i) => (
+                    {activeLead.engagementReasons.slice(0, 2).map((r, i) => (
                       <div key={i} className="mb-0.5">• {r}</div>
                     ))}
                   </div>

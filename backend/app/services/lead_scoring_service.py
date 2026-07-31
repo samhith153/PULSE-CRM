@@ -133,3 +133,12 @@ class LeadScoringService:
         )
 
         return ls
+
+    async def recompute_for_lead(
+        self, lead_id: UUID, organization_id: UUID, created_by: Optional[UUID] = None
+    ) -> Optional[LeadScore]:
+        try:
+            return await self.compute_and_store_scores(lead_id, organization_id, created_by)
+        except Exception as e:
+            logger.warning("Failed to recompute lead scores", extra={"lead_id": str(lead_id), "error": str(e)})
+            return None
