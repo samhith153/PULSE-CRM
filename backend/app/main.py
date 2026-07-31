@@ -68,6 +68,29 @@ def recompute_features():
         print("Feature recompute failed:", result.stderr)
     else:
         print("Feature recompute completed.")
+
+async def poll_gmail_replies():
+    """Poll connected Gmail accounts for new inbound messages / replies."""
+    from sqlalchemy import select
+
+    from app.database.connection import AsyncSessionFactory
+    from app.models.email import GmailConnection
+    from app.services.email_service import EmailService
+
+    try:
+        async with AsyncSessionFactory() as db:
+            result = await db.execute(
+                select(GmailConnection).where(GmailConnection.is_active.is_(True))
+            )
+            connections = list(result.scalars().all())
+            if not connections:
+                return
+            svc = EmailService(db)
+            for organization_id in {c.organization_id for c in connections}:
+                await svc.sync_all_connections(organization_id, None)
+    except Exception as exc:
+        print("Gmail polling failed:", exc)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     register_default_consumers()
@@ -75,6 +98,7 @@ async def lifespan(app: FastAPI):
 
     scheduler.add_job(recompute_features, "interval", minutes=5)
     scheduler.add_job(process_event_outbox, "interval", seconds=15)
+    scheduler.add_job(poll_gmail_replies, "interval", minutes=2)
     scheduler.start()
 
     yield

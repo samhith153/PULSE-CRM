@@ -51,6 +51,7 @@ from sqlalchemy import func
 
 import httpx
 import base64
+import re
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 logger = get_logger(__name__)
@@ -577,18 +578,6 @@ class EmailService:
         from email.mime.multipart import MIMEMultipart
         from email.mime.text import MIMEText
 
-        message_id = str(uuid4())
-        thread_id = message_id
-        message = self._build_message(
-            subject,
-            receiver,
-            html_body,
-            html_body,
-            message_id=message_id,
-        )
-
-        await self._send_smtp_message(message)
-
         sent_at = datetime.now(timezone.utc)
         body_preview = html_body[:500]
 
@@ -609,10 +598,17 @@ class EmailService:
 
         sender_email = connection.email_address
 
+        # Single delivery through the connected Gmail account. Setting our own
+        # Message-ID keeps reply matching reliable: replies reference it via
+        # In-Reply-To and share the same Gmail thread.
+        rfc_message_id_local = str(uuid4())
+        domain = settings.SMTP_FROM_EMAIL.split("@")[-1]
+
         msg = MIMEMultipart("alternative")
         msg["From"] = sender_email
         msg["To"] = receiver
         msg["Subject"] = subject
+        msg["Message-ID"] = f"<{rfc_message_id_local}@{domain}>"
         msg.attach(MIMEText(html_body, "html"))
         msg.attach(MIMEText(html_body, "plain"))
 
@@ -620,15 +616,15 @@ class EmailService:
 
         gmail_response = await self.gmail_client.send_message(access_token, raw_mime)
 
-        message_id = gmail_response.get("id", str(uuid4()))
-        thread_id = gmail_response.get("threadId", message_id)
+        gmail_message_id = gmail_response.get("id", str(uuid4()))
+        thread_id = gmail_response.get("threadId", gmail_message_id)
 
 
         email, _ = await self.ingest_email(
             organization_id=organization_id,
             created_by=created_by,
             gmail_connection_id=gmail_connection_id,
-            gmail_message_id=message_id,
+            gmail_message_id=gmail_message_id,
             thread_id=thread_id,
             direction=EmailDirection.OUTBOUND,
             sender=sender_email,
@@ -640,7 +636,8 @@ class EmailService:
             raw_payload={
                 "provider": "gmail_api",
                 "status": "sent",
-                "gmail_message_id": message_id,
+                "message_id": rfc_message_id_local,
+                "gmail_message_id": gmail_message_id,
                 "gmail_thread_id": thread_id,
                 "events": [
                     {
@@ -663,7 +660,7 @@ class EmailService:
             source="smtp",
             payload={
                 "email_id": str(email.id),
-                "gmail_message_id": message_id,
+                "gmail_message_id": gmail_message_id,
                 "thread_id": thread_id,
                 "subject": subject,
                 "body_preview": body_preview,
@@ -777,15 +774,26 @@ class EmailService:
         """
         headers = headers_map(msg)
 
-        raw_ref = headers.get("in-reply-to") or (
-            headers.get("references", "").split()[-1] if headers.get("references") else ""
-        )
-        in_reply_to = raw_ref.strip("<>").split("@")[0] if raw_ref else ""
-
+        # 1) Same Gmail thread as an outbound email — replies share the threadId
+        #    of the message they answer, so this is the most reliable signal.
         original = None
-        if in_reply_to:
-            original = await self.email_repo.get_by_message_id_global(in_reply_to)
+        thread_id = msg.get("threadId")
+        if thread_id:
+            original = await self.email_repo.get_outbound_by_thread(organization_id, thread_id)
 
+        # 2) In-Reply-To / References → RFC 5322 Message-ID local part. The local
+        #    part is stored on the outbound email (raw_payload) when we send it.
+        if not original:
+            raw_ref = headers.get("in-reply-to") or (
+                headers.get("references", "").split()[-1] if headers.get("references") else ""
+            )
+            in_reply_to = raw_ref.strip("<>").split("@")[0] if raw_ref else ""
+            if in_reply_to:
+                original = await self.email_repo.get_by_raw_message_id_local(in_reply_to)
+                if not original:
+                    original = await self.email_repo.get_by_message_id_global(in_reply_to)
+
+        # 3) Subject + participants fallback (handles clients that rewrite threads).
         if not original:
             subject = headers.get("subject", "")
             normalized = self._normalize_subject(subject)
@@ -883,11 +891,15 @@ class EmailService:
         )
 
     def _normalize_subject(self, subject: str) -> str:
-        s = subject.strip()
-        for prefix in ("Re:", "RE:", "Fwd:", "FWD:", "Fw:", "re:", "fwd:"):
-            if s.startswith(prefix):
-                s = s[len(prefix):].strip()
-        return s.lower()
+        # Strips repeated reply/forward markers like "Re:", "RE:", "Re[2]:",
+        # "Re: Fwd: Re: ..." and locale variants ("Aw:", "Sv:").
+        return re.sub(
+            r"^((re|fwd|fw|aw|sv)(\s*\[\d+\])?\s*:\s*)+",
+            "",
+            subject.strip(),
+            flags=re.IGNORECASE,
+        ).lower()
+
     async def webhook_sync(self, organization_id: UUID, created_by: Optional[UUID], payload: GmailWebhookRequest) -> EmailSyncResultResponse:
         if payload.gmail_connection_id:
             return await self.fetch_from_gmail(organization_id, payload.gmail_connection_id, created_by)
