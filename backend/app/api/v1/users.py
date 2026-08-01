@@ -181,6 +181,12 @@ async def reset_user_password(
     import secrets
     import string
 
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reset your own password via this endpoint. Use change-password instead.",
+        )
+
     svc = UserService(db)
     user = await svc.get_user(user_id, current_user.organization_id)
 
@@ -202,6 +208,6 @@ async def reset_user_password(
 
     return {
         "success": True,
-        "message": "Password reset successfully.",
-        "data": {"new_password": new_password},
+        "message": "Password reset successfully. The user will be notified via email.",
+        "data": {},
     }

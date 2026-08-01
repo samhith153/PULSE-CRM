@@ -253,7 +253,7 @@ async def get_calendar_event(
     "/event/{event_id}",
     response_model=StandardResponse[CalendarEventResponse],
     summary="Update a calendar event",
-    dependencies=[Depends(require_permission("activity:create"))],
+    dependencies=[Depends(require_permission("activity:update"))],
     tags=["Calendar"],
 )
 async def update_calendar_event(
@@ -273,7 +273,7 @@ async def update_calendar_event(
     response_model=None,
     response_class=Response,
     summary="Soft delete a calendar event",
-    dependencies=[Depends(require_permission("activity:create"))],
+    dependencies=[Depends(require_permission("activity:update"))],
     tags=["Calendar"],
 )
 async def delete_calendar_event(

@@ -30,7 +30,7 @@ interface KPI {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export default function ReportsView({ userRole = 'admin' }: { userRole?: 'representative' | 'manager' | 'admin' }) {
+export default function ReportsView({ userRole = 'admin', onLoaded }: { userRole?: 'sales_rep' | 'manager' | 'admin'; onLoaded?: () => void } = {}) {
   const [data, setData] = useState<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +44,7 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
     getRoleDashboard(userRole)
       .then((d) => { if (!cancelled) { setData(d); setError(null); } })
       .catch((e) => { if (!cancelled) setError(e?.message || 'Failed to load reports'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+      .finally(() => { if (!cancelled) setLoading(false); onLoaded?.(); });
     return () => { cancelled = true; };
   }, [userRole]);
 

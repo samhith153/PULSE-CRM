@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { X, Mail, Lock, Loader2, Activity, AlertCircle } from 'lucide-react';
 import { login, register, setToken, getCurrentUser } from '@/utils/api';
 
-type Role = 'representative' | 'manager' | 'admin';
+type Role = 'sales_rep' | 'manager' | 'admin';
 type ModalMode = 'signin' | 'signup';
 
 interface AuthModalProps {
@@ -57,7 +57,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
         } else if (mainRole === 'manager') {
           resolvedRole = 'manager';
         } else if (mainRole === 'sales_rep') {
-          resolvedRole = 'representative';
+          resolvedRole = 'sales_rep';
         }
       }
 

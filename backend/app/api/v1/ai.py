@@ -26,6 +26,9 @@ from app.schemas.ai import (
     AINextBestActionResponse,
     AIRecommendationRequest,
     AIRecommendationResponse,
+    AIBatchRecommendationRequest,
+    AIBatchRecommendationResponse,
+    AIBatchRecommendationItem,
     DealInsightRequest,
     DealInsightResponse,
     EnhancedRecommendationResponse,
@@ -34,6 +37,7 @@ from app.schemas.ai import (
 )
 from app.services.ai_service import AIService
 from app.services.recommendation_engine_service import EnhancedRecommendationService
+from app.services.recommendation_service import RecommendationService
 
 router = APIRouter(dependencies=[Depends(require_permission("ai:access"))])
 
@@ -92,6 +96,45 @@ async def recommendations(
 ) -> AIRecommendationResponse:
     service = AIService(db)
     return await service.recommendations(current_user.organization_id, payload.entity_type, payload.entity_id)
+
+
+@router.post(
+    "/recommendations/batch",
+    response_model=AIBatchRecommendationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Batch generate recommendations for multiple leads",
+)
+async def batch_recommendations(
+    payload: AIBatchRecommendationRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> AIBatchRecommendationResponse:
+    svc = RecommendationService(db)
+    uuid_ids = [UUID(str(lid)) for lid in payload.lead_ids]
+    raw = await svc.batch_generate_for_leads(uuid_ids, current_user.organization_id)
+    items = {}
+    for lid in payload.lead_ids:
+        key = str(lid)
+        rec = raw.get(lid) or raw.get(UUID(key))
+        if rec and rec.get("recommended_action"):
+            items[key] = AIBatchRecommendationItem(
+                lead_id=lid,
+                recommended_action=rec.get("recommended_action", ""),
+                reason=rec.get("reason", ""),
+                current_score=rec.get("current_score", 0),
+                current_stage=rec.get("current_stage", ""),
+                all_candidates=rec.get("all_candidates", []),
+            )
+        else:
+            items[key] = AIBatchRecommendationItem(
+                lead_id=lid,
+                recommended_action="No recommendation available for this lead.",
+                reason="",
+            )
+    return AIBatchRecommendationResponse(
+        recommendations=items,
+        generated_at=datetime.now(timezone.utc),
+    )
 
 
 @router.post("/deal-insight", response_model=DealInsightResponse, status_code=status.HTTP_200_OK)

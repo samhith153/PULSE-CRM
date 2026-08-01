@@ -243,6 +243,45 @@ export async function deleteLead(leadId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/leads/${leadId}`, { method: 'DELETE' });
 }
 
+export interface LeadRecommendation {
+  entity_type: string;
+  entity_id: string | null;
+  status: string;
+  recommendations: string[];
+  reasoning: string[];
+  metadata: Record<string, unknown>;
+  generated_at: string;
+}
+
+export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecommendation> {
+  return apiFetch<LeadRecommendation>('/api/v1/ai/recommendations', {
+    method: 'POST',
+    body: JSON.stringify({ entity_type: 'lead', entity_id: leadId }),
+  });
+}
+
+export interface BatchRecommendationItem {
+  lead_id: string;
+  recommended_action: string;
+  reason: string;
+  current_score: number;
+  current_stage: string;
+  all_candidates: Record<string, unknown>[];
+}
+
+export interface BatchRecommendationResponse {
+  status: string;
+  recommendations: Record<string, BatchRecommendationItem>;
+  generated_at: string;
+}
+
+export async function fetchBatchRecommendations(leadIds: string[]): Promise<BatchRecommendationResponse> {
+  return apiFetch<BatchRecommendationResponse>('/api/v1/ai/recommendations/batch', {
+    method: 'POST',
+    body: JSON.stringify({ lead_ids: leadIds }),
+  });
+}
+
 export async function convertLead(
   leadId: string,
   payload: { industry?: string; revenue?: number; employee_count?: number; pipeline_stage_id?: string }
@@ -695,7 +734,7 @@ export async function getSalesDashboard(period: 'week' | 'month' | 'quarter' | '
 // Fetch the dashboard KPIs for a given UI role. Each role hits its own
 // RBAC-scoped endpoint so a sales rep / manager never calls /dashboard/admin.
 export async function getRoleDashboard(
-  role: 'representative' | 'manager' | 'admin',
+  role: 'sales_rep' | 'manager' | 'admin',
   period: 'week' | 'month' | 'quarter' | 'year' = 'month',
 ): Promise<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData> {
   switch (role) {
@@ -703,7 +742,7 @@ export async function getRoleDashboard(
       return getAdminDashboard();
     case 'manager':
       return getManagerDashboard();
-    case 'representative':
+    case 'sales_rep':
     default:
       // Prefer the canonical /dashboard/sales; fall back to the /sales-rep alias.
       return getSalesDashboard(period).catch(() => getSalesRepDashboard(period));
@@ -1094,28 +1133,81 @@ export async function dismissNotification(notificationId: string): Promise<Notif
 }
 // --- AI Insights API ---
 
+export interface ImmediateActionItem {
+  id: string;
+  lead_name?: string;
+  deal_name?: string;
+  score: number;
+  priority: string;
+  reason: string;
+  deal_value?: number;
+  probability?: number;
+  owner_name?: string;
+  last_activity_at?: string | null;
+}
+
+export interface FollowUpDueItem {
+  id: string;
+  title: string;
+  company_name?: string;
+  owner_name?: string;
+  due_date: string;
+  status: string;
+  days_overdue?: number;
+}
+
+export interface GoingColdItem {
+  id: string;
+  name: string;
+  company_name?: string;
+  owner_name?: string;
+  cold_score: number;
+  risk_level: string;
+  days_inactive: number;
+  deal_value?: number;
+}
+
+export interface PipelineHealthData {
+  score: number;
+  status: string;
+  velocity_change_pct: number;
+  breakdown: Record<string, any>;
+}
+
 export interface AIActionCenterData {
-  immediateActions: Array<{
-    id: string;
-    lead_name?: string;
-    deal_name?: string;
-    score: number;
-    priority: string;
-    reason: string;
-    deal_value?: number;
-    probability?: number;
-    owner_name?: string;
-    last_activity_at?: string | null;
-  }>;
-  followUps?: any[];
-  pipeline_health?: any;
-  highValueDeals?: any[];
-  riskItems?: any[];
-  opportunityScores?: any[];
+  pipeline_health?: PipelineHealthData;
+  immediate_actions?: ImmediateActionItem[];
+  follow_ups?: FollowUpDueItem[];
+  going_cold?: { items: GoingColdItem[]; total: number };
+  high_value_deals?: any[];
+  risk_items?: any[];
+  opportunity_scores?: any[];
   recommendations?: any[];
   notifications?: any[];
 }
 
-export async function getAIActionCenter(): Promise<AIActionCenterData> {
-  return apiFetch<AIActionCenterData>('/api/v1/ai-insights/immediate-actions');
+// Fixed endpoint pointing to the full action-center route defined in backend
+export async function getAIActionCenter(dateFilter?: string, priority?: string): Promise<AIActionCenterData> {
+  const query = toQuery({ date_filter: dateFilter, priority });
+  return apiFetch<AIActionCenterData>(`/api/v1/ai-insights/action-center${query}`);
+}
+
+export async function getPipelineHealth(): Promise<PipelineHealthData> {
+  return apiFetch<PipelineHealthData>('/api/v1/ai-insights/pipeline-health');
+}
+
+export async function getImmediateActions(): Promise<ImmediateActionItem[]> {
+  return apiFetch<ImmediateActionItem[]>('/api/v1/ai-insights/immediate-actions');
+}
+
+export async function getFollowUps(): Promise<FollowUpDueItem[]> {
+  return apiFetch<FollowUpDueItem[]>('/api/v1/ai-insights/follow-ups');
+}
+
+export async function getGoingColdLeads(params: { limit?: number; minimum_risk?: string } = {}): Promise<any> {
+  return apiFetch<any>(`/api/v1/ai-insights/going-cold${toQuery(params)}`);
+}
+
+export async function getDailyPriorities(params: { limit?: number; priority?: string } = {}): Promise<any> {
+  return apiFetch<any>(`/api/v1/ai-insights/daily-priorities${toQuery(params)}`);
 }

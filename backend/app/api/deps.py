@@ -13,7 +13,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ForbiddenException, UnauthorizedException
-from app.core.permissions import resolve_permissions_for_user
+from app.core.permissions import Role, resolve_permissions_for_user
 from app.core.security import decode_access_token
 from app.database.connection import get_db
 from app.models.user import User
@@ -83,19 +83,28 @@ def require_any_permission(*permissions: str) -> Callable:
     return _check
 
 
-def require_role(*roles: str) -> Callable:
-    """Pass if the user has any of the listed roles."""
+def require_role(*roles: Role | str) -> Callable:
+    """Pass if the user has any of the listed roles.
+
+    Accepts Role enum values or raw role name strings for backward compatibility.
+    """
 
     async def _check(current_user: CurrentUser) -> None:
         if current_user.is_superuser:
             return
+
+        # Normalize all role names to strings for comparison
+        required_role_names = {
+            role.value if isinstance(role, Role) else str(role)
+            for role in roles
+        }
 
         user_roles = {
             ur.role.name
             for ur in current_user.user_roles
             if ur.role and ur.role.name
         }
-        if not any(role in user_roles for role in roles):
-            raise ForbiddenException(f"Required role: {', '.join(roles)}")
+        if not required_role_names.intersection(user_roles):
+            raise ForbiddenException(f"Required role: {', '.join(required_role_names)}")
 
     return _check

@@ -36,7 +36,7 @@ interface Company {
   files: { id: number; name: string; size: string }[];
 }
 
-export default function CompaniesView() {
+export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,9 +58,13 @@ export default function CompaniesView() {
       if (!cancelled) {
         setCompanies(data as any);
         setLoading(false);
+        onLoaded?.();
       }
     }).catch(() => {
-      if (!cancelled) setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+        onLoaded?.();
+      }
     });
     return () => { cancelled = true; };
   }, []);

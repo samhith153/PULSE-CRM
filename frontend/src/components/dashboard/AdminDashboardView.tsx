@@ -27,7 +27,7 @@ function sparkPath(values: number[], w = 120, h = 36): string {
     .join(' ');
 }
 
-export default function AdminDashboardView() {
+export default function AdminDashboardView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [data, setData] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +47,7 @@ export default function AdminDashboardView() {
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+        onLoaded?.();
       });
     return () => {
       cancelled = true;
