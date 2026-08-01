@@ -62,7 +62,7 @@ function backendToLocal(b: BackendLead): Lead {
     status: STATUS_UNMAP[b.status] || 'New',
     priority: (b.priority as Lead['priority']) ?? 'Low',
     owner: b.owner_name || 'Unassigned',
-    ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
+    ownerAvatar: null,
     notes: b.notes || '',
     source: mappedSource,
     industry: b.industry || undefined,
@@ -126,7 +126,7 @@ interface Lead {
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
   priority: 'Critical' | 'High' | 'Medium' | 'Low';
   owner: string;
-  ownerAvatar: string;
+  ownerAvatar: string | null;
   notes: string;
   source?: string;
   value?: string | number;
@@ -789,7 +789,13 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                             {/* Owner */}
                             <td className="py-3">
                               <div className="flex items-center space-x-1.5">
-                                <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
+                                {lead.ownerAvatar ? (
+                                  <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
+                                ) : (
+                                  <div className="h-5 w-5 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center">
+                                    <span className="text-[7px] font-bold text-slate-400">{lead.owner.split(' ').map((p: string) => p[0]).slice(0, 1).join('')}</span>
+                                  </div>
+                                )}
                                 <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
                               </div>
                             </td>
@@ -915,7 +921,13 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
             <div className="flex justify-between items-center">
               <span className="text-brand-text/50">Owner</span>
               <div className="flex items-center space-x-1">
-                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-slate-200" />
+                {activeLead.ownerAvatar ? (
+                  <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-slate-200" />
+                ) : (
+                  <div className="h-4.5 w-4.5 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center">
+                    <span className="text-[7px] font-bold text-slate-400">{activeLead.owner.split(' ').map((p: string) => p[0]).slice(0, 1).join('')}</span>
+                  </div>
+                )}
                 <span className="text-brand-text">{activeLead.owner}</span>
               </div>
             </div>

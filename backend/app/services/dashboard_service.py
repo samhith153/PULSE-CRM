@@ -777,15 +777,14 @@ class DashboardService:
             ]
 
         def _non_admin_user_filter():
-            """Return a subquery condition that excludes users with the 'admin' role."""
-            admin_role_subq = (
+            """Return a condition that excludes users with the 'admin' role."""
+            admin_user_ids = (
                 select(UserRole.user_id)
                 .join(Role, Role.id == UserRole.role_id)
                 .where(Role.name == "admin")
                 .correlate(User)
-                .exists()
             )
-            return ~admin_role_subq
+            return User.id.notin_(admin_user_ids)
 
         async def _deal_count(*extra):
             r = await self.db.execute(
