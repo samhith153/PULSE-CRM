@@ -1,0 +1,177 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Start PostgreSQL
+        run: |
+          docker run -d \
+            --name pulse-crm-db \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=password \
+            -e POSTGRES_DB=pulse_crm_test \
+            -p 5432:5432 \
+            postgres:16-alpine
+          docker exec pulse-crm-db pg_isready -U postgres
+          sleep 5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Run database migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/pulse_crm_test
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          ENVIRONMENT: development
+        run: alembic upgrade head
+
+      - name: Seed test database
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/pulse_crm_test
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          ENVIRONMENT: development
+        run: |
+          python -c "
+          import asyncio
+          from app.database.connection import engine
+          from app.models import *
+          from sqlalchemy import text
+          
+          async def seed():
+              async with engine.begin() as conn:
+                  # Create default org and admin user
+                  from app.services.auth_service import AuthService
+                  auth = AuthService()
+                  await auth.register(
+                      organization_name='CI Test Org',
+                      full_name='CI Admin',
+                      email='admin@ci-test.com',
+                      password='CIAdmin1234!'
+                  )
+                  print('Test data seeded successfully')
+          
+          asyncio.run(seed())
+          "
+
+      - name: Start backend server
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/pulse_crm_test
+          SECRET_KEY: ci-test-secret-key-not-for-production
+          ENVIRONMENT: development
+          HOST: 0.0.0.0
+          PORT: 8000
+        run: uvicorn app.main:app --host 0.0.0.0 --port 8000 &
+
+      - name: Wait for backend to be ready
+        run: |
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8000/api/v1/health/ping > /dev/null 2>&1; then
+              echo "Backend is ready!"
+              break
+            fi
+            echo "Waiting for backend... ($i/60)"
+            sleep 2
+          done
+          curl -sf http://localhost:8000/api/v1/health/ping || exit 1
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+        run: npm run build
+
+      - name: Run E2E tests
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:8000
+          CI: true
+        run: npx playwright test --project=chromium --reporter=html,json,list
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ github.sha }}
+          path: frontend/playwright-report/
+          retention-days: 14
+
+      - name: Upload test results JSON
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ github.sha }}
+          path: frontend/test-results.json
+          retention-days: 14
+
+      - name: Upload traces on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces-${{ github.sha }}
+          path: frontend/test-results/
+          retention-days: 7
+
+      - name: Publish test summary
+        if: always()
+        run: |
+          if [ -f frontend/test-results.json ]; then
+            echo "## E2E Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            TOTAL=$(cat frontend/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('stats',{}).get('expected',0) + d.get('stats',{}).get('unexpected',0) + d.get('stats',{}).get('flaky',0) + d.get('stats',{}).get('skipped',0))")
+            PASSED=$(cat frontend/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('stats',{}).get('expected',0))")
+            FAILED=$(cat frontend/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('stats',{}).get('unexpected',0))")
+            FLAKY=$(cat frontend/test-results.json | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('stats',{}).get('flaky',0))")
+            echo "| Metric | Count |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Total | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+            echo "| Passed | $PASSED |" >> $GITHUB_STEP_SUMMARY
+            echo "| Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+            echo "| Flaky | $FLAKY |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Stop PostgreSQL
+        if: always()
+        run: docker stop pulse-crm-db && docker rm pulse-crm-db
