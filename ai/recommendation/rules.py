@@ -38,34 +38,86 @@ class ActionRule:
 
 
 ACTION_RULES: list[ActionRule] = [
+    # ── New Lead ────────────────────────────────────────────────────────
     ActionRule(
-        name="Send follow-up",
+        name="Research the prospect",
+        stages=["New Lead"],
+        weights={"s": 0.6, "u": 0.2, "ct": 0.1, "dv": 0.05},
+    ),
+    ActionRule(
+        name="Send introductory email",
+        stages=["New Lead"],
+        weights={"s": 0.4, "u": 0.2, "dv": 0.15, "ct": 0.1},
+    ),
+    # ── Contacted ───────────────────────────────────────────────────────
+    ActionRule(
+        name="Send follow-up email",
         stages=["Contacted", "Qualified"],
-        weights={"u": 0.5, "r": 0.3, "s": 0.2, "dv": 0.1, "eo": 0.1, "rw": 0.05},
-        invert_r=True,  # weighs heavier when there's been NO reply
+        weights={"u": 0.5, "r": 0.3, "s": 0.2, "dv": 0.1, "eo": 0.1},
+        invert_r=True,
     ),
     ActionRule(
-        name="Schedule demo",
-        stages=["Qualified", "Demo Scheduled"],
-        weights={"s": 0.6, "u": 0.2, "r": 0.2, "dv": 0.15, "mt": 0.1},
-        invert_u=True,  # weighs heavier when the lead is still FRESH
+        name="Make a phone call",
+        stages=["Contacted", "Qualified"],
+        weights={"u": 0.4, "r": 0.3, "s": 0.2, "ct": 0.1},
+        invert_r=True,
     ),
     ActionRule(
-        name="Send proposal",
-        stages=["Demo Scheduled", "Negotiation"],
-        weights={"s": 0.5, "r": 0.3, "u": 0.2, "dv": 0.15, "mt": 0.15, "ct": 0.05},
-        invert_u=True,
+        name="Try a different channel",
+        stages=["Contacted"],
+        weights={"u": 0.5, "eo": 0.3, "r": 0.2},
+        invert_r=True,
+        invert_eo=True,
     ),
     ActionRule(
         name="Mark as stale",
-        stages=["Contacted", "Qualified", "Demo Scheduled"],
-        weights={"u": 0.7, "s": 0.3, "rw": 0.1, "eo": 0.05},
-        invert_s=True,  # weighs heavier when score is LOW
+        stages=["Contacted", "Qualified"],
+        weights={"u": 0.7, "s": 0.3, "eo": 0.05},
+        invert_s=True,
+    ),
+    # ── Qualified ───────────────────────────────────────────────────────
+    ActionRule(
+        name="Schedule a product demo",
+        stages=["Qualified"],
+        weights={"s": 0.6, "u": 0.2, "r": 0.2, "dv": 0.15, "mt": 0.1},
+        invert_u=True,
     ),
     ActionRule(
-        name="Escalate to manager",
+        name="Send relevant content",
+        stages=["Qualified"],
+        weights={"s": 0.4, "eo": 0.3, "u": 0.2, "dv": 0.1},
+    ),
+    # ── Proposal Sent ───────────────────────────────────────────────────
+    ActionRule(
+        name="Follow up on proposal",
+        stages=["Proposal Sent"],
+        weights={"u": 0.5, "s": 0.3, "dv": 0.15, "ct": 0.05},
+    ),
+    ActionRule(
+        name="Send case study or testimonial",
+        stages=["Proposal Sent", "Negotiation"],
+        weights={"s": 0.4, "dv": 0.3, "u": 0.2},
+    ),
+    ActionRule(
+        name="Address objections",
+        stages=["Proposal Sent", "Negotiation"],
+        weights={"r": 0.4, "dv": 0.3, "s": 0.2, "u": 0.1},
+    ),
+    # ── Negotiation ─────────────────────────────────────────────────────
+    ActionRule(
+        name="Finalize contract terms",
         stages=["Negotiation"],
-        weights={"s": 0.5, "u": 0.5, "dv": 0.15, "mt": 0.1, "rw": 0.1},
+        weights={"s": 0.5, "dv": 0.3, "u": 0.2},
+    ),
+    ActionRule(
+        name="Escalate to manager for approval",
+        stages=["Negotiation"],
+        weights={"s": 0.4, "u": 0.4, "dv": 0.15, "mt": 0.1, "rw": 0.1},
+    ),
+    ActionRule(
+        name="Offer value-add services",
+        stages=["Negotiation"],
+        weights={"s": 0.5, "dv": 0.3, "u": 0.2},
     ),
 ]
 

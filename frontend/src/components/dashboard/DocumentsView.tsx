@@ -18,7 +18,7 @@ interface DocumentItem {
   fileUrl?: string; // downloadable URL
 }
 
-export default function DocumentsView() {
+export default function DocumentsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -62,6 +62,7 @@ export default function DocumentsView() {
       console.error('Error fetching documents:', error);
     } finally {
       setIsLoading(false);
+      onLoaded?.();
     }
   };
 

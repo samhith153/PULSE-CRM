@@ -21,9 +21,9 @@ STAGE_MAP = {
     "qualified": "Qualified",
     "proposal_sent": "Proposal Sent",
     "negotiation": "Negotiation",
-    "won": "Won",
-    "lost": "Lost",
-    "converted": "Converted",
+    "won": "Negotiation",
+    "lost": "Contacted",
+    "converted": "Qualified",
 }
 
 TERMINAL_STAGES = {"won", "lost", "converted"}

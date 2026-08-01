@@ -243,6 +243,45 @@ export async function deleteLead(leadId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/leads/${leadId}`, { method: 'DELETE' });
 }
 
+export interface LeadRecommendation {
+  entity_type: string;
+  entity_id: string | null;
+  status: string;
+  recommendations: string[];
+  reasoning: string[];
+  metadata: Record<string, unknown>;
+  generated_at: string;
+}
+
+export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecommendation> {
+  return apiFetch<LeadRecommendation>('/api/v1/ai/recommendations', {
+    method: 'POST',
+    body: JSON.stringify({ entity_type: 'lead', entity_id: leadId }),
+  });
+}
+
+export interface BatchRecommendationItem {
+  lead_id: string;
+  recommended_action: string;
+  reason: string;
+  current_score: number;
+  current_stage: string;
+  all_candidates: Record<string, unknown>[];
+}
+
+export interface BatchRecommendationResponse {
+  status: string;
+  recommendations: Record<string, BatchRecommendationItem>;
+  generated_at: string;
+}
+
+export async function fetchBatchRecommendations(leadIds: string[]): Promise<BatchRecommendationResponse> {
+  return apiFetch<BatchRecommendationResponse>('/api/v1/ai/recommendations/batch', {
+    method: 'POST',
+    body: JSON.stringify({ lead_ids: leadIds }),
+  });
+}
+
 export async function convertLead(
   leadId: string,
   payload: { industry?: string; revenue?: number; employee_count?: number; pipeline_stage_id?: string }
@@ -695,7 +734,7 @@ export async function getSalesDashboard(period: 'week' | 'month' | 'quarter' | '
 // Fetch the dashboard KPIs for a given UI role. Each role hits its own
 // RBAC-scoped endpoint so a sales rep / manager never calls /dashboard/admin.
 export async function getRoleDashboard(
-  role: 'representative' | 'manager' | 'admin',
+  role: 'sales_rep' | 'manager' | 'admin',
   period: 'week' | 'month' | 'quarter' | 'year' = 'month',
 ): Promise<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData> {
   switch (role) {
@@ -703,7 +742,7 @@ export async function getRoleDashboard(
       return getAdminDashboard();
     case 'manager':
       return getManagerDashboard();
-    case 'representative':
+    case 'sales_rep':
     default:
       // Prefer the canonical /dashboard/sales; fall back to the /sales-rep alias.
       return getSalesDashboard(period).catch(() => getSalesRepDashboard(period));

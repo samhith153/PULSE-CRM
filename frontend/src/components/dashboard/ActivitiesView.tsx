@@ -46,7 +46,7 @@ function timeAgo(iso: string): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-export default function ActivitiesView() {
+export default function ActivitiesView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [items, setItems] = useState<ActivityTimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,10 @@ export default function ActivitiesView() {
         setError(e?.message || 'Failed to load activities.');
       })
       .finally(() => {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          onLoaded?.();
+        }
       });
     return () => {
       mounted = false;

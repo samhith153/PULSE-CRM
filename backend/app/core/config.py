@@ -74,8 +74,8 @@ class Settings(BaseSettings):
     CORS_ALLOW_HEADERS: str = "*"
 
     ENABLE_RATE_LIMIT: bool = True
-    RATE_LIMIT_PER_MINUTE: int = 60
-    RATE_LIMIT_BURST: int = 10
+    RATE_LIMIT_PER_MINUTE: int = 600
+    RATE_LIMIT_BURST: int = 120
 
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
@@ -89,6 +89,7 @@ class Settings(BaseSettings):
     SMTP_TLS: bool = True
     FRONTEND_BASE_URL: str = "http://localhost:3000"
     BREVO_API_KEY: str = ""
+    BREVO_WEBHOOK_SECRET: Optional[str] = None
 
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None

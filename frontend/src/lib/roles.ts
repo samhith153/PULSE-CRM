@@ -1,13 +1,13 @@
-export type Role = 'representative' | 'manager' | 'admin';
+export type Role = 'sales_rep' | 'manager' | 'admin';
 
 export const ROLE_HOME: Record<Role, string> = {
-  representative: 'dashboard',
+  sales_rep: 'dashboard',
   manager: 'dashboard',
   admin: 'dashboard',
 };
 
 export const ROLE_TABS: Record<Role, Set<string>> = {
-  representative: new Set([
+  sales_rep: new Set([
     'dashboard', 'leads', 'contacts', 'companies', 'deals', 'activities', 'emails',
     'integrations', 'workflows', 'ai insights', 'reports', 'documents',
     'notifications', 'settings', 'profile',

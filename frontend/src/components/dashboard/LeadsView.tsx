@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, getCurrentUser, getUsers } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, getCurrentUser, getUsers, fetchLeadRecommendation, fetchBatchRecommendations } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -143,7 +143,7 @@ interface Lead {
   meetings: MeetingItem[];
 }
 
-export default function LeadsView() {
+export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
 
@@ -170,6 +170,7 @@ export default function LeadsView() {
   const [gmailConnected, setGmailConnected] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [leadRecommendations, setLeadRecommendations] = useState<Record<string, string>>({});
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
@@ -203,6 +204,18 @@ export default function LeadsView() {
     getLeads().then(data => {
       const mapped = (data ?? []).map(backendToLocal);
       setLeads(mapped);
+      const ids = mapped.map(l => l.id).filter(Boolean);
+      if (ids.length > 0) {
+        fetchBatchRecommendations(ids).then(res => {
+          const recs: Record<string, string> = {};
+          for (const [id, item] of Object.entries(res.recommendations || {})) {
+            recs[id] = item.recommended_action || 'No recommendation available.';
+          }
+          setLeadRecommendations(recs);
+        }).catch(() => {});
+      }
+    }).finally(() => {
+      onLoaded?.();
     });
     getCurrentUser().then(user => {
       setCurrentUser(user);
@@ -232,106 +245,40 @@ export default function LeadsView() {
       getLeads().then(data => {
         const mapped = (data ?? []).map(backendToLocal);
         setLeads(mapped);
+        const ids = mapped.map(l => l.id).filter(Boolean);
+        if (ids.length > 0) {
+          fetchBatchRecommendations(ids).then(res => {
+            const recs: Record<string, string> = {};
+            for (const [id, item] of Object.entries(res.recommendations || {})) {
+              recs[id] = item.recommended_action || 'No recommendation available.';
+            }
+            setLeadRecommendations(recs);
+          }).catch(() => {});
+        }
       }).catch(() => {});
     }, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  // Fetch recommendation when selected lead changes
+  useEffect(() => {
+    if (!selectedLeadId || leadRecommendations[selectedLeadId]) return;
+    fetchLeadRecommendation(String(selectedLeadId))
+      .then(res => {
+        const text = res.recommendations?.[0] || 'No recommendation available.';
+        setLeadRecommendations(prev => ({ ...prev, [selectedLeadId]: text }));
+      })
+      .catch(() => {
+        setLeadRecommendations(prev => ({ ...prev, [selectedLeadId]: 'Unable to generate recommendation.' }));
+      });
+  }, [selectedLeadId]);
+
   // Get currently active lead object
   const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
 
-  // AI Recommendation engine
+  // AI Recommendation engine — returns cached backend recommendation or loading text
   const getAIRecommendation = (lead: Lead) => {
-    if (lead.status === 'New' && lead.priority === 'High') {
-      return `High-priority inbound lead. Send an introductory email with custom SSO/SLA details and schedule a 15-minute briefing within 2 hours.`;
-    }
-    if (lead.status === 'Contacted' && lead.score > 70) {
-      return `Lead score is high (${lead.score}). Call back to schedule a formal sandbox product walkthrough and invite their engineering stakeholders.`;
-    }
-    if (lead.status === 'Qualified') {
-      return `Migration budget is set. Draft and send the custom enterprise SLA pricing proposal. Next touchpoint deadline: 24 hours.`;
-    }
-    return `Monitor lead activity. Log notes on their technical requirements stack when they open the next pricing link.`;
-  };
-
-  // ML Pipeline Feature Engineering Helpers
-  const getSourceQuality = (source?: string) => {
-    if (!source) return 50;
-    const mapping: Record<string, number> = {
-      "Referral": 100,
-      "Website": 85,
-      "LinkedIn": 70,
-      "Webinar": 75,
-      "Event": 65,
-      "Cold Email": 40
-    };
-    return mapping[source] || 50;
-  };
-
-  const getEngagementDetails = (emails: any[]) => {
-    let score = 0;
-    if (!emails) return { score, level: "LOW" };
-    emails.forEach(email => {
-      score += 5; // email exists
-      if (email.subject?.toLowerCase().includes("re:") || email.replied === "Yes") {
-        score += 15;
-      }
-    });
-    
-    let level = "LOW";
-    if (score >= 50) level = "HIGH";
-    else if (score >= 25) level = "MEDIUM";
-    
-    return { score, level };
-  };
-
-  const getReplyDetails = (emails: any[]) => {
-    if (!emails || emails.length === 0) return { rate: 0, level: "NO RESPONSE" };
-    let totalSent = emails.length;
-    let totalReplied = emails.filter(email => 
-      email.subject?.toLowerCase().includes("re:") || 
-      email.replied === "Yes"
-    ).length;
-    
-    const rate = Math.round((totalReplied / totalSent) * 100);
-    let level = "NO RESPONSE";
-    if (rate >= 70) level = "FAST";
-    else if (rate >= 40) level = "MEDIUM";
-    else if (rate > 0) level = "SLOW";
-    
-    return { rate, level };
-  };
-
-  const getRecencyDays = (timeline: any[]) => {
-    if (!timeline || timeline.length === 0) return 999;
-    let minDays = 999;
-    timeline.forEach(item => {
-      const timeStr = item.time?.toLowerCase() || '';
-      if (timeStr.includes("today")) {
-        minDays = Math.min(minDays, 0);
-      } else if (timeStr.includes("yesterday")) {
-        minDays = Math.min(minDays, 1);
-      } else {
-        const match = timeStr.match(/(\d+)\s+day/);
-        if (match) {
-          minDays = Math.min(minDays, parseInt(match[1]));
-        }
-      }
-    });
-    return minDays;
-  };
-
-  const getCompanyBand = (companyName: string) => {
-    const sizeMap: Record<string, string> = {
-      "TechCorp Inc.": "Enterprise",
-      "MedSaaS Solutions": "Large",
-      "Empiric Logistics": "Medium",
-      "AeroSpace Labs": "Large",
-      "CloudSync Co.": "Medium",
-      "Fintech Global": "Enterprise",
-      "Apex Dynamics": "Large"
-    };
-    return sizeMap[companyName] || "Medium";
+    return leadRecommendations[lead.id] || 'Loading recommendation...';
   };
 
   // Filtered Leads list
@@ -404,6 +351,9 @@ export default function LeadsView() {
     try {
       const updated = await updateLead(activeLead.id, payload);
       setLeads(leads.map(l => l.id === activeLead.id ? backendToLocal(updated) : l));
+      fetchLeadRecommendation(String(activeLead.id)).then(res => {
+        setLeadRecommendations(prev => ({ ...prev, [activeLead.id]: res.recommendations?.[0] || 'No recommendation available.' }));
+      }).catch(() => {});
     } catch (err) {
       console.error("Failed to update lead:", err);
     }
@@ -467,6 +417,9 @@ export default function LeadsView() {
         }
         return l;
       }));
+      fetchLeadRecommendation(convertingLeadId).then(res => {
+        setLeadRecommendations(prev => ({ ...prev, [convertingLeadId]: res.recommendations?.[0] || 'No recommendation available.' }));
+      }).catch(() => {});
       setIsConvertModalOpen(false);
       setConvertingLeadId(null);
     } catch (err) {
@@ -538,6 +491,9 @@ export default function LeadsView() {
         }
         return l;
       }));
+      fetchLeadRecommendation(String(activeLead.id)).then(res => {
+        setLeadRecommendations(prev => ({ ...prev, [activeLead.id]: res.recommendations?.[0] || 'No recommendation available.' }));
+      }).catch(() => {});
       setIsEmailModalOpen(false);
       setEmailForm({ subject: '', body: '' });
     } catch (err: any) {
@@ -961,78 +917,6 @@ export default function LeadsView() {
               <div className="flex items-center space-x-1">
                 <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-slate-200" />
                 <span className="text-brand-text">{activeLead.owner}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Engineered AI Features (ML Pipeline Integration) */}
-          <div className="py-3.5 border-b border-brand-border-purple/15 space-y-3">
-            <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider flex items-center space-x-1">
-              <Award className="h-4 w-4 text-brand-accent" />
-              <span>AI Pipeline Features</span>
-            </h4>
-            
-            <div className="grid grid-cols-2 gap-2.5 text-[10px] font-bold">
-              {/* Engagement Level */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Engagement Level</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-heading font-extrabold">{getEngagementDetails(activeLead.emails).score} pts</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide ${
-                    getEngagementDetails(activeLead.emails).level === 'HIGH' 
-                      ? 'bg-emerald-50 text-emerald-700' 
-                      : getEngagementDetails(activeLead.emails).level === 'MEDIUM'
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-rose-50 text-rose-700'
-                  }`}>
-                    {getEngagementDetails(activeLead.emails).level}
-                  </span>
-                </div>
-              </div>
-
-              {/* Reply Rate */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Reply Velocity</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-heading font-extrabold">{getReplyDetails(activeLead.emails).rate}%</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide ${
-                    getReplyDetails(activeLead.emails).level === 'FAST' 
-                      ? 'bg-emerald-50 text-emerald-700' 
-                      : getReplyDetails(activeLead.emails).level === 'MEDIUM'
-                      ? 'bg-amber-50 text-amber-700'
-                      : getReplyDetails(activeLead.emails).level === 'SLOW'
-                      ? 'bg-rose-50 text-rose-700'
-                      : 'bg-slate-100 text-slate-600'
-                  }`}>
-                    {getReplyDetails(activeLead.emails).level}
-                  </span>
-                </div>
-              </div>
-
-              {/* Recency */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Touchpoint Recency</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-heading font-extrabold">
-                    {getRecencyDays(activeLead.timeline) === 999 ? 'No touch' : `${getRecencyDays(activeLead.timeline)} days`}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-blue-50 text-blue-700">
-                    {getRecencyDays(activeLead.timeline) <= 3 ? 'Active' : getRecencyDays(activeLead.timeline) <= 7 ? 'Warm' : 'Cold'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Company Band & Source */}
-              <div className="bg-slate-50 border border-slate-100 rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-slate-400 uppercase tracking-wide text-[8.5px]">Firmographic Band</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-brand-heading font-extrabold truncate max-w-[55px]" title={activeLead.company}>
-                    {getCompanyBand(activeLead.company)}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wide bg-purple-50 text-purple-700">
-                    Q: {getSourceQuality(activeLead.source)}
-                  </span>
-                </div>
               </div>
             </div>
           </div>

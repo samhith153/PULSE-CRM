@@ -53,7 +53,7 @@ export default function DashboardHome() {
     setIsAuthLoading(false);
   }, []);
 
-  const handleLogin = (role: 'representative' | 'manager' | 'admin') => {
+  const handleLogin = (role: 'sales_rep' | 'manager' | 'admin') => {
     setIsAuthenticated(true);
     sessionStorage.setItem('pulse-crm-auth', 'true');
     setUserRole(role);
@@ -79,16 +79,16 @@ export default function DashboardHome() {
   const [groupBy, setGroupBy] = useState('Stage');
   
   // User Role State — derived from the authenticated user's real roles.
-  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
+  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('manager');
   const [token, setToken] = useState<string | null>(() => getToken());
 
   // Map backend role names -> UI role. Backend uses "sales_rep", "manager", "admin".
-  const mapBackendRole = (roles: string[]): 'representative' | 'manager' | 'admin' => {
+  const mapBackendRole = (roles: string[]): 'sales_rep' | 'manager' | 'admin' => {
     if (roles.includes('admin')) return 'admin';
     if (roles.includes('manager')) return 'manager';
-    if (roles.includes('sales_rep') || roles.includes('representative')) return 'representative';
-    // Fallback: a user without a recognized role defaults to representative (least privilege).
-    return 'representative';
+    if (roles.includes('sales_rep')) return 'sales_rep';
+    // Fallback: a user without a recognized role defaults to sales_rep (least privilege).
+    return 'sales_rep';
   };
 
   // Resolve the real role from the API whenever the token changes. Each run is
@@ -173,21 +173,17 @@ export default function DashboardHome() {
     setIsEmpty(tabKey === 'marketing');
   };
 
+  // Reset loading state when activeTab or userRole changes
+  useEffect(() => {
+    setIsLoading(true);
+  }, [activeTab, userRole]);
+
+  // Safety-net: auto-clear skeleton after 1.5s for views without onLoaded
   useEffect(() => {
     if (!isLoading) return;
-    const timer = setTimeout(() => setIsLoading(false), 450);
+    const timer = setTimeout(() => setIsLoading(false), 1500);
     return () => clearTimeout(timer);
   }, [isLoading]);
-
-  // Trigger loading when activeTab changes
-  useEffect(() => {
-    setIsLoading(true);
-  }, [activeTab]);
-
-  // Trigger loading when userRole changes
-  useEffect(() => {
-    setIsLoading(true);
-  }, [userRole]);
 
   // Determine skeleton loader layout based on active tab
   const getSkeletonLayout = (tab: string) => {
@@ -242,7 +238,7 @@ export default function DashboardHome() {
   ];
 
 
-  // Shared professional dashboard layout for representatives and the default fallback:
+  // Shared professional dashboard layout for sales reps and the default fallback:
   // KPI cards, charts, heatmap, widgets, right panel, and report builder.
   const genericDashboard = (
     <>
@@ -462,33 +458,33 @@ export default function DashboardHome() {
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
           <SkeletonLoader isLoading={isLoading} layout={getSkeletonLayout(activeTab)}>
             {!ROLE_TABS[userRole].has(activeTab) ? (
-              userRole === 'representative' ? (
+              userRole === 'sales_rep' ? (
                 genericDashboard
               ) : userRole === 'manager' ? (
-                <ManagerDashboardView onTabChange={navigate} />
+                <ManagerDashboardView onTabChange={navigate} onLoaded={() => setIsLoading(false)} />
               ) : (
-                <AdminDashboardView />
+                <AdminDashboardView onLoaded={() => setIsLoading(false)} />
               )
             ) : activeTab === 'leads' ? (
-              <LeadsView />
+              <LeadsView onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'contacts' ? (
-              <ContactsView />
+              <ContactsView onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'companies' ? (
-              <CompaniesView />
+              <CompaniesView onLoaded={() => setIsLoading(false)} />
             ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
-              <PipelineView />
+              <PipelineView onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'products' ? (
-              <ProductsView />
+              <ProductsView onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'activities' ? (
-              <ActivitiesView />
+              <ActivitiesView onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'emails' ? (
-              <EmailsView />
+              <EmailsView onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'documents' ? (
-              <DocumentsView />
+              <DocumentsView onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'reports' ? (
-              <ReportsView userRole={userRole} />
+              <ReportsView userRole={userRole} onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'workflows' ? (
-              <WorkflowsView />
+              <WorkflowsView onLoaded={() => setIsLoading(false)} />
             ) : activeTab === 'ai insights' ? (
               <AIInsightsView />
             ) : activeTab === 'settings' ? (

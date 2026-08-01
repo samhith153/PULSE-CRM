@@ -1,9 +1,15 @@
-﻿"""Simple per-client rate limiting middleware."""
+﻿"""Per-client token-bucket rate limiting middleware.
+
+* `burst` controls the maximum burst size (bucket capacity).
+* `requests_per_minute` controls the sustained refill rate (tokens/sec = rpm / 60).
+
+A client can consume up to `burst` tokens in a single burst, then is limited to
+the sustained rate.  Tokens refill continuously between requests.
+"""
 from __future__ import annotations
 
 import time
-from collections import defaultdict, deque
-from typing import Deque
+from collections import defaultdict
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -12,14 +18,50 @@ from starlette.responses import JSONResponse, Response
 from app.core.config import settings
 
 
+class _TokenBucket:
+    """Thread-safe (single-threaded event loop) per-client token bucket."""
+    __slots__ = ("capacity", "tokens", "refill_rate", "last_refill")
+
+    def __init__(self, capacity: float, refill_rate: float) -> None:
+        self.capacity = capacity
+        self.tokens = capacity
+        self.refill_rate = refill_rate   # tokens per second
+        self.last_refill = time.monotonic()
+
+    def take(self) -> bool:
+        """Refill and attempt to consume one token. Returns True if allowed."""
+        now = time.monotonic()
+        elapsed = now - self.last_refill
+        if elapsed > 0:
+            self.tokens = min(self.capacity, self.tokens + elapsed * self.refill_rate)
+            self.last_refill = now
+
+        if self.tokens >= 1.0:
+            self.tokens -= 1.0
+            return True
+        return False
+
+    @property
+    def remaining(self) -> int:
+        return max(0, int(self.tokens))
+
+
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, requests_per_minute: int | None = None, burst: int | None = None, enabled: bool | None = None) -> None:
+    def __init__(
+        self,
+        app,
+        requests_per_minute: int | None = None,
+        burst: int | None = None,
+        enabled: bool | None = None,
+    ) -> None:
         super().__init__(app)
         self.enabled = settings.ENABLE_RATE_LIMIT if enabled is None else enabled
-        self.requests_per_minute = requests_per_minute or settings.RATE_LIMIT_PER_MINUTE
+        self.rpm = requests_per_minute or settings.RATE_LIMIT_PER_MINUTE
         self.burst = burst or settings.RATE_LIMIT_BURST
-        self.window_seconds = 60.0
-        self._requests: dict[str, Deque[float]] = defaultdict(deque)
+        self._refill_rate = self.rpm / 60.0  # tokens per second
+        self._buckets: dict[str, _TokenBucket] = defaultdict(
+            lambda: _TokenBucket(self.burst, self._refill_rate)
+        )
 
     def _client_key(self, request: Request) -> str:
         forwarded_for = request.headers.get("x-forwarded-for")
@@ -35,15 +77,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path in {"/", settings.DOCS_URL, settings.REDOC_URL, settings.OPENAPI_URL}:
             return await call_next(request)
 
-        now = time.monotonic()
-        cutoff = now - self.window_seconds
         key = self._client_key(request)
-        bucket = self._requests[key]
-        while bucket and bucket[0] <= cutoff:
-            bucket.popleft()
+        bucket = self._buckets[key]
 
-        limit = max(self.requests_per_minute, self.burst)
-        if len(bucket) >= limit:
+        if not bucket.take():
             return JSONResponse(
                 status_code=429,
                 content={
@@ -54,11 +91,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 },
             )
 
-        bucket.append(now)
         response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(max(0, limit - len(bucket)))
+        response.headers["X-RateLimit-Limit"] = str(self.burst)
+        response.headers["X-RateLimit-Remaining"] = str(bucket.remaining)
         return response
-
-
-

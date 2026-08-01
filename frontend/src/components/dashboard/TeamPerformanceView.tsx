@@ -27,7 +27,7 @@ interface RepRow {
   avatar?: string | null;
 }
 
-export default function TeamPerformanceView({ userRole = 'manager' }: { userRole?: 'representative' | 'manager' | 'admin' }) {
+export default function TeamPerformanceView({ userRole = 'manager' }: { userRole?: 'sales_rep' | 'manager' | 'admin' }) {
   const [reps, setReps] = useState<RepRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +62,7 @@ export default function TeamPerformanceView({ userRole = 'manager' }: { userRole
             winRate: asNumber(r.conversion_rate),
             avatar: null,
           }));
-        } else if (userRole === 'representative' && 'summary' in d) {
+        } else if (userRole === 'sales_rep' && 'summary' in d) {
           const s = (d as SalesRepDashboardData).summary;
           rows = [{
             rank: 1,

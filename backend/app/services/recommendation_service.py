@@ -30,11 +30,10 @@ if root_dir not in sys.path:
     sys.path.insert(0, root_dir)
 
 try:
-    from ai.recommendation import build_lead_features, generate_recommendation, is_terminal
+    from ai.recommendation import build_lead_features, generate_recommendation
 except ImportError:
     build_lead_features = None
     generate_recommendation = None
-    is_terminal = None
 
 
 class RecommendationService:
@@ -50,7 +49,7 @@ class RecommendationService:
         self, lead_id: UUID, organization_id: UUID
     ) -> Optional[dict]:
         """Generate a recommendation for a lead and store it."""
-        if not generate_recommendation or not build_lead_features or not is_terminal:
+        if not generate_recommendation or not build_lead_features:
             logger.warning("ai.recommendation module not available")
             return None
 
@@ -83,6 +82,7 @@ class RecommendationService:
         all_candidates = result.get("all_candidates", [])
 
         if not recommended_action:
+            logger.info("No recommendation generated", extra={"lead_id": str(lead_id), "stage": features.current_stage})
             return None
 
         # Determine priority
@@ -127,7 +127,10 @@ class RecommendationService:
         self, lead_id: UUID, organization_id: UUID
     ) -> Optional[dict]:
         """Get the latest stored recommendation for a lead."""
-        rec = await self.recommendation_repo.latest_for_lead(organization_id, lead_id)
+        recs = await self.recommendation_repo.latest_for_entity(
+            organization_id, entity_type="lead", entity_id=lead_id
+        )
+        rec = recs[0] if recs else None
         if not rec:
             return None
         return {

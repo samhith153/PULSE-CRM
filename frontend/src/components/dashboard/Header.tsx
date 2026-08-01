@@ -26,7 +26,7 @@ interface HeaderProps {
   onTabChange?: (tab: string) => void;
   onOpenCommandPalette?: () => void;
   onSignOut?: () => void;
-  userRole: 'representative' | 'manager' | 'admin';
+  userRole: 'sales_rep' | 'manager' | 'admin';
 }
 
 export default function Header({ 
@@ -137,7 +137,7 @@ export default function Header({
           email: "sarah.johnson@kalnet-demo.com",
           avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
         };
-      case 'representative':
+      case 'sales_rep':
       default:
         return {
           name: "Priya Sharma",
@@ -195,7 +195,7 @@ export default function Header({
         <div className="flex items-center space-x-1.5 bg-slate-50 border border-brand-border-purple/10 px-2.5 py-1.5 rounded-lg text-xs font-bold text-brand-text shadow-sm/5 select-none">
           <span className="text-[9px] text-slate-400 font-extrabold uppercase">Role:</span>
           <span className="text-brand-heading font-extrabold capitalize">
-            {userRole === 'representative' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
+            {userRole === 'sales_rep' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
           </span>
         </div>
 

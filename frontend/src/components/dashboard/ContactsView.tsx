@@ -35,7 +35,7 @@ interface ContactItem {
 
 const EMPTY_CONTACTS: ContactItem[] = [];
 
-export default function ContactsView() {
+export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
 
@@ -63,9 +63,13 @@ export default function ContactsView() {
       if (!cancelled) {
         setContacts(data as any);
         setLoading(false);
+        onLoaded?.();
       }
     }).catch(() => {
-      if (!cancelled) setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+        onLoaded?.();
+      }
     });
     return () => { cancelled = true; };
   }, []);

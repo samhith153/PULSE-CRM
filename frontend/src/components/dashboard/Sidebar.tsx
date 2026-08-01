@@ -31,7 +31,7 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  userRole: 'representative' | 'manager' | 'admin';
+  userRole: 'sales_rep' | 'manager' | 'admin';
 }
 
 export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }: SidebarProps) {
@@ -116,7 +116,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
             ]
           }
         ];
-      case 'representative':
+      case 'sales_rep':
       default:
         return [
           {
@@ -170,7 +170,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
           role: "Sales Manager",
           avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
         };
-      case 'representative':
+      case 'sales_rep':
       default:
         return {
           name: "Priya Sharma",

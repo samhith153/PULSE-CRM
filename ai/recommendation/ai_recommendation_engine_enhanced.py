@@ -182,6 +182,11 @@ def _build_reason(features: LeadFeatures, winning_action: str, top_factor: str) 
     if winning_action == "Try a different channel":
         return f"Email isn't getting responses ({emails_sent} sent, {emails_received} received). Try LinkedIn, phone, or a mutual connection introduction."
 
+    if winning_action == "Mark as stale":
+        if score < 30:
+            return f"Low score ({score}/100) and no engagement in {days} days. Mark as stale to deprioritize and focus on warmer leads."
+        return f"No meaningful activity in {days} days (score {score}/100). Mark as stale and revisit in your next pipeline review."
+
     if winning_action == "Send relevant content":
         if score >= 60:
             return f"Fit score is {score}/100. Share a case study or resource that matches their industry and use case to build credibility."

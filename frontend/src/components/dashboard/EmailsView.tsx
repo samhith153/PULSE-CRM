@@ -21,7 +21,7 @@ function formatSize(bytes?: number | null) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export default function EmailsView() {
+export default function EmailsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [emails, setEmails] = useState<SyncedEmail[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<SyncedEmail | null>(null);
   const [threadEmails, setThreadEmails] = useState<SyncedEmail[]>([]);
@@ -104,7 +104,7 @@ export default function EmailsView() {
   useEffect(() => {
     if (!hasLoadedOnceRef.current) {
       hasLoadedOnceRef.current = true;
-      refresh();
+      refresh().finally(() => onLoaded?.());
       return;
     }
     loadEmails();

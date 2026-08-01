@@ -87,7 +87,7 @@ function eventToWorkflow(event: AutomationEvent): Workflow {
 }
 
 
-export default function WorkflowsView() {
+export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loadingWorkflows, setLoadingWorkflows] = useState(true);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
@@ -149,6 +149,7 @@ export default function WorkflowsView() {
       setWorkflowError(e?.message || 'Live workflows could not be loaded.');
     } finally {
       setLoadingWorkflows(false);
+      onLoaded?.();
     }
   };
 

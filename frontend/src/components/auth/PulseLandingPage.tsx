@@ -14,7 +14,7 @@ import AuthModal from '@/components/shared/AuthModal';
 import SkeletonLoader from '@/components/dashboard/SkeletonLoader';
 
 interface PulseLandingPageProps {
-  onLogin: (role: 'representative' | 'manager' | 'admin') => void;
+  onLogin: (role: 'sales_rep' | 'manager' | 'admin') => void;
 }
 
 const C = {
@@ -36,7 +36,7 @@ const C = {
   darkText: 'rgba(255,255,255,0.6)',
 };
 
-type Role = 'representative' | 'manager' | 'admin';
+type Role = 'sales_rep' | 'manager' | 'admin';
 
 interface Toast {
   id: number;
