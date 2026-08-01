@@ -76,11 +76,14 @@ export default function DashboardHome() {
   
   // User Role State — derived from the authenticated user's real roles.
   // Initialise from localStorage to avoid a flash of wrong role before the API responds.
-  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>(() => {
+  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('sales_rep');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     const cached = localStorage.getItem('pulse-crm-role');
-    if (cached === 'admin' || cached === 'manager' || cached === 'sales_rep') return cached;
-    return 'sales_rep';
-  });
+    if (cached === 'admin' || cached === 'manager' || cached === 'sales_rep') {
+      setUserRole(cached);
+    }
+  }, []);
   const [token, setToken] = useState<string | null>(() => getToken());
   const [currentUser, setCurrentUser] = useState<{ full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null>(null);
 
