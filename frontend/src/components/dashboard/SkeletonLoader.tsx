@@ -4,14 +4,14 @@ import React from 'react';
 
 interface SkeletonLoaderProps {
   isLoading: boolean;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   layout?: 'dashboard' | 'table' | 'kanban' | 'form' | 'calendar' | 'landing' | 'list';
   count?: number;
 }
 
 export default function SkeletonLoader({ 
   isLoading, 
-  children, 
+  children = null, 
   layout = 'list', 
   count = 3 
 }: SkeletonLoaderProps) {

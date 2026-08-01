@@ -206,6 +206,16 @@ class DealService:
                 )
             except Exception as e:
                 logger.warning("Failed to generate recommendation on deal update", extra={"deal_id": str(deal_id), "error": str(e)})
+            # Recompute lead scores (pipeline stage changed)
+            try:
+                from app.services.feature_vector_service import FeatureVectorService
+                from app.services.lead_scoring_service import LeadScoringService
+                fvs = FeatureVectorService(self.db)
+                await fvs.compute_and_store_for_lead(deal.lead_id, organization_id, deal.created_by)
+                lss = LeadScoringService(self.db)
+                await lss.compute_and_store_scores(deal.lead_id, organization_id, deal.created_by)
+            except Exception as e:
+                logger.warning("Failed to recompute lead scores on deal stage change", extra={"deal_id": str(deal_id), "error": str(e)})
 
         return await self.get(deal_id, organization_id)
 

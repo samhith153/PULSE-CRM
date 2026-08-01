@@ -9,6 +9,7 @@ import {
   markAllNotificationsRead,
   dismissNotification,
 } from '@/utils/api';
+import { toast } from '@/lib/toast';
 
 const POLL_INTERVAL_MS = 20000;
 
@@ -25,7 +26,7 @@ export function useNotifications(pageSize = 20) {
       setNotifications(result.items);
       setUnreadCount(result.unread_count);
     } catch {
-      // Silent — keep last-known state on transient failures.
+      toast.error('Failed to load notifications');
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -36,7 +37,7 @@ export function useNotifications(pageSize = 20) {
       const count = await getUnreadNotificationCount();
       if (mounted.current) setUnreadCount(count);
     } catch {
-      // Silent.
+      toast.error('Failed to load unread count');
     }
   }, []);
 
@@ -56,6 +57,7 @@ export function useNotifications(pageSize = 20) {
     try {
       await markNotificationRead(id);
     } catch {
+      toast.error('Failed to mark notification as read');
       await refresh();
     }
   }, [refresh]);
@@ -66,6 +68,7 @@ export function useNotifications(pageSize = 20) {
     try {
       await markAllNotificationsRead();
     } catch {
+      toast.error('Failed to mark all notifications as read');
       await refresh();
     }
   }, [refresh]);
@@ -77,6 +80,7 @@ export function useNotifications(pageSize = 20) {
     try {
       await dismissNotification(id);
     } catch {
+      toast.error('Failed to dismiss notification');
       await refresh();
     }
   }, [notifications, refresh]);

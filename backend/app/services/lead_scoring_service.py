@@ -109,17 +109,9 @@ class LeadScoringService:
         }
 
         # ── Console output: INPUT ────────────────────────────────────────────
-        print(f"\n{'='*60}")
-        print(f"LEAD SCORING COMPUTATION FOR LEAD: {lead_id}")
-        print(f"{'='*60}")
-        print(f"FIT FEATURES INPUT:")
-        for k, v in fit_features.items():
-            print(f"  {k}: {v}")
-        print(f"{'-'*60}")
-        print(f"ENGAGEMENT FEATURES INPUT:")
-        for k, v in engagement_features.items():
-            print(f"  {k}: {v}")
-        print(f"{'-'*60}")
+        logger.debug("LEAD SCORING COMPUTATION FOR LEAD: %s", lead_id)
+        logger.debug("FIT FEATURES INPUT: %s", fit_features)
+        logger.debug("ENGAGEMENT FEATURES INPUT: %s", engagement_features)
 
         # ── Compute scores ───────────────────────────────────────────────────
         result = None
@@ -133,15 +125,11 @@ class LeadScoringService:
             return None
 
         # ── Console output: RESULTS ──────────────────────────────────────────
-        print(f"SCORING RESULTS:")
-        print(f"  fit_score: {result['fit']['score']}")
-        print(f"  fit_reasons: {result['fit']['reasons']}")
-        print(f"  engagement_score: {result['engagement']['score']}")
-        print(f"  engagement_reasons: {result['engagement']['reasons']}")
-        print(f"  overall_score: {result['overall']['score']}")
-        print(f"  tier: {result['overall']['tier']}")
-        print(f"  top_reasons: {result['overall']['top_reasons']}")
-        print(f"{'='*60}\n")
+        logger.debug("SCORING RESULTS: fit=%s engagement=%s overall=%s tier=%s reasons=%s",
+            result['fit']['score'], result['engagement']['score'],
+            result['overall']['score'], result['overall']['tier'],
+            result['overall']['top_reasons'],
+        )
 
         # ── Persist onto LeadScore table ────────────────────────────────────
         scores_data = {

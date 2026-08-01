@@ -75,8 +75,17 @@ export default function DashboardHome() {
   const [groupBy, setGroupBy] = useState('Stage');
   
   // User Role State — derived from the authenticated user's real roles.
-  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('manager');
+  // Initialise from localStorage to avoid a flash of wrong role before the API responds.
+  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('sales_rep');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const cached = localStorage.getItem('pulse-crm-role');
+    if (cached === 'admin' || cached === 'manager' || cached === 'sales_rep') {
+      setUserRole(cached);
+    }
+  }, []);
   const [token, setToken] = useState<string | null>(() => getToken());
+  const [currentUser, setCurrentUser] = useState<{ full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null>(null);
 
   // Map backend role names -> UI role. Backend uses "sales_rep", "manager", "admin".
   const mapBackendRole = (roles: string[]): 'sales_rep' | 'manager' | 'admin' => {
@@ -98,6 +107,7 @@ export default function DashboardHome() {
         if (cancelled) return;
         const role = mapBackendRole(me.roles || []);
         setUserRole(role);
+        setCurrentUser({ full_name: me.full_name, email: me.email, avatar_url: me.avatar_url, job_title: me.job_title });
         localStorage.setItem('pulse-crm-role', role);
       })
       .catch(() => {
@@ -256,6 +266,7 @@ export default function DashboardHome() {
         collapsed={sidebarCollapsed} 
         setCollapsed={setSidebarCollapsed} 
         userRole={userRole}
+        currentUser={currentUser}
       />
 
       {/* Main dashboard content container */}
@@ -270,6 +281,7 @@ export default function DashboardHome() {
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onSignOut={handleSignOut}
           userRole={userRole}
+          currentUser={currentUser}
         />
 
         {/* Dashboard inner scroll view with increased whitespace */}

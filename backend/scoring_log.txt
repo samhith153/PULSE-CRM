@@ -180,3 +180,41 @@ Thread ID:   19fbc34e618b3c3e
     - 🟠 WEAK INTENT - Lead said: 'inquiry' (score: 35.0)
     - ⚙️ Very complex industry - Pharma → Heavy workflows & regulations
 ======================================================================
+
+======================================================================
+SCORING LOG — 2026-08-01T12:43:46.145010+00:00
+Lead ID:     502e440d-3efb-411a-abf7-ce5f352fb1d0
+Thread ID:   19fbd5862c644e7e
+--- Engagement Features ---
+  average_response_time: 0.02
+  response_time_score: 100
+  num_response_pairs: 1
+  last_processed_sent_at: 2026-08-01 12:42:55+00:00
+  days_since_last_outbound: 0
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 50
+  ai_intent_category_score: 85
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         77
+  Fit Reasons:
+    - 🏢 Large organization - 500 employees → Higher CRM need
+    - ⚙️ Very complex industry - Healthcare → Heavy workflows & regulations
+    - ❌ No CRM system - Using no crm → Major pain point
+    - 🎯 High customization potential - Will need tailored workflows
+  Engagement Score:  75
+  Engagement Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📞 MID-STAGE - Pipeline: converted → In progress (score: 50.0)
+    - ⚡ VERY RESPONSIVE - Average: 0.02h → Highly engaged (score: 100.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 0 days ago → Still hot
+  Overall Score:     100
+  Tier:              Critical
+  Top Reasons:
+    - 🏢 Large organization - 500 employees → Higher CRM need
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - ⚙️ Very complex industry - Healthcare → Heavy workflows & regulations
+======================================================================

@@ -27,6 +27,7 @@ interface HeaderProps {
   onOpenCommandPalette?: () => void;
   onSignOut?: () => void;
   userRole: 'sales_rep' | 'manager' | 'admin';
+  currentUser?: { full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null;
 }
 
 export default function Header({ 
@@ -36,7 +37,8 @@ export default function Header({
   onTabChange, 
   onOpenCommandPalette, 
   onSignOut,
-  userRole
+  userRole,
+  currentUser
 }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -124,27 +126,18 @@ export default function Header({
 
   // Dynamic profile details mapping
   const getUserProfile = () => {
-    switch (userRole) {
-      case 'admin':
-        return {
-          name: "System Admin",
-          email: "admin@kalnet-pulse.com",
-          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80"
-        };
-      case 'manager':
-        return {
-          name: "Sarah Johnson",
-          email: "sarah.johnson@kalnet-demo.com",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
-        };
-      case 'sales_rep':
-      default:
-        return {
-          name: "Priya Sharma",
-          email: "priya.sharma@kalnet-demo.com",
-          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
-        };
+    if (currentUser) {
+      return {
+        name: currentUser.full_name,
+        email: currentUser.email,
+        avatar: currentUser.avatar_url || null,
+      };
     }
+    return {
+      name: userRole === 'admin' ? 'Admin' : userRole === 'manager' ? 'Manager' : 'Sales Rep',
+      email: '',
+      avatar: null,
+    };
   };
 
   const profile = getUserProfile();
@@ -292,14 +285,18 @@ export default function Header({
             className="flex items-center space-x-2 p-1 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
             aria-label="Profile menu"
           >
-            <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden border border-brand-border-purple/20">
-              <Image 
-                src={profile.avatar} 
-                alt={`${profile.name} Avatar`} 
-                width={28} height={28}
-                className="h-full w-full object-cover"
-                unoptimized
-              />
+            <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden border border-brand-border-purple/20 flex items-center justify-center">
+              {profile.avatar ? (
+                <Image 
+                  src={profile.avatar} 
+                  alt={`${profile.name} Avatar`} 
+                  width={28} height={28}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <User className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
+              )}
             </div>
             <span className="text-xs font-bold text-brand-text hidden md:inline-block">{profile.name}</span>
           </button>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getCompanies, updateCompany } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Building2, 
   Search, 
@@ -29,7 +30,7 @@ interface Company {
   contacts: string[];
   openDeals: number;
   owner: string;
-  ownerAvatar: string;
+  ownerAvatar: string | null;
   notes: string;
   timeline: { id: number; title: string; time: string }[];
   emails: { id: number; subject: string; time: string }[];
@@ -64,6 +65,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
       if (!cancelled) {
         setLoading(false);
         onLoaded?.();
+        toast.error('Failed to load companies');
       }
     });
     return () => { cancelled = true; };
@@ -87,9 +89,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
       contacts: [],
       openDeals: 0,
       owner: form.owner,
-      ownerAvatar: form.owner === 'Sarah Johnson' 
-        ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80" 
-        : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
+      ownerAvatar: null,
       notes: form.notes,
       timeline: [{ id: 1, title: "Company Profile Added", time: "Just now" }],
       emails: [],
@@ -122,6 +122,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
       } : c));
       setIsEditModalOpen(false);
     } catch {
+      toast.error('Failed to save company');
     }
   };
 

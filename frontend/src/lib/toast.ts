@@ -32,5 +32,3 @@ export const toast = {
 };
 
 export default toast;
-
-export type { ToastType, ToastOptions, ToastItem, AddToastFn };
