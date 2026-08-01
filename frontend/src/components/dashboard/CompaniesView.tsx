@@ -38,7 +38,6 @@ interface Company {
 
 export default function CompaniesView() {
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,17 +51,9 @@ export default function CompaniesView() {
   const [contactName, setContactName] = useState('');
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
     getCompanies().then(data => {
-      if (!cancelled) {
-        setCompanies(data as any);
-        setLoading(false);
-      }
-    }).catch(() => {
-      if (!cancelled) setLoading(false);
+      setCompanies(data as any);
     });
-    return () => { cancelled = true; };
   }, []);
 
   const active = selectedId ? companies.find(c => c.id === selectedId) || null : null;
@@ -136,14 +127,26 @@ export default function CompaniesView() {
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Companies List */}
       <div className={`col-span-12 ${active ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
-            <div className="mb-4">
-              <h2 className="font-sans text-2xl text-brand-heading font-bold">Companies</h2>
-              <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Monitor accounts, track revenue sizes, and view contact chains.</p>
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div>
+              <h2 className="font-sans text-2xl text-foreground font-bold">Companies</h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Monitor accounts, track revenue sizes, and view contact chains.</p>
             </div>
+            <button 
+              onClick={() => {
+                setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
+                setIsAddModalOpen(true);
+              }}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Company</span>
+            </button>
+          </div>
 
           <div className="relative mb-4">
-            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
+            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
               <Search className="h-3.5 w-3.5" />
             </span>
             <input 
@@ -151,14 +154,14 @@ export default function CompaniesView() {
               placeholder="Search companies..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
+              className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
             />
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-left">
               <thead>
-                <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
+                <tr className="border-b border-border text-[9px] uppercase font-semibold tracking-widest text-muted-foreground pb-2">
                   <th className="pb-2">Company Name</th>
                   <th className="pb-2">Industry</th>
                   <th className="pb-2">Revenue</th>
@@ -167,44 +170,19 @@ export default function CompaniesView() {
                   <th className="pb-2 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                {loading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td className="py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="h-6 w-6 rounded bg-slate-100 shrink-0" />
-                          <div className="h-3.5 w-28 bg-slate-100 rounded" />
-                        </div>
-                      </td>
-                      <td className="py-3"><div className="h-3.5 w-20 bg-slate-100 rounded" /></td>
-                      <td className="py-3"><div className="h-3.5 w-16 bg-slate-100 rounded" /></td>
-                      <td className="py-3 text-center"><div className="h-3.5 w-8 bg-slate-100 rounded mx-auto" /></td>
-                      <td className="py-3 text-center"><div className="h-3.5 w-8 bg-slate-100 rounded mx-auto" /></td>
-                      <td className="py-3 text-right">
-                        <div className="flex justify-end">
-                          <div className="h-6 w-6 bg-slate-100 rounded" />
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-4 text-center text-slate-400">No companies found.</td>
-                  </tr>
-                ) : (
-                  filtered.map((comp) => (
-                    <tr 
-                      key={comp.id}
+              <tbody className="divide-y divide-border text-xs text-foreground font-semibold">
+                {filtered.map((comp) => (
+                  <tr 
+                    key={comp.id}
                     onClick={() => setSelectedId(comp.id)}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
                       setSelectedId(prevId => prevId === comp.id ? null : prevId);
                     }}
-                    className={`hover:bg-slate-50/50 cursor-pointer transition-colors ${comp.id === selectedId ? 'bg-brand-secondary-accent/10' : ''}`}
+                    className={`hover:bg-secondary/50 cursor-pointer transition-colors ${comp.id === selectedId ? 'bg-brand-purple/5' : ''}`}
                   >
-                    <td className="py-3 font-extrabold text-brand-heading truncate max-w-[160px]">{comp.name}</td>
-                    <td className="py-3 text-brand-text/80 truncate max-w-[120px]">{comp.industry}</td>
+                    <td className="py-3 font-semibold text-foreground truncate max-w-[160px]">{comp.name}</td>
+                    <td className="py-3 text-muted-foreground truncate max-w-[120px]">{comp.industry}</td>
                     <td className="py-3 tabular-nums">{comp.revenue || '—'}</td>
                     <td className="py-3 text-center tabular-nums">{comp.employees}</td>
                     <td className="py-3 text-center tabular-nums">{comp.openDeals}</td>
@@ -222,14 +200,14 @@ export default function CompaniesView() {
                             });
                             setIsEditModalOpen(true);
                           }}
-                          className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                          className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
                         >
                           <Edit className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                )))}
+                ))}
               </tbody>
             </table>
           </div>
@@ -238,21 +216,21 @@ export default function CompaniesView() {
 
       {/* Details Side Panel */}
       {active && <div className="col-span-12 lg:col-span-4 space-y-5">
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
-          <div className="flex items-center justify-between pb-3 border-b border-brand-border-purple/15">
+        <div className="bg-card border border-border rounded-2xl p-5 sticky top-20">
+          <div className="flex items-center justify-between pb-3 border-b border-border">
             <div className="flex items-center space-x-2.5">
-              <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/20 border border-brand-border-purple/35 flex items-center justify-center text-brand-accent">
+              <div className="h-8.5 w-8.5 rounded-lg bg-secondary border border-border flex items-center justify-center text-brand-purple">
                 <Building2 className="h-4.5 w-4.5" />
               </div>
               <div>
-                <h3 className="font-extrabold text-brand-heading text-sm">{active.name}</h3>
-                <p className="text-[10px] text-brand-text/60 font-bold">{active.industry}</p>
+                <h3 className="font-semibold text-foreground text-sm">{active.name}</h3>
+                <p className="text-[10px] text-muted-foreground font-semibold">{active.industry}</p>
               </div>
             </div>
             {/* Close Button */}
             <button 
               onClick={() => setSelectedId(null)}
-              className="p-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 rounded text-slate-500 hover:text-slate-700 transition-all duration-200 cursor-pointer"
+              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
               title="Close Summary"
               aria-label="Close Summary"
             >
@@ -260,28 +238,28 @@ export default function CompaniesView() {
             </button>
           </div>
 
-          <div className="py-3 space-y-2.5 text-[11px] font-semibold border-b border-brand-border-purple/15">
+          <div className="py-3 space-y-2.5 text-[11px] font-semibold border-b border-border">
             <div className="flex justify-between">
-              <span className="text-brand-text/50">Owner</span>
-              <span className="text-brand-text">{active.owner}</span>
+              <span className="text-muted-foreground">Owner</span>
+              <span className="text-foreground">{active.owner}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-brand-text/50">Revenue Size</span>
-              <span className="text-brand-text tabular-nums">{active.revenue || '—'}</span>
+              <span className="text-muted-foreground">Revenue Size</span>
+              <span className="text-muted-foreground tabular-nums">{active.revenue || '—'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-brand-text/50">Employees</span>
-              <span className="text-brand-text tabular-nums">{active.employees}</span>
+              <span className="text-muted-foreground">Employees</span>
+              <span className="text-muted-foreground tabular-nums">{active.employees}</span>
             </div>
           </div>
 
           {/* Contacts list */}
-          <div className="py-3 border-b border-brand-border-purple/15">
+          <div className="py-3 border-b border-border">
             <div className="flex items-center justify-between mb-2">
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Company Contacts</h4>
+              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Company Contacts</h4>
               <button 
                 onClick={() => setIsAddContactModalOpen(true)}
-                className="text-brand-accent hover:text-brand-accent-hover inline-flex items-center space-x-0.5 text-[10px] font-bold cursor-pointer"
+                className="text-brand-purple hover:text-brand-purple/80 inline-flex items-center space-x-0.5 text-[10px] font-bold cursor-pointer"
               >
                 <PlusCircle className="h-3 w-3" />
                 <span>Add Link</span>
@@ -290,52 +268,52 @@ export default function CompaniesView() {
             <div className="space-y-1.5">
               {active.contacts.length > 0 ? (
                 active.contacts.map((c, i) => (
-                  <div key={i} className="text-[11px] text-brand-text font-bold flex items-center">
-                    <Users className="h-3 w-3 mr-1.5 text-brand-text/40" />
+                  <div key={i} className="text-[11px] text-foreground font-semibold flex items-center">
+                    <Users className="h-3 w-3 mr-1.5 text-muted-foreground" />
                     {c}
                   </div>
                 ))
               ) : (
-                <p className="text-slate-400 text-[10px] font-semibold">No contacts linked yet.</p>
+                <p className="text-muted-foreground text-[10px] font-semibold">No contacts linked yet.</p>
               )}
             </div>
           </div>
 
           {/* Notes */}
-          <div className="py-3 border-b border-brand-border-purple/15">
-            <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">Notes</h4>
-            <p className="text-[11px] text-brand-text/80 leading-relaxed font-bold bg-slate-50/60 p-2 border border-brand-border-purple/20 rounded-lg">{active.notes || 'No internal notes saved.'}</p>
+          <div className="py-3 border-b border-border">
+            <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Notes</h4>
+            <p className="text-[11px] text-muted-foreground leading-relaxed font-semibold bg-secondary p-2 border border-border rounded-lg">{active.notes || 'No internal notes saved.'}</p>
           </div>
 
           {/* Timeline & Files */}
           <div className="pt-3 space-y-4">
             <div>
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-2">Recent Timeline</h4>
+              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-2">Recent Timeline</h4>
               <div className="space-y-2">
                 {active.timeline.map((item) => (
                   <div key={item.id} className="text-[10px] font-semibold flex justify-between">
-                    <span className="text-brand-text/80">{item.title}</span>
-                    <span className="text-slate-400 font-bold">{item.time}</span>
+                    <span className="text-muted-foreground">{item.title}</span>
+                    <span className="text-muted-foreground font-bold">{item.time}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div>
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-2">Uploaded Attachments</h4>
+              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-2">Uploaded Attachments</h4>
               <div className="space-y-1.5">
                 {active.files.length > 0 ? (
                   active.files.map((file) => (
-                    <div key={file.id} className="p-2 border border-brand-border-purple/15 rounded bg-slate-50/50 flex justify-between items-center text-[10px] font-semibold">
-                      <span className="flex items-center text-brand-heading font-extrabold">
-                        <Paperclip className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+                    <div key={file.id} className="p-2 border border-border rounded bg-secondary flex justify-between items-center text-[10px] font-semibold">
+                      <span className="flex items-center text-foreground font-semibold">
+                        <Paperclip className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
                         {file.name}
                       </span>
-                      <span className="text-slate-400">{file.size}</span>
+                      <span className="text-muted-foreground">{file.size}</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-slate-400 text-[10px] font-semibold">No files uploaded.</p>
+                  <p className="text-muted-foreground text-[10px] font-semibold">No files uploaded.</p>
                 )}
               </div>
             </div>
@@ -345,43 +323,43 @@ export default function CompaniesView() {
 
       {/* Add Company Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Add Company</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Add Company</h3>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleAdd} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company Name</label>
-                  <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company Name</label>
+                  <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
-                  <input type="text" required placeholder="e.g. Software" value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Industry</label>
+                  <input type="text" required placeholder="e.g. Software" value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue</label>
-                  <input type="text" placeholder="e.g. ₹5,000,000" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Revenue</label>
+                  <input type="text" placeholder="e.g. ₹5,000,000" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Employees</label>
-                  <input type="number" value={form.employees} onChange={e => setForm({...form, employees: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Employees</label>
+                  <input type="number" value={form.employees} onChange={e => setForm({...form, employees: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Owner</label>
-                <select value={form.owner} onChange={e => setForm({...form, owner: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Owner</label>
+                <select value={form.owner} onChange={e => setForm({...form, owner: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                   <option>Sarah Johnson</option>
                   <option>Alex Johnson</option>
                 </select>
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Save Company</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  cursor-pointer">Save Company</button>
               </div>
             </form>
           </div>
@@ -390,36 +368,36 @@ export default function CompaniesView() {
 
       {/* Edit Company Modal */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Edit Company</h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Edit Company</h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleEdit} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company Name</label>
-                  <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company Name</label>
+                  <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
-                  <input type="text" required value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Industry</label>
+                  <input type="text" required value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue</label>
-                  <input type="text" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Revenue</label>
+                  <input type="text" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Employees</label>
-                  <input type="number" value={form.employees} onChange={e => setForm({...form, employees: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Employees</label>
+                  <input type="number" value={form.employees} onChange={e => setForm({...form, employees: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Save Changes</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  cursor-pointer">Save Changes</button>
               </div>
             </form>
           </div>
@@ -428,20 +406,20 @@ export default function CompaniesView() {
 
       {/* Add Contact Modal */}
       {isAddContactModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Link Contact</h3>
-              <button onClick={() => setIsAddContactModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Link Contact</h3>
+              <button onClick={() => setIsAddContactModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleAddContact} className="p-5 space-y-4">
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Contact Name & Role</label>
-                <input type="text" required placeholder="e.g. Timothy Brown (CTO)" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Contact Name & Role</label>
+                <input type="text" required placeholder="e.g. Timothy Brown (CTO)" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsAddContactModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Link Contact</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsAddContactModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  cursor-pointer">Link Contact</button>
               </div>
             </form>
           </div>
@@ -450,3 +428,4 @@ export default function CompaniesView() {
     </div>
   );
 }
+

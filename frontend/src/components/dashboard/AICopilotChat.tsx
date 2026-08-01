@@ -190,7 +190,7 @@ Sales Manager, Pulse CRM`;
       {/* Floating Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-tr from-brand-accent to-brand-secondary-accent border border-brand-border-purple/35 flex items-center justify-center text-white shadow-[0_8px_30px_rgba(121,87,251,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-tr from-brand-accent to-brand-secondary-accent border border-border flex items-center justify-center text-primary-foreground shadow-[0_8px_30px_rgba(121,87,251,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
         aria-label="Ask PulseAI"
       >
         {isOpen ? (
@@ -208,24 +208,24 @@ Sales Manager, Pulse CRM`;
 
       {/* Slide-over Chat Box */}
       {isOpen && (
-        <div className="fixed bottom-22 right-6 w-[380px] max-h-[580px] h-[500px] rounded-2xl border border-brand-border-purple/30 bg-brand-bg/95 backdrop-blur-md shadow-2xl flex flex-col overflow-hidden z-50 animate-in slide-in-from-bottom-8 fade-in duration-300 text-brand-text">
+        <div className="fixed bottom-22 right-6 w-[380px] max-h-[580px] h-[500px] rounded-2xl border border-border bg-brand-bg/95 backdrop-blur-md  flex flex-col overflow-hidden z-50 animate-in slide-in-from-bottom-8 fade-in duration-300 text-muted-foreground">
           {/* Header */}
-          <div className="bg-gradient-to-r from-brand-heading to-brand-accent p-4 flex items-center justify-between text-white border-b border-brand-border-purple/20 shrink-0">
+          <div className="bg-gradient-to-r from-brand-heading to-brand-accent p-4 flex items-center justify-between text-primary-foreground border-b border-border shrink-0">
             <div className="flex items-center space-x-2.5">
-              <div className="h-9.5 w-9.5 rounded-xl bg-white/15 flex items-center justify-center">
-                <Sparkles className="h-5.5 w-5.5 text-white" />
+              <div className="h-9.5 w-9.5 rounded-xl bg-card/15 flex items-center justify-center">
+                <Sparkles className="h-5.5 w-5.5 text-primary-foreground" />
               </div>
               <div>
-                <h3 className="text-sm font-black tracking-wide">PulseAI Copilot</h3>
+                <h3 className="text-sm font-semibold tracking-wide">PulseAI Copilot</h3>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[10px] text-white/85 font-bold uppercase tracking-wider">Online Sync</span>
+                  <span className="text-[10px] text-primary-foreground/85 font-bold uppercase tracking-wider">Online Sync</span>
                 </div>
               </div>
             </div>
             <button 
               onClick={() => setIsOpen(false)}
-              className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+              className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-1 rounded-lg hover:bg-card/10"
             >
               <X className="h-4.5 w-4.5" />
             </button>
@@ -238,41 +238,41 @@ Sales Manager, Pulse CRM`;
               return (
                 <div key={m.id} className={`flex items-start space-x-2.5 ${isAI ? 'justify-start' : 'justify-end'}`}>
                   {isAI && (
-                    <div className="h-7 w-7 rounded-lg bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center shrink-0">
-                      <Bot className="h-4 w-4 text-brand-accent" />
+                    <div className="h-7 w-7 rounded-lg bg-brand-purple/10 border border-brand-accent/20 flex items-center justify-center shrink-0">
+                      <Bot className="h-4 w-4 text-brand-purple" />
                     </div>
                   )}
                   
                   <div className="max-w-[78%] flex flex-col space-y-1.5">
                     <div className={`p-3 rounded-xl text-xs leading-relaxed font-medium ${
                       isAI 
-                        ? 'bg-brand-sidebar-hover/15 border border-brand-border-purple/15 text-brand-text' 
-                        : 'bg-brand-accent text-white rounded-br-none'
+                        ? 'bg-brand-sidebar-hover/15 border border-border text-muted-foreground' 
+                        : 'bg-brand-purple text-primary-foreground rounded-br-none'
                     }`}>
                       <p className="whitespace-pre-wrap">{m.text}</p>
 
                       {/* --- Pipeline Metric Cards --- */}
                       {isAI && m.type === 'pipeline' && m.data && (
-                        <div className="mt-3.5 space-y-2.5 border-t border-brand-border-purple/20 pt-3">
+                        <div className="mt-3.5 space-y-2.5 border-t border-border pt-3">
                           <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg text-center">
-                              <p className="text-[9px] text-slate-400 font-extrabold uppercase">Total pipeline</p>
-                              <p className="text-sm font-black text-brand-heading mt-0.5 tabular-nums">
+                            <div className="bg-brand-bg border border-border p-2.5 rounded-lg text-center">
+                              <p className="text-[9px] text-muted-foreground font-semibold uppercase">Total pipeline</p>
+                              <p className="text-sm font-semibold text-foreground mt-0.5 tabular-nums">
                                 ${m.data.totalValue.toLocaleString()}
                               </p>
                             </div>
-                            <div className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg text-center">
-                              <p className="text-[9px] text-slate-400 font-extrabold uppercase">Weighted forecast</p>
-                              <p className="text-sm font-black text-emerald-600 mt-0.5 tabular-nums">
+                            <div className="bg-brand-bg border border-border p-2.5 rounded-lg text-center">
+                              <p className="text-[9px] text-muted-foreground font-semibold uppercase">Weighted forecast</p>
+                              <p className="text-sm font-semibold text-brand-cyan mt-0.5 tabular-nums">
                                 ${m.data.weightedForecast.toLocaleString()}
                               </p>
                             </div>
                           </div>
-                          <div className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg">
-                            <p className="text-[9px] text-slate-400 font-extrabold uppercase mb-1">Deals by Stage ({m.data.count})</p>
+                          <div className="bg-brand-bg border border-border p-2.5 rounded-lg">
+                            <p className="text-[9px] text-muted-foreground font-semibold uppercase mb-1">Deals by Stage ({m.data.count})</p>
                             <div className="space-y-1">
                               {Object.entries(m.data.stages).map(([stage, count]: any) => (
-                                <div key={stage} className="flex justify-between text-[10px] font-bold text-brand-text">
+                                <div key={stage} className="flex justify-between text-[10px] font-bold text-muted-foreground">
                                   <span>{stage}</span>
                                   <span className="tabular-nums">{count}</span>
                                 </div>
@@ -284,14 +284,14 @@ Sales Manager, Pulse CRM`;
 
                       {/* --- Leads Recommended List --- */}
                       {isAI && m.type === 'leads' && m.data && (
-                        <div className="mt-3.5 space-y-2 border-t border-brand-border-purple/20 pt-3">
+                        <div className="mt-3.5 space-y-2 border-t border-border pt-3">
                           {m.data.map((lead: Lead) => (
-                            <div key={lead.id} className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg flex items-center justify-between gap-1">
+                            <div key={lead.id} className="bg-brand-bg border border-border p-2.5 rounded-lg flex items-center justify-between gap-1">
                               <div className="min-w-0">
-                                <p className="text-[11px] font-extrabold text-brand-heading truncate">{lead.title}</p>
-                                <p className="text-[9px] text-brand-accent font-bold truncate mt-0.5">{lead.company_name || ''}</p>
+                                <p className="text-[11px] font-semibold text-foreground truncate">{lead.title}</p>
+                                <p className="text-[9px] text-brand-purple font-bold truncate mt-0.5">{lead.company_name || ''}</p>
                               </div>
-                              <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded tabular-nums shrink-0">
+                              <span className="text-[10px] font-semibold bg-brand-cyan/15 text-brand-cyan px-1.5 py-0.5 rounded tabular-nums shrink-0">
                                 Score: {lead.score ?? 0}
                               </span>
                             </div>
@@ -301,16 +301,16 @@ Sales Manager, Pulse CRM`;
 
                       {/* --- Generated Email Draft Template --- */}
                       {isAI && m.type === 'email' && m.data && (
-                        <div className="mt-3.5 border-t border-brand-border-purple/20 pt-3">
-                          <div className="relative bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg font-mono text-[9.5px] whitespace-pre-wrap leading-normal text-brand-text/90">
+                        <div className="mt-3.5 border-t border-border pt-3">
+                          <div className="relative bg-brand-bg border border-border p-2.5 rounded-lg font-mono text-[9.5px] whitespace-pre-wrap leading-normal text-muted-foreground/90">
                             {m.data.template}
                             <button
                               onClick={() => handleCopy(m.data.template, m.id)}
-                              className="absolute top-2 right-2 p-1.5 bg-brand-sidebar-hover/10 hover:bg-brand-sidebar-hover/20 border border-brand-border-purple/15 rounded text-slate-500 hover:text-brand-text cursor-pointer transition-colors shadow-sm/5"
+                              className="absolute top-2 right-2 p-1.5 bg-brand-sidebar-hover/10 hover:bg-brand-sidebar-hover/20 border border-border rounded text-muted-foreground hover:text-muted-foreground cursor-pointer transition-colors "
                               title="Copy email draft"
                             >
                               {copiedId === m.id ? (
-                                <Check className="h-3 w-3 text-emerald-600" />
+                                <Check className="h-3 w-3 text-brand-cyan" />
                               ) : (
                                 <Copy className="h-3 w-3" />
                               )}
@@ -319,14 +319,14 @@ Sales Manager, Pulse CRM`;
                         </div>
                       )}
                     </div>
-                    <span className="text-[9px] text-slate-400 self-start px-1 font-bold">
+                    <span className="text-[9px] text-muted-foreground self-start px-1 font-bold">
                       {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                   
                   {!isAI && (
-                    <div className="h-7 w-7 rounded-lg bg-brand-accent flex items-center justify-center shrink-0">
-                      <User className="h-4 w-4 text-white" />
+                    <div className="h-7 w-7 rounded-lg bg-brand-purple flex items-center justify-center shrink-0">
+                      <User className="h-4 w-4 text-primary-foreground" />
                     </div>
                   )}
                 </div>
@@ -335,10 +335,10 @@ Sales Manager, Pulse CRM`;
 
             {isTyping && (
               <div className="flex items-start space-x-2.5 justify-start">
-                <div className="h-7 w-7 rounded-lg bg-brand-accent/10 border border-brand-accent/20 flex items-center justify-center shrink-0">
-                  <Bot className="h-4 w-4 text-brand-accent animate-bounce" />
+                <div className="h-7 w-7 rounded-lg bg-brand-purple/10 border border-brand-accent/20 flex items-center justify-center shrink-0">
+                  <Bot className="h-4 w-4 text-brand-purple animate-bounce" />
                 </div>
-                <div className="max-w-[78%] p-3 rounded-xl text-xs bg-brand-sidebar-hover/15 border border-brand-border-purple/10 flex items-center space-x-1">
+                <div className="max-w-[78%] p-3 rounded-xl text-xs bg-brand-sidebar-hover/15 border border-border flex items-center space-x-1">
                   <span className="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-100"></span>
                   <span className="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-200"></span>
                   <span className="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-300"></span>
@@ -349,7 +349,7 @@ Sales Manager, Pulse CRM`;
           </div>
 
           {/* Quick Actions Shortcuts Selector */}
-          <div className="px-4 py-2 border-t border-brand-border-purple/15 flex space-x-2 overflow-x-auto shrink-0 bg-brand-sidebar-hover/10 scrollbar-none">
+          <div className="px-4 py-2 border-t border-border flex space-x-2 overflow-x-auto shrink-0 bg-brand-sidebar-hover/10 scrollbar-none">
             {[
               { label: '📊 Pipeline Health', text: 'Pipeline Health' },
               { label: '⚡ Recommendations', text: 'Lead recommendations' },
@@ -358,7 +358,7 @@ Sales Manager, Pulse CRM`;
               <button
                 key={btn.text}
                 onClick={() => triggerShortcut(btn.text)}
-                className="py-1 px-2.5 bg-brand-bg border border-brand-border-purple/20 hover:border-brand-accent hover:text-brand-accent rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer shadow-sm/5"
+                className="py-1 px-2.5 bg-brand-bg border border-border hover:border-brand-accent hover:text-brand-purple rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer "
               >
                 {btn.label}
               </button>
@@ -371,19 +371,19 @@ Sales Manager, Pulse CRM`;
               e.preventDefault();
               handleSendMessage(inputValue);
             }} 
-            className="p-3 border-t border-brand-border-purple/15 flex items-center space-x-2 shrink-0 bg-brand-bg"
+            className="p-3 border-t border-border flex items-center space-x-2 shrink-0 bg-brand-bg"
           >
             <input
               type="text"
               placeholder="Ask Copilot something..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              className="flex-1 px-3 py-1.5 border border-brand-border-purple/25 rounded-lg text-xs focus:outline-none focus:border-brand-accent transition-colors bg-brand-sidebar-hover/10 text-brand-text placeholder-brand-text/50"
+              className="flex-1 px-3 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:border-brand-accent transition-colors bg-brand-sidebar-hover/10 text-muted-foreground placeholder-brand-text/50"
             />
             <button
               type="submit"
               disabled={!inputValue.trim() || isTyping}
-              className="h-8 w-8 rounded-lg bg-brand-accent text-white flex items-center justify-center hover:bg-brand-accent-hover disabled:opacity-50 transition-all cursor-pointer shrink-0"
+              className="h-8 w-8 rounded-lg bg-brand-purple text-primary-foreground flex items-center justify-center hover:bg-brand-purple/90 disabled:opacity-50 transition-all cursor-pointer shrink-0"
             >
               <Send className="h-3.5 w-3.5" />
             </button>

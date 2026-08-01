@@ -214,45 +214,24 @@ class ForecastRepository:
     ) -> dict[str, Decimal]:
         """
         For a given month window returns: pipeline_value, expected_revenue, maximum_revenue.
-
-        Bucketing rule (matches Forecast Summary base dataset exactly):
-          effective_date = COALESCE(expected_close_date, CAST(created_at AS DATE))
-        A deal is included in this month when its effective_date falls in
-        [month_start.date(), month_end.date()).
-
-        Deals with NO expected_close_date and NO created_at are bucketed into
-        the current month so they are never silently dropped.
+        Deals are bucketed by their expected_close_date falling within the month.
+        Falls back to all open deals when no expected_close_date is set.
         """
-        from sqlalchemy import cast, Date as SADate, or_, and_
-
-        base = self._active_open_deals(organization_id)
-        ms = month_start.date()
-        me = month_end.date()
-
-        # A deal belongs to this month when:
-        #   (expected_close_date IS NOT NULL AND expected_close_date in [ms, me))
-        #   OR
-        #   (expected_close_date IS NULL AND DATE(created_at) in [ms, me))
-        in_month = or_(
-            and_(
-                Deal.expected_close_date.isnot(None),
-                Deal.expected_close_date >= ms,
-                Deal.expected_close_date < me,
-            ),
-            and_(
-                Deal.expected_close_date.is_(None),
-                cast(Deal.created_at, SADate) >= ms,
-                cast(Deal.created_at, SADate) < me,
-            ),
-        )
-
-        # Pipeline = SUM(amount)
+        # Pipeline: SUM(amount) for open deals closing this month
         pipeline_stmt = select(
             func.coalesce(func.sum(Deal.amount), 0)
-        ).where(*base, in_month)
-        pipeline = Decimal(str((await self.db.execute(pipeline_stmt)).scalar_one() or 0))
+        ).where(
+            Deal.organization_id == organization_id,
+            Deal.is_active.is_(True),
+            Deal.is_deleted.is_(False),
+            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
+            Deal.expected_close_date >= month_start.date(),
+            Deal.expected_close_date < month_end.date(),
+        )
+        pipeline_result = await self.db.execute(pipeline_stmt)
+        pipeline = Decimal(str(pipeline_result.scalar_one() or 0))
 
-        # Expected = SUM(amount × probability / 100)
+        # Expected: SUM(amount * probability/100)
         expected_stmt = select(
             func.coalesce(
                 func.sum(
@@ -263,13 +242,21 @@ class ForecastRepository:
                 ),
                 0,
             )
-        ).where(*base, in_month)
-        expected = Decimal(str((await self.db.execute(expected_stmt)).scalar_one() or 0))
+        ).where(
+            Deal.organization_id == organization_id,
+            Deal.is_active.is_(True),
+            Deal.is_deleted.is_(False),
+            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
+            Deal.expected_close_date >= month_start.date(),
+            Deal.expected_close_date < month_end.date(),
+        )
+        expected_result = await self.db.execute(expected_stmt)
+        expected = Decimal(str(expected_result.scalar_one() or 0))
 
         return {
             "pipeline": pipeline,
             "expected": expected,
-            "maximum": pipeline,   # maximum = full pipeline (100 % close)
+            "maximum": pipeline,  # maximum = full pipeline value
         }
 
     # ── 9. Quarterly Projection ───────────────────────────────────────────────
@@ -293,73 +280,16 @@ class ForecastRepository:
     async def get_quarterly_open_pipeline(
         self, organization_id: UUID, q_start: datetime, q_end: datetime
     ) -> Decimal:
-        """
-        SUM(amount) for open deals whose effective date falls in the quarter.
-        effective_date = COALESCE(expected_close_date, DATE(created_at))
-        Deals without either date are bucketed into the current quarter.
-        """
-        from sqlalchemy import cast, Date as SADate, or_, and_
-
-        base = self._active_open_deals(organization_id)
-        qs = q_start.date()
-        qe = q_end.date()
-
-        in_quarter = or_(
-            and_(
-                Deal.expected_close_date.isnot(None),
-                Deal.expected_close_date >= qs,
-                Deal.expected_close_date < qe,
-            ),
-            and_(
-                Deal.expected_close_date.is_(None),
-                cast(Deal.created_at, SADate) >= qs,
-                cast(Deal.created_at, SADate) < qe,
-            ),
-        )
-
         stmt = select(
             func.coalesce(func.sum(Deal.amount), 0)
-        ).where(*base, in_quarter)
-        result = await self.db.execute(stmt)
-        return Decimal(str(result.scalar_one() or 0))
-
-    async def get_quarterly_expected_revenue(
-        self, organization_id: UUID, q_start: datetime, q_end: datetime
-    ) -> Decimal:
-        """
-        SUM(amount × probability/100) for open deals in the quarter.
-        Uses the same effective_date bucketing as get_quarterly_open_pipeline.
-        """
-        from sqlalchemy import cast, Date as SADate, or_, and_
-
-        base = self._active_open_deals(organization_id)
-        qs = q_start.date()
-        qe = q_end.date()
-
-        in_quarter = or_(
-            and_(
-                Deal.expected_close_date.isnot(None),
-                Deal.expected_close_date >= qs,
-                Deal.expected_close_date < qe,
-            ),
-            and_(
-                Deal.expected_close_date.is_(None),
-                cast(Deal.created_at, SADate) >= qs,
-                cast(Deal.created_at, SADate) < qe,
-            ),
+        ).where(
+            Deal.organization_id == organization_id,
+            Deal.is_active.is_(True),
+            Deal.is_deleted.is_(False),
+            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
+            Deal.expected_close_date >= q_start.date(),
+            Deal.expected_close_date < q_end.date(),
         )
-
-        stmt = select(
-            func.coalesce(
-                func.sum(
-                    case(
-                        (Deal.amount.isnot(None), Deal.amount * (Deal.probability / 100.0)),
-                        else_=0,
-                    )
-                ),
-                0,
-            )
-        ).where(*base, in_quarter)
         result = await self.db.execute(stmt)
         return Decimal(str(result.scalar_one() or 0))
 
@@ -464,116 +394,3 @@ class ForecastRepository:
         )
         result = await self.db.execute(stmt)
         return Decimal(str(result.scalar_one() or 0))
-
-    # ── 13. Forecast Risks ────────────────────────────────────────────────────
-
-    async def get_forecast_risks(self, organization_id: UUID) -> list[dict]:
-        """
-        Identify at-risk deals: aging, overdue, low probability, no activity.
-        Returns raw rows for the service to convert into ForecastRisk objects.
-        """
-        from app.models.company import Company
-        from app.models.user import User
-        from sqlalchemy.orm import selectinload
-
-        now = datetime.now(timezone.utc)
-        stale_threshold = now - __import__('datetime').timedelta(days=14)
-
-        stmt = (
-            select(
-                Deal.id,
-                Deal.name,
-                Deal.amount,
-                Deal.probability,
-                Deal.expected_close_date,
-                Deal.updated_at,
-                Deal.created_at,
-                User.full_name.label("owner_name"),
-                Company.name.label("company_name"),
-            )
-            .outerjoin(User, Deal.owner_id == User.id)
-            .outerjoin(Company, Deal.company_id == Company.id)
-            .where(*self._active_open_deals(organization_id))
-            .order_by(Deal.updated_at.asc())
-        )
-        result = await self.db.execute(stmt)
-        rows = result.all()
-
-        risks = []
-        for row in rows:
-            risk_type = None
-            risk_desc = None
-            days_overdue = 0
-
-            # Overdue close date
-            if row.expected_close_date and row.expected_close_date < now.date():
-                days_overdue = (now.date() - row.expected_close_date).days
-                risk_type = "overdue"
-                risk_desc = f"Close date passed {days_overdue} day(s) ago"
-
-            # Low probability
-            elif row.probability is not None and row.probability < 25:
-                risk_type = "low_probability"
-                risk_desc = f"Deal probability is critically low at {row.probability}%"
-
-            # No recent activity (stale > 14 days)
-            elif row.updated_at and row.updated_at < stale_threshold:
-                days_stale = (now - row.updated_at).days
-                risk_type = "no_activity"
-                risk_desc = f"No activity for {days_stale} days"
-
-            # Aging deal (created > 60 days ago, still open)
-            elif row.created_at:
-                age_days = (now - row.created_at).days
-                if age_days > 60:
-                    risk_type = "aging"
-                    risk_desc = f"Deal has been open for {age_days} days without closing"
-
-            if risk_type:
-                risks.append({
-                    "deal_id": str(row.id),
-                    "deal_name": row.name,
-                    "company": row.company_name,
-                    "owner_name": row.owner_name,
-                    "deal_value": Decimal(str(row.amount or 0)),
-                    "risk_type": risk_type,
-                    "risk_description": risk_desc,
-                    "days_overdue": days_overdue,
-                    "probability": row.probability or 0,
-                })
-
-        return risks
-
-    # ── 14. Revenue trend (won deals per month) ───────────────────────────────
-
-    async def get_revenue_trend(
-        self, organization_id: UUID, months: int = 6
-    ) -> list[dict]:
-        """Return won revenue grouped by month for the last `months` months."""
-        now = datetime.now(timezone.utc)
-        points = []
-        for offset in range(months - 1, -1, -1):
-            month = now.month - offset
-            year = now.year
-            while month <= 0:
-                month += 12
-                year -= 1
-            start = datetime(year, month, 1, tzinfo=timezone.utc)
-            end_month = month + 1 if month < 12 else 1
-            end_year = year if month < 12 else year + 1
-            end = datetime(end_year, end_month, 1, tzinfo=timezone.utc)
-
-            stmt = select(func.coalesce(func.sum(Deal.amount), 0)).where(
-                Deal.organization_id == organization_id,
-                Deal.is_active.is_(True),
-                Deal.is_deleted.is_(False),
-                Deal.status == DealStatus.WON.value,
-                Deal.closed_at >= start,
-                Deal.closed_at < end,
-            )
-            result = await self.db.execute(stmt)
-            points.append({
-                "month": start.strftime("%b %Y"),
-                "revenue": Decimal(str(result.scalar_one() or 0)),
-            })
-        return points

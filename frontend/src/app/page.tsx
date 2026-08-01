@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import StatCards from '@/components/dashboard/StatCards';
@@ -8,7 +9,6 @@ import Charts from '@/components/dashboard/Charts';
 import Widgets from '@/components/dashboard/Widgets';
 import RightPanel from '@/components/dashboard/RightPanel';
 import ReportBuilderModal from '@/components/dashboard/ReportBuilderModal';
-import PulseLandingPage from '@/components/auth/PulseLandingPage';
 import LeadsView from '@/components/dashboard/LeadsView';
 import CompaniesView from '@/components/dashboard/CompaniesView';
 import ContactsView from '@/components/dashboard/ContactsView';
@@ -38,35 +38,51 @@ import IntegrationsView from '@/components/dashboard/IntegrationsView';
 import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
-import SkeletonLoader from '@/components/dashboard/SkeletonLoader';
-import { Calendar, Filter, ChevronDown, Check, Settings2, Loader2, Plus } from 'lucide-react';
-import { getToken, getCurrentUser, clearToken } from '@/utils/api';
-import { ROLE_HOME, ROLE_TABS, Role } from '@/lib/roles';
+import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
+import { clearToken } from '@/utils/api';
 
 export default function DashboardHome() {
+  const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
 
   useEffect(() => {
-    const auth = sessionStorage.getItem('pulse-crm-auth') === 'true';
-    setIsAuthenticated(auth);
-    setIsAuthLoading(false);
-  }, []);
+    const params = new URLSearchParams(window.location.search);
+    const authFromLanding = params.get('auth') === 'true';
+    const roleParam = params.get('role');
+    const emailParam = params.get('email');
+    const validRoles = ['representative', 'manager', 'admin'] as const;
 
-  const handleLogin = (role: 'representative' | 'manager' | 'admin') => {
+    if (authFromLanding && roleParam && validRoles.includes(roleParam as typeof validRoles[number])) {
+      sessionStorage.setItem('pulse-crm-auth', 'true');
+      localStorage.setItem('pulse-crm-role', roleParam);
+      if (emailParam) localStorage.setItem('pulse-crm-user', emailParam);
+      setIsAuthenticated(true);
+      setUserRole(roleParam as 'representative' | 'manager' | 'admin');
+      window.history.replaceState({}, '', window.location.pathname);
+      setIsAuthLoading(false);
+      return;
+    }
+
+    const auth = sessionStorage.getItem('pulse-crm-auth') === 'true';
+
+    if (!auth) {
+      router.replace('/login');
+      return;
+    }
+
     setIsAuthenticated(true);
-    sessionStorage.setItem('pulse-crm-auth', 'true');
-    setUserRole(role);
-    setToken(getToken());
-  };
+    const savedRole = localStorage.getItem('pulse-crm-role') as 'representative' | 'manager' | 'admin' | null;
+    if (savedRole && validRoles.includes(savedRole)) setUserRole(savedRole);
+    setIsAuthLoading(false);
+  }, [router]);
 
   const handleSignOut = () => {
     setIsAuthenticated(false);
     sessionStorage.removeItem('pulse-crm-auth');
     clearToken();
-    setToken(null);
-    localStorage.removeItem('pulse-crm-role');
-    localStorage.removeItem('pulse-crm-user');
+    router.replace('/login');
   };
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -77,52 +93,9 @@ export default function DashboardHome() {
   const [reportType, setReportType] = useState('Sales Funnel');
   const [primaryMetric, setPrimaryMetric] = useState('Deal Value');
   const [groupBy, setGroupBy] = useState('Stage');
-  
-  // User Role State — derived from the authenticated user's real roles.
-  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
-  const [token, setToken] = useState<string | null>(() => getToken());
 
-  // Map backend role names -> UI role. Backend uses "sales_rep", "manager", "admin".
-  const mapBackendRole = (roles: string[]): 'representative' | 'manager' | 'admin' => {
-    if (roles.includes('admin')) return 'admin';
-    if (roles.includes('manager')) return 'manager';
-    if (roles.includes('sales_rep') || roles.includes('representative')) return 'representative';
-    // Fallback: a user without a recognized role defaults to representative (least privilege).
-    return 'representative';
-  };
-
-  // Resolve the real role from the API whenever the token changes. Each run is
-  // cancelled on the next, so a stale-token response can never override the
-  // logged-in user's role (e.g. signing in as manager right after an admin session).
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    getCurrentUser()
-      .then((me) => {
-        if (cancelled) return;
-        const role = mapBackendRole(me.roles || []);
-        setUserRole(role);
-        localStorage.setItem('pulse-crm-role', role);
-      })
-      .catch(() => {
-        if (cancelled) return;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
-  // Role-scoped navigation: never let a tab the current role cannot access win.
-  const navigate = (tab: string) => {
-    setActiveTab(ROLE_TABS[userRole].has(tab) ? tab : ROLE_HOME[userRole]);
-  };
-
-  // Re-sanitize the active tab whenever the resolved role changes.
-  useEffect(() => {
-    setActiveTab(prev => (ROLE_TABS[userRole].has(prev) ? prev : ROLE_HOME[userRole]));
-  }, [userRole]);
-
-  // Layout Customization States
+  const [showFiltersMenu, setShowFiltersMenu] = useState(false);
+  const [selectedPipelineType, setSelectedPipelineType] = useState('All');
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
   const [layoutSettings, setLayoutSettings] = useState({
     statCards: true,
@@ -161,8 +134,6 @@ export default function DashboardHome() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-  const [showFiltersMenu, setShowFiltersMenu] = useState(false);
-  const [selectedPipelineType, setSelectedPipelineType] = useState('All');
   
   const [isLoading, setIsLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
@@ -178,42 +149,6 @@ export default function DashboardHome() {
     const timer = setTimeout(() => setIsLoading(false), 450);
     return () => clearTimeout(timer);
   }, [isLoading]);
-
-  // Trigger loading when activeTab changes
-  useEffect(() => {
-    setIsLoading(true);
-  }, [activeTab]);
-
-  // Trigger loading when userRole changes
-  useEffect(() => {
-    setIsLoading(true);
-  }, [userRole]);
-
-  // Determine skeleton loader layout based on active tab
-  const getSkeletonLayout = (tab: string) => {
-    switch (tab) {
-      case 'dashboard':
-        return 'dashboard';
-      case 'leads':
-      case 'contacts':
-      case 'companies':
-      case 'products':
-      case 'users':
-      case 'audit logs':
-        return 'table';
-      case 'deals':
-      case 'pipeline':
-      case 'team pipeline':
-        return 'kanban';
-      case 'settings':
-      case 'profile':
-        return 'form';
-      case 'calendar':
-        return 'calendar';
-      default:
-        return 'list';
-    }
-  };
 
   // Custom reports state
   const [recentReports, setRecentReports] = useState([
@@ -241,11 +176,93 @@ export default function DashboardHome() {
     { name: 'Custom Reports', key: 'custom' },
   ];
 
+  if (isAuthLoading || !isAuthenticated) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-surface-warm">
+        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      </div>
+    );
+  }
 
-  // Shared professional dashboard layout for representatives and the default fallback:
-  // KPI cards, charts, heatmap, widgets, right panel, and report builder.
-  const genericDashboard = (
-    <>
+  return (
+    <div className="flex bg-surface-warm h-screen overflow-hidden font-sans text-foreground antialiased">
+      {/* Sidebar navigation - toned down background */}
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        collapsed={sidebarCollapsed} 
+        setCollapsed={setSidebarCollapsed} 
+        userRole={userRole}
+      />
+
+      {/* Main dashboard content container */}
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        
+        {/* Top Navbar */}
+        <Header 
+          collapsed={sidebarCollapsed} 
+          setCollapsed={setSidebarCollapsed} 
+          onNewReportClick={() => setIsReportModalOpen(true)} 
+          onTabChange={(tab) => setActiveTab(tab)}
+          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
+          onSignOut={handleSignOut}
+          userRole={userRole}
+        />
+
+        {/* Dashboard inner scroll view with increased whitespace */}
+        <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
+          {activeTab === 'leads' ? (
+            <LeadsView />
+          ) : activeTab === 'contacts' ? (
+            <ContactsView />
+          ) : activeTab === 'companies' ? (
+            <CompaniesView />
+          ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
+            <PipelineView />
+          ) : activeTab === 'products' ? (
+            <ProductsView />
+          ) : activeTab === 'activities' ? (
+            <ActivitiesView />
+          ) : activeTab === 'emails' ? (
+            <EmailsView />
+          ) : activeTab === 'documents' ? (
+            <DocumentsView />
+          ) : activeTab === 'reports' ? (
+            <ReportsView />
+          ) : activeTab === 'workflows' ? (
+            <WorkflowsView />
+          ) : activeTab === 'ai insights' ? (
+            <AIInsightsView />
+          ) : activeTab === 'settings' ? (
+            <SettingsView userRole={userRole} />
+          ) : activeTab === 'profile' ? (
+            <ProfileView userRole={userRole} />
+          ) : activeTab === 'notifications' ? (
+            <NotificationsView />
+          ) : activeTab === 'calendar' ? (
+            <CalendarView />
+          ) : activeTab === 'forecast' ? (
+            <ForecastView />
+          ) : activeTab === 'team performance' ? (
+            <TeamPerformanceView />
+          ) : activeTab === 'users' ? (
+            <UsersView />
+          ) : activeTab === 'roles & permissions' ? (
+            <RolesPermissionsView />
+          ) : activeTab === 'integrations' ? (
+            <IntegrationsView />
+          ) : activeTab === 'automation' ? (
+            <AutomationView />
+          ) : activeTab === 'ai models' ? (
+            <AIModelsView />
+          ) : activeTab === 'audit logs' ? (
+            <AuditLogsView />
+          ) : activeTab === 'dashboard' && userRole === 'manager' ? (
+            <ManagerDashboardView onTabChange={setActiveTab} />
+          ) : activeTab === 'dashboard' && userRole === 'admin' ? (
+            <AdminDashboardView />
+          ) : (
+            <>
               {/* Header block with improved contrast & page title visual prominence */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
@@ -259,16 +276,16 @@ export default function DashboardHome() {
                 
                 {/* Datepicker and Layout Customization (Tactile and premium style) */}
                 <div className="flex items-center space-x-2 shrink-0 self-start md:self-auto">
-                  <button className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5">
-                    <Calendar className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
+                  <button className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition-all duration-200 cursor-pointer">
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
                     <span className="tabular-nums">May 12 – May 18, 2025</span>
                   </button>
 
                   <button 
                     onClick={() => setIsCustomizerOpen(true)}
-                    className="inline-flex items-center space-x-1.5 bg-white border border-brand-border-purple/35 hover:border-brand-border-purple active:bg-slate-50 px-3.5 py-1.5 rounded-lg text-xs font-bold text-brand-text/80 transition-all duration-200 cursor-pointer shadow-sm/5"
+                    className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition-all duration-200 cursor-pointer"
                   >
-                    <Settings2 className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
+                    <Settings2 className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
                     <span>Customize Layout</span>
                   </button>
                 </div>
@@ -298,7 +315,7 @@ export default function DashboardHome() {
                     loading={isLoading} 
                     showLeaderboard={layoutSettings.leaderboard}
                     showProductivity={layoutSettings.productivity}
-                    onTabChange={navigate}
+                    onTabChange={setActiveTab}
                   />
                 )}
 
@@ -313,15 +330,15 @@ export default function DashboardHome() {
 
               </div>
               {/* Report Builder Control Panel at the bottom of the page */}
-              <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 hover:shadow-md hover:border-brand-border-purple/40 transition-all duration-300 mt-6">
-                <div className="flex items-center justify-between mb-4 border-b border-slate-100 pb-2">
+              <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 mt-6">
+                <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
                   <div>
-                    <h3 className="font-bold text-brand-heading text-sm">Report builder</h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                    <h3 className="font-bold text-foreground text-sm">Report builder</h3>
+                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
                       Configure template, metrics, and grouping to dynamically compile custom reports.
                     </p>
                   </div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-brand-accent/10 text-brand-accent uppercase tracking-wider">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-brand-purple/10 text-brand-purple uppercase tracking-wider">
                     Customizer
                   </span>
                 </div>
@@ -331,21 +348,21 @@ export default function DashboardHome() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     {/* Report Type */}
                     <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">
+                      <label className="block text-[9px] font-extrabold text-foreground uppercase tracking-wider mb-1.5">
                         Report Template
                       </label>
                       <div className="relative">
                         <select
                           value={reportType}
                           onChange={(e) => setReportType(e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-brand-border-purple/35 bg-white rounded-lg text-xs text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent transition-all duration-200 cursor-pointer appearance-none pr-8 font-semibold"
+                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer appearance-none pr-8 font-semibold"
                         >
                           <option value="Sales Funnel">Sales Funnel Analysis</option>
                           <option value="Lead Conversion">Lead Conversion Rate</option>
                           <option value="Activity Log">Rep Activity Metrics</option>
                           <option value="Revenue Projection">Revenue Forecast Q3</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-400">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted-foreground">
                           <ChevronDown className="h-3 w-3" strokeWidth={2} />
                         </div>
                       </div>
@@ -353,21 +370,21 @@ export default function DashboardHome() {
 
                     {/* Primary Metric */}
                     <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">
+                      <label className="block text-[9px] font-extrabold text-foreground uppercase tracking-wider mb-1.5">
                         Primary Metric
                       </label>
                       <div className="relative">
                         <select
                           value={primaryMetric}
                           onChange={(e) => setPrimaryMetric(e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-brand-border-purple/35 bg-white rounded-lg text-xs text-brand-text focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent transition-all duration-200 cursor-pointer appearance-none pr-8 font-semibold"
+                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer appearance-none pr-8 font-semibold"
                         >
                           <option value="Deal Value">Deal Value (INR)</option>
                           <option value="Lead Score">AI Lead Score</option>
                           <option value="Conversion Rate">Conversion Rate (%)</option>
                           <option value="Task Count">Total Activities</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-450">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted-foreground">
                           <ChevronDown className="h-3 w-3" strokeWidth={2} />
                         </div>
                       </div>
@@ -375,7 +392,7 @@ export default function DashboardHome() {
 
                     {/* Group By Selector */}
                     <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">
+                      <label className="block text-[9px] font-extrabold text-foreground uppercase tracking-wider mb-1.5">
                         Group By
                       </label>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -388,8 +405,8 @@ export default function DashboardHome() {
                               onClick={() => setGroupBy(group)}
                               className={`py-1.5 rounded-lg text-[10px] font-extrabold border transition-all duration-200 cursor-pointer ${
                                 isActive 
-                                  ? 'border-brand-accent bg-brand-accent/5 text-brand-accent shadow-sm/5' 
-                                  : 'border-brand-border-purple/30 hover:border-brand-border-purple text-brand-text/75 hover:bg-slate-50'
+                                  ? 'border-brand-purple bg-brand-purple/5 text-brand-purple shadow-sm' 
+                                  : 'border-border hover:border-muted-foreground text-muted-foreground hover:bg-secondary'
                               }`}
                             >
                               {group}
@@ -401,16 +418,16 @@ export default function DashboardHome() {
                   </div>
 
                   {/* Schema Preview & Button Row */}
-                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-slate-50 border border-brand-border-purple/15 rounded-xl p-3.5 mt-2">
-                    <div className="flex items-center space-x-2 text-xs text-brand-text font-semibold overflow-hidden w-full sm:w-auto">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[9px] shrink-0">Output Schema:</span>
-                      <span className="font-mono bg-white px-2.5 py-1 rounded border border-brand-border-purple/20 text-brand-accent font-bold truncate max-w-full sm:max-w-md">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-secondary border border-border rounded-xl p-3.5 mt-2">
+                    <div className="flex items-center space-x-2 text-xs text-foreground font-semibold overflow-hidden w-full sm:w-auto">
+                      <span className="text-muted-foreground font-bold uppercase tracking-wider text-[9px] shrink-0">Output Schema:</span>
+                      <span className="font-mono bg-background px-2.5 py-1 rounded border border-border text-brand-purple font-bold truncate max-w-full sm:max-w-md">
                         {`${reportType.toLowerCase().replace(/\s+/g, '_')}_by_${groupBy.toLowerCase()}.csv`}
                       </span>
                     </div>
                     <button
                       onClick={() => setIsReportModalOpen(true)}
-                      className="inline-flex items-center justify-center space-x-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white py-2 px-5 rounded-lg text-xs font-extrabold shadow-sm/10 hover:shadow-sm hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 cursor-pointer w-full sm:w-auto shrink-0"
+                      className="inline-flex items-center justify-center space-x-1.5 bg-ink text-background hover:-translate-y-0.5 hover:shadow-nav py-2.5 px-5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer w-full sm:w-auto shrink-0 animate-pulse-slow"
                     >
                       <Plus className="h-4 w-4" strokeWidth={2.5} />
                       <span>Generate Custom Report</span>
@@ -418,111 +435,8 @@ export default function DashboardHome() {
                   </div>
                 </div>
               </div>
-    </>
-  );
-
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <Loader2 className="h-8 w-8 text-brand-accent animate-spin" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <PulseLandingPage onLogin={handleLogin} />;
-  }
-
-  return (
-    <div className="flex bg-slate-50 h-screen overflow-hidden font-sans text-brand-text antialiased">
-      {/* Sidebar navigation - toned down background */}
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={navigate} 
-        collapsed={sidebarCollapsed} 
-        setCollapsed={setSidebarCollapsed} 
-        userRole={userRole}
-      />
-
-      {/* Main dashboard content container */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
-        {/* Top Navbar */}
-        <Header 
-          collapsed={sidebarCollapsed} 
-          setCollapsed={setSidebarCollapsed} 
-          onNewReportClick={() => setIsReportModalOpen(true)} 
-          onTabChange={(tab) => navigate(tab)}
-          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onSignOut={handleSignOut}
-          userRole={userRole}
-        />
-
-        {/* Dashboard inner scroll view with increased whitespace */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-          <SkeletonLoader isLoading={isLoading} layout={getSkeletonLayout(activeTab)}>
-            {!ROLE_TABS[userRole].has(activeTab) ? (
-              userRole === 'representative' ? (
-                genericDashboard
-              ) : userRole === 'manager' ? (
-                <ManagerDashboardView onTabChange={navigate} />
-              ) : (
-                <AdminDashboardView />
-              )
-            ) : activeTab === 'leads' ? (
-              <LeadsView />
-            ) : activeTab === 'contacts' ? (
-              <ContactsView />
-            ) : activeTab === 'companies' ? (
-              <CompaniesView />
-            ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
-              <PipelineView />
-            ) : activeTab === 'products' ? (
-              <ProductsView />
-            ) : activeTab === 'activities' ? (
-              <ActivitiesView />
-            ) : activeTab === 'emails' ? (
-              <EmailsView />
-            ) : activeTab === 'documents' ? (
-              <DocumentsView />
-            ) : activeTab === 'reports' ? (
-              <ReportsView userRole={userRole} />
-            ) : activeTab === 'workflows' ? (
-              <WorkflowsView />
-            ) : activeTab === 'ai insights' ? (
-              <AIInsightsView />
-            ) : activeTab === 'settings' ? (
-              <SettingsView userRole={userRole} />
-            ) : activeTab === 'profile' ? (
-              <ProfileView userRole={userRole} />
-            ) : activeTab === 'notifications' ? (
-              <NotificationsView />
-            ) : activeTab === 'calendar' ? (
-              <CalendarView />
-            ) : activeTab === 'forecast' ? (
-              <ForecastView />
-            ) : activeTab === 'team performance' ? (
-              <TeamPerformanceView userRole={userRole} />
-            ) : activeTab === 'users' ? (
-              <UsersView />
-            ) : activeTab === 'roles & permissions' ? (
-              <RolesPermissionsView />
-            ) : activeTab === 'integrations' ? (
-              <IntegrationsView />
-            ) : activeTab === 'automation' ? (
-              <AutomationView />
-            ) : activeTab === 'ai models' ? (
-              <AIModelsView />
-            ) : activeTab === 'audit logs' ? (
-              <AuditLogsView />
-            ) : activeTab === 'dashboard' && userRole === 'manager' ? (
-              <ManagerDashboardView onTabChange={navigate} />
-            ) : activeTab === 'dashboard' && userRole === 'admin' ? (
-              <AdminDashboardView />
-            ) : (
-              genericDashboard
-            )}
-          </SkeletonLoader>
+            </>
+          )}
         </main>
       </div>
 
@@ -537,8 +451,7 @@ export default function DashboardHome() {
       <CommandPalette 
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
-        setActiveTab={navigate}
-        userRole={userRole}
+        setActiveTab={setActiveTab}
         onNewReportClick={() => setIsReportModalOpen(true)}
       />
 

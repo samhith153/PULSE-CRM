@@ -36,7 +36,7 @@ def get_top_reasons(fit_reasons, engagement_reasons, fit_score, engagement_score
         top_reasons.append(fit_reasons[0])  # Usually the most important fit factor
     
     # Reason 2: Strongest engagement factor (first reason usually captures main engagement driver)
-    if engagement_reasons:
+    if engagement_score >= 70 and engagement_reasons:
         top_reasons.append(engagement_reasons[0])  # Usually the most important engagement factor
     
     # Reason 3: Secondary factor (either fit or engagement, whichever is second strongest)

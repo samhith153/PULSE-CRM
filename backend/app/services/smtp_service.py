@@ -23,20 +23,20 @@ class SMTPService:
         external_entity_type: str | None = None,
         external_entity_id: UUID | None = None,
     ):
-        # Generate our own identifiers first, so we can tell Brevo about them
-        message_id = str(uuid4())
-        thread_id = message_id
-
+        # Build SMTP message
         message = self.email_service._build_message(
             subject=subject,
             to_email=receiver,
             html_body=html_body,
             text_body=html_body,
-            message_id=message_id,
         )
 
         # Send through Brevo SMTP
         await self.email_service._send_smtp_message(message)
+
+        # Generate our own identifiers
+        message_id = str(uuid4())
+        thread_id = message_id
 
          # Save email in CRM
         email, _ = await self.email_service.ingest_email(

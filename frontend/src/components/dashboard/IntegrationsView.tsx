@@ -86,19 +86,19 @@ export default function IntegrationsView() {
   return (
     <div className="space-y-6">
       {toast && (
-        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="fixed bottom-5 right-5 z-55 bg-ink text-primary-foreground px-4 py-2.5 rounded-xl flex items-center space-x-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
           <Check className="h-4 w-4" />
           <span>{toast}</span>
         </div>
       )}
 
       <div>
-        <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">System Integrations</h1>
-        <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">Connect third-party communications channels and synchronization agents.</p>
+        <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">System Integrations</h1>
+        <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">Connect third-party communications channels and synchronization agents.</p>
       </div>
 
       {gmailError && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-xs font-bold flex items-start gap-2">
+        <div className="bg-amber-50 border border-amber-200 text-foreground rounded-xl px-4 py-3 text-xs font-bold flex items-start gap-2">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <span>{gmailError}</span>
         </div>
@@ -109,43 +109,43 @@ export default function IntegrationsView() {
           const Icon = item.icon;
           const isGmail = item.id === 'gmail';
           return (
-            <div key={item.id} className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col justify-between space-y-4">
+            <div key={item.id} className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between space-y-4">
               <div className="flex items-start space-x-4">
-                <div className="h-10 w-10 rounded-xl bg-brand-sidebar-hover/30 border border-brand-border-purple/10 flex items-center justify-center text-brand-accent shrink-0">
+                <div className="h-10 w-10 rounded-xl bg-secondary border border-border flex items-center justify-center text-brand-purple shrink-0">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center space-x-2">
-                    <h3 className="text-xs font-extrabold text-brand-text">{item.name}</h3>
-                    <span className="text-[9px] text-slate-400 font-extrabold">{item.provider}</span>
+                    <h3 className="text-xs font-semibold text-foreground">{item.name}</h3>
+                    <span className="text-[9px] text-muted-foreground font-semibold">{item.provider}</span>
                   </div>
-                  <p className="text-[11px] text-brand-text/70 mt-1 font-semibold leading-relaxed">{item.description}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1 font-semibold leading-relaxed">{item.description}</p>
                   {isGmail && gmailConnection && (
-                    <p className="text-[10px] text-brand-accent font-extrabold mt-2 truncate">{gmailConnection.email_address} - {gmailConnection.sync_status}</p>
+                    <p className="text-[10px] text-brand-purple font-semibold mt-2 truncate">{gmailConnection.email_address} - {gmailConnection.sync_status}</p>
                   )}
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-4 border-t border-slate-100">
+              <div className="flex justify-between items-center pt-4 border-t border-border">
                 <div className="flex items-center space-x-1.5">
-                  <span className={`h-2 w-2 rounded-full ${item.status === 'Connected' ? 'bg-emerald-500' : item.status === 'Configure' ? 'bg-amber-500' : 'bg-slate-300'}`} />
-                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide">{isGmail && isLoadingGmail ? 'Checking' : item.status}</span>
+                  <span className={`h-2 w-2 rounded-full ${item.status === 'Connected' ? 'bg-brand-cyan/150' : item.status === 'Configure' ? 'bg-amber-500' : 'bg-slate-300'}`} />
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{isGmail && isLoadingGmail ? 'Checking' : item.status}</span>
                 </div>
 
                 <div className="flex space-x-2">
                   {isGmail ? (
                     <>
-                      <button onClick={gmailConnection?.is_active ? handleDisconnectGmail : handleConnectGmail} disabled={isLoadingGmail} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 ${gmailConnection?.is_active ? 'bg-rose-50 hover:bg-rose-100 text-rose-700' : 'bg-brand-accent hover:bg-brand-accent-hover text-white'}`}>
+                      <button onClick={gmailConnection?.is_active ? handleDisconnectGmail : handleConnectGmail} disabled={isLoadingGmail} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 ${gmailConnection?.is_active ? 'bg-destructive/10 hover:bg-rose-100 text-destructive' : 'bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground'}`}>
                         {isLoadingGmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : gmailConnection?.is_active ? 'Disconnect' : 'Connect Gmail'}
                       </button>
-                      <button onClick={loadGmailStatus} disabled={isLoadingGmail} className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-brand-text transition-colors cursor-pointer disabled:opacity-60" title="Refresh status">
+                      <button onClick={loadGmailStatus} disabled={isLoadingGmail} className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-60" title="Refresh status">
                         <RefreshCw className={`h-4 w-4 ${isLoadingGmail ? 'animate-spin' : ''}`} />
                       </button>
                     </>
                   ) : (
-                    <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 text-slate-500 cursor-not-allowed">Coming Soon</button>
+                    <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-secondary text-muted-foreground cursor-not-allowed">Coming Soon</button>
                   )}
-                  {item.status !== 'Disconnected' && <button className="p-1.5 border border-slate-200 hover:bg-slate-50 rounded-lg text-slate-400 hover:text-brand-text transition-colors cursor-pointer"><Settings className="h-4 w-4" /></button>}
+                  {item.status !== 'Disconnected' && <button className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer"><Settings className="h-4 w-4" /></button>}
                 </div>
               </div>
             </div>
@@ -155,3 +155,4 @@ export default function IntegrationsView() {
     </div>
   );
 }
+

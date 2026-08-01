@@ -72,7 +72,7 @@ from app.schemas.ai_insights import (
 )
 from app.schemas.common import StandardResponse
 
-router = APIRouter(dependencies=[Depends(require_role("manager", "admin", "sales_rep"))])
+router = APIRouter(dependencies=[Depends(require_role("manager", "admin"))])
 
 
 # ── Full action center ────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ async def get_pipeline_health(current_user: CurrentUser, db: DBSession) -> dict:
     from app.services.ai_insights_service import AIInsightsService
     svc  = AIInsightsService(db)
     repo = AIInsightsRepository(db)
-    user_id, team_ids = None, None # pipeline health is always org-wide
+    user_id, team_ids = await svc._scope(current_user)
     components = await repo.get_pipeline_health_components(
         current_user.organization_id, user_id, team_ids
     )

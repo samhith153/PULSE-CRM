@@ -19,7 +19,7 @@ import {
   Lightbulb,
   Loader2,
 } from 'lucide-react';
-import { getRoleDashboard, asNumber, formatINR, formatNum, formatPct, AdminDashboardData, ManagerDashboardData, SalesRepDashboardData } from '@/utils/api';
+import { getAdminDashboard, asNumber, formatINR, formatNum, formatPct, AdminDashboardData } from '@/utils/api';
 
 interface KPI {
   title: string;
@@ -30,8 +30,8 @@ interface KPI {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-export default function ReportsView({ userRole = 'admin' }: { userRole?: 'representative' | 'manager' | 'admin' }) {
-  const [data, setData] = useState<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData | null>(null);
+export default function ReportsView() {
+  const [data, setData] = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [leaderboardMetric, setLeaderboardMetric] = useState<'revenue' | 'deals'>('revenue');
@@ -39,105 +39,53 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    // Each role hits its own RBAC-scoped endpoint — a sales rep / manager
-    // must never call /api/v1/dashboard/admin (would 403).
-    getRoleDashboard(userRole)
+    getAdminDashboard()
       .then((d) => { if (!cancelled) { setData(d); setError(null); } })
       .catch((e) => { if (!cancelled) setError(e?.message || 'Failed to load reports'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [userRole]);
+  }, []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24 text-slate-400 text-xs font-semibold">
+      <div className="flex items-center justify-center py-24 text-muted-foreground text-xs font-semibold">
         <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading reports…
       </div>
     );
   }
 
   if (error || !data) {
-    return <div className="py-24 text-center text-rose-600 text-xs font-semibold">{error || 'No report data.'}</div>;
+    return <div className="py-24 text-center text-destructive text-xs font-semibold">{error || 'No report data.'}</div>;
   }
 
-  // Role-aware KPI extraction. The three dashboard payloads use different
-  // shapes, so pull whatever each role actually has.
-  let totalLeads = 0, converted = 0, winRate = 0, revenueWon = 0, revenueGrowth = 0, leadsGrowth = 0;
-  let funnelStages: { stage: string; count: number; percentage: number; conversion_rate: string }[] = [];
-  let reps: { name: string; revenue: number; revenueStr: string; deals: number; activities: number }[] = [];
-
-  if (userRole === 'admin' && 'summary' in data && 'top_sales_reps' in data) {
-    const s = (data as AdminDashboardData).summary;
-    totalLeads = asNumber(s.leads?.total);
-    converted = asNumber(s.leads?.converted);
-    winRate = asNumber(s.leads?.conversion_rate) || (totalLeads ? (converted / totalLeads) * 100 : 0);
-    revenueWon = asNumber(s.revenue?.this_year);
-    revenueGrowth = asNumber(s.revenue?.growth_pct);
-    leadsGrowth = asNumber(s.leads?.monthly_growth_pct);
-    funnelStages = (data as AdminDashboardData).lead_funnel?.length
-      ? (data as AdminDashboardData).lead_funnel.map((f) => ({
-          stage: f.stage,
-          count: asNumber(f.count),
-          percentage: asNumber(f.percentage),
-          conversion_rate: String(asNumber(f.percentage)),
-        }))
-      : [
-          { stage: 'Leads', count: totalLeads, percentage: 100, conversion_rate: '100' },
-          { stage: 'Converted', count: converted, percentage: totalLeads ? (converted / totalLeads) * 100 : 0, conversion_rate: String(totalLeads ? (converted / totalLeads) * 100 : 0) },
-          { stage: 'Lost', count: Math.max(0, totalLeads - converted), percentage: totalLeads ? ((totalLeads - converted) / totalLeads) * 100 : 0, conversion_rate: String(totalLeads ? ((totalLeads - converted) / totalLeads) * 100 : 0) },
-        ];
-    reps = ((data as AdminDashboardData).top_sales_reps ?? []).map((r) => ({
-      name: r.full_name,
-      revenue: asNumber(r.revenue),
-      revenueStr: formatINR(r.revenue),
-      deals: asNumber(r.deals_closed),
-      activities: 0,
-    }));
-  } else if (userRole === 'manager' && 'summary' in data) {
-    const s = (data as ManagerDashboardData).summary;
-    revenueWon = asNumber(s.team_revenue);
-    revenueGrowth = asNumber(s.quota_achievement);
-    winRate = asNumber(s.win_rate);
-    totalLeads = asNumber(s.team_members);
-    const stageDist = (data as ManagerDashboardData).pipeline_health?.stage_distribution ?? [];
-    funnelStages = stageDist.map((st) => ({
-      stage: st.stage,
-      count: asNumber(st.deal_count),
-      percentage: asNumber(st.percentage),
-      conversion_rate: String(asNumber(st.percentage)),
-    }));
-    reps = ((data as ManagerDashboardData).top_reps ?? []).map((r) => ({
-      name: r.full_name,
-      revenue: asNumber(r.revenue),
-      revenueStr: formatINR(r.revenue),
-      deals: asNumber(r.deals_closed),
-      activities: 0,
-    }));
-  } else {
-    // sales rep
-    const s = (data as SalesRepDashboardData).summary;
-    revenueWon = asNumber(s.total_revenue);
-    revenueGrowth = asNumber(s.average_deal_size ? s.win_rate : 0);
-    winRate = asNumber(s.win_rate);
-    const stageDist = (data as SalesRepDashboardData).deals_by_stage ?? [];
-    funnelStages = stageDist.map((st) => ({
-      stage: st.stage,
-      count: asNumber(st.count),
-      percentage: asNumber(st.percentage),
-      conversion_rate: String(asNumber(st.conversion_rate ?? st.percentage)),
-    }));
-    reps = [];
-  }
-
+  const s = data.summary;
+  const totalLeads = asNumber(s.leads?.total);
+  const converted = asNumber(s.leads?.converted);
   const lost = Math.max(0, totalLeads - converted);
+  const winRate = asNumber(s.leads?.conversion_rate) || (totalLeads ? (converted / totalLeads) * 100 : 0);
 
   const kpis: KPI[] = [
-    { title: 'Total Revenue Won', value: formatINR(revenueWon), change: formatPct(revenueGrowth), isPositive: revenueGrowth >= 0, timeframe: 'period', icon: IndianRupee },
-    { title: 'New Leads Created', value: `${formatNum(totalLeads)} leads`, change: formatPct(leadsGrowth), isPositive: leadsGrowth >= 0, timeframe: 'vs last period', icon: Users },
+    { title: 'Total Revenue Won', value: formatINR(s.revenue?.this_year), change: formatPct(asNumber(s.revenue?.growth_pct)), isPositive: asNumber(s.revenue?.growth_pct) >= 0, timeframe: 'this year', icon: IndianRupee },
+    { title: 'New Leads Created', value: `${formatNum(totalLeads)} leads`, change: formatPct(asNumber(s.leads?.monthly_growth_pct)), isPositive: asNumber(s.leads?.monthly_growth_pct) >= 0, timeframe: 'vs last month', icon: Users },
     { title: 'Lead Conversion', value: `${winRate.toFixed(1)}%`, change: formatPct(winRate), isPositive: winRate >= 0, timeframe: 'overall', icon: Target },
     { title: 'Avg Sales Cycle', value: '—', change: 'live data n/a', isPositive: true, timeframe: 'from deals', icon: Clock },
   ];
 
+  const funnelStages = data.lead_funnel?.length
+    ? data.lead_funnel
+    : [
+        { stage: 'Leads', count: totalLeads, percentage: 100, conversion_rate: '100' },
+        { stage: 'Converted', count: converted, percentage: totalLeads ? (converted / totalLeads) * 100 : 0, conversion_rate: totalLeads ? (converted / totalLeads) * 100 : 0 },
+        { stage: 'Lost', count: lost, percentage: totalLeads ? (lost / totalLeads) * 100 : 0, conversion_rate: totalLeads ? (lost / totalLeads) * 100 : 0 },
+      ];
+
+  const reps = (data.top_sales_reps ?? []).map((r) => ({
+    name: r.full_name,
+    revenue: asNumber(r.revenue),
+    revenueStr: formatINR(r.revenue),
+    deals: asNumber(r.deals_closed),
+    activities: 0,
+  }));
   const maxRevenue = Math.max(1, ...reps.map((r) => r.revenue));
   const maxDeals = Math.max(1, ...reps.map((r) => r.deals));
 
@@ -146,10 +94,10 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl md:text-4xl font-sans text-brand-heading tracking-tight font-bold">
+        <h1 className="text-3xl md:text-4xl font-sans text-foreground tracking-tight font-bold">
           Business Strategy Reports
         </h1>
-        <p className="text-xs md:text-sm text-brand-text/75 mt-2 leading-relaxed max-w-2xl font-medium tracking-wide">
+        <p className="text-xs md:text-sm text-muted-foreground mt-2 leading-relaxed max-w-2xl font-medium tracking-wide">
           Operational metrics pulled live from your organization's CRM data. Drill down into conversion funnels and revenue attribution.
         </p>
       </div>
@@ -161,27 +109,27 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
           return (
             <div
               key={idx}
-              className="bg-white border border-brand-border-purple/20 rounded-xl p-4 shadow-sm/5 hover:shadow-md hover:-translate-y-0.5 hover:border-brand-border-purple/40 transition-all duration-300 flex flex-col justify-between min-h-[130px]"
+              className="bg-card border border-border rounded-2xl p-4 hover:shadow-nav hover:-translate-y-0.5 hover:border-border transition-all duration-300 flex flex-col justify-between min-h-[130px]"
             >
               <div className="flex items-center justify-between gap-2">
                 <div className="flex flex-col min-w-0">
-                  <span className="text-[10px] font-bold text-brand-heading uppercase tracking-wider truncate">
+                  <span className="text-[10px] font-bold text-foreground uppercase tracking-wider truncate">
                     {kpi.title}
                   </span>
-                  <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded self-start mt-1 leading-none ${kpi.isPositive ? 'text-emerald-700 bg-emerald-50 border border-emerald-100/50' : 'text-rose-700 bg-rose-50 border border-rose-100/50'}`}>
+                  <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded self-start mt-1 leading-none ${kpi.isPositive ? 'text-brand-cyan bg-brand-cyan/15 border border-brand-cyan/20/50' : 'text-destructive bg-destructive/10 border border-destructive/15/50'}`}>
                     {kpi.change}
                   </span>
                 </div>
-                <div className="h-8 w-8 rounded-lg bg-brand-sidebar-hover/20 text-brand-heading flex items-center justify-center border border-brand-border-purple/20 shrink-0">
+                <div className="h-8 w-8 rounded-lg bg-secondary text-foreground flex items-center justify-center border border-border shrink-0">
                   <Icon className="h-4.5 w-4.5" />
                 </div>
               </div>
               <div className="mt-2.5">
-                <span className="text-xl sm:text-2xl font-extrabold text-brand-text tracking-tight font-sans tabular-nums leading-none block">
+                <span className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight font-sans tabular-nums leading-none block">
                   {kpi.value}
                 </span>
               </div>
-              <div className="mt-2.5 pt-2.5 border-t border-slate-100 text-[9px] text-brand-text/60 font-semibold">
+              <div className="mt-2.5 pt-2.5 border-t border-border text-[9px] text-muted-foreground font-semibold">
                 {kpi.timeframe}
               </div>
             </div>
@@ -191,33 +139,33 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
 
       {/* 2. Sales & Revenue Reports section */}
       <section className="space-y-6">
-        <h2 className="text-sm font-extrabold text-brand-heading uppercase tracking-wider border-b border-brand-border-purple/15 pb-2 flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider border-b border-border pb-2 flex items-center gap-2">
           <TrendingUp className="h-4.5 w-4.5" />
           <span>📊 Sales & Revenue Reports</span>
         </h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Revenue by Rep (Bar) */}
-          <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 lg:col-span-2 flex flex-col justify-between hover:border-brand-border-purple/40 hover:shadow-md transition-all duration-300">
+          <div className="bg-card border border-border rounded-2xl p-5 lg:col-span-2 flex flex-col justify-between hover:border-border hover:shadow-nav transition-all duration-300">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-brand-heading text-sm">Revenue by Sales Rep</h3>
-              <PieChart className="h-4.5 w-4.5 text-slate-400" />
+              <h3 className="font-bold text-foreground text-sm">Revenue by Sales Rep</h3>
+              <PieChart className="h-4.5 w-4.5 text-muted-foreground" />
             </div>
 
             <div className="space-y-4 mt-2">
-              {reps.length === 0 && <p className="text-center text-slate-400 text-xs font-semibold py-6">No rep revenue data yet.</p>}
+              {reps.length === 0 && <p className="text-center text-muted-foreground text-xs font-semibold py-6">No rep revenue data yet.</p>}
               {reps.map((rep, idx) => {
                 const val = leaderboardMetric === 'revenue' ? rep.revenue : rep.deals;
                 const max = leaderboardMetric === 'revenue' ? maxRevenue : maxDeals;
                 const label = leaderboardMetric === 'revenue' ? rep.revenueStr : `${rep.deals} deals`;
                 return (
                   <div key={idx} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold text-brand-text">
+                    <div className="flex items-center justify-between text-xs font-bold text-foreground">
                       <span className="truncate max-w-[160px]">{rep.name}</span>
-                      <span className="tabular-nums text-[10px] text-brand-heading font-extrabold">{label}</span>
+                      <span className="tabular-nums text-[10px] text-foreground font-semibold">{label}</span>
                     </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-brand-accent rounded-full transition-all duration-300" style={{ width: `${(val / max) * 100}%` }} />
+                    <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                      <div className="h-full bg-brand-purple rounded-full transition-all duration-300" style={{ width: `${(val / max) * 100}%` }} />
                     </div>
                   </div>
                 );
@@ -226,17 +174,17 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
           </div>
 
           {/* Lead Source / Funnel summary card */}
-          <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col justify-between hover:border-brand-border-purple/40 hover:shadow-md transition-all duration-300">
+          <div className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-border hover:shadow-nav transition-all duration-300">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-brand-heading text-sm">Funnel Summary</h3>
-              <Info className="h-3.5 w-3.5 text-slate-400" />
+              <h3 className="font-bold text-foreground text-sm">Funnel Summary</h3>
+              <Info className="h-3.5 w-3.5 text-muted-foreground" />
             </div>
             <div className="space-y-3">
-              <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Total Leads</span><span className="tabular-nums">{formatNum(totalLeads)}</span></div>
-              <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Converted</span><span className="tabular-nums">{formatNum(converted)}</span></div>
-              <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Won Deals</span><span className="tabular-nums">{converted}</span></div>
-              <div className="flex justify-between text-[11px] font-bold text-brand-text/80"><span>Lost Deals</span><span className="tabular-nums">{lost}</span></div>
-              <div className="pt-2 border-t border-slate-100 flex justify-between text-[11px] font-extrabold text-brand-heading"><span>Overall Win Rate</span><span className="tabular-nums">{winRate.toFixed(1)}%</span></div>
+              <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Total Leads</span><span className="tabular-nums">{formatNum(totalLeads)}</span></div>
+              <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Converted</span><span className="tabular-nums">{formatNum(converted)}</span></div>
+              <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Won Deals</span><span className="tabular-nums">{converted}</span></div>
+              <div className="flex justify-between text-[11px] font-bold text-muted-foreground"><span>Lost Deals</span><span className="tabular-nums">{lost}</span></div>
+              <div className="pt-2 border-t border-border flex justify-between text-[11px] font-semibold text-foreground"><span>Overall Win Rate</span><span className="tabular-nums">{winRate.toFixed(1)}%</span></div>
             </div>
           </div>
         </div>
@@ -244,45 +192,45 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
 
       {/* 3. Activity & Pipeline Reports section */}
       <section className="space-y-6">
-        <h2 className="text-sm font-extrabold text-brand-heading uppercase tracking-wider border-b border-brand-border-purple/15 pb-2 flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider border-b border-border pb-2 flex items-center gap-2">
           <Activity className="h-4.5 w-4.5" />
           <span>📈 Activity & Pipeline Reports</span>
         </h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Pipeline Conversion Funnel */}
-          <div className="bg-white border border-brand-border-purple/20 rounded-xl p-6 shadow-sm/5 lg:col-span-2 hover:border-brand-border-purple/40 hover:shadow-md transition-all duration-300">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-slate-100 pb-4">
+          <div className="bg-card border border-border rounded-2xl p-6 lg:col-span-2 hover:border-border hover:shadow-nav transition-all duration-300">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-border pb-4">
               <div>
-                <h3 className="font-extrabold text-brand-heading text-base">Pipeline Conversion Funnel</h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5">Stage-by-stage progression and conversion efficiency</p>
+                <h3 className="font-semibold text-foreground text-base">Pipeline Conversion Funnel</h3>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Stage-by-stage progression and conversion efficiency</p>
               </div>
-              <div className="flex items-center space-x-4 bg-slate-50 border border-slate-200/80 px-4 py-2 rounded-xl">
+              <div className="flex items-center space-x-4 bg-secondary border border-border/80 px-4 py-2 rounded-xl">
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Conversion</span>
-                  <span className="text-xs text-slate-600 font-semibold">{converted} of {formatNum(totalLeads)} Converted</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block">Total Conversion</span>
+                  <span className="text-xs text-muted-foreground font-semibold">{converted} of {formatNum(totalLeads)} Converted</span>
                 </div>
-                <div className="text-right pl-3 border-l border-slate-200">
-                  <span className="text-lg font-black text-indigo-600 block leading-none">{totalConversion.toFixed(1)}%</span>
-                  <span className="text-[9px] font-bold text-emerald-600">Live</span>
+                <div className="text-right pl-3 border-l border-border">
+                  <span className="text-lg font-semibold text-brand-purple block leading-none">{totalConversion.toFixed(1)}%</span>
+                  <span className="text-[9px] font-bold text-brand-cyan">Live</span>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3">
               {funnelStages.map((stage, idx) => (
-                <div key={idx} className="bg-slate-50/80 border border-slate-200/70 rounded-xl p-3 flex flex-col justify-between space-y-3 hover:border-indigo-200 hover:bg-white transition-all shadow-2xs min-h-[90px]">
+                <div key={idx} className="bg-secondary/80 border border-border/70 rounded-xl p-3 flex flex-col justify-between space-y-3 hover:border-brand-purple/20 hover:bg-card transition-all  min-h-[90px]">
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-brand-accent" />
-                      <span className="text-[9.5px] font-bold text-slate-400">Step {idx + 1}</span>
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-brand-purple" />
+                      <span className="text-[9.5px] font-bold text-muted-foreground">Step {idx + 1}</span>
                     </div>
-                    <span className="text-[11px] font-bold text-slate-900 leading-snug tracking-tight block">{stage.stage}</span>
+                    <span className="text-[11px] font-bold text-foreground leading-snug tracking-tight block">{stage.stage}</span>
                   </div>
                   <div>
                     <div className="flex items-baseline justify-between pt-1">
-                      <span className="text-xs font-extrabold text-slate-900 tabular-nums">{asNumber(stage.count)} deals</span>
-                      <span className="text-[9.5px] font-extrabold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 tabular-nums">{asNumber(stage.percentage).toFixed(0)}%</span>
+                      <span className="text-xs font-semibold text-foreground tabular-nums">{asNumber(stage.count)} deals</span>
+                      <span className="text-[9.5px] font-semibold text-brand-purple bg-brand-purple/10 px-1.5 py-0.5 rounded border border-brand-purple/15 tabular-nums">{asNumber(stage.percentage).toFixed(0)}%</span>
                     </div>
                     <div className="w-full h-1.5 bg-slate-200/70 rounded-full overflow-hidden mt-1.5">
                       <div className="h-full rounded-full transition-all duration-500" style={{ width: `${asNumber(stage.percentage)}%`, backgroundColor: '#7c3aed' }} />
@@ -294,38 +242,38 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
           </div>
 
           {/* Team Leaderboard */}
-          <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col justify-between hover:border-brand-border-purple/40 hover:shadow-md transition-all duration-300">
+          <div className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:border-border hover:shadow-nav transition-all duration-300">
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-brand-heading text-sm">Team Leaderboard</h3>
-                <div className="flex space-x-1 p-0.5 bg-slate-100 rounded-lg text-[9px] font-extrabold uppercase">
-                  <button onClick={() => setLeaderboardMetric('revenue')} className={`px-2 py-0.5 rounded cursor-pointer ${leaderboardMetric === 'revenue' ? 'bg-white text-brand-heading shadow-sm' : 'text-slate-400'}`}>Rev</button>
-                  <button onClick={() => setLeaderboardMetric('deals')} className={`px-2 py-0.5 rounded cursor-pointer ${leaderboardMetric === 'deals' ? 'bg-white text-brand-heading shadow-sm' : 'text-slate-400'}`}>Deals</button>
+                <h3 className="font-bold text-foreground text-sm">Team Leaderboard</h3>
+                <div className="flex space-x-1 p-0.5 bg-secondary rounded-lg text-[9px] font-semibold uppercase">
+                  <button onClick={() => setLeaderboardMetric('revenue')} className={`px-2 py-0.5 rounded cursor-pointer ${leaderboardMetric === 'revenue' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}>Rev</button>
+                  <button onClick={() => setLeaderboardMetric('deals')} className={`px-2 py-0.5 rounded cursor-pointer ${leaderboardMetric === 'deals' ? 'bg-card text-foreground' : 'text-muted-foreground'}`}>Deals</button>
                 </div>
               </div>
 
               <div className="space-y-3.5 mt-4">
-                {reps.length === 0 && <p className="text-center text-slate-400 text-xs font-semibold py-6">No leaderboard data yet.</p>}
+                {reps.length === 0 && <p className="text-center text-muted-foreground text-xs font-semibold py-6">No leaderboard data yet.</p>}
                 {reps.map((rep, idx) => {
                   const val = leaderboardMetric === 'revenue' ? rep.revenue : rep.deals;
                   const max = leaderboardMetric === 'revenue' ? maxRevenue : maxDeals;
                   const label = leaderboardMetric === 'revenue' ? rep.revenueStr : `${rep.deals} deals`;
                   return (
                     <div key={idx} className="space-y-1">
-                      <div className="flex items-center justify-between text-xs font-bold text-brand-text">
+                      <div className="flex items-center justify-between text-xs font-bold text-foreground">
                         <span className="truncate max-w-[140px]">{rep.name}</span>
-                        <span className="tabular-nums text-[10px] text-brand-heading font-extrabold">{label}</span>
+                        <span className="tabular-nums text-[10px] text-foreground font-semibold">{label}</span>
                       </div>
-                      <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-brand-accent rounded-full transition-all duration-300" style={{ width: `${(val / max) * 100}%` }} />
+                      <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                        <div className="h-full bg-brand-purple rounded-full transition-all duration-300" style={{ width: `${(val / max) * 100}%` }} />
                       </div>
                     </div>
                   );
                 })}
               </div>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-100 text-center">
-              <span className="text-[10px] font-bold text-slate-400">Live from top sales reps</span>
+            <div className="mt-4 pt-3 border-t border-border text-center">
+              <span className="text-[10px] font-bold text-muted-foreground">Live from top sales reps</span>
             </div>
           </div>
         </div>
@@ -333,3 +281,4 @@ export default function ReportsView({ userRole = 'admin' }: { userRole?: 'repres
     </div>
   );
 }
+

@@ -90,3 +90,14 @@ class CurrentUserResponse(BaseModel):
     is_superuser: bool
 
     model_config = {"from_attributes": True}
+
+
+# ── Google Sign-In ────────────────────────────────────────────────────────────
+
+class GoogleLoginRequest(BaseModel):
+    credential: str = Field(description="Google Identity Services credential/ID token")
+
+
+class AuthConfigResponse(BaseModel):
+    google_client_id: Optional[str] = None
+
