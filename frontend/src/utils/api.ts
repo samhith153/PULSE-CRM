@@ -755,7 +755,7 @@ export async function getRoleDashboard(
   }
 }
 
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
+export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean; avatar_url: string | null; phone: string | null; job_title: string | null }> {
   return apiFetch('/api/v1/auth/me');
 }
 
@@ -1216,4 +1216,16 @@ export async function getGoingColdLeads(params: { limit?: number; minimum_risk?:
 
 export async function getDailyPriorities(params: { limit?: number; priority?: string } = {}): Promise<any> {
   return apiFetch<any>(`/api/v1/ai-insights/daily-priorities${toQuery(params)}`);
+}
+
+export async function uploadAvatar(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Avatar upload failed (${res.status})`);
+  return res.json();
 }

@@ -51,15 +51,15 @@ export default function TeamPerformanceView({ userRole = 'manager' }: { userRole
             winRate: asNumber(r.conversion_rate),
             avatar: null,
           }));
-        } else if (userRole === 'manager' && 'top_reps' in d) {
-          rows = (d as ManagerDashboardData).top_reps.map((r, i) => ({
-            rank: i + 1,
+        } else if (userRole === 'manager' && 'rep_quota_attainment' in d) {
+          rows = (d as ManagerDashboardData).rep_quota_attainment.map((r) => ({
+            rank: r.rank,
             name: r.full_name,
-            revenue: asNumber(r.revenue),
+            revenue: asNumber(r.revenue_generated),
             calls: 0,
             meetings: 0,
-            deals: asNumber(r.deals_closed),
-            winRate: asNumber(r.conversion_rate),
+            deals: 0,
+            winRate: asNumber(r.quota_achievement_pct),
             avatar: null,
           }));
         } else if (userRole === 'sales_rep' && 'summary' in d) {
