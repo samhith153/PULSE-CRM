@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { getEmail, getEmails, getGmailConnections, getThread, syncGmail, SyncedEmail, ThreadSummary } from '@/utils/api';
+import { toast } from '@/lib/toast';
 
 type MailboxFilter = 'all' | 'inbound' | 'outbound' | 'unread';
 
@@ -76,7 +77,7 @@ export default function EmailsView({ onLoaded }: { onLoaded?: () => void } = {})
         unread: unreadRes.total
       });
     } catch {
-      // Counts are cosmetic; keep last known values on failure.
+      toast.error('Failed to load email counts');
     }
   };
 
@@ -88,7 +89,7 @@ export default function EmailsView({ onLoaded }: { onLoaded?: () => void } = {})
       setIsSyncing(true);
       await syncGmail(connection.id);
     } catch {
-      // Fall through to listing already-synced emails.
+      toast.error('Failed to sync emails');
     } finally {
       setIsSyncing(false);
     }
@@ -133,7 +134,7 @@ export default function EmailsView({ onLoaded }: { onLoaded?: () => void } = {})
           setThreadEmails(thread.emails);
           setThreadSummary(thread.summary);
         } catch {
-          // Thread fetch failed; show single email only.
+          toast.error('Failed to load email thread');
         }
       }
     } catch (err) {

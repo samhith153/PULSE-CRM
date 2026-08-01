@@ -89,9 +89,7 @@ async def check_db_connection() -> bool:
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT current_user"))
             user = result.scalar()
-            logger.info("Database connected - current_user=%s", user)
-            print(f"Database Connected!")
-            print(f"Current User: {user}")
+            logger.info("Database Connected - current_user=%s", user)
         return True
     except Exception as exc:
         logger.exception(
@@ -99,8 +97,5 @@ async def check_db_connection() -> bool:
             type(exc).__name__,
             exc,
         )
-        print("\n========== DATABASE ERROR ==========")
-        print(type(exc).__name__)
-        print(str(exc))
-        print("====================================\n")
+        logger.error("========== DATABASE ERROR ==========\n%s: %s\n====================================", type(exc).__name__, exc)
         return False

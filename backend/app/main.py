@@ -52,9 +52,9 @@ async def process_event_outbox():
     try:
         processed = await event_worker.run_once(batch_size=100)
         if processed:
-            print(f"Event outbox: processed {processed} event(s).")
+            logger.info("Event outbox: processed %d event(s).", processed)
     except Exception as exc:
-        print("Event outbox processing failed:", exc)
+        logger.warning("Event outbox processing failed: %s", exc)
 
 def recompute_features():
     from app.services.feature_recompute_service import recompute_lead_features
@@ -69,17 +69,53 @@ def recompute_features():
                 result = await conn.execute(text("SELECT DISTINCT id FROM organizations"))
                 return [str(row[0]) for row in result]
 
-        org_ids = asyncio.get_event_loop().run_until_complete(_get_org_ids())
+        org_ids = asyncio.run(_get_org_ids())
     except Exception as exc:
-        print("Failed to fetch organization IDs:", exc)
+        logger.warning("Failed to fetch organization IDs: %s", exc)
         return
 
     for org_id in org_ids:
         ok = recompute_lead_features(org_id)
         if not ok:
-            print(f"Feature recompute failed for org {org_id}.")
+            logger.warning("Feature recompute failed for org %s.", org_id)
         else:
-            print(f"Feature recompute completed for org {org_id}.")
+            logger.info("Feature recompute completed for org %s.", org_id)
+
+        # After feature vectors are updated, re-run scoring for all leads
+        try:
+            import asyncio as _asyncio
+            from uuid import UUID as _UUID
+            from app.database.connection import AsyncSessionFactory
+            from app.models.lead import Lead
+            from app.services.lead_scoring_service import LeadScoringService
+            from sqlalchemy import select as _select
+
+            async def _rescore_all():
+                async with AsyncSessionFactory() as db:
+                    result = await db.execute(
+                        _select(Lead.id).where(
+                            Lead.organization_id == _UUID(org_id),
+                            Lead.is_active.is_(True),
+                            Lead.is_deleted.is_(False),
+                        )
+                    )
+                    lead_ids = [row[0] for row in result.all()]
+                    svc = LeadScoringService(db)
+                    scored = 0
+                    for lid in lead_ids:
+                        try:
+                            ls = await svc.compute_and_store_scores(lid, _UUID(org_id))
+                            if ls:
+                                scored += 1
+                        except Exception:
+                            pass
+                    await db.commit()
+                    return scored
+
+            scored_count = _asyncio.run(_rescore_all())
+            logger.info("Rescored %d leads for org %s.", scored_count, org_id)
+        except Exception as exc:
+            logger.warning("Rescoring failed for org %s: %s", org_id, exc)
 
 async def poll_gmail_replies():
     """Poll connected Gmail accounts for new inbound messages / replies."""
@@ -104,9 +140,9 @@ async def poll_gmail_replies():
                     await db.commit()
                 except Exception as exc:
                     await db.rollback()
-                    print("Gmail polling failed for org", organization_id, ":", exc)
+                    logger.warning("Gmail polling failed for org %s: %s", organization_id, exc)
     except Exception as exc:
-        print("Gmail polling failed:", exc)
+        logger.warning("Gmail polling failed: %s", exc)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -115,7 +151,7 @@ async def lifespan(app: FastAPI):
 
     scheduler.add_job(recompute_features, "interval", minutes=5)
     scheduler.add_job(process_event_outbox, "interval", seconds=15)
-    scheduler.add_job(poll_gmail_replies, "interval", minutes=2)
+    scheduler.add_job(poll_gmail_replies, "interval", minutes=5)
     scheduler.start()
 
     yield

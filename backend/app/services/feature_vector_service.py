@@ -131,21 +131,14 @@ class FeatureVectorService:
             "current_crm": lead.current_crm,
         }
 
-        print(f"\n{'='*60}")
-        print(f"FEATURE VECTOR COMPUTATION FOR LEAD: {lead_id}")
-        print(f"{'='*60}")
-        print(f"INPUT VALUES:")
-        for key, value in lead_dict.items():
-            print(f"  {key}: {value}")
-        print(f"{'-'*60}")
+        logger.debug("FEATURE VECTOR COMPUTATION FOR LEAD: %s", lead_id)
+        logger.debug("INPUT VALUES: %s", lead_dict)
 
         fit_scores = {}
         if compute_fit_features:
             try:
                 fit_scores = compute_fit_features(lead_dict)
-                print(f"COMPUTED FIT SCORES:")
-                for key, value in fit_scores.items():
-                    print(f"  {key}: {value}")
+                logger.debug("COMPUTED FIT SCORES: %s", fit_scores)
             except Exception as e:
                 logger.error("Error computing fit features", extra={"error": str(e)})
 
@@ -157,10 +150,12 @@ class FeatureVectorService:
             "customization_potential_score": fit_scores.get("customization_potential_score"),
         }
 
-        print(f"FEATURES TO BE STORED IN DATABASE:")
-        for key, value in features_data.items():
-            print(f"  {key}: {value}")
-        print(f"{'='*60}\n")
+        # Also populate buying_stage_score from lead status — this is available
+        # without email data and significantly impacts engagement scoring.
+        if buying_stage_score and lead.status:
+            features_data["buying_stage_score"] = buying_stage_score(lead.status)
+
+        logger.debug("FEATURES TO BE STORED IN DATABASE: %s", features_data)
 
         fv = await self.repo.upsert_for_lead(
             lead_id=lead_id,
@@ -277,14 +272,13 @@ class FeatureVectorService:
             "engagement_trend_score": trend,
         }
 
-        print(f"\n{'='*60}")
-        print(f"ENGAGEMENT FEATURES FOR LEAD: {lead_id} (thread: {thread_id})")
-        print(f"  previous_avg={old_avg}h, previous_pairs={old_pairs}")
-        print(f"  new_pairs_found={new_pairs_found}")
-        for key, value in features_data.items():
-            print(f"  {key}: {value}")
-        print(f"  avg_response_hours={avg_response_hours} (total pairs={num_pairs})")
-        print(f"{'='*60}\n")
+        logger.debug(
+            "ENGAGEMENT FEATURES FOR LEAD: %s (thread: %s) "
+            "previous_avg=%sh, previous_pairs=%s, new_pairs_found=%s, "
+            "avg_response_hours=%s (total pairs=%s) features=%s",
+            lead_id, thread_id, old_avg, old_pairs, new_pairs_found,
+            avg_response_hours, num_pairs, features_data,
+        )
 
         fv = await self.repo.upsert_for_lead(
             lead_id=lead_id,

@@ -8,6 +8,9 @@ from app.api.deps import CurrentUser, DBSession, require_permission
 from app.models.document import Document
 from app.schemas.document import DocumentResponse
 from app.core.config import settings
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -123,7 +126,7 @@ async def delete_document(doc_id: UUID, current_user: CurrentUser, db: DBSession
         # Delete from cloud storage bucket
         get_supabase().storage.from_(BUCKET_NAME).remove([doc.file_path])
     except Exception as e:
-        print(f"Warning: Failed to delete cloud file: {e}")
+        logger.warning("Failed to delete cloud file: %s", e)
         
     await db.delete(doc)
     await db.commit()

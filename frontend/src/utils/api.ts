@@ -205,6 +205,14 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       }
     } catch {
     }
+    // Show toast for permission errors so users get immediate feedback
+    if (res.status === 403) {
+      toast.error(`Permission denied: ${message}`);
+    } else if (res.status === 401) {
+      toast.error('Session expired. Please log in again.');
+    } else if (res.status >= 500) {
+      toast.error(`Server error: ${message}`);
+    }
     throw new Error(message);
   }
   if (res.status === 204) {

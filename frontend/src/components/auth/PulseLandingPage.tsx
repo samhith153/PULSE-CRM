@@ -823,7 +823,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 7.5. TRUST / FEATURES BAR ══════════ */}
-      <section data-reveal="trust" style={{ background: C.white, borderTop: `1px solid ${C.border}`, padding: `40px ${px}`, opacity: visibleSections.has('trust') ? 1 : 0, transform: visibleSections.has('trust') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.7s ease, transform 0.7s ease' }}>
+      <section style={{ background: C.white, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, padding: `40px ${px}` }}>
         <div className="pulse-trust-grid" style={{ maxWidth: maxW, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
           {trustBadges.map(b => {
             const Icon = b.icon;
@@ -845,14 +845,12 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 8. PLATFORM + ORBIT DIAGRAM ══════════ */}
-      <section data-reveal="orbit" style={{ 
+      <section style={{ 
         background: '#ffffff', 
         padding: `40px ${px}`, 
         position: 'relative', 
         overflow: 'hidden', 
-        opacity: visibleSections.has('orbit') ? 1 : 0, 
-        transform: visibleSections.has('orbit') ? 'translateY(0)' : 'translateY(32px)', 
-        transition: 'opacity 0.9s ease, transform 0.9s ease' 
+        borderTop: `1px solid ${C.border}`,
       }}>
         {/* Leaf Illustration - Bottom Left */}
         <div style={{ position: 'absolute', bottom: 0, left: 0, pointerEvents: 'none', zIndex: 0 }}>
@@ -1097,7 +1095,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 9. TESTIMONIALS ══════════ */}
-      <section data-reveal="testimonials" style={{ background: C.white, padding: `40px ${px}`, borderTop: `1px solid ${C.border}`, opacity: visibleSections.has('testimonials') ? 1 : 0, transform: visibleSections.has('testimonials') ? 'translateY(0)' : 'translateY(32px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+      <section style={{ background: C.white, padding: `40px ${px}`, borderTop: `1px solid ${C.border}` }}>
         <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 24 }}>
             <p style={{ fontSize: 11, fontWeight: 700, color: C.violet, textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 8px' }}>Customer stories</p>
@@ -1129,7 +1127,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       </section>
 
       {/* ══════════ 11. BOTTOM CTA BANNER ══════════ */}
-      <section data-reveal="cta" style={{ background: C.sectionAlt, padding: `${sectionPy} ${px}`, opacity: visibleSections.has('cta') ? 1 : 0, transform: visibleSections.has('cta') ? 'translateY(0)' : 'translateY(24px)', transition: 'opacity 0.8s ease, transform 0.8s ease' }}>
+      <section style={{ background: C.sectionAlt, padding: `${sectionPy} ${px}` }}>
         <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           {/* Floating card */}
           <div style={{ background: `linear-gradient(135deg, ${C.violet} 0%, #6d28d9 100%)`, borderRadius: 28, padding: '64px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: `0 24px 64px ${C.violet}40` }}>

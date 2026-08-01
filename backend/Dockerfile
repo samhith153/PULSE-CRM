@@ -15,6 +15,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend codebase
 COPY . .
 
+# For local Docker builds, run from the repo root:
+#   docker build -f backend/Dockerfile .
+# This ensures the ai/ package (at repo root) is included in the build context.
+# On Render (runtime: python, rootDir: backend), the ai/ package is installed
+# separately via the buildCommand or pip.
+
 EXPOSE 8000
 
 # Start Uvicorn app server using the new async app entry point

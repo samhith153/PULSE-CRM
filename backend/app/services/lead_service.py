@@ -57,6 +57,10 @@ class LeadService:
     ) -> Lead:
         data = payload.model_dump(exclude_none=True)
 
+        # Default owner to the creator if not explicitly assigned
+        if not data.get("owner_id"):
+            data["owner_id"] = created_by
+
         await self._validate_relations(
             organization_id,
             data.get("company_id"),
@@ -108,6 +112,8 @@ class LeadService:
             )
         except Exception as e:
             logger.warning("Failed to compute lead scores on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Refresh lead so response includes the newly computed scores
+        lead = await self.repo.get_active_by_id(lead.id, organization_id)
         logger.info("Lead created", extra={"lead_id": str(lead.id)})
         return lead
 
@@ -211,6 +217,13 @@ class LeadService:
             payload={"lead_id": str(lead.id), "status": new_status.value},
             topic="lead",
         )
+        # ── Recompute feature vector (buying_stage_score depends on status) ─
+        try:
+            await self.feature_vector_service.compute_and_store_for_lead(
+                lead.id, organization_id, lead.created_by
+            )
+        except Exception as e:
+            logger.warning("Failed to recompute feature vector on status change", extra={"lead_id": str(lead.id), "error": str(e)})
         # ── Recompute scores (buying_stage changed) ──────────────────────
         try:
             await self.lead_scoring_service.compute_and_store_scores(
@@ -219,7 +232,7 @@ class LeadService:
         except Exception as e:
             logger.warning("Failed to recompute lead scores on status change", extra={"lead_id": str(lead.id), "error": str(e)})
         logger.info("Lead status updated", extra={"lead_id": str(lead_id), "new_status": new_status.value})
-        return lead
+        return await self.get(lead_id, organization_id)
 
     async def assign(
         self,
@@ -371,6 +384,13 @@ class LeadService:
                 lead_updates["employee_count"] = employee_count
             await self.repo.update(lead, **lead_updates)
 
+            # ── Recompute feature vector (buying_stage_score depends on status) ─
+            try:
+                await self.feature_vector_service.compute_and_store_for_lead(
+                    lead.id, organization_id, created_by
+                )
+            except Exception as e:
+                logger.warning("Failed to recompute feature vector on convert", extra={"lead_id": str(lead.id), "error": str(e)})
             # ── Recompute scores (buying_stage changed to converted) ────────
             try:
                 await self.lead_scoring_service.compute_and_store_scores(

@@ -64,7 +64,7 @@ export default function UsersView() {
       const data = await getRoles();
       setRoles(Array.isArray(data) && data.length ? data : FALLBACK);
     } catch {
-      // Network/permission failure shouldn't block user creation — show safe defaults.
+      toast.error('Failed to load roles');
       setRoles(FALLBACK);
     }
   }, []);

@@ -75,7 +75,12 @@ export default function DashboardHome() {
   const [groupBy, setGroupBy] = useState('Stage');
   
   // User Role State — derived from the authenticated user's real roles.
-  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('manager');
+  // Initialise from localStorage to avoid a flash of wrong role before the API responds.
+  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>(() => {
+    const cached = localStorage.getItem('pulse-crm-role');
+    if (cached === 'admin' || cached === 'manager' || cached === 'sales_rep') return cached;
+    return 'sales_rep';
+  });
   const [token, setToken] = useState<string | null>(() => getToken());
   const [currentUser, setCurrentUser] = useState<{ full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null>(null);
 

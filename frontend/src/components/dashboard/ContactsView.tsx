@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getContacts, createContact, updateContact } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Contact, 
   Search, 
@@ -69,6 +70,7 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
       if (!cancelled) {
         setLoading(false);
         onLoaded?.();
+        toast.error('Failed to load contacts');
       }
     });
     return () => { cancelled = true; };
@@ -121,6 +123,7 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
       setIsAddModalOpen(false);
       setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
     } catch {
+      toast.error('Failed to save contact');
     }
   };
 
@@ -151,6 +154,7 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
       } : c));
       setIsEditModalOpen(false);
     } catch {
+      toast.error('Failed to save contact');
     }
   };
 

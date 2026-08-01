@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getCompanies, updateCompany } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Building2, 
   Search, 
@@ -64,6 +65,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
       if (!cancelled) {
         setLoading(false);
         onLoaded?.();
+        toast.error('Failed to load companies');
       }
     });
     return () => { cancelled = true; };
@@ -120,6 +122,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
       } : c));
       setIsEditModalOpen(false);
     } catch {
+      toast.error('Failed to save company');
     }
   };
 
