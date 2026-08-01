@@ -1237,3 +1237,14 @@ export async function sendAssistantMessage(
     body: JSON.stringify({ message, user_role: userRole, context }),
   });
 }
+export async function uploadAvatar(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Avatar upload failed (${res.status})`);
+  return res.json();
+}
