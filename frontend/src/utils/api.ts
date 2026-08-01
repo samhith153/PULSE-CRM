@@ -704,16 +704,22 @@ export interface ManagerDashboardData {
 }
 
 export interface SalesRepDashboardData {
-  summary: { total_revenue: Decimal; won_deals: number; win_rate: Decimal; average_deal_size: Decimal; average_sales_cycle: Decimal };
-  revenue_stat: { total: Decimal; previous_period: Decimal; growth_pct: Decimal };
-  won_deals_stat: { count: number; previous_period: number; growth_pct: Decimal };
-  win_rate_stat: { win_rate: Decimal; previous_win_rate: Decimal; growth_pct: Decimal };
-  avg_deal_size_stat: { avg_deal_value: Decimal; previous_avg: Decimal; growth_pct: Decimal };
-  avg_sales_cycle_stat: { avg_days: Decimal; previous_avg_days: Decimal; difference_days: Decimal };
-  revenue_trend: { period: string; revenue: Decimal }[];
-  deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
-  deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
-  key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
+  summary: { total_revenue: number; won_deals: number; win_rate: number; average_deal_size: number; average_sales_cycle: number };
+  revenue_stat: { total: number; previous_period: number; growth_pct: number };
+  won_deals_stat: { count: number; previous_period: number; growth_pct: number };
+  win_rate_stat: { win_rate: number; previous_win_rate: number; growth_pct: number };
+  avg_deal_size_stat: { avg_deal_value: number; previous_avg: number; growth_pct: number };
+  avg_sales_cycle_stat: { avg_days: number; previous_avg_days: number; difference_days: number };
+  revenue_trend: { period: string; revenue: number }[];
+  deals_by_stage: { stage: string; count: number; percentage: number; conversion_rate: number }[];
+  deals_by_source: { source: string; count: number; percentage: number; revenue: number }[];
+  revenue_by_company_size: { size_bucket: string; revenue: number; percentage: number }[];
+  activity_heatmap: { date: string; activity_type: string; count: number; intensity: string }[];
+  team_performance: { user_id: string; full_name: string; revenue: number; won_deals: number; win_rate: number }[];
+  activity_overview: { emails_sent: number; calls_made: number; meetings_held: number; tasks_completed: number; notes_added: number; emails_growth_pct: number; calls_growth_pct: number; meetings_growth_pct: number; tasks_growth_pct: number };
+  key_metrics: { open_deals: number; pipeline_value: number; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: number; deals_created_growth_pct: number; activities_growth_pct: number };
+  recent_reports: { report_name: string; created_at: string; created_by: string | null; report_type: string }[];
+  report_templates: { name: string; description: string; primary_metrics: string[]; group_by_options: string[] }[];
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {

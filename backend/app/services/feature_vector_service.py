@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-import pandas as pd
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,6 +18,30 @@ from app.repositories.feature_vector_repository import FeatureVectorRepository
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.email_repository import EmailRepository
 from app.core.logging import get_logger
+
+
+def _days_since_last_outbound(records: list) -> int | None:
+    """Days since last outbound email (pure-Python replacement for pandas version)."""
+    outbound = [r for r in records if r["direction"] == "outbound"]
+    if not outbound:
+        return None
+    latest = max(r["sent_at"] for r in outbound if r["sent_at"])
+    tz = latest.tzinfo or timezone.utc
+    now = datetime.now(tz)
+    return (now - latest).days
+
+
+def _customer_initiative_score(records: list) -> int:
+    """Score based on latest email direction (pure-Python replacement for pandas version)."""
+    if not records:
+        return 0
+    latest = max(records, key=lambda r: r["sent_at"] or datetime.min.replace(tzinfo=timezone.utc))
+    if latest["direction"] == "inbound":
+        return 100
+    elif latest["direction"] == "outbound":
+        return 30
+    return 0
+
 
 # Log file for scoring results
 SCORING_LOG_FILE = os.path.join(os.path.dirname(__file__), "..", "..", "scoring_log.txt")
@@ -179,38 +202,32 @@ class FeatureVectorService:
         if not emails:
             return None
 
-        df = pd.DataFrame([
-            {
-                "direction": e.direction,
-                "sent_at": e.sent_at,
-                "thread_id": e.thread_id,
-            }
-            for e in emails
-        ])
-        df["sent_at"] = pd.to_datetime(df["sent_at"])
-        df = df.sort_values("sent_at").reset_index(drop=True)
+        # Build sorted email records (pure Python, no pandas)
+        email_records = sorted(
+            [{"direction": e.direction, "sent_at": e.sent_at} for e in emails],
+            key=lambda r: r["sent_at"] or datetime.min.replace(tzinfo=timezone.utc),
+        )
 
-        # ── Filter to only NEW emails (after cutoff) ──────────────────────
+        # Filter to only NEW emails (after cutoff)
         if cutoff is not None:
-            cutoff_ts = pd.to_datetime(cutoff)
-            new_df = df[df["sent_at"] > cutoff_ts]
+            cutoff_ts = cutoff if isinstance(cutoff, datetime) else datetime.fromisoformat(str(cutoff))
+            new_records = [r for r in email_records if r["sent_at"] and r["sent_at"] > cutoff_ts]
         else:
-            new_df = df
+            new_records = email_records
 
         # ── Incremental running average ───────────────────────────────────
         avg_time = old_avg
         num_pairs = old_pairs
         new_pairs_found = 0
 
-        for i in range(len(new_df)):
-            if new_df.iloc[i]["direction"] == "inbound":
-                inbound_ts = new_df.iloc[i]["sent_at"]
-                # Scan backwards in the FULL sorted df to find previous outbound
-                for j in range(len(df) - 1, -1, -1):
-                    if df.iloc[j]["sent_at"] >= inbound_ts:
+        for rec in new_records:
+            if rec["direction"] == "inbound":
+                inbound_ts = rec["sent_at"]
+                for prev in reversed(email_records):
+                    if prev["sent_at"] >= inbound_ts:
                         continue
-                    if df.iloc[j]["direction"] == "outbound":
-                        diff_hours = (inbound_ts - df.iloc[j]["sent_at"]).total_seconds() / 3600
+                    if prev["direction"] == "outbound":
+                        diff_hours = (inbound_ts - prev["sent_at"]).total_seconds() / 3600
                         avg_time = (avg_time * num_pairs + diff_hours) / (num_pairs + 1)
                         num_pairs += 1
                         new_pairs_found += 1
@@ -219,9 +236,9 @@ class FeatureVectorService:
         avg_response_hours = round(avg_time, 2) if num_pairs > 0 else None
 
         # ── Compute other engagement features from FULL thread ────────────
-        outbound_emails = df[df["direction"] == "outbound"]
-        if not outbound_emails.empty:
-            latest_outbound = outbound_emails["sent_at"].max()
+        outbound_records = [r for r in email_records if r["direction"] == "outbound"]
+        if outbound_records:
+            latest_outbound = max(r["sent_at"] for r in outbound_records)
             tz = latest_outbound.tzinfo or timezone.utc
             now = datetime.now(tz)
             days_idle = (now - latest_outbound).days
@@ -237,15 +254,15 @@ class FeatureVectorService:
         intent_category = summary.summary_word if summary else None
 
         rt_score = response_time_score(avg_response_hours)
-        days_val = days_since_last_outbound(df) if days_since_last_outbound else days_idle
+        days_val = _days_since_last_outbound(email_records) if days_since_last_outbound else days_idle
         decay = engagement_decay_penalty(days_idle) if engagement_decay_penalty else 0
-        ci_score = customer_initiative_score(df) if customer_initiative_score else 0
+        ci_score = _customer_initiative_score(email_records) if customer_initiative_score else 0
         bs_score = buying_stage_score(lead_status) if buying_stage_score else 0
         intent_score_val = ai_intent_category_score(intent_category) if ai_intent_category_score else 0
         trend = engagement_trend_score(None, None) if engagement_trend_score else 50
 
         # ── Determine new cutoff ──────────────────────────────────────────
-        new_cutoff = df["sent_at"].max().to_pydatetime() if not df.empty else None
+        new_cutoff = max((r["sent_at"] for r in email_records if r["sent_at"]), default=None)
 
         features_data = {
             "average_response_time": avg_response_hours,
