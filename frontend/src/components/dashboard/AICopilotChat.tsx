@@ -3,38 +3,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, 
-  MessageSquareCode, 
   X, 
   Send, 
-  TrendingUp, 
-  Award, 
-  Mail, 
   Copy, 
   Check, 
   Bot, 
-  User,
-  ArrowRight
+  User
 } from 'lucide-react';
-import { getLeads, getDeals, Lead } from '@/utils/api';
-
-interface DealItem {
-  id: string;
-  title: string;
-  company: string;
-  value: number;
-  stage: string;
-  priority: string;
-  owner: string;
-  closeDate: string;
-}
+import { sendAssistantMessage } from '@/utils/api';
 
 interface Message {
   id: string;
   sender: 'user' | 'ai';
   text: string;
   timestamp: Date;
-  type?: 'text' | 'pipeline' | 'leads' | 'email';
-  data?: any;
+  suggestions?: string[];
 }
 
 export default function AICopilotChat() {
@@ -43,37 +26,16 @@ export default function AICopilotChat() {
     {
       id: 'welcome',
       sender: 'ai',
-      text: "Hi Alex! I'm your PulseAI Copilot. How can I help you accelerate sales today?",
+      text: "Hi! I'm PULSE Assistant. I can help you with anything in the CRM — from managing leads to understanding pipeline stages. What would you like to know?",
       timestamp: new Date(),
-      type: 'text'
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  // Loaded data for real-time computations
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [deals, setDeals] = useState<DealItem[]>([]);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    // Pre-fetch data for instant availability
-    async function loadCRMData() {
-      try {
-        const [fetchedLeads, fetchedDeals] = await Promise.all([
-          getLeads(),
-          getDeals()
-        ]);
-        setLeads(fetchedLeads);
-        setDeals(fetchedDeals as any);
-      } catch (err) {
-        console.error('Error fetching data for AI Copilot:', err);
-      }
-    }
-    loadCRMData();
-  }, []);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -81,108 +43,72 @@ export default function AICopilotChat() {
     }
   }, [messages, isTyping]);
 
+  useEffect(() => {
+    if (isOpen && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isOpen]);
+
+  const getUserRole = (): string => {
+    if (typeof window === 'undefined') return 'sales_rep';
+    return localStorage.getItem('pulse-crm-role') || 'sales_rep';
+  };
+
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const simulateBotReply = (userText: string) => {
-    setIsTyping(true);
-    
-    setTimeout(() => {
-      setIsTyping(false);
-      const textLower = userText.toLowerCase();
-      let botMessage: Partial<Message> = {
-        id: Math.random().toString(),
-        sender: 'ai',
-        timestamp: new Date()
-      };
-
-      if (textLower.includes('pipeline') || textLower.includes('health') || textLower.includes('deal') || textLower.includes('forecast')) {
-        // Compute pipeline metrics
-        const totalValue = deals.reduce((sum, d) => sum + d.value, 0);
-        const stageCounts = deals.reduce((acc, d) => {
-          acc[d.stage] = (acc[d.stage] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        // Calculate weighted forecast
-        const stageProbabilities: Record<string, number> = {
-          'Qualified': 0.1,
-          'Proposal': 0.4,
-          'Under Review': 0.7,
-          'Won': 1.0,
-          'Lost': 0.0
-        };
-        const weightedForecast = deals.reduce((sum, d) => {
-          const prob = stageProbabilities[d.stage] || 0;
-          return sum + (d.value * prob);
-        }, 0);
-
-        botMessage.text = "Here is the real-time breakdown of your current deals pipeline:";
-        botMessage.type = 'pipeline';
-        botMessage.data = {
-          totalValue,
-          weightedForecast,
-          count: deals.length,
-          stages: stageCounts
-        };
-      } else if (textLower.includes('lead') || textLower.includes('recommend') || textLower.includes('score')) {
-        // Sort leads by AI Score
-        const sortedLeads = [...leads].sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 3);
-        botMessage.text = "Based on activity velocity and lead scores, here are the top 3 high-priority leads you should follow up with:";
-        botMessage.type = 'leads';
-        botMessage.data = sortedLeads;
-      } else if (textLower.includes('email') || textLower.includes('draft') || textLower.includes('follow up') || textLower.includes('follow-up')) {
-        // Grab a lead name if available
-        const leadName = leads[0]?.title || "Alex Rivera";
-        const companyName = leads[0]?.company_name || leads[0]?.company_id || "TechCorp Inc.";
-        const emailTemplate = `Subject: Quick follow up - Pulse CRM
-
-Hi ${leadName.split(' ')[0]},
-
-It was great connecting with you recently regarding ${companyName}'s CRM migration goals. 
-
-I've put together the database migration timeline and regional security audit sheets we discussed. Let me know if you have 10 minutes for a quick call this Thursday at 2:00 PM to review these options.
-
-Best regards,
-Alex Johnson
-Sales Manager, Pulse CRM`;
-
-        botMessage.text = `Here is a custom follow-up draft for **${leadName}** (${companyName}):`;
-        botMessage.type = 'email';
-        botMessage.data = {
-          template: emailTemplate,
-          recipient: leadName
-        };
-      } else {
-        botMessage.text = "I can help you review your pipeline, recommend priority leads, or draft professional follow-up templates. Try choosing one of the shortcuts below!";
-        botMessage.type = 'text';
-      }
-
-      setMessages(prev => [...prev, botMessage as Message]);
-    }, 1500);
-  };
-
-  const handleSendMessage = (textToSend: string) => {
-    if (!textToSend.trim()) return;
+  const handleSendMessage = async (textToSend: string) => {
+    if (!textToSend.trim() || isTyping) return;
 
     const userMessage: Message = {
-      id: Math.random().toString(),
+      id: Date.now().toString(),
       sender: 'user',
       text: textToSend,
       timestamp: new Date(),
-      type: 'text'
     };
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
-    simulateBotReply(textToSend);
+    setIsTyping(true);
+
+    try {
+      const userRole = getUserRole();
+      const result = await sendAssistantMessage(textToSend, userRole);
+
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: result.response,
+        timestamp: new Date(),
+        suggestions: result.suggestions,
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error: any) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: "Sorry, I couldn't process your request. Please try again or ask your admin for help.",
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  const triggerShortcut = (actionText: string) => {
-    handleSendMessage(actionText);
+  const handleSuggestionClick = (suggestion: string) => {
+    handleSendMessage(suggestion);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage(inputValue);
+    }
   };
 
   return (
@@ -191,7 +117,7 @@ Sales Manager, Pulse CRM`;
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-tr from-brand-accent to-brand-secondary-accent border border-brand-border-purple/35 flex items-center justify-center text-white shadow-[0_8px_30px_rgba(121,87,251,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
-        aria-label="Ask PulseAI"
+        aria-label="Ask PULSE Assistant"
       >
         {isOpen ? (
           <X className="h-6 w-6 transition-transform duration-300 rotate-90" />
@@ -216,10 +142,10 @@ Sales Manager, Pulse CRM`;
                 <Sparkles className="h-5.5 w-5.5 text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-black tracking-wide">PulseAI Copilot</h3>
+                <h3 className="text-sm font-black tracking-wide">PULSE Assistant</h3>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[10px] text-white/85 font-bold uppercase tracking-wider">Online Sync</span>
+                  <span className="text-[10px] text-white/85 font-bold uppercase tracking-wider">CRM Help</span>
                 </div>
               </div>
             </div>
@@ -250,75 +176,23 @@ Sales Manager, Pulse CRM`;
                         : 'bg-brand-accent text-white rounded-br-none'
                     }`}>
                       <p className="whitespace-pre-wrap">{m.text}</p>
-
-                      {/* --- Pipeline Metric Cards --- */}
-                      {isAI && m.type === 'pipeline' && m.data && (
-                        <div className="mt-3.5 space-y-2.5 border-t border-brand-border-purple/20 pt-3">
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg text-center">
-                              <p className="text-[9px] text-slate-400 font-extrabold uppercase">Total pipeline</p>
-                              <p className="text-sm font-black text-brand-heading mt-0.5 tabular-nums">
-                                ${m.data.totalValue.toLocaleString()}
-                              </p>
-                            </div>
-                            <div className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg text-center">
-                              <p className="text-[9px] text-slate-400 font-extrabold uppercase">Weighted forecast</p>
-                              <p className="text-sm font-black text-emerald-600 mt-0.5 tabular-nums">
-                                ${m.data.weightedForecast.toLocaleString()}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg">
-                            <p className="text-[9px] text-slate-400 font-extrabold uppercase mb-1">Deals by Stage ({m.data.count})</p>
-                            <div className="space-y-1">
-                              {Object.entries(m.data.stages).map(([stage, count]: any) => (
-                                <div key={stage} className="flex justify-between text-[10px] font-bold text-brand-text">
-                                  <span>{stage}</span>
-                                  <span className="tabular-nums">{count}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* --- Leads Recommended List --- */}
-                      {isAI && m.type === 'leads' && m.data && (
-                        <div className="mt-3.5 space-y-2 border-t border-brand-border-purple/20 pt-3">
-                          {m.data.map((lead: Lead) => (
-                            <div key={lead.id} className="bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg flex items-center justify-between gap-1">
-                              <div className="min-w-0">
-                                <p className="text-[11px] font-extrabold text-brand-heading truncate">{lead.title}</p>
-                                <p className="text-[9px] text-brand-accent font-bold truncate mt-0.5">{lead.company_name || ''}</p>
-                              </div>
-                              <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded tabular-nums shrink-0">
-                                Score: {lead.score ?? 0}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* --- Generated Email Draft Template --- */}
-                      {isAI && m.type === 'email' && m.data && (
-                        <div className="mt-3.5 border-t border-brand-border-purple/20 pt-3">
-                          <div className="relative bg-brand-bg border border-brand-border-purple/20 p-2.5 rounded-lg font-mono text-[9.5px] whitespace-pre-wrap leading-normal text-brand-text/90">
-                            {m.data.template}
-                            <button
-                              onClick={() => handleCopy(m.data.template, m.id)}
-                              className="absolute top-2 right-2 p-1.5 bg-brand-sidebar-hover/10 hover:bg-brand-sidebar-hover/20 border border-brand-border-purple/15 rounded text-slate-500 hover:text-brand-text cursor-pointer transition-colors shadow-sm/5"
-                              title="Copy email draft"
-                            >
-                              {copiedId === m.id ? (
-                                <Check className="h-3 w-3 text-emerald-600" />
-                              ) : (
-                                <Copy className="h-3 w-3" />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
+
+                    {/* Suggestion Chips (only on AI messages) */}
+                    {isAI && m.suggestions && m.suggestions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {m.suggestions.map((suggestion, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className="px-2 py-1 bg-brand-bg border border-brand-border-purple/20 hover:border-brand-accent hover:text-brand-accent rounded-full text-[9px] font-bold transition-all cursor-pointer shadow-sm/5"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
                     <span className="text-[9px] text-slate-400 self-start px-1 font-bold">
                       {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
@@ -351,13 +225,14 @@ Sales Manager, Pulse CRM`;
           {/* Quick Actions Shortcuts Selector */}
           <div className="px-4 py-2 border-t border-brand-border-purple/15 flex space-x-2 overflow-x-auto shrink-0 bg-brand-sidebar-hover/10 scrollbar-none">
             {[
-              { label: '📊 Pipeline Health', text: 'Pipeline Health' },
-              { label: '⚡ Recommendations', text: 'Lead recommendations' },
-              { label: '📧 Draft Email', text: 'Draft follow-up email' }
+              { label: '📋 Create Lead', text: 'How do I create a lead?' },
+              { label: '🔄 Convert Lead', text: 'How do I convert a lead?' },
+              { label: '📊 Pipeline', text: 'How do I manage the pipeline?' },
+              { label: '📧 Connect Gmail', text: 'How do I connect my Gmail?' }
             ].map((btn) => (
               <button
                 key={btn.text}
-                onClick={() => triggerShortcut(btn.text)}
+                onClick={() => handleSendMessage(btn.text)}
                 className="py-1 px-2.5 bg-brand-bg border border-brand-border-purple/20 hover:border-brand-accent hover:text-brand-accent rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer shadow-sm/5"
               >
                 {btn.label}
@@ -374,11 +249,14 @@ Sales Manager, Pulse CRM`;
             className="p-3 border-t border-brand-border-purple/15 flex items-center space-x-2 shrink-0 bg-brand-bg"
           >
             <input
+              ref={inputRef}
               type="text"
-              placeholder="Ask Copilot something..."
+              placeholder="Ask about PULSE CRM..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="flex-1 px-3 py-1.5 border border-brand-border-purple/25 rounded-lg text-xs focus:outline-none focus:border-brand-accent transition-colors bg-brand-sidebar-hover/10 text-brand-text placeholder-brand-text/50"
+              disabled={isTyping}
             />
             <button
               type="submit"

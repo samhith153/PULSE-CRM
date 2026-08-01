@@ -1218,14 +1218,22 @@ export async function getDailyPriorities(params: { limit?: number; priority?: st
   return apiFetch<any>(`/api/v1/ai-insights/daily-priorities${toQuery(params)}`);
 }
 
-export async function uploadAvatar(file: File): Promise<{ url: string }> {
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+// ---------------------------------------------------------------------------
+// PULSE Assistant (Internal Help Chat)
+// ---------------------------------------------------------------------------
+
+export interface AssistantChatResponse {
+  response: string;
+  suggestions: string[];
+}
+
+export async function sendAssistantMessage(
+  message: string,
+  userRole: string = 'sales_rep',
+  context: Record<string, any> = {}
+): Promise<AssistantChatResponse> {
+  return apiFetch<AssistantChatResponse>('/api/v1/assistant/chat', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
-    body: formData,
+    body: JSON.stringify({ message, user_role: userRole, context }),
   });
-  if (!res.ok) throw new Error(`Avatar upload failed (${res.status})`);
-  return res.json();
 }
