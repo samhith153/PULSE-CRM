@@ -109,6 +109,10 @@ class Settings(BaseSettings):
     SCORING_PROVIDER: str = "rule_based"
     AI_TIMEOUT: int = 30
 
+    # Assistant (Groq free tier)
+    ASSISTANT_API_KEY: Optional[str] = None
+    ASSISTANT_MODEL: str = "llama-3.3-70b-versatile"
+
     WEBHOOK_MAX_ATTEMPTS: int = 5
     WEBHOOK_TIMEOUT_SECONDS: int = 10
 

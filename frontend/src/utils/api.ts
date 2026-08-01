@@ -1217,3 +1217,23 @@ export async function getGoingColdLeads(params: { limit?: number; minimum_risk?:
 export async function getDailyPriorities(params: { limit?: number; priority?: string } = {}): Promise<any> {
   return apiFetch<any>(`/api/v1/ai-insights/daily-priorities${toQuery(params)}`);
 }
+
+// ---------------------------------------------------------------------------
+// PULSE Assistant (Internal Help Chat)
+// ---------------------------------------------------------------------------
+
+export interface AssistantChatResponse {
+  response: string;
+  suggestions: string[];
+}
+
+export async function sendAssistantMessage(
+  message: string,
+  userRole: string = 'sales_rep',
+  context: Record<string, any> = {}
+): Promise<AssistantChatResponse> {
+  return apiFetch<AssistantChatResponse>('/api/v1/assistant/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, user_role: userRole, context }),
+  });
+}
