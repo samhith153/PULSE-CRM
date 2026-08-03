@@ -1,14 +1,13 @@
 """
 Overall Engine - Combine Fit Score + Engagement Score with tier-based prioritization.
-
+ 
 Formula:
 1. Raw Score = 0.6 × Fit + 0.4 × Engagement
 2. Assign Tier based on business rules
-3. Final Score = Tier_Lower_Bound + |Raw_Score - Tier_Lower_Bound|
-4. Clamp to Tier boundaries
+3. Final Score = Clamp Raw_Score to Tier boundaries (for within-tier differentiation)
 """
-
-
+ 
+ 
 # Tier definitions
 TIERS = {
     "Critical": {"lower": 90, "upper": 100},
@@ -16,14 +15,14 @@ TIERS = {
     "Medium": {"lower": 40, "upper": 69},
     "Low": {"lower": 0, "upper": 39},
 }
-
+ 
 # Weights for combining fit and engagement
 OVERALL_WEIGHTS = {
     "fit": 0.6,
     "engagement": 0.4,
 }
-
-
+ 
+ 
 def calculate_raw_score(fit_score, engagement_score):
     """
     Calculate raw score from fit and engagement.
@@ -42,8 +41,8 @@ def calculate_raw_score(fit_score, engagement_score):
     )
     
     return round(raw_score, 2)
-
-
+ 
+ 
 def assign_tier(fit_score, engagement_score):
     """
     Assign priority tier based on business rules.
@@ -79,15 +78,13 @@ def assign_tier(fit_score, engagement_score):
     # Low: Everything else
     else:
         return "Low"
-
-
+ 
+ 
 def calculate_final_score(fit_score, engagement_score, tier):
     """
     Calculate final score within tier boundaries.
     
-    Formula:
-    Final Score = Tier_Lower_Bound + |Raw_Score - Tier_Lower_Bound|
-    Clamped to [Tier_Lower, Tier_Upper]
+    Simply clamps raw score to tier range for within-tier differentiation.
     
     Args:
         fit_score: float (0-100)
@@ -106,15 +103,12 @@ def calculate_final_score(fit_score, engagement_score, tier):
     lower_bound = tier_info["lower"]
     upper_bound = tier_info["upper"]
     
-    # Apply tier formula: Lower_Bound + |Raw - Lower_Bound|
-    final_score = lower_bound + abs(raw_score - lower_bound)
-    
-    # Clamp to tier bounds
-    final_score = max(lower_bound, min(upper_bound, final_score))
+    # Clamp raw score to tier bounds
+    final_score = max(lower_bound, min(upper_bound, raw_score))
     
     return round(final_score, 2)
-
-
+ 
+ 
 def calculate_overall_score(fit_score, engagement_score):
     """
     Calculate overall priority score.
@@ -122,7 +116,7 @@ def calculate_overall_score(fit_score, engagement_score):
     Pipeline:
     1. Calculate raw score (0.6×Fit + 0.4×Engagement)
     2. Assign tier (Critical/High/Medium/Low)
-    3. Calculate final score within tier bounds
+    3. Clamp final score to tier bounds
     
     Args:
         fit_score: float (0-100)

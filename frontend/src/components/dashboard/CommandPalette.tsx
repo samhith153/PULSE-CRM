@@ -18,17 +18,30 @@ import {
   User,
   Plus,
   Search,
-  CornerDownLeft
+  CornerDownLeft,
+  type LucideIcon
 } from 'lucide-react';
+import { ROLE_TABS, Role } from '@/lib/roles';
 
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   setActiveTab: (tab: string) => void;
+  userRole: Role;
   onNewReportClick: () => void;
 }
 
-export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewReportClick }: CommandPaletteProps) {
+type PaletteItem = {
+  id: string;
+  title: string;
+  description: string;
+  category: 'Navigation' | 'Actions' | 'Leads' | 'Contacts' | 'Companies' | 'Deals';
+  icon: LucideIcon;
+  action: () => void;
+  tab?: string;
+};
+
+export default function CommandPalette({ isOpen, onClose, setActiveTab, userRole, onNewReportClick }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -59,39 +72,41 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
 
   if (!isOpen) return null;
 
-  const searchItems = [
+  const searchItems: PaletteItem[] = [
     // Navigation
-    { id: 'nav-dashboard', title: 'Go to Dashboard', description: 'View sales performance and widgets', category: 'Navigation' as const, icon: LayoutDashboard, action: () => { setActiveTab('dashboard'); onClose(); } },
-    { id: 'nav-leads', title: 'Go to Leads', description: 'Manage inbound unqualified leads', category: 'Navigation' as const, icon: Users, action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'nav-contacts', title: 'Go to Contacts', description: 'View client personnel profiles', category: 'Navigation' as const, icon: Contact, action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'nav-companies', title: 'Go to Companies', description: 'Browse and edit organizations', category: 'Navigation' as const, icon: Building2, action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'nav-deals', title: 'Go to Deals & Pipeline', description: 'Track deal stages and opportunities', category: 'Navigation' as const, icon: Layers, action: () => { setActiveTab('deals'); onClose(); } },
-    { id: 'nav-products', title: 'Go to Products', description: 'Browse company product pricing tiers', category: 'Navigation' as const, icon: Package, action: () => { setActiveTab('products'); onClose(); } },
-    { id: 'nav-activities', title: 'Go to Activities', description: 'View tasks, calls, and calendar', category: 'Navigation' as const, icon: Activity, action: () => { setActiveTab('activities'); onClose(); } },
-    { id: 'nav-emails', title: 'Go to Emails', description: 'Read synced communications', category: 'Navigation' as const, icon: Mail, action: () => { setActiveTab('emails'); onClose(); } },
-    { id: 'nav-workflows', title: 'Go to Workflows', description: 'Configure trigger actions and automations', category: 'Navigation' as const, icon: GitBranch, action: () => { setActiveTab('workflows'); onClose(); } },
-    { id: 'nav-ai', title: 'Go to AI Insights', description: 'Read system generated predictions', category: 'Navigation' as const, icon: Sparkles, action: () => { setActiveTab('ai insights'); onClose(); } },
-    { id: 'nav-reports', title: 'Go to Reports & Analytics', description: 'View conversion rates and forecasts', category: 'Navigation' as const, icon: BarChart3, action: () => { setActiveTab('reports'); onClose(); } },
-    { id: 'nav-documents', title: 'Go to Documents', description: 'Browse deal templates and attachments', category: 'Navigation' as const, icon: FileText, action: () => { setActiveTab('documents'); onClose(); } },
-    { id: 'nav-settings', title: 'Go to Settings', description: 'Manage workspace integrations', category: 'Navigation' as const, icon: Settings, action: () => { setActiveTab('settings'); onClose(); } },
-    { id: 'nav-profile', title: 'Go to Profile', description: 'Manage personal credentials', category: 'Navigation' as const, icon: User, action: () => { setActiveTab('profile'); onClose(); } },
+    { id: 'nav-dashboard', title: 'Go to Dashboard', description: 'View sales performance and widgets', category: 'Navigation', icon: LayoutDashboard, tab: 'dashboard', action: () => { setActiveTab('dashboard'); onClose(); } },
+    { id: 'nav-leads', title: 'Go to Leads', description: 'Manage inbound unqualified leads', category: 'Navigation', icon: Users, tab: 'leads', action: () => { setActiveTab('leads'); onClose(); } },
+    { id: 'nav-contacts', title: 'Go to Contacts', description: 'View client personnel profiles', category: 'Navigation', icon: Contact, tab: 'contacts', action: () => { setActiveTab('contacts'); onClose(); } },
+    { id: 'nav-companies', title: 'Go to Companies', description: 'Browse and edit organizations', category: 'Navigation', icon: Building2, tab: 'companies', action: () => { setActiveTab('companies'); onClose(); } },
+    { id: 'nav-deals', title: 'Go to Deals & Pipeline', description: 'Track deal stages and opportunities', category: 'Navigation', icon: Layers, tab: 'deals', action: () => { setActiveTab('deals'); onClose(); } },
+    { id: 'nav-products', title: 'Go to Products', description: 'Browse company product pricing tiers', category: 'Navigation', icon: Package, tab: 'products', action: () => { setActiveTab('products'); onClose(); } },
+    { id: 'nav-activities', title: 'Go to Activities', description: 'View tasks, calls, and calendar', category: 'Navigation', icon: Activity, tab: 'activities', action: () => { setActiveTab('activities'); onClose(); } },
+    { id: 'nav-emails', title: 'Go to Emails', description: 'Read synced communications', category: 'Navigation', icon: Mail, tab: 'emails', action: () => { setActiveTab('emails'); onClose(); } },
+    { id: 'nav-workflows', title: 'Go to Workflows', description: 'Configure trigger actions and automations', category: 'Navigation', icon: GitBranch, tab: 'workflows', action: () => { setActiveTab('workflows'); onClose(); } },
+    { id: 'nav-ai', title: 'Go to AI Insights', description: 'Read system generated predictions', category: 'Navigation', icon: Sparkles, tab: 'ai insights', action: () => { setActiveTab('ai insights'); onClose(); } },
+    { id: 'nav-reports', title: 'Go to Reports & Analytics', description: 'View conversion rates and forecasts', category: 'Navigation', icon: BarChart3, tab: 'reports', action: () => { setActiveTab('reports'); onClose(); } },
+    { id: 'nav-documents', title: 'Go to Documents', description: 'Browse deal templates and attachments', category: 'Navigation', icon: FileText, tab: 'documents', action: () => { setActiveTab('documents'); onClose(); } },
+    { id: 'nav-settings', title: 'Go to Settings', description: 'Manage workspace integrations', category: 'Navigation', icon: Settings, tab: 'settings', action: () => { setActiveTab('settings'); onClose(); } },
+    { id: 'nav-profile', title: 'Go to Profile', description: 'Manage personal credentials', category: 'Navigation', icon: User, tab: 'profile', action: () => { setActiveTab('profile'); onClose(); } },
     
     // Actions
-    { id: 'act-report', title: 'Create New Report', description: 'Open the custom report builder dialog', category: 'Actions' as const, icon: Plus, action: () => { onNewReportClick(); onClose(); } },
+    { id: 'act-report', title: 'Create New Report', description: 'Open the custom report builder dialog', category: 'Actions', icon: Plus, action: () => { onNewReportClick(); onClose(); } },
     
     // Mocks / Entities
-    { id: 'lead-acme', title: 'Acme Enterprise (Lead)', description: 'Status: Contacted | ₹120,000 value', category: 'Leads' as const, icon: Users, action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'lead-bigtech', title: 'Big Tech SaaS Upgrade (Lead)', description: 'Status: New | ₹85,000 value', category: 'Leads' as const, icon: Users, action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'contact-bruce', title: 'Bruce Wayne (Contact)', description: 'Wayne Enterprises | bwayne@wayne.com', category: 'Contacts' as const, icon: Contact, action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'contact-sarah', title: 'Sarah Johnson (Contact)', description: 'Acme Corp | sjohnson@acme.com', category: 'Contacts' as const, icon: Contact, action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'company-wayne', title: 'Wayne Enterprises (Company)', description: 'Domain: wayne.com | Gotham City', category: 'Companies' as const, icon: Building2, action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'company-acme', title: 'Acme Corp (Company)', description: 'Domain: acme.com | Manufacturing', category: 'Companies' as const, icon: Building2, action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'deal-saas', title: 'Enterprise SaaS Upgrade (Deal)', description: 'Stage: Qualified | ₹120,000 value', category: 'Deals' as const, icon: Layers, action: () => { setActiveTab('deals'); onClose(); } },
-    { id: 'deal-logistics', title: 'Global Logistics API (Deal)', description: 'Stage: Negotiation | ₹380,000 value', category: 'Deals' as const, icon: Layers, action: () => { setActiveTab('deals'); onClose(); } }
+    { id: 'lead-acme', title: 'Acme Enterprise (Lead)', description: 'Status: Contacted | ₹120,000 value', category: 'Leads', icon: Users, tab: 'leads', action: () => { setActiveTab('leads'); onClose(); } },
+    { id: 'lead-bigtech', title: 'Big Tech SaaS Upgrade (Lead)', description: 'Status: New | ₹85,000 value', category: 'Leads', icon: Users, tab: 'leads', action: () => { setActiveTab('leads'); onClose(); } },
+    { id: 'contact-bruce', title: 'Bruce Wayne (Contact)', description: 'Wayne Enterprises | bwayne@wayne.com', category: 'Contacts', icon: Contact, tab: 'contacts', action: () => { setActiveTab('contacts'); onClose(); } },
+    { id: 'contact-sarah', title: 'Sarah Johnson (Contact)', description: 'Acme Corp | sjohnson@acme.com', category: 'Contacts', icon: Contact, tab: 'contacts', action: () => { setActiveTab('contacts'); onClose(); } },
+    { id: 'company-wayne', title: 'Wayne Enterprises (Company)', description: 'Domain: wayne.com | Gotham City', category: 'Companies', icon: Building2, tab: 'companies', action: () => { setActiveTab('companies'); onClose(); } },
+    { id: 'company-acme', title: 'Acme Corp (Company)', description: 'Domain: acme.com | Manufacturing', category: 'Companies', icon: Building2, tab: 'companies', action: () => { setActiveTab('companies'); onClose(); } },
+    { id: 'deal-saas', title: 'Enterprise SaaS Upgrade (Deal)', description: 'Stage: Qualified | ₹120,000 value', category: 'Deals', icon: Layers, tab: 'deals', action: () => { setActiveTab('deals'); onClose(); } },
+    { id: 'deal-logistics', title: 'Global Logistics API (Deal)', description: 'Stage: Negotiation | ₹380,000 value', category: 'Deals', icon: Layers, tab: 'deals', action: () => { setActiveTab('deals'); onClose(); } }
   ];
 
+  const visibleSearchItems = searchItems.filter(item => !item.tab || ROLE_TABS[userRole].has(item.tab));
+
   // Filter items based on search query
-  const filtered = searchItems.filter(item => {
+  const filtered = visibleSearchItems.filter(item => {
     const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
     return searchString.includes(query.toLowerCase());
   });

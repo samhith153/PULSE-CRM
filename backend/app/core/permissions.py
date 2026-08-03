@@ -50,6 +50,7 @@ class Permission(str, Enum):
 
     ACTIVITY_CREATE = "activity:create"
     ACTIVITY_READ = "activity:read"
+    ACTIVITY_UPDATE = "activity:update"
 
     EMAIL_SEND = "email:send"
     EMAIL_READ = "email:read"
@@ -62,6 +63,14 @@ class Permission(str, Enum):
 
     WEBHOOK_MANAGE = "webhook:manage"
     FILE_UPLOAD = "file:upload"
+
+    DOCUMENT_READ = "document:read"
+    DOCUMENT_DELETE = "document:delete"
+
+    EVENT_READ = "event:read"
+    EVENT_CREATE = "event:create"
+
+    NOTIFICATION_READ = "notification:read"
 
     REPORT_VIEW = "report:view"
     REPORT_EXPORT = "report:export"
@@ -109,6 +118,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.PIPELINE_UPDATE,
         Permission.ACTIVITY_CREATE,
         Permission.ACTIVITY_READ,
+        Permission.ACTIVITY_UPDATE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
@@ -117,6 +127,11 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.AI_ACCESS,
         Permission.WEBHOOK_MANAGE,
         Permission.FILE_UPLOAD,
+        Permission.DOCUMENT_READ,
+        Permission.DOCUMENT_DELETE,
+        Permission.EVENT_READ,
+        Permission.EVENT_CREATE,
+        Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
         Permission.REPORT_EXPORT,
     },
@@ -137,12 +152,19 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.DEAL_UPDATE,
         Permission.PIPELINE_READ,
         Permission.ACTIVITY_READ,
+        Permission.ACTIVITY_CREATE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
+        Permission.AI_ACCESS,
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
+        Permission.DOCUMENT_READ,
+        Permission.EVENT_READ,
+        Permission.EVENT_CREATE,
+        Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
+        Permission.REPORT_EXPORT,
     },
 }
 
@@ -156,9 +178,15 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
     """
     Resolve permissions from the loaded user roles.
 
-    Prefer persisted role-permission assignments when available, but fall back
-    to the built-in role catalog for system roles so access checks remain stable
-    even if the database seed is incomplete.
+    Use the persisted role-permission assignments whenever they exist, so
+    custom edits in the admin UI are authoritative. For built-in system
+    roles without any DB permissions assigned, fall back to the built-in
+    permission catalog so authorization remains stable.
+
+    The built-in `admin` role is always granted the full permission set.
+    This prevents an incomplete DB permission assignment from accidentally
+    locking admins out of core actions (e.g. loading the role list needed to
+    create users).
     """
     permissions: set[str] = set()
 
@@ -167,11 +195,12 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         if not role:
             continue
 
+        role_db_permissions: set[str] = set()
         for role_permission in getattr(role, "role_permissions", []) or []:
             permission = getattr(role_permission, "permission", None)
             codename = getattr(permission, "codename", None)
             if codename:
-                permissions.add(codename)
+                role_db_permissions.add(codename)
 
         role_name = getattr(role, "name", None)
         try:
@@ -179,8 +208,17 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         except ValueError:
             built_in_role = None
 
+        # Admin always has every permission — never stripped by DB edits.
+        if built_in_role is Role.ADMIN:
+            permissions.update(get_permissions_for_role(Role.ADMIN))
+            continue
+
         if built_in_role:
+            # Always include built-in baseline so permissions are never missing
+            # due to an incomplete seed. DB permissions extend, never shrink.
             permissions.update(get_permissions_for_role(built_in_role))
+        else:
+            permissions.update(role_db_permissions)
 
     return sorted(permissions)
 

@@ -103,30 +103,17 @@ def response_time_score(avg_response_time_hours):
 def days_since_last_outbound(emails):
     """
     Days since LAST OUTBOUND email (sales rep sent email).
-    
-    Measures: How long has this lead been idle without our action?
-    
-    Args:
-        emails: DataFrame with columns [direction, sent_at]
-    
-    Returns:
-        int: Number of days, or None if no outbound emails
     """
-    
     if emails.empty:
         return None
-    
-    # Filter for outbound emails only (from sales rep)
+
     outbound_emails = emails[emails["direction"] == "outbound"]
-    
     if outbound_emails.empty:
         return None
-    
-    # Get the latest outbound email
+
     latest_outbound = pd.to_datetime(outbound_emails["sent_at"]).max()
-    days = (datetime.now() - latest_outbound).days
-    
-    return days
+    now = pd.Timestamp.now(tz=latest_outbound.tzinfo) if latest_outbound.tzinfo is not None else pd.Timestamp.now()
+    return (now - latest_outbound).days
 
 
 def engagement_decay_penalty(days_since_last_outbound):
@@ -222,41 +209,31 @@ def ai_intent_category_score(intent_category):
     return intent_mapping.get(intent_category, 0)
 
 
+# Real LeadStatus enum values from app/utils/enums.py:
+# new, contacted, qualified, proposal_sent, negotiation, won, lost, converted
+_STAGE_SCORE_MAP = {
+    "new": 10, "contacted": 30, "qualified": 50, "proposal_sent": 70,
+    "negotiation": 90, "won": 100, "lost": 0, "converted": 50,
+}
+
+
 def buying_stage_score(stage):
     """
-    Current buying stage to engagement score mapping (0-100).
-    
-    Mapping per PDF spec:
-    - New Lead: 10
-    - Contacted: 20
-    - Responded: 40
-    - Meeting: 60
-    - Demo: 75
-    - Proposal: 85
-    - Negotiation: 95
-    - Won: 100
-    - Lost: 0
-    
-    Args:
-        stage: str (buying stage name)
-    
-    Returns:
-        int: Score 0-100
+    Buying stage mapping, based on real LeadStatus values.
     """
-    
-    mapping = {
-        "New Lead": 10,
-        "Contacted": 20,
-        "Responded": 40,
-        "Meeting": 60,
-        "Demo": 75,
-        "Proposal": 85,
-        "Negotiation": 95,
-        "Won": 100,
-        "Lost": 0,
-    }
-    
-    return mapping.get(stage, 0)
+    if stage is None:
+        return 0
+    return _STAGE_SCORE_MAP.get(str(stage).lower(), 0)
+
+
+def intent_strength_score(stage):
+    """
+    Temporary intent score derived from lead status.
+    Replace with AI model later.
+    """
+    if stage is None:
+        return 0
+    return _STAGE_SCORE_MAP.get(str(stage).lower(), 0)
 
 
 def customer_initiative_score(emails):
@@ -324,3 +301,28 @@ def engagement_trend_score(intent_today, intent_7_days_ago):
         return 25   # Declining ⬇️
     else:
         return 0    # Strong decline 🔴
+
+
+
+def reply_recency_score(emails):
+    """
+    Score based on latest email activity.
+    """
+    if emails.empty:
+        return 0
+
+    latest = pd.to_datetime(emails["sent_at"]).max()
+    now = pd.Timestamp.now(tz=latest.tzinfo) if latest.tzinfo is not None else pd.Timestamp.now()
+    days = (now - latest).days
+
+    if days <= 1:
+        return 100
+    elif days <= 3:
+        return 80
+    elif days <= 7:
+        return 60
+    elif days <= 14:
+        return 40
+    else:
+        return 20
+

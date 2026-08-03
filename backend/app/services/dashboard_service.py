@@ -17,7 +17,8 @@ from app.models.deal import Deal
 from app.models.email import Email
 from app.models.lead import Lead
 from app.models.lead_score import LeadScore
-from app.models.user import User
+from app.models.user import User, UserRole
+from app.models.role import Role
 from app.repositories.pipeline_repository import PipelineRepository
 from app.schemas.dashboard import (
     DashboardAnalyticsResponse,
@@ -775,6 +776,16 @@ class DashboardService:
                 User.is_deleted.is_(False),
             ]
 
+        def _non_admin_user_filter():
+            """Return a condition that excludes users with the 'admin' role."""
+            admin_user_ids = (
+                select(UserRole.user_id)
+                .join(Role, Role.id == UserRole.role_id)
+                .where(Role.name == "admin")
+                .correlate(User)
+            )
+            return User.id.notin_(admin_user_ids)
+
         async def _deal_count(*extra):
             r = await self.db.execute(
                 select(func.count(Deal.id)).where(*_deal_base(*extra))
@@ -787,8 +798,11 @@ class DashboardService:
             )
             return Decimal(str(r.scalar_one() or 0))
 
-        # ── Team members (all non-deleted users in the org) ───────────────────
-        team_stmt = select(User.id, User.full_name).where(*_user_base())
+        # ── Team members (sales reps + managers, no admins) ──────────────────
+        team_stmt = (
+            select(User.id, User.full_name)
+            .where(*_user_base(), _non_admin_user_filter())
+        )
         team_rows = (await self.db.execute(team_stmt)).all()
         team_member_ids = [r[0] for r in team_rows]
         total_members = len(team_member_ids)
@@ -925,7 +939,7 @@ class DashboardService:
                 & Deal.is_active.is_(True)
                 & Deal.is_deleted.is_(False),
             )
-            .where(*_user_base())
+            .where(*_user_base(), _non_admin_user_filter())
             .group_by(User.id, User.full_name)
             .order_by(
                 func.coalesce(
@@ -1568,8 +1582,8 @@ class DashboardService:
                     )
                 )
 
-        # ── 11. Team Performance Table ────────────────────────────────────────
-        team_stmt = (
+        # ── 11. My Performance Row ────────────────────────────────────────────
+        my_stmt = (
             select(
                 User.id,
                 User.full_name,
@@ -1589,26 +1603,25 @@ class DashboardService:
                 & Deal.is_deleted.is_(False),
             )
             .where(
+                User.id == user_id,
                 User.organization_id == organization_id,
                 User.is_active.is_(True),
                 User.is_deleted.is_(False),
             )
             .group_by(User.id, User.full_name)
-            .order_by(func.coalesce(func.sum(
-                case((Deal.status == DealStatus.WON.value, Deal.amount), else_=0)
-            ), 0).desc())
         )
-        team_rows = (await self.db.execute(team_stmt)).all()
-        team_performance = [
-            RepTeamPerformanceRow(
-                user_id=row[0],
-                full_name=row[1],
-                revenue=Decimal(str(row[2] or 0)),
-                won_deals=int(row[3] or 0),
-                win_rate=self._percentage(int(row[3] or 0), max(int(row[4] or 1), 1)),
+        my_row = (await self.db.execute(my_stmt)).one_or_none()
+        team_performance = []
+        if my_row:
+            team_performance.append(
+                RepTeamPerformanceRow(
+                    user_id=my_row[0],
+                    full_name=my_row[1],
+                    revenue=Decimal(str(my_row[2] or 0)),
+                    won_deals=int(my_row[3] or 0),
+                    win_rate=self._percentage(int(my_row[3] or 0), max(int(my_row[4] or 1), 1)),
+                )
             )
-            for row in team_rows
-        ]
 
         # ── 12. Activity Overview (current vs previous month) ─────────────────
         call_actions = ["call", "call_logged"]

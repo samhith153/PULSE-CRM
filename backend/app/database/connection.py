@@ -36,6 +36,12 @@ connect_args = {}
 if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
     connect_args["ssl"] = ssl_context
 
+# asyncpg + PgBouncer (Supabase pooler) are incompatible with asyncpg's
+# prepared-statement cache: pgbouncer resets server-side prepared statements
+# between transactions, which desyncs asyncpg's transaction state and raises
+# "cannot use Connection.transaction() in a manually started transaction".
+connect_args["statement_cache_size"] = 0
+
 engine = create_async_engine(
     DATABASE_URL,
     connect_args=connect_args,
@@ -83,9 +89,7 @@ async def check_db_connection() -> bool:
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT current_user"))
             user = result.scalar()
-            logger.info("Database connected - current_user=%s", user)
-            print(f"Database Connected!")
-            print(f"Current User: {user}")
+            logger.info("Database Connected - current_user=%s", user)
         return True
     except Exception as exc:
         logger.exception(
@@ -93,8 +97,5 @@ async def check_db_connection() -> bool:
             type(exc).__name__,
             exc,
         )
-        print("\n========== DATABASE ERROR ==========")
-        print(type(exc).__name__)
-        print(str(exc))
-        print("====================================\n")
+        logger.error("========== DATABASE ERROR ==========\n%s: %s\n====================================", type(exc).__name__, exc)
         return False

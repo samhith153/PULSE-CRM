@@ -72,7 +72,7 @@ from app.schemas.ai_insights import (
 )
 from app.schemas.common import StandardResponse
 
-router = APIRouter(dependencies=[Depends(require_role("manager", "admin"))])
+router = APIRouter(dependencies=[Depends(require_role("manager", "admin", "sales_rep"))])
 
 
 # ── Full action center ────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ async def get_pipeline_health(current_user: CurrentUser, db: DBSession) -> dict:
     from app.services.ai_insights_service import AIInsightsService
     svc  = AIInsightsService(db)
     repo = AIInsightsRepository(db)
-    user_id, team_ids = await svc._scope(current_user)
+    user_id, team_ids = None, None # pipeline health is always org-wide
     components = await repo.get_pipeline_health_components(
         current_user.organization_id, user_id, team_ids
     )
@@ -438,7 +438,6 @@ async def get_going_cold_notifications(
         "Low (25-49) | Informational (<25)\n\n"
         "**RBAC:** Admin=org-wide, Manager=team, Sales Rep=own leads."
     ),
-    dependencies=[Depends(require_role("admin", "manager", "sales_rep"))],
     tags=["AI Insights"],
 )
 async def get_daily_priorities(
@@ -496,7 +495,6 @@ async def get_daily_priorities(
         "completed today, pending today, meetings today, follow-ups today, "
         "calls today, and deals closing this week."
     ),
-    dependencies=[Depends(require_role("admin", "manager", "sales_rep"))],
     tags=["AI Insights"],
 )
 async def get_daily_priorities_summary(
@@ -523,7 +521,6 @@ async def get_daily_priorities_summary(
         "- Proposals awaiting response\n"
         "- Cold leads requiring recovery"
     ),
-    dependencies=[Depends(require_role("admin", "manager", "sales_rep"))],
     tags=["AI Insights"],
 )
 async def get_daily_priorities_notifications(

@@ -133,9 +133,24 @@ class EmailSyncResultResponse(BaseModel):
     emails: list[EmailResponse] = Field(default_factory=list)
 
 
+class EmailThreadSummary(BaseModel):
+    summary: Optional[str] = None
+    summary_word: Optional[str] = None
+    sentiment: Optional[str] = None
+    intent: Optional[str] = None
+    confidence: Optional[float] = None
+    key_points: list[str] = Field(default_factory=list)
+    action_items: list[str] = Field(default_factory=list)
+    category: Optional[str] = None
+    draft_reply: Optional[str] = None
+    follow_up_suggestion: Optional[str] = None
+    follow_up_timing: Optional[str] = None
+
+
 class EmailThreadResponse(BaseModel):
     thread_id: str
     emails: list[EmailResponse] = Field(default_factory=list)
+    summary: Optional[EmailThreadSummary] = None
 
 
 class EmailHistoryResponse(BaseModel):

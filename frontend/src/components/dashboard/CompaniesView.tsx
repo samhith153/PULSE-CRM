@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getCompanies, updateCompany } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Building2, 
   Search, 
@@ -29,15 +30,16 @@ interface Company {
   contacts: string[];
   openDeals: number;
   owner: string;
-  ownerAvatar: string;
+  ownerAvatar: string | null;
   notes: string;
   timeline: { id: number; title: string; time: string }[];
   emails: { id: number; subject: string; time: string }[];
   files: { id: number; name: string; size: string }[];
 }
 
-export default function CompaniesView() {
+export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,9 +53,22 @@ export default function CompaniesView() {
   const [contactName, setContactName] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
     getCompanies().then(data => {
-      setCompanies(data as any);
+      if (!cancelled) {
+        setCompanies(data as any);
+        setLoading(false);
+        onLoaded?.();
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setLoading(false);
+        onLoaded?.();
+        toast.error('Failed to load companies');
+      }
     });
+    return () => { cancelled = true; };
   }, []);
 
   const active = selectedId ? companies.find(c => c.id === selectedId) || null : null;
@@ -74,9 +89,7 @@ export default function CompaniesView() {
       contacts: [],
       openDeals: 0,
       owner: form.owner,
-      ownerAvatar: form.owner === 'Sarah Johnson' 
-        ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80" 
-        : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
+      ownerAvatar: null,
       notes: form.notes,
       timeline: [{ id: 1, title: "Company Profile Added", time: "Just now" }],
       emails: [],
@@ -109,6 +122,7 @@ export default function CompaniesView() {
       } : c));
       setIsEditModalOpen(false);
     } catch {
+      toast.error('Failed to save company');
     }
   };
 
@@ -128,22 +142,10 @@ export default function CompaniesView() {
       {/* Companies List */}
       <div className={`col-span-12 ${active ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <div>
+            <div className="mb-4">
               <h2 className="font-sans text-2xl text-brand-heading font-bold">Companies</h2>
               <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Monitor accounts, track revenue sizes, and view contact chains.</p>
             </div>
-            <button 
-              onClick={() => {
-                setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
-                setIsAddModalOpen(true);
-              }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Company</span>
-            </button>
-          </div>
 
           <div className="relative mb-4">
             <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
@@ -171,9 +173,34 @@ export default function CompaniesView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                {filtered.map((comp) => (
-                  <tr 
-                    key={comp.id}
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="py-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-6 w-6 rounded bg-slate-100 shrink-0" />
+                          <div className="h-3.5 w-28 bg-slate-100 rounded" />
+                        </div>
+                      </td>
+                      <td className="py-3"><div className="h-3.5 w-20 bg-slate-100 rounded" /></td>
+                      <td className="py-3"><div className="h-3.5 w-16 bg-slate-100 rounded" /></td>
+                      <td className="py-3 text-center"><div className="h-3.5 w-8 bg-slate-100 rounded mx-auto" /></td>
+                      <td className="py-3 text-center"><div className="h-3.5 w-8 bg-slate-100 rounded mx-auto" /></td>
+                      <td className="py-3 text-right">
+                        <div className="flex justify-end">
+                          <div className="h-6 w-6 bg-slate-100 rounded" />
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-4 text-center text-slate-400">No companies found.</td>
+                  </tr>
+                ) : (
+                  filtered.map((comp) => (
+                    <tr 
+                      key={comp.id}
                     onClick={() => setSelectedId(comp.id)}
                     onDoubleClick={(e) => {
                       e.stopPropagation();
@@ -207,7 +234,7 @@ export default function CompaniesView() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

@@ -1,4 +1,5 @@
-import { toast } from '@/lib/toast';
+import { toast } from '../lib/toast';
+export { toast };
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
@@ -38,6 +39,7 @@ export interface Lead {
   score: number | null;
   fit_score: number | null;
   engagement_score: number | null;
+  engagement_reasons: string[] | null;
   top_reasons: string[] | null;
   priority: string | null;
   notes: string | null;
@@ -203,6 +205,14 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       }
     } catch {
     }
+    // Show toast for permission errors so users get immediate feedback
+    if (res.status === 403) {
+      toast.error(`Permission denied: ${message}`);
+    } else if (res.status === 401) {
+      toast.error('Session expired. Please log in again.');
+    } else if (res.status >= 500) {
+      toast.error(`Server error: ${message}`);
+    }
     throw new Error(message);
   }
   if (res.status === 204) {
@@ -239,6 +249,45 @@ export async function updateLead(leadId: string, leadData: Record<string, unknow
 
 export async function deleteLead(leadId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/leads/${leadId}`, { method: 'DELETE' });
+}
+
+export interface LeadRecommendation {
+  entity_type: string;
+  entity_id: string | null;
+  status: string;
+  recommendations: string[];
+  reasoning: string[];
+  metadata: Record<string, unknown>;
+  generated_at: string;
+}
+
+export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecommendation> {
+  return apiFetch<LeadRecommendation>('/api/v1/ai/recommendations', {
+    method: 'POST',
+    body: JSON.stringify({ entity_type: 'lead', entity_id: leadId }),
+  });
+}
+
+export interface BatchRecommendationItem {
+  lead_id: string;
+  recommended_action: string;
+  reason: string;
+  current_score: number;
+  current_stage: string;
+  all_candidates: Record<string, unknown>[];
+}
+
+export interface BatchRecommendationResponse {
+  status: string;
+  recommendations: Record<string, BatchRecommendationItem>;
+  generated_at: string;
+}
+
+export async function fetchBatchRecommendations(leadIds: string[]): Promise<BatchRecommendationResponse> {
+  return apiFetch<BatchRecommendationResponse>('/api/v1/ai/recommendations/batch', {
+    method: 'POST',
+    body: JSON.stringify({ lead_ids: leadIds }),
+  });
 }
 
 export async function convertLead(
@@ -370,67 +419,6 @@ export async function getPipelineStages(): Promise<any[]> {
   return stages;
 }
 
-// --- Conversation Intelligence (Bhavani Summarization API) ---
-export interface SummaryMessage {
-  sender: string;
-  recipients: string[];
-  subject: string;
-  body: string;
-  timestamp: string;
-  direction: 'incoming' | 'outgoing';
-}
-
-export interface ConversationSummary {
-  thread_id: string;
-  summary: string;
-  summary_word: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  intent: 'demo' | 'buy' | 'negotiate' | 'followup' | 'decline' | 'other';
-  confidence: number;
-  key_points: string[];
-  action_items: string[];
-  category?: 'sales' | 'support' | 'general' | 'urgent';
-  draft_reply?: string;
-  follow_up_suggestion?: string;
-  follow_up_timing?: 'immediate' | 'today' | 'tomorrow' | '2_days' | '3_days' | '1_week' | '2_weeks' | 'no_followup';
-  processing_time_ms?: number;
-  model_version?: string;
-}
-
-export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders()
-    },
-    body: JSON.stringify({
-      thread_id: threadId,
-      messages,
-      contact_id: contactId,
-      deal_id: dealId
-    })
-  });
-  if (!res.ok) {
-    let message = `Summarization failed (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
-export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
-    headers: { ...getAuthHeaders() }
-  });
-  if (!res.ok) {
-    let message = `Failed to load summary (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
 
 function toQuery(params: Record<string, string | number | boolean | null | undefined>): string {
   const search = new URLSearchParams();
@@ -516,6 +504,7 @@ export interface EmailListParams {
   search?: string;
   direction?: 'inbound' | 'outbound' | '';
   thread_id?: string;
+  is_read?: boolean;
   sort_order?: 'asc' | 'desc';
 }
 
@@ -597,6 +586,30 @@ export async function getEmail(id: string): Promise<SyncedEmail> {
   return apiFetch<SyncedEmail>(`/api/v1/emails/${id}`);
 }
 
+export interface ThreadSummary {
+  summary: string | null;
+  summary_word: string | null;
+  sentiment: string | null;
+  intent: string | null;
+  confidence: number | null;
+  key_points: string[];
+  action_items: string[];
+  category: string | null;
+  draft_reply: string | null;
+  follow_up_suggestion: string | null;
+  follow_up_timing: string | null;
+}
+
+export interface ThreadResult {
+  thread_id: string;
+  emails: SyncedEmail[];
+  summary: ThreadSummary | null;
+}
+
+export async function getThread(threadId: string): Promise<ThreadResult> {
+  return apiFetch<ThreadResult>(`/api/v1/gmail/threads/${encodeURIComponent(threadId)}`);
+}
+
 export async function getActivities(params: ActivityListParams = {}): Promise<PaginatedResult<ActivityTimelineItem>> {
   const { activity_type, ...rest } = params;
   return apiFetch<PaginatedResult<ActivityTimelineItem>>(
@@ -610,7 +623,6 @@ export async function createActivity(payload: CreateActivityPayload): Promise<Ac
     body: JSON.stringify(payload)
   });
 }
-
 // --- Dashboard KPI API (Admin / Manager / Sales Rep) ---
 
 // Decimal values arrive as strings from the JSON serializer.
@@ -700,16 +712,22 @@ export interface ManagerDashboardData {
 }
 
 export interface SalesRepDashboardData {
-  summary: { total_revenue: Decimal; won_deals: number; win_rate: Decimal; average_deal_size: Decimal; average_sales_cycle: Decimal };
-  revenue_stat: { total: Decimal; previous_period: Decimal; growth_pct: Decimal };
-  won_deals_stat: { count: number; previous_period: number; growth_pct: Decimal };
-  win_rate_stat: { win_rate: Decimal; previous_win_rate: Decimal; growth_pct: Decimal };
-  avg_deal_size_stat: { avg_deal_value: Decimal; previous_avg: Decimal; growth_pct: Decimal };
-  avg_sales_cycle_stat: { avg_days: Decimal; previous_avg_days: Decimal; difference_days: Decimal };
-  revenue_trend: { period: string; revenue: Decimal }[];
-  deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
-  deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
-  key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
+  summary: { total_revenue: number; won_deals: number; win_rate: number; average_deal_size: number; average_sales_cycle: number };
+  revenue_stat: { total: number; previous_period: number; growth_pct: number };
+  won_deals_stat: { count: number; previous_period: number; growth_pct: number };
+  win_rate_stat: { win_rate: number; previous_win_rate: number; growth_pct: number };
+  avg_deal_size_stat: { avg_deal_value: number; previous_avg: number; growth_pct: number };
+  avg_sales_cycle_stat: { avg_days: number; previous_avg_days: number; difference_days: number };
+  revenue_trend: { period: string; revenue: number }[];
+  deals_by_stage: { stage: string; count: number; percentage: number; conversion_rate: number }[];
+  deals_by_source: { source: string; count: number; percentage: number; revenue: number }[];
+  revenue_by_company_size: { size_bucket: string; revenue: number; percentage: number }[];
+  activity_heatmap: { date: string; activity_type: string; count: number; intensity: string }[];
+  team_performance: { user_id: string; full_name: string; revenue: number; won_deals: number; win_rate: number }[];
+  activity_overview: { emails_sent: number; calls_made: number; meetings_held: number; tasks_completed: number; notes_added: number; emails_growth_pct: number; calls_growth_pct: number; meetings_growth_pct: number; tasks_growth_pct: number };
+  key_metrics: { open_deals: number; pipeline_value: number; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: number; deals_created_growth_pct: number; activities_growth_pct: number };
+  recent_reports: { report_name: string; created_at: string; created_by: string | null; report_type: string }[];
+  report_templates: { name: string; description: string; primary_metrics: string[]; group_by_options: string[] }[];
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
@@ -724,7 +742,28 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
 }
 
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
+export async function getSalesDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
+  return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales${toQuery({ period })}`);
+}
+// Fetch the dashboard KPIs for a given UI role. Each role hits its own
+// RBAC-scoped endpoint so a sales rep / manager never calls /dashboard/admin.
+export async function getRoleDashboard(
+  role: 'sales_rep' | 'manager' | 'admin',
+  period: 'week' | 'month' | 'quarter' | 'year' = 'month',
+): Promise<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData> {
+  switch (role) {
+    case 'admin':
+      return getAdminDashboard();
+    case 'manager':
+      return getManagerDashboard();
+    case 'sales_rep':
+    default:
+      // Prefer the canonical /dashboard/sales; fall back to the /sales-rep alias.
+      return getSalesDashboard(period).catch(() => getSalesRepDashboard(period));
+  }
+}
+
+export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean; avatar_url: string | null; phone: string | null; job_title: string | null }> {
   return apiFetch('/api/v1/auth/me');
 }
 
@@ -795,7 +834,6 @@ export async function createAutomationEvent(payload: {
     body: JSON.stringify(payload)
   });
 }
-
 export async function getWebhookEndpoints(): Promise<WebhookEndpoint[]> {
   return apiFetch<WebhookEndpoint[]>('/api/v1/webhooks/endpoints');
 }
@@ -917,5 +955,304 @@ export async function updateRolePermissions(roleId: string, permissionCodenames:
   });
 }
 
+export interface DocumentResponse {
+  id: string;
+  organization_id: string;
+  uploaded_by?: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size_bytes: number;
+  created_at: string;
+}
 
+export async function uploadDocument(file: File): Promise<DocumentResponse | null> {
+  const formData = new FormData();
+  formData.append('file', file);
 
+  try {
+    // This now uses the API_BASE_URL that is already defined in your file
+    const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getToken()}`
+      },
+      body: formData
+    });
+
+    if (!res.ok) {
+        console.error('Upload failed with status:', res.status);
+        return null;
+    }
+    return (await res.json()) as DocumentResponse;
+  } catch (error) {
+    console.error('Error uploading document:', error);
+    return null;
+  }
+}
+
+export async function getDocuments(): Promise<DocumentResponse[]> {
+  const dbResult = await apiFetch<any>('/api/v1/documents');
+  const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
+  return items as DocumentResponse[];
+}
+
+export async function downloadDocumentFile(id: string | number): Promise<Blob> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/${id}/download`, {
+    headers: getAuthHeaders()
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to download document');
+  }
+  return res.blob();
+}
+
+export async function deleteDocumentAPI(id: string | number): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/${id}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders()
+  });
+
+  if (!res.ok) {
+    throw new Error('Failed to delete document');
+  }
+}
+
+// --- Sales Manager Forecast API ---
+
+export interface ManagerForecastData {
+  expected_revenue: {
+    expected_revenue: Decimal;
+    quarter: string;
+    previous_forecast: Decimal;
+    growth_pct: Decimal;
+    target_achievement_pct: Decimal;
+  };
+  best_case_pipeline: {
+    best_case_pipeline: Decimal;
+    active_pipeline_value: Decimal;
+    difference_from_expected: Decimal;
+  };
+  pipeline_coverage: {
+    coverage_ratio: Decimal;
+    coverage_status: string;  // Critical / Moderate / Healthy / Excellent
+  };
+  confidence_score: {
+    score: number;
+    status: string;   // Very High / High / Medium / Low
+    description: string;
+  };
+  monthly_forecast: {
+    month: string;
+    pipeline: Decimal;
+    expected: Decimal;
+    maximum: Decimal;
+  }[];
+  quarterly_projection: {
+    quarter: string;
+    quota_target: Decimal;
+    expected_closed_revenue: Decimal;
+    best_case_close: Decimal;
+    open_pipeline: Decimal;
+    target_achievement_pct: Decimal;
+  }[];
+  forecast_trend: { month: string; forecast: Decimal }[];
+  forecast_accuracy: {
+    current_accuracy_pct: Decimal;
+    previous_accuracy_pct: Decimal;
+    difference_pct: Decimal;
+  };
+  sales_velocity: {
+    sales_velocity: Decimal;
+    previous_velocity: Decimal;
+    growth_pct: Decimal;
+  };
+  forecast_insights: { message: string; type: string }[];
+  forecast_risks: {
+    deal_id: string;
+    deal_name: string;
+    company: string | null;
+    owner_name: string | null;
+    deal_value: Decimal;
+    risk_type: string;
+    risk_description: string;
+    days_overdue: number;
+    probability: number;
+  }[];
+  forecast_recommendations: {
+    priority: string;
+    title: string;
+    description: string;
+    action: string;
+    impact: string;
+  }[];
+  quarter: string;
+  period: string;
+  generated_at: string;
+}
+
+export async function getManagerForecast(
+  period: 'monthly' | 'quarterly' | 'yearly' = 'monthly'
+): Promise<ManagerForecastData> {
+  return apiFetch<ManagerForecastData>(
+    `/api/v1/dashboard/manager/forecast${toQuery({ period })}`
+  );
+}
+
+// --- Notifications API ---
+export interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  payload: Record<string, unknown> | null;
+  is_read: boolean;
+  read_at: string | null;
+  is_dismissed: boolean;
+  created_at: string;
+}
+
+export interface NotificationList {
+  items: Notification[];
+  total: number;
+  unread_count: number;
+}
+
+export async function getNotifications(params: { page?: number; pageSize?: number; unreadOnly?: boolean } = {}): Promise<NotificationList> {
+  const query = new URLSearchParams();
+  query.set('page', String(params.page ?? 1));
+  query.set('page_size', String(params.pageSize ?? 20));
+  if (params.unreadOnly) query.set('unread_only', 'true');
+  return apiFetch<NotificationList>(`/api/v1/notifications?${query.toString()}`);
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const result = await apiFetch<{ unread_count: number }>('/api/v1/notifications/unread-count');
+  return result.unread_count;
+}
+
+export async function markNotificationRead(notificationId: string): Promise<Notification> {
+  return apiFetch<Notification>(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead(): Promise<{ updated: number }> {
+  return apiFetch<{ updated: number }>('/api/v1/notifications/read-all', { method: 'POST' });
+}
+
+export async function dismissNotification(notificationId: string): Promise<Notification> {
+  return apiFetch<Notification>(`/api/v1/notifications/${notificationId}`, { method: 'DELETE' });
+}
+// --- AI Insights API ---
+
+export interface ImmediateActionItem {
+  id: string;
+  lead_name?: string;
+  deal_name?: string;
+  score: number;
+  priority: string;
+  reason: string;
+  deal_value?: number;
+  probability?: number;
+  owner_name?: string;
+  last_activity_at?: string | null;
+}
+
+export interface FollowUpDueItem {
+  id: string;
+  title: string;
+  company_name?: string;
+  owner_name?: string;
+  due_date: string;
+  status: string;
+  days_overdue?: number;
+}
+
+export interface GoingColdItem {
+  id: string;
+  name: string;
+  company_name?: string;
+  owner_name?: string;
+  cold_score: number;
+  risk_level: string;
+  days_inactive: number;
+  deal_value?: number;
+}
+
+export interface PipelineHealthData {
+  score: number;
+  status: string;
+  velocity_change_pct: number;
+  breakdown: Record<string, any>;
+}
+
+export interface AIActionCenterData {
+  pipeline_health?: PipelineHealthData;
+  immediate_actions?: ImmediateActionItem[];
+  follow_ups?: FollowUpDueItem[];
+  going_cold?: { items: GoingColdItem[]; total: number };
+  high_value_deals?: any[];
+  risk_items?: any[];
+  opportunity_scores?: any[];
+  recommendations?: any[];
+  notifications?: any[];
+}
+
+// Fixed endpoint pointing to the full action-center route defined in backend
+export async function getAIActionCenter(dateFilter?: string, priority?: string): Promise<AIActionCenterData> {
+  const query = toQuery({ date_filter: dateFilter, priority });
+  return apiFetch<AIActionCenterData>(`/api/v1/ai-insights/action-center${query}`);
+}
+
+export async function getPipelineHealth(): Promise<PipelineHealthData> {
+  return apiFetch<PipelineHealthData>('/api/v1/ai-insights/pipeline-health');
+}
+
+export async function getImmediateActions(): Promise<ImmediateActionItem[]> {
+  return apiFetch<ImmediateActionItem[]>('/api/v1/ai-insights/immediate-actions');
+}
+
+export async function getFollowUps(): Promise<FollowUpDueItem[]> {
+  return apiFetch<FollowUpDueItem[]>('/api/v1/ai-insights/follow-ups');
+}
+
+export async function getGoingColdLeads(params: { limit?: number; minimum_risk?: string } = {}): Promise<any> {
+  return apiFetch<any>(`/api/v1/ai-insights/going-cold${toQuery(params)}`);
+}
+
+export async function getDailyPriorities(params: { limit?: number; priority?: string } = {}): Promise<any> {
+  return apiFetch<any>(`/api/v1/ai-insights/daily-priorities${toQuery(params)}`);
+}
+
+// ---------------------------------------------------------------------------
+// PULSE Assistant (Internal Help Chat)
+// ---------------------------------------------------------------------------
+
+export interface AssistantChatResponse {
+  response: string;
+  suggestions: string[];
+}
+
+export async function sendAssistantMessage(
+  message: string,
+  userRole: string = 'sales_rep',
+  context: Record<string, any> = {}
+): Promise<AssistantChatResponse> {
+  return apiFetch<AssistantChatResponse>('/api/v1/assistant/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, user_role: userRole, context }),
+  });
+}
+export async function uploadAvatar(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: formData,
+  });
+  if (!res.ok) throw new Error(`Avatar upload failed (${res.status})`);
+  return res.json();
+}

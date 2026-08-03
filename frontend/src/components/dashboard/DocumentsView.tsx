@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, FileText, Download, UploadCloud, X, Calendar, User, Eye } from 'lucide-react';
+import { uploadDocument, getDocuments, downloadDocumentFile, deleteDocumentAPI, DocumentResponse } from '../../utils/api';
 
 interface DocumentItem {
-  id: number;
+  id: number | string;
   name: string;
   type: 'SLA' | 'Proposal' | 'Contract' | 'NDA';
   size: string;
@@ -17,7 +18,7 @@ interface DocumentItem {
   fileUrl?: string; // downloadable URL
 }
 
-export default function DocumentsView() {
+export default function DocumentsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -41,15 +42,27 @@ export default function DocumentsView() {
   const fetchDocuments = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch('/api/documents');
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data);
-      }
+      const docs = await getDocuments();
+      
+      // Map backend data to UI interface
+      const mappedDocs = docs.map((doc: DocumentResponse) => ({
+        id: doc.id,
+        name: doc.file_name.replace(/\.[^/.]+$/, ''),
+        type: 'SLA' as any, // You can make this dynamic later
+        size: `${(doc.file_size_bytes / 1024).toFixed(1)} KB`,
+        associatedDeal: 'General / Unlinked',
+        uploadedBy: 'Current User', 
+        uploadedAt: new Date(doc.created_at).toLocaleDateString(),
+        status: 'Approved' as any,
+        filePath: doc.file_path,
+      }));
+      
+      setDocuments(mappedDocs);
     } catch (error) {
       console.error('Error fetching documents:', error);
     } finally {
       setIsLoading(false);
+      onLoaded?.();
     }
   };
 
@@ -68,30 +81,32 @@ export default function DocumentsView() {
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('name', form.name || selectedFile.name.replace(/\.[^/.]+$/, ''));
-    formData.append('type', form.type);
-    formData.append('associatedDeal', form.associatedDeal || 'General / Unlinked');
-    formData.append('status', form.status);
-
     try {
-      const response = await fetch('/api/documents', {
-        method: 'POST',
-        body: formData,
-      });
+      // 1. Send the file to your Python backend!
+      const uploadedBackendDoc = await uploadDocument(selectedFile);
 
-      if (response.ok) {
-        const newDoc = await response.json();
+      if (uploadedBackendDoc) {
+        // 2. Map the PostgreSQL response into your UI's format
+        const newDoc: DocumentItem = {
+          id: uploadedBackendDoc.id, // The UUID from PostgreSQL
+          name: form.name || uploadedBackendDoc.file_name.replace(/\.[^/.]+$/, ''),
+          type: form.type,
+          size: `${(uploadedBackendDoc.file_size_bytes / 1024).toFixed(1)} KB`,
+          associatedDeal: form.associatedDeal || 'General / Unlinked',
+          uploadedBy: 'Current User', 
+          uploadedAt: new Date(uploadedBackendDoc.created_at).toLocaleDateString(),
+          status: form.status,
+          filePath: uploadedBackendDoc.file_path,
+        };
+
+        // 3. Update the UI state instantly
         setDocuments([newDoc, ...documents]);
         setIsUploadOpen(false);
         setSelectedFile(null);
         setForm({ name: '', type: 'SLA', associatedDeal: '', status: 'Draft' });
-        // Refresh the list
-        await fetchDocuments();
+        
       } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to upload document');
+        alert('Failed to upload document to backend');
       }
     } catch (error) {
       console.error('Error uploading document:', error);
@@ -99,19 +114,13 @@ export default function DocumentsView() {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: number | string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
-
+    
     try {
-      const response = await fetch(`/api/documents/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setDocuments(documents.filter(d => d.id !== id));
-      } else {
-        alert('Failed to delete document');
-      }
+      await deleteDocumentAPI(id);
+      // Remove it from the UI instantly if the backend deletion succeeds
+      setDocuments(documents.filter(d => d.id !== id));
     } catch (error) {
       console.error('Error deleting document:', error);
       alert('Failed to delete document');
@@ -120,21 +129,15 @@ export default function DocumentsView() {
 
   const handleDownload = async (doc: DocumentItem) => {
     try {
-      const response = await fetch(`/api/documents/${doc.id}/download`);
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = doc.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Failed to download document');
-      }
+      const blob = await downloadDocumentFile(doc.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading document:', error);
       alert('Failed to download document');
@@ -143,16 +146,10 @@ export default function DocumentsView() {
 
   const handleView = async (doc: DocumentItem) => {
     try {
-      const response = await fetch(`/api/documents/${doc.id}/download`);
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Failed to view document');
-      }
+      const blob = await downloadDocumentFile(doc.id);
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      // Intentionally not revoking object URL immediately so the new tab can load it
     } catch (error) {
       console.error('Error viewing document:', error);
       alert('Failed to view document');

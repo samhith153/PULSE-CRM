@@ -26,9 +26,10 @@ import { getManagerDashboard, asNumber, formatINR, formatNum, formatPct, Manager
 
 interface ManagerDashboardViewProps {
   onTabChange?: (tab: string) => void;
+  onLoaded?: () => void;
 }
 
-export default function ManagerDashboardView({ onTabChange }: ManagerDashboardViewProps) {
+export default function ManagerDashboardView({ onTabChange, onLoaded }: ManagerDashboardViewProps) {
   const [data, setData] = useState<ManagerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+        onLoaded?.();
       });
     return () => {
       cancelled = true;

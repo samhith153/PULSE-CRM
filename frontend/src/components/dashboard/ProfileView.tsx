@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   User,
@@ -13,8 +13,9 @@ import {
   Calendar,
   ShieldAlert,
   Loader2,
+  Camera,
 } from 'lucide-react';
-import { getCurrentUser, getSalesRepDashboard, asNumber, formatINR, formatPct, SalesRepDashboardData } from '@/utils/api';
+import { getCurrentUser, getSalesRepDashboard, asNumber, formatINR, formatPct, SalesRepDashboardData, uploadAvatar } from '@/utils/api';
 
 interface ProfileShape {
   id: string;
@@ -32,6 +33,8 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const [kpi, setKpi] = useState<SalesRepDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,16 +72,53 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const progressPercent = Math.min(100, Math.round((achieved / (quota || 1)) * 100));
   const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '—';
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadAvatar(file);
+      const fresh = await getCurrentUser();
+      setProfile(fresh as unknown as ProfileShape);
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-white border border-brand-border-purple/20 rounded-xl p-6 shadow-sm/5">
         <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5">
-          <div className="h-20 w-20 rounded-full overflow-hidden border border-brand-border-purple/35 shrink-0 shadow-md bg-slate-100 flex items-center justify-center">
-            {profile.avatar_url ? (
-              <Image src={profile.avatar_url} alt={profile.full_name} width={80} height={80} className="h-full w-full object-cover" unoptimized />
-            ) : (
-              <User className="h-8 w-8 text-slate-400" />
-            )}
+          <div className="relative group">
+            <div className="h-20 w-20 rounded-full overflow-hidden border border-brand-border-purple/35 shrink-0 shadow-md bg-slate-100 flex items-center justify-center">
+              {profile.avatar_url ? (
+                <Image src={profile.avatar_url} alt={profile.full_name} width={80} height={80} className="h-full w-full object-cover" unoptimized />
+              ) : (
+                <User className="h-8 w-8 text-slate-400" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer disabled:cursor-not-allowed"
+            >
+              {uploading ? (
+                <Loader2 className="h-5 w-5 text-white animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5 text-white" />
+              )}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
           </div>
 
           <div className="flex-1 text-center sm:text-left min-w-0">

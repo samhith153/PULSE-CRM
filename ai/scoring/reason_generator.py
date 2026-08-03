@@ -182,8 +182,6 @@ def get_engagement_reasons(features):
     
     if customer_initiative_score == 100:
         reasons.append(f"🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged")
-    elif customer_initiative_score == 60:
-        reasons.append(f"🔄 MIXED - Both sides initiating → Healthy two-way conversation")
     elif customer_initiative_score == 30:
         reasons.append(f"📧 SALES DRIVEN - Latest email from US → We're chasing them")
     elif customer_initiative_score == 0:

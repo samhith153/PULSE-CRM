@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search } from 'lucide-react';
-import { getEmail, getEmails, SyncedEmail } from '@/utils/api';
+import React, { useEffect, useRef, useState } from 'react';
+import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { getEmail, getEmails, getGmailConnections, getThread, syncGmail, SyncedEmail, ThreadSummary } from '@/utils/api';
+import { toast } from '@/lib/toast';
 
 type MailboxFilter = 'all' | 'inbound' | 'outbound' | 'unread';
 
@@ -21,9 +22,11 @@ function formatSize(bytes?: number | null) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export default function EmailsView() {
+export default function EmailsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [emails, setEmails] = useState<SyncedEmail[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<SyncedEmail | null>(null);
+  const [threadEmails, setThreadEmails] = useState<SyncedEmail[]>([]);
+  const [threadSummary, setThreadSummary] = useState<ThreadSummary | null>(null);
   const [filter, setFilter] = useState<MailboxFilter>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -31,6 +34,8 @@ export default function EmailsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [counts, setCounts] = useState({ all: 0, inbound: 0, outbound: 0, unread: 0 });
 
   const direction = filter === 'inbound' ? 'inbound' : filter === 'outbound' ? 'outbound' : '';
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -39,11 +44,17 @@ export default function EmailsView() {
     setIsLoading(true);
     setError(null);
     try {
-      const result = await getEmails({ page, page_size: pageSize, search, direction, sort_order: 'desc' });
-      const rows = filter === 'unread' ? result.data.filter(item => !item.is_read) : result.data;
-      setEmails(rows);
-      setTotal(filter === 'unread' ? rows.length : result.total);
-      if (selectedEmail && !rows.some(item => item.id === selectedEmail.id)) setSelectedEmail(null);
+      const result = await getEmails({
+        page,
+        page_size: pageSize,
+        search,
+        direction,
+        is_read: filter === 'unread' ? false : undefined,
+        sort_order: 'desc'
+      });
+      setEmails(result.data);
+      setTotal(result.total);
+      if (selectedEmail && !result.data.some(item => item.id === selectedEmail.id)) setSelectedEmail(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load emails.');
     } finally {
@@ -51,7 +62,52 @@ export default function EmailsView() {
     }
   };
 
+  const loadCounts = async () => {
+    try {
+      const [allRes, inboundRes, outboundRes, unreadRes] = await Promise.all([
+        getEmails({ page: 1, page_size: 1 }),
+        getEmails({ page: 1, page_size: 1, direction: 'inbound' }),
+        getEmails({ page: 1, page_size: 1, direction: 'outbound' }),
+        getEmails({ page: 1, page_size: 1, is_read: false }),
+      ]);
+      setCounts({
+        all: allRes.total,
+        inbound: inboundRes.total,
+        outbound: outboundRes.total,
+        unread: unreadRes.total
+      });
+    } catch {
+      toast.error('Failed to load email counts');
+    }
+  };
+
+  const runSync = async () => {
+    try {
+      const connections = await getGmailConnections();
+      const connection = connections.find(item => item.is_active) ?? connections[0];
+      if (!connection) return;
+      setIsSyncing(true);
+      await syncGmail(connection.id);
+    } catch {
+      toast.error('Failed to sync emails');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const refresh = async () => {
+    await runSync();
+    await Promise.all([loadCounts(), loadEmails()]);
+  };
+
+  const hasLoadedOnceRef = useRef(false);
+
   useEffect(() => {
+    if (!hasLoadedOnceRef.current) {
+      hasLoadedOnceRef.current = true;
+      refresh().finally(() => onLoaded?.());
+      return;
+    }
     loadEmails();
   }, [page, filter]);
 
@@ -63,14 +119,24 @@ export default function EmailsView() {
     return () => window.clearTimeout(timeout);
   }, [search]);
 
-  const unreadCount = useMemo(() => emails.filter(email => !email.is_read).length, [emails]);
-
   const openEmail = async (email: SyncedEmail) => {
     setSelectedEmail(email);
+    setThreadEmails([]);
+    setThreadSummary(null);
     setIsDetailLoading(true);
     setError(null);
     try {
-      setSelectedEmail(await getEmail(email.id));
+      const fullEmail = await getEmail(email.id);
+      setSelectedEmail(fullEmail);
+      if (fullEmail.thread_id) {
+        try {
+          const thread = await getThread(fullEmail.thread_id);
+          setThreadEmails(thread.emails);
+          setThreadSummary(thread.summary);
+        } catch {
+          toast.error('Failed to load email thread');
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load email details.');
     } finally {
@@ -83,10 +149,10 @@ export default function EmailsView() {
       <aside className="w-56 shrink-0 border-r border-brand-border-purple/15 bg-slate-50/50 p-3 flex flex-col gap-4">
         <nav className="space-y-0.5">
           {[
-            { id: 'all', label: 'All Mail', icon: Mail, count: total },
-            { id: 'inbound', label: 'Inbox', icon: Inbox, count: unreadCount },
-            { id: 'outbound', label: 'Sent', icon: MailOpen, count: 0 },
-            { id: 'unread', label: 'Unread', icon: MailOpen, count: unreadCount }
+            { id: 'all', label: 'All Mail', icon: Mail, count: counts.all },
+            { id: 'inbound', label: 'Inbox', icon: Inbox, count: counts.inbound },
+            { id: 'outbound', label: 'Sent', icon: MailOpen, count: counts.outbound },
+            { id: 'unread', label: 'Unread', icon: MailOpen, count: counts.unread }
           ].map(item => {
             const Icon = item.icon;
             const active = filter === item.id;
@@ -106,8 +172,8 @@ export default function EmailsView() {
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search sender, subject, preview..." className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-[11px] text-brand-text focus:outline-none focus:bg-white bg-white" />
           </div>
-          <button onClick={loadEmails} disabled={isLoading} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors disabled:opacity-50" title="Refresh emails">
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <button onClick={refresh} disabled={isLoading || isSyncing} className="p-1.5 hover:bg-slate-100 rounded text-slate-500 hover:text-brand-text transition-colors disabled:opacity-50" title="Sync Gmail and refresh emails">
+            <RefreshCw className={`h-4 w-4 ${isLoading || isSyncing ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
@@ -152,14 +218,60 @@ export default function EmailsView() {
           <div className="h-full overflow-y-auto p-6 space-y-5">
             <div>
               <h3 className="text-base font-extrabold text-brand-heading leading-tight">{selectedEmail.subject}</h3>
-              <p className="text-[10px] font-bold text-slate-400 mt-1">{formatDate(selectedEmail.sent_at)} - {selectedEmail.is_read ? 'Read' : 'Unread'}</p>
+              <p className="text-[10px] font-bold text-slate-400 mt-1">{selectedEmail.thread_id && `Thread: ${selectedEmail.thread_id}`}</p>
             </div>
-            <div className="rounded-xl border border-brand-border-purple/15 bg-slate-50/50 p-4 space-y-2 text-xs font-semibold text-brand-text/80">
-              <p><span className="font-extrabold text-brand-heading">From:</span> {selectedEmail.sender}</p>
-              <p><span className="font-extrabold text-brand-heading">To:</span> {selectedEmail.receiver || 'Not provided'}</p>
-              {selectedEmail.thread_id && <p><span className="font-extrabold text-brand-heading">Thread:</span> {selectedEmail.thread_id}</p>}
-            </div>
-            <div className="text-xs text-brand-text font-semibold leading-relaxed whitespace-pre-line border-b border-slate-100 pb-6 min-h-[140px]">{selectedEmail.body_preview || 'No message body was provided by the backend response.'}</div>
+            {threadSummary && (
+              <div className="rounded-xl border border-brand-accent/20 bg-brand-accent/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-brand-accent" />
+                  <h4 className="text-xs font-extrabold text-brand-accent uppercase tracking-wider">AI Summary</h4>
+                  {threadSummary.confidence != null && (
+                    <span className="text-[9px] font-bold text-slate-400 ml-auto">{Math.round(threadSummary.confidence * 100)}% confidence</span>
+                  )}
+                </div>
+                <p className="text-xs font-semibold text-brand-text leading-relaxed">{threadSummary.summary}</p>
+                <div className="flex flex-wrap gap-2">
+                  {threadSummary.sentiment && (
+                    <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${threadSummary.sentiment === 'positive' ? 'bg-emerald-100 text-emerald-700' : threadSummary.sentiment === 'negative' ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {threadSummary.sentiment}
+                    </span>
+                  )}
+                  {threadSummary.category && (
+                    <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">{threadSummary.category}</span>
+                  )}
+                  {threadSummary.intent && (
+                    <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{threadSummary.intent}</span>
+                  )}
+                </div>
+                {threadSummary.follow_up_suggestion && (
+                  <div className="flex items-start gap-1.5 pt-1 border-t border-brand-accent/10">
+                    <span className="text-[9px] font-extrabold text-brand-accent shrink-0 mt-0.5">Follow-up:</span>
+                    <span className="text-[10px] font-semibold text-brand-text/70">{threadSummary.follow_up_suggestion}</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {threadEmails.length > 0 ? (
+              <div className="space-y-4">
+                {threadEmails.map((msg) => (
+                  <div key={msg.id} className="rounded-xl border border-brand-border-purple/15 bg-slate-50/50 p-4 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-extrabold text-brand-heading">{msg.direction === 'outbound' ? `To: ${msg.receiver}` : `From: ${msg.sender}`}</p>
+                      <span className="text-[10px] font-bold text-slate-400">{formatDate(msg.sent_at)}</span>
+                    </div>
+                    <div className="text-xs text-brand-text font-semibold leading-relaxed whitespace-pre-line">{msg.body_preview || 'No message body.'}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <>
+                <div className="rounded-xl border border-brand-border-purple/15 bg-slate-50/50 p-4 space-y-2 text-xs font-semibold text-brand-text/80">
+                  <p><span className="font-extrabold text-brand-heading">From:</span> {selectedEmail.sender}</p>
+                  <p><span className="font-extrabold text-brand-heading">To:</span> {selectedEmail.receiver || 'Not provided'}</p>
+                </div>
+                <div className="text-xs text-brand-text font-semibold leading-relaxed whitespace-pre-line border-b border-slate-100 pb-6 min-h-[140px]">{selectedEmail.body_preview || 'No message body was provided by the backend response.'}</div>
+              </>
+            )}
             <div className="space-y-2.5">
               <h4 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">Attachments</h4>
               {selectedEmail.attachment_metadata?.length ? selectedEmail.attachment_metadata.map(file => (

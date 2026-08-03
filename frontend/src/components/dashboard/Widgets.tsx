@@ -32,7 +32,7 @@ export default function Widgets({
       revenue: "₹1.25M",
       revenueRaw: 1250000,
       winRate: "40.0%",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+      avatar: null
     },
     {
       name: "Sarah Johnson",
@@ -40,7 +40,7 @@ export default function Widgets({
       revenue: "₹980K",
       revenueRaw: 980000,
       winRate: "33.0%",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
+      avatar: null
     },
     {
       name: "David Wilson",
@@ -48,7 +48,7 @@ export default function Widgets({
       revenue: "₹750K",
       revenueRaw: 750000,
       winRate: "29.0%",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&q=80"
+      avatar: null
     },
     {
       name: "Lisa Martinez",
@@ -56,7 +56,7 @@ export default function Widgets({
       revenue: "₹480K",
       revenueRaw: 480000,
       winRate: "25.0%",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&fit=crop&q=80"
+      avatar: null
     },
     {
       name: "Michael Brown",
@@ -64,7 +64,7 @@ export default function Widgets({
       revenue: "₹360K",
       revenueRaw: 360000,
       winRate: "20.0%",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+      avatar: null
     }
   ];
 
@@ -125,8 +125,12 @@ export default function Widgets({
                     <tr key={index} className="hover:bg-slate-50/20 transition-colors">
                       {/* Member Info */}
                       <td className="py-2.5 flex items-center space-x-2.5">
-                        <div className="h-6.5 w-6.5 rounded-full overflow-hidden shrink-0 border border-brand-border-purple/20">
-                          <Image src={member.avatar} alt={member.name} width={26} height={26} className="h-full w-full object-cover" unoptimized />
+                        <div className="h-6.5 w-6.5 rounded-full shrink-0 border border-brand-border-purple/20 bg-brand-accent/10 flex items-center justify-center overflow-hidden">
+                          {member.avatar ? (
+                            <Image src={member.avatar} alt={member.name} width={26} height={26} className="h-full w-full object-cover" unoptimized />
+                          ) : (
+                            <span className="text-[9px] font-bold text-brand-accent">{member.name.split(' ').map((p: string) => p[0]).slice(0, 2).join('')}</span>
+                          )}
                         </div>
                         <span className="font-bold text-brand-text truncate max-w-[120px]">{member.name}</span>
                       </td>

@@ -25,6 +25,7 @@ router = APIRouter()
     "/me",
     response_model=StandardResponse[OrganizationResponse],
     summary="Get own organization",
+    dependencies=[Depends(require_permission("org:read"))],
 )
 async def get_my_organization(
     current_user: CurrentUser,

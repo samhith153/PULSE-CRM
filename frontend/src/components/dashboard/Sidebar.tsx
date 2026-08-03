@@ -23,7 +23,8 @@ import {
   Shield,
   Bell,
   Link2,
-  Cpu
+  Cpu,
+  User
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -31,10 +32,11 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  userRole: 'representative' | 'manager' | 'admin';
+  userRole: 'sales_rep' | 'manager' | 'admin';
+  currentUser?: { full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }: SidebarProps) {
+export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole, currentUser }: SidebarProps) {
   // Dynamic sidebar sections based on user role
   const getSections = () => {
     switch (userRole) {
@@ -63,6 +65,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
               { name: 'Leads', icon: Users, tab: 'leads' },
               { name: 'Activities', icon: Activity, tab: 'activities' },
               { name: 'Calendar', icon: Calendar, tab: 'calendar' },
+              { name: 'Emails', icon: Mail, tab: 'emails' },
               { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
               { name: 'Integrations', icon: Link2, tab: 'integrations' },
             ]
@@ -97,6 +100,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
             items: [
               { name: 'Integrations', icon: Link2, tab: 'integrations' },
               { name: 'Automation', icon: GitBranch, tab: 'automation' },
+              { name: 'Emails', icon: Mail, tab: 'emails' },
             ]
           },
           {
@@ -114,7 +118,7 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
             ]
           }
         ];
-      case 'representative':
+      case 'sales_rep':
       default:
         return [
           {
@@ -155,27 +159,18 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
 
   // Dynamic user profile footer details based on active role
   const getUserProfile = () => {
-    switch (userRole) {
-      case 'admin':
-        return {
-          name: "System Admin",
-          role: "Administrator",
-          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80"
-        };
-      case 'manager':
-        return {
-          name: "Alex Johnson",
-          role: "Sales Manager",
-          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
-        };
-      case 'representative':
-      default:
-        return {
-          name: "Sarah Johnson",
-          role: "Sales Representative",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
-        };
+    if (currentUser) {
+      return {
+        name: currentUser.full_name,
+        role: currentUser.job_title || (userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative'),
+        avatar: currentUser.avatar_url || null,
+      };
     }
+    return {
+      name: userRole === 'admin' ? 'Admin' : userRole === 'manager' ? 'Manager' : 'Sales Rep',
+      role: userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative',
+      avatar: null,
+    };
   };
 
   const profile = getUserProfile();
@@ -308,14 +303,18 @@ export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole }
           className="flex items-center justify-between w-full text-left cursor-pointer hover:bg-slate-50 p-1 rounded-lg transition-colors"
         >
           <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
-              <Image 
-                src={profile.avatar} 
-                alt={`${profile.name} Profile`} 
-                width={32} height={32}
-                className="h-full w-full object-cover"
-                unoptimized
-              />
+            <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
+              {profile.avatar ? (
+                <Image 
+                  src={profile.avatar} 
+                  alt={`${profile.name} Profile`} 
+                  width={32} height={32}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <User className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
+              )}
             </div>
             {!collapsed && (
               <div className="text-left overflow-hidden">

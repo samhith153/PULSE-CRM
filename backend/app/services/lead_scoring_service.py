@@ -8,9 +8,12 @@ import os
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.lead_score import LeadScore
+from app.models.email_summary import EmailSummary
+from app.models.email import Email
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.feature_vector_repository import FeatureVectorRepository
 from app.repositories.lead_score_repository import LeadScoreRepository
@@ -67,6 +70,25 @@ class LeadScoringService:
         }
 
         # ── Build engagement_features dict ────────────────────────────────────
+        # Fetch latest email summary for this lead to get summary_word
+        # (single query with LEFT JOIN instead of two sequential queries)
+        summary_word = None
+        try:
+            stmt_summary = (
+                select(EmailSummary.summary_word)
+                .join(Email, Email.thread_id == EmailSummary.thread_id)
+                .where(
+                    Email.external_entity_id == lead_id,
+                    Email.is_active.is_(True),
+                )
+                .order_by(Email.sent_at.desc())
+                .limit(1)
+            )
+            result_summary = await self.db.execute(stmt_summary)
+            summary_word = result_summary.scalar_one_or_none()
+        except Exception:
+            pass
+
         engagement_features = {
             "intent_category_score": fv.ai_intent_category_score or 0,
             "buying_stage_score": fv.buying_stage_score or 0,
@@ -77,24 +99,16 @@ class LeadScoringService:
             "days_since_last_outbound": fv.days_since_last_outbound or 0,
             # Raw values for reason_generator
             "average_response_time_hours": fv.average_response_time,
-            "intent_today": None,
-            "buying_stage": None,
-            "intent_today_score": 0,
+            "intent_today": summary_word,
+            "buying_stage": lead.status,
+            "intent_today_score": fv.ai_intent_category_score or 0,
             "intent_7_days_ago_score": 0,
         }
 
         # ── Console output: INPUT ────────────────────────────────────────────
-        print(f"\n{'='*60}")
-        print(f"LEAD SCORING COMPUTATION FOR LEAD: {lead_id}")
-        print(f"{'='*60}")
-        print(f"FIT FEATURES INPUT:")
-        for k, v in fit_features.items():
-            print(f"  {k}: {v}")
-        print(f"{'-'*60}")
-        print(f"ENGAGEMENT FEATURES INPUT:")
-        for k, v in engagement_features.items():
-            print(f"  {k}: {v}")
-        print(f"{'-'*60}")
+        logger.debug("LEAD SCORING COMPUTATION FOR LEAD: %s", lead_id)
+        logger.debug("FIT FEATURES INPUT: %s", fit_features)
+        logger.debug("ENGAGEMENT FEATURES INPUT: %s", engagement_features)
 
         # ── Compute scores ───────────────────────────────────────────────────
         result = None
@@ -108,15 +122,11 @@ class LeadScoringService:
             return None
 
         # ── Console output: RESULTS ──────────────────────────────────────────
-        print(f"SCORING RESULTS:")
-        print(f"  fit_score: {result['fit']['score']}")
-        print(f"  fit_reasons: {result['fit']['reasons']}")
-        print(f"  engagement_score: {result['engagement']['score']}")
-        print(f"  engagement_reasons: {result['engagement']['reasons']}")
-        print(f"  overall_score: {result['overall']['score']}")
-        print(f"  tier: {result['overall']['tier']}")
-        print(f"  top_reasons: {result['overall']['top_reasons']}")
-        print(f"{'='*60}\n")
+        logger.debug("SCORING RESULTS: fit=%s engagement=%s overall=%s tier=%s reasons=%s",
+            result['fit']['score'], result['engagement']['score'],
+            result['overall']['score'], result['overall']['tier'],
+            result['overall']['top_reasons'],
+        )
 
         # ── Persist onto LeadScore table ────────────────────────────────────
         scores_data = {

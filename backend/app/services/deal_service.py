@@ -196,6 +196,27 @@ class DealService:
                 payload={"deal_id": str(deal.id), "changes": list(update_data.keys())},
                 topic="deal",
             )
+
+        # Trigger recommendation regeneration if stage changed and deal has a linked lead
+        if deal.lead_id and "pipeline_stage_id" in update_data:
+            try:
+                from app.services.recommendation_service import RecommendationService
+                await RecommendationService(self.db).generate_for_lead(
+                    deal.lead_id, organization_id
+                )
+            except Exception as e:
+                logger.warning("Failed to generate recommendation on deal update", extra={"deal_id": str(deal_id), "error": str(e)})
+            # Recompute lead scores (pipeline stage changed)
+            try:
+                from app.services.feature_vector_service import FeatureVectorService
+                from app.services.lead_scoring_service import LeadScoringService
+                fvs = FeatureVectorService(self.db)
+                await fvs.compute_and_store_for_lead(deal.lead_id, organization_id, deal.created_by)
+                lss = LeadScoringService(self.db)
+                await lss.compute_and_store_scores(deal.lead_id, organization_id, deal.created_by)
+            except Exception as e:
+                logger.warning("Failed to recompute lead scores on deal stage change", extra={"deal_id": str(deal_id), "error": str(e)})
+
         return await self.get(deal_id, organization_id)
 
     async def delete(self, deal_id: UUID, organization_id: UUID) -> None:

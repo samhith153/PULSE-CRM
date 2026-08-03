@@ -12,11 +12,13 @@ services:
     envVars:
       - key: DATABASE_URL
         sync: false
-      - key: JWT_SECRET_KEY
+      - key: SECRET_KEY
         generateValue: true
       - key: ENVIRONMENT
         value: production
       - key: SUMMARIZATION_API_KEY
+        sync: false
+      - key: ASSISTANT_API_KEY
         sync: false
 
 

@@ -14,7 +14,7 @@ import {
   Star,
   Loader2,
 } from 'lucide-react';
-import { getAdminDashboard, asNumber, formatINR, formatPct, AdminDashboardData } from '@/utils/api';
+import { getRoleDashboard, asNumber, formatINR, formatPct, AdminDashboardData, ManagerDashboardData, SalesRepDashboardData } from '@/utils/api';
 
 interface RepRow {
   rank: number;
@@ -27,7 +27,7 @@ interface RepRow {
   avatar?: string | null;
 }
 
-export default function TeamPerformanceView() {
+export default function TeamPerformanceView({ userRole = 'manager' }: { userRole?: 'sales_rep' | 'manager' | 'admin' }) {
   const [reps, setReps] = useState<RepRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,26 +35,53 @@ export default function TeamPerformanceView() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getAdminDashboard()
-      .then((d: AdminDashboardData) => {
+    // Manager/admin see the team leaderboard; a sales rep sees their own stats.
+    getRoleDashboard(userRole)
+      .then((d: AdminDashboardData | ManagerDashboardData | SalesRepDashboardData) => {
         if (cancelled) return;
-        const rows: RepRow[] = (d?.top_sales_reps ?? []).map((r, i) => ({
-          rank: i + 1,
-          name: r.full_name,
-          revenue: asNumber(r.revenue),
-          calls: 0,
-          meetings: 0,
-          deals: asNumber(r.deals_closed),
-          winRate: asNumber(r.conversion_rate),
-          avatar: null,
-        }));
+        let rows: RepRow[] = [];
+        if (userRole === 'admin' && 'top_sales_reps' in d) {
+          rows = (d as AdminDashboardData).top_sales_reps.map((r, i) => ({
+            rank: i + 1,
+            name: r.full_name,
+            revenue: asNumber(r.revenue),
+            calls: 0,
+            meetings: 0,
+            deals: asNumber(r.deals_closed),
+            winRate: asNumber(r.conversion_rate),
+            avatar: null,
+          }));
+        } else if (userRole === 'manager' && 'rep_quota_attainment' in d) {
+          rows = (d as ManagerDashboardData).rep_quota_attainment.map((r) => ({
+            rank: r.rank,
+            name: r.full_name,
+            revenue: asNumber(r.revenue_generated),
+            calls: 0,
+            meetings: 0,
+            deals: 0,
+            winRate: asNumber(r.quota_achievement_pct),
+            avatar: null,
+          }));
+        } else if (userRole === 'sales_rep' && 'summary' in d) {
+          const s = (d as SalesRepDashboardData).summary;
+          rows = [{
+            rank: 1,
+            name: 'You',
+            revenue: asNumber(s.total_revenue),
+            calls: 0,
+            meetings: 0,
+            deals: asNumber(s.won_deals),
+            winRate: asNumber(s.win_rate),
+            avatar: null,
+          }];
+        }
         setReps(rows);
         setError(null);
       })
       .catch((e) => { if (!cancelled) setError(e?.message || 'Failed to load team performance'); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [userRole]);
 
   const teamAverages = reps.length
     ? {

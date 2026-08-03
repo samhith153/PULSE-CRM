@@ -1,0 +1,335 @@
+{
+  "app_name": "PULSE CRM",
+  "app_brand": "KALNET PULSE",
+  "version": "1.0.0",
+
+  "features": {
+    "leads": {
+      "name": "Lead Management",
+      "description": "Track and manage potential customers through your sales funnel.",
+      "statuses": ["New", "Contacted", "Qualified", "Converted", "Lost"],
+      "capabilities": {
+        "create_lead": "Click 'Add Lead' button in the Leads page header to create a new lead manually.",
+        "edit_lead": "Click the pencil (Edit) icon on any lead row to modify its details.",
+        "delete_lead": "Click the trash (Delete) icon on a lead row. Only admins and managers can delete leads.",
+        "convert_lead": "Click the 'Convert' button on a lead row. This moves the lead into the Deals pipeline as an active opportunity. Converted leads cannot be converted again.",
+        "lead_scoring": "PULSE uses AI to automatically score leads based on Fit Score (company/industry match) and Engagement Score (email opens, meetings, activity). Scores range from 0-100.",
+        "priority_view": "Toggle 'Priority View' in the Leads page header to sort leads by AI score. The highest-scoring lead is highlighted with a accent border.",
+        "lead_sources": "Leads can come from: Website, Referral, LinkedIn, Cold Email, Event, Webinar, Partner, Paid Ads, Organic Search, or Other.",
+        "lead_owner": "Each lead has an assigned owner responsible for following up."
+      }
+    },
+    "deals": {
+      "name": "Deal Pipeline",
+      "description": "Visual Kanban pipeline to track sales opportunities from prospecting to close.",
+      "pipeline_stages": ["Prospecting", "Qualification", "Proposal", "Negotiation", "Closed Won", "Closed Lost"],
+      "capabilities": {
+        "view_pipeline": "Click 'Pipeline' or 'Deals' in the sidebar to see the Kanban board view.",
+        "create_deal": "Click 'Add Deal' button in the Pipeline view to create a new deal.",
+        "move_deal": "Drag and drop deal cards between pipeline stages on the Kanban board.",
+        "deal_value": "Each deal has an estimated value used for revenue forecasting.",
+        "weighted_forecast": "Pipeline calculates weighted forecast by multiplying deal value by stage probability (e.g., Proposal = 40%, Negotiation = 70%).",
+        "deal_owner": "Each deal has an assigned owner responsible for closing it."
+      }
+    },
+    "contacts": {
+      "name": "Contact Management",
+      "description": "Manage individual people you communicate with at companies.",
+      "capabilities": {
+        "create_contact": "Click 'Add Contact' in the Contacts page. Fill in name, email, phone, job title, and optional company link.",
+        "edit_contact": "Click the edit icon on any contact row to update details.",
+        "delete_contact": "Only admins and managers can delete contacts.",
+        "link_to_company": "Contacts can be linked to a Company record to build account-level relationships."
+      }
+    },
+    "companies": {
+      "name": "Company Management",
+      "description": "Track B2B account records for organizations you sell to.",
+      "capabilities": {
+        "create_company": "Click 'Add Company' in the Companies page. Add domain, industry, employee count, annual revenue.",
+        "edit_company": "Click the edit icon to update company details.",
+        "delete_company": "Only admins and managers can delete companies.",
+        "linked_records": "Companies link to Contacts, Leads, and Deals for a 360-degree account view."
+      }
+    },
+    "emails": {
+      "name": "Email Integration",
+      "description": "Send and sync emails directly from PULSE CRM via Gmail.",
+      "capabilities": {
+        "connect_gmail": "Go to Integrations page and connect your Gmail account via OAuth. This enables email sync and sending.",
+        "send_email": "From a Lead detail view, click the 'Email' action button. Compose and send directly through your connected Gmail.",
+        "email_sync": "PULSE automatically syncs incoming and outgoing emails linked to leads and contacts.",
+        "email_thread_summary": "AI can summarize long email threads to extract key points, sentiment, and action items."
+      }
+    },
+    "calendar": {
+      "name": "Calendar",
+      "description": "Schedule and manage meetings, calls, follow-ups, and demos.",
+      "capabilities": {
+        "view_calendar": "Click 'Calendar' in the sidebar to see all scheduled events.",
+        "create_event": "Click to add a new calendar event — meetings, calls, follow-ups, demos, or tasks.",
+        "event_types": "Events can be: Meeting, Call, Follow-up, Demo, Task, or Reminder.",
+        "link_to_records": "Calendar events can be linked to Leads, Contacts, Companies, or Deals."
+      }
+    },
+    "activities": {
+      "name": "Activity Timeline",
+      "description": "Immutable event log tracking all interactions across your CRM.",
+      "capabilities": {
+        "view_timeline": "Each Lead, Deal, Contact, and Company has an Activity Timeline tab showing all history.",
+        "activity_types": "Tracks: calls, emails, meetings, notes, system events, and AI actions.",
+        "log_activity": "Activities are automatically logged when you perform actions (send email, log call, schedule meeting)."
+      }
+    },
+    "ai_insights": {
+      "name": "AI Insights",
+      "description": "AI-powered lead scoring, recommendations, and conversation intelligence.",
+      "capabilities": {
+        "lead_scoring": "AI scores each lead based on fit (company/industry match) and engagement (activity level). View scores in the Priority View.",
+        "next_best_action": "When viewing a lead, the AI suggests the next best action to take (e.g., 'Follow up with pricing details').",
+        "conversation_summary": "AI summarizes email threads to extract key points, sentiment, intent, and suggested replies.",
+        "batch_recommendations": "Get AI recommendations for all leads at once in the Priority View."
+      }
+    },
+    "reports": {
+      "name": "Reports & Dashboards",
+      "description": "Role-specific dashboards and customizable reports.",
+      "capabilities": {
+        "dashboards": "Each role has a tailored dashboard: Sales Rep sees personal pipeline, Manager sees team metrics, Admin sees full organization overview.",
+        "report_builder": "Click 'New Report' to build custom reports with filters and grouping.",
+        "export_reports": "Reports can be exported. Managers and admins can export; sales reps can view and export.",
+        "forecast": "View pipeline forecast with weighted deal values and close date projections.",
+        "team_performance": "Managers and admins can view team performance metrics and leaderboards."
+      }
+    },
+    "settings": {
+      "name": "Settings & Integrations",
+      "description": "Configure your account, integrations, and system preferences.",
+      "capabilities": {
+        "profile": "Update your name, email, timezone, and avatar in the Profile page.",
+        "integrations": "Connect Gmail, SMTP, Brevo for email. Manage webhook subscriptions.",
+        "notifications": "View and manage in-app notifications for deal updates, lead assignments, and system events.",
+        "documents": "Upload and manage files (attachments, avatars) in the Documents page."
+      }
+    }
+  },
+
+  "workflows": {
+    "create_lead": {
+      "title": "How to Create a Lead",
+      "steps": [
+        "Navigate to the **Leads** page from the sidebar.",
+        "Click the **Add Lead** button in the top-right corner.",
+        "Fill in the lead details: Name, Company, Email, Phone, Source, Industry, etc.",
+        "Select the **Status** (default is New) and **Priority**.",
+        "Click **Save** to create the lead."
+      ]
+    },
+    "convert_lead": {
+      "title": "How to Convert a Lead",
+      "steps": [
+        "Go to the **Leads** page and find the lead you want to convert.",
+        "Click the **Convert** button on the lead row.",
+        "In the conversion dialog, optionally update Industry, Revenue, and Employee Count.",
+        "Select a **Pipeline Stage** for the new deal.",
+        "Click **Convert** to move the lead into the Deals pipeline.",
+        "The lead status changes to 'Converted' and a new Deal is created."
+      ]
+    },
+    "manage_pipeline": {
+      "title": "How to Manage the Deal Pipeline",
+      "steps": [
+        "Navigate to **Pipeline** or **Deals** in the sidebar.",
+        "View the Kanban board with deals organized by pipeline stage.",
+        "Drag and drop deal cards to move them between stages.",
+        "Click **Add Deal** to create a new deal directly in a pipeline stage.",
+        "The weighted forecast updates automatically as deals move."
+      ]
+    },
+    "send_email": {
+      "title": "How to Send an Email",
+      "steps": [
+        "Make sure your Gmail is connected in **Integrations** settings.",
+        "Open a Lead detail view by clicking on a lead.",
+        "Click the **Email** action button.",
+        "Enter the Subject and compose your email body.",
+        "Click **Send** to send the email through your connected Gmail."
+      ]
+    },
+    "log_call": {
+      "title": "How to Log a Call",
+      "steps": [
+        "Open a Lead detail view by clicking on a lead.",
+        "Click the **Log Call** action button.",
+        "Select the call outcome (e.g., 'Spoke with Lead', 'Left Voicemail', 'No Answer').",
+        "Add notes about the call.",
+        "Click **Save** to log the call to the activity timeline."
+      ]
+    },
+    "schedule_meeting": {
+      "title": "How to Schedule a Meeting",
+      "steps": [
+        "Open a Lead detail view by clicking on a lead.",
+        "Click the **Meet** action button.",
+        "Enter the meeting Title, Date, Time, and Description/Agenda.",
+        "Click **Save** to schedule the meeting."
+      ]
+    },
+    "use_priority_view": {
+      "title": "How to Use Priority View",
+      "steps": [
+        "Go to the **Leads** page.",
+        "Click the **Priority View** toggle button in the header.",
+        "Leads are now sorted by AI score (highest first).",
+        "The top lead is highlighted with an accent border.",
+        "View Fit Score, Engagement Score, Overall Score, and AI Recommendation for each lead.",
+        "Toggle off to return to the standard list view."
+      ]
+    },
+    "view_reports": {
+      "title": "How to View Reports",
+      "steps": [
+        "Click **Reports** in the sidebar.",
+        "Browse the available report types and dashboards.",
+        "Use the Report Builder to create custom reports.",
+        "Export reports using the export button (Managers and Admins only)."
+      ]
+    }
+  },
+
+  "roles": {
+    "admin": {
+      "name": "Administrator",
+      "description": "Full access to all features and settings.",
+      "can": [
+        "Create, edit, and delete all CRM records (leads, deals, contacts, companies)",
+        "Delete leads, deals, contacts, and companies",
+        "Assign leads and deals to team members",
+        "Manage users (create, edit, delete, activate, deactivate)",
+        "Manage roles and permissions",
+        "View and export all reports",
+        "Manage pipeline stages",
+        "Connect Gmail and manage integrations",
+        "Access AI features",
+        "Manage webhooks",
+        "Upload and delete documents",
+        "Access system admin settings",
+        "View audit logs"
+      ],
+      "cannot": []
+    },
+    "manager": {
+      "name": "Manager",
+      "description": "Manage team and CRM data, but limited system admin access.",
+      "can": [
+        "Create, edit all CRM records (leads, deals, contacts, companies)",
+        "Assign leads and deals to team members",
+        "Create, edit, activate/deactivate users",
+        "View and export all reports",
+        "Manage pipeline stages",
+        "Connect Gmail and manage integrations",
+        "Access AI features",
+        "Upload and manage documents"
+      ],
+      "cannot": [
+        "Delete users",
+        "Manage roles and permissions",
+        "Create or delete organizations",
+        "Access system admin settings",
+        "View audit logs"
+      ]
+    },
+    "sales_rep": {
+      "name": "Sales Representative",
+      "description": "Day-to-day CRM usage for sales activities.",
+      "can": [
+        "Create, edit leads, deals, contacts, companies",
+        "Convert leads to deals",
+        "Send emails via connected Gmail",
+        "Log calls and schedule meetings",
+        "View and export reports",
+        "Access AI insights and recommendations",
+        "Upload documents"
+      ],
+      "cannot": [
+        "Delete any CRM records (leads, deals, contacts, companies)",
+        "Assign leads or deals to others",
+        "Manage pipeline stages",
+        "Create, edit, or delete users",
+        "Manage roles or permissions",
+        "Manage webhooks or integrations"
+      ]
+    }
+  },
+
+  "faq": [
+    {
+      "question": "What is PULSE CRM?",
+      "answer": "PULSE CRM (KALNET PULSE) is an enterprise Customer Relationship Management platform for B2B sales and marketing teams. It helps you manage leads, deals, contacts, companies, emails, and activities — all with AI-powered insights."
+    },
+    {
+      "question": "How do I reset my password?",
+      "answer": "Go to the **Settings** page and update your password from the Profile section. If you're locked out, contact your admin."
+    },
+    {
+      "question": "What is lead scoring?",
+      "answer": "Lead scoring is an AI-powered feature that automatically scores leads from 0-100 based on two factors: **Fit Score** (how well the lead matches your ideal customer profile) and **Engagement Score** (how actively they interact with your emails and meetings)."
+    },
+    {
+      "question": "What does the Priority View do?",
+      "answer": "Priority View sorts your leads by AI score (highest first) so you can focus on the most promising opportunities first. Toggle it on/off using the **Priority View** button in the Leads page header."
+    },
+    {
+      "question": "How do I connect my Gmail?",
+      "answer": "Go to **Integrations** in the sidebar, find the Gmail section, and click **Connect Gmail**. You'll be redirected to Google OAuth to authorize PULSE to access your email. Once connected, you can send and sync emails directly from the CRM."
+    },
+    {
+      "question": "Can I undo a lead conversion?",
+      "answer": "No, lead conversion is permanent. Once a lead is converted, it moves to the Deals pipeline and its status is set to 'Converted'. Make sure you're ready to convert before proceeding."
+    },
+    {
+      "question": "How does the AI recommendation work?",
+      "answer": "The AI analyzes your lead's fit score, engagement score, recent activity, email interactions, and meeting history to suggest the **next best action** — like 'Follow up with pricing' or 'Schedule a demo call'."
+    },
+    {
+      "question": "What's the difference between a Lead and a Deal?",
+      "answer": "A **Lead** is a potential customer you're prospecting. A **Deal** is an active sales opportunity in your pipeline. When a lead is qualified, you **convert** it into a Deal to track it through your sales pipeline."
+    },
+    {
+      "question": "How do I add a new team member?",
+      "answer": "Admins can go to **Users** in the sidebar and click **Add User**. Managers can also create users. Fill in their name, email, assign a role, and they'll receive an invitation."
+    },
+    {
+      "question": "Can I customize the pipeline stages?",
+      "answer": "Yes, admins and managers can manage pipeline stages. Go to **Pipeline** settings to add, edit, or reorder stages. Each stage has a name, color, and probability percentage used for forecasting."
+    },
+    {
+      "question": "How do I upload a file or document?",
+      "answer": "Go to **Documents** in the sidebar and click the upload button. You can upload images (JPEG, PNG, WebP), PDFs, and Word documents. Files are stored securely and can be attached to CRM records."
+    },
+    {
+      "question": "What notifications will I receive?",
+      "answer": "PULSE sends in-app notifications for events like: lead assignment, deal stage changes, deal won/lost, new activities, and system updates. View them in the **Notifications** page."
+    }
+  ],
+
+  "glossary": {
+    "Lead": "A potential customer or prospect that hasn't been qualified yet.",
+    "Deal": "An active sales opportunity being tracked through your pipeline.",
+    "Contact": "An individual person you communicate with at a company.",
+    "Company": "A B2B account record representing an organization.",
+    "Pipeline": "The visual stages a deal moves through from prospecting to close.",
+    "Pipeline Stage": "A step in your sales process (e.g., Prospecting, Proposal, Negotiation, Won, Lost).",
+    "Lead Score": "AI-calculated score (0-100) indicating lead quality.",
+    "Fit Score": "How well a lead matches your ideal customer profile based on company size, industry, etc.",
+    "Engagement Score": "How actively a lead interacts with your emails, meetings, and activities.",
+    "Priority Tier": "Classification of leads: Critical, High, Medium, or Low based on overall score.",
+    "Weighted Forecast": "Revenue projection calculated by multiplying deal value by stage probability.",
+    "Activity Timeline": "Chronological log of all interactions (calls, emails, meetings, notes) for a record.",
+    "Lead Conversion": "The process of moving a qualified Lead into the Deals pipeline.",
+    "Owner": "The team member assigned to manage a lead or deal.",
+    "Gmail Integration": "OAuth connection that enables email sync and sending from within PULSE.",
+    "Webhook": "Outbound HTTP notifications triggered by CRM events.",
+    "RBAC": "Role-Based Access Control — permissions assigned based on user roles (Admin, Manager, Sales Rep)."
+  }
+}
