@@ -218,3 +218,40 @@ Thread ID:   19fbd5862c644e7e
     - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
     - ⚙️ Very complex industry - Healthcare → Heavy workflows & regulations
 ======================================================================
+
+======================================================================
+SCORING LOG — 2026-08-03T08:29:21.345739+00:00
+Lead ID:     4cd63c84-71b3-4fba-88f1-f74530e7d90f
+Thread ID:   19fc6bd04ab53b5a
+--- Engagement Features ---
+  average_response_time: 0.01
+  response_time_score: 100
+  num_response_pairs: 1
+  last_processed_sent_at: 2026-08-03 08:28:51+00:00
+  days_since_last_outbound: 0
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 50
+  ai_intent_category_score: 35
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         67
+  Fit Reasons:
+    - 👥 Small company - 10 employees → Lower complexity
+    - ⚙️ Very complex industry - Manufacturing → Heavy workflows & regulations
+    - ❌ No CRM system - Using no crm → Major pain point
+    - 🎯 High customization potential - Will need tailored workflows
+  Engagement Score:  57
+  Engagement Reasons:
+    - 🟠 WEAK INTENT - Lead said: 'inquiry' (score: 35.0)
+    - 📞 MID-STAGE - Pipeline: converted → In progress (score: 50.0)
+    - ⚡ VERY RESPONSIVE - Average: 0.01h → Highly engaged (score: 100.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 0 days ago → Still hot
+  Overall Score:     63
+  Tier:              Medium
+  Top Reasons:
+    - 🟠 WEAK INTENT - Lead said: 'inquiry' (score: 35.0)
+    - ⚙️ Very complex industry - Manufacturing → Heavy workflows & regulations
+======================================================================

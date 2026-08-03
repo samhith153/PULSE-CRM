@@ -71,24 +71,21 @@ class LeadScoringService:
 
         # ── Build engagement_features dict ────────────────────────────────────
         # Fetch latest email summary for this lead to get summary_word
+        # (single query with LEFT JOIN instead of two sequential queries)
         summary_word = None
         try:
-            stmt_email = (
-                select(Email)
-                .where(Email.external_entity_id == lead_id, Email.is_active == True)
+            stmt_summary = (
+                select(EmailSummary.summary_word)
+                .join(Email, Email.thread_id == EmailSummary.thread_id)
+                .where(
+                    Email.external_entity_id == lead_id,
+                    Email.is_active.is_(True),
+                )
                 .order_by(Email.sent_at.desc())
                 .limit(1)
             )
-            result_email = await self.db.execute(stmt_email)
-            latest_email = result_email.scalar_one_or_none()
-            if latest_email:
-                stmt_summary = select(EmailSummary).where(
-                    EmailSummary.thread_id == latest_email.thread_id
-                )
-                result_summary = await self.db.execute(stmt_summary)
-                summary_obj = result_summary.scalar_one_or_none()
-                if summary_obj:
-                    summary_word = summary_obj.summary_word
+            result_summary = await self.db.execute(stmt_summary)
+            summary_word = result_summary.scalar_one_or_none()
         except Exception:
             pass
 

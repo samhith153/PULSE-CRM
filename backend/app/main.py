@@ -1,6 +1,7 @@
 ﻿"""
 KALNET PULSE CRM - FastAPI Application Factory
 """
+import asyncio
 import os
 import sys
 
@@ -41,8 +42,6 @@ setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
 logger = get_logger(__name__)
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-import sys
-import os
 
 scheduler = AsyncIOScheduler()
 event_worker = EventWorker()
@@ -56,66 +55,63 @@ async def process_event_outbox():
     except Exception as exc:
         logger.warning("Event outbox processing failed: %s", exc)
 
-def recompute_features():
+
+async def recompute_features():
+    """Async batch job: run feature recompute subprocess per org, then
+    rescore every lead.  Runs via APScheduler AsyncIOScheduler (no
+    asyncio.run needed — we're already in the event loop).
+    """
     from app.services.feature_recompute_service import recompute_lead_features
+    from app.database.connection import AsyncSessionFactory
+    from app.models.lead import Lead
+    from app.services.lead_scoring_service import LeadScoringService
+    from sqlalchemy import select, text
+    from uuid import UUID
 
     try:
-        from app.database.connection import engine
-        from sqlalchemy import text
-        import asyncio
-
-        async def _get_org_ids():
-            async with engine.connect() as conn:
-                result = await conn.execute(text("SELECT DISTINCT id FROM organizations"))
-                return [str(row[0]) for row in result]
-
-        org_ids = asyncio.run(_get_org_ids())
+        async with AsyncSessionFactory() as db:
+            result = await db.execute(text("SELECT DISTINCT id FROM organizations"))
+            org_ids = [str(row[0]) for row in result]
     except Exception as exc:
         logger.warning("Failed to fetch organization IDs: %s", exc)
         return
 
     for org_id in org_ids:
-        ok = recompute_lead_features(org_id)
-        if not ok:
-            logger.warning("Feature recompute failed for org %s.", org_id)
-        else:
-            logger.info("Feature recompute completed for org %s.", org_id)
-
-        # After feature vectors are updated, re-run scoring for all leads
+        # Run the subprocess in a thread so the event loop stays responsive
         try:
-            import asyncio as _asyncio
-            from uuid import UUID as _UUID
-            from app.database.connection import AsyncSessionFactory
-            from app.models.lead import Lead
-            from app.services.lead_scoring_service import LeadScoringService
-            from sqlalchemy import select as _select
+            ok = await asyncio.to_thread(recompute_lead_features, org_id)
+            if not ok:
+                logger.warning("Feature recompute failed for org %s.", org_id)
+            else:
+                logger.info("Feature recompute completed for org %s.", org_id)
+        except Exception as exc:
+            logger.warning("Feature recompute exception for org %s: %s", org_id, exc)
 
-            async def _rescore_all():
-                async with AsyncSessionFactory() as db:
-                    result = await db.execute(
-                        _select(Lead.id).where(
-                            Lead.organization_id == _UUID(org_id),
-                            Lead.is_active.is_(True),
-                            Lead.is_deleted.is_(False),
-                        )
+        # Rescore all leads for this org in a fresh session
+        try:
+            async with AsyncSessionFactory() as db:
+                result = await db.execute(
+                    select(Lead.id).where(
+                        Lead.organization_id == UUID(org_id),
+                        Lead.is_active.is_(True),
+                        Lead.is_deleted.is_(False),
                     )
-                    lead_ids = [row[0] for row in result.all()]
-                    svc = LeadScoringService(db)
-                    scored = 0
-                    for lid in lead_ids:
-                        try:
-                            ls = await svc.compute_and_store_scores(lid, _UUID(org_id))
-                            if ls:
-                                scored += 1
-                        except Exception:
-                            pass
-                    await db.commit()
-                    return scored
-
-            scored_count = _asyncio.run(_rescore_all())
-            logger.info("Rescored %d leads for org %s.", scored_count, org_id)
+                )
+                lead_ids = [row[0] for row in result.all()]
+                svc = LeadScoringService(db)
+                scored = 0
+                for lid in lead_ids:
+                    try:
+                        ls = await svc.compute_and_store_scores(lid, UUID(org_id))
+                        if ls:
+                            scored += 1
+                    except Exception:
+                        pass
+                await db.commit()
+                logger.info("Rescored %d leads for org %s.", scored, org_id)
         except Exception as exc:
             logger.warning("Rescoring failed for org %s: %s", org_id, exc)
+
 
 async def poll_gmail_replies():
     """Poll connected Gmail accounts for new inbound messages / replies."""
@@ -144,12 +140,13 @@ async def poll_gmail_replies():
     except Exception as exc:
         logger.warning("Gmail polling failed: %s", exc)
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     register_default_consumers()
-    logger.info(...)  # your existing startup lines stay here
+    logger.info("Application starting")
 
-    scheduler.add_job(recompute_features, "interval", minutes=5)
+    scheduler.add_job(recompute_features, "interval", minutes=60)
     scheduler.add_job(process_event_outbox, "interval", seconds=15)
     scheduler.add_job(poll_gmail_replies, "interval", minutes=5)
     scheduler.start()

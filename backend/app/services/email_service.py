@@ -56,6 +56,48 @@ BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 logger = get_logger(__name__)
 
+# ── Background-task infrastructure ──────────────────────────────────────
+# Holds references to fire-and-forget tasks so the garbage collector
+# does not cancel them mid-flight.
+_background_tasks: set[asyncio.Task] = set()  # noqa: F811
+
+# Per-lead debounce: when bursty inbound mail arrives for the same lead we
+# only want one subprocess running at a time.  Maps lead_id -> asyncio.Event
+# that is *set* while a recompute is in progress.
+_recompute_locks: dict[str, asyncio.Event] = {}
+
+
+async def _run_recompute_background(
+    organization_id: UUID,
+    lead_id: UUID,
+) -> None:
+    """Run the feature-recompute subprocess in a thread pool, with per-lead
+    debounce so concurrent inbound emails for the same lead don't spawn
+    multiple subprocesses.
+    """
+    from app.services.feature_recompute_service import recompute_lead_features
+
+    key = f"{organization_id}:{lead_id}"
+    lock = _recompute_locks.get(key)
+    if lock is not None and lock.is_set():
+        logger.debug("Recompute already running for lead %s, skipping", lead_id)
+        return
+
+    lock = asyncio.Event()
+    _recompute_locks[key] = lock
+    lock.set()
+    try:
+        await asyncio.to_thread(
+            recompute_lead_features,
+            str(organization_id),
+            str(lead_id),
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Background recompute failed for lead %s: %s", lead_id, exc)
+    finally:
+        lock.clear()
+        _recompute_locks.pop(key, None)
+
 
 class EmailService:
     def __init__(self, db: AsyncSession) -> None:
@@ -551,14 +593,11 @@ class EmailService:
             # fresh on inbound mail (the 5-min batch job remains the fallback).
             # Best-effort: never let a recompute failure break email storage.
             if external_entity_type == "lead" and external_entity_id is not None:
-                try:
-                    from app.services.feature_recompute_service import recompute_lead_features
-                    recompute_lead_features(str(organization_id), str(external_entity_id))
-                except Exception as exc:  # noqa: BLE001
-                    logger.warning(
-                        "Engagement recompute skipped for lead %s: %s",
-                        external_entity_id, exc,
-                    )
+                task = asyncio.create_task(
+                    _run_recompute_background(organization_id, external_entity_id)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
         elif is_read:
             await self.events.record_event(
                 EventType.EMAIL_READ,

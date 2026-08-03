@@ -26,44 +26,83 @@ def _sync_db_url() -> str:
     return async_url
 
 
-def load_real_emails(organization_id: str) -> pd.DataFrame:
-    engine = create_engine(_sync_db_url())
-    query = """
-        SELECT
-            external_entity_id AS lead_id,
-            sender, receiver, direction, sent_at, raw_payload,
-            CASE WHEN raw_payload->>'status' = 'replied' THEN 'Yes' ELSE 'No' END AS replied
-        FROM emails
-        WHERE organization_id = %(org_id)s
-          AND receiver NOT LIKE '%%example.com%%'
-          AND sender NOT LIKE '%%example.com%%'
-          AND external_entity_id IN (SELECT id FROM leads)
-    """
-    df = pd.read_sql(query, engine, params={"org_id": organization_id})
+def _get_engine():
+    return create_engine(_sync_db_url(), pool_size=1, max_overflow=2, pool_pre_ping=True)
+
+
+def load_real_emails(organization_id: str, lead_id: str | None = None) -> pd.DataFrame:
+    engine = _get_engine()
+    params: dict = {"org_id": organization_id}
+    if lead_id:
+        query = """
+            SELECT
+                external_entity_id AS lead_id,
+                sender, receiver, direction, sent_at, raw_payload,
+                CASE WHEN raw_payload->>'status' = 'replied' THEN 'Yes' ELSE 'No' END AS replied
+            FROM emails
+            WHERE organization_id = %(org_id)s
+              AND receiver NOT LIKE '%%example.com%%'
+              AND sender NOT LIKE '%%example.com%%'
+              AND external_entity_id IN (SELECT id FROM leads)
+              AND external_entity_id = %(lead_id)s
+        """
+        params["lead_id"] = lead_id
+    else:
+        query = """
+            SELECT
+                external_entity_id AS lead_id,
+                sender, receiver, direction, sent_at, raw_payload,
+                CASE WHEN raw_payload->>'status' = 'replied' THEN 'Yes' ELSE 'No' END AS replied
+            FROM emails
+            WHERE organization_id = %(org_id)s
+              AND receiver NOT LIKE '%%example.com%%'
+              AND sender NOT LIKE '%%example.com%%'
+              AND external_entity_id IN (SELECT id FROM leads)
+        """
+    df = pd.read_sql(query, engine, params=params)
     df["lead_id"] = df["lead_id"].astype(str)
+    engine.dispose()
     return df
 
 
-def load_real_leads(organization_id: str) -> pd.DataFrame:
-    engine = create_engine(_sync_db_url())
-    query = """
-        SELECT
-            l.id AS lead_id,
-            l.status,
-            COALESCE(c.industry, l.industry) AS industry,
-            COALESCE(c.current_crm, l.current_crm) AS current_crm,
-            COALESCE(c.operational_system, l.operational_systems) AS operational_system,
-            COALESCE(c.employee_count, l.employee_count) AS employee_count
-        FROM leads l
-        LEFT JOIN companies c ON c.id = l.company_id
-        WHERE l.organization_id = %(org_id)s
-    """
-    df = pd.read_sql(query, engine, params={"org_id": organization_id})
+def load_real_leads(organization_id: str, lead_id: str | None = None) -> pd.DataFrame:
+    engine = _get_engine()
+    params: dict = {"org_id": organization_id}
+    if lead_id:
+        query = """
+            SELECT
+                l.id AS lead_id,
+                l.status,
+                COALESCE(c.industry, l.industry) AS industry,
+                COALESCE(c.current_crm, l.current_crm) AS current_crm,
+                COALESCE(c.operational_system, l.operational_systems) AS operational_system,
+                COALESCE(c.employee_count, l.employee_count) AS employee_count
+            FROM leads l
+            LEFT JOIN companies c ON c.id = l.company_id
+            WHERE l.organization_id = %(org_id)s
+              AND l.id = %(lead_id)s
+        """
+        params["lead_id"] = lead_id
+    else:
+        query = """
+            SELECT
+                l.id AS lead_id,
+                l.status,
+                COALESCE(c.industry, l.industry) AS industry,
+                COALESCE(c.current_crm, l.current_crm) AS current_crm,
+                COALESCE(c.operational_system, l.operational_systems) AS operational_system,
+                COALESCE(c.employee_count, l.employee_count) AS employee_count
+            FROM leads l
+            LEFT JOIN companies c ON c.id = l.company_id
+            WHERE l.organization_id = %(org_id)s
+        """
+    df = pd.read_sql(query, engine, params=params)
     df["lead_id"] = df["lead_id"].astype(str)
+    engine.dispose()
     return df
 
 def load_email_activity_signals(organization_id: str) -> pd.DataFrame:
-    engine = create_engine(_sync_db_url())
+    engine = _get_engine()
     query = """
         SELECT
             external_entity_id AS lead_id,
@@ -76,7 +115,9 @@ def load_email_activity_signals(organization_id: str) -> pd.DataFrame:
           AND sender NOT LIKE '%%example.com%%'
         ORDER BY sent_at DESC
     """
-    return pd.read_sql(query, engine, params={"org_id": organization_id})
+    df = pd.read_sql(query, engine, params={"org_id": organization_id})
+    engine.dispose()
+    return df
 
 
 def compute_reply_and_activity(emails: pd.DataFrame) -> dict:
