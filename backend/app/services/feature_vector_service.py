@@ -2,6 +2,7 @@
 Feature Vector Service
 Computes and persists feature vectors for leads using fit and engagement feature engineering modules.
 """
+import asyncio
 import sys
 import os
 from datetime import datetime, timezone
@@ -296,7 +297,7 @@ class FeatureVectorService:
             )
             await self.db.commit()
 
-            # Write scoring log
+            # Write scoring log (off the event loop to avoid blocking)
             if lead_score:
                 scores_dict = {
                     "fit_score": lead_score.fit_score,
@@ -307,7 +308,9 @@ class FeatureVectorService:
                     "priority_tier": lead_score.priority_tier,
                     "top_reasons": lead_score.top_reasons or [],
                 }
-                _write_scoring_log(lead_id, thread_id, features_data, scores_dict)
+                await asyncio.to_thread(
+                    _write_scoring_log, lead_id, thread_id, features_data, scores_dict
+                )
                 logger.info(
                     "Scoring complete for lead %s: overall=%s tier=%s",
                     lead_id, lead_score.overall_score, lead_score.priority_tier,

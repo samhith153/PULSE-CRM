@@ -1,6 +1,7 @@
 """
 Lead Management Service
 """
+import asyncio
 from typing import List, Optional, Tuple
 from uuid import UUID
 
@@ -17,8 +18,6 @@ from app.repositories.lead_repository import LeadRepository
 from app.repositories.pipeline_repository import PipelineRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.lead import LeadAssignRequest, LeadCreateRequest, LeadStatusUpdateRequest, LeadUpdateRequest
-from app.services.feature_vector_service import FeatureVectorService
-from app.services.lead_scoring_service import LeadScoringService
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import ActivityEntityType, ActivityType, DealStatus, LeadStatus, PipelineStageSlug
 
@@ -35,6 +34,47 @@ VALID_TRANSITIONS: dict[LeadStatus, list[LeadStatus]] = {
     LeadStatus.LOST: [],
 }
 
+# ── Background-task infrastructure ──────────────────────────────────────
+_lead_ai_tasks: set[asyncio.Task] = set()
+
+
+async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUID) -> None:
+    """Run feature-vector + scoring in a fresh DB session, off the request path."""
+    from app.database.connection import AsyncSessionFactory
+    from app.services.feature_vector_service import FeatureVectorService
+    from app.services.lead_scoring_service import LeadScoringService
+
+    try:
+        async with AsyncSessionFactory() as db:
+            try:
+                await FeatureVectorService(db).compute_and_store_for_lead(
+                    lead_id, organization_id, created_by
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Background feature-vector compute failed for lead %s: %s",
+                    lead_id, exc,
+                )
+            try:
+                await LeadScoringService(db).compute_and_store_scores(
+                    lead_id, organization_id, created_by
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Background lead scoring failed for lead %s: %s",
+                    lead_id, exc,
+                )
+            await db.commit()
+    except Exception as exc:
+        logger.warning("Background AI session failed for lead %s: %s", lead_id, exc)
+
+
+def _enqueue_lead_ai(lead_id: UUID, organization_id: UUID, created_by: UUID) -> None:
+    """Fire-and-forget feature-vector + scoring; does NOT block the caller."""
+    task = asyncio.create_task(_lead_ai_compute(lead_id, organization_id, created_by))
+    _lead_ai_tasks.add(task)
+    task.add_done_callback(_lead_ai_tasks.discard)
+
 
 class LeadService:
     def __init__(self, db: AsyncSession) -> None:
@@ -46,8 +86,6 @@ class LeadService:
         self.company_repo = CompanyRepository(db)
         self.contact_repo = ContactRepository(db)
         self.user_repo = UserRepository(db)
-        self.feature_vector_service = FeatureVectorService(db)
-        self.lead_scoring_service = LeadScoringService(db)
 
     async def create(
         self,
@@ -98,22 +136,8 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "owner_id": str(lead.owner_id)},
                 topic="lead",
             )
-        # Auto-compute feature vector
-        try:
-            await self.feature_vector_service.compute_and_store_for_lead(
-                lead.id, organization_id, created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to compute feature vector on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
-        # Auto-compute lead scores
-        try:
-            await self.lead_scoring_service.compute_and_store_scores(
-                lead.id, organization_id, created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to compute lead scores on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
-        # Refresh lead so response includes the newly computed scores
-        lead = await self.repo.get_active_by_id(lead.id, organization_id)
+        # Fire-and-forget: feature vector + scoring refresh in background
+        _enqueue_lead_ai(lead.id, organization_id, created_by)
         logger.info("Lead created", extra={"lead_id": str(lead.id)})
         return lead
 
@@ -165,20 +189,8 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "changes": list(update_data.keys())},
                 topic="lead",
             )
-        # Auto-compute feature vector on update
-        try:
-            await self.feature_vector_service.compute_and_store_for_lead(
-                lead.id, organization_id, lead.created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to compute feature vector on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
-        # Auto-compute lead scores on update
-        try:
-            await self.lead_scoring_service.compute_and_store_scores(
-                lead.id, organization_id, lead.created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to compute lead scores on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Fire-and-forget: feature vector + scoring refresh in background
+        _enqueue_lead_ai(lead.id, organization_id, lead.created_by)
         return await self.get(lead_id, organization_id)
 
     async def update_status(
@@ -217,20 +229,8 @@ class LeadService:
             payload={"lead_id": str(lead.id), "status": new_status.value},
             topic="lead",
         )
-        # ── Recompute feature vector (buying_stage_score depends on status) ─
-        try:
-            await self.feature_vector_service.compute_and_store_for_lead(
-                lead.id, organization_id, lead.created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to recompute feature vector on status change", extra={"lead_id": str(lead.id), "error": str(e)})
-        # ── Recompute scores (buying_stage changed) ──────────────────────
-        try:
-            await self.lead_scoring_service.compute_and_store_scores(
-                lead.id, organization_id, lead.created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to recompute lead scores on status change", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Fire-and-forget: feature vector + scoring refresh in background
+        _enqueue_lead_ai(lead.id, organization_id, lead.created_by)
         logger.info("Lead status updated", extra={"lead_id": str(lead_id), "new_status": new_status.value})
         return await self.get(lead_id, organization_id)
 
@@ -384,21 +384,6 @@ class LeadService:
                 lead_updates["employee_count"] = employee_count
             await self.repo.update(lead, **lead_updates)
 
-            # ── Recompute feature vector (buying_stage_score depends on status) ─
-            try:
-                await self.feature_vector_service.compute_and_store_for_lead(
-                    lead.id, organization_id, created_by
-                )
-            except Exception as e:
-                logger.warning("Failed to recompute feature vector on convert", extra={"lead_id": str(lead.id), "error": str(e)})
-            # ── Recompute scores (buying_stage changed to converted) ────────
-            try:
-                await self.lead_scoring_service.compute_and_store_scores(
-                    lead.id, organization_id, created_by
-                )
-            except Exception as e:
-                logger.warning("Failed to recompute lead scores on convert", extra={"lead_id": str(lead.id), "error": str(e)})
-
             await self.timeline.record_activity(
                 organization_id=organization_id,
                 created_by=created_by,
@@ -437,7 +422,9 @@ class LeadService:
                     entity_id=deal.id,
                 )
 
-            return deal
+        # Fire-and-forget: feature vector + scoring for converted lead (own session)
+        _enqueue_lead_ai(lead_id, organization_id, created_by)
+        return deal
 
     async def _validate_relations(
         self,
@@ -460,5 +447,3 @@ class LeadService:
             owner = await self.user_repo.get_by_id_with_roles(owner_id)
             if not owner or owner.organization_id != organization_id:
                 raise BusinessRuleException(f"Owner (user) '{owner_id}' not found.")
-
-
