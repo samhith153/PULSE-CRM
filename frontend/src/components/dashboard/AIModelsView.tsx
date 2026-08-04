@@ -46,18 +46,18 @@ export default function AIModelsView() {
     <div className="space-y-6">
       {/* Toast Alert */}
       {toast && (
-        <div className="fixed bottom-5 right-5 z-55 bg-slate-900 dark:bg-brand-accent text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <RefreshCw className="h-4 w-4 text-emerald-400 animate-spin" />
+        <div className="fixed bottom-5 right-5 z-55 bg-ink dark:bg-brand-purple text-primary-foreground px-4 py-2.5 rounded-xl flex items-center space-x-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <RefreshCw className="h-4 w-4 text-brand-cyan animate-spin" />
           <span>{toast}</span>
         </div>
       )}
 
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">
+        <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
           AI Copilot Models Management
         </h1>
-        <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
+        <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
           Inspect validation accuracy, check status states, and schedule retraining runs for neural nodes.
         </p>
       </div>
@@ -65,22 +65,22 @@ export default function AIModelsView() {
       {/* Models List */}
       <div className="space-y-6">
         {models.map((model) => (
-          <div key={model.id} className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div key={model.id} className="bg-card border border-border rounded-2xl p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div className="space-y-2 flex-1 max-w-xl">
               <div className="flex items-center space-x-2.5">
-                <div className="h-8 w-8 rounded-lg bg-brand-sidebar-hover/30 border border-brand-border-purple/10 flex items-center justify-center text-brand-accent shrink-0">
+                <div className="h-8 w-8 rounded-lg bg-secondary border border-border flex items-center justify-center text-brand-purple shrink-0">
                   <Sparkles className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs font-extrabold text-brand-text flex items-center">
+                  <h3 className="text-xs font-semibold text-foreground flex items-center">
                     <span>{model.name}</span>
-                    <span className="ml-2 text-[9px] text-slate-400 font-bold bg-slate-100 px-1.5 py-0.2 rounded">
+                    <span className="ml-2 text-[9px] text-muted-foreground font-bold bg-secondary px-1.5 py-0.2 rounded">
                       {model.version}
                     </span>
                   </h3>
                 </div>
               </div>
-              <p className="text-[11px] text-brand-text/70 leading-relaxed font-semibold">
+              <p className="text-[11px] text-muted-foreground leading-relaxed font-semibold">
                 {model.description}
               </p>
             </div>
@@ -88,22 +88,22 @@ export default function AIModelsView() {
             {/* Performance status & Train buttons */}
             <div className="flex flex-wrap md:flex-nowrap items-center gap-6 self-stretch md:self-auto border-t md:border-t-0 pt-4 md:pt-0 border-slate-150">
               <div className="text-left md:text-right">
-                <span className="text-[9px] font-bold text-slate-400 uppercase block">Verification Precision</span>
-                <span className="text-base font-extrabold text-brand-heading tabular-nums">{model.accuracy}</span>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase block">Verification Precision</span>
+                <span className="text-base font-semibold text-foreground tabular-nums">{model.accuracy}</span>
               </div>
 
               <div className="text-left md:text-right">
-                <span className="text-[9px] font-bold text-slate-400 uppercase block">Last Trained Run</span>
-                <span className="text-xs font-extrabold text-brand-text tabular-nums">{model.lastTrained}</span>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase block">Last Trained Run</span>
+                <span className="text-xs font-semibold text-foreground tabular-nums">{model.lastTrained}</span>
               </div>
 
               <div className="flex items-center space-x-3">
-                <span className={`px-2 py-0.5 rounded font-extrabold uppercase tracking-wide text-[8px] flex items-center space-x-1 ${
+                <span className={`px-2 py-0.5 rounded font-semibold uppercase tracking-wide text-[8px] flex items-center space-x-1 ${
                   model.status === 'Active' 
-                    ? 'bg-emerald-50 text-emerald-700' 
+                    ? 'bg-brand-cyan/15 text-brand-cyan' 
                     : model.status === 'Training'
                     ? 'bg-amber-50 text-amber-700'
-                    : 'bg-slate-50 text-slate-700'
+                    : 'bg-secondary text-foreground'
                 }`}>
                   {model.status === 'Training' && <RefreshCw className="h-2.5 w-2.5 animate-spin mr-1" />}
                   <span>{model.status}</span>
@@ -112,10 +112,10 @@ export default function AIModelsView() {
                 <button 
                   onClick={() => triggerRetrain(model.id, model.name)}
                   disabled={model.status === 'Training'}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition-colors cursor-pointer flex items-center space-x-1.5 ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center space-x-1.5 ${
                     model.status === 'Training'
-                      ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      : 'bg-brand-accent hover:bg-brand-accent-hover text-white'
+                      ? 'bg-secondary text-muted-foreground cursor-not-allowed'
+                      : 'bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground'
                   }`}
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${model.status === 'Training' ? 'animate-spin' : ''}`} />
@@ -129,3 +129,4 @@ export default function AIModelsView() {
     </div>
   );
 }
+

@@ -8,12 +8,9 @@ import os
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.lead_score import LeadScore
-from app.models.email_summary import EmailSummary
-from app.models.email import Email
 from app.repositories.lead_repository import LeadRepository
 from app.repositories.feature_vector_repository import FeatureVectorRepository
 from app.repositories.lead_score_repository import LeadScoreRepository
@@ -70,6 +67,7 @@ class LeadScoringService:
         }
 
         # ── Build engagement_features dict ────────────────────────────────────
+<<<<<<< HEAD
         # Fetch latest email summary for this lead to get summary_word
         # (single query with LEFT JOIN instead of two sequential queries)
         summary_word = None
@@ -89,6 +87,8 @@ class LeadScoringService:
         except Exception:
             pass
 
+=======
+>>>>>>> origin/new-ui
         engagement_features = {
             "intent_category_score": fv.ai_intent_category_score or 0,
             "buying_stage_score": fv.buying_stage_score or 0,
@@ -99,9 +99,9 @@ class LeadScoringService:
             "days_since_last_outbound": fv.days_since_last_outbound or 0,
             # Raw values for reason_generator
             "average_response_time_hours": fv.average_response_time,
-            "intent_today": summary_word,
-            "buying_stage": lead.status,
-            "intent_today_score": fv.ai_intent_category_score or 0,
+            "intent_today": None,
+            "buying_stage": None,
+            "intent_today_score": 0,
             "intent_7_days_ago_score": 0,
         }
 

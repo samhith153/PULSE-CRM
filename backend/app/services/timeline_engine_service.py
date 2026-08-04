@@ -50,32 +50,9 @@ class TimelineEngineService:
             topic=topic or entity_type,
             title=title,
             description=description,
-            # We already wrote the ActivityTimeline row above (activity_repo.create),
-            # so tell TimelineProjectionConsumer to skip re-projecting this event
-            # once the durable EventWorker picks it up — otherwise every action
-            # would end up duplicated in the timeline.
-            payload={**(payload or {}), "timeline_projected": True},
+            payload=payload,
             source=source or "crm",
         )
-        # Broadly notify the acting user for every activity, so the
-        # notification feed mirrors the activity timeline. deal_won,
-        # deal_lost, and lead_converted are created explicitly with richer
-        # copy at their call sites (pipeline_service, lead_service), so skip
-        # them here to avoid double notifications.
-        _ALREADY_HANDLED_ELSEWHERE = {"deal_won", "deal_lost", "lead_converted"}
-        if created_by and action not in _ALREADY_HANDLED_ELSEWHERE:
-            from app.services.notification_service import NotificationService
-
-            await NotificationService(self.db).create_for_user(
-                organization_id=organization_id,
-                user_id=created_by,
-                notif_type=action,
-                title=title,
-                message=description,
-                entity_type=entity_type,
-                entity_id=entity_id,
-            )
-
 
     async def record_activity(
         self,

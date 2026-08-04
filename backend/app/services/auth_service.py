@@ -1,4 +1,4 @@
-﻿"""
+"""
 Authentication Service
 All authentication business logic lives here - never in route handlers.
 """
@@ -268,3 +268,111 @@ class AuthService:
             token_type="bearer",
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
+
+    async def login_with_google(self, credential: str, client_ip: str = "") -> TokenResponse:
+        """Authenticate user using Google ID Token."""
+        if not settings.GOOGLE_CLIENT_ID:
+            raise BusinessRuleException("Google Sign-In is not configured on the server.")
+
+        try:
+            # Verify the ID token using google-auth library
+            from google.oauth2 import id_token
+            from google.auth.transport import requests as google_requests
+
+            idinfo = id_token.verify_oauth2_token(
+                credential, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+            )
+
+            email = idinfo.get("email")
+            if not email:
+                raise InvalidCredentialsException("Google token did not provide an email address.")
+            
+            email = email.lower()
+            full_name = idinfo.get("name", "Google User").strip()
+            avatar_url = idinfo.get("picture")
+
+        except Exception as e:
+            logger.error("Failed to verify Google token", exc_info=True)
+            raise InvalidCredentialsException("Invalid Google token or verification failed.")
+
+        user = await self.user_repo.get_by_email(email)
+
+        if not user:
+            # Auto-register user and create a default organization
+            org_name = f"{full_name}'s Workspace"
+            existing_org = await self.org_repo.get_by_name(org_name)
+            
+            if existing_org:
+                import secrets
+                org_name = f"{org_name} {secrets.token_hex(3)}"
+            
+            slug = _slugify(org_name)
+            organization = await self.org_repo.create(name=org_name, slug=slug)
+
+            admin_role = await self.role_repo.get_by_name("admin")
+            
+            import secrets
+            random_pw = secrets.token_urlsafe(32)
+
+            user = await self.user_repo.create(
+                email=email,
+                full_name=full_name,
+                hashed_password=hash_password(random_pw),
+                organization_id=organization.id,
+                avatar_url=avatar_url,
+                is_verified=True,
+                is_superuser=True,
+                last_login_ip=client_ip,
+                last_login_at=datetime.now(timezone.utc),
+            )
+
+            if admin_role:
+                await self.user_repo.assign_role(user, admin_role.id, user.id)
+                user = await self.user_repo.get_by_id_with_roles(user.id)
+
+            logger.info("New user registered via Google", extra={"user_id": str(user.id), "org": org_name})
+            await self.events.record_event(
+                "USER_REGISTERED",
+                organization_id=organization.id,
+                actor_id=user.id,
+                aggregate_type="user",
+                aggregate_id=str(user.id),
+                source="auth_google",
+                payload={
+                    "user_id": str(user.id),
+                    "organization_id": str(organization.id),
+                    "email": user.email,
+                    "organization_name": org_name,
+                    "registered_via": "google",
+                },
+            )
+        else:
+            if not user.is_active:
+                raise UnauthorizedException("Your account has been deactivated.")
+
+            updates = {
+                "last_login_at": datetime.now(timezone.utc),
+                "last_login_ip": client_ip,
+            }
+            if avatar_url and not user.avatar_url:
+                updates["avatar_url"] = avatar_url
+            
+            await self.user_repo.update(user, **updates)
+
+            logger.info("User logged in via Google", extra={"user_id": str(user.id)})
+            try:
+                async with self.db.begin_nested():
+                    await self.events.record_event(
+                        "USER_LOGGED_IN",
+                        organization_id=user.organization_id,
+                        actor_id=user.id,
+                        aggregate_type="user",
+                        aggregate_id=str(user.id),
+                        source="auth_google",
+                        payload={"user_id": str(user.id), "email": user.email, "client_ip": client_ip, "logged_in_via": "google"},
+                    )
+            except Exception:
+                logger.exception("Failed to record login event", extra={"user_id": str(user.id)})
+
+        return await self._build_tokens(user)
+

@@ -1,6 +1,7 @@
 ﻿"""
 KALNET PULSE CRM - FastAPI Application Factory
 """
+<<<<<<< HEAD
 import asyncio
 import os
 import sys
@@ -13,6 +14,8 @@ _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")
 if _REPO_ROOT not in sys.path:
     sys.path.insert(0, _REPO_ROOT)
 
+=======
+>>>>>>> origin/new-ui
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
@@ -36,11 +39,11 @@ from app.middlewares.private_network import PrivateNetworkAccessMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
-from app.services.event_worker import EventWorker
 
 setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
 logger = get_logger(__name__)
 
+<<<<<<< HEAD
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 scheduler = AsyncIOScheduler()
@@ -140,10 +143,13 @@ async def poll_gmail_replies():
     except Exception as exc:
         logger.warning("Gmail polling failed: %s", exc)
 
+=======
+>>>>>>> origin/new-ui
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     register_default_consumers()
+<<<<<<< HEAD
     logger.info("Application starting")
 
     scheduler.add_job(recompute_features, "interval", minutes=60)
@@ -151,9 +157,15 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(poll_gmail_replies, "interval", minutes=5)
     scheduler.start()
 
+=======
+    logger.info(
+        "Starting %s v%s [%s]",
+        settings.APP_NAME,
+        settings.APP_VERSION,
+        settings.ENVIRONMENT,
+    )
+>>>>>>> origin/new-ui
     yield
-
-    scheduler.shutdown()
     logger.info("Application shutdown complete.")
 
 

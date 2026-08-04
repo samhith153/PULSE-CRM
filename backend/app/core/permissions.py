@@ -164,7 +164,6 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.EVENT_CREATE,
         Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
-        Permission.REPORT_EXPORT,
     },
 }
 
@@ -178,15 +177,9 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
     """
     Resolve permissions from the loaded user roles.
 
-    Use the persisted role-permission assignments whenever they exist, so
-    custom edits in the admin UI are authoritative. For built-in system
-    roles without any DB permissions assigned, fall back to the built-in
-    permission catalog so authorization remains stable.
-
-    The built-in `admin` role is always granted the full permission set.
-    This prevents an incomplete DB permission assignment from accidentally
-    locking admins out of core actions (e.g. loading the role list needed to
-    create users).
+    Prefer persisted role-permission assignments when available, but fall back
+    to the built-in role catalog for system roles so access checks remain stable
+    even if the database seed is incomplete.
     """
     permissions: set[str] = set()
 
@@ -195,12 +188,11 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         if not role:
             continue
 
-        role_db_permissions: set[str] = set()
         for role_permission in getattr(role, "role_permissions", []) or []:
             permission = getattr(role_permission, "permission", None)
             codename = getattr(permission, "codename", None)
             if codename:
-                role_db_permissions.add(codename)
+                permissions.add(codename)
 
         role_name = getattr(role, "name", None)
         try:
@@ -208,6 +200,7 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         except ValueError:
             built_in_role = None
 
+<<<<<<< HEAD
         # Admin always has every permission — never stripped by DB edits.
         if built_in_role is Role.ADMIN:
             permissions.update(get_permissions_for_role(Role.ADMIN))
@@ -216,9 +209,10 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         if built_in_role:
             # Always include built-in baseline so permissions are never missing
             # due to an incomplete seed. DB permissions extend, never shrink.
+=======
+        if built_in_role:
+>>>>>>> origin/new-ui
             permissions.update(get_permissions_for_role(built_in_role))
-        else:
-            permissions.update(role_db_permissions)
 
     return sorted(permissions)
 

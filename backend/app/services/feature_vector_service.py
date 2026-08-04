@@ -5,21 +5,21 @@ Computes and persists feature vectors for leads using fit and engagement feature
 import asyncio
 import sys
 import os
-from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
+<<<<<<< HEAD
 from sqlalchemy import select
+=======
+>>>>>>> origin/new-ui
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.feature_vector import FeatureVector
-from app.models.lead import Lead
-from app.models.email_summary import EmailSummary
 from app.repositories.feature_vector_repository import FeatureVectorRepository
 from app.repositories.lead_repository import LeadRepository
-from app.repositories.email_repository import EmailRepository
 from app.core.logging import get_logger
 
+<<<<<<< HEAD
 
 def _days_since_last_outbound(records: list) -> int | None:
     """Days since last outbound email (pure-Python replacement for pandas version)."""
@@ -79,6 +79,8 @@ def _write_scoring_log(lead_id, thread_id, engagement_features, scores):
     except Exception as e:
         logger.warning("Failed to write scoring log: %s", e)
 
+=======
+>>>>>>> origin/new-ui
 # Add root directory to sys.path so we can import from ai.pipeline
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
 if root_dir not in sys.path:
@@ -89,25 +91,6 @@ try:
 except ImportError:
     compute_fit_features = None
 
-try:
-    from ai.pipeline.engagement_features import (
-        response_time_score,
-        days_since_last_outbound,
-        engagement_decay_penalty,
-        customer_initiative_score,
-        buying_stage_score,
-        ai_intent_category_score,
-        engagement_trend_score,
-    )
-except ImportError:
-    response_time_score = None
-    days_since_last_outbound = None
-    engagement_decay_penalty = None
-    customer_initiative_score = None
-    buying_stage_score = None
-    ai_intent_category_score = None
-    engagement_trend_score = None
-
 logger = get_logger(__name__)
 
 
@@ -116,7 +99,6 @@ class FeatureVectorService:
         self.db = db
         self.repo = FeatureVectorRepository(db)
         self.lead_repo = LeadRepository(db)
-        self.email_repo = EmailRepository(db)
 
     async def compute_and_store_for_lead(
         self, lead_id: UUID, organization_id: UUID, created_by: Optional[UUID] = None
@@ -132,14 +114,34 @@ class FeatureVectorService:
             "current_crm": lead.current_crm,
         }
 
+<<<<<<< HEAD
         logger.debug("FEATURE VECTOR COMPUTATION FOR LEAD: %s", lead_id)
         logger.debug("INPUT VALUES: %s", lead_dict)
+=======
+        # Print input values to console
+        print(f"\n{'='*60}")
+        print(f"FEATURE VECTOR COMPUTATION FOR LEAD: {lead_id}")
+        print(f"{'='*60}")
+        print(f"INPUT VALUES:")
+        print(f"  employees: {lead_dict['employees']}")
+        print(f"  industry: {lead_dict['industry']}")
+        print(f"  operational_system: {lead_dict['operational_system']}")
+        print(f"  current_crm: {lead_dict['current_crm']}")
+        print(f"{'-'*60}")
+>>>>>>> origin/new-ui
 
         fit_scores = {}
         if compute_fit_features:
             try:
                 fit_scores = compute_fit_features(lead_dict)
+<<<<<<< HEAD
                 logger.debug("COMPUTED FIT SCORES: %s", fit_scores)
+=======
+                # Print computed fit scores
+                print(f"COMPUTED FIT SCORES:")
+                for key, value in fit_scores.items():
+                    print(f"  {key}: {value}")
+>>>>>>> origin/new-ui
             except Exception as e:
                 logger.error("Error computing fit features", extra={"error": str(e)})
 
@@ -151,12 +153,20 @@ class FeatureVectorService:
             "customization_potential_score": fit_scores.get("customization_potential_score"),
         }
 
+<<<<<<< HEAD
         # Also populate buying_stage_score from lead status — this is available
         # without email data and significantly impacts engagement scoring.
         if buying_stage_score and lead.status:
             features_data["buying_stage_score"] = buying_stage_score(lead.status)
 
         logger.debug("FEATURES TO BE STORED IN DATABASE: %s", features_data)
+=======
+        # Print final features to be stored
+        print(f"FEATURES TO BE STORED IN DATABASE:")
+        for key, value in features_data.items():
+            print(f"  {key}: {value}")
+        print(f"{'='*60}\n")
+>>>>>>> origin/new-ui
 
         fv = await self.repo.upsert_for_lead(
             lead_id=lead_id,
@@ -166,6 +176,7 @@ class FeatureVectorService:
         )
         return fv
 
+<<<<<<< HEAD
     async def compute_engagement_features(
         self,
         organization_id: UUID,
@@ -320,6 +331,8 @@ class FeatureVectorService:
 
         return fv
 
+=======
+>>>>>>> origin/new-ui
     async def get_by_lead_id(
         self, lead_id: UUID, organization_id: UUID
     ) -> Optional[FeatureVector]:

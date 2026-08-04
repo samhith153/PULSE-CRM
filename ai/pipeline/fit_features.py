@@ -61,7 +61,7 @@ def industry_complexity_score(industry):
 def operational_system_score(system):
     """
     Operational System Score
-
+    
     Measures current operational setup maturity.
     """
 
@@ -150,10 +150,10 @@ def customization_potential_score(
         software_gap * 0.25 +
         (100 - operational_score) * 0.25
     )
-
+ 
     # Clamp to 0-100 range
     score = max(0, min(100, score))
-
+ 
     return round(score)
 
 
@@ -162,7 +162,7 @@ def compute_fit_features(lead_dict: dict) -> dict:
     ═══════════════════════════════════════════════════════════════════
     ORCHESTRATOR FUNCTION - Runs ALL fit scoring functions
     ═══════════════════════════════════════════════════════════════════
-
+    
     Input: lead_dict with company information
     {
         "id": "lead_123",
@@ -172,7 +172,7 @@ def compute_fit_features(lead_dict: dict) -> dict:
         "operational_system": "Excel",
         "current_crm": "No CRM"
     }
-
+    
     Output: Dictionary with all fit scores
     {
         "company_size_score": 85,
@@ -183,31 +183,31 @@ def compute_fit_features(lead_dict: dict) -> dict:
         "overall_fit_score": 89
     }
     """
-
+    
     # STEP 1: Extract the lead information from the dictionary
     employees = lead_dict.get("employees")
     industry = lead_dict.get("industry")
     operational_system = lead_dict.get("operational_system")
     current_crm = lead_dict.get("current_crm")
-
+    
     # STEP 2: Call each individual scoring function
     company_size = company_size_score(employees)
     industry_complexity = industry_complexity_score(industry)
     operational_score = operational_system_score(operational_system)
     software_gap = software_gap_score(current_crm)
-
+    
     # STEP 3: Combine scores to get customization potential
     customization = customization_potential_score(
         industry_score=industry_complexity,
         software_gap=software_gap,
         operational_score=operational_score
     )
-
+    
     # STEP 4: Calculate overall fit score (average of all components)
     overall_fit_score = round(
         (company_size + industry_complexity + operational_score + software_gap + customization) / 5
     )
-
+    
     # STEP 5: Return all scores as a dictionary
     fit_features = {
         "company_size_score": company_size,
@@ -217,8 +217,10 @@ def compute_fit_features(lead_dict: dict) -> dict:
         "customization_potential_score": customization,
         "overall_fit_score": overall_fit_score
     }
-
+    
     return fit_features
+
+
 # ═══════════════════════════════════════════════════════════════════
 # HOW TO USE THIS IN YOUR FEATURE_SERVICE.PY
 # ═══════════════════════════════════════════════════════════════════
@@ -250,4 +252,3 @@ def compute_fit_features(lead_dict: dict) -> dict:
 #         })
 #
 # ═══════════════════════════════════════════════════════════════════
-
