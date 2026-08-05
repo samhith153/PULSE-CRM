@@ -15,49 +15,50 @@ export default function QuotaPaceCard({ deals = [] }: QuotaPaceCardProps) {
       (d) => d.status === 'Won' || d.stage === 'Won' || d.status === 'Closed Won' || d.status === 'Closed'
     );
     const achieved = wonDeals.reduce((sum, d) => sum + asNumber(d.amount || d.value), 0);
-    
+
     // Default target of ₹50L (5,000,000)
     const target = 5000000;
     const percentage = target > 0 ? Math.round((achieved / target) * 100) : 0;
 
     // Define Q3 / Month expected pace: say 60% through the period
     const expectedPacePct = 60;
-    
+
     // Threshold calculation: achieved percent relative to expected pace
     const paceRatio = expectedPacePct > 0 ? (percentage / expectedPacePct) * 100 : 100;
 
-    let status: 'success' | 'warning' | 'danger' = 'success';
-    let statusText = 'On track';
-    let Icon = CheckCircle2;
-    let colorClass = 'text-brand-purple dark:text-sky-400';
-    let barGradient = 'linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-blue) 100%)';
-    let glowColor = 'shadow-[0_0_12px_rgba(37,99,235,0.25)] dark:shadow-[0_0_12px_rgba(96,165,250,0.25)]';
-    let bgClass = 'bg-brand-purple/10 border-brand-purple/20';
+    let status: 'success' | 'warning' | 'danger';
+    let statusText: string;
+    let Icon: typeof CheckCircle2;
+    // CSS variable strings for inline styles
+    let barColor: string;
+    let badgeBg: string;
+    let badgeBorder: string;
+    let badgeText: string;
 
     if (paceRatio >= 90) {
       status = 'success';
       statusText = `On Track • ${percentage}%`;
       Icon = CheckCircle2;
-      colorClass = 'text-brand-purple dark:text-sky-400';
-      barGradient = 'linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-blue) 100%)';
-      glowColor = 'shadow-[0_0_12px_rgba(37,99,235,0.25)] dark:shadow-[0_0_12px_rgba(96,165,250,0.25)]';
-      bgClass = 'bg-brand-purple/10 border-brand-purple/20';
+      barColor = 'var(--status-success-text)';
+      badgeBg = 'var(--status-success-bg)';
+      badgeBorder = 'var(--status-success-text)';
+      badgeText = 'var(--status-success-text)';
     } else if (paceRatio >= 70) {
       status = 'warning';
       statusText = `At Risk • ${percentage}%`;
       Icon = AlertTriangle;
-      colorClass = 'text-brand-purple dark:text-sky-400';
-      barGradient = 'linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-blue) 100%)';
-      glowColor = 'shadow-[0_0_12px_rgba(37,99,235,0.25)] dark:shadow-[0_0_12px_rgba(96,165,250,0.25)]';
-      bgClass = 'bg-brand-purple/10 border-brand-purple/20';
+      barColor = 'var(--status-warning-text)';
+      badgeBg = 'var(--status-warning-bg)';
+      badgeBorder = 'var(--status-warning-text)';
+      badgeText = 'var(--status-warning-text)';
     } else {
       status = 'danger';
       statusText = `Behind Pace • ${percentage}%`;
       Icon = AlertCircle;
-      colorClass = 'text-brand-purple dark:text-sky-400';
-      barGradient = 'linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-blue) 100%)';
-      glowColor = 'shadow-[0_0_12px_rgba(37,99,235,0.25)] dark:shadow-[0_0_12px_rgba(96,165,250,0.25)]';
-      bgClass = 'bg-brand-purple/10 border-brand-purple/20';
+      barColor = 'var(--status-danger-text)';
+      badgeBg = 'var(--status-danger-bg)';
+      badgeBorder = 'var(--status-danger-text)';
+      badgeText = 'var(--status-danger-text)';
     }
 
     return {
@@ -67,14 +68,15 @@ export default function QuotaPaceCard({ deals = [] }: QuotaPaceCardProps) {
       expectedPacePct,
       statusText,
       Icon,
-      colorClass,
-      barGradient,
-      glowColor,
-      bgClass,
+      status,
+      barColor,
+      badgeBg,
+      badgeBorder,
+      badgeText,
     };
   }, [deals]);
 
-  const { achieved, target, percentage, statusText, Icon, colorClass, barGradient, glowColor, bgClass } = quota;
+  const { achieved, target, percentage, statusText, Icon, barColor, badgeBg, badgeBorder, badgeText } = quota;
 
   return (
     <div className="bg-card border border-border/80 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300 w-full">
@@ -89,30 +91,55 @@ export default function QuotaPaceCard({ deals = [] }: QuotaPaceCardProps) {
           </div>
         </div>
 
-        <div className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold ${bgClass} ${colorClass} select-none`}>
+        {/* Status badge — color synced with bar fill */}
+        <div
+          className="flex items-center space-x-1.5 px-2.5 py-1 rounded-full border text-[11px] font-bold select-none"
+          style={{
+            backgroundColor: badgeBg,
+            borderColor: `color-mix(in srgb, ${badgeBorder} 30%, transparent)`,
+            color: badgeText,
+          }}
+        >
           <Icon size={12} />
           <span>{statusText}</span>
         </div>
       </div>
 
       <div className="space-y-[var(--space-2)]">
-        {/* Progress bar container */}
-        <div className="relative pt-1.5 pb-0.5">
-          <div className="h-3 w-full bg-secondary dark:bg-slate-800 rounded-full">
-            <div 
-              className={`h-full rounded-full transition-all duration-500 ease-out ${glowColor}`} 
-              style={{ width: `${Math.min(percentage, 100)}%`, background: barGradient }}
-            />
-          </div>
-          {/* Expected pace line indicator */}
-          <div 
-            className="absolute top-0 bottom-0 w-0.5 z-10 flex flex-col items-center pointer-events-none" 
-            style={{ left: `${quota.expectedPacePct}%` }}
+        {/* Progress bar */}
+        <div className="relative" style={{ height: '8px' }}>
+          {/* Track — neutral gray, full width */}
+          <div
+            className="absolute inset-0 rounded-full"
+            style={{ background: 'var(--border-default)' }}
+          />
+
+          {/* Fill — proportional to achieved %, status-colored */}
+          <div
+            className="absolute top-0 left-0 h-full rounded-full transition-all duration-500 ease-out"
+            style={{
+              width: `${Math.min(Math.max(percentage, 0), 100)}%`,
+              background: barColor,
+              boxShadow: `0 0 8px color-mix(in srgb, ${barColor} 40%, transparent)`,
+              minWidth: percentage > 0 ? '4px' : '0px',
+            }}
+          />
+
+          {/* Expected pace marker dot — --text-primary so it sits clearly above both track and fill */}
+          <div
+            className="absolute z-10 pointer-events-none"
+            style={{
+              left: `${quota.expectedPacePct}%`,
+              top: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              background: 'var(--text-primary)',
+              border: '2px solid var(--surface-1)',
+            }}
             title={`Expected Target Pace: ${quota.expectedPacePct}%`}
-          >
-            <span className="h-2.5 w-2.5 rounded-full bg-brand-purple border-2 border-background dark:border-card shrink-0 -mt-0.5" />
-            <div className="w-[1px] flex-1 border-l border-dashed border-brand-purple/80" />
-          </div>
+          />
         </div>
 
         {/* Readouts */}
@@ -122,7 +149,12 @@ export default function QuotaPaceCard({ deals = [] }: QuotaPaceCardProps) {
           </div>
           <div className="flex items-center space-x-2">
             <span>Target: <span className="font-bold text-foreground tabular-nums">{formatINR(target)}</span></span>
-            <span className="text-[10px] text-muted-foreground/60 font-medium">({quota.expectedPacePct}% expected pace marker)</span>
+            <span
+              className="text-[10px] font-medium"
+              style={{ color: 'var(--text-primary)', opacity: 0.5 }}
+            >
+              ({quota.expectedPacePct}% expected pace)
+            </span>
           </div>
         </div>
       </div>
