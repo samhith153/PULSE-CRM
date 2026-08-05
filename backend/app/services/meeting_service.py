@@ -1,4 +1,4 @@
-"""
+﻿"""
 Meeting service.
 """
 from __future__ import annotations
@@ -9,7 +9,6 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ForbiddenException, NotFoundException
-from app.models.meeting import Meeting
 from app.models.user import User
 from app.repositories.meeting_repository import MeetingRepository
 from app.schemas.meeting import MeetingCreateRequest, MeetingResponse, MeetingUpdateRequest
@@ -28,10 +27,11 @@ class MeetingService:
             title=payload.title,
             description=payload.description,
             status=payload.status,
+            event_type="meeting",
             start_datetime=payload.start_datetime,
             end_datetime=payload.end_datetime,
             owner_id=owner_id,
-            meeting_link=payload.meeting_link,
+            meeting_url=payload.meeting_link,
             location=payload.location,
             reminder_minutes=payload.reminder_minutes,
             related_lead_id=payload.related_lead_id,
@@ -98,6 +98,8 @@ class MeetingService:
         self._assert_access(user, meeting.owner_id, meeting.created_by)
 
         update_data = payload.model_dump(exclude_none=True)
+        if "meeting_link" in update_data:
+            update_data["meeting_url"] = update_data.pop("meeting_link")
         if update_data.get("end_datetime", meeting.end_datetime) <= update_data.get("start_datetime", meeting.start_datetime):
             raise ValueError("end_datetime must be after start_datetime")
         updated = await self.repo.update(meeting, **update_data)

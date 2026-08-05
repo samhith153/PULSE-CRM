@@ -270,6 +270,7 @@ class DashboardService:
             DashboardDealRiskItem,
             DashboardDealsAtRiskCard,
             DashboardLeadsCard,
+            DashboardCallsTodayCard,
             DashboardMeetingItem,
             DashboardMeetingsCard,
             DashboardOpenDealsCard,
@@ -314,6 +315,12 @@ class DashboardService:
             deal_ids=untouched_ids,
         )
 
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow_start = today_start + timedelta(days=1)
+        calls_today = DashboardCallsTodayCard(
+            count=await repo.calls_today(organization_id, user_id, today_start, tomorrow_start)
+        )
+
         my_leads = DashboardLeadsCard(
             count=await repo.count_active_leads(organization_id, user_id)
         )
@@ -323,10 +330,10 @@ class DashboardService:
             DashboardTaskItem(
                 id=row["task"].id,
                 title=row["task"].title,
-                due_date=row["task"].end_datetime,
+                due_date=row["task"].due_date or row["task"].created_at,
                 priority=row["task"].priority,
                 status=row["task"].status,
-                overdue=row["task"].end_datetime < now,
+                overdue=bool(row["task"].due_date and row["task"].due_date < now),
             )
             for row in task_rows
         ]
@@ -341,7 +348,7 @@ class DashboardService:
                 start_datetime=meeting.start_datetime,
                 end_datetime=meeting.end_datetime,
                 status=meeting.status,
-                meeting_link=meeting.meeting_link,
+                meeting_link=meeting.meeting_url,
                 location=meeting.location,
             )
             for meeting in meeting_rows
@@ -359,11 +366,12 @@ class DashboardService:
             task = row["task"]
             score = priority_weights.get(str(task.priority).lower(), 10)
             reasons = [f"{task.priority} priority"]
-            if task.end_datetime < now:
+            task_due = task.due_date or task.created_at
+            if task_due < now:
                 score += 40
                 reasons.append("overdue")
             else:
-                days_until_due = max((task.end_datetime - now).days, 0)
+                days_until_due = max((task_due - now).days, 0)
                 if days_until_due <= 1:
                     score += 25
                     reasons.append("due soon")
@@ -384,8 +392,8 @@ class DashboardService:
                     title=task.title,
                     priority_score=min(score, 100),
                     reasons=reasons,
-                    due_date=task.end_datetime,
-                    overdue=task.end_datetime < now,
+                    due_date=task_due,
+                    overdue=task_due < now,
                 )
             )
         priority_items.sort(key=lambda item: item.priority_score, reverse=True)
@@ -436,16 +444,25 @@ class DashboardService:
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         next_month = month_start.replace(year=month_start.year + 1, month=1) if month_start.month == 12 else month_start.replace(month=month_start.month + 1)
         achieved = Decimal(str(await repo.won_revenue_between(organization_id, user_id, month_start, next_month)))
+        quota_target = await self._user_sales_quota(user_id, organization_id)
+        elapsed_days = Decimal(str(now.day))
+        days_in_month = Decimal(str((next_month - month_start).days))
+        expected = (quota_target * elapsed_days / days_in_month) if quota_target else None
+        percentage = (achieved * Decimal('100') / quota_target) if quota_target and quota_target > 0 else None
+        quota_status = 'target_unavailable'
+        if quota_target and expected is not None:
+            quota_status = 'on_track' if achieved >= expected else 'behind'
         quota = DashboardQuotaCard(
-            target=None,
+            target=quota_target,
             achieved=achieved,
-            expected=None,
-            percentage=None,
-            status="target_unavailable",
+            expected=expected,
+            percentage=percentage,
+            status=quota_status,
         )
 
         return RedesignedDashboardResponse(
             openDeals=open_deals,
+            callsToday=calls_today,
             untouchedDeals=untouched_deals,
             myLeads=my_leads,
             tasks=tasks,
@@ -455,6 +472,16 @@ class DashboardService:
             quota=quota,
             lastUpdated=now,
         )
+
+    async def _user_sales_quota(self, user_id: UUID, organization_id: UUID) -> Decimal | None:
+        stmt = select(User.sales_quota).where(
+            User.id == user_id,
+            User.organization_id == organization_id,
+            User.is_active.is_(True),
+            User.is_deleted.is_(False),
+        )
+        quota = (await self.db.execute(stmt)).scalar_one_or_none()
+        return Decimal(str(quota)) if quota is not None else None
 
     # -------------------------------------------------------------------------
     # Admin Dashboard KPI  (admin-only, cross-org aware)

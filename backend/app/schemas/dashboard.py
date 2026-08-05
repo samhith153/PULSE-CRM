@@ -103,6 +103,10 @@ class DashboardLeadsCard(BaseModel):
     count: int
 
 
+class DashboardCallsTodayCard(BaseModel):
+    count: int
+
+
 class DashboardTaskItem(BaseModel):
     id: UUID
     title: str
@@ -170,6 +174,7 @@ class DashboardQuotaCard(BaseModel):
 class RedesignedDashboardResponse(BaseModel):
     open_deals: DashboardOpenDealsCard = Field(alias="openDeals")
     untouched_deals: DashboardUntouchedDealsCard = Field(alias="untouchedDeals")
+    calls_today: DashboardCallsTodayCard = Field(alias="callsToday")
     my_leads: DashboardLeadsCard = Field(alias="myLeads")
     tasks: DashboardTasksCard
     meetings: DashboardMeetingsCard

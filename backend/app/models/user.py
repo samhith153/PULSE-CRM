@@ -6,9 +6,10 @@ Users have Roles (M2M) which carry Permissions.
 """
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -39,6 +40,7 @@ class User(Base, AuditMixin):
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     job_title: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    sales_quota: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
 
     # ── Tenancy ───────────────────────────────────────────────────────────────
     organization_id: Mapped[uuid.UUID] = mapped_column(
@@ -139,3 +141,5 @@ class UserRole(Base):
     role: Mapped["Role"] = relationship(
         "Role", back_populates="user_roles", lazy="selectin"
     )
+
+
