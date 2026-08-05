@@ -392,13 +392,13 @@ export default function ReportsView() {
                     cx="60" 
                     cy="60" 
                     r="45" 
-                    stroke="var(--border)" 
+                    stroke="var(--border-strong)" 
                     strokeWidth="10" 
                     fill="none" 
                     strokeLinecap="round"
                     strokeDasharray={`${arcLength} 282.7`}
                     transform="rotate(-180 60 60)"
-                    className="opacity-25"
+                    className="opacity-55"
                   />
                   {/* Delivered - Royal Blue */}
                   <circle 

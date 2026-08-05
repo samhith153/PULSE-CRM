@@ -106,27 +106,27 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
   // Stylings for each stage
   const stageStyles = [
     {
-      fillClass: 'fill-indigo-600 opacity-20 dark:fill-indigo-400 dark:opacity-15',
+      fillClass: 'fill-indigo-100 dark:fill-indigo-900',
       badgeClass: 'bg-[#ECEFFD] dark:bg-[#1E234A] text-indigo-700 dark:text-indigo-300 border border-indigo-500/20',
       glowColor: 'rgba(99, 102, 241, 0.25)'
     },
     {
-      fillClass: 'fill-indigo-600 opacity-40 dark:fill-indigo-400 dark:opacity-30',
+      fillClass: 'fill-indigo-200 dark:fill-indigo-800',
       badgeClass: 'bg-[#DCE1FC] dark:bg-[#1B1D4B] text-indigo-700 dark:text-indigo-300 border border-indigo-400/25',
       glowColor: 'rgba(99, 102, 241, 0.35)'
     },
     {
-      fillClass: 'fill-indigo-600 opacity-70 dark:fill-indigo-400 dark:opacity-55',
+      fillClass: 'fill-indigo-300 dark:fill-indigo-700',
       badgeClass: 'bg-[#C5CBEF] dark:bg-[#15174B] text-indigo-800 dark:text-indigo-200 border border-indigo-400/30',
       glowColor: 'rgba(99, 102, 241, 0.45)'
     },
     {
-      fillClass: 'fill-indigo-600 dark:fill-indigo-500',
+      fillClass: 'fill-indigo-500 dark:fill-indigo-600',
       badgeClass: 'bg-[#4F46E5] text-primary-foreground border border-indigo-400/40 shadow-sm',
       glowColor: 'rgba(79, 70, 229, 0.55)'
     },
     {
-      fillClass: 'fill-emerald-500 dark:fill-emerald-400',
+      fillClass: 'fill-emerald-500 dark:fill-emerald-500',
       badgeClass: 'bg-[#10B981] text-primary-foreground border border-emerald-400/40 shadow-sm',
       glowColor: 'rgba(16, 185, 129, 0.55)'
     }
