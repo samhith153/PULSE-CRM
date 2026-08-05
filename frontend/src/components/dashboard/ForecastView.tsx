@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   TrendingUp, 
   Target, 
@@ -12,154 +12,71 @@ import {
   CheckCircle,
   HelpCircle
 } from 'lucide-react';
-import {
-  getManagerForecast,
-  asNumber,
-  type ManagerForecastData,
-} from '@/utils/api';
+import { motion } from 'framer-motion';
 
-// ── Helpers ────────────────────────────────────────────────────────────────
+/* ── Radial progress ring ───────────────────────────────────────────── */
+function RadialProgressRing({ progress, size = 110, strokeWidth = 8.5 }: { progress: number; size?: number; strokeWidth?: number }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (Math.min(progress, 100) / 100) * circumference;
 
-function fmtINR(v: string | number | null | undefined): string {
-  const n = asNumber(v);
-  if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000)    return `₹${(n / 1_00_000).toFixed(2)}L`;
-  if (n >= 1_000)       return `₹${(n / 1_000).toFixed(1)}K`;
-  return `₹${n.toLocaleString('en-IN')}`;
+  return (
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--secondary)"
+          strokeWidth={strokeWidth}
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--brand-purple)"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute text-center flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold text-foreground tabular-nums">{Math.round(progress)}%</span>
+        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Reliability</span>
+      </div>
+    </div>
+  );
 }
-
-function fmtNum(v: string | number | null | undefined): string {
-  const n = asNumber(v);
-  return n.toLocaleString('en-IN');
-}
-
-// ── Skeleton ───────────────────────────────────────────────────────────────
-
-function SkeletonBlock({ h = 'h-5', w = 'w-full' }: { h?: string; w?: string }) {
-  return <div className={`${h} ${w} bg-slate-100 rounded animate-pulse`} />;
-}
-
-// ── Component ──────────────────────────────────────────────────────────────
 
 export default function ForecastView() {
-  const [data, setData]       = useState<ManagerForecastData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [confidenceScore, setConfidenceScore] = useState(88);
+  const expectedRevenue = 3450000;
+  
+  const monthlyForecast = [
+    { month: "May 2025", expected: 1100000, bestCase: 1300000, pipeline: 1800000 },
+    { month: "June 2025", expected: 1250000, bestCase: 1550000, pipeline: 2100000 },
+    { month: "July 2025", expected: 1100000, bestCase: 1400000, pipeline: 1950000 }
+  ];
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
+  const quarterlyForecast = [
+    { quarter: "Q3 2025", committed: 3450000, bestCase: 4250000, pipeline: 5850000, quota: 3000000 },
+    { quarter: "Q4 2025", committed: 3900000, bestCase: 4800000, pipeline: 6500000, quota: 3500000 }
+  ];
 
-    getManagerForecast('monthly')
-      .then((d) => { if (!cancelled) setData(d); })
-      .catch((e) => { if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load forecast'); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-
-    return () => { cancelled = true; };
-  }, []);
-
-  // ── Derived values (safe defaults when data is null) ─────────────────────
-
-  const confidenceScore  = data?.confidence_score.score ?? 0;
-  const confidenceDesc   = data?.confidence_score.description ?? 'No forecast data available.';
-  const expectedRevenue  = asNumber(data?.expected_revenue.expected_revenue);
-  const quarterLabel     = data?.expected_revenue.quarter ?? '—';
-  const bestCase         = asNumber(data?.best_case_pipeline.best_case_pipeline);
-  const coverageRatio    = asNumber(data?.pipeline_coverage.coverage_ratio);
-  const coverageStatus   = data?.pipeline_coverage.coverage_status ?? '—';
-  const targetAchPct     = asNumber(data?.expected_revenue.target_achievement_pct);
-  const quarterTarget    = asNumber(data?.quarterly_projection?.[0]?.quota_target ?? 0);
-
-  const monthlyForecast  = (data?.monthly_forecast ?? []).map((m) => ({
-    month:    m.month,
-    expected: asNumber(m.expected),
-    bestCase: asNumber(m.maximum),
-    pipeline: asNumber(m.pipeline),
-  }));
-
-  const quarterlyForecast = (data?.quarterly_projection ?? []).map((q) => ({
-    quarter:   q.quarter,
-    committed: asNumber(q.expected_closed_revenue),
-    bestCase:  asNumber(q.best_case_close),
-    pipeline:  asNumber(q.open_pipeline),
-    quota:     asNumber(q.quota_target),
-    pct:       Math.round(asNumber(q.target_achievement_pct)),
-  }));
-
-  // Dynamic maxVal from actual data (fallback 1 to avoid /0)
-  const allValues = monthlyForecast.flatMap((m) => [m.expected, m.bestCase, m.pipeline]);
-  const maxVal = allValues.length > 0 ? Math.max(...allValues, 1) : 1;
-
-  // ── Loading state ─────────────────────────────────────────────────────────
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">
-            Sales Forecast
-          </h1>
-          <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
-            Projections of revenue targets and confidence tiers generated from active pipeline pipelines.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="col-span-12 md:col-span-7 bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-            <SkeletonBlock h="h-8" w="w-48" />
-            <SkeletonBlock h="h-4" />
-            <SkeletonBlock h="h-4" w="w-3/4" />
-            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
-              <SkeletonBlock h="h-6" />
-              <SkeletonBlock h="h-6" />
-            </div>
-          </div>
-          <div className="col-span-12 md:col-span-5 bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col items-center space-y-4">
-            <SkeletonBlock h="h-4" w="w-32" />
-            <div className="w-32 h-32 rounded-full bg-slate-100 animate-pulse" />
-            <SkeletonBlock h="h-10" />
-          </div>
-        </div>
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-          <SkeletonBlock h="h-5" w="w-48" />
-          {[1, 2, 3].map((i) => <SkeletonBlock key={i} h="h-8" />)}
-        </div>
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-          <SkeletonBlock h="h-5" w="w-48" />
-          <SkeletonBlock h="h-24" />
-        </div>
-      </div>
-    );
-  }
-
-  // ── Error state ───────────────────────────────────────────────────────────
-
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">Sales Forecast</h1>
-          <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
-            Projections of revenue targets and confidence tiers generated from active pipeline pipelines.
-          </p>
-        </div>
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 text-rose-700">
-          <p className="font-bold text-sm">Couldn't load forecast data</p>
-          <p className="text-xs mt-1">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Main render ───────────────────────────────────────────────────────────
+  const maxVal = 7000000;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">
+        <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
           Sales Forecast
         </h1>
-        <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
+        <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
           Projections of revenue targets and confidence tiers generated from active pipeline pipelines.
         </p>
       </div>
@@ -167,134 +84,112 @@ export default function ForecastView() {
       {/* Headline Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Expected Revenue (Col 7) */}
-        <div className="col-span-12 md:col-span-7 bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col justify-between space-y-4">
+        <div className="col-span-12 md:col-span-7 bg-card border border-border rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="flex justify-between items-start">
             <div>
-              <span className="text-[10px] font-extrabold text-brand-text/60 uppercase block">Expected Revenue</span>
-              <h2 className="text-3xl font-bold text-brand-heading mt-1">{fmtINR(expectedRevenue)}</h2>
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase block">Expected Revenue</span>
+              <h2 className="text-3xl font-bold text-foreground mt-1">₹{expectedRevenue.toLocaleString()}</h2>
             </div>
-            <span className="text-[9px] font-extrabold bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded uppercase tracking-wider">
-              {quarterLabel} Projected
+            <span className="text-[9px] font-semibold bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded uppercase tracking-wider">
+              Q3 Projected
             </span>
           </div>
 
-          <p className="text-xs text-brand-text/75 leading-relaxed font-semibold">
-            Based on active deals, historical conversion rates, and representative quota velocity.
-            {quarterTarget > 0
-              ? ` The team is projected to reach ${targetAchPct.toFixed(1)}% of the ${quarterLabel} quota of ${fmtINR(quarterTarget)}.`
-              : ' No pipeline data available.'}
+          <p className="text-xs text-muted-foreground leading-relaxed font-semibold">
+            Based on active deals, historical conversion rates, and representative quota velocity. The team is projected to exceed the base Q3 quota of ₹3,000,000 by 15%.
           </p>
 
-          <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+          <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border">
             <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">Best Case Pipeline</span>
-              <p className="text-sm font-extrabold text-brand-text mt-0.5">
-                {bestCase > 0 ? fmtINR(bestCase) : '₹0'}
-              </p>
+              <span className="text-[9px] font-bold text-muted-foreground uppercase">Best Case Pipeline</span>
+              <p className="text-sm font-semibold text-foreground mt-0.5">₹4,250,000</p>
             </div>
             <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">Active Pipe Coverage</span>
-              <p className="text-sm font-extrabold text-brand-text mt-0.5">
-                {coverageRatio > 0 ? `${coverageRatio.toFixed(2)}x Target` : 'No pipeline data available'}
-              </p>
+              <span className="text-[9px] font-bold text-muted-foreground uppercase">Active Pipe Coverage</span>
+              <p className="text-sm font-semibold text-foreground mt-0.5">1.95x Target</p>
             </div>
           </div>
         </div>
 
         {/* Confidence Score Gauge (Col 5) */}
-        <div className="col-span-12 md:col-span-5 bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col items-center justify-between text-center space-y-4">
+        <div className="col-span-12 md:col-span-5 bg-card border border-border rounded-2xl p-5 flex flex-col items-center justify-between text-center space-y-4 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="w-full flex justify-between items-center text-left">
-            <span className="text-[10px] font-extrabold text-brand-text/60 uppercase">AI Confidence Score</span>
-            <HelpCircle className="h-4 w-4 text-slate-400 cursor-pointer" />
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase">AI Confidence Score</span>
+            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-pointer" />
           </div>
 
-          <div className="relative flex items-center justify-center">
-            {/* Visual Ring */}
-            <svg className="w-32 h-32 transform -rotate-90">
-              <circle cx="64" cy="64" r="50" stroke="#f1f5f9" strokeWidth="10" fill="transparent" />
-              <circle 
-                cx="64" 
-                cy="64" 
-                r="50" 
-                stroke="var(--brand-accent)" 
-                strokeWidth="10" 
-                fill="transparent" 
-                strokeDasharray={314}
-                strokeDashoffset={314 - (314 * confidenceScore) / 100}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute text-center">
-              <span className="text-2xl font-black text-brand-heading tabular-nums">{confidenceScore}%</span>
-              <span className="text-[9px] font-bold text-slate-450 block uppercase tracking-wider">Reliability</span>
-            </div>
+          <div className="relative flex items-center justify-center py-2">
+            <RadialProgressRing progress={confidenceScore} size={110} strokeWidth={8.5} />
           </div>
 
-          <div className="w-full p-2.5 bg-brand-sidebar-hover/10 border border-brand-border-purple/15 rounded-xl">
-            <p className="text-[10px] font-bold text-brand-text/80">
-              {confidenceDesc}
+          <div className="w-full p-2.5 bg-secondary border border-border rounded-xl">
+            <p className="text-[10px] font-bold text-muted-foreground">
+              High confidence ranking. Data points match historical Q3 close rates with low deal churn.
             </p>
           </div>
         </div>
       </div>
 
       {/* Monthly Forecast Breakdown */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-        <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-          <Calendar className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <h3 className="font-semibold text-foreground text-sm flex items-center">
+          <Calendar className="h-4.5 w-4.5 mr-2 text-brand-purple" />
           <span>Monthly Forecast Breakdown</span>
         </h3>
 
-        {monthlyForecast.length === 0 ? (
-          <p className="text-xs text-slate-400 py-4 text-center">No forecast data available.</p>
-        ) : (
-          <div className="space-y-4">
-            {monthlyForecast.map((item, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex justify-between text-xs font-bold text-brand-text">
-                  <span className="font-extrabold">{item.month}</span>
-                  <span className="tabular-nums font-extrabold text-brand-heading">
-                    Expected: {fmtINR(item.expected)} / Max: {fmtINR(item.bestCase)}
-                  </span>
-                </div>
-                <div className="relative h-6 w-full bg-slate-100 rounded-lg overflow-hidden flex items-center px-2.5">
-                  {/* Expected bar */}
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 bg-brand-accent/35 border-r border-brand-accent/50 transition-all duration-300"
-                    style={{ width: `${Math.min((item.expected / maxVal) * 100, 100)}%` }}
-                  />
-                  {/* Best Case bar */}
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 bg-brand-secondary-accent/15 border-r border-brand-secondary-accent/30 transition-all duration-300"
-                    style={{ width: `${Math.min((item.bestCase / maxVal) * 100, 100)}%` }}
-                  />
-                  {/* Pipeline line marker */}
-                  <div 
-                    className="absolute top-0 bottom-0 w-0.5 bg-brand-border-purple/80 z-10"
-                    style={{ left: `${Math.min((item.pipeline / maxVal) * 100, 100)}%` }}
-                    title={`Pipeline coverage: ${fmtINR(item.pipeline)}`}
-                  />
-                  <span className="z-20 text-[9px] font-extrabold text-brand-heading flex items-center">
-                    Pipeline: {fmtINR(item.pipeline)}
-                  </span>
-                </div>
+        <div className="space-y-4">
+          {monthlyForecast.map((item, idx) => (
+            <div key={idx} className="space-y-1.5">
+              <div className="flex justify-between text-xs font-bold text-foreground">
+                <span className="font-semibold">{item.month}</span>
+                <span className="tabular-nums font-semibold text-foreground">
+                  Expected: ₹{item.expected.toLocaleString()} / Max: ₹{item.bestCase.toLocaleString()}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
+              <div className="relative h-6 w-full bg-secondary rounded-lg overflow-hidden flex items-center px-2.5">
+                {/* Best Case bar */}
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(item.bestCase / maxVal) * 100}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute left-0 top-0 bottom-0 bg-brand-purple/10 border-r border-border"
+                />
+                {/* Expected bar */}
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(item.expected / maxVal) * 100}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
+                  className="absolute left-0 top-0 bottom-0 bg-brand-purple/30 border-r border-brand-accent/50"
+                />
+                {/* Pipeline line marker */}
+                <motion.div 
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="absolute top-0 bottom-0 w-0.5 bg-brand-border-purple/80 z-10 origin-bottom"
+                  style={{ left: `${(item.pipeline / maxVal) * 100}%` }}
+                  title={`Pipeline coverage: ₹${item.pipeline.toLocaleString()}`}
+                />
+                <span className="z-20 text-[9px] font-semibold text-foreground flex items-center">
+                  Pipeline: ₹{item.pipeline.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Quarterly Forecast Grid */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-        <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-          <TrendingUp className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <h3 className="font-semibold text-foreground text-sm flex items-center">
+          <TrendingUp className="h-4.5 w-4.5 mr-2 text-brand-purple" />
           <span>Quarterly Projections Matrix</span>
         </h3>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
+              <tr className="border-b border-border text-[10px] uppercase font-semibold text-foreground">
                 <th className="py-2.5">Quarter</th>
                 <th className="py-2.5 text-right">Quota Target</th>
                 <th className="py-2.5 text-right">Expected Closed</th>
@@ -303,29 +198,24 @@ export default function ForecastView() {
                 <th className="py-2.5 text-right">Target Achievement</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-semibold text-brand-text">
-              {quarterlyForecast.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-6 text-center text-xs text-slate-400">
-                    No pipeline data available.
-                  </td>
-                </tr>
-              ) : (
-                quarterlyForecast.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 font-extrabold">{item.quarter}</td>
-                    <td className="py-3 text-right tabular-nums">{fmtINR(item.quota)}</td>
-                    <td className="py-3 text-right tabular-nums font-extrabold text-brand-heading">{fmtINR(item.committed)}</td>
-                    <td className="py-3 text-right tabular-nums">{fmtINR(item.bestCase)}</td>
-                    <td className="py-3 text-right tabular-nums text-slate-500">{fmtINR(item.pipeline)}</td>
+            <tbody className="divide-y divide-border text-xs font-semibold text-foreground">
+              {quarterlyForecast.map((item, idx) => {
+                const pct = Math.round((item.committed / item.quota) * 100);
+                return (
+                  <tr key={idx} className="hover:bg-secondary transition-colors">
+                    <td className="py-3 font-semibold">{item.quarter}</td>
+                    <td className="py-3 text-right tabular-nums">₹{item.quota.toLocaleString()}</td>
+                    <td className="py-3 text-right tabular-nums font-semibold text-foreground">₹{item.committed.toLocaleString()}</td>
+                    <td className="py-3 text-right tabular-nums">₹{item.bestCase.toLocaleString()}</td>
+                    <td className="py-3 text-right tabular-nums text-muted-foreground">₹{item.pipeline.toLocaleString()}</td>
                     <td className="py-3 text-right">
-                      <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold tabular-nums">
-                        {item.pct}%
+                      <span className="bg-brand-cyan/15 text-brand-cyan px-2 py-0.5 rounded font-semibold tabular-nums">
+                        {pct}%
                       </span>
                     </td>
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>

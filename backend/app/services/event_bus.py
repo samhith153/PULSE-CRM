@@ -75,19 +75,3 @@ event_bus = EventBus()
 
 def register_default_consumers() -> None:
     event_bus.register("*", LoggingEventConsumer())
-
-@dataclass(slots=True)
-class EventEnvelope:
-    event_id: UUID
-    organization_id: UUID
-    aggregate_type: str
-    aggregate_id: Optional[UUID]
-    event_type: str
-    topic: str
-    title: str
-    description: Optional[str]
-    payload: Optional[dict]
-    source: Optional[str]
-    status: str
-    created_at: datetime
-    actor_id: Optional[UUID] = None

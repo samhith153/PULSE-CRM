@@ -1,4 +1,4 @@
-﻿"""
+"""
 Models package.
 Import all models here so Alembic auto-detects them and SQLAlchemy mapper
 registration works correctly.
@@ -9,7 +9,6 @@ from app.models.company import Company  # noqa: F401
 from app.models.contact import Contact  # noqa: F401
 from app.models.deal import Deal  # noqa: F401
 from app.models.email import GmailConnection, Email  # noqa: F401
-from app.models.email_summary import EmailSummary  # noqa: F401
 from app.models.event_outbox import EventOutbox  # noqa: F401
 from app.models.lead import Lead  # noqa: F401
 from app.models.lead_score import LeadScore  # noqa: F401
@@ -24,5 +23,6 @@ from app.models.ai_summary import AISummary  # noqa: F401
 
 from app.models.webhook import WebhookEndpoint, WebhookDelivery  # noqa: F401
 from app.models.calendar_event import CalendarEvent  # noqa: F401
-from app.models.document import Document
-from app.models.notification import Notification  # noqa: F401
+from app.models.document import Document  # noqa: F401
+
+

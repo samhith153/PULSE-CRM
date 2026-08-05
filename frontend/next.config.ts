@@ -19,12 +19,12 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Proxy /uploads to the backend so avatars and attachments work
-  async rewrites() {
+  async redirects() {
     return [
       {
-        source: '/uploads/:path*',
-        destination: `${backendUrl}/uploads/:path*`,
+        source: '/login',
+        destination: '/',
+        permanent: false,
       },
     ];
   },

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, getCurrentUser, getUsers, fetchLeadRecommendation, fetchBatchRecommendations } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Search, 
   Filter, 
@@ -28,7 +29,9 @@ import {
   Globe,
   Monitor,
   Users,
-  ChevronDown
+  LayoutGrid,
+  List,
+  ArrowLeft
 } from 'lucide-react';
 
 // Mapping helpers
@@ -56,7 +59,6 @@ function backendToLocal(b: BackendLead): Lead {
     score: b.score ?? 0,
     fit_score: b.fit_score ?? null,
     engagement_score: b.engagement_score ?? null,
-    engagementReasons: b.engagement_reasons ?? [],
     priorityTier: b.priority ?? null,
     topReasons: b.top_reasons ?? [],
     status: STATUS_UNMAP[b.status] || 'New',
@@ -120,7 +122,6 @@ interface Lead {
   score: number;
   fit_score: number | null;
   engagement_score: number | null;
-  engagementReasons: string[];
   priorityTier: string | null;
   topReasons: string[];
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
@@ -147,6 +148,65 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
 
+  const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('pulse-crm-view-mode-leads') as any) || 'default';
+    }
+    return 'default';
+  });
+
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
+  const [sortField, setSortField] = useState<string>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const toggleViewMode = (mode: 'default' | 'list') => {
+    setViewMode(mode);
+    localStorage.setItem('pulse-crm-view-mode-leads', mode);
+  };
+
+  const handleToggleSelectAll = (items: any[]) => {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map(item => item.id)));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string | number) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleHeaderClick = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const handleDeleteSelectedLeads = async () => {
+    if (!window.confirm(`Are you sure you want to delete the ${selectedIds.size} selected lead(s)?`)) return;
+    try {
+      for (const id of Array.from(selectedIds)) {
+        await apiDeleteLead(String(id));
+      }
+      setLeads(prev => prev.filter(lead => !selectedIds.has(lead.id)));
+      setSelectedIds(new Set());
+      setSelectedLeadId(null);
+      toast.success("Selected leads deleted successfully.");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Failed to delete selected leads.");
+    }
+  };
+
   // Selections & Filters State
   const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -156,10 +216,8 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
   const [isPriorityView, setIsPriorityView] = useState(false);
 
   // Modal Open/Close States
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isCreateIndustryOpen, setIsCreateIndustryOpen] = useState(false);
+  const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isEditIndustryOpen, setIsEditIndustryOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
@@ -174,18 +232,27 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
-    name: '', jobTitle: '', email: '', phone: '',
-    company: '', industry: '', location: '', numberOfEmployees: '',
-    source: '', currentCRM: '', operationalSystem: '',
-    status: 'New' as Lead['status'], priority: 'Medium' as Lead['priority'], owner: '', notes: ''
+    name: '',
+    jobTitle: '',
+    email: '',
+    phone: '',
+    company: '',
+    industry: '',
+    location: '',
+    numberOfEmployees: '',
+    source: '',
+    currentCRM: '',
+    operationalSystem: '',
+    status: 'New' as Lead['status'],
+    priority: 'Medium' as Lead['priority'],
+    owner: 'Sarah Johnson',
+    notes: ''
   });
   const [emailForm, setEmailForm] = useState({ subject: '', body: '' });
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
   const [meetingForm, setMeetingForm] = useState({ title: '', date: '', time: '', desc: '' });
   const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employeeCount: '', pipelineStageId: '' });
   const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string; slug: string }[]>([]);
-  const [currentUser, setCurrentUser] = useState<{ id: string; full_name: string } | null>(null);
-  const [users, setUsers] = useState<{ id: string; full_name: string }[]>([]);
 
   const getProgressPoints = (score: number) => {
     const p1 = { x: 10, y: 80 };
@@ -217,15 +284,6 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     }).finally(() => {
       onLoaded?.();
     });
-    getCurrentUser().then(user => {
-      setCurrentUser(user);
-      setLeadForm(prev => ({ ...prev, owner: user.full_name }));
-    }).catch(() => {});
-    getUsers().then(data => {
-      if (data && data.data) {
-        setUsers(data.data.map(u => ({ id: u.id, full_name: u.full_name })));
-      }
-    }).catch(() => {});
     getGmailStatus().then(status => {
       setGmailConnected(status.connected);
       if (status.connection) {
@@ -239,26 +297,42 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     }).catch(() => {});
   }, []);
 
-  // Poll for lead score updates every 30 seconds
   useEffect(() => {
-    const interval = setInterval(() => {
-      getLeads().then(data => {
-        const mapped = (data ?? []).map(backendToLocal);
-        setLeads(mapped);
-        const ids = mapped.map(l => l.id).filter(Boolean);
-        if (ids.length > 0) {
-          fetchBatchRecommendations(ids).then(res => {
-            const recs: Record<string, string> = {};
-            for (const [id, item] of Object.entries(res.recommendations || {})) {
-              recs[id] = item.recommended_action || 'No recommendation available.';
-            }
-            setLeadRecommendations(recs);
-          }).catch(() => {});
-        }
-      }).catch(() => {});
-    }, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    const handleOpenCreateLead = () => {
+      setLeadForm({
+        name: '', jobTitle: '', email: '', phone: '',
+        company: '', industry: '', location: '', numberOfEmployees: '',
+        source: '', currentCRM: '', operationalSystem: '',
+        status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: ''
+      });
+      setIsCreatingFullPage(true);
+    };
+    const handleOpenNote = () => {
+      if (selectedLeadId) {
+        setCallForm({ outcome: 'Spoke with Lead', notes: '' });
+        setIsCallModalOpen(true);
+      } else {
+        alert('Please select a lead from the list first to add a note.');
+      }
+    };
+    const handleOpenMeeting = () => {
+      if (selectedLeadId) {
+        setMeetingForm({ title: '', date: '', time: '', desc: '' });
+        setIsMeetingModalOpen(true);
+      } else {
+        alert('Please select a lead from the list first to schedule a meeting.');
+      }
+    };
+    
+    window.addEventListener('pulse-open-create-lead-modal', handleOpenCreateLead);
+    window.addEventListener('pulse-open-create-note-modal', handleOpenNote);
+    window.addEventListener('pulse-open-create-meeting-modal', handleOpenMeeting);
+    return () => {
+      window.removeEventListener('pulse-open-create-lead-modal', handleOpenCreateLead);
+      window.removeEventListener('pulse-open-create-note-modal', handleOpenNote);
+      window.removeEventListener('pulse-open-create-meeting-modal', handleOpenMeeting);
+    };
+  }, [selectedLeadId]);
 
   // Fetch recommendation when selected lead changes
   useEffect(() => {
@@ -294,6 +368,25 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     ? [...filteredLeads].sort((a, b) => (b.score || 0) - (a.score || 0))
     : filteredLeads;
 
+  const sortedLeads = React.useMemo(() => {
+    if (isPriorityView) {
+      return displayLeads;
+    }
+    return [...displayLeads].sort((a, b) => {
+      const ra = a as any;
+      const rb = b as any;
+      let valA: any = (ra[sortField] || '').toString().toLowerCase();
+      let valB: any = (rb[sortField] || '').toString().toLowerCase();
+      if (sortField === 'score') {
+        valA = Number(ra[sortField]) || 0;
+        valB = Number(rb[sortField]) || 0;
+      }
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [displayLeads, sortField, sortOrder, isPriorityView]);
+
   // Action: Create Lead Submit
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -316,7 +409,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
       const newLead: Lead = {
         ...backendToLocal(created),
         timeline: [
-          { id: Date.now(), type: "creation" as const, title: "Lead Created Manually", desc: `Lead added to database by ${currentUser?.full_name || 'system user'}.`, time: "Just now" }
+          { id: Date.now(), type: "creation" as const, title: "Lead Created Manually", desc: `Lead added to database by system user.`, time: "Just now" }
         ],
       };
       setLeads([newLead, ...leads]);
@@ -324,8 +417,8 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     } catch (err) {
       console.error("Failed to create lead:", err);
     }
-    setIsCreateModalOpen(false);
-    setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: currentUser?.full_name || '', notes: '' });
+    setIsCreatingFullPage(false);
+    setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
   };
 
   // Action: Edit Lead Submit
@@ -339,13 +432,10 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
       email: leadForm.email || undefined,
       phone: leadForm.phone || undefined,
       status: STATUS_MAP[leadForm.status as string] || leadForm.status,
-      priority: leadForm.priority,
       source: SOURCE_MAP[leadForm.source as string] || leadForm.source || undefined,
       industry: leadForm.industry || undefined,
       location: leadForm.location || undefined,
       employee_count: leadForm.numberOfEmployees ? parseInt(leadForm.numberOfEmployees, 10) || undefined : undefined,
-      current_crm: leadForm.currentCRM || undefined,
-      operational_systems: leadForm.operationalSystem || undefined,
       notes: leadForm.notes || undefined,
     };
     try {
@@ -577,49 +667,448 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     }));
   };
 
+  if (isCreatingFullPage) {
+    return (
+      <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-200">
+        {/* Full page header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-border">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => {
+                setIsCreatingFullPage(false);
+                setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
+              }}
+              className="p-2 border border-border hover:bg-secondary rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition-all hover:scale-105"
+              title="Back to Leads"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="bg-brand-purple/10 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">New Prospect</span>
+              </div>
+              <h2 className="font-sans text-2xl text-foreground font-bold tracking-tight mt-1">Create New Lead</h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Enter all details across prospect, company, and technology dimensions.</p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreatingFullPage(false);
+                setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
+              }}
+              className="px-4.5 py-2 border border-border rounded-xl text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="full-page-lead-form"
+              className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition-all hover:-translate-y-0.5"
+            >
+              Create Lead
+            </button>
+          </div>
+        </div>
+
+        <form id="full-page-lead-form" onSubmit={handleCreateLead} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Card 1: Contact Information */}
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center space-x-2 pb-3 border-b border-border">
+              <div className="p-1.5 bg-brand-purple/10 text-brand-purple rounded-lg">
+                <User className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Contact Information</h4>
+                <p className="text-[10px] text-muted-foreground font-medium">Basic contact details of the prospect</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">
+                    Full Name <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. John Doe"
+                    value={leadForm.name}
+                    onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Job Title</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. VP of Engineering"
+                    value={leadForm.jobTitle}
+                    onChange={(e) => setLeadForm({ ...leadForm, jobTitle: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">
+                    Email Address <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="name@company.com"
+                    value={leadForm.email}
+                    onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Phone Number</label>
+                  <input
+                    type="text"
+                    placeholder="+1 (555) 000-0000"
+                    value={leadForm.phone}
+                    onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Company Information */}
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center space-x-2 pb-3 border-b border-border">
+              <div className="p-1.5 bg-brand-purple/10 text-brand-purple rounded-lg">
+                <Building2 className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Company Information</h4>
+                <p className="text-[10px] text-muted-foreground font-medium">Details of the target organization</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">
+                    Company Name <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Acme Corp"
+                    value={leadForm.company}
+                    onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">
+                    Industry <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    required
+                    value={leadForm.industry}
+                    onChange={(e) => setLeadForm({ ...leadForm, industry: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                  >
+                    <option value="">Select Industry</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Pharma">Pharma</option>
+                    <option value="Logistics">Logistics</option>
+                    <option value="Construction">Construction</option>
+                    <option value="Education">Education</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Insurance">Insurance</option>
+                    <option value="Hospitality">Hospitality</option>
+                    <option value="Real Estate">Real Estate</option>
+                    <option value="Agriculture">Agriculture</option>
+                    <option value="Legal">Legal</option>
+                    <option value="Retail">Retail</option>
+                    <option value="Media">Media</option>
+                    <option value="Consulting">Consulting</option>
+                    <option value="IT">IT</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Location</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. San Francisco, CA"
+                    value={leadForm.location}
+                    onChange={(e) => setLeadForm({ ...leadForm, location: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Number of Employees</label>
+                  <select
+                    value={leadForm.numberOfEmployees}
+                    onChange={(e) => setLeadForm({ ...leadForm, numberOfEmployees: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                  >
+                    <option value="">Select Range</option>
+                    <option value="1">1</option>
+                    <option value="10">10</option>
+                    <option value="50">50</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                    <option value="1001">1001+</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Lead Classification */}
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center space-x-2 pb-3 border-b border-border">
+              <div className="p-1.5 bg-brand-purple/10 text-brand-purple rounded-lg">
+                <Globe className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Lead Classification</h4>
+                <p className="text-[10px] text-muted-foreground font-medium">Source, priority, and current assignments</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">
+                    Lead Source <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    required
+                    value={leadForm.source}
+                    onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                  >
+                    <option value="">Select Source</option>
+                    <option value="Website">Website</option>
+                    <option value="Referral">Referral</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="Cold Email">Cold Email</option>
+                    <option value="Event">Event</option>
+                    <option value="Webinar">Webinar</option>
+                    <option value="Partner">Partner</option>
+                    <option value="Paid Ads">Paid Ads</option>
+                    <option value="Organic Search">Organic Search</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Priority</label>
+                  <select
+                    value={leadForm.priority}
+                    onChange={(e) => setLeadForm({ ...leadForm, priority: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Status</label>
+                  <select
+                    value={leadForm.status}
+                    onChange={(e) => setLeadForm({ ...leadForm, status: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                  >
+                    <option value="New">New</option>
+                    <option value="Contacted">Contacted</option>
+                    <option value="Qualified">Qualified</option>
+                    <option value="Converted">Converted</option>
+                    <option value="Lost">Lost</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Lead Owner</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sarah Johnson"
+                  value={leadForm.owner}
+                  onChange={(e) => setLeadForm({ ...leadForm, owner: e.target.value })}
+                  className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: Technical Stack & Context */}
+          <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
+            <div className="flex items-center space-x-2 pb-3 border-b border-border">
+              <div className="p-1.5 bg-brand-purple/10 text-brand-purple rounded-lg">
+                <Monitor className="h-4 w-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Technical Context & Notes</h4>
+                <p className="text-[10px] text-muted-foreground font-medium">Tools used and additional qualitative notes</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Current CRM</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Salesforce, HubSpot"
+                    value={leadForm.currentCRM}
+                    onChange={(e) => setLeadForm({ ...leadForm, currentCRM: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Operational System</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. SAP, Oracle ERP"
+                    value={leadForm.operationalSystem}
+                    onChange={(e) => setLeadForm({ ...leadForm, operationalSystem: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Background Notes / Context</label>
+                <textarea
+                  placeholder="Enter initial conversations, requirements or key context..."
+                  value={leadForm.notes}
+                  onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}
+                  className="w-full h-19 px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Form Actions Footer (Span full width) */}
+          <div className="col-span-1 md:col-span-2 flex items-center justify-between p-4 bg-secondary/50 border border-border rounded-xl mt-4">
+            <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1">
+              <span className="text-destructive font-bold text-xs">*</span> Required fields must be completed.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCreatingFullPage(false);
+                  setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
+                }}
+                className="px-4.5 py-2 border border-border rounded-xl text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition-all hover:-translate-y-0.5"
+              >
+                Create Lead
+              </button>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Left Pane (Table, filters, search, headers) */}
-      <div className={`col-span-12 ${activeLead ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+      <div className={`col-span-12 ${activeLead && viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
+        <div className="bg-card border border-border rounded-2xl p-5">
           {/* Header Row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
               <div className="flex items-center space-x-3">
-                <h2 className="font-sans text-2xl text-brand-heading font-bold">Sales Leads</h2>
+                <h2 className="font-sans text-2xl text-foreground font-bold">Sales Leads</h2>
                 {/* Priority View Toggle */}
                 <button
                   type="button"
                   onClick={() => setIsPriorityView(!isPriorityView)}
-                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold transition-all duration-200 cursor-pointer ${
+                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all duration-200 cursor-pointer ${
                     isPriorityView
-                      ? 'bg-brand-accent text-white shadow-sm ring-2 ring-brand-accent/25'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-brand-heading'
+                      ? 'bg-brand-purple text-primary-foreground ring-2 ring-brand-purple/25'
+                      : 'bg-secondary hover:bg-secondary text-foreground hover:text-foreground'
                   }`}
                 >
                   <Sparkles className="h-3 w-3" />
                   <span>{isPriorityView ? 'Priority View On' : 'Priority View Off'}</span>
                 </button>
               </div>
-              <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Manage prospects, monitor qualification scores, and trigger follow-ups.</p>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Manage prospects, monitor qualification scores, and trigger follow-ups.</p>
             </div>
-            <button 
-              onClick={() => {
-                setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: currentUser?.full_name || '', notes: '' });
-                setIsCreateModalOpen(true);
-              }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 transition-colors cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
-              <span>Add Lead</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {/* View Toggle Button */}
+              <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
+                <button
+                  type="button"
+                  onClick={() => toggleViewMode('default')}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    viewMode === 'default'
+                      ? 'bg-card text-brand-purple shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="Split View"
+                >
+                  <LayoutGrid size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleViewMode('list')}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-card text-brand-purple shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="List Table View"
+                >
+                  <List size={14} />
+                </button>
+              </div>
+
+              {selectedIds.size > 0 && (
+                <button 
+                  onClick={handleDeleteSelectedLeads}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer mr-2"
+                >
+                  <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
+                  <span>Delete Selected ({selectedIds.size})</span>
+                </button>
+              )}
+
+              <button 
+                onClick={() => {
+                  setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
+                  setIsCreatingFullPage(true);
+                }}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
+                <span>Add Lead</span>
+              </button>
+            </div>
           </div>
 
           {/* Search & Filters block */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             {/* Search Input */}
             <div className="relative">
-              <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
+              <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
                 <Search className="h-3.5 w-3.5" />
               </span>
               <input 
@@ -627,7 +1116,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 placeholder="Search leads, companies..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text bg-slate-50/50 focus:bg-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
+                className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground bg-secondary placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
               />
             </div>
             
@@ -636,7 +1125,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
               <select 
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="w-full px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text/80 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent/20 cursor-pointer"
+                className="w-full px-3 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-purple/20 cursor-pointer"
               >
                 <option value="All">All</option>
                 <option value="New">New</option>
@@ -649,7 +1138,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
               <select 
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value)}
-                className="w-full px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text/80 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-accent/20 cursor-pointer"
+                className="w-full px-3 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-purple/20 cursor-pointer"
               >
                 <option value="All">All Priorities</option>
                 <option value="Critical">Critical Priority</option>
@@ -661,32 +1150,154 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
           </div>
 
           {/* Lead Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
+          {viewMode === 'list' ? (
+            <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card custom-scrollbar">
+              <table className="w-full border-collapse text-left table-fixed">
+                <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
+                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
+                    <th className="py-3 px-4 w-[5%] text-left">
+                      <input 
+                        type="checkbox" 
+                        checked={sortedLeads.length > 0 && selectedIds.size === sortedLeads.length}
+                        onChange={() => handleToggleSelectAll(sortedLeads)}
+                        className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
+                      />
+                    </th>
+                    <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>Name</th>
+                    <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('company')}>Company</th>
+                    <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('email')}>Email</th>
+                    <th className="py-3 px-2 w-[12%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('phone')}>Phone</th>
+                    <th className="py-3 px-2 w-[7%] cursor-pointer hover:text-foreground text-center" onClick={() => handleHeaderClick('score')}>Score</th>
+                    <th className="py-3 px-2 w-[11%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('status')}>Status</th>
+                    <th className="py-3 px-2 w-[11%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('priority')}>Priority</th>
+                    <th className="py-3 px-2 w-[10%] text-right pr-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
+                  {sortedLeads.length > 0 ? (
+                    sortedLeads.map((lead) => {
+                      const isRowSelected = selectedIds.has(lead.id);
+                      return (
+                        <tr 
+                          key={lead.id} 
+                          onClick={() => setSelectedLeadId(lead.id)}
+                          className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                        >
+                          <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                              type="checkbox" 
+                              checked={isRowSelected}
+                              onChange={() => handleToggleSelectRow(lead.id)}
+                              className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
+                            />
+                          </td>
+                          <td className="py-3.5 px-2 font-bold truncate" title={lead.name}>{lead.name}</td>
+                          <td className="py-3.5 px-2 text-muted-foreground truncate" title={lead.company}>{lead.company}</td>
+                          <td className="py-3.5 px-2 text-muted-foreground truncate" title={lead.email}>{lead.email}</td>
+                          <td className="py-3.5 px-2 text-muted-foreground truncate" title={lead.phone}>{lead.phone}</td>
+                          <td className="py-3.5 px-2 text-center font-bold tabular-nums">
+                            <span className={`px-2 py-0.5 rounded text-[10px] ${
+                              lead.score >= 80 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/15' :
+                              lead.score >= 50 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/15' :
+                              'bg-rose-500/10 text-rose-500 border border-rose-500/15'
+                            }`}>
+                              {lead.score}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
+                              lead.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15' :
+                              lead.status === 'Lost' ? 'bg-rose-500/10 text-rose-500 border-rose-500/15' :
+                              'bg-brand-purple/10 text-brand-purple border-brand-purple/15'
+                            }`}>
+                              {lead.status}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-2">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
+                              lead.priority === 'Critical' ? 'bg-rose-500/10 text-rose-500 border-rose-500/15' :
+                              lead.priority === 'High' ? 'bg-amber-500/10 text-amber-500 border-amber-500/15' :
+                              'bg-secondary text-muted-foreground border-border'
+                            }`}>
+                              {lead.priority}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-2 text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex justify-end gap-1.5">
+                              <button 
+                                onClick={() => {
+                                  setLeadForm({
+                                    name: lead.name,
+                                    jobTitle: lead.jobTitle || '',
+                                    email: lead.email,
+                                    phone: lead.phone,
+                                    company: lead.company,
+                                    industry: lead.industry || '',
+                                    location: lead.location || '',
+                                    numberOfEmployees: lead.numberOfEmployees || '',
+                                    source: lead.source || '',
+                                    currentCRM: lead.currentCRM || '',
+                                    operationalSystem: lead.operationalSystem || '',
+                                    status: lead.status,
+                                    priority: lead.priority,
+                                    owner: lead.owner,
+                                    notes: lead.notes
+                                  });
+                                  setSelectedLeadId(lead.id);
+                                  setIsEditModalOpen(true);
+                                }}
+                                className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </button>
+                              <button 
+                                onClick={() => setDeleteConfirmId(lead.id)}
+                                className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-muted-foreground">
+                        No leads matching search or filter selections.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card">
+              <table className="w-full border-collapse text-left">
+              <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)]">
                 {isPriorityView ? (
-                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
-                    <th className="pb-2">Company Name</th>
-                    <th className="pb-2 text-center">Fit Score</th>
-                    <th className="pb-2 text-center">Engagement Score</th>
-                    <th className="pb-2 text-center">Overall Score</th>
-                    <th className="pb-2">Recommendation</th>
-                    <th className="pb-2 text-right">Actions</th>
+                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
+                    <th className="py-3 px-4">Company Name</th>
+                    <th className="py-3 text-center">Fit Score</th>
+                    <th className="py-3 text-center">Engagement Score</th>
+                    <th className="py-3 text-center">Overall Score</th>
+                    <th className="py-3">Recommendation</th>
+                    <th className="py-3 text-right pr-4">Actions</th>
                   </tr>
                 ) : (
-                  <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
-                    <th className="pb-2">Name & Company</th>
-                    <th className="pb-2 text-center">Score</th>
-                    <th className="pb-2">Status</th>
-                    <th className="pb-2">Priority</th>
-                    <th className="pb-2">Owner</th>
-                    <th className="pb-2 text-right">Actions</th>
+                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
+                    <th className="py-3 px-4">Name & Company</th>
+                    <th className="py-3 text-center">Score</th>
+                    <th className="py-3">Status</th>
+                    <th className="py-3">Priority</th>
+                    <th className="py-3">Owner</th>
+                    <th className="py-3 text-right pr-4">Actions</th>
                   </tr>
                 )}
               </thead>
-              <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
-                {displayLeads.length > 0 ? (
-                  displayLeads.map((lead, idx) => {
+              <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
+                {sortedLeads.length > 0 ? (
+                  sortedLeads.map((lead, idx) => {
                     const isSelected = lead.id === selectedLeadId;
                     const isTopPriority = isPriorityView && idx === 0;
                     return (
@@ -697,46 +1308,46 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                           e.stopPropagation();
                           setSelectedLeadId(prevId => prevId === lead.id ? null : prevId);
                         }}
-                        className={`hover:bg-slate-50/50 cursor-pointer transition-all duration-200 ${
-                          isSelected ? 'bg-brand-secondary-accent/10' : ''
-                        } ${isTopPriority ? 'border-l-4 border-l-brand-accent bg-brand-accent/[0.03]' : ''}`}
+                        className={`hover:bg-secondary/40 cursor-pointer transition-all duration-200 border-b border-border/40 ${
+                          isSelected ? 'bg-brand-blue/[0.04]' : ''
+                        } ${isTopPriority ? 'bg-brand-blue/[0.01]' : ''}`}
                       >
                         {isPriorityView ? (
                           <>
                             {/* Company Name */}
-                            <td className="py-3">
-                              <div className="font-extrabold text-black flex items-center space-x-1.5">
-                                <Building2 className="h-3.5 w-3.5 text-black shrink-0" />
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold text-foreground flex items-center space-x-1.5">
+                                <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                                 <span>{lead.company}</span>
                               </div>
-                              <div className="text-[10px] text-brand-text/60 mt-0.5 ml-5">
+                              <div className="text-[10px] text-muted-foreground mt-0.5 ml-5">
                                 Contact: {lead.name}
                               </div>
                             </td>
                             {/* Fit Score */}
-                            <td className="py-3 text-center">
-                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
+                            <td className="py-3.5 text-center">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/10">
                                 {lead.fit_score ?? 0}%
                               </span>
                             </td>
                             {/* Engagement Score */}
-                            <td className="py-3 text-center">
-                              <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-slate-100 text-black">
+                            <td className="py-3.5 text-center">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground border border-border/60">
                                 {lead.engagement_score ?? 0}%
                               </span>
                             </td>
                             {/* Overall Score */}
-                            <td className="py-3 text-center">
-                              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                                lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
-                                lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
+                            <td className="py-3.5 text-center">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums border ${
+                                lead.score >= 80 ? 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400 border-emerald-500/10' :
+                                lead.score >= 60 ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400 border-amber-500/10' : 'text-destructive bg-destructive/10 border-destructive/10'
                               }`}>
                                 {lead.score}%
                               </span>
                             </td>
                             {/* Recommendation */}
-                            <td className="py-3">
-                              <div className="text-[10px] text-brand-heading font-bold max-w-[220px] truncate" title={getAIRecommendation(lead)}>
+                            <td className="py-3.5">
+                              <div className="text-[10px] text-foreground/80 font-medium max-w-[220px] truncate" title={getAIRecommendation(lead)}>
                                 {getAIRecommendation(lead)}
                               </div>
                             </td>
@@ -744,59 +1355,60 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                         ) : (
                           <>
                             {/* Name & Company */}
-                            <td className="py-3">
-                              <div className="font-extrabold text-brand-heading">{lead.name}</div>
-                              <div className="text-[10px] text-brand-text/60 mt-0.5 flex items-center">
-                                <Building2 className="h-3.5 w-3.5 mr-1 text-brand-text/40" />
+                            <td className="py-3.5 px-4">
+                              <div className="font-semibold text-foreground">{lead.name}</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center">
+                                <Building2 className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
                                 {lead.company}
                               </div>
                             </td>
                             
                             {/* Lead Score */}
-                            <td className="py-3 text-center">
-                              <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                                lead.score >= 80 ? 'text-emerald-700 bg-emerald-50' :
-                                lead.score >= 60 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50'
+                            <td className="py-3.5 text-center">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums border ${
+                                lead.score >= 80 ? 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400 border-emerald-500/10' :
+                                lead.score >= 60 ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400 border-amber-500/10' : 'text-destructive bg-destructive/10 border-destructive/10'
                               }`}>
                                 {lead.score}
                               </span>
                             </td>
 
                             {/* Status Badge */}
-                            <td className="py-3">
-                              <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
-                                lead.status === 'New' ? 'text-blue-750 bg-blue-50' :
-                                lead.status === 'Contacted' ? 'text-yellow-750 bg-yellow-50' :
-                                lead.status === 'Qualified' ? 'text-purple-750 bg-purple-50' :
-                                lead.status === 'Converted' ? 'text-emerald-750 bg-emerald-50 border border-emerald-100' : 'text-slate-500 bg-slate-100'
+                            <td className="py-3.5">
+                              <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
+                                lead.status === 'New' ? 'text-blue-600 bg-blue-500/10 dark:text-blue-400 border-blue-500/10' :
+                                lead.status === 'Contacted' ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400 border-amber-500/10' :
+                                lead.status === 'Qualified' ? 'text-indigo-600 bg-indigo-500/10 dark:text-indigo-400 border-indigo-500/10' :
+                                lead.status === 'Converted' ? 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400 border-emerald-500/10' :
+                                'text-muted-foreground bg-secondary/80 border border-border/80'
                               }`}>
                                 {lead.status}
                               </span>
                             </td>
 
                             {/* Priority Badge */}
-                            <td className="py-3">
-                              <span className={`text-[9px] font-bold ${
+                            <td className="py-3.5">
+                              <span className={`text-[10px] font-semibold flex items-center gap-1.5 ${
                                 lead.priorityTier === 'Critical' ? 'text-emerald-600' :
-                                lead.priorityTier === 'High' ? 'text-rose-600' :
+                                lead.priorityTier === 'High' ? 'text-destructive' :
                                 lead.priorityTier === 'Medium' ? 'text-amber-600' :
-                                lead.priorityTier === 'Low' ? 'text-slate-500' : 'text-slate-300'
+                                'text-muted-foreground'
                               }`}>
-                                ● {lead.priorityTier || lead.priority}
+                                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                  lead.priorityTier === 'Critical' ? 'bg-emerald-500' :
+                                  lead.priorityTier === 'High' ? 'bg-destructive' :
+                                  lead.priorityTier === 'Medium' ? 'bg-amber-500' :
+                                  'bg-muted-foreground/60'
+                                }`} />
+                                <span>{lead.priorityTier || lead.priority}</span>
                               </span>
                             </td>
 
                             {/* Owner */}
-                            <td className="py-3">
+                            <td className="py-3.5">
                               <div className="flex items-center space-x-1.5">
-                                {lead.ownerAvatar ? (
-                                  <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-slate-200" />
-                                ) : (
-                                  <div className="h-5 w-5 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center">
-                                    <span className="text-[7px] font-bold text-slate-400">{lead.owner.split(' ').map((p: string) => p[0]).slice(0, 1).join('')}</span>
-                                  </div>
-                                )}
-                                <span className="text-[10px] text-brand-text/80 truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
+                                <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-border" />
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
                               </div>
                             </td>
                           </>
@@ -808,7 +1420,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                             {lead.status !== 'Converted' && (
                               <button 
                                 onClick={() => handleConvertLead(lead.id)}
-                                className="px-2 py-0.5 border border-emerald-250 text-emerald-750 hover:bg-emerald-600 hover:text-white rounded text-[10px] font-extrabold transition-colors cursor-pointer"
+                                className="px-2 py-0.5 border border-emerald-250 text-emerald-750 hover:bg-brand-cyan hover:text-primary-foreground rounded text-[10px] font-semibold transition-colors cursor-pointer"
                                 title="Convert Lead"
                               >
                                 Convert
@@ -816,7 +1428,6 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                             )}
                             <button 
                               onClick={() => {
-                                setSelectedLeadId(lead.id);
                                 setLeadForm({
                                   name: lead.name,
                                   jobTitle: lead.jobTitle || '',
@@ -836,13 +1447,13 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                                 });
                                 setIsEditModalOpen(true);
                               }}
-                              className="p-1 text-slate-400 hover:text-brand-heading hover:bg-slate-100 rounded transition-colors cursor-pointer"
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
                             >
                               <Edit className="h-3.5 w-3.5" />
                             </button>
                             <button 
                               onClick={() => setDeleteConfirmId(lead.id)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                              className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -853,7 +1464,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
                       No leads matching search or filter selections.
                     </td>
                   </tr>
@@ -861,30 +1472,31 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
               </tbody>
             </table>
           </div>
+          )}
         </div>
       </div>
 
       {/* Right Pane (Selected Lead Details drawer, activities, timeline logs, editable notes, AI advice) */}
-      {activeLead && <div className="col-span-12 lg:col-span-4 space-y-5">
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
+      {activeLead && viewMode !== 'list' && <div className="col-span-12 lg:col-span-4 space-y-5">
+        <div className="bg-card border border-border rounded-2xl p-5 sticky top-20">
           {/* Card Title Header */}
-          <div className="flex items-start justify-between border-b border-brand-border-purple/15 pb-3">
+          <div className="flex items-start justify-between border-b border-border pb-3">
             <div>
-              <h3 className="font-extrabold text-brand-heading text-sm">{activeLead.name}</h3>
-              <p className="text-[10px] text-brand-text/60 font-bold">{activeLead.company}</p>
+              <h3 className="font-semibold text-foreground text-sm">{activeLead.name}</h3>
+              <p className="text-[10px] text-muted-foreground font-semibold">{activeLead.company}</p>
             </div>
             
             <div className="flex items-center space-x-2">
               {/* Circular score progress indicator */}
-              <div className="flex items-center space-x-1 bg-brand-sidebar-hover/30 border border-brand-border-purple/35 rounded-lg px-2 py-0.5">
-                <Award className="h-3.5 w-3.5 text-brand-accent" strokeWidth={2} />
-                <span className="text-[10px] font-extrabold text-brand-text tabular-nums">{activeLead.score}%</span>
+              <div className="flex items-center space-x-1 bg-secondary border border-border rounded-lg px-2 py-0.5">
+                <Award className="h-3.5 w-3.5 text-brand-purple" strokeWidth={2} />
+                <span className="text-[10px] font-semibold text-foreground tabular-nums">{activeLead.score}%</span>
               </div>
               
               {/* Close Button */}
               <button 
                 onClick={() => setSelectedLeadId(null)}
-                className="p-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 hover:border-slate-300 rounded text-slate-500 hover:text-slate-700 transition-all duration-200 cursor-pointer"
+                className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
                 title="Close Summary"
                 aria-label="Close Summary"
               >
@@ -894,105 +1506,171 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
           </div>
 
           {/* Quick Details Fields list */}
-          <div className="py-3.5 space-y-2.5 text-[11px] font-semibold border-b border-brand-border-purple/15">
+          <div className="py-3.5 space-y-2.5 text-[11px] font-semibold border-b border-border">
             <div className="flex justify-between">
-              <span className="text-brand-text/50">Status</span>
-              <span className={`font-bold px-1.5 py-0.25 rounded ${
-                activeLead.status === 'Converted' ? 'text-emerald-700 bg-emerald-50' : 'text-brand-heading'
+              <span className="text-muted-foreground">Status</span>
+              <span className={`font-semibold px-1.5 py-0.25 rounded ${
+                activeLead.status === 'Converted' ? 'text-brand-cyan bg-brand-cyan/15' : 'text-foreground'
               }`}>{activeLead.status}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-brand-text/50">Priority</span>
-              <span className={`font-bold ${
-                activeLead.priorityTier === 'Critical' ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.25 rounded' :
+              <span className="text-muted-foreground">Priority</span>
+              <span className={`font-semibold ${
+                activeLead.priorityTier === 'Critical' ? 'text-brand-cyan bg-brand-cyan/15 px-1.5 py-0.25 rounded' :
                 activeLead.priorityTier === 'High' ? 'text-amber-700 bg-amber-50 px-1.5 py-0.25 rounded' :
                 activeLead.priorityTier === 'Medium' ? 'text-blue-700 bg-blue-50 px-1.5 py-0.25 rounded' :
-                activeLead.priorityTier === 'Low' ? 'text-slate-500 bg-slate-50 px-1.5 py-0.25 rounded' : ''
+                activeLead.priorityTier === 'Low' ? 'text-muted-foreground bg-secondary px-1.5 py-0.25 rounded' : ''
               }`}>{activeLead.priorityTier || activeLead.priority}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-brand-text/50">Email</span>
-              <a href={`mailto:${activeLead.email}`} className="text-brand-accent hover:underline truncate max-w-[150px]">{activeLead.email}</a>
+              <span className="text-muted-foreground">Email</span>
+              <a href={`mailto:${activeLead.email}`} className="text-brand-purple hover:underline truncate max-w-[150px]">{activeLead.email}</a>
             </div>
             <div className="flex justify-between">
-              <span className="text-brand-text/50">Phone</span>
-              <span className="text-brand-text tabular-nums">{activeLead.phone}</span>
+              <span className="text-muted-foreground">Phone</span>
+              <span className="text-foreground tabular-nums">{activeLead.phone}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-brand-text/50">Owner</span>
+              <span className="text-muted-foreground">Owner</span>
               <div className="flex items-center space-x-1">
-                {activeLead.ownerAvatar ? (
-                  <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-slate-200" />
-                ) : (
-                  <div className="h-4.5 w-4.5 rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center">
-                    <span className="text-[7px] font-bold text-slate-400">{activeLead.owner.split(' ').map((p: string) => p[0]).slice(0, 1).join('')}</span>
-                  </div>
-                )}
-                <span className="text-brand-text">{activeLead.owner}</span>
+                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-border" />
+                <span className="text-foreground">{activeLead.owner}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Engineered AI Features (ML Pipeline Integration) */}
+          <div className="py-3.5 border-b border-border space-y-3">
+            <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider flex items-center space-x-1">
+              <Award className="h-4 w-4 text-brand-purple" />
+              <span>AI Pipeline Features</span>
+            </h4>
+            
+            <div className="grid grid-cols-2 gap-2.5 text-[10px] font-semibold">
+              {/* Engagement Level */}
+              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
+                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Engagement Level</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-foreground font-semibold">{getEngagementDetails(activeLead.emails).score} pts</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide ${
+                    getEngagementDetails(activeLead.emails).level === 'HIGH' 
+                      ? 'bg-brand-cyan/15 text-brand-cyan' 
+                      : getEngagementDetails(activeLead.emails).level === 'MEDIUM'
+                      ? 'bg-amber-50 text-amber-700'
+                      : 'bg-destructive/10 text-destructive'
+                  }`}>
+                    {getEngagementDetails(activeLead.emails).level}
+                  </span>
+                </div>
+              </div>
+
+              {/* Reply Rate */}
+              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
+                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Reply Velocity</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-foreground font-semibold">{getReplyDetails(activeLead.emails).rate}%</span>
+                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide ${
+                    getReplyDetails(activeLead.emails).level === 'FAST' 
+                      ? 'bg-brand-cyan/15 text-brand-cyan' 
+                      : getReplyDetails(activeLead.emails).level === 'MEDIUM'
+                      ? 'bg-amber-50 text-amber-700'
+                      : getReplyDetails(activeLead.emails).level === 'SLOW'
+                      ? 'bg-destructive/10 text-destructive'
+                      : 'bg-secondary text-muted-foreground'
+                  }`}>
+                    {getReplyDetails(activeLead.emails).level}
+                  </span>
+                </div>
+              </div>
+
+              {/* Recency */}
+              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
+                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Touchpoint Recency</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-foreground font-semibold">
+                    {getRecencyDays(activeLead.timeline) === 999 ? 'No touch' : `${getRecencyDays(activeLead.timeline)} days`}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide bg-blue-50 text-blue-700">
+                    {getRecencyDays(activeLead.timeline) <= 3 ? 'Active' : getRecencyDays(activeLead.timeline) <= 7 ? 'Warm' : 'Cold'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Company Band & Source */}
+              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
+                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Firmographic Band</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-foreground font-semibold truncate max-w-[55px]" title={activeLead.company}>
+                    {getCompanyBand(activeLead.company)}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide bg-brand-purple/10 text-brand-purple">
+                    Q: {getSourceQuality(activeLead.source)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* AI Recommendation Alert box */}
-          <div className="mt-4 bg-brand-sidebar-hover/20 border border-brand-border-purple/30 rounded-xl p-3.5 flex items-start space-x-2">
-            <Sparkles className="h-4.5 w-4.5 text-brand-accent shrink-0 mt-0.5" strokeWidth={2} />
+          <div className="mt-4 bg-brand-purple/5 border border-border rounded-xl p-3.5 flex items-start space-x-2">
+            <Sparkles className="h-4.5 w-4.5 text-brand-purple shrink-0 mt-0.5" strokeWidth={2} />
             <div>
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">AI Next Best Action</h4>
-              <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-bold">{getAIRecommendation(activeLead)}</p>
+              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider">AI Next Best Action</h4>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{getAIRecommendation(activeLead)}</p>
             </div>
           </div>
 
           {/* Priority View - Advanced Scoring Details (toggled on/off) */}
           {isPriorityView && (
-            <div className="mt-4 border border-brand-border-purple/30 rounded-xl p-3.5">
-              <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider flex items-center space-x-1 mb-3">
-                <Award className="h-4 w-4 text-brand-accent" />
+            <div className="mt-4 border border-border rounded-xl p-3.5">
+              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider flex items-center space-x-1 mb-3">
+                <Award className="h-4 w-4 text-brand-purple" />
                 <span>Priority Scoring Details</span>
               </h4>
-              <div className="space-y-2.5 text-[10px] font-bold">
+              <div className="space-y-2.5 text-[10px] font-semibold">
                 <div className="flex justify-between items-center">
-                  <span className="text-brand-text/60">Fit Score</span>
-                  <span className="font-extrabold text-brand-heading">{activeLead.fit_score ?? 0}%</span>
+                  <span className="text-muted-foreground">Fit Score</span>
+                  <span className="font-semibold text-foreground">{activeLead.fit_score ?? 0}%</span>
                 </div>
                 {activeLead.fit_score !== null && activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).length > 0 && (
-                  <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-blue-200">
+                  <div className="reason-subtext">
                     {activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).slice(0, 2).map((r, i) => (
                       <div key={i} className="mb-0.5">• {r}</div>
                     ))}
                   </div>
                 )}
-                <div className="border-t border-brand-border-purple/10" />
+                <div className="border-t border-border" />
                 <div className="flex justify-between items-center">
-                  <span className="text-brand-text/60">Engagement Score</span>
-                  <span className="font-extrabold text-brand-heading">{activeLead.engagement_score ?? 0}%</span>
+                  <span className="text-muted-foreground">Engagement Score</span>
+                  <span className="font-semibold text-foreground">{activeLead.engagement_score ?? 0}%</span>
                 </div>
-                {activeLead.engagementReasons.length > 0 && (
-                  <div className="text-[9px] text-brand-text/70 leading-relaxed pl-2 border-l-2 border-amber-200">
-                    {activeLead.engagementReasons.slice(0, 2).map((r, i) => (
+                {activeLead.engagement_score !== null && activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).length > 0 && (
+                  <div className="reason-subtext">
+                    {activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).slice(0, 2).map((r, i) => (
                       <div key={i} className="mb-0.5">• {r}</div>
                     ))}
                   </div>
                 )}
-                <div className="border-t border-brand-border-purple/10" />
+                <div className="border-t border-border" />
                 <div className="flex justify-between items-center">
-                  <span className="text-brand-text/60">Overall Score</span>
-                  <span className={`font-extrabold tabular-nums ${
-                    activeLead.score >= 80 ? 'text-emerald-600' : activeLead.score >= 60 ? 'text-amber-600' : 'text-rose-600'
+                  <span className="text-muted-foreground">Overall Score</span>
+                  <span className={`font-semibold tabular-nums ${
+                    activeLead.score >= 80 ? 'text-brand-cyan' : activeLead.score >= 60 ? 'text-amber-600' : 'text-destructive'
                   }`}>{activeLead.score}%</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-brand-text/60">Tier</span>
-                  <span className={`font-extrabold ${
-                    activeLead.priorityTier === 'Critical' ? 'text-emerald-600' :
+                  <span className="text-muted-foreground">Tier</span>
+                  <span className={`font-semibold ${
+                    activeLead.priorityTier === 'Critical' ? 'text-brand-cyan' :
                     activeLead.priorityTier === 'High' ? 'text-amber-600' :
                     activeLead.priorityTier === 'Medium' ? 'text-blue-600' :
-                    activeLead.priorityTier === 'Low' ? 'text-slate-500' : 'text-slate-300'
+                    activeLead.priorityTier === 'Low' ? 'text-muted-foreground' : 'text-muted-foreground'
                   }`}>{activeLead.priorityTier || activeLead.priority}</span>
                 </div>
                 {activeLead.topReasons.length > 0 && (
-                  <div className="border-t border-brand-border-purple/10 pt-2">
-                    <span className="text-[9px] text-brand-text/60 uppercase tracking-wider font-extrabold">Top Reasons</span>
-                    <div className="mt-1 text-[9px] text-brand-text/80 leading-relaxed">
+                  <div className="border-t border-border pt-2">
+                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Top Reasons</span>
+                    <div className="mt-1 text-[9px] text-muted-foreground leading-relaxed">
                       {activeLead.topReasons.slice(0, 3).map((r, i) => (
                         <div key={i} className="mb-0.5">• {r}</div>
                       ))}
@@ -1005,9 +1683,9 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
 
           {/* Live Notes block */}
           <div className="mt-4">
-            <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider mb-1.5">Internal Notes</h4>
+            <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Internal Notes</h4>
             <textarea
-              className="w-full p-2 border border-brand-border-purple/30 rounded-lg text-[11px] font-semibold text-brand-text bg-slate-50/50 focus:bg-white placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 min-h-[70px] resize-y leading-relaxed"
+              className="w-full p-2 border border-border rounded-lg text-[11px] font-semibold text-foreground bg-secondary placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 min-h-[70px] resize-y leading-relaxed"
               value={activeLead.notes}
               onChange={(e) => handleSaveNotes(e.target.value)}
               placeholder="Record lead feedback, key challenges, sizing metrics..."
@@ -1018,36 +1696,36 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
           <div className="grid grid-cols-3 gap-2 mt-4">
             <button 
               onClick={() => setIsEmailModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-brand-border-purple/35 hover:border-brand-border-purple hover:bg-slate-50 rounded-lg text-[10px] font-extrabold text-brand-text/80 cursor-pointer transition-colors"
+              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
             >
-              <Mail className="h-3.5 w-3.5 text-slate-450" />
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Email</span>
             </button>
             <button 
               onClick={() => setIsCallModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-brand-border-purple/35 hover:border-brand-border-purple hover:bg-slate-50 rounded-lg text-[10px] font-extrabold text-brand-text/80 cursor-pointer transition-colors"
+              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
             >
-              <Phone className="h-3.5 w-3.5 text-slate-450" />
+              <PhoneCall className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Log Call</span>
             </button>
             <button 
               onClick={() => setIsMeetingModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-brand-border-purple/35 hover:border-brand-border-purple hover:bg-slate-50 rounded-lg text-[10px] font-extrabold text-brand-text/80 cursor-pointer transition-colors"
+              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
             >
-              <Calendar className="h-3.5 w-3.5 text-slate-450" />
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Meet</span>
             </button>
           </div>          {/* Activity Feeds Tabs toggles */}
-          <div className="mt-5 border-t border-brand-border-purple/15 pt-4">
-            <div className="flex border-b border-brand-border-purple/15 text-[10px] font-extrabold uppercase flex-wrap">
+          <div className="mt-5 border-t border-border pt-4">
+            <div className="flex border-b border-border text-[10px] font-semibold uppercase flex-wrap">
               {['timeline', 'emails', 'calls', 'meetings', 'activity chart'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveHistoryTab(tab)}
                   className={`pb-1.5 px-2.5 border-b-2 transition-all cursor-pointer ${
                     activeHistoryTab === tab 
-                      ? 'border-brand-secondary-accent text-brand-heading' 
-                      : 'border-transparent text-slate-450 hover:text-brand-text'
+                      ? 'border-brand-purple text-foreground' 
+                      : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   {tab}
@@ -1058,21 +1736,21 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
             {/* Tab content loops */}
             <div className="mt-3.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
               {activeHistoryTab === 'timeline' && (
-                <div className="space-y-3 pl-2 border-l border-brand-border-purple/15">
+                <div className="space-y-3 pl-2 border-l border-border">
                   {activeLead.timeline.length > 0 ? (
                     activeLead.timeline.map((act) => (
                       <div key={act.id} className="relative text-[10px] font-semibold leading-relaxed">
                         {/* Dot indicator */}
-                        <div className="absolute -left-[12.5px] top-1 h-2 w-2 rounded-full bg-brand-secondary-accent border border-white" />
-                        <div className="font-extrabold text-brand-heading flex justify-between">
+                        <div className="absolute -left-[12.5px] top-1 h-2 w-2 rounded-full bg-brand-purple border border-card" />
+                        <div className="font-semibold text-foreground flex justify-between">
                           <span>{act.title}</span>
-                          <span className="text-slate-400 font-bold">{act.time}</span>
+                          <span className="text-muted-foreground font-semibold">{act.time}</span>
                         </div>
-                        <p className="text-brand-text/75 mt-0.5">{act.desc}</p>
+                        <p className="text-muted-foreground mt-0.5">{act.desc}</p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-center text-slate-400 py-3 text-[10px]">No timeline logs recorded.</p>
+                    <p className="text-center text-muted-foreground py-3 text-[10px]">No timeline logs recorded.</p>
                   )}
                 </div>
               )}
@@ -1081,16 +1759,16 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 <div className="space-y-2.5">
                   {activeLead.emails.length > 0 ? (
                     activeLead.emails.map((e) => (
-                      <div key={e.id} className="p-2 border border-brand-border-purple/20 rounded-lg bg-slate-50/50">
-                        <div className="flex justify-between items-center text-[10px] font-extrabold text-brand-heading">
+                      <div key={e.id} className="p-2 border border-border rounded-lg bg-secondary">
+                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
                           <span className="truncate max-w-[150px]">{e.subject}</span>
-                          <span className="text-slate-400 font-bold">{e.time}</span>
+                          <span className="text-muted-foreground font-semibold">{e.time}</span>
                         </div>
-                        <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-semibold">{e.body}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{e.body}</p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-center text-slate-400 py-3 text-[10px]">No emails logged.</p>
+                    <p className="text-center text-muted-foreground py-3 text-[10px]">No emails logged.</p>
                   )}
                 </div>
               )}
@@ -1099,16 +1777,16 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 <div className="space-y-2.5">
                   {activeLead.calls.length > 0 ? (
                     activeLead.calls.map((c) => (
-                      <div key={c.id} className="p-2 border border-brand-border-purple/20 rounded-lg bg-slate-50/50">
-                        <div className="flex justify-between items-center text-[10px] font-extrabold text-brand-heading">
+                      <div key={c.id} className="p-2 border border-border rounded-lg bg-secondary">
+                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
                           <span>{c.outcome}</span>
-                          <span className="text-slate-400 font-bold">{c.time}</span>
+                          <span className="text-muted-foreground font-semibold">{c.time}</span>
                         </div>
-                        <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-semibold">{c.notes}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{c.notes}</p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-center text-slate-400 py-3 text-[10px]">No call notes logged.</p>
+                    <p className="text-center text-muted-foreground py-3 text-[10px]">No call notes logged.</p>
                   )}
                 </div>
               )}
@@ -1117,26 +1795,26 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 <div className="space-y-2.5">
                   {activeLead.meetings.length > 0 ? (
                     activeLead.meetings.map((m) => (
-                      <div key={m.id} className="p-2 border border-brand-border-purple/20 rounded-lg bg-slate-50/50">
-                        <div className="flex justify-between items-center text-[10px] font-extrabold text-brand-heading">
+                      <div key={m.id} className="p-2 border border-border rounded-lg bg-secondary">
+                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
                           <span>{m.title}</span>
-                          <span className="text-brand-accent">{m.date}</span>
+                          <span className="text-brand-purple">{m.date}</span>
                         </div>
-                        <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Time: {m.time}</p>
-                        <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-semibold">{m.desc}</p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5 font-semibold">Time: {m.time}</p>
+                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{m.desc}</p>
                       </div>
                     ))
                   ) : (
-                    <p className="text-center text-slate-400 py-3 text-[10px]">No meetings scheduled.</p>
+                    <p className="text-center text-muted-foreground py-3 text-[10px]">No meetings scheduled.</p>
                   )}
                 </div>
               )}
 
               {activeHistoryTab === 'activity chart' && (
                 <div className="space-y-3 p-1">
-                  <div className="p-3 border border-brand-border-purple/20 rounded-xl bg-slate-50/50">
-                    <h5 className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-2 flex items-center space-x-1">
-                      <TrendingUp className="h-3.5 w-3.5 text-brand-accent" />
+                  <div className="p-3 border border-border rounded-xl bg-secondary">
+                    <h5 className="text-[9px] font-semibold text-foreground uppercase tracking-wider mb-2 flex items-center space-x-1">
+                      <TrendingUp className="h-3.5 w-3.5 text-brand-purple" />
                       <span>Lead Progression & Score Trend</span>
                     </h5>
                     <div className="w-full h-32 relative">
@@ -1154,24 +1832,24 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                         <path
                           d={getProgressPoints(activeLead.score).path}
                           fill="none"
-                          stroke="#7957fb"
+                          stroke="var(--brand-purple)"
                           strokeWidth="2.5"
                           strokeLinecap="round"
                         />
                         
                         {getProgressPoints(activeLead.score).points.map((p, idx) => (
-                          <circle key={idx} cx={p.x} cy={p.y} r="4" fill="#7957fb" stroke="white" strokeWidth="1.5" />
+                          <circle key={idx} cx={p.x} cy={p.y} r="4" fill="var(--brand-purple)" stroke="white" strokeWidth="1.5" />
                         ))}
 
                         <defs>
                           <linearGradient id="purpleGradLeads" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="#7957fb" />
-                            <stop offset="100%" stopColor="#7957fb" stopOpacity="0" />
+                            <stop offset="0%" stopColor="var(--brand-purple)" />
+                            <stop offset="100%" stopColor="var(--brand-purple)" stopOpacity="0" />
                           </linearGradient>
                         </defs>
                       </svg>
                       
-                      <div className="flex justify-between text-[8px] font-bold text-slate-400 mt-1">
+                      <div className="flex justify-between text-[8px] font-semibold text-muted-foreground mt-1">
                         <span>Created ({activeLead.timeline[activeLead.timeline.length - 1]?.time || '5d ago'})</span>
                         <span>Midpoint</span>
                         <span>Today (Score: {activeLead.score})</span>
@@ -1186,384 +1864,69 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
       </div>
       }
 
-      {/* CREATE LEAD DIALOG MODAL */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-gradient-to-r from-slate-50 to-brand-sidebar-hover/20 rounded-t-xl">
-              <div>
-                <h3 className="font-bold text-brand-heading text-sm">Create New Lead</h3>
-                <p className="text-[10px] text-brand-text/50 font-semibold mt-0.5">Capture prospect details across all dimensions</p>
-              </div>
-              <button onClick={() => setIsCreateModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer hover:bg-slate-100 rounded transition-colors"><X className="h-4.5 w-4.5" /></button>
-            </div>
-            <form onSubmit={handleCreateLead} className="max-h-[70vh] overflow-y-auto scrollbar-thin">
-              {/* LEAD INFORMATION Section */}
-              <div className="px-5 pt-5 pb-4">
-                <div className="flex items-center space-x-1.5 mb-3">
-                  <User className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Lead Information</h4>
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
-                        Full Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Job Title</label>
-                      <input type="text" placeholder="e.g. VP of Engineering" value={leadForm.jobTitle} onChange={(e) => setLeadForm({...leadForm, jobTitle: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
-                        Email <span className="text-rose-500">*</span>
-                      </label>
-                      <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone Number</label>
-                      <input type="text" placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* COMPANY INFORMATION Section */}
-              <div className="px-5 pb-4 pt-1 border-t border-brand-border-purple/10">
-                <div className="flex items-center space-x-1.5 mb-3 mt-3">
-                  <Building2 className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Company Information</h4>
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
-                        Company Name <span className="text-rose-500">*</span>
-                      </label>
-                      <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
-                    </div>
-                    <div className="relative">
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
-                        Industry <span className="text-rose-500">*</span>
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setIsCreateIndustryOpen(!isCreateIndustryOpen)}
-                        className="w-full flex items-center justify-between px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors text-left"
-                      >
-                        <span>{leadForm.industry || "Select Industry"}</span>
-                        <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                      </button>
-                      {isCreateIndustryOpen && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setIsCreateIndustryOpen(false)} />
-                          <div className="absolute left-0 right-0 mt-1 max-h-36 overflow-y-auto bg-white border border-brand-border-purple/30 rounded-lg shadow-lg z-20 scrollbar-thin">
-                            {[
-                              "Manufacturing", "Healthcare", "Pharma", "Logistics", "Construction", 
-                              "Education", "Finance", "Insurance", "Hospitality", "Real Estate", 
-                              "Agriculture", "Legal", "Retail", "Media", "Consulting", "IT"
-                            ].map((ind) => (
-                              <button
-                                key={ind}
-                                type="button"
-                                onClick={() => {
-                                  setLeadForm({ ...leadForm, industry: ind });
-                                  setIsCreateIndustryOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors font-semibold ${
-                                  leadForm.industry === ind ? 'bg-brand-secondary-accent/10 text-brand-heading font-extrabold' : 'text-brand-text'
-                                }`}
-                              >
-                                {ind}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Location</label>
-                      <input type="text" placeholder="e.g. San Francisco, CA" value={leadForm.location} onChange={(e) => setLeadForm({...leadForm, location: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>
-                      <select value={leadForm.numberOfEmployees} onChange={(e) => setLeadForm({...leadForm, numberOfEmployees: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
-                        <option value="">Select Range</option>
-                        <option>1</option>
-                        <option>10</option>
-                        <option>50</option>
-                        <option>200</option>
-                        <option>500</option>
-                        <option>1001</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* LEAD SOURCE Section */}
-              <div className="px-5 pb-4 pt-1 border-t border-brand-border-purple/10">
-                <div className="flex items-center space-x-1.5 mb-3 mt-3">
-                  <Globe className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Lead Source</h4>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">
-                    Source <span className="text-rose-500">*</span>
-                  </label>
-                  <select required value={leadForm.source} onChange={(e) => setLeadForm({...leadForm, source: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors">
-                    <option value="">Select Source</option>
-                    <option>Website</option>
-                    <option>Referral</option>
-                    <option>LinkedIn</option>
-                    <option>Cold Email</option>
-                    <option>Event</option>
-                    <option>Webinar</option>
-                    <option>Partner</option>
-                    <option>Paid Ads</option>
-                    <option>Organic Search</option>
-                    <option>Other</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* CURRENT SOFTWARE Section */}
-              <div className="px-5 pb-5 pt-1 border-t border-brand-border-purple/10">
-                <div className="flex items-center space-x-1.5 mb-3 mt-3">
-                  <Monitor className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Current Software</h4>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Current CRM</label>
-                    <input type="text" placeholder="e.g. Salesforce, HubSpot" value={leadForm.currentCRM} onChange={(e) => setLeadForm({...leadForm, currentCRM: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Operational System</label>
-                    <input type="text" placeholder="e.g. SAP, Oracle ERP" value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white hover:border-brand-border-purple/50 transition-colors" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit Footer */}
-              <div className="px-5 py-3.5 border-t border-brand-border-purple/15 bg-slate-50/50 flex items-center justify-between rounded-b-xl">
-                <p className="text-[9px] text-brand-text/40 font-semibold"><span className="text-rose-500">*</span> Required fields</p>
-                <div className="flex space-x-2.5">
-                  <button type="button" onClick={() => setIsCreateModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-100 cursor-pointer transition-colors">Cancel</button>
-                  <button type="submit" className="px-5 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer transition-colors">Create Lead</button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Create Lead modal removed — replaced by full page create view */}
 
       {/* EDIT LEAD DIALOG MODAL */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-lg animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-gradient-to-r from-slate-50 to-brand-sidebar-hover/20 rounded-t-xl">
-              <div>
-                <h3 className="font-bold text-brand-heading text-sm">Edit Lead Details</h3>
-                <p className="text-[10px] text-brand-text/50 font-semibold mt-0.5">Update prospect details across all dimensions</p>
-              </div>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer hover:bg-slate-100 rounded transition-colors"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Edit Lead Details</h3>
+              <button onClick={() => setIsEditModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
-            <form onSubmit={handleEditLead} className="max-h-[70vh] overflow-y-auto scrollbar-thin">
-              {/* LEAD STATUS & ASSIGNMENT Section */}
-              <div className="px-5 pt-5 pb-4">
-                <div className="flex items-center space-x-1.5 mb-3">
-                  <Award className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Status & Assignment</h4>
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Status</label>
-                    <select value={leadForm.status} onChange={(e) => setLeadForm({...leadForm, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
-                      <option>New</option>
-                      <option>Contacted</option>
-                      <option>Qualified</option>
-                      <option>Converted</option>
-                      <option>Lost</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
-                    <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
-                      <option>Critical</option>
-                      <option>High</option>
-                      <option>Medium</option>
-                      <option>Low</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Owner</label>
-                    <select value={leadForm.owner} onChange={(e) => setLeadForm({...leadForm, owner: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
-                      {users.length > 0 ? (
-                        users.map(u => (
-                          <option key={u.id} value={u.full_name}>{u.full_name}</option>
-                        ))
-                      ) : (
-                        <option>{currentUser?.full_name || 'Sarah Johnson'}</option>
-                      )}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* LEAD INFORMATION Section */}
-              <div className="px-5 pb-4 pt-1 border-t border-brand-border-purple/10">
-                <div className="flex items-center space-x-1.5 mb-3 mt-3">
-                  <User className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Lead Information</h4>
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Full Name</label>
-                      <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Job Title</label>
-                      <input type="text" placeholder="e.g. VP of Engineering" value={leadForm.jobTitle} onChange={(e) => setLeadForm({...leadForm, jobTitle: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email</label>
-                      <input type="email" required placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Phone Number</label>
-                      <input type="text" placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* COMPANY INFORMATION Section */}
-              <div className="px-5 pb-4 pt-1 border-t border-brand-border-purple/10">
-                <div className="flex items-center space-x-1.5 mb-3 mt-3">
-                  <Building2 className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Company Information</h4>
-                </div>
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company Name</label>
-                      <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
-                    </div>
-                    <div className="relative">
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
-                      <button
-                        type="button"
-                        onClick={() => setIsEditIndustryOpen(!isEditIndustryOpen)}
-                        className="w-full flex items-center justify-between px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20 hover:border-brand-border-purple/50 transition-colors text-left"
-                      >
-                        <span>{leadForm.industry || "Select Industry"}</span>
-                        <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
-                      </button>
-                      {isEditIndustryOpen && (
-                        <>
-                          <div className="fixed inset-0 z-10" onClick={() => setIsEditIndustryOpen(false)} />
-                          <div className="absolute left-0 right-0 mt-1 max-h-36 overflow-y-auto bg-white border border-brand-border-purple/30 rounded-lg shadow-lg z-20 scrollbar-thin">
-                            {[
-                              "Manufacturing", "Healthcare", "Pharma", "Logistics", "Construction", 
-                              "Education", "Finance", "Insurance", "Hospitality", "Real Estate", 
-                              "Agriculture", "Legal", "Retail", "Media", "Consulting", "IT"
-                            ].map((ind) => (
-                              <button
-                                key={ind}
-                                type="button"
-                                onClick={() => {
-                                  setLeadForm({ ...leadForm, industry: ind });
-                                  setIsEditIndustryOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors font-semibold ${
-                                  leadForm.industry === ind ? 'bg-brand-secondary-accent/10 text-brand-heading font-extrabold' : 'text-brand-text'
-                                }`}
-                              >
-                                {ind}
-                              </button>
-                            ))}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Location</label>
-                      <input type="text" placeholder="e.g. San Francisco, CA" value={leadForm.location} onChange={(e) => setLeadForm({...leadForm, location: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
-                    </div>
-                    <div>
-                      <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>
-                      <select value={leadForm.numberOfEmployees} onChange={(e) => setLeadForm({...leadForm, numberOfEmployees: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
-                        <option value="">Select Range</option>
-                        <option>1</option>
-                        <option>10</option>
-                        <option>50</option>
-                        <option>200</option>
-                        <option>500</option>
-                        <option>1001</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* LEAD SOURCE Section */}
-              <div className="px-5 pb-4 pt-1 border-t border-brand-border-purple/10">
-                <div className="flex items-center space-x-1.5 mb-3 mt-3">
-                  <Globe className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Lead Source</h4>
+            <form onSubmit={handleEditLead} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Lead Name</label>
+                  <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Source</label>
-                  <select value={leadForm.source} onChange={(e) => setLeadForm({...leadForm, source: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20">
-                    <option value="">Select Source</option>
-                    <option>Website</option>
-                    <option>Referral</option>
-                    <option>LinkedIn</option>
-                    <option>Cold Email</option>
-                    <option>Event</option>
-                    <option>Webinar</option>
-                    <option>Partner</option>
-                    <option>Paid Ads</option>
-                    <option>Organic Search</option>
-                    <option>Other</option>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company</label>
+                  <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none bg-background" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Email</label>
+                  <input type="email" placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Phone</label>
+                  <input type="text" placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Status</label>
+                  <select value={leadForm.status} onChange={(e) => setLeadForm({...leadForm, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
+                    <option>New</option>
+                    <option>Contacted</option>
+                    <option>Qualified</option>
+                    <option>Converted</option>
+                    <option>Lost</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Priority</label>
+                  <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
+                    <option>Critical</option>
+                    <option>High</option>
+                    <option>Medium</option>
+                    <option>Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Owner</label>
+                  <select value={leadForm.owner} onChange={(e) => setLeadForm({...leadForm, owner: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
+                    <option>Sarah Johnson</option>
+                    <option>Alex Johnson</option>
+                    <option>Lisa Martinez</option>
                   </select>
                 </div>
               </div>
-
-              {/* CURRENT SOFTWARE Section */}
-              <div className="px-5 pb-5 pt-1 border-t border-brand-border-purple/10">
-                <div className="flex items-center space-x-1.5 mb-3 mt-3">
-                  <Monitor className="h-3.5 w-3.5 text-brand-accent" />
-                  <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">Current Software</h4>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Current CRM</label>
-                    <input type="text" placeholder="e.g. Salesforce, HubSpot" value={leadForm.currentCRM} onChange={(e) => setLeadForm({...leadForm, currentCRM: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Operational System</label>
-                    <input type="text" placeholder="e.g. SAP, Oracle ERP" value={leadForm.operationalSystem} onChange={(e) => setLeadForm({...leadForm, operationalSystem: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-accent/20 bg-white" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Submit Footer */}
-              <div className="px-5 py-3.5 border-t border-brand-border-purple/15 bg-slate-50/50 flex items-center justify-end space-x-2.5 rounded-b-xl">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-100 cursor-pointer transition-colors">Cancel</button>
-                <button type="submit" className="px-5 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer transition-colors">Save Changes</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer">Save Changes</button>
               </div>
             </form>
           </div>
@@ -1572,45 +1935,45 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
 
       {/* SEND EMAIL DIALOG MODAL */}
       {isEmailModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Send Email to {activeLead?.name}</h3>
-              <button onClick={() => { setIsEmailModalOpen(false); setEmailError(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Send Email to {activeLead?.name}</h3>
+              <button onClick={() => { setIsEmailModalOpen(false); setEmailError(null); }} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">
               {!gmailConnected && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-foreground">
                   <strong>Gmail not connected.</strong> Go to <strong>Integrations</strong> in the sidebar to connect your Gmail account, then try again.
                 </div>
               )}
               {activeLead?.email && (
-                <div className="p-2.5 bg-slate-50 border border-brand-border-purple/20 rounded-lg">
-                  <span className="text-[9px] font-extrabold text-brand-heading uppercase tracking-wider">To:</span>
-                  <span className="ml-2 text-xs text-brand-text">{activeLead.email}</span>
+                <div className="p-2.5 bg-secondary border border-border rounded-lg">
+                  <span className="text-[9px] font-semibold text-foreground uppercase tracking-wider">To:</span>
+                  <span className="ml-2 text-xs text-foreground">{activeLead.email}</span>
                 </div>
               )}
               {!activeLead?.email && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-xs text-destructive">
                   <strong>No email address.</strong> Edit this lead to add an email address first.
                 </div>
               )}
               {emailError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800">
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-xs text-destructive">
                   {emailError}
                 </div>
               )}
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Subject</label>
-                <input type="text" required placeholder="Subject line" value={emailForm.subject} onChange={(e) => setEmailForm({...emailForm, subject: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Subject</label>
+                <input type="text" required placeholder="Subject line" value={emailForm.subject} onChange={(e) => setEmailForm({...emailForm, subject: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none bg-background" />
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Email Body</label>
-                <textarea required placeholder="Write your message here..." value={emailForm.body} onChange={(e) => setEmailForm({...emailForm, body: e.target.value})} className="w-full p-3 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none min-h-[120px] leading-relaxed" />
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Email Body</label>
+                <textarea required placeholder="Write your message here..." value={emailForm.body} onChange={(e) => setEmailForm({...emailForm, body: e.target.value})} className="w-full p-3 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none min-h-[120px] leading-relaxed bg-background" />
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => { setIsEmailModalOpen(false); setEmailError(null); }} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" disabled={emailSending || !gmailConnected || !activeLead?.email} className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => { setIsEmailModalOpen(false); setEmailError(null); }} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" disabled={emailSending || !gmailConnected || !activeLead?.email} className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
                   <Send className="h-3.5 w-3.5" />
                   <span>{emailSending ? 'Sending...' : 'Send Email'}</span>
                 </button>
@@ -1622,16 +1985,16 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
 
       {/* LOG CALL DIALOG MODAL */}
       {isCallModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50 rounded-t-xl">
-              <h3 className="font-bold text-brand-heading text-sm">Log Call Outcome</h3>
-              <button onClick={() => setIsCallModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Log Call Outcome</h3>
+              <button onClick={() => setIsCallModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleLogCall} className="p-5 space-y-4">
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Call Outcome</label>
-                <select value={callForm.outcome} onChange={(e) => setCallForm({...callForm, outcome: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Call Outcome</label>
+                <select value={callForm.outcome} onChange={(e) => setCallForm({...callForm, outcome: e.target.value})} className="w-full px-3 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                   <option>Spoke with Lead</option>
                   <option>Left Voice Mail</option>
                   <option>Busy / No Answer</option>
@@ -1639,12 +2002,12 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Call Notes</label>
-                <textarea required placeholder="Summarize prospect comments, next scheduling options..." value={callForm.notes} onChange={(e) => setCallForm({...callForm, notes: e.target.value})} className="w-full p-3 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none min-h-[80px]" />
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Call Notes</label>
+                <textarea required placeholder="Summarize prospect comments, next scheduling options..." value={callForm.notes} onChange={(e) => setCallForm({...callForm, notes: e.target.value})} className="w-full p-3 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none min-h-[80px] bg-background" />
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5 rounded-b-xl bg-slate-50/20 px-5 pb-5">
-                <button type="button" onClick={() => setIsCallModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsCallModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer">
                   <PhoneCall className="h-3.5 w-3.5" />
                   <span>Log Call</span>
                 </button>
@@ -1656,34 +2019,34 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
 
       {/* SCHEDULE MEETING DIALOG MODAL */}
       {isMeetingModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50 rounded-t-xl">
-              <h3 className="font-bold text-brand-heading text-sm">Schedule Meeting</h3>
-              <button onClick={() => setIsMeetingModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Schedule Meeting</h3>
+              <button onClick={() => setIsMeetingModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleScheduleMeeting} className="p-5 space-y-4">
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Meeting Title</label>
-                <input type="text" required placeholder="e.g. Pulse Sandbox Architecture Demo" value={meetingForm.title} onChange={(e) => setMeetingForm({...meetingForm, title: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none" />
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Meeting Title</label>
+                <input type="text" required placeholder="e.g. Pulse Sandbox Architecture Demo" value={meetingForm.title} onChange={(e) => setMeetingForm({...meetingForm, title: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none bg-background" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Date</label>
-                  <input type="date" required value={meetingForm.date} onChange={(e) => setMeetingForm({...meetingForm, date: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none cursor-pointer" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Date</label>
+                  <input type="date" required value={meetingForm.date} onChange={(e) => setMeetingForm({...meetingForm, date: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none cursor-pointer bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Time</label>
-                  <input type="time" required value={meetingForm.time} onChange={(e) => setMeetingForm({...meetingForm, time: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none cursor-pointer" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Time</label>
+                  <input type="time" required value={meetingForm.time} onChange={(e) => setMeetingForm({...meetingForm, time: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none cursor-pointer bg-background" />
                 </div>
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Agenda / Details</label>
-                <textarea required placeholder="Discuss compliance guidelines and db sizing outline..." value={meetingForm.desc} onChange={(e) => setMeetingForm({...meetingForm, desc: e.target.value})} className="w-full p-3 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-400 focus:outline-none min-h-[80px]" />
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Agenda / Details</label>
+                <textarea required placeholder="Discuss compliance guidelines and db sizing outline..." value={meetingForm.desc} onChange={(e) => setMeetingForm({...meetingForm, desc: e.target.value})} className="w-full p-3 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none min-h-[80px] bg-background" />
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5 rounded-b-xl bg-slate-50/20 px-5 pb-5">
-                <button type="button" onClick={() => setIsMeetingModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsMeetingModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer">
                   <Calendar className="h-3.5 w-3.5" strokeWidth={2} />
                   <span>Schedule Meeting</span>
                 </button>
@@ -1695,39 +2058,39 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
 
       {/* CONVERT LEAD DIALOG MODAL */}
       {isConvertModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Convert Lead to Account & Deal</h3>
-              <button onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Convert Lead to Account & Deal</h3>
+              <button onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleConvertLeadSubmit} className="p-5 space-y-4">
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Industry</label>
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Industry</label>
                 <input 
                   type="text" 
                   placeholder="e.g. Software, Healthcare, Retail" 
                   value={convertForm.industry} 
                   onChange={(e) => setConvertForm({...convertForm, industry: e.target.value})} 
-                  className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" 
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-background" 
                 />
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Revenue ($)</label>
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Revenue ($)</label>
                 <input 
                   type="number" 
                   placeholder="e.g. 1200000" 
                   value={convertForm.revenue} 
                   onChange={(e) => setConvertForm({...convertForm, revenue: e.target.value})} 
-                  className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" 
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-background" 
                 />
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Pipeline Stage</label>
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Pipeline Stage</label>
                 <select 
                   value={convertForm.pipelineStageId} 
                   onChange={(e) => setConvertForm({...convertForm, pipelineStageId: e.target.value})} 
-                  className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-accent/20"
+                  className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
                 >
                   <option value="">— Default (New) —</option>
                   {pipelineStages.map((s) => (
@@ -1736,26 +2099,26 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 </select>
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Number of Employees</label>
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Number of Employees</label>
                 <input 
                   type="number" 
                   placeholder="e.g. 150" 
                   value={convertForm.employeeCount} 
                   onChange={(e) => setConvertForm({...convertForm, employeeCount: e.target.value})} 
-                  className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text placeholder-slate-450 focus:outline-none focus:ring-1 focus:ring-brand-accent/20" 
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-background" 
                 />
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
                 <button 
                   type="button" 
                   onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} 
-                  className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer"
+                  className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-750 text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer transition-colors"
+                  className="px-4 py-1.5 bg-brand-cyan hover:bg-brand-cyan/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer transition-colors"
                 >
                   Convert Lead
                 </button>
@@ -1767,26 +2130,26 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
 
       {/* DELETE CONFIRMATION MODAL */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex items-center space-x-2 bg-rose-50/40">
-              <AlertCircle className="h-4.5 w-4.5 text-rose-500" />
-              <h3 className="font-bold text-brand-heading text-sm">Confirm Delete</h3>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex items-center space-x-2 bg-destructive/10">
+              <AlertCircle className="h-4.5 w-4.5 text-destructive" />
+              <h3 className="font-semibold text-foreground text-sm">Confirm Delete</h3>
             </div>
             <div className="p-5">
-              <p className="text-xs text-brand-text/80 leading-relaxed">
-                Are you sure you want to delete this lead? This action <span className="font-extrabold text-rose-600">cannot be undone</span> and will permanently remove all associated data.
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Are you sure you want to delete this lead? This action <span className="font-semibold text-destructive">cannot be undone</span> and will permanently remove all associated data.
               </p>
               <div className="flex justify-end space-x-2.5 mt-5">
                 <button 
                   onClick={() => setDeleteConfirmId(null)} 
-                  className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer transition-colors"
+                  className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer transition-colors"
                 >
                   Cancel
                 </button>
                 <button 
                   onClick={handleDeleteLead} 
-                  className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer transition-colors inline-flex items-center space-x-1.5"
+                  className="px-4 py-1.5 bg-destructive hover:bg-destructive/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer transition-colors inline-flex items-center space-x-1.5"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   <span>Delete Permanently</span>

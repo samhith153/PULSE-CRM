@@ -1,15 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  Notification,
-  getNotifications,
-  getUnreadNotificationCount,
-  markNotificationRead,
-  markAllNotificationsRead,
-  dismissNotification,
-} from '@/utils/api';
-import { toast } from '@/lib/toast';
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+const getNotifications = async (params: { page: number; pageSize: number }) => ({
+  items: [] as Notification[],
+  unread_count: 0,
+});
+const getUnreadNotificationCount = async () => 0;
+const markNotificationRead = async (id: string) => {};
+const markAllNotificationsRead = async () => {};
+const dismissNotification = async (id: string) => {};
 
 const POLL_INTERVAL_MS = 20000;
 

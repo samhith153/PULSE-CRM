@@ -16,7 +16,7 @@ class LeadCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: Optional[str] = None
     status: LeadStatus = LeadStatus.NEW
-    source: Optional[LeadSource] = None
+    source: LeadSource
     interest: Optional[str] = Field(default=None, max_length=100)
     industry: Optional[str] = Field(default=None, max_length=100)
     employee_count: Optional[int] = None
@@ -110,7 +110,6 @@ class LeadResponse(BaseModel):
     score: Optional[int] = None
     fit_score: Optional[int] = None
     engagement_score: Optional[int] = None
-    engagement_reasons: Optional[list[str]] = None
     top_reasons: Optional[list[str]] = None
     priority: Optional[str] = None
 
@@ -135,7 +134,6 @@ class LeadResponse(BaseModel):
             score=lead.lead_score.overall_score if lead.lead_score else None,
             fit_score=lead.lead_score.fit_score if lead.lead_score else None,
             engagement_score=lead.lead_score.engagement_score if lead.lead_score else None,
-            engagement_reasons=lead.lead_score.engagement_reasons if lead.lead_score else None,
             top_reasons=lead.lead_score.top_reasons if lead.lead_score else None,
             priority=lead.lead_score.priority_tier if lead.lead_score else None,
             notes=lead.notes,

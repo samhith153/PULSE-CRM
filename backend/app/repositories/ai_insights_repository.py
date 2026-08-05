@@ -261,7 +261,6 @@ class AIInsightsRepository:
         # Lead quality: avg lead score (0-100)
         lq_stmt = (
             select(func.coalesce(func.avg(LeadScore.overall_score), 0))
-            .select_from(Lead) #explicitly set the base table first
             .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .where(*self._active_leads(organization_id))
         )

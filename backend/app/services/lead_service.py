@@ -229,8 +229,6 @@ class LeadService:
             payload={"lead_id": str(lead.id), "status": new_status.value},
             topic="lead",
         )
-        # Fire-and-forget: feature vector + scoring refresh in background
-        _enqueue_lead_ai(lead.id, organization_id, lead.created_by)
         logger.info("Lead status updated", extra={"lead_id": str(lead_id), "new_status": new_status.value})
         return await self.get(lead_id, organization_id)
 
@@ -408,23 +406,7 @@ class LeadService:
             )
 
             logger.info("Lead converted to deal", extra={"lead_id": str(lead.id), "deal_id": str(deal.id)})
-
-            if created_by:
-                from app.services.notification_service import NotificationService
-
-                await NotificationService(self.db).create_for_user(
-                    organization_id=organization_id,
-                    user_id=lead.owner_id or created_by,
-                    notif_type="lead_converted",
-                    title="Lead converted",
-                    message=f"Lead '{lead.title}' was converted into a deal.",
-                    entity_type="deal",
-                    entity_id=deal.id,
-                )
-
-        # Fire-and-forget: feature vector + scoring for converted lead (own session)
-        _enqueue_lead_ai(lead_id, organization_id, created_by)
-        return deal
+            return deal
 
     async def _validate_relations(
         self,
