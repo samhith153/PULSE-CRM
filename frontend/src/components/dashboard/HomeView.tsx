@@ -51,6 +51,7 @@ interface Task {
   deadline: string;
   priority: 'High' | 'Medium' | 'Low';
   status: 'Pending' | 'Completed' | 'Overdue' | 'Not Started' | 'In Progress';
+  fitScore?: number; // 0–100 lead/task fit alignment score
 }
 
 interface Meeting {
@@ -357,12 +358,12 @@ export default function HomeView({ onTabChange }: HomeViewProps) {
 
   const initializeDefaultTasks = () => {
     const defaults: Task[] = [
-      { id: 1, title: "Register for upcoming CRM Webinars", deadline: "2026-08-03", priority: "Medium", status: "Not Started" },
-      { id: 2, title: "Refer CRM Videos", deadline: "2026-08-05", priority: "Medium", status: "In Progress" },
-      { id: 3, title: "Competitor Comparison Document", deadline: "2026-08-01", priority: "High", status: "Not Started" },
-      { id: 4, title: "Get Approval from Manager", deadline: "2026-08-02", priority: "High", status: "Not Started" },
-      { id: 5, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress" },
-      { id: 6, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress" }
+      { id: 1, title: "Register for upcoming CRM Webinars", deadline: "2026-08-03", priority: "Medium", status: "Not Started", fitScore: 82 },
+      { id: 2, title: "Refer CRM Videos", deadline: "2026-08-05", priority: "Medium", status: "In Progress", fitScore: 67 },
+      { id: 3, title: "Competitor Comparison Document", deadline: "2026-08-01", priority: "High", status: "Not Started", fitScore: 91 },
+      { id: 4, title: "Get Approval from Manager", deadline: "2026-08-02", priority: "High", status: "Not Started", fitScore: 45 },
+      { id: 5, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress", fitScore: 58 },
+      { id: 6, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress", fitScore: 74 }
     ];
     setTasks(defaults);
     localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(defaults));
@@ -740,13 +741,20 @@ export default function HomeView({ onTabChange }: HomeViewProps) {
                             <table className="w-full text-left border-collapse table-fixed">
                               <thead>
                                 <tr className="border-b border-border/40 text-[9px] uppercase font-bold text-muted-foreground/75 tracking-wider select-none">
-                                  <th className="pb-[var(--space-2)] px-[var(--space-3)] text-left w-[55%]">Subject</th>
-                                  <th className="pb-[var(--space-2)] px-[var(--space-3)] text-right w-[25%]">Due Date</th>
-                                  <th className="pb-[var(--space-2)] px-[var(--space-3)] text-right w-[20%]">Status</th>
+                                  <th className="pb-[var(--space-2)] px-[var(--space-3)] text-left w-[42%]">Subject</th>
+                                  <th className="pb-[var(--space-2)] px-[var(--space-3)] text-center w-[13%]">Fit Score</th>
+                                  <th className="pb-[var(--space-2)] px-[var(--space-3)] text-right w-[22%]">Due Date</th>
+                                  <th className="pb-[var(--space-2)] px-[var(--space-3)] text-right w-[23%]">Status</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-border/30 text-xs font-semibold text-foreground">
-                                {sortedTasks.map((task) => (
+                                {sortedTasks.map((task) => {
+                                  const score = task.fitScore ?? null;
+                                  const scoreColor = score === null ? '' :
+                                    score >= 75 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                                    score >= 50 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                                    'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+                                  return (
                                   <tr key={task.id} className="hover:bg-secondary/15 transition-colors">
                                     <td className="py-[var(--space-2)] px-[var(--space-3)] text-left overflow-hidden max-w-0">
                                       <div className="flex items-center gap-2 min-w-0">
@@ -764,6 +772,19 @@ export default function HomeView({ onTabChange }: HomeViewProps) {
                                           {task.title}
                                         </span>
                                       </div>
+                                    </td>
+                                    {/* Fit Score */}
+                                    <td className="py-[var(--space-2)] px-[var(--space-3)] text-center whitespace-nowrap">
+                                      {score !== null ? (
+                                        <span
+                                          className={`inline-flex items-center justify-center px-2 py-0.5 rounded-full border text-[10px] font-bold tabular-nums ${scoreColor}`}
+                                          title={`Fit Score: ${score}/100`}
+                                        >
+                                          {score}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground/40 text-[10px]">—</span>
+                                      )}
                                     </td>
                                     <td 
                                       className="py-[var(--space-2)] px-[var(--space-3)] text-right text-muted-foreground whitespace-nowrap text-xs font-semibold" 
@@ -785,7 +806,8 @@ export default function HomeView({ onTabChange }: HomeViewProps) {
                                       </span>
                                     </td>
                                   </tr>
-                                ))}
+                                  );
+                                })}
                               </tbody>
                             </table>
                           )}
