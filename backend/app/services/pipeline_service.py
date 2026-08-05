@@ -354,21 +354,6 @@ class PipelineService:
             payload={"deal_id": str(deal.id), "stage_id": str(stage.id), "stage_slug": stage.slug},
             topic="pipeline",
         )
-
-        if stage.slug in {PipelineStageSlug.WON.value, PipelineStageSlug.LOST.value} and created_by:
-            from app.services.notification_service import NotificationService
-
-            is_won = stage.slug == PipelineStageSlug.WON.value
-            await NotificationService(self.db).create_for_user(
-                organization_id=organization_id,
-                user_id=deal.owner_id or created_by,
-                notif_type="deal_won" if is_won else "deal_lost",
-                title="Deal won" if is_won else "Deal lost",
-                message=f"Deal '{deal.name}' was marked as {'won' if is_won else 'lost'}.",
-                entity_type="deal",
-                entity_id=deal.id,
-            )
-
         return deal
 
     async def list_deals_by_stage(

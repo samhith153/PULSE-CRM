@@ -1,4 +1,4 @@
-﻿"""AI persistence models for scores, recommendations, and summaries."""
+"""AI persistence models for scores, recommendations, and summaries."""
 from __future__ import annotations
 
 import uuid
@@ -19,6 +19,7 @@ class AIScore(Base, TenantMixin):
     lead_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("leads.id", ondelete="CASCADE"), nullable=True, index=True)
     deal_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("deals.id", ondelete="CASCADE"), nullable=True, index=True)
     score: Mapped[int] = mapped_column(Integer, nullable=False)
+    tier: Mapped[Optional[str]] = mapped_column(String(30), nullable=True, index=True)
     confidence: Mapped[int] = mapped_column(Integer, nullable=False)
     provider: Mapped[str] = mapped_column(String(50), nullable=False)
     model_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
@@ -59,3 +60,5 @@ class AIConversationSummary(Base, TenantMixin):
     regenerated_from_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("ai_conversation_summaries.id", ondelete="SET NULL"), nullable=True)
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     organization_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False, index=True)
+
+

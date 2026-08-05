@@ -177,50 +177,50 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+      <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h2 className="font-sans text-2xl text-brand-heading font-bold">Deals Kanban Pipeline</h2>
-            <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Drag and drop cards to update pipeline stages, track forecasts, and monitor deal velocity.</p>
+            <h2 className="font-sans text-2xl text-foreground font-bold">Deals Kanban Pipeline</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Drag and drop cards to update pipeline stages, track forecasts, and monitor deal velocity.</p>
           </div>
           <button 
             onClick={() => {
               setForm({ title: '', company: '', value: 10000, stage: stageNames[0] || 'Qualified', priority: 'Medium', owner: '', closeDate: '' });
               setIsAddModalOpen(true);
             }}
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
           >
             <Plus className="h-3.5 w-3.5" />
             <span>Create Deal</span>
           </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 pt-4 border-t border-brand-border-purple/15">
-          <div className="flex items-center space-x-3 bg-slate-50/50 p-3 rounded-lg border border-brand-border-purple/15">
-            <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/10 flex items-center justify-center text-brand-accent border border-brand-border-purple/20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 pt-4 border-t border-border">
+          <div className="flex items-center space-x-3 bg-secondary p-3 rounded-lg border border-border">
+            <div className="h-8.5 w-8.5 rounded-lg bg-secondary flex items-center justify-center text-brand-purple border border-border">
               <IndianRupee className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-[9px] font-extrabold text-brand-text/60 uppercase">Total Pipeline Value</p>
-              <p className="text-sm font-extrabold text-brand-heading tabular-nums">${totalValue.toLocaleString()}</p>
+              <p className="text-[9px] font-semibold text-muted-foreground uppercase">Total Pipeline Value</p>
+              <p className="text-sm font-semibold text-foreground tabular-nums">${totalValue.toLocaleString()}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 bg-slate-50/50 p-3 rounded-lg border border-brand-border-purple/15">
-            <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/10 flex items-center justify-center text-brand-accent border border-brand-border-purple/20">
+          <div className="flex items-center space-x-3 bg-secondary p-3 rounded-lg border border-border">
+            <div className="h-8.5 w-8.5 rounded-lg bg-secondary flex items-center justify-center text-brand-purple border border-border">
               <TrendingUp className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-[9px] font-extrabold text-brand-text/60 uppercase">Weighted Revenue Forecast</p>
-              <p className="text-sm font-extrabold text-brand-heading tabular-nums">${Math.round(weightedForecast).toLocaleString()}</p>
+              <p className="text-[9px] font-semibold text-muted-foreground uppercase">Weighted Revenue Forecast</p>
+              <p className="text-sm font-semibold text-foreground tabular-nums">${Math.round(weightedForecast).toLocaleString()}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 bg-brand-sidebar-hover/20 p-3 rounded-lg border border-brand-border-purple/30">
-            <Sparkles className="h-4.5 w-4.5 text-brand-accent" />
+          <div className="flex items-center space-x-3 bg-brand-purple/5 p-3 rounded-lg border border-border">
+            <Sparkles className="h-4.5 w-4.5 text-brand-purple" />
             <div>
-              <p className="text-[9px] font-extrabold text-brand-heading uppercase">AI Co-pilot Status</p>
-              <p className="text-[10px] text-brand-text/80 font-bold leading-tight">Click on deal details to read next-best-action alerts.</p>
+              <p className="text-[9px] font-semibold text-foreground uppercase">AI Co-pilot Status</p>
+              <p className="text-[10px] text-muted-foreground font-semibold leading-tight">Click on deal details to read next-best-action alerts.</p>
             </div>
           </div>
         </div>
@@ -236,14 +236,14 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               key={stage.id}
               onDragOver={handleDragOver}
               onDrop={() => handleDrop(stage.name)}
-              className="bg-slate-50/50 border border-brand-border-purple/20 rounded-xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
+              className="bg-secondary border border-border rounded-2xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
             >
-              <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
+              <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
                 <div>
-                  <h3 className="text-[11px] font-extrabold text-brand-heading uppercase tracking-wider">{stage.name}</h3>
-                  <p className="text-[10px] text-slate-400 font-bold mt-0.5 tabular-nums">${stageSum.toLocaleString()}</p>
+                  <h3 className="text-[11px] font-semibold text-foreground uppercase tracking-wider">{stage.name}</h3>
+                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 tabular-nums">${stageSum.toLocaleString()}</p>
                 </div>
-                <span className="text-[9px] font-extrabold bg-brand-secondary-accent/15 text-brand-accent px-1.5 py-0.5 rounded-full tabular-nums">
+                <span className="text-[9px] font-semibold bg-brand-purple/10 text-brand-purple px-1.5 py-0.5 rounded-full tabular-nums">
                   {stageDeals.length}
                 </span>
               </div>
@@ -254,23 +254,23 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                     key={deal.id}
                     draggable
                     onDragStart={() => handleDragStart(deal.id)}
-                    className="bg-white border border-brand-border-purple/20 rounded-lg p-3 shadow-sm/5 hover:border-brand-border-purple/40 hover:-translate-y-0.5 transition-all duration-200 cursor-grab active:cursor-grabbing"
+                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-200 cursor-grab active:cursor-grabbing"
                   >
                     <div className="flex justify-between items-start gap-1">
-                      <h4 className="text-[11px] font-extrabold text-brand-heading leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
+                      <h4 className="text-[11px] font-semibold text-foreground leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
                       <span className={`text-[8px] font-bold px-1 py-0.25 rounded shrink-0 ${
-                        deal.priority === 'High' ? 'text-rose-700 bg-rose-50' :
-                        deal.priority === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-slate-500 bg-slate-50'
+                        deal.priority === 'High' ? 'text-destructive bg-destructive/10' :
+                        deal.priority === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-muted-foreground bg-secondary'
                       }`}>{deal.priority}</span>
                     </div>
 
-                    <div className="text-[10px] text-brand-text/60 mt-1 flex items-center">
-                      <Building2 className="h-3 w-3 mr-1 text-slate-400" />
+                    <div className="text-[10px] text-muted-foreground mt-1 flex items-center">
+                      <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
                       {deal.company}
                     </div>
 
-                    <div className="mt-3.5 pt-2.5 border-t border-brand-border-purple/10 flex justify-between items-center">
-                      <span className="text-[11px] font-extrabold text-brand-heading tabular-nums">${deal.value.toLocaleString()}</span>
+                    <div className="mt-3.5 pt-2.5 border-t border-border flex justify-between items-center">
+                      <span className="text-[11px] font-semibold text-foreground tabular-nums">${deal.value.toLocaleString()}</span>
                       
                       <div className="flex space-x-1">
                         <button 
@@ -287,14 +287,14 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                             });
                             setIsEditModalOpen(true);
                           }}
-                          className="p-0.5 text-slate-400 hover:text-brand-heading rounded"
+                          className="p-0.5 text-muted-foreground hover:text-foreground rounded"
                           title="Edit Deal"
                         >
                           <Edit className="h-3 w-3" />
                         </button>
                         <button 
                           onClick={() => handleDelete(deal.id)}
-                          className="p-0.5 text-slate-400 hover:text-rose-600 rounded"
+                          className="p-0.5 text-muted-foreground hover:text-destructive rounded"
                            title="Delete Deal (cascades to contact and company if no other active deals)"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -302,7 +302,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       </div>
                     </div>
 
-                    <div className="mt-2 flex justify-between items-center text-[9px] font-bold text-brand-accent/80 border-t border-brand-border-purple/10 pt-1.5">
+                    <div className="mt-2 flex justify-between items-center text-[9px] font-semibold text-muted-foreground border-t border-border pt-1.5">
                       <span>Shift Stage:</span>
                       <select 
                         value={deal.stage}
@@ -314,7 +314,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                             updateDealStage(deal.id, stageId).catch(() => {});
                           }
                         }}
-                        className="bg-transparent text-brand-accent focus:outline-none cursor-pointer"
+                        className="bg-transparent text-brand-purple focus:outline-none cursor-pointer"
                       >
                         {stageNames.map(st => (
                           <option key={st} value={st}>{st}</option>
@@ -330,52 +330,52 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       </div>
 
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Create New Deal</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Create New Deal</h3>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleAdd} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Deal Title</label>
-                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Deal Title</label>
+                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company</label>
+                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Value ($)</label>
-                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value ($)</label>
+                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Stage</label>
-                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Stage</label>
+                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
-                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Priority</label>
+                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Close Date</label>
-                  <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none cursor-pointer" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Close Date</label>
+                  <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background cursor-pointer" />
                 </div>
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Save Deal</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold  cursor-pointer">Save Deal</button>
               </div>
             </form>
           </div>
@@ -383,61 +383,61 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       )}
 
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Edit Deal Details</h3>
-              <button onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Edit Deal Details</h3>
+              <button onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleEdit} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Deal Title</label>
-                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Deal Title</label>
+                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company</label>
+                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Value ($)</label>
-                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value ($)</label>
+                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Stage</label>
-                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Stage</label>
+                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
-                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Priority</label>
+                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Close Date</label>
-                  <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none cursor-pointer" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Close Date</label>
+                  <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background cursor-pointer" />
                 </div>
               </div>
               {selectedDeal && (
-                <div className="mt-3.5 bg-brand-sidebar-hover/20 border border-brand-border-purple/30 rounded-xl p-3.5 flex items-start space-x-2">
-                  <Sparkles className="h-4.5 w-4.5 text-brand-accent shrink-0 mt-0.5" />
+                <div className="mt-3.5 bg-brand-purple/5 border border-border rounded-xl p-3.5 flex items-start space-x-2">
+                  <Sparkles className="h-4.5 w-4.5 text-brand-purple shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">AI Copilot Recommendation</h4>
-                    <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-bold">{getAISuggestion(selectedDeal)}</p>
+                    <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider">AI Copilot Recommendation</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{getAISuggestion(selectedDeal)}</p>
                   </div>
                 </div>
               )}
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Save Changes</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold  cursor-pointer">Save Changes</button>
               </div>
             </form>
           </div>
@@ -446,3 +446,4 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     </div>
   );
 }
+

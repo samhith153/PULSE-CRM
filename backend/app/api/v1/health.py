@@ -34,6 +34,20 @@ async def health_check() -> HealthResponse:
     )
 
 
+@router.get("/debug")
+async def debug_health():
+    from app.database.connection import engine, DATABASE_URL
+    from sqlalchemy import text
+    try:
+        async with engine.connect() as conn:
+            result = await conn.execute(text("SELECT 1"))
+            val = result.scalar()
+            return {"status": "ok", "db_url": DATABASE_URL, "val": val}
+    except Exception as e:
+        import traceback
+        return {"status": "error", "db_url": DATABASE_URL, "error": str(e), "traceback": traceback.format_exc()}
+
+
 @router.get(
     "/ping",
     summary="Liveness Probe",
