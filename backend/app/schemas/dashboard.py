@@ -1,7 +1,7 @@
 ﻿"""
 Dashboard and Analytics Schemas
 """
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
