@@ -468,7 +468,7 @@ export default function PipelineView() {
               <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
                 <div>
                   <h3 className="text-[11px] font-semibold text-foreground uppercase tracking-wider">{stage.name}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 tabular-nums">${stageSum.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 tabular-nums">₹{stageSum.toLocaleString()}</p>
                 </div>
                 <span className="text-[9px] font-semibold bg-brand-purple/10 text-brand-purple px-1.5 py-0.5 rounded-full tabular-nums">
                   {stageDeals.length}
@@ -497,7 +497,7 @@ export default function PipelineView() {
                     </div>
 
                     <div className="mt-3.5 pt-2.5 border-t border-border flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-foreground tabular-nums">${deal.value.toLocaleString()}</span>
+                      <span className="text-[11px] font-semibold text-foreground tabular-nums">₹{deal.value.toLocaleString()}</span>
                       
                       <div className="flex space-x-1">
                         <button 
@@ -577,7 +577,7 @@ export default function PipelineView() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value ($)</label>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value (₹)</label>
                   <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
@@ -630,7 +630,7 @@ export default function PipelineView() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value ($)</label>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value (₹)</label>
                   <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>

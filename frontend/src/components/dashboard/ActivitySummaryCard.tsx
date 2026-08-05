@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  ClipboardList, 
-  Calendar, 
-  PhoneCall, 
-  AlertTriangle, 
-  CheckCircle2, 
-  Mail, 
+import {
+  ClipboardList,
+  Calendar,
+  PhoneCall,
+  AlertTriangle,
+  CheckCircle2,
+  Mail,
   Inbox,
-  ArrowRight
+  ArrowUpRight,
 } from 'lucide-react';
 import { getActivitiesFromStorage, Activity } from '@/utils/activityDb';
 
@@ -19,118 +18,164 @@ interface ActivitySummaryCardProps {
 }
 
 export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCardProps) {
-  const router = useRouter();
   const [activities, setActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
     setActivities(getActivitiesFromStorage());
   }, []);
 
-  // Compute counts
   const todayStr = new Date().toISOString().slice(0, 10);
 
-  // 1. Today's Tasks (type === 'task' and status === 'Pending' and due date is today)
-  const todayTasks = activities.filter(a => 
-    a.type === 'task' && 
-    a.status === 'Pending' && 
-    a.dueDate?.slice(0, 10) === todayStr
-  ).length;
+  const todayTasks       = activities.filter(a => a.type === 'task'    && a.status === 'Pending'   && a.dueDate?.slice(0, 10) === todayStr).length;
+  const upcomingMeetings = activities.filter(a => a.type === 'meeting' && a.status === 'Scheduled' && a.dueDate?.slice(0, 10) >= todayStr).length;
+  const pendingCalls     = activities.filter(a => a.type === 'call'    && a.status === 'Pending').length;
+  const overdueTasks     = activities.filter(a => a.type === 'task'    && a.status === 'Overdue').length;
+  const completedItems   = activities.filter(a => a.status === 'Completed').length;
+  const emailsSent       = activities.filter(a => a.type === 'email'   && a.details.from?.includes('sarah.johnson')).length;
+  const emailsReceived   = activities.filter(a => a.type === 'email'   && a.details.to?.includes('sarah.johnson')).length;
 
-  // 2. Upcoming Meetings (type === 'meeting' and status === 'Scheduled' and date is >= today)
-  const upcomingMeetings = activities.filter(a => 
-    a.type === 'meeting' && 
-    a.status === 'Scheduled' && 
-    a.dueDate?.slice(0, 10) >= todayStr
-  ).length;
+  const totalActive = todayTasks + upcomingMeetings + pendingCalls + overdueTasks + emailsSent + emailsReceived;
+  const completionPct = totalActive + completedItems > 0
+    ? Math.round((completedItems / (totalActive + completedItems)) * 100)
+    : 0;
 
-  // 3. Pending Calls (type === 'call' and status === 'Pending')
-  const pendingCalls = activities.filter(a => 
-    a.type === 'call' && 
-    a.status === 'Pending'
-  ).length;
-
-  // 4. Overdue Tasks (type === 'task' and status === 'Overdue')
-  const overdueTasks = activities.filter(a => 
-    a.type === 'task' && 
-    a.status === 'Overdue'
-  ).length;
-
-  // 5. Completed Activities (status === 'Completed')
-  const completedActivities = activities.filter(a => 
-    a.status === 'Completed'
-  ).length;
-
-  // 6. Emails Sent (type === 'email' and details.from is from sarah.johnson)
-  const emailsSent = activities.filter(a => 
-    a.type === 'email' && 
-    a.details.from?.includes('sarah.johnson')
-  ).length;
-
-  // 7. Emails Received (type === 'email' and details.to is to sarah.johnson)
-  const emailsReceived = activities.filter(a => 
-    a.type === 'email' && 
-    a.details.to?.includes('sarah.johnson')
-  ).length;
-
-  const handleStatClick = (tabFilter: string) => {
-    // Navigate using Next.js router
-    router.push(`/activities?tab=${tabFilter}`);
-  };
-
-  const statItems = [
-    { label: "Today's Tasks", count: todayTasks, icon: ClipboardList, filter: "today-tasks", color: "text-brand-purple bg-brand-purple/10 border-brand-purple/20" },
-    { label: "Upcoming Meetings", count: upcomingMeetings, icon: Calendar, filter: "upcoming-meetings", color: "text-brand-blue bg-brand-blue/10 border-brand-blue/20" },
-    { label: "Pending Calls", count: pendingCalls, icon: PhoneCall, filter: "pending-calls", color: "text-brand-cyan bg-brand-cyan/10 border-brand-cyan/20" },
-    { label: "Overdue Tasks", count: overdueTasks, icon: AlertTriangle, filter: "overdue-tasks", color: "text-rose-500 bg-rose-500/10 border-rose-500/20" },
-    { label: "Completed Items", count: completedActivities, icon: CheckCircle2, filter: "completed", color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20" },
-    { label: "Emails Sent", count: emailsSent, icon: Mail, filter: "emails-sent", color: "text-amber-500 bg-amber-500/10 border-amber-500/20" },
-    { label: "Emails Received", count: emailsReceived, icon: Inbox, filter: "emails-received", color: "text-indigo-500 bg-indigo-500/10 border-indigo-500/20" },
+  const leftStats = [
+    { label: "Today's Tasks",    count: todayTasks,       icon: ClipboardList, filter: 'today-tasks',      color: 'text-brand-purple', bg: 'bg-brand-purple/10 border-brand-purple/20' },
+    { label: 'Upcoming Meetings', count: upcomingMeetings, icon: Calendar,      filter: 'upcoming-meetings', color: 'text-brand-blue',   bg: 'bg-brand-blue/10 border-brand-blue/20' },
+    { label: 'Pending Calls',    count: pendingCalls,     icon: PhoneCall,     filter: 'pending-calls',    color: 'text-brand-cyan',   bg: 'bg-brand-cyan/10 border-brand-cyan/20' },
+    { label: 'Overdue Tasks',    count: overdueTasks,     icon: AlertTriangle, filter: 'overdue-tasks',    color: 'text-rose-500',     bg: 'bg-rose-500/10 border-rose-500/20' },
   ];
 
+  const rightStats = [
+    { label: 'Completed Items',  count: completedItems,   icon: CheckCircle2,  filter: 'completed',        color: 'text-emerald-500',  bg: 'bg-emerald-500/10 border-emerald-500/20' },
+    { label: 'Emails Sent',      count: emailsSent,       icon: Mail,          filter: 'emails-sent',      color: 'text-amber-500',    bg: 'bg-amber-500/10 border-amber-500/20' },
+    { label: 'Emails Received',  count: emailsReceived,   icon: Inbox,         filter: 'emails-received',  color: 'text-indigo-500',   bg: 'bg-indigo-500/10 border-indigo-500/20' },
+  ];
+
+  const allStats = [...leftStats, ...rightStats];
+  const maxCount = Math.max(...allStats.map(s => s.count), 1);
+
   return (
-    <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-card flex flex-col justify-between">
-      <div className="flex items-center justify-between border-b border-border pb-[var(--space-2)] mb-[var(--space-3)]">
-        <div>
-          <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 select-none">
-            <ClipboardList className="h-4.5 w-4.5 text-brand-purple" />
-            <span>Today's Work Summary</span>
-          </h3>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Quick counts of outstanding calendar obligations, follow-ups, and inbox status.</p>
+    <div className="bg-card border border-border rounded-2xl shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300 w-full overflow-hidden">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-[var(--space-4)] pt-[var(--space-4)] pb-[var(--space-3)] border-b border-border/60">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-brand-purple/10 flex items-center justify-center text-brand-purple">
+            <ClipboardList size={15} />
+          </div>
+          <div>
+            <h3 className="font-bold text-foreground text-sm leading-tight select-none">Today&apos;s Work Summary</h3>
+            <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 uppercase tracking-wider">
+              {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
+            </p>
+          </div>
         </div>
-        <button
-          onClick={() => router.push('/activities')}
-          className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-purple hover:underline cursor-pointer"
-        >
-          <span>View Activities</span>
-          <ArrowRight size={12} />
-        </button>
+
+        {/* Overall completion pill */}
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider select-none">Completion</p>
+            <p className={`text-lg font-black tabular-nums leading-tight ${completionPct >= 60 ? 'text-emerald-500' : completionPct >= 30 ? 'text-amber-500' : 'text-rose-500'}`}>
+              {completionPct}%
+            </p>
+          </div>
+          <button
+            onClick={() => onTabChange?.('activities')}
+            className="flex items-center gap-1 text-[11px] font-bold text-brand-purple hover:text-brand-purple/80 border border-brand-purple/20 bg-brand-purple/5 hover:bg-brand-purple/10 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer select-none"
+          >
+            <span>View All</span>
+            <ArrowUpRight size={11} />
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-[var(--space-2)]">
-        {statItems.map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={index}
-              onClick={() => handleStatClick(item.filter)}
-              className="flex flex-col justify-between items-start p-3 bg-secondary/15 hover:bg-secondary/40 border border-border/80 hover:border-brand-purple/20 rounded-xl transition-all duration-200 text-left h-24 group cursor-pointer"
-            >
-              <div className="flex justify-between items-center w-full">
-                <div className={`h-7 w-7 rounded-lg flex items-center justify-center border ${item.color}`}>
-                  <Icon size={13} strokeWidth={2.25} />
+      {/* Stats Grid — two columns side by side */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-border/40">
+
+        {/* Left column */}
+        <div className="px-[var(--space-4)] py-[var(--space-3)] space-y-[var(--space-2)]">
+          <p className="text-[9px] font-extrabold text-muted-foreground/60 uppercase tracking-widest mb-[var(--space-2)] select-none">Tasks &amp; Meetings</p>
+          {leftStats.map((item) => {
+            const Icon = item.icon;
+            const barWidth = Math.max((item.count / maxCount) * 100, item.count > 0 ? 6 : 0);
+            return (
+              <button
+                key={item.filter}
+                onClick={() => onTabChange?.('activities')}
+                className="w-full flex items-center gap-3 group cursor-pointer hover:bg-secondary/25 rounded-xl px-2 py-1.5 -mx-2 transition-colors duration-150"
+              >
+                {/* Icon */}
+                <div className={`h-7 w-7 rounded-lg flex items-center justify-center border shrink-0 ${item.bg} ${item.color}`}>
+                  <Icon size={12} strokeWidth={2.25} />
                 </div>
-              </div>
-              <div>
-                <h4 className="text-[9px] font-extrabold text-muted-foreground/80 uppercase tracking-wide group-hover:text-foreground transition-colors leading-tight">
-                  {item.label}
-                </h4>
-                <p className="text-xl font-black text-foreground tracking-tight tabular-nums mt-1 leading-none">
-                  {item.count}
-                </p>
-              </div>
-            </button>
-          );
-        })}
+                {/* Label + bar */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-muted-foreground group-hover:text-foreground transition-colors truncate select-none">{item.label}</span>
+                    <span className={`text-xs font-black tabular-nums shrink-0 ml-2 ${item.color}`}>{item.count}</span>
+                  </div>
+                  {/* Mini progress bar */}
+                  <div className="h-1 rounded-full bg-border/40 w-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        item.color === 'text-brand-purple' ? 'bg-brand-purple' :
+                        item.color === 'text-brand-blue'   ? 'bg-brand-blue' :
+                        item.color === 'text-brand-cyan'   ? 'bg-brand-cyan' :
+                        item.color === 'text-rose-500'     ? 'bg-rose-500' :
+                        'bg-border'
+                      }`}
+                      style={{ width: `${barWidth}%` }}
+                    />
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right column */}
+        <div className="px-[var(--space-4)] py-[var(--space-3)] space-y-[var(--space-2)]">
+          <p className="text-[9px] font-extrabold text-muted-foreground/60 uppercase tracking-widest mb-[var(--space-2)] select-none">Emails &amp; Completed</p>
+          {rightStats.map((item) => {
+            const Icon = item.icon;
+            const barWidth = Math.max((item.count / maxCount) * 100, item.count > 0 ? 6 : 0);
+            return (
+              <button
+                key={item.filter}
+                onClick={() => onTabChange?.('activities')}
+                className="w-full flex items-center gap-3 group cursor-pointer hover:bg-secondary/25 rounded-xl px-2 py-1.5 -mx-2 transition-colors duration-150"
+              >
+                <div className={`h-7 w-7 rounded-lg flex items-center justify-center border shrink-0 ${item.bg} ${item.color}`}>
+                  <Icon size={12} strokeWidth={2.25} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-bold text-muted-foreground group-hover:text-foreground transition-colors truncate select-none">{item.label}</span>
+                    <span className={`text-xs font-black tabular-nums shrink-0 ml-2 ${item.color}`}>{item.count}</span>
+                  </div>
+                  <div className="h-1 rounded-full bg-border/40 w-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        item.color === 'text-emerald-500' ? 'bg-emerald-500' :
+                        item.color === 'text-amber-500'   ? 'bg-amber-500' :
+                        item.color === 'text-indigo-500'  ? 'bg-indigo-500' :
+                        'bg-border'
+                      }`}
+                      style={{ width: `${barWidth}%` }}
+                    />
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+
+          {/* Completion ring summary */}
+          <div className="mt-[var(--space-3)] pt-[var(--space-2)] border-t border-border/40 flex items-center justify-between">
+            <span className="text-[10px] font-bold text-muted-foreground select-none">Total completed today</span>
+            <span className="text-sm font-black text-emerald-500 tabular-nums">{completedItems} / {totalActive + completedItems}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

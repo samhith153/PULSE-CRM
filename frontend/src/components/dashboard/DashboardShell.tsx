@@ -235,7 +235,13 @@ export default function DashboardShell({ requiredRole, defaultTab = 'home', acti
         {/* Dashboard inner scroll view */}
         <main className="flex-1 overflow-y-auto px-4 py-8 md:px-6 space-y-6">
           {activeTab === 'home' ? (
-            <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
+            requiredRole === 'manager' ? (
+              <ManagerDashboardView onTabChange={setActiveTab} />
+            ) : requiredRole === 'admin' ? (
+              <AdminDashboardView />
+            ) : (
+              <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
+            )
           ) : activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (
@@ -247,7 +253,7 @@ export default function DashboardShell({ requiredRole, defaultTab = 'home', acti
           ) : activeTab === 'products' ? (
             <ProductsView />
           ) : activeTab === 'activities' ? (
-            <ActivitiesView activityId={activityId} />
+            <ActivitiesView activityId={activityId} onTabChange={setActiveTab} />
           ) : activeTab === 'emails' ? (
             <EmailsView />
           ) : activeTab === 'documents' ? (

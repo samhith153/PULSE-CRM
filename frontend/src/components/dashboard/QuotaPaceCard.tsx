@@ -101,11 +101,16 @@ export default function QuotaPaceCard({ deals = [] }: QuotaPaceCardProps) {
   } = quota;
 
   const fillWidth = Math.min(Math.max(percentage, 0), 100);
-
   return (
-    <div className={`bg-card border ${cardAccentClass} rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md transition-all duration-300 w-full overflow-hidden relative`}>
+    <div className={`bg-card border ${cardAccentClass} rounded-[20px] p-6 shadow-sm hover:shadow-md transition-all duration-300 w-full overflow-hidden relative`}>
+      {/* Left accent bar */}
+      <div 
+        className={`absolute left-0 top-0 bottom-0 w-[5px] z-10 ${
+          status === 'success' ? 'bg-[#10b981]' :
+          status === 'warning' ? 'bg-[#fbbf24]' : 'bg-[#ef4444]'
+        }`} 
+      />
 
-      {/* Subtle colored bleed glow top-right corner */}
       <div
         className="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-10 pointer-events-none"
         style={{ background: barGradient, filter: 'blur(24px)' }}

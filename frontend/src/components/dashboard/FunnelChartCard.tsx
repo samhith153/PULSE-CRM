@@ -86,10 +86,12 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
       const hStart = heights[i];
       const hEnd = heights[i + 1];
 
-      const yTopStart = 120 - hStart / 2;
-      const yBottomStart = 120 + hStart / 2;
-      const yTopEnd = 120 - hEnd / 2;
-      const yBottomEnd = 120 + hEnd / 2;
+      // Center vertically in 280-tall viewBox (leave 40px top for counts, 40px bottom for labels)
+      const centerY = 140;
+      const yTopStart = centerY - hStart / 2;
+      const yBottomStart = centerY + hStart / 2;
+      const yTopEnd = centerY - hEnd / 2;
+      const yBottomEnd = centerY + hEnd / 2;
 
       // Cubic Bezier spline curves for S-curve wave-like taper
       const d = `
@@ -102,6 +104,7 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
       return d.trim();
     });
   }, [funnelStages]);
+
 
   // Stylings for each stage
   const stageStyles = [
@@ -158,10 +161,11 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
         </div>
       </div>
 
-      <div className="relative w-full overflow-hidden select-none">
+      <div className="relative w-full select-none">
         <svg 
-          viewBox="0 0 1000 240" 
-          className="w-full h-auto overflow-visible cursor-pointer"
+          viewBox="0 0 1000 280" 
+          className="w-full h-auto cursor-pointer"
+          style={{ overflow: 'visible' }}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredIndex(null)}
         >
@@ -185,7 +189,7 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                     filter: isHovered 
                       ? `drop-shadow(0px 8px 16px ${style.glowColor})`
                       : 'none',
-                    transformOrigin: `${idx * 200 + 100}px 120px`
+                    transformOrigin: `${idx * 200 + 100}px 140px`
                   }}
                   animate={{
                     scale: isHovered ? 1.025 : 1,
@@ -202,11 +206,16 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                 {/* Count value text (Top) */}
                 <motion.text
                   x={idx * 200 + 100}
-                  y={32}
+                  y={22}
                   textAnchor="middle"
-                  className="text-sm font-black text-foreground font-sans fill-foreground select-none tabular-nums"
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 32 }}
+                  dominantBaseline="middle"
+                  fontSize="14"
+                  fontWeight="800"
+                  fontFamily="sans-serif"
+                  fill="currentColor"
+                  className="fill-foreground select-none tabular-nums"
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.15 + 0.3, duration: 0.4 }}
                 >
@@ -216,11 +225,16 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                 {/* Stage label text (Bottom) */}
                 <motion.text
                   x={idx * 200 + 100}
-                  y={215}
+                  y={258}
                   textAnchor="middle"
-                  className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider font-sans fill-muted-foreground select-none"
-                  initial={{ opacity: 0, y: 200 }}
-                  whileInView={{ opacity: 1, y: 215 }}
+                  dominantBaseline="middle"
+                  fontSize="9"
+                  fontWeight="700"
+                  fontFamily="sans-serif"
+                  className="fill-muted-foreground select-none"
+                  style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.15 + 0.3, duration: 0.4 }}
                 >
@@ -231,10 +245,12 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
           })}
         </svg>
 
-        {/* Floating pill percentage badges */}
-        <div className="absolute inset-0 pointer-events-none">
+        {/* Floating pill percentage badges — positioned in SVG coordinate space mapped to % */}
+        <div className="absolute pointer-events-none" style={{ inset: 0 }}>
           {funnelStages.map((stage, idx) => {
-            const leftPercent = idx * 20 + 10; // Center of segment
+            const leftPercent = idx * 20 + 10;
+            // Segments centered at y=140 in a 280-tall viewBox → 50% vertically
+            const topPercent = 50;
             const style = stageStyles[idx];
             return (
               <div 
@@ -242,7 +258,7 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                 className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
                 style={{ 
                   left: `${leftPercent}%`, 
-                  top: '50%'
+                  top: `${topPercent}%`
                 }}
               >
                 <motion.span 

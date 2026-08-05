@@ -1327,25 +1327,25 @@ export default function LeadsView() {
             </div>
           ) : (
             <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card">
-              <table className="w-full border-collapse text-left">
-              <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)]">
+              <table className="w-full border-collapse text-left table-fixed">
+              <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
                 {isPriorityView ? (
-                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
-                    <th className="py-3 px-4">Company Name</th>
-                    <th className="py-3 text-center">Fit Score</th>
-                    <th className="py-3 text-center">Engagement Score</th>
-                    <th className="py-3 text-center">Overall Score</th>
-                    <th className="py-3">Recommendation</th>
-                    <th className="py-3 text-right pr-4">Actions</th>
+                  <tr className="text-[11px] uppercase font-extrabold tracking-wider text-muted-foreground/80 border-b border-border/60 bg-secondary/15">
+                    <th className="py-3 px-4 w-[22%]">Company Name</th>
+                    <th className="py-3 text-center w-[14%] text-brand-blue">Fit Score</th>
+                    <th className="py-3 text-center w-[16%] text-[#E8A33D]">Engagement Score</th>
+                    <th className="py-3 text-center w-[14%] text-[#4FB477]">Overall Score</th>
+                    <th className="py-3 w-[26%]">Recommendation</th>
+                    <th className="py-3 text-right pr-4 w-[8%]">Actions</th>
                   </tr>
                 ) : (
-                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
-                    <th className="py-3 px-4">Name & Company</th>
-                    <th className="py-3 text-center">Score</th>
-                    <th className="py-3">Status</th>
-                    <th className="py-3">Priority</th>
-                    <th className="py-3">Owner</th>
-                    <th className="py-3 text-right pr-4">Actions</th>
+                  <tr className="text-[11px] uppercase font-extrabold tracking-wider text-muted-foreground/80 border-b border-border/60 bg-secondary/15">
+                    <th className="py-3 px-4 w-[30%]">Name & Company</th>
+                    <th className="py-3 text-center w-[12%]">Score</th>
+                    <th className="py-3 w-[18%]">Status</th>
+                    <th className="py-3 w-[16%]">Priority</th>
+                    <th className="py-3 w-[16%]">Owner</th>
+                    <th className="py-3 text-right pr-4 w-[8%]">Actions</th>
                   </tr>
                 )}
               </thead>
@@ -2130,7 +2130,7 @@ export default function LeadsView() {
                 />
               </div>
               <div>
-                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Revenue ($)</label>
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Revenue (₹)</label>
                 <input 
                   type="number" 
                   placeholder="e.g. 1200000" 

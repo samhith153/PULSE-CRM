@@ -191,7 +191,6 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     'priorityQueue',
     'atRisk',
     'today',
-    'quickCapture'
   ]);
   const [hidden, setHidden] = useState<string[]>([]);
   const [sizes, setSizes] = useState<Record<string, 'half' | 'full'>>({
@@ -202,7 +201,6 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     today: 'full',
     priorityQueue: 'half',
     atRisk: 'half',
-    quickCapture: 'half',
   });
 
   // Load user info and layout settings
@@ -270,7 +268,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
   };
 
   const handleResetLayout = () => {
-    const defaultLayout = ['stats', 'quotaPace', 'funnelChart', 'activitySummary', 'priorityQueue', 'atRisk', 'today', 'quickCapture'];
+    const defaultLayout = ['stats', 'quotaPace', 'funnelChart', 'activitySummary', 'priorityQueue', 'atRisk', 'today'];
     const defaultHidden: string[] = [];
     const defaultSizes: Record<string, 'half' | 'full'> = {
       stats: 'full',
@@ -280,7 +278,6 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
       today: 'full',
       priorityQueue: 'half',
       atRisk: 'half',
-      quickCapture: 'half',
     };
     setLayout(defaultLayout);
     setHidden(defaultHidden);
@@ -667,31 +664,54 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                       },
                     ].map((card, i) => {
                       const Icon = card.icon;
+                      
+                      // Shape definition mapping for Part 2 requirements
+                      let shapeClass = 'rounded-xl';
+                      let clipPath = undefined;
+                      let rotateWrapper = false;
+
+                      if (card.title === 'My Leads') {
+                        shapeClass = 'rounded-full'; // perfect circle
+                      } else if (card.title === 'My Open Deals') {
+                        shapeClass = 'rounded-[10px]'; // squircle (~30% radius)
+                      } else if (card.title === 'My Untouched Deals') {
+                        shapeClass = ''; // custom hexagon clip-path
+                        clipPath = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
+                      } else if (card.title === 'My Calls Today') {
+                        shapeClass = 'rounded-md'; // diamond (rotate 45deg)
+                        rotateWrapper = true;
+                      }
+
                       return (
                         <div 
                           key={i} 
-                          className="bg-card border border-border rounded-2xl p-[var(--space-4)] hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between h-28"
+                          className="bg-card border border-border rounded-[8px] p-3 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between h-20 select-none"
                         >
                           <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
+                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
                               {card.title}
                             </p>
-                            <div className="mt-3 flex items-baseline">
+                            <div className="mt-2.5 flex items-baseline">
                               {statsLoading ? (
-                                <span className="text-2xl font-extrabold text-muted-foreground/45 animate-pulse">...</span>
+                                <span className="text-xl font-extrabold text-muted-foreground/45 animate-pulse">...</span>
                               ) : card.value === null || card.value === 0 ? (
-                                <span className="text-xs font-semibold text-muted-foreground/75 bg-secondary/40 px-2.5 py-1 rounded-lg border border-border/80 inline-block mt-0.5 select-none">
+                                <span className="text-[10px] font-semibold text-muted-foreground/75 bg-secondary/40 px-2 py-0.5 rounded border border-border/80 inline-block select-none">
                                   {card.emptyLabel}
                                 </span>
                               ) : (
-                                <h3 className="text-3xl font-black text-foreground tracking-tight tabular-nums leading-none">
+                                <h3 className="text-2xl font-black text-foreground tracking-tight tabular-nums leading-none">
                                   {card.value}
                                 </h3>
                               )}
                             </div>
                           </div>
-                          <div className={`h-11 w-11 rounded-xl flex items-center justify-center border shrink-0 ${card.color}`}>
-                            <Icon size={18} strokeWidth={2.25} />
+
+                          {/* Nested badge design securely inside the card container */}
+                          <div 
+                            style={{ clipPath }}
+                            className={`h-9 w-9 flex items-center justify-center border shrink-0 shadow-sm transition-transform duration-300 ${card.color} ${shapeClass} ${rotateWrapper ? 'rotate-45' : ''}`}
+                          >
+                            <Icon size={15} strokeWidth={2.25} className={rotateWrapper ? '-rotate-45' : ''} />
                           </div>
                         </div>
                       );
@@ -709,7 +729,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                 cardContent = (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--space-4)] items-stretch">
                     {/* Left Column — My Open Tasks */}
-                    <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-card flex flex-col justify-between h-[450px]">
+                    <div className="bg-card border border-border rounded-xl p-[var(--space-4)] shadow-card flex flex-col justify-between h-[450px]">
                       <div className="flex-1 flex flex-col min-w-0 min-h-0">
                         {/* Header / Title / Refresh */}
                         <div className="flex items-center justify-between pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] h-10 shrink-0">
@@ -849,7 +869,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     </div>
 
                     {/* Right Column — My Meetings */}
-                    <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-card flex flex-col justify-between h-[450px]">
+                    <div className="bg-card border border-border rounded-xl p-[var(--space-4)] shadow-card flex flex-col justify-between h-[450px]">
                       <div className="flex-1 flex flex-col min-w-0 min-h-0">
                         {/* Header / Title / Sort */}
                         <div className="flex items-center justify-between pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] h-10 shrink-0">
@@ -965,7 +985,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
               } else if (itemId === 'priorityQueue') {
                 // Priority Queue widget
                 cardContent = (
-                  <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] flex flex-col justify-between h-[360px]">
+                  <div className="bg-card border border-border rounded-xl p-[var(--space-4)] flex flex-col justify-between h-[360px]">
                     <div>
                       <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] select-none">
                         <Layers className="h-4.5 w-4.5 text-brand-purple" />
@@ -1003,7 +1023,9 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
               } else if (itemId === 'atRisk') {
                 // Deals at risk widget
                 cardContent = (
-                  <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] flex flex-col justify-between h-[360px]">
+                  <div className="bg-card border border-border rounded-xl p-[var(--space-4)] flex flex-col justify-between h-[360px] relative overflow-hidden">
+                    {/* Left accent bar (red/danger alert for Deals at Risk) */}
+                    <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-[#E2604F]" />
                     <div>
                       <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] select-none">
                         <AlertTriangle className="h-4.5 w-4.5 text-destructive" />
@@ -1033,9 +1055,6 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     </div>
                   </div>
                 );
-              } else if (itemId === 'quickCapture') {
-                // Render new Quick Capture card
-                cardContent = <QuickCaptureCard onTabChange={onTabChange} />;
               } else if (itemId === 'activitySummary') {
                 // Render Today's Work summary card
                 cardContent = <ActivitySummaryCard onTabChange={onTabChange} />;
