@@ -81,6 +81,7 @@ from app.api.v1.notifications import router as notifications_router
 
 from app.api.v1.documents import router as documents_router
 from app.api.v1.assistant import router as assistant_router
+from app.api.v1.stream import router as stream_router
 
 api_router = APIRouter()
 
@@ -132,3 +133,4 @@ api_router.include_router(notifications_router, prefix="/notifications", tags=["
 
 api_router.include_router(documents_router, prefix="/documents", tags=["documents"])
 api_router.include_router(assistant_router, prefix="/assistant", tags=["Assistant"])
+api_router.include_router(stream_router, prefix="/stream", tags=["Real-time Stream"])

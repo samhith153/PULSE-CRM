@@ -18,6 +18,7 @@ from app.schemas.dashboard import (
     AdminDashboardResponse,
     ManagerDashboardResponse,
     SalesRepDashboardResponse,
+    SalesRepCommandDashboardResponse,
 )
 from app.schemas.forecast import (
     ManagerForecastResponse,
@@ -166,6 +167,42 @@ async def get_manager_dashboard(current_user: CurrentUser, db: DBSession) -> dic
     data = await svc.manager_kpi(current_user.id, current_user.organization_id)
     return {"success": True, "message": "Manager KPIs retrieved successfully.", "data": data}
 
+@router.get(
+    "/me",
+    response_model=StandardResponse[SalesRepCommandDashboardResponse],
+    summary="Sales Rep Command Center",
+    description=(
+        "Hydrates all 6 core widgets and top KPIs concurrently in a single request "
+        "for the Next.js Sales Command Center. "
+        "**Sales Rep, Manager, or Admin role required.**"
+    ),
+    dependencies=[Depends(require_role("sales_rep", "manager", "admin"))],
+    tags=["Dashboard"],
+)
+async def get_my_command_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """
+    GET /api/v1/dashboard/me
+
+    Secured: JWT required + sales_rep / manager / admin role.
+    All data is strictly scoped to owner_id == current_user.id.
+    Executes concurrent DB queries to prevent frontend waterfall loading.
+    """
+    svc = DashboardService(db)
+    
+    # Calls the new concurrent method built in DashboardService
+    data = await svc.sales_rep_command_center(
+        user_id=current_user.id, 
+        organization_id=current_user.organization_id
+    )
+    
+    return {
+        "success": True, 
+        "message": "Command Center data retrieved successfully.", 
+        "data": data
+    }
 
 @router.get(
     "/sales-rep",
