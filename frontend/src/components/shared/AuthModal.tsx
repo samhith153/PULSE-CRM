@@ -139,8 +139,28 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
         setToken(result.access_token);
       }
 
+<<<<<<< HEAD
+      // Fetch the actual user profile to get their true role from the database.
+      // Registration always creates an admin; existing users keep their assigned role.
+      const profileData = await getCurrentUser().catch(() => null);
+      let resolvedRole: Role = mode === 'signup' ? 'admin' : 'manager';
+      let resolvedName = name;
+
+      if (profileData) {
+        resolvedName = profileData.full_name;
+        const mainRole = profileData.roles && profileData.roles.length > 0 ? profileData.roles[0] : '';
+        if (mainRole === 'admin') {
+          resolvedRole = 'admin';
+        } else if (mainRole === 'manager') {
+          resolvedRole = 'manager';
+        } else if (mainRole === 'sales_rep') {
+          resolvedRole = 'sales_rep';
+        }
+      }
+=======
       const user = await getCurrentUser();
       const primaryRole = user.roles && user.roles.length > 0 ? user.roles[0] : 'sales_rep';
+>>>>>>> origin/new-ui
 
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pulse-crm-auth', 'true');

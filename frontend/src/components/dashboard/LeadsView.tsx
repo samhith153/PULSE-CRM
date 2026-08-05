@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages } from '@/utils/api';
-import { toast } from '@/lib/toast';
 import { 
   Search, 
   Filter, 
@@ -296,56 +295,6 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
       setPipelineStages(data as any);
     }).catch(() => {});
   }, []);
-
-  useEffect(() => {
-    const handleOpenCreateLead = () => {
-      setLeadForm({
-        name: '', jobTitle: '', email: '', phone: '',
-        company: '', industry: '', location: '', numberOfEmployees: '',
-        source: '', currentCRM: '', operationalSystem: '',
-        status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: ''
-      });
-      setIsCreatingFullPage(true);
-    };
-    const handleOpenNote = () => {
-      if (selectedLeadId) {
-        setCallForm({ outcome: 'Spoke with Lead', notes: '' });
-        setIsCallModalOpen(true);
-      } else {
-        alert('Please select a lead from the list first to add a note.');
-      }
-    };
-    const handleOpenMeeting = () => {
-      if (selectedLeadId) {
-        setMeetingForm({ title: '', date: '', time: '', desc: '' });
-        setIsMeetingModalOpen(true);
-      } else {
-        alert('Please select a lead from the list first to schedule a meeting.');
-      }
-    };
-    
-    window.addEventListener('pulse-open-create-lead-modal', handleOpenCreateLead);
-    window.addEventListener('pulse-open-create-note-modal', handleOpenNote);
-    window.addEventListener('pulse-open-create-meeting-modal', handleOpenMeeting);
-    return () => {
-      window.removeEventListener('pulse-open-create-lead-modal', handleOpenCreateLead);
-      window.removeEventListener('pulse-open-create-note-modal', handleOpenNote);
-      window.removeEventListener('pulse-open-create-meeting-modal', handleOpenMeeting);
-    };
-  }, [selectedLeadId]);
-
-  // Fetch recommendation when selected lead changes
-  useEffect(() => {
-    if (!selectedLeadId || leadRecommendations[selectedLeadId]) return;
-    fetchLeadRecommendation(String(selectedLeadId))
-      .then(res => {
-        const text = res.recommendations?.[0] || 'No recommendation available.';
-        setLeadRecommendations(prev => ({ ...prev, [selectedLeadId]: text }));
-      })
-      .catch(() => {
-        setLeadRecommendations(prev => ({ ...prev, [selectedLeadId]: 'Unable to generate recommendation.' }));
-      });
-  }, [selectedLeadId]);
 
   // Get currently active lead object
   const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;

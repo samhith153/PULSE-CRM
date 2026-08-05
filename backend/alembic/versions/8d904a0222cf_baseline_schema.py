@@ -12,10 +12,10 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = '8d904a0222cf'
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision = '8d904a0222cf'
+down_revision = None
+branch_labels = None
+depends_on = None
 
 
 def upgrade() -> None:

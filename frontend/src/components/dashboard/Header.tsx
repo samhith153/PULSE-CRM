@@ -138,20 +138,26 @@ export default function Header({
 
   // Dynamic profile details mapping
   const getUserProfile = () => {
-    let name = "";
-    let email = "";
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('pulse-crm-user');
-      if (storedUser) {
-        if (storedUser.includes('@')) {
-          email = storedUser;
-          const namePart = storedUser.split('@')[0];
-          name = namePart.replace(/[._-]/g, ' ');
-        } else {
-          name = storedUser;
-          email = `${storedUser.toLowerCase().replace(/\s+/g, '.')}@pulse.crm`;
-        }
-      }
+    switch (userRole) {
+      case 'admin':
+        return {
+          name: "System Admin",
+          email: "admin@pulse.crm",
+          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80"
+        };
+      case 'manager':
+        return {
+          name: "Alex Johnson",
+          email: "alex.johnson@pulse.crm",
+          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+        };
+      case 'representative':
+      default:
+        return {
+          name: "Sarah Johnson",
+          email: "sarah.johnson@pulse.crm",
+          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
+        };
     }
 
     let defaultAvatar = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80";
@@ -312,6 +318,22 @@ export default function Header({
             className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-border transition-all cursor-pointer overflow-hidden"
             aria-label="Profile menu"
           >
+<<<<<<< HEAD
+            <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden border border-brand-border-purple/20 flex items-center justify-center">
+              {profile.avatar ? (
+                <Image 
+                  src={profile.avatar} 
+                  alt={`${profile.name} Avatar`} 
+                  width={28} height={28}
+                  className="h-full w-full object-cover"
+                  unoptimized
+                />
+              ) : (
+                <User className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
+              )}
+            </div>
+            <span className="text-xs font-bold text-brand-text hidden md:inline-block">{profile.name}</span>
+=======
             <Image
               src={profile.avatar}
               alt={`${profile.name} avatar`}
@@ -319,6 +341,7 @@ export default function Header({
               className="h-full w-full object-cover"
               unoptimized
             />
+>>>>>>> origin/new-ui
           </button>
 
           <AnimatePresence>

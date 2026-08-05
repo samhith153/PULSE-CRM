@@ -11,11 +11,10 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = 'b7a1c3e9f0d2'
-down_revision: Union[str, None] = '20260730_drop_domain_events'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
-
+revision = "b7a1c3e9f0d2"
+down_revision = "20260730_drop_domain_events"
+branch_labels = None
+depends_on = None
 
 def upgrade() -> None:
     op.add_column("feature_vectors", sa.Column("num_response_pairs", sa.Integer(), nullable=True))

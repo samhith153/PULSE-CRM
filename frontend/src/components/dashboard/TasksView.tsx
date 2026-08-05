@@ -21,6 +21,43 @@ interface Task {
   status: 'Pending' | 'Completed' | 'Overdue' | 'Not Started' | 'In Progress';
 }
 
+function getSourceTaskId(activity: ActivityTimelineItem): string | null {
+  const source = activity.payload?.source_task_id;
+  return typeof source === 'string' && source ? source : null;
+}
+
+function getTaskRootId(activity: ActivityTimelineItem, byId: Map<string, ActivityTimelineItem>): string {
+  const seen = new Set<string>();
+  let current = activity;
+
+  while (!seen.has(current.id)) {
+    seen.add(current.id);
+    const sourceId = getSourceTaskId(current);
+    const source = sourceId ? byId.get(sourceId) : null;
+    if (!source) return sourceId || current.id;
+    current = source;
+  }
+
+  return current.id;
+}
+
+function latestTasksFromActivities(items: ActivityTimelineItem[]): Task[] {
+  const byId = new Map(items.map(item => [item.id, item]));
+  const latestByRoot = new Map<string, ActivityTimelineItem>();
+
+  items.forEach((item) => {
+    const rootId = getTaskRootId(item, byId);
+    const existing = latestByRoot.get(rootId);
+    if (!existing || new Date(item.created_at).getTime() >= new Date(existing.created_at).getTime()) {
+      latestByRoot.set(rootId, item);
+    }
+  });
+
+  return Array.from(latestByRoot.values())
+    .map(activityToTask)
+    .sort((a, b) => a.deadline.localeCompare(b.deadline));
+}
+
 export default function TasksView() {
   const [tasks, setTasks] = useState<Task[]>([]);
 

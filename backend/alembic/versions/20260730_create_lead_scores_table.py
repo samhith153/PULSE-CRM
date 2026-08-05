@@ -12,10 +12,10 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
 
-revision: str = "20260730_create_lead_scores"
-down_revision: Union[str, None] = "202607300004"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision = "20260730_create_lead_scores"
+down_revision = "202607300004"
+branch_labels = None
+depends_on = None
 
 
 def upgrade() -> None:

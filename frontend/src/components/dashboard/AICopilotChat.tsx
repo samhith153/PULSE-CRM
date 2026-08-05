@@ -116,8 +116,13 @@ export default function AICopilotChat() {
       {/* Floating Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-brand-purple/15 hover:bg-brand-purple/25 dark:bg-brand-purple/25 dark:hover:bg-brand-purple/35 backdrop-blur-md border border-brand-purple/30 flex items-center justify-center text-brand-purple dark:text-sky-400 shadow-[0_8px_32px_rgba(29,78,216,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
+<<<<<<< HEAD
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-tr from-brand-accent to-brand-secondary-accent border border-brand-border-purple/35 flex items-center justify-center text-white shadow-[0_8px_30px_rgba(121,87,251,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
+        aria-label="Ask PULSE Assistant"
+=======
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-tr from-brand-accent to-brand-secondary-accent border border-border flex items-center justify-center text-primary-foreground shadow-[0_8px_30px_rgba(121,87,251,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
         aria-label="Ask PulseAI"
+>>>>>>> origin/new-ui
       >
         {isOpen ? (
           <X className="h-6 w-6 transition-transform duration-300 rotate-90" />
@@ -142,10 +147,17 @@ export default function AICopilotChat() {
                 <Sparkles className="h-5.5 w-5.5 text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold tracking-wide text-white">PulseAI Copilot</h3>
+<<<<<<< HEAD
+                <h3 className="text-sm font-black tracking-wide">PULSE Assistant</h3>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[10px] text-white/90 font-bold uppercase tracking-wider">Online Sync</span>
+                  <span className="text-[10px] text-white/85 font-bold uppercase tracking-wider">CRM Help</span>
+=======
+                <h3 className="text-sm font-semibold tracking-wide">PulseAI Copilot</h3>
+                <div className="flex items-center space-x-1 mt-0.5">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="text-[10px] text-primary-foreground/85 font-bold uppercase tracking-wider">Online Sync</span>
+>>>>>>> origin/new-ui
                 </div>
               </div>
             </div>
@@ -176,6 +188,26 @@ export default function AICopilotChat() {
                         : 'bg-brand-purple text-primary-foreground rounded-br-none'
                     }`}>
                       <p className="whitespace-pre-wrap">{m.text}</p>
+<<<<<<< HEAD
+                    </div>
+
+                    {/* Suggestion Chips (only on AI messages) */}
+                    {isAI && m.suggestions && m.suggestions.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {m.suggestions.map((suggestion, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => handleSuggestionClick(suggestion)}
+                            className="px-2 py-1 bg-brand-bg border border-brand-border-purple/20 hover:border-brand-accent hover:text-brand-accent rounded-full text-[9px] font-bold transition-all cursor-pointer shadow-sm/5"
+                          >
+                            {suggestion}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <span className="text-[9px] text-slate-400 self-start px-1 font-bold">
+=======
 
                       {/* --- Pipeline Metric Cards --- */}
                       {isAI && m.type === 'pipeline' && m.data && (
@@ -246,6 +278,7 @@ export default function AICopilotChat() {
                       )}
                     </div>
                     <span className="text-[9px] text-muted-foreground self-start px-1 font-bold">
+>>>>>>> origin/new-ui
                       {m.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
@@ -284,8 +317,13 @@ export default function AICopilotChat() {
             ].map((btn) => (
               <button
                 key={btn.text}
+<<<<<<< HEAD
+                onClick={() => handleSendMessage(btn.text)}
+                className="py-1 px-2.5 bg-brand-bg border border-brand-border-purple/20 hover:border-brand-accent hover:text-brand-accent rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer shadow-sm/5"
+=======
                 onClick={() => triggerShortcut(btn.text)}
-                className="py-1 px-2.5 bg-card border border-border hover:border-brand-purple hover:text-brand-purple rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer "
+                className="py-1 px-2.5 bg-brand-bg border border-border hover:border-brand-accent hover:text-brand-purple rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer "
+>>>>>>> origin/new-ui
               >
                 {btn.label}
               </button>
@@ -306,7 +344,13 @@ export default function AICopilotChat() {
               placeholder="Ask about PULSE CRM..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              className="flex-1 px-3 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:border-brand-purple transition-colors bg-background text-foreground placeholder-muted-foreground"
+<<<<<<< HEAD
+              onKeyDown={handleKeyDown}
+              className="flex-1 px-3 py-1.5 border border-brand-border-purple/25 rounded-lg text-xs focus:outline-none focus:border-brand-accent transition-colors bg-brand-sidebar-hover/10 text-brand-text placeholder-brand-text/50"
+              disabled={isTyping}
+=======
+              className="flex-1 px-3 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:border-brand-accent transition-colors bg-brand-sidebar-hover/10 text-muted-foreground placeholder-brand-text/50"
+>>>>>>> origin/new-ui
             />
             <button
               type="submit"

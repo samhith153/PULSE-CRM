@@ -125,7 +125,7 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
       if (!cancelled) {
         setContacts(data as any);
         setLoading(false);
-        onLoaded?.();
+        if (data.length && !selectedId) setSelectedId((data as any)[0].id);
       }
     }).catch(() => {
       if (!cancelled) {

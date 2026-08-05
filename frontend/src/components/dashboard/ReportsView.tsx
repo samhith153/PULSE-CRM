@@ -83,8 +83,10 @@ const formatRupee = (value: number, decimals = 0) => {
 };
 
 export default function ReportsView() {
-  const [salesReportTimeframe, setSalesReportTimeframe] = useState('Monthly');
-  const [salesActivityTimeframe, setSalesActivityTimeframe] = useState('Monthly');
+  const [data, setData] = useState<AdminDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [leaderboardMetric, setLeaderboardMetric] = useState<'revenue' | 'deals'>('revenue');
 
   // SVG circular segments parameters for Sales Activity Arc Chart
   // Radius = 45. Arc Circumference = 2 * PI * 45 = 282.7. 
