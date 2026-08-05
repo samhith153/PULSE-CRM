@@ -16,7 +16,7 @@ class LeadCreateRequest(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: Optional[str] = None
     status: LeadStatus = LeadStatus.NEW
-    source: Optional[LeadSource] = None
+    source: LeadSource
     interest: Optional[str] = Field(default=None, max_length=100)
     industry: Optional[str] = Field(default=None, max_length=100)
     employee_count: Optional[int] = None

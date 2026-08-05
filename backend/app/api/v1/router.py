@@ -1,4 +1,4 @@
-﻿"""
+"""
 API v1 Router
 Aggregates all domain routers under /api/v1.
 """
@@ -57,6 +57,7 @@ from app.api.v1.companies import router as companies_router
 from app.api.v1.contacts import router as contacts_router
 from app.api.v1.dashboard import router as dashboard_router
 from app.api.v1.deals import router as deals_router
+from app.api.v1.documents import router as documents_router
 from app.api.v1.emails import router as emails_router
 from app.api.v1.events import router as events_router
 from app.api.v1.webhooks import router as webhooks_router
@@ -87,6 +88,7 @@ api_router.include_router(companies_router, prefix="/companies", tags=["Companie
 api_router.include_router(contacts_router, prefix="/contacts", tags=["Contacts"])
 api_router.include_router(leads_router, prefix="/leads", tags=["Leads"])
 api_router.include_router(deals_router, prefix="/deals", tags=["Deals"])
+api_router.include_router(documents_router, prefix="/documents", tags=["Documents"])
 api_router.include_router(activity_router, prefix="/activity", tags=["Activity"])
 api_router.include_router(activities_router, prefix="/activities", tags=["Activities"])
 api_router.include_router(timeline_router, prefix="/timeline", tags=["Timeline"])

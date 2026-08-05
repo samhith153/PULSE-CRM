@@ -26,21 +26,27 @@ export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.
   return { ref, visible };
 }
 
-/** Counts up to a target value when it enters the viewport. */
-export function useCountUp(target: number, duration = 1400) {
-  // Match the same threshold as useReveal (0.15) per spec §5 timing rules
+export function useCountUp(target: number, duration = 1000) {
   const { ref, visible } = useReveal<HTMLDivElement>(0.15);
   const [value, setValue] = useState(0);
+  const prevTargetRef = useRef(0);
 
   useEffect(() => {
     if (!visible) return;
+    const startVal = prevTargetRef.current;
+    const diff = target - startVal;
+    
     let frame = 0;
     const start = performance.now();
     const tick = (now: number) => {
       const p = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - p, 3);
-      setValue(Math.round(target * eased));
-      if (p < 1) frame = requestAnimationFrame(tick);
+      const eased = 1 - Math.pow(1 - p, 4); // easeOutQuart
+      setValue(Math.round(startVal + diff * eased));
+      if (p < 1) {
+        frame = requestAnimationFrame(tick);
+      } else {
+        prevTargetRef.current = target;
+      }
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);

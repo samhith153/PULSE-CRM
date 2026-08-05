@@ -2,9 +2,10 @@
 
 import React from 'react';
 import { 
-  X, 
-  Settings2, 
-  Layout, 
+  X,
+  Settings2,
+  Layout,
+  BarChartHorizontal,
   Eye, 
   EyeOff, 
   TrendingUp, 
@@ -22,6 +23,8 @@ interface LayoutSettings {
   productivity: boolean;
   heatmap: boolean;
   rightPanel: boolean;
+  quotaPace: boolean;
+  funnelChart: boolean;
 }
 
 interface DashboardCustomizerProps {
@@ -70,7 +73,19 @@ export default function DashboardCustomizer({ isOpen, onClose, settings, onToggl
       name: 'Quick Reports & Key Insights',
       desc: 'Interactive report builder portal, conversion velocities, and AI priorities feed.',
       icon: FileText,
-    }
+    },
+    {
+      key: 'quotaPace' as keyof LayoutSettings,
+      name: 'Quota Pace',
+      desc: 'Progress bar showing current quota achievement for the month.',
+      icon: BarChartHorizontal,
+    },
+    {
+      key: 'funnelChart' as keyof LayoutSettings,
+      name: 'Funnel Chart',
+      desc: 'Visual representation of pipeline stages with conversion percentages.',
+      icon: Layout,
+    },
   ];
 
   return (

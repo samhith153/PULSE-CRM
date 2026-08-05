@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { 
@@ -10,8 +10,12 @@ import {
   FileSpreadsheet,
   ArrowUpRight,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  BarChart3,
+  PieChart
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface RightPanelProps {
   onNewReportClick: () => void;
@@ -19,20 +23,39 @@ interface RightPanelProps {
   loading?: boolean;
 }
 
+const getReportStyles = (title: string, index: number) => {
+  const t = title.toLowerCase();
+  let Icon = FileSpreadsheet;
+  let bgClass = 'bg-brand-purple/10 text-brand-purple border border-brand-purple/15';
+
+  if (t.includes('funnel') || t.includes('conversion')) {
+    Icon = BarChart3;
+    bgClass = 'bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/15';
+  } else if (t.includes('projection') || t.includes('forecast') || t.includes('revenue')) {
+    Icon = TrendingUp;
+    bgClass = 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/15';
+  } else if (t.includes('segment') || t.includes('share') || t.includes('source') || t.includes('size')) {
+    Icon = PieChart;
+    bgClass = 'bg-brand-blue/10 text-brand-blue border border-brand-blue/15';
+  }
+
+  return { Icon, bgClass };
+};
+
 export default function RightPanel({ onNewReportClick, recentReports, loading = false }: RightPanelProps) {
 
   const metrics = [
     {
       title: "Open deals",
       count: 68,
-      desc: "Value: â‚¹2.12M",
+      desc: "Value: ₹2.12M",
       icon: FolderOpen,
       color: "text-brand-purple",
       bg: "bg-brand-purple/10 border border-brand-purple/20"
     },
     {
       title: "Total pipeline value",
-      count: "â‚¹5.67M",
+      count: "₹5.67M",
       desc: "vs last month",
       change: "+22%",
       isPositive: true,
@@ -74,15 +97,15 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
-        <div className="bg-card border border-border rounded-2xl p-5 h-72" />
-        <div className="bg-card border border-border rounded-2xl p-5 h-72" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6 animate-pulse">
+        <div className="bg-card border border-border rounded-2xl p-5 h-[280px]" />
+        <div className="bg-card border border-border rounded-2xl p-5 h-[280px]" />
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
 
       {/* Key Metrics Summary */}
       <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300">
@@ -127,23 +150,54 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
 
       {/* Recent Reports */}
       <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300">
-        <h3 className="font-bold text-foreground text-sm mb-4">Recent reports</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-foreground text-sm">Recent reports</h3>
+          {/* Avatar Stack implied collaboration detail */}
+          <div className="flex items-center -space-x-1.5 overflow-hidden select-none" title="3 teammates active on these templates">
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
+              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&fit=crop&q=80" alt="Teammate 1" />
+            </div>
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
+              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&fit=crop&q=80" alt="Teammate 2" />
+            </div>
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
+              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&fit=crop&q=80" alt="Teammate 3" />
+            </div>
+          </div>
+        </div>
         
         <div className="space-y-2">
-          {recentReports.map((report) => (
-            <div 
-              key={report.id} 
-              className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition-all duration-200 border border-transparent hover:border-border"
-            >
-              <div className="size-8 rounded-lg bg-background text-brand-purple flex items-center justify-center border border-border shrink-0">
-                <FileSpreadsheet className="h-4 w-4" strokeWidth={1.75} />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-xs font-bold text-foreground truncate leading-none">{report.title}</h4>
-                <p className="text-[10px] text-muted-foreground mt-1 truncate leading-none">{report.time}</p>
-              </div>
-            </div>
-          ))}
+          {recentReports.map((report, idx) => {
+            const { Icon, bgClass } = getReportStyles(report.title, idx);
+            const isFirst = idx === 0;
+            return (
+              <motion.div 
+                key={report.id} 
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, delay: idx * 0.06 }}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition-all duration-200 border cursor-pointer hover:-translate-y-0.5 hover:shadow-nav hover:bg-secondary/70",
+                  isFirst ? "border-brand-purple/30 bg-brand-purple/5 shadow-[inset_3px_0_0_0_var(--brand-purple)] pl-4" : "border-transparent hover:border-border"
+                )}
+              >
+                <div className={cn("size-8 rounded-lg flex items-center justify-center shrink-0", bgClass)}>
+                  <Icon className="h-4 w-4" strokeWidth={1.75} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="text-xs font-bold text-foreground truncate leading-none">{report.title}</h4>
+                    {isFirst && (
+                      <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-brand-purple text-primary-foreground uppercase tracking-wide leading-none select-none">
+                        New
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1 truncate leading-none">{report.time}</p>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
 
         <div className="mt-4 pt-3 border-t border-border text-center">
@@ -160,4 +214,3 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
     </div>
   );
 }
-

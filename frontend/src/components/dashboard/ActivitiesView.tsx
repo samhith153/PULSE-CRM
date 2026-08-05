@@ -1,6 +1,6 @@
-﻿'use client';
+'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Clock, 
   Mail, 
@@ -13,6 +13,7 @@ import {
   ListFilter
 } from 'lucide-react';
 import CalendarView from './CalendarView';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ActivityLog {
   id: number;
@@ -36,6 +37,16 @@ export default function ActivitiesView() {
     { id: 6, type: 'creation', title: 'New Lead Ingested', desc: 'Helena Troy registered via custom enterprise contact form.', user: 'System', time: '1 week ago', dateKey: 'month' },
     { id: 7, type: 'call', title: 'Call Outcome: Busy', desc: 'Tried calling David Hume. Cold nurturing assigned.', user: 'David Wilson', time: '2 weeks ago', dateKey: 'month' }
   ]);
+  useEffect(() => {
+    const handleOpenMeeting = () => {
+      setActiveSubTab('calendar');
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('pulse-open-create-calendar-event-modal'));
+      }, 100);
+    };
+    window.addEventListener('pulse-open-create-meeting-modal', handleOpenMeeting);
+    return () => window.removeEventListener('pulse-open-create-meeting-modal', handleOpenMeeting);
+  }, []);
 
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [search, setSearch] = useState('');
@@ -57,6 +68,21 @@ export default function ActivitiesView() {
       case 'note': return <FileText className="h-4 w-4 text-amber-600" />;
       case 'stage_change': return <GitPullRequest className="h-4 w-4 text-destructive" />;
     }
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 350, damping: 26 } }
   };
 
   return (
@@ -129,36 +155,55 @@ export default function ActivitiesView() {
           </div>
 
           {/* Timeline representation */}
-          <div className="relative border-l border-border pl-4 ml-3 space-y-6">
-            {filtered.length > 0 ? (
-              filtered.map((log) => (
-                <div key={log.id} className="relative">
-                  {/* Visual Icon Node overlay */}
-                  <div className="absolute -left-[27px] top-0 h-6.5 w-6.5 rounded-full bg-card border border-border flex items-center justify-center">
-                    {getIcon(log.type)}
-                  </div>
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="relative border-l border-border pl-4 ml-3 space-y-6"
+          >
+            <AnimatePresence mode="popLayout">
+              {filtered.length > 0 ? (
+                filtered.map((log) => (
+                  <motion.div 
+                    key={log.id} 
+                    variants={itemVariants}
+                    layout
+                    exit={{ opacity: 0, y: -15 }}
+                    className="relative"
+                  >
+                    {/* Visual Icon Node overlay */}
+                    <div className="absolute -left-[27px] top-0 h-6.5 w-6.5 rounded-full bg-card border border-border flex items-center justify-center z-10 shadow-sm">
+                      {getIcon(log.type)}
+                    </div>
 
-                  <div className="bg-secondary hover:bg-secondary border border-border rounded-xl p-4 transition-colors">
-                    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                      <div>
-                        <h4 className="text-xs font-semibold text-foreground">{log.title}</h4>
-                        <p className="text-xs text-muted-foreground mt-1 font-semibold leading-relaxed">{log.desc}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-[10px] font-semibold text-muted-foreground flex items-center justify-end">
-                          <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
-                          {log.time}
-                        </span>
-                        <p className="text-[9px] text-brand-purple font-semibold mt-0.5">by {log.user}</p>
+                    <div className="bg-secondary/40 hover:bg-secondary/70 border border-border/80 rounded-xl p-4 transition-colors duration-200 hover:shadow-nav">
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground">{log.title}</h4>
+                          <p className="text-xs text-muted-foreground mt-1 font-semibold leading-relaxed">{log.desc}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-[10px] font-semibold text-muted-foreground flex items-center justify-end">
+                            <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
+                            {log.time}
+                          </span>
+                          <p className="text-[9px] text-brand-purple font-semibold mt-0.5">by {log.user}</p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-center py-6 text-xs font-semibold">No activity logs found matching the filter criteria.</p>
-            )}
-          </div>
+                  </motion.div>
+                ))
+              ) : (
+                <motion.p 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-muted-foreground text-center py-6 text-xs font-semibold"
+                >
+                  No activity logs found matching the filter criteria.
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </motion.div>
         </div>
       )}
 
@@ -166,4 +211,3 @@ export default function ActivitiesView() {
     </div>
   );
 }
-

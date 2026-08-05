@@ -15,12 +15,12 @@ timeout /t 2 /nobreak >nul
 
 :: Start backend
 echo [2/4] Starting backend on port 8000...
-start "PULSE-CRM Backend" cmd /k "cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\backend && .venv\Scripts\python.exe main.py"
+start "PULSE-CRM Backend" cmd /k "cd /d "%~dp0backend" && .venv\Scripts\python.exe main.py"
 timeout /t 3 /nobreak >nul
 
 :: Start frontend
 echo [3/4] Starting frontend on port 3000...
-start "PULSE-CRM Frontend" cmd /k "cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend && npm run dev"
+start "PULSE-CRM Frontend" cmd /k "cd /d "%~dp0frontend" && npm run dev"
 timeout /t 5 /nobreak >nul
 
 :: Verify

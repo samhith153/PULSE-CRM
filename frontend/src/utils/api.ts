@@ -319,6 +319,10 @@ export async function updateContact(contactId: string | number, contactData: any
   });
 }
 
+export async function deleteContact(contactId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/contacts/${contactId}`, { method: 'DELETE' });
+}
+
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
   const dbResult = await apiFetch<any>('/api/v1/companies');
@@ -354,6 +358,10 @@ export async function updateCompany(companyId: string | number, companyData: any
     method: 'PUT',
     body: JSON.stringify(companyData)
   });
+}
+
+export async function deleteCompany(companyId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/companies/${companyId}`, { method: 'DELETE' });
 }
 
 // --- Deals API ---
@@ -921,3 +929,49 @@ export async function updateRolePermissions(roleId: string, permissionCodenames:
     body: JSON.stringify({ permission_codenames: permissionCodenames })
   });
 }
+
+// --- Documents / Attachments API ---
+export async function getDocuments(params: { contact_id?: string; deal_id?: string; company_id?: string }): Promise<any[]> {
+  const query = new URLSearchParams();
+  if (params.contact_id) query.append('contact_id', params.contact_id);
+  if (params.deal_id) query.append('deal_id', params.deal_id);
+  if (params.company_id) query.append('company_id', params.company_id);
+  
+  const queryString = query.toString();
+  const endpoint = `/api/v1/documents${queryString ? `?${queryString}` : ''}`;
+  const res = await apiFetch<any>(endpoint);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+export async function uploadDocument(
+  file: File,
+  params: { contact_id?: string; deal_id?: string; company_id?: string }
+): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (params.contact_id) formData.append('contact_id', params.contact_id);
+  if (params.deal_id) formData.append('deal_id', params.deal_id);
+  if (params.company_id) formData.append('company_id', params.company_id);
+  
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders()
+    },
+    body: formData
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || 'Failed to upload document');
+  }
+  return res.json();
+}
+
+export async function deleteDocument(docId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/documents/${docId}`, { method: 'DELETE' });
+}
+
+export function getDocumentDownloadUrl(docId: string): string {
+  return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
+}
+

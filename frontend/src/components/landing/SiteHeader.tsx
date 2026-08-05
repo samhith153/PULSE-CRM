@@ -16,7 +16,7 @@ type Plan = { name: string; desc: string };
 type MenuConfig = {
   columns?: MenuColumn[];
   plans?: { heading: string; items: Plan[]; link: string };
-  promo: { image?: string; heading: string; desc: string; link: string; cta?: boolean };
+  promo: { image?: any; heading: string; desc: string; link: string; cta?: boolean };
 };
 
 const menus: Record<string, MenuConfig> = {
@@ -315,7 +315,7 @@ export function SiteHeader({ onOpenSignUp, onOpenSignIn }: SiteHeaderProps) {
                 <div className="overflow-hidden rounded-3xl bg-surface-warm">
                   {active.promo.image ? (
                     <img
-                      src={active.promo.image}
+                      src={typeof active.promo.image === "object" ? active.promo.image.src : active.promo.image}
                       alt={active.promo.heading}
                       loading="lazy"
                       width={800}

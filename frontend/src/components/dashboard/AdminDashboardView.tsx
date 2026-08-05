@@ -19,7 +19,8 @@ import {
   formatPct,
   AdminDashboardData,
 } from '@/utils/api';
-import { useReveal } from '@/hooks/use-reveal';
+import { useReveal, useCountUp } from '@/hooks/use-reveal';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /* ── Sparkline (same Area-chart pattern as StatCards) ─────────────────── */
 function Spark({ values, positive }: { values: number[]; positive: boolean }) {
@@ -32,16 +33,42 @@ function Spark({ values, positive }: { values: number[]; positive: boolean }) {
     x: (i / (n - 1)) * 100,
     y: 34 - ((v - min) / range) * 30 + 2,
   }));
-  const line = coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
-  const area = `${line} L${coords[n-1].x.toFixed(1)},40 L0,40 Z`;
-  const stroke = positive ? 'var(--brand-purple)' : 'var(--destructive)';
+
+  // Create cubic bezier curve through points for smooth monotone look
+  let linePath = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    const cpX1 = p0.x + (p1.x - p0.x) / 3;
+    const cpY1 = p0.y;
+    const cpX2 = p0.x + 2 * (p1.x - p0.x) / 3;
+    const cpY2 = p1.y;
+    linePath += ` C ${cpX1.toFixed(1)} ${cpY1.toFixed(1)}, ${cpX2.toFixed(1)} ${cpY2.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+  }
+
+  const areaPath = `${linePath} L ${coords[n-1].x.toFixed(1)} 40 L 0 40 Z`;
+  const strokeColor = positive ? 'var(--brand-cyan)' : 'var(--destructive)';
+
   return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-8 w-full" aria-hidden>
-      <path d={area} fill={stroke} fillOpacity="0.12" stroke="none" />
-      <path d={line} fill="none" stroke={stroke} strokeWidth="2" vectorEffect="non-scaling-stroke" />
-      {coords.map((c, i) => (
-        <circle key={i} cx={c.x.toFixed(1)} cy={c.y.toFixed(1)} r="1.6" fill="var(--brand-cyan)" vectorEffect="non-scaling-stroke" />
-      ))}
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-8 w-full overflow-visible" aria-hidden>
+      <motion.path 
+        d={areaPath} 
+        fill={strokeColor} 
+        fillOpacity="0.08" 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      />
+      <motion.path 
+        d={linePath} 
+        fill="none" 
+        stroke={strokeColor} 
+        strokeWidth="1.5" 
+        vectorEffect="non-scaling-stroke"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+      />
     </svg>
   );
 }
@@ -54,34 +81,48 @@ interface KpiTile {
   isPositive: boolean;
   values: number[];
   icon: React.ElementType;
+  targetValue: number;
+  prefix?: string;
+  suffix?: string;
 }
 
 function StatTile({ tile, delay = 0 }: { tile: KpiTile; delay?: number }) {
-  const { ref, visible } = useReveal<HTMLDivElement>();
+  const { ref, value, visible } = useCountUp(tile.targetValue, 1000);
   const Delta = tile.isPositive ? ArrowUpRight : ArrowDownRight;
+
+  const displayVal = tile.targetValue === 0 
+    ? tile.value 
+    : `${tile.prefix ?? ''}${value.toLocaleString()}${tile.suffix ?? ''}`;
+
   return (
-    <div
-      ref={ref}
-      data-visible={visible}
-      style={{ transitionDelay: `${delay}ms` }}
-      className="reveal flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-nav"
+    <motion.div
+      ref={ref as React.RefObject<HTMLDivElement>}
+      initial={{ opacity: 0, y: 15 }}
+      animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
+      whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
+      className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-5 shadow-card transition-colors duration-200 cursor-pointer"
     >
-      <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary text-brand-purple">
-        <tile.icon size={16} strokeWidth={2} />
+      <div className="flex items-center justify-between">
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary text-brand-purple">
+          <tile.icon size={16} strokeWidth={2} />
+        </div>
+        <p className={`flex items-center gap-1 text-[11px] font-bold ${tile.isPositive ? 'text-brand-cyan' : 'text-destructive'}`}>
+          <Delta size={12} strokeWidth={2.5} className="shrink-0" />
+          <span>{tile.change}</span>
+        </p>
       </div>
       <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-none">
         {tile.title}
       </p>
       <p className="text-2xl font-semibold text-foreground tabular-nums leading-none">
-        {tile.value}
+        {displayVal}
       </p>
-      <p className={`flex items-center gap-1 text-[11px] font-bold ${tile.isPositive ? 'text-brand-cyan' : 'text-destructive'}`}>
-        <Delta size={12} strokeWidth={2.5} className="shrink-0" />
-        <span>{tile.change}</span>
-        <span className="font-medium text-muted-foreground">vs last month</span>
-      </p>
-      <Spark values={tile.values} positive={tile.isPositive} />
-    </div>
+      <span className="text-[10px] text-muted-foreground/60 font-semibold mt-0.5">vs last month</span>
+      <div className="mt-2">
+        <Spark values={tile.values} positive={tile.isPositive} />
+      </div>
+    </motion.div>
   );
 }
 
@@ -105,48 +146,100 @@ function RevenueChart({
   const revCoords  = revenues.map((v, i) => ({ x: (i/(n-1))*100, y: 86 - (v/maxRev)*78 + 2 }));
   const leadCoords = leads.map((v, i)    => ({ x: (i/(n-1))*100, y: 86 - (v/maxLead)*78 + 2 }));
 
-  const pathFor = (coords: { x: number; y: number }[]) =>
-    coords.map((c, i) => `${i===0?'M':'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
-
-  const areaFor = (coords: { x: number; y: number }[]) => {
-    const p = pathFor(coords);
-    return `${p} L100,90 L0,90 Z`;
+  const curvePath = (coords: { x: number; y: number }[]) => {
+    if (coords.length === 0) return '';
+    let path = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[i];
+      const p1 = coords[i + 1];
+      const cpX1 = p0.x + (p1.x - p0.x) / 3;
+      const cpY1 = p0.y;
+      const cpX2 = p0.x + 2 * (p1.x - p0.x) / 3;
+      const cpY2 = p1.y;
+      path += ` C ${cpX1.toFixed(1)} ${cpY1.toFixed(1)}, ${cpX2.toFixed(1)} ${cpY2.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+    }
+    return path;
   };
 
-  const revPath  = pathFor(revCoords);
-  const leadPath = pathFor(leadCoords);
+  const revPathStr = curvePath(revCoords);
+  const revAreaStr = `${revPathStr} L 100 90 L 0 90 Z`;
+
+  const leadPathStr = curvePath(leadCoords);
+  const leadAreaStr = `${leadPathStr} L 100 90 L 0 90 Z`;
 
   return (
-    <div className="mt-4">
+    <div className="mt-4 relative">
       <svg
         viewBox="0 0 100 90"
         preserveAspectRatio="none"
         className="h-48 w-full overflow-visible"
         aria-hidden
       >
+        <defs>
+          <linearGradient id="adminRevGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--brand-purple)" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="var(--brand-purple)" stopOpacity="0.0" />
+          </linearGradient>
+          <linearGradient id="adminLeadGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--brand-cyan)" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="var(--brand-cyan)" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
         {/* Grid lines */}
         {[0, 22, 44, 66, 88].map((y) => (
           <line key={y} x1="0" x2="100" y1={y} y2={y}
-            stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke"
+            stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" strokeOpacity={0.4} vectorEffect="non-scaling-stroke"
             className="text-border" />
         ))}
-        {/* Revenue area + line */}
-        <path d={areaFor(revCoords)} fill="var(--brand-purple)" fillOpacity="0.10" stroke="none" />
-        <path
-          d={revPath} fill="none" stroke="var(--brand-purple)" strokeWidth="2"
-          vectorEffect="non-scaling-stroke"
-          strokeDasharray={visible ? 'none' : '200'}
-          style={{ transition: 'stroke-dashoffset 1.2s ease-out' }}
+
+        {/* Revenue area */}
+        <motion.path
+          d={revAreaStr}
+          fill="url(#adminRevGrad)"
+          initial={{ opacity: 0 }}
+          animate={visible ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ duration: 0.8 }}
         />
-        {/* Leads area + line */}
-        <path d={areaFor(leadCoords)} fill="var(--brand-cyan)" fillOpacity="0.08" stroke="none" />
-        <path d={leadPath} fill="none" stroke="var(--brand-cyan)" strokeWidth="1.5"
-          vectorEffect="non-scaling-stroke" strokeDasharray="3 2" />
+        {/* Revenue line */}
+        <motion.path
+          d={revPathStr}
+          fill="none"
+          stroke="var(--brand-purple)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+          initial={{ pathLength: 0 }}
+          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
+          transition={{ duration: 1.2, ease: "easeInOut" }}
+        />
+
+        {/* Leads area */}
+        <motion.path
+          d={leadAreaStr}
+          fill="url(#adminLeadGrad)"
+          initial={{ opacity: 0 }}
+          animate={visible ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+        />
+        {/* Leads line */}
+        <motion.path
+          d={leadPathStr}
+          fill="none"
+          stroke="var(--brand-cyan)"
+          strokeWidth="1.5"
+          strokeDasharray="4 3"
+          vectorEffect="non-scaling-stroke"
+          initial={{ pathLength: 0 }}
+          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
+          transition={{ duration: 1.2, ease: "easeInOut", delay: 0.2 }}
+        />
+
         {/* Data points + hover zones */}
         {revCoords.map((c, i) => (
           <g key={i}>
-            <circle cx={c.x.toFixed(1)} cy={c.y.toFixed(1)} r={hovered===i ? '2.5' : '1.6'}
-              fill="var(--brand-cyan)" vectorEffect="non-scaling-stroke" className="transition-all duration-150" />
+            <circle cx={c.x.toFixed(1)} cy={c.y.toFixed(1)} r={hovered===i ? '2.5' : '1.8'}
+              fill="var(--brand-cyan)" stroke="var(--background)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" className="transition-all duration-150" />
             <rect
               x={`${c.x - 4}`} y="0" width="8" height="90"
               fill="transparent" className="cursor-pointer"
@@ -155,19 +248,8 @@ function RevenueChart({
             />
           </g>
         ))}
-        {/* Hover tooltip via foreignObject */}
-        {hovered !== null && (
-          <foreignObject
-            x={Math.min(revCoords[hovered].x - 12, 72)}
-            y={Math.max(revCoords[hovered].y - 20, 0)}
-            width="26" height="12"
-          >
-            <div className="rounded bg-ink px-1.5 py-0.5 text-[8px] font-semibold text-primary-foreground whitespace-nowrap">
-              {formatINR(monthly[hovered].revenue)}
-            </div>
-          </foreignObject>
-        )}
       </svg>
+
       <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
         {monthly.map((m) => (
           <span key={m.month}>
@@ -175,6 +257,34 @@ function RevenueChart({
           </span>
         ))}
       </div>
+
+      {/* Hover tooltip */}
+      <AnimatePresence>
+        {hovered !== null && (
+          <motion.div 
+            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-2 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-float p-3 text-xs flex gap-4 z-20"
+          >
+            <div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">Month</p>
+              <p className="font-semibold text-foreground mt-0.5">
+                {new Date(`${monthly[hovered].month}-01`).toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' })}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-brand-purple">Revenue</p>
+              <p className="font-semibold text-foreground mt-0.5">{formatINR(asNumber(monthly[hovered].revenue))}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-brand-cyan">Leads</p>
+              <p className="font-semibold text-foreground mt-0.5">{monthly[hovered].leads_created}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -207,27 +317,30 @@ function DonutChart({
     <div className="flex flex-col items-center gap-4">
       <div className="relative size-36">
         <svg className="size-full -rotate-90" viewBox="0 0 160 160">
-          <circle cx="80" cy="80" r="56" fill="none" stroke="var(--secondary)" strokeWidth="16" />
+          <circle cx="80" cy="80" r="56" fill="none" stroke="var(--secondary)" strokeWidth="14" />
           {segments.map((seg, i) => (
-            <circle
+            <motion.circle
               key={i}
               cx="80" cy="80" r="56"
               fill="none"
               stroke={seg.color}
-              strokeWidth={hovered === i ? 22 : 16}
+              strokeWidth={hovered === i ? 18 : 14}
               strokeDasharray={`${seg.dash} ${CIRC}`}
               strokeDashoffset={seg.offset}
-              className="cursor-pointer transition-all duration-150"
+              initial={{ strokeDashoffset: CIRC }}
+              animate={{ strokeDashoffset: seg.offset }}
+              transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: i * 0.05 }}
+              className="cursor-pointer transition-all duration-200"
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             />
           ))}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-          <span className="text-lg font-semibold text-foreground tabular-nums leading-none">
-            {hovered !== null ? `${segments[hovered].pct}%` : `${data.length}`}
+          <span className="text-xl font-bold text-foreground tabular-nums leading-none">
+            {hovered !== null ? `${segments[hovered].pct}%` : `100%`}
           </span>
-          <span className="mt-0.5 text-[10px] text-muted-foreground uppercase tracking-wide leading-none">
+          <span className="mt-1 text-[9px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
             {hovered !== null ? segments[hovered].name : 'Sources'}
           </span>
         </div>
@@ -307,6 +420,8 @@ export default function AdminDashboardView() {
       isPositive: asNumber(s.revenue.growth_pct) >= 0,
       values: revSeries.length ? revSeries : [4, 6, 5, 8, 9, 11],
       icon: Wallet,
+      targetValue: asNumber(s.revenue.this_month),
+      prefix: '₹',
     },
     {
       title: 'Active Users',
@@ -315,6 +430,7 @@ export default function AdminDashboardView() {
       isPositive: s.users.new_this_month >= 0,
       values: leadSeries.length ? leadSeries : [2, 3, 4, 4, 5, 6],
       icon: Users,
+      targetValue: asNumber(s.users.active),
     },
     {
       title: 'Companies',
@@ -323,6 +439,7 @@ export default function AdminDashboardView() {
       isPositive: asNumber(s.companies.monthly_growth_pct) >= 0,
       values: monthly.map((m) => m.leads_converted).length ? monthly.map((m) => m.leads_converted) : [3, 4, 4, 5, 6, 7],
       icon: Building2,
+      targetValue: asNumber(s.companies.total),
     },
     {
       title: 'New Leads',
@@ -331,6 +448,7 @@ export default function AdminDashboardView() {
       isPositive: asNumber(s.leads.monthly_growth_pct) >= 0,
       values: leadSeries.length ? leadSeries : [5, 7, 6, 9, 8, 11],
       icon: UserPlus,
+      targetValue: asNumber(s.leads.new_this_month),
     },
   ];
 

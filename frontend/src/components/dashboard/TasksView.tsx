@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   CheckCircle2, 
@@ -18,34 +18,68 @@ interface Task {
   title: string;
   deadline: string;
   priority: 'High' | 'Medium' | 'Low';
-  status: 'Pending' | 'Completed' | 'Overdue';
+  status: 'Pending' | 'Completed' | 'Overdue' | 'Not Started' | 'In Progress';
 }
 
 export default function TasksView() {
-  const [tasks, setTasks] = useState<Task[]>([
-    { id: 1, title: "Review TechCorp SAML integration setup details", deadline: "2025-05-13", priority: "High", status: "Overdue" },
-    { id: 2, title: "Follow up with Marcus Aurelius on HIPAA files", deadline: "2025-05-15", priority: "High", status: "Pending" },
-    { id: 3, title: "Send Helena Troy volumetric agency pricing tier sheet", deadline: "2025-05-16", priority: "Medium", status: "Pending" },
-    { id: 4, title: "Draft Q3 forecast report template", deadline: "2025-05-18", priority: "Low", status: "Pending" },
-    { id: 5, title: "Sign database security agreement contract", deadline: "2025-05-10", priority: "High", status: "Completed" }
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-
   const [form, setForm] = useState({
-    title: '', deadline: '2025-05-14', priority: 'Medium' as Task['priority'], status: 'Pending' as Task['status']
+    title: '', deadline: '2026-08-04', priority: 'Medium' as Task['priority'], status: 'Pending' as Task['status']
   });
 
+  useEffect(() => {
+    const saved = localStorage.getItem('pulse-crm-manual-tasks');
+    if (saved) {
+      try {
+        setTasks(JSON.parse(saved));
+      } catch {
+        initializeDefaultTasks();
+      }
+    } else {
+      initializeDefaultTasks();
+    }
+  }, []);
+
+  const initializeDefaultTasks = () => {
+    const defaults: Task[] = [
+      { id: 1, title: "Register for upcoming CRM Webinars", deadline: "2026-08-03", priority: "Medium", status: "Not Started" },
+      { id: 2, title: "Refer CRM Videos", deadline: "2026-08-05", priority: "Medium", status: "In Progress" },
+      { id: 3, title: "Competitor Comparison Document", deadline: "2026-08-01", priority: "High", status: "Not Started" },
+      { id: 4, title: "Get Approval from Manager", deadline: "2026-08-02", priority: "High", status: "Not Started" },
+      { id: 5, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress" },
+      { id: 6, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress" }
+    ];
+    setTasks(defaults);
+    localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(defaults));
+  };
+
+  const saveTasks = (updated: Task[]) => {
+    setTasks(updated);
+    localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(updated));
+  };
+
+  useEffect(() => {
+    const handleOpen = () => {
+      setForm({ title: '', deadline: '2026-08-04', priority: 'Medium', status: 'Pending' });
+      setIsAddOpen(true);
+    };
+    window.addEventListener('pulse-open-create-task-modal', handleOpen);
+    return () => window.removeEventListener('pulse-open-create-task-modal', handleOpen);
+  }, []);
+
   const handleToggle = (id: number) => {
-    setTasks(tasks.map(t => {
+    const updated = tasks.map(t => {
       if (t.id === id) {
         const nextStatus = t.status === 'Completed' ? 'Pending' : 'Completed';
-        return { ...t, status: nextStatus };
+        return { ...t, status: nextStatus as any };
       }
       return t;
-    }));
+    });
+    saveTasks(updated);
   };
 
   const handleAdd = (e: React.FormEvent) => {
@@ -57,30 +91,33 @@ export default function TasksView() {
       priority: form.priority,
       status: form.status
     };
-    setTasks([...tasks, newTask]);
+    const updated = [...tasks, newTask];
+    saveTasks(updated);
     setIsAddOpen(false);
   };
 
   const handleEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTask) return;
-    setTasks(tasks.map(t => t.id === selectedTask.id ? {
+    const updated = tasks.map(t => t.id === selectedTask.id ? {
       ...t,
       title: form.title,
       deadline: form.deadline,
       priority: form.priority,
       status: form.status
-    } : t));
+    } : t);
+    saveTasks(updated);
     setIsEditOpen(false);
     setSelectedTask(null);
   };
 
   const handleDelete = (id: number) => {
-    setTasks(tasks.filter(t => t.id !== id));
+    const updated = tasks.filter(t => t.id !== id);
+    saveTasks(updated);
   };
 
   const overdueList = tasks.filter(t => t.status === 'Overdue');
-  const pendingList = tasks.filter(t => t.status === 'Pending');
+  const pendingList = tasks.filter(t => t.status === 'Pending' || t.status === 'Not Started' || t.status === 'In Progress');
   const completedList = tasks.filter(t => t.status === 'Completed');
 
   return (
@@ -252,9 +289,11 @@ export default function TasksView() {
               <div>
                 <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Status Column</label>
                 <select value={form.status} onChange={e => setForm({...form, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-card text-muted-foreground rounded-lg text-xs cursor-pointer">
-                  <option>Pending</option>
-                  <option>Overdue</option>
-                  <option>Completed</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Not Started">Not Started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Overdue">Overdue</option>
+                  <option value="Completed">Completed</option>
                 </select>
               </div>
               <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
@@ -296,9 +335,11 @@ export default function TasksView() {
               <div>
                 <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Status Column</label>
                 <select value={form.status} onChange={e => setForm({...form, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-card text-muted-foreground rounded-lg text-xs cursor-pointer">
-                  <option>Pending</option>
-                  <option>Overdue</option>
-                  <option>Completed</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Not Started">Not Started</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Overdue">Overdue</option>
+                  <option value="Completed">Completed</option>
                 </select>
               </div>
               <div className="pt-3 border-t border-border flex justify-end space-x-2.5">

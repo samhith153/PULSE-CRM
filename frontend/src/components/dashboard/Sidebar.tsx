@@ -2,8 +2,9 @@
 
 import React from 'react';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import {
-  LayoutDashboard,
+  Home,
   Users,
   Contact,
   Building2,
@@ -68,7 +69,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
             { name: 'Activities',   icon: Activity,  tab: 'activities' },
             { name: 'Calendar',     icon: Calendar,  tab: 'calendar' },
             { name: 'AI Insights',  icon: Sparkles,  tab: 'ai insights' },
-            { name: 'Integrations', icon: Link2,     tab: 'integrations' },
           ],
         },
         {
@@ -98,13 +98,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           ],
         },
         {
-          label: 'Automation',
-          items: [
-            { name: 'Integrations', icon: Link2,     tab: 'integrations' },
-            { name: 'Automation',   icon: GitBranch, tab: 'automation' },
-          ],
-        },
-        {
           label: 'Intelligence',
           items: [
             { name: 'Reports',    icon: BarChart3, tab: 'reports' },
@@ -124,33 +117,39 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
     default:
       return [
         {
-          label: 'Work',
+          label: 'Dashboard',
           items: [
-            { name: 'Leads',        icon: Users,     tab: 'leads' },
-            { name: 'Contacts',     icon: Contact,   tab: 'contacts' },
-            { name: 'Companies',    icon: Building2, tab: 'companies' },
-            { name: 'Deals',        icon: Layers,    tab: 'deals' },
-            { name: 'Activities',   icon: Activity,  tab: 'activities' },
-            { name: 'Emails',       icon: Mail,      tab: 'emails' },
-            { name: 'Integrations', icon: Link2,     tab: 'integrations' },
+            { name: 'Dashboard', icon: Home, tab: 'home' },
           ],
         },
         {
-          label: 'Intelligence',
+          label: 'Productivity',
           items: [
-            { name: 'Workflows',   icon: GitBranch, tab: 'workflows' },
-            { name: 'AI Insights', icon: Sparkles,  tab: 'ai insights' },
+            { name: 'Leads',        icon: Users,      tab: 'leads' },
+            { name: 'Contacts',     icon: Contact,    tab: 'contacts' },
+            { name: 'Companies',    icon: Building2,  tab: 'companies' },
+            { name: 'Deals',        icon: Layers,     tab: 'deals' },
+            { name: 'Activities',   icon: Activity,   tab: 'activities' },
+            { name: 'Emails',       icon: Mail,       tab: 'emails' },
+            { name: 'Integrations', icon: Link2,      tab: 'integrations' },
           ],
         },
         {
-          label: 'Analytics',
+          label: 'Automations & Intelligence',
+          items: [
+            { name: 'Workflows',   icon: Zap,      tab: 'workflows' },
+            { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
+          ],
+        },
+        {
+          label: 'Data & Analytics',
           items: [
             { name: 'Reports',   icon: BarChart3, tab: 'reports' },
             { name: 'Documents', icon: FileText,  tab: 'documents' },
           ],
         },
         {
-          label: 'System',
+          label: 'Configuration',
           items: [
             { name: 'Settings', icon: Settings, tab: 'settings' },
           ],
@@ -198,18 +197,15 @@ export default function Sidebar({
 
   /* Shared active / inactive styles */
   const itemBase = cn(
-    'group relative w-full flex items-center rounded-xl py-2 text-sm',
-    'transition-colors duration-150 cursor-pointer',
+    'group relative w-full flex items-center rounded-xl py-2 text-sm z-0 overflow-hidden',
+    'transition-all duration-200 cursor-pointer',
   );
   const itemActive = cn(
-    'bg-sidebar-accent text-brand-purple font-semibold',
-    // 2 px brand-purple left indicator bar via pseudo element
-    'before:absolute before:inset-y-2 before:left-0 before:w-0.5',
-    'before:rounded-full before:bg-brand-purple',
+    'text-brand-blue font-semibold',
   );
   const itemInactive = cn(
-    'text-sidebar-foreground/75 font-medium',
-    'hover:bg-sidebar-accent/60 hover:text-sidebar-foreground',
+    'text-sidebar-foreground/75 font-medium hover:text-sidebar-foreground',
+    'hover:bg-sidebar-accent/60',
   );
 
   return (
@@ -217,7 +213,7 @@ export default function Sidebar({
       className={cn(
         'flex h-full flex-col shrink-0 overflow-hidden',
         'bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
-        'transition-[width] duration-200 ease-out z-40',
+        'transition-[width] duration-300 ease-in-out z-40',
         collapsed ? 'w-16' : 'w-60',
       )}
     >
@@ -236,29 +232,39 @@ export default function Sidebar({
       {/* ── Scrollable nav ───────────────────────────────────────────── */}
       <nav className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
 
-        {/* Dashboard home */}
+        {/* Home */}
         <button
-          onClick={() => setActiveTab('dashboard')}
+          onClick={() => setActiveTab('home')}
           className={cn(
             itemBase,
             collapsed ? 'justify-center px-2' : 'px-3 gap-2.5',
-            isActive('dashboard') ? itemActive : itemInactive,
+            isActive('home') ? itemActive : itemInactive,
           )}
         >
-          <LayoutDashboard
+          {isActive('home') && (
+            <motion.div
+              layoutId="activeNavIndicator"
+              className="absolute inset-0 bg-brand-blue/[0.08] rounded-xl z-0"
+              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+            >
+              <div className="absolute left-0 top-2 bottom-2 w-0.75 rounded-r bg-brand-blue" />
+            </motion.div>
+          )}
+          <Home
             size={16}
             strokeWidth={2}
+            fill={isActive('home') ? "rgba(37, 99, 235, 0.15)" : "none"}
             className={cn(
-              'shrink-0 transition-colors',
-              isActive('dashboard') ? 'text-brand-purple' : 'text-muted-foreground group-hover:text-sidebar-foreground',
+              'shrink-0 transition-colors relative z-10',
+              isActive('home') ? 'text-brand-blue' : 'text-muted-foreground group-hover:text-sidebar-foreground',
             )}
           />
-          {!collapsed && <span className="truncate">Dashboard</span>}
+          {!collapsed && <span className="truncate relative z-10">Home</span>}
 
           {/* Collapsed tooltip */}
           {collapsed && (
             <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground shadow-nav opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
-              Dashboard
+              Home
             </span>
           )}
         </button>
@@ -289,17 +295,27 @@ export default function Sidebar({
                     active ? itemActive : itemInactive,
                   )}
                 >
+                  {active && (
+                    <motion.div
+                      layoutId="activeNavIndicator"
+                      className="absolute inset-0 bg-brand-blue/[0.08] rounded-xl z-0"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    >
+                      <div className="absolute left-0 top-2 bottom-2 w-0.75 rounded-r bg-brand-blue" />
+                    </motion.div>
+                  )}
                   <Icon
                     size={15}
                     strokeWidth={2}
+                    fill={active ? "rgba(37, 99, 235, 0.15)" : "none"}
                     className={cn(
-                      'shrink-0 transition-colors',
+                      'shrink-0 transition-colors relative z-10',
                       active
-                        ? 'text-brand-purple'
+                        ? 'text-brand-blue'
                         : 'text-muted-foreground group-hover:text-sidebar-foreground',
                     )}
                   />
-                  {!collapsed && <span className="truncate">{item.name}</span>}
+                  {!collapsed && <span className="truncate relative z-10">{item.name}</span>}
 
                   {collapsed && (
                     <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground shadow-nav opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">

@@ -26,6 +26,8 @@ class LeadSource(str, Enum):
     TRADE_SHOW = "trade_show"
     PARTNER = "partner"
     INBOUND = "inbound"
+    COLD_OUTREACH = "cold_outreach"
+    CAMPAIGN = "campaign"
     OTHER = "other"
 
 

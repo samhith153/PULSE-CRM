@@ -12,6 +12,46 @@ import {
   CheckCircle,
   HelpCircle
 } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+/* ── Radial progress ring ───────────────────────────────────────────── */
+function RadialProgressRing({ progress, size = 110, strokeWidth = 8.5 }: { progress: number; size?: number; strokeWidth?: number }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (Math.min(progress, 100) / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--secondary)"
+          strokeWidth={strokeWidth}
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--brand-purple)"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute text-center flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold text-foreground tabular-nums">{Math.round(progress)}%</span>
+        <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">Reliability</span>
+      </div>
+    </div>
+  );
+}
 
 export default function ForecastView() {
   const [confidenceScore, setConfidenceScore] = useState(88);
@@ -44,7 +84,7 @@ export default function ForecastView() {
       {/* Headline Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Expected Revenue (Col 7) */}
-        <div className="col-span-12 md:col-span-7 bg-card border border-border rounded-2xl p-5 flex flex-col justify-between space-y-4">
+        <div className="col-span-12 md:col-span-7 bg-card border border-border rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="flex justify-between items-start">
             <div>
               <span className="text-[10px] font-semibold text-muted-foreground uppercase block">Expected Revenue</span>
@@ -72,32 +112,14 @@ export default function ForecastView() {
         </div>
 
         {/* Confidence Score Gauge (Col 5) */}
-        <div className="col-span-12 md:col-span-5 bg-card border border-border rounded-2xl p-5 flex flex-col items-center justify-between text-center space-y-4">
+        <div className="col-span-12 md:col-span-5 bg-card border border-border rounded-2xl p-5 flex flex-col items-center justify-between text-center space-y-4 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="w-full flex justify-between items-center text-left">
             <span className="text-[10px] font-semibold text-muted-foreground uppercase">AI Confidence Score</span>
             <HelpCircle className="h-4 w-4 text-muted-foreground cursor-pointer" />
           </div>
 
-          <div className="relative flex items-center justify-center">
-            {/* Visual Ring */}
-            <svg className="w-32 h-32 transform -rotate-90">
-              <circle cx="64" cy="64" r="50" stroke="#f1f5f9" strokeWidth="10" fill="transparent" />
-              <circle 
-                cx="64" 
-                cy="64" 
-                r="50" 
-                stroke="var(--brand-accent)" 
-                strokeWidth="10" 
-                fill="transparent" 
-                strokeDasharray={314}
-                strokeDashoffset={314 - (314 * confidenceScore) / 100}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute text-center">
-              <span className="text-2xl font-semibold text-foreground tabular-nums">{confidenceScore}%</span>
-              <span className="text-[9px] font-bold text-muted-foreground block uppercase tracking-wider">Reliability</span>
-            </div>
+          <div className="relative flex items-center justify-center py-2">
+            <RadialProgressRing progress={confidenceScore} size={110} strokeWidth={8.5} />
           </div>
 
           <div className="w-full p-2.5 bg-secondary border border-border rounded-xl">
@@ -109,7 +131,7 @@ export default function ForecastView() {
       </div>
 
       {/* Monthly Forecast Breakdown */}
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
         <h3 className="font-semibold text-foreground text-sm flex items-center">
           <Calendar className="h-4.5 w-4.5 mr-2 text-brand-purple" />
           <span>Monthly Forecast Breakdown</span>
@@ -125,19 +147,26 @@ export default function ForecastView() {
                 </span>
               </div>
               <div className="relative h-6 w-full bg-secondary rounded-lg overflow-hidden flex items-center px-2.5">
-                {/* Expected bar */}
-                <div 
-                  className="absolute left-0 top-0 bottom-0 bg-brand-purple/35 border-r border-brand-accent/50 transition-all duration-300"
-                  style={{ width: `${(item.expected / maxVal) * 100}%` }}
-                />
                 {/* Best Case bar */}
-                <div 
-                  className="absolute left-0 top-0 bottom-0 bg-brand-purple/10 border-r border-border transition-all duration-300"
-                  style={{ width: `${(item.bestCase / maxVal) * 100}%` }}
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(item.bestCase / maxVal) * 100}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="absolute left-0 top-0 bottom-0 bg-brand-purple/10 border-r border-border"
+                />
+                {/* Expected bar */}
+                <motion.div 
+                  initial={{ width: 0 }}
+                  animate={{ width: `${(item.expected / maxVal) * 100}%` }}
+                  transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
+                  className="absolute left-0 top-0 bottom-0 bg-brand-purple/30 border-r border-brand-accent/50"
                 />
                 {/* Pipeline line marker */}
-                <div 
-                  className="absolute top-0 bottom-0 w-0.5 bg-brand-border-purple/80 z-10"
+                <motion.div 
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
+                  className="absolute top-0 bottom-0 w-0.5 bg-brand-border-purple/80 z-10 origin-bottom"
                   style={{ left: `${(item.pipeline / maxVal) * 100}%` }}
                   title={`Pipeline coverage: ₹${item.pipeline.toLocaleString()}`}
                 />
@@ -151,7 +180,7 @@ export default function ForecastView() {
       </div>
 
       {/* Quarterly Forecast Grid */}
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
         <h3 className="font-semibold text-foreground text-sm flex items-center">
           <TrendingUp className="h-4.5 w-4.5 mr-2 text-brand-purple" />
           <span>Quarterly Projections Matrix</span>
@@ -194,4 +223,3 @@ export default function ForecastView() {
     </div>
   );
 }
-

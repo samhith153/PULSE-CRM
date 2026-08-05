@@ -1,13 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getCompanies, updateCompany } from '@/utils/api';
+import { getCompanies, updateCompany, deleteCompany } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Building2, 
   Search, 
   Plus, 
   Edit, 
   Eye, 
+  Trash2, 
   UserPlus, 
   Users, 
   IndianRupee, 
@@ -17,7 +19,9 @@ import {
   Mail, 
   PlusCircle,
   X,
-  Check
+  Check,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 
 interface Company {
@@ -45,6 +49,63 @@ export default function CompaniesView() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAddContactModalOpen, setIsAddContactModalOpen] = useState(false);
 
+  const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('pulse-crm-view-mode-companies') as any) || 'default';
+    }
+    return 'default';
+  });
+
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
+  const [sortField, setSortField] = useState<string>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const toggleViewMode = (mode: 'default' | 'list') => {
+    setViewMode(mode);
+    localStorage.setItem('pulse-crm-view-mode-companies', mode);
+  };
+
+  const handleToggleSelectAll = (items: any[]) => {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map(item => item.id)));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string | number) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleHeaderClick = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const handleDeleteSelectedCompanies = async () => {
+    if (!window.confirm(`Are you sure you want to delete the ${selectedIds.size} selected company/companies?`)) return;
+    try {
+      await Promise.all(Array.from(selectedIds).map(id => deleteCompany(id)));
+      setCompanies(prev => prev.filter(c => !selectedIds.has(c.id)));
+      setSelectedIds(new Set());
+      setSelectedId(null);
+      toast.success("Selected companies deleted successfully.");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Failed to delete selected companies.");
+    }
+  };
+
   const [form, setForm] = useState({
     name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: ''
   });
@@ -56,12 +117,35 @@ export default function CompaniesView() {
     });
   }, []);
 
+  useEffect(() => {
+    const handleOpen = () => {
+      setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
+      setIsAddModalOpen(true);
+    };
+    window.addEventListener('pulse-open-create-company-modal', handleOpen);
+    return () => window.removeEventListener('pulse-open-create-company-modal', handleOpen);
+  }, []);
+
   const active = selectedId ? companies.find(c => c.id === selectedId) || null : null;
 
   const filtered = companies.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.industry.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const sortedCompanies = React.useMemo(() => {
+    return [...filtered].sort((a: any, b: any) => {
+      let valA = (a[sortField] || '').toString().toLowerCase();
+      let valB = (b[sortField] || '').toString().toLowerCase();
+      if (sortField === 'employees' || sortField === 'openDeals') {
+        valA = Number(a[sortField]) || 0;
+        valB = Number(b[sortField]) || 0;
+      }
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filtered, sortField, sortOrder]);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,23 +210,62 @@ export default function CompaniesView() {
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Companies List */}
-      <div className={`col-span-12 ${active ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
+      <div className={`col-span-12 ${active && viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
               <h2 className="font-sans text-2xl text-foreground font-bold">Companies</h2>
               <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Monitor accounts, track revenue sizes, and view contact chains.</p>
             </div>
-            <button 
-              onClick={() => {
-                setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
-                setIsAddModalOpen(true);
-              }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold transition-colors cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Company</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {/* View Toggle Button */}
+              <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
+                <button
+                  type="button"
+                  onClick={() => toggleViewMode('default')}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    viewMode === 'default'
+                      ? 'bg-card text-brand-purple shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="Split View"
+                >
+                  <LayoutGrid size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleViewMode('list')}
+                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-card text-brand-purple shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="List Table View"
+                >
+                  <List size={14} />
+                </button>
+              </div>
+              {selectedIds.size > 0 && (
+                <button 
+                  onClick={handleDeleteSelectedCompanies}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer mr-2"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Selected ({selectedIds.size})</span>
+                </button>
+              )}
+
+              <button 
+                onClick={() => {
+                  setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
+                  setIsAddModalOpen(true);
+                }}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add Company</span>
+              </button>
+            </div>
           </div>
 
           <div className="relative mb-4">
@@ -158,64 +281,130 @@ export default function CompaniesView() {
             />
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-border text-[9px] uppercase font-semibold tracking-widest text-muted-foreground pb-2">
-                  <th className="pb-2">Company Name</th>
-                  <th className="pb-2">Industry</th>
-                  <th className="pb-2">Revenue</th>
-                  <th className="pb-2 text-center">Employees</th>
-                  <th className="pb-2 text-center">Open Deals</th>
-                  <th className="pb-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border text-xs text-foreground font-semibold">
-                {filtered.map((comp) => (
-                  <tr 
-                    key={comp.id}
-                    onClick={() => setSelectedId(comp.id)}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedId(prevId => prevId === comp.id ? null : prevId);
-                    }}
-                    className={`hover:bg-secondary/50 cursor-pointer transition-colors ${comp.id === selectedId ? 'bg-brand-purple/5' : ''}`}
-                  >
-                    <td className="py-3 font-semibold text-foreground truncate max-w-[160px]">{comp.name}</td>
-                    <td className="py-3 text-muted-foreground truncate max-w-[120px]">{comp.industry}</td>
-                    <td className="py-3 tabular-nums">{comp.revenue || '—'}</td>
-                    <td className="py-3 text-center tabular-nums">{comp.employees}</td>
-                    <td className="py-3 text-center tabular-nums">{comp.openDeals}</td>
-                    <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
-                      <div className="flex justify-end space-x-1">
-                        <button 
-                          onClick={() => {
-                            setForm({
-                              name: comp.name,
-                              industry: comp.industry,
-                              revenue: comp.revenue,
-                              employees: comp.employees,
-                              owner: comp.owner,
-                              notes: comp.notes
-                            });
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
+          {viewMode === 'list' ? (
+            <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card custom-scrollbar">
+              <table className="w-full border-collapse text-left table-fixed">
+                <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
+                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
+                    <th className="py-3 px-4 w-[5%] text-left">
+                      <input 
+                        type="checkbox" 
+                        checked={sortedCompanies.length > 0 && selectedIds.size === sortedCompanies.length}
+                        onChange={() => handleToggleSelectAll(sortedCompanies)}
+                        className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
+                      />
+                    </th>
+                    <th className="py-3 px-2 w-[22%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>Company Name</th>
+                    <th className="py-3 px-2 w-[20%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('industry')}>Industry</th>
+                    <th className="py-3 px-2 w-[15%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('revenue')}>Revenue</th>
+                    <th className="py-3 px-2 w-[13%] cursor-pointer hover:text-foreground text-center" onClick={() => handleHeaderClick('employees')}>Employees</th>
+                    <th className="py-3 px-2 w-[13%] cursor-pointer hover:text-foreground text-center" onClick={() => handleHeaderClick('openDeals')}>Open Deals</th>
+                    <th className="py-3 px-2 w-[12%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('owner')}>Owner</th>
+                    <th className="py-3 px-2 w-[5%] text-right pr-4">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
+                  {sortedCompanies.length > 0 ? (
+                    sortedCompanies.map((comp) => {
+                      const isRowSelected = selectedIds.has(comp.id);
+                      return (
+                        <tr 
+                          key={comp.id} 
+                          onClick={() => setSelectedId(comp.id)}
+                          className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                        >
+                          <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
+                            <input 
+                              type="checkbox" 
+                              checked={isRowSelected}
+                              onChange={() => handleToggleSelectRow(comp.id)}
+                              className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
+                            />
+                          </td>
+                          <td className="py-3.5 px-2 font-bold truncate" title={comp.name}>{comp.name}</td>
+                          <td className="py-3.5 px-2 text-muted-foreground truncate" title={comp.industry}>{comp.industry}</td>
+                          <td className="py-3.5 px-2 text-muted-foreground tabular-nums truncate">{comp.revenue || '—'}</td>
+                          <td className="py-3.5 px-2 text-center tabular-nums">{comp.employees}</td>
+                          <td className="py-3.5 px-2 text-center tabular-nums">{comp.openDeals}</td>
+                          <td className="py-3.5 px-2 text-muted-foreground truncate" title={comp.owner}>{comp.owner}</td>
+                          <td className="py-3.5 px-2 text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              onClick={() => {
+                                setForm({ name: comp.name, industry: comp.industry, revenue: comp.revenue, employees: comp.employees, owner: comp.owner, notes: comp.notes });
+                                setSelectedId(comp.id);
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={8} className="py-8 text-center text-muted-foreground">
+                        No companies matching search.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card">
+              <table className="w-full border-collapse text-left">
+                <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
+                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
+                    <th className="py-3 px-4 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>Company Name</th>
+                    <th className="py-3 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('industry')}>Industry</th>
+                    <th className="py-3 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('revenue')}>Revenue</th>
+                    <th className="py-3 text-center cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('employees')}>Employees</th>
+                    <th className="py-3 text-center cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('openDeals')}>Open Deals</th>
+                    <th className="py-3 text-right pr-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
+                  {sortedCompanies.map((comp) => (
+                    <tr 
+                      key={comp.id}
+                      onClick={() => setSelectedId(comp.id)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(prevId => prevId === comp.id ? null : prevId);
+                      }}
+                      className={`hover:bg-secondary/40 cursor-pointer transition-all duration-200 border-b border-border/40 ${comp.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
+                    >
+                      <td className="py-3.5 px-4 font-semibold text-foreground truncate max-w-[160px]">{comp.name}</td>
+                      <td className="py-3.5 text-muted-foreground truncate max-w-[120px]">{comp.industry}</td>
+                      <td className="py-3.5 tabular-nums">{comp.revenue || '—'}</td>
+                      <td className="py-3.5 text-center tabular-nums">{comp.employees}</td>
+                      <td className="py-3.5 text-center tabular-nums">{comp.openDeals}</td>
+                      <td className="py-3.5 text-right pr-4" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-end space-x-1">
+                          <button 
+                            onClick={() => {
+                              setForm({ name: comp.name, industry: comp.industry, revenue: comp.revenue, employees: comp.employees, owner: comp.owner, notes: comp.notes });
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Details Side Panel */}
-      {active && <div className="col-span-12 lg:col-span-4 space-y-5">
+      {active && viewMode !== 'list' && <div className="col-span-12 lg:col-span-4 space-y-5">
         <div className="bg-card border border-border rounded-2xl p-5 sticky top-20">
           <div className="flex items-center justify-between pb-3 border-b border-border">
             <div className="flex items-center space-x-2.5">

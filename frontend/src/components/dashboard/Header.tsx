@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, 
   Bell, 
@@ -14,7 +15,11 @@ import {
   Settings,
   LogOut,
   Sun,
-  Moon
+  Moon,
+  UserPlus,
+  CheckSquare,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -38,12 +43,33 @@ export default function Header({
 }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
   
-  // Theme state and persistence logic
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  // Real-time synchronization mockup variables
+  const [syncSeconds, setSyncSeconds] = useState(2);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('pulse-crm-theme') as 'light' | 'dark' || 'light';
+    const timer = setInterval(() => {
+      setSyncSeconds((prev) => {
+        if (prev >= 14) {
+          setIsSyncing(true);
+          const syncTimeout = setTimeout(() => {
+            setIsSyncing(false);
+          }, 1200);
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Theme state and persistence logic
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('pulse-crm-theme') as 'light' | 'dark' || 'dark';
     setTheme(savedTheme);
     document.documentElement.setAttribute('data-theme', savedTheme);
     if (savedTheme === 'dark') {
@@ -67,6 +93,7 @@ export default function Header({
   
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const quickAddRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -76,6 +103,9 @@ export default function Header({
       }
       if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
         setShowProfileMenu(false);
+      }
+      if (quickAddRef.current && !quickAddRef.current.contains(event.target as Node)) {
+        setShowQuickAdd(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -106,33 +136,47 @@ export default function Header({
 
   // Dynamic profile details mapping
   const getUserProfile = () => {
-    switch (userRole) {
-      case 'admin':
-        return {
-          name: "System Admin",
-          email: "admin@pulse.crm",
-          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80"
-        };
-      case 'manager':
-        return {
-          name: "Alex Johnson",
-          email: "alex.johnson@pulse.crm",
-          avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
-        };
-      case 'representative':
-      default:
-        return {
-          name: "Sarah Johnson",
-          email: "sarah.johnson@pulse.crm",
-          avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
-        };
+    let name = "";
+    let email = "";
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('pulse-crm-user');
+      if (storedUser) {
+        if (storedUser.includes('@')) {
+          email = storedUser;
+          const namePart = storedUser.split('@')[0];
+          name = namePart.replace(/[._-]/g, ' ');
+        } else {
+          name = storedUser;
+          email = `${storedUser.toLowerCase().replace(/\s+/g, '.')}@pulse.crm`;
+        }
+      }
     }
+
+    let defaultAvatar = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80";
+    if (userRole === 'admin') {
+      defaultAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80";
+      if (!name) name = "System Admin";
+      if (!email) email = "admin@pulse.crm";
+    } else if (userRole === 'manager') {
+      defaultAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80";
+      if (!name) name = "Alex Johnson";
+      if (!email) email = "alex.johnson@pulse.crm";
+    } else {
+      if (!name) name = "Sarah Johnson";
+      if (!email) email = "sarah.johnson@pulse.crm";
+    }
+
+    return {
+      name: name,
+      email: email,
+      avatar: defaultAvatar
+    };
   };
 
   const profile = getUserProfile();
 
   return (
-    <header className="sticky top-0 z-30 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border bg-background/85 px-4 py-3 backdrop-blur-md md:px-6 text-foreground">
+    <header className="sticky top-0 z-30 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border/80 bg-background/70 px-4 py-3 backdrop-blur-xl md:px-6 text-foreground">
 
       {/* Left: sidebar toggle */}
       <button
@@ -145,7 +189,7 @@ export default function Header({
 
       {/* Center: search bar */}
       <div
-        className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border bg-secondary px-4 cursor-pointer"
+        className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/60 bg-secondary/40 px-4 cursor-pointer hover:bg-secondary/70 hover:border-border transition-all duration-200"
         onClick={() => onOpenCommandPalette?.()}
       >
         <Search size={16} className="shrink-0 text-muted-foreground" />
@@ -157,15 +201,24 @@ export default function Header({
           readOnly
           onClick={() => onOpenCommandPalette?.()}
           onFocus={(e) => { e.target.blur(); onOpenCommandPalette?.(); }}
-          className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none cursor-pointer"
+          className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/75 focus:outline-none cursor-pointer"
         />
-        <span className="hidden shrink-0 rounded-md bg-background px-1.5 py-0.5 text-[11px] text-muted-foreground sm:inline">
+        <span className="hidden shrink-0 rounded-md bg-background border border-border/80 px-1.5 py-0.5 text-[11px] font-semibold text-muted-foreground sm:inline">
           ⌘K
         </span>
       </div>
 
       {/* Right: actions cluster */}
       <div className="flex shrink-0 items-center gap-2">
+
+        {/* Live sync pulsing badge */}
+        <span className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-background/55 px-2.5 py-1 text-[11px] font-semibold text-brand-purple lg:inline-flex select-none transition-all duration-300 min-w-[110px]">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-purple ${isSyncing ? 'opacity-90 scale-150 duration-500' : 'opacity-60'}`}></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-purple"></span>
+          </span>
+          <span>{isSyncing ? 'Syncing...' : `Updated ${syncSeconds}s ago`}</span>
+        </span>
 
         {/* Role badge */}
         <span className="hidden items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground lg:inline-flex select-none">
@@ -174,14 +227,64 @@ export default function Header({
           </span>
         </span>
 
-        {/* New Report pill button */}
-        <button
-          onClick={onNewReportClick}
-          className="arrow-nudge hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-ink text-primary-foreground hover:-translate-y-0.5 hover:shadow-nav rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer"
-        >
-          <Plus size={14} strokeWidth={2} />
-          <span>New Report</span>
-        </button>
+        {/* Quick Add pill button */}
+        <div className="relative" ref={quickAddRef}>
+          <button
+            onClick={() => setShowQuickAdd(!showQuickAdd)}
+            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-ink text-primary-foreground hover:opacity-90 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer"
+          >
+            <Plus size={14} strokeWidth={2.5} />
+            <span>Quick Add</span>
+            <ChevronDown size={11} className={`transition-transform duration-200 ${showQuickAdd ? 'rotate-180' : ''}`} />
+          </button>
+
+          <AnimatePresence>
+            {showQuickAdd && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-xl shadow-float overflow-hidden z-50"
+              >
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => { setShowQuickAdd(false); onTabChange?.('leads'); }}
+                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium"
+                  >
+                    <UserPlus size={14} className="text-muted-foreground" />
+                    <span>New Lead</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowQuickAdd(false); onTabChange?.('tasks'); }}
+                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium"
+                  >
+                    <CheckSquare size={14} className="text-muted-foreground" />
+                    <span>New Task</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowQuickAdd(false); onTabChange?.('calendar'); }}
+                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium"
+                  >
+                    <Calendar size={14} className="text-muted-foreground" />
+                    <span>Schedule Meeting</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowQuickAdd(false); onNewReportClick(); }}
+                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium border-t border-border mt-1 pt-2.5"
+                  >
+                    <FileText size={14} className="text-muted-foreground" />
+                    <span>New Report</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* Theme toggle */}
         <button
@@ -197,7 +300,7 @@ export default function Header({
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             aria-label="View notifications"
-            className="relative grid size-9 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary cursor-pointer"
+            className="relative grid size-9 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary cursor-pointer hover-wiggle"
           >
             <Bell size={15} />
             <span className="absolute -top-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-brand-purple text-[9px] font-semibold text-primary-foreground">
@@ -205,48 +308,56 @@ export default function Header({
             </span>
           </button>
 
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-popover border border-border rounded-xl shadow-float overflow-hidden z-50 menu-in">
-              <div className="px-4 py-3 bg-secondary border-b border-border flex justify-between items-center">
-                <span className="font-semibold text-foreground text-xs">Notifications</span>
-                <span className="text-[11px] bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full font-semibold">
-                  4 New
-                </span>
-              </div>
-              <div className="divide-y divide-border max-h-72 overflow-y-auto">
-                {notifications.map((n) => (
-                  <div key={n.id} className="p-3 hover:bg-secondary transition-colors flex items-start gap-2.5 text-xs">
-                    <div className="mt-0.5 shrink-0">
-                      {n.type === 'won' && <TrendingUp size={14} className="text-brand-cyan" strokeWidth={1.75} />}
-                      {n.type === 'warning' && <ShieldAlert size={14} className="text-destructive" strokeWidth={1.75} />}
-                      {n.type === 'report' && <FileText size={14} className="text-brand-purple" strokeWidth={1.75} />}
-                      {!['won', 'warning', 'report'].includes(n.type) && <Bell size={14} className="text-muted-foreground" strokeWidth={1.75} />}
+          <AnimatePresence>
+            {showNotifications && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                className="absolute right-0 mt-2 w-80 bg-popover border border-border rounded-xl shadow-float overflow-hidden z-50"
+              >
+                <div className="px-4 py-3 bg-secondary border-b border-border flex justify-between items-center">
+                  <span className="font-semibold text-foreground text-xs">Notifications</span>
+                  <span className="text-[11px] bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full font-semibold">
+                    4 New
+                  </span>
+                </div>
+                <div className="divide-y divide-border max-h-72 overflow-y-auto">
+                  {notifications.map((n) => (
+                    <div key={n.id} className="p-3 hover:bg-secondary transition-colors flex items-start gap-2.5 text-xs">
+                      <div className="mt-0.5 shrink-0">
+                        {n.type === 'won' && <TrendingUp size={14} className="text-brand-cyan" strokeWidth={1.75} />}
+                        {n.type === 'warning' && <ShieldAlert size={14} className="text-destructive" strokeWidth={1.75} />}
+                        {n.type === 'report' && <FileText size={14} className="text-brand-purple" strokeWidth={1.75} />}
+                        {!['won', 'warning', 'report'].includes(n.type) && <Bell size={14} className="text-muted-foreground" strokeWidth={1.75} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-foreground leading-relaxed">{n.text}</p>
+                        <span className="text-[11px] text-muted-foreground mt-0.5 block">{n.time}</span>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-foreground leading-relaxed">{n.text}</p>
-                      <span className="text-[11px] text-muted-foreground mt-0.5 block">{n.time}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="p-2 border-t border-border bg-secondary flex justify-between px-4">
-                <button
-                  type="button"
-                  onClick={() => setShowNotifications(false)}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer"
-                >
-                  Mark all read
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowNotifications(false); onTabChange?.('notifications'); }}
-                  className="text-xs text-brand-purple hover:text-brand-purple/80 transition-colors py-1 cursor-pointer"
-                >
-                  View all alerts
-                </button>
-              </div>
-            </div>
-          )}
+                  ))}
+                </div>
+                <div className="p-2 border-t border-border bg-secondary flex justify-between px-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotifications(false)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer font-medium"
+                  >
+                    Mark all read
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowNotifications(false); onTabChange?.('notifications'); }}
+                    className="text-xs text-brand-purple hover:text-brand-purple/80 transition-colors py-1 cursor-pointer font-medium"
+                  >
+                    View all alerts
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* User avatar / dropdown */}
@@ -265,41 +376,49 @@ export default function Header({
             />
           </button>
 
-          {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-xl shadow-float overflow-hidden z-50 menu-in">
-              <div className="px-4 py-2.5 bg-secondary border-b border-border">
-                <p className="text-xs font-semibold text-foreground truncate">{profile.name}</p>
-                <p className="text-[11px] text-muted-foreground truncate mt-0.5">{profile.email}</p>
-              </div>
-              <div className="py-1">
-                <button
-                  type="button"
-                  onClick={() => { setShowProfileMenu(false); onTabChange?.('profile'); }}
-                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                >
-                  <User size={14} className="text-muted-foreground" strokeWidth={1.75} />
-                  <span>My Profile</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowProfileMenu(false); onTabChange?.('settings'); }}
-                  className="flex items-center gap-2 w-full text-left px-4 py-2 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer"
-                >
-                  <Settings size={14} className="text-muted-foreground" strokeWidth={1.75} />
-                  <span>Account Settings</span>
-                </button>
-              </div>
-              <div className="border-t border-border py-1">
-                <button
-                  onClick={() => { setShowProfileMenu(false); onSignOut?.(); }}
-                  className="flex items-center gap-2 w-full px-4 py-2 text-xs text-destructive hover:bg-destructive/10 transition-colors text-left cursor-pointer"
-                >
-                  <LogOut size={14} strokeWidth={1.75} />
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          )}
+          <AnimatePresence>
+            {showProfileMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+                className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-xl shadow-float overflow-hidden z-50"
+              >
+                <div className="px-4 py-2.5 bg-secondary border-b border-border">
+                  <p className="text-xs font-semibold text-foreground truncate">{profile.name}</p>
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{profile.email}</p>
+                </div>
+                <div className="py-1">
+                  <button
+                    type="button"
+                    onClick={() => { setShowProfileMenu(false); onTabChange?.('profile'); }}
+                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium"
+                  >
+                    <User size={14} className="text-muted-foreground" strokeWidth={1.75} />
+                    <span>My Profile</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowProfileMenu(false); onTabChange?.('settings'); }}
+                    className="flex items-center gap-2 w-full text-left px-4 py-2 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium"
+                  >
+                    <Settings size={14} className="text-muted-foreground" strokeWidth={1.75} />
+                    <span>Account Settings</span>
+                  </button>
+                </div>
+                <div className="border-t border-border py-1">
+                  <button
+                    onClick={() => { setShowProfileMenu(false); onSignOut?.(); }}
+                    className="flex items-center gap-2 w-full px-4 py-2.5 text-xs text-destructive hover:bg-destructive/10 transition-colors text-left cursor-pointer font-medium"
+                  >
+                    <LogOut size={14} strokeWidth={1.75} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </header>
