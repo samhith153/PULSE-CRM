@@ -10,10 +10,10 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "20260801_0008"
-down_revision: str | None = "206727f7ae42"
-branch_labels: str | None = None
-depends_on: str | None = None
+revision = "20260801_0008"
+down_revision = "206727f7ae42"
+branch_labels = None
+depends_on = None
 
 
 meeting_attendance_status_enum = postgresql.ENUM(

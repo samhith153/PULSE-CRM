@@ -11,11 +11,10 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision: str = "20260730_drop_domain_events"
-down_revision: Union[str, None] = "20260730_create_lead_scores"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
-
+revision = "20260730_drop_domain_events"
+down_revision = "20260730_create_lead_scores"
+branch_labels = None
+depends_on = None
 
 def upgrade() -> None:
     op.drop_index("ix_domain_events_topic", table_name="domain_events")
