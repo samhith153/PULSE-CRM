@@ -29,35 +29,35 @@ export default function QuotaPaceCard({ deals = [] }: QuotaPaceCardProps) {
     let status: 'success' | 'warning' | 'danger' = 'success';
     let statusText = 'On track';
     let Icon = CheckCircle2;
-    let colorClass = 'text-emerald-600 dark:text-emerald-400';
-    let barGradient = 'linear-gradient(90deg, #34d399 0%, #059669 100%)';
-    let glowColor = 'shadow-[0_0_12px_rgba(16,185,129,0.35)]';
-    let bgClass = 'bg-emerald-500/10 border-emerald-500/20';
+    let colorClass = 'text-brand-purple dark:text-sky-400';
+    let barGradient = 'linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-blue) 100%)';
+    let glowColor = 'shadow-[0_0_12px_rgba(37,99,235,0.25)] dark:shadow-[0_0_12px_rgba(96,165,250,0.25)]';
+    let bgClass = 'bg-brand-purple/10 border-brand-purple/20';
 
     if (paceRatio >= 90) {
       status = 'success';
       statusText = `On Track • ${percentage}%`;
       Icon = CheckCircle2;
-      colorClass = 'text-emerald-600 dark:text-emerald-400';
-      barGradient = 'linear-gradient(90deg, #34d399 0%, #059669 100%)';
-      glowColor = 'shadow-[0_0_12px_rgba(16,185,129,0.35)]';
-      bgClass = 'bg-emerald-500/10 border-emerald-500/20';
+      colorClass = 'text-brand-purple dark:text-sky-400';
+      barGradient = 'linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-blue) 100%)';
+      glowColor = 'shadow-[0_0_12px_rgba(37,99,235,0.25)] dark:shadow-[0_0_12px_rgba(96,165,250,0.25)]';
+      bgClass = 'bg-brand-purple/10 border-brand-purple/20';
     } else if (paceRatio >= 70) {
       status = 'warning';
       statusText = `At Risk • ${percentage}%`;
       Icon = AlertTriangle;
-      colorClass = 'text-amber-600 dark:text-amber-400';
-      barGradient = 'linear-gradient(90deg, #fbbf24 0%, #d97706 100%)';
-      glowColor = 'shadow-[0_0_12px_rgba(245,158,11,0.35)]';
-      bgClass = 'bg-amber-500/10 border-amber-500/20';
+      colorClass = 'text-brand-purple dark:text-sky-400';
+      barGradient = 'linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-blue) 100%)';
+      glowColor = 'shadow-[0_0_12px_rgba(37,99,235,0.25)] dark:shadow-[0_0_12px_rgba(96,165,250,0.25)]';
+      bgClass = 'bg-brand-purple/10 border-brand-purple/20';
     } else {
       status = 'danger';
       statusText = `Behind Pace • ${percentage}%`;
       Icon = AlertCircle;
-      colorClass = 'text-rose-600 dark:text-rose-400';
-      barGradient = 'linear-gradient(90deg, #f87171 0%, #dc2626 100%)';
-      glowColor = 'shadow-[0_0_12px_rgba(239,68,68,0.35)]';
-      bgClass = 'bg-rose-500/10 border-rose-500/20';
+      colorClass = 'text-brand-purple dark:text-sky-400';
+      barGradient = 'linear-gradient(90deg, var(--brand-purple) 0%, var(--brand-blue) 100%)';
+      glowColor = 'shadow-[0_0_12px_rgba(37,99,235,0.25)] dark:shadow-[0_0_12px_rgba(96,165,250,0.25)]';
+      bgClass = 'bg-brand-purple/10 border-brand-purple/20';
     }
 
     return {
