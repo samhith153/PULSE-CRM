@@ -45,6 +45,8 @@ import HomeView from '@/components/dashboard/HomeView';
 import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
 import { clearToken, setToken } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDashboardOverview } from '@/hooks/use-dashboard';
+import { useCrmStream } from '@/hooks/use-crm-stream';
 
 interface DashboardShellProps {
   requiredRole: 'sales_rep' | 'manager' | 'admin';
@@ -64,6 +66,17 @@ export default function DashboardShell({ requiredRole, defaultTab = 'home', acti
   const [groupBy, setGroupBy] = useState('Stage');
   const [isLoading, setIsLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
+
+  // ── Unified dashboard data hook (GET /api/v1/dashboard/me) ──────────────
+  // Returns null gracefully when the backend endpoint is not yet deployed.
+  // Individual widgets continue to use their own API calls as fallback.
+  const { data: dashboardData, refetch: refetchDashboard } = useDashboardOverview();
+
+  // ── Real-time SSE stream — invalidates dashboardData on AI events ────────
+  useCrmStream({
+    enabled: authorized,
+    onInvalidate: refetchDashboard,
+  });
 
   const [isFabOpen, setIsFabOpen] = useState(false);
   const fabRef = useRef<HTMLDivElement>(null);
@@ -222,7 +235,7 @@ export default function DashboardShell({ requiredRole, defaultTab = 'home', acti
         {/* Dashboard inner scroll view */}
         <main className="flex-1 overflow-y-auto px-4 py-8 md:px-6 space-y-6">
           {activeTab === 'home' ? (
-            <HomeView onTabChange={setActiveTab} />
+            <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
           ) : activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (

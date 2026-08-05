@@ -975,3 +975,83 @@ export function getDocumentDownloadUrl(docId: string): string {
   return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
 }
 
+// ─── Dashboard Unified Endpoint ─────────────────────────────────────────────
+// Powers all 6 core dashboard widgets via GET /api/v1/dashboard/me
+
+export interface DashboardKPI {
+  open_deals: number;
+  won_deals_this_month: number;
+  leads_today: number;
+  calls_today: number;
+  quota_achieved: number;   // ₹ value of won deals against sales_quota
+  quota_target: number;     // sales_quota from users table
+  quota_pct: number;        // 0–100 percentage
+}
+
+export interface DashboardPriorityItem {
+  lead_id: string;
+  name: string;
+  overall_score: number;    // from ai_scores.overall_score
+  tier: string;             // Hot | Warm | Cold
+  status: string;
+}
+
+export interface DashboardAtRiskDeal {
+  deal_id: string;
+  name: string;
+  value: number;
+  sentiment: string;        // negative | neutral | positive
+  days_stalled: number;     // derived from updated_at
+  owner_name: string | null;
+}
+
+export interface DashboardOpenTask {
+  task_id: string;
+  title: string;
+  due_date: string | null;
+  status: string;           // pending | completed
+  fit_score?: number | null;
+}
+
+export interface DashboardCalendarEvent {
+  event_id: string;
+  title: string;
+  start_time: string;
+  end_time?: string | null;
+}
+
+export interface DashboardOverviewData {
+  kpis: DashboardKPI;
+  priority_queue: DashboardPriorityItem[];
+  at_risk_deals: DashboardAtRiskDeal[];
+  open_tasks: DashboardOpenTask[];
+  calendar_events: DashboardCalendarEvent[];
+  calls_today: number;
+  // Raw lists for widgets that need full records
+  deals?: any[];
+  leads?: any[];
+}
+
+/**
+ * GET /api/v1/dashboard/me
+ * Executes 9 queries concurrently on the backend via asyncio.gather()
+ * to hydrate all 6 core dashboard widgets in a single request.
+ */
+export async function getDashboardMe(): Promise<DashboardOverviewData | null> {
+  try {
+    const data = await apiFetch<DashboardOverviewData>('/api/v1/dashboard/me');
+    return data ?? null;
+  } catch {
+    // Endpoint not yet deployed — return null so callers can fall back gracefully
+    return null;
+  }
+}
+
+/**
+ * Build the SSE URL for real-time dashboard stream updates.
+ * The token is passed as a query param because EventSource doesn't support headers.
+ */
+export function getDashboardStreamUrl(): string {
+  const token = getToken();
+  return `${API_BASE_URL}/api/v1/stream/dashboard${token ? `?token=${token}` : ''}`;
+}

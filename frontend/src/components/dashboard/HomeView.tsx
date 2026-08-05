@@ -44,6 +44,7 @@ import QuotaPaceCard from './QuotaPaceCard';
 import FunnelChartCard from './FunnelChartCard';
 import QuickCaptureCard from './QuickCaptureCard';
 import ActivitySummaryCard from './ActivitySummaryCard';
+import type { DashboardOverviewData } from '@/utils/api';
 
 interface Task {
   id: number;
@@ -64,7 +65,10 @@ interface Meeting {
 
 interface HomeViewProps {
   onTabChange: (tab: string) => void;
+  /** Optional pre-fetched unified dashboard data from GET /api/v1/dashboard/me */
+  dashboardData?: DashboardOverviewData;
 }
+
 
 // Draggable Card Wrapper Component
 interface SortableCardWrapperProps {
@@ -151,7 +155,7 @@ function SortableCardWrapper({
   );
 }
 
-export default function HomeView({ onTabChange }: HomeViewProps) {
+export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) {
   // User name state
   const [userName, setUserName] = useState('User');
 
@@ -300,7 +304,12 @@ export default function HomeView({ onTabChange }: HomeViewProps) {
   );
 
   // Load stats from API
+  // If dashboardData from the unified endpoint is already available, we skip
+  // the individual API calls entirely. Falls back to separate requests otherwise.
   const loadStats = () => {
+    // If unified dashboard data is already seeded, skip redundant fetches
+    if (dashboardData) return;
+
     setStatsLoading(true);
     Promise.all([
       getDeals().catch(() => [] as any[]),
@@ -339,6 +348,22 @@ export default function HomeView({ onTabChange }: HomeViewProps) {
       setStatsLoading(false);
     });
   };
+
+  // When unified dashboard data arrives from the fast endpoint, seed stats immediately
+  useEffect(() => {
+    if (!dashboardData) return;
+    const kpis = dashboardData.kpis;
+    if (kpis) {
+      setOpenDealsCount(kpis.open_deals ?? null);
+      setCallsTodayCount(kpis.calls_today ?? null);
+      setLeadsCount(kpis.leads_today ?? null);
+      setUntouchedDealsCount(null); // backend doesn't expose this yet
+    }
+    if (dashboardData.deals) setDeals(dashboardData.deals);
+    if (dashboardData.leads) setLeadsListState(dashboardData.leads);
+    setStatsLoading(false);
+  }, [dashboardData]);
+
 
   // Load tasks
   const loadTasks = () => {
