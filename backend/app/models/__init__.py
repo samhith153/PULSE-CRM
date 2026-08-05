@@ -23,4 +23,7 @@ from app.models.ai_summary import AISummary  # noqa: F401
 
 from app.models.webhook import WebhookEndpoint, WebhookDelivery  # noqa: F401
 from app.models.calendar_event import CalendarEvent  # noqa: F401
+from app.models.meeting import Meeting  # noqa: F401
+
+
 

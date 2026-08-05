@@ -81,11 +81,6 @@ async def check_db_connection() -> bool:
     """Quick health check — verifies we can query the database."""
     try:
         async with engine.connect() as conn:
-<<<<<<< HEAD
-            result = await conn.execute(text("SELECT current_user"))
-            user = result.scalar()
-            logger.info("Database Connected - current_user=%s", user)
-=======
             if engine.url.drivername.startswith("sqlite"):
                 result = await conn.execute(text("SELECT 1"))
                 user = "sqlite_user"
@@ -95,7 +90,6 @@ async def check_db_connection() -> bool:
             logger.info("Database connected - current_user=%s", user)
             print(f"Database Connected!")
             print(f"Current User: {user}")
->>>>>>> origin/new-ui
         return True
     except Exception as exc:
         logger.exception(

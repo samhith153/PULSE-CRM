@@ -462,38 +462,7 @@ class EmailService:
             },
             topic = "gmail" if gmail_connection_id else "smtp",
         )
-<<<<<<< HEAD
-        if direction == EmailDirection.INBOUND:
-            await self.events.record_event(
-                EventType.EMAIL_RECEIVED,
-                organization_id=organization_id,
-                actor_id=created_by,
-                aggregate_type="email",
-                aggregate_id=str(email.id),
-                source="gmail" if gmail_connection_id else "smtp",
-                payload={
-                    "email_id": str(email.id),
-                    "gmail_message_id": gmail_message_id,
-                    "thread_id": thread_id,
-                    "subject": subject,
-                    "body_preview": body_preview,
-                    "external_entity_type": external_entity_type,
-                    "external_entity_id": str(external_entity_id) if external_entity_id else None,
-                },
-            )
-            # Recompute engagement features for the linked lead so scores stay
-            # fresh on inbound mail (the 5-min batch job remains the fallback).
-            # Best-effort: never let a recompute failure break email storage.
-            if external_entity_type == "lead" and external_entity_id is not None:
-                task = asyncio.create_task(
-                    _run_recompute_background(organization_id, external_entity_id)
-                )
-                _background_tasks.add(task)
-                task.add_done_callback(_background_tasks.discard)
-        elif is_read:
-=======
         if is_read:
->>>>>>> origin/new-ui
             await self.events.record_event(
                 EventType.EMAIL_READ,
                 organization_id=organization_id,

@@ -17,6 +17,7 @@ from app.schemas.dashboard import (
     TopSalesRepresentativeResponse,
     AdminDashboardResponse,
     ManagerDashboardResponse,
+    RedesignedDashboardResponse,
     SalesRepDashboardResponse,
 )
 from app.schemas.forecast import ManagerForecastResponse
@@ -108,6 +109,19 @@ async def get_dashboard_trends(current_user: CurrentUser, db: DBSession) -> dict
     trends = await svc.trends(current_user.organization_id)
     return {"success": True, "message": "OK", "data": trends}
 
+
+
+@router.get(
+    "/redesigned",
+    response_model=StandardResponse[RedesignedDashboardResponse],
+    summary="Get redesigned dashboard cards",
+    dependencies=[Depends(require_permission("dashboard:read"))],
+    tags=["Dashboard"],
+)
+async def get_redesigned_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+    svc = DashboardService(db)
+    data = await svc.redesigned_dashboard(current_user.id, current_user.organization_id)
+    return {"success": True, "message": "Dashboard cards retrieved successfully.", "data": data}
 
 @router.get(
     "/admin",
@@ -228,3 +242,5 @@ async def get_manager_forecast(
         "message": "Forecast KPIs retrieved successfully.",
         "data": data,
     }
+
+

@@ -262,9 +262,203 @@ class DashboardService:
             end = datetime(year, month + 1, 1, tzinfo=timezone.utc)
         return start, end
 
-    # ─────────────────────────────────────────────────────────────────────────
+
+    async def redesigned_dashboard(self, user_id: UUID, organization_id: UUID):
+        from app.repositories.dashboard_repository import DashboardRepository
+        from app.schemas.dashboard import (
+            DashboardDealItem,
+            DashboardDealRiskItem,
+            DashboardDealsAtRiskCard,
+            DashboardLeadsCard,
+            DashboardMeetingItem,
+            DashboardMeetingsCard,
+            DashboardOpenDealsCard,
+            DashboardPriorityQueueCard,
+            DashboardPriorityQueueItem,
+            DashboardQuotaCard,
+            DashboardTaskItem,
+            DashboardTasksCard,
+            DashboardUntouchedDealsCard,
+            RedesignedDashboardResponse,
+        )
+
+        repo = DashboardRepository(self.db)
+        now = datetime.now(timezone.utc)
+        untouched_threshold_days = 7
+        untouched_cutoff = now - timedelta(days=untouched_threshold_days)
+
+        open_count = await repo.count_open_deals(organization_id, user_id)
+        recent_deals = await repo.recent_open_deals(organization_id, user_id)
+        open_deals = DashboardOpenDealsCard(
+            count=open_count,
+            recent_deals=[
+                DashboardDealItem(
+                    id=deal.id,
+                    name=deal.name,
+                    status=deal.status,
+                    amount=deal.amount,
+                    expected_close_date=deal.expected_close_date.isoformat() if deal.expected_close_date else None,
+                )
+                for deal in recent_deals
+            ],
+        )
+
+        latest_activity_rows = await repo.latest_deal_activity(organization_id, user_id)
+        untouched_ids = [
+            deal.id for deal, last_activity_at in latest_activity_rows
+            if last_activity_at is None or last_activity_at < untouched_cutoff
+        ]
+        untouched_deals = DashboardUntouchedDealsCard(
+            count=len(untouched_ids),
+            threshold_days=untouched_threshold_days,
+            deal_ids=untouched_ids,
+        )
+
+        my_leads = DashboardLeadsCard(
+            count=await repo.count_active_leads(organization_id, user_id)
+        )
+
+        task_rows = await repo.open_tasks(organization_id, user_id)
+        task_items = [
+            DashboardTaskItem(
+                id=row["task"].id,
+                title=row["task"].title,
+                due_date=row["task"].end_datetime,
+                priority=row["task"].priority,
+                status=row["task"].status,
+                overdue=row["task"].end_datetime < now,
+            )
+            for row in task_rows
+        ]
+        tasks = DashboardTasksCard(count=len(task_items), items=task_items)
+
+        meeting_rows = await repo.dashboard_meetings(organization_id, user_id, now)
+        today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+        meeting_items = [
+            DashboardMeetingItem(
+                id=meeting.id,
+                title=meeting.title,
+                start_datetime=meeting.start_datetime,
+                end_datetime=meeting.end_datetime,
+                status=meeting.status,
+                meeting_link=meeting.meeting_link,
+                location=meeting.location,
+            )
+            for meeting in meeting_rows
+        ]
+        meetings = DashboardMeetingsCard(
+            count=len(meeting_items),
+            today=[item for item in meeting_items if item.start_datetime <= today_end],
+            upcoming=[item for item in meeting_items if item.start_datetime > today_end],
+        )
+
+        priority_rows = await repo.priority_candidates(organization_id, user_id)
+        priority_items = []
+        priority_weights = {"critical": 35, "high": 25, "medium": 15, "low": 5}
+        for row in priority_rows:
+            task = row["task"]
+            score = priority_weights.get(str(task.priority).lower(), 10)
+            reasons = [f"{task.priority} priority"]
+            if task.end_datetime < now:
+                score += 40
+                reasons.append("overdue")
+            else:
+                days_until_due = max((task.end_datetime - now).days, 0)
+                if days_until_due <= 1:
+                    score += 25
+                    reasons.append("due soon")
+                elif days_until_due <= 3:
+                    score += 15
+                    reasons.append("upcoming due date")
+            deal_value = Decimal(str(row.get("deal_value") or 0))
+            if deal_value >= Decimal("10000"):
+                score += 15
+                reasons.append("high deal value")
+            lead_score = int(row.get("lead_score") or 0)
+            if lead_score >= 80:
+                score += 10
+                reasons.append("strong lead score")
+            priority_items.append(
+                DashboardPriorityQueueItem(
+                    task_id=task.id,
+                    title=task.title,
+                    priority_score=min(score, 100),
+                    reasons=reasons,
+                    due_date=task.end_datetime,
+                    overdue=task.end_datetime < now,
+                )
+            )
+        priority_items.sort(key=lambda item: item.priority_score, reverse=True)
+        priority_queue = DashboardPriorityQueueCard(items=priority_items[:10])
+
+        risk_items = []
+        for row in await repo.at_risk_deals(organization_id, user_id):
+            deal = row["deal"]
+            score = 0
+            reasons = []
+            last_activity_at = row.get("last_activity_at")
+            if last_activity_at is None:
+                score += 35
+                reasons.append("no recorded activity")
+            else:
+                inactive_days = (now - last_activity_at).days
+                if inactive_days >= 7:
+                    score += 30
+                    reasons.append(f"no activity for {inactive_days} days")
+            if deal.expected_close_date and deal.expected_close_date < now.date():
+                score += 30
+                reasons.append("close date overdue")
+            if deal.status and "proposal" in deal.status.lower():
+                score += 20
+                reasons.append("proposal pending")
+            engagement_score = row.get("engagement_score")
+            if engagement_score is not None and int(engagement_score) < 40:
+                score += 20
+                reasons.append("negative customer engagement")
+            lead_score = row.get("lead_score")
+            if lead_score is not None and int(lead_score) < 50:
+                score += 10
+                reasons.append("low lead score")
+            if score > 0:
+                risk_items.append(
+                    DashboardDealRiskItem(
+                        deal_id=deal.id,
+                        deal_name=deal.name,
+                        risk_score=min(score, 100),
+                        risk_reason=", ".join(reasons),
+                        amount=deal.amount,
+                        company_name=row.get("company_name"),
+                    )
+                )
+        risk_items.sort(key=lambda item: item.risk_score, reverse=True)
+        deals_at_risk = DashboardDealsAtRiskCard(items=risk_items[:10])
+
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month = month_start.replace(year=month_start.year + 1, month=1) if month_start.month == 12 else month_start.replace(month=month_start.month + 1)
+        achieved = Decimal(str(await repo.won_revenue_between(organization_id, user_id, month_start, next_month)))
+        quota = DashboardQuotaCard(
+            target=None,
+            achieved=achieved,
+            expected=None,
+            percentage=None,
+            status="target_unavailable",
+        )
+
+        return RedesignedDashboardResponse(
+            openDeals=open_deals,
+            untouchedDeals=untouched_deals,
+            myLeads=my_leads,
+            tasks=tasks,
+            meetings=meetings,
+            priorityQueue=priority_queue,
+            dealsAtRisk=deals_at_risk,
+            quota=quota,
+            lastUpdated=now,
+        )
+
+    # -------------------------------------------------------------------------
     # Admin Dashboard KPI  (admin-only, cross-org aware)
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     async def admin_kpi(self, organization_id: UUID):  # noqa: C901
         """
@@ -319,7 +513,7 @@ class DashboardService:
             r = await self.db.execute(stmt)
             return Decimal(str(r.scalar_one() or 0))
 
-        # ── 1. Organizations ─────────────────────────────────────────────────
+        # -- 1. Organizations -------------------------------------------------
         total_orgs_stmt = select(func.count(Organization.id)).where(
             Organization.is_active.is_(True),
             Organization.is_deleted.is_(False),
@@ -353,7 +547,7 @@ class DashboardService:
             monthly_growth_pct=org_growth,
         )
 
-        # ── 2. Users ─────────────────────────────────────────────────────────
+        # -- 2. Users ---------------------------------------------------------
         total_users = await _count(User)
         active_users_stmt = select(func.count(User.id)).where(
             User.organization_id == organization_id,
@@ -371,7 +565,7 @@ class DashboardService:
             new_this_month=new_users_month,
         )
 
-        # ── 3. Companies ─────────────────────────────────────────────────────
+        # -- 3. Companies -----------------------------------------------------
         total_companies = await _count(Company)
         new_companies_month = await _count(Company, Company.created_at >= month_start)
         prev_companies = await _count(
@@ -389,7 +583,7 @@ class DashboardService:
             monthly_growth_pct=company_growth,
         )
 
-        # ── 4. Contacts ──────────────────────────────────────────────────────
+        # -- 4. Contacts ------------------------------------------------------
         total_contacts = await _count(Contact)
         new_contacts_month = await _count(Contact, Contact.created_at >= month_start)
         prev_contacts = await _count(
@@ -407,7 +601,7 @@ class DashboardService:
             monthly_growth_pct=contact_growth,
         )
 
-        # ── 5 + 6. Leads ─────────────────────────────────────────────────────
+        # -- 5 + 6. Leads -----------------------------------------------------
         total_leads = await _count(Lead)
         new_leads_today = await _count(Lead, Lead.created_at >= today_start)
         new_leads_month = await _count(Lead, Lead.created_at >= month_start)
@@ -434,7 +628,7 @@ class DashboardService:
             conversion_rate=conversion_rate,
         )
 
-        # ── 7. Revenue ───────────────────────────────────────────────────────
+        # -- 7. Revenue -------------------------------------------------------
         rev_today = await _sum_amount(
             Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= today_start
         )
@@ -465,7 +659,7 @@ class DashboardService:
             growth_pct=rev_growth,
         )
 
-        # ── 8. Tasks (via ActivityTimeline) ──────────────────────────────────
+        # -- 8. Tasks (via ActivityTimeline) ----------------------------------
         # "Tasks" are modelled as activity_timeline_events with action=meeting/call
         # We treat overdue = past meetings, pending = future, due today = today
         pending_tasks = await self._count_rows(
@@ -504,7 +698,7 @@ class DashboardService:
             tasks=task_stats,
         )
 
-        # ── 9. Monthly Sales Analytics (12 months) ───────────────────────────
+        # -- 9. Monthly Sales Analytics (12 months) ---------------------------
         monthly_sales: list[AdminMonthlySalesPoint] = []
         for offset in range(11, -1, -1):
             start, end = self._month_bounds(now, offset)
@@ -537,7 +731,7 @@ class DashboardService:
                 )
             )
 
-        # ── 10. Lead Source Analytics ────────────────────────────────────────
+        # -- 10. Lead Source Analytics ----------------------------------------
         source_stmt = (
             select(Lead.source, func.count(Lead.id))
             .where(*_base(Lead))
@@ -555,7 +749,7 @@ class DashboardService:
             for r in source_rows
         ]
 
-        # ── 11. Lead Funnel ──────────────────────────────────────────────────
+        # -- 11. Lead Funnel --------------------------------------------------
         funnel_stages = [
             "new", "contacted", "qualified",
             "proposal_sent", "negotiation", "won", "lost",
@@ -578,7 +772,7 @@ class DashboardService:
             for stage in funnel_stages
         ]
 
-        # ── 12. Top 5 Sales Representatives ─────────────────────────────────
+        # -- 12. Top 5 Sales Representatives ---------------------------------
         won_expr = func.sum(
             case((Deal.status == DealStatus.WON.value, 1), else_=0)
         )
@@ -614,7 +808,7 @@ class DashboardService:
             for row in top_reps_rows
         ]
 
-        # ── 13. Top 5 Companies ──────────────────────────────────────────────
+        # -- 13. Top 5 Companies ----------------------------------------------
         top_companies_stmt = (
             select(
                 Company.id,
@@ -664,7 +858,7 @@ class DashboardService:
             for row in top_companies_rows
         ]
 
-        # ── 14. Recent Activities (latest 20) ────────────────────────────────
+        # -- 14. Recent Activities (latest 20) --------------------------------
         recent_stmt = (
             select(ActivityTimeline)
             .where(
@@ -687,7 +881,7 @@ class DashboardService:
             for row in recent_rows
         ]
 
-        # ── 15. Notifications Summary ────────────────────────────────────────
+        # -- 15. Notifications Summary ----------------------------------------
         high_priority_leads_stmt = (
             select(func.count(Lead.id))
             .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
@@ -715,9 +909,9 @@ class DashboardService:
             generated_at=now,
         )
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Manager Dashboard KPI  (manager-scoped, org-tenanted)
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     async def manager_kpi(self, manager_id: UUID, organization_id: UUID):  # noqa: C901
         """
@@ -752,7 +946,7 @@ class DashboardService:
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         last_month_start, _ = self._month_bounds(now, 1)
 
-        # ── helpers ──────────────────────────────────────────────────────────
+        # -- helpers ----------------------------------------------------------
         def _deal_base(*extra):
             return [
                 Deal.organization_id == organization_id,
@@ -798,7 +992,7 @@ class DashboardService:
             )
             return Decimal(str(r.scalar_one() or 0))
 
-        # ── Team members (sales reps + managers, no admins) ──────────────────
+        # -- Team members (sales reps + managers, no admins) ------------------
         team_stmt = (
             select(User.id, User.full_name)
             .where(*_user_base(), _non_admin_user_filter())
@@ -807,7 +1001,7 @@ class DashboardService:
         team_member_ids = [r[0] for r in team_rows]
         total_members = len(team_member_ids)
 
-        # ── 1. Team Revenue Won ───────────────────────────────────────────────
+        # -- 1. Team Revenue Won -----------------------------------------------
         team_revenue_won = await _deal_sum(Deal.status == DealStatus.WON.value)
         prev_month_won = await _deal_sum(
             Deal.status == DealStatus.WON.value,
@@ -832,7 +1026,7 @@ class DashboardService:
             monthly_growth_pct=monthly_growth,
         )
 
-        # ── 2. Forecast Projection ────────────────────────────────────────────
+        # -- 2. Forecast Projection --------------------------------------------
         # SUM(amount * probability/100) for open deals
         forecast_stmt = select(
             func.coalesce(
@@ -881,7 +1075,7 @@ class DashboardService:
             expected_quarter_revenue=quarter_rev + projected_revenue,
         )
 
-        # ── 3. Pipeline Health ────────────────────────────────────────────────
+        # -- 3. Pipeline Health ------------------------------------------------
         active_pipeline_value = await _deal_sum(
             Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
         )
@@ -919,7 +1113,7 @@ class DashboardService:
             stage_distribution=stage_distribution,
         )
 
-        # ── 4. Rep Quota Attainment ───────────────────────────────────────────
+        # -- 4. Rep Quota Attainment -------------------------------------------
         rep_revenue_stmt = (
             select(
                 User.id,
@@ -967,9 +1161,9 @@ class DashboardService:
                 )
             )
 
-        # ── 5. Already in stage_distribution (pipeline health) ───────────────
+        # -- 5. Already in stage_distribution (pipeline health) ---------------
 
-        # ── 6. Monthly Revenue Trend (12 months) ─────────────────────────────
+        # -- 6. Monthly Revenue Trend (12 months) -----------------------------
         monthly_revenue_trend: list[ManagerMonthlyRevenue] = []
         prev_rev = Decimal("0")
         for offset in range(11, -1, -1):
@@ -991,7 +1185,7 @@ class DashboardService:
             )
             prev_rev = m_rev
 
-        # ── 7. Top 5 Performing Reps ─────────────────────────────────────────
+        # -- 7. Top 5 Performing Reps -----------------------------------------
         top_reps: list[ManagerTopRep] = []
         for rank, row in enumerate(rep_rows[:5], start=1):
             total_rep_deals = int(row[2] or 1) if row[2] else 1
@@ -1022,7 +1216,7 @@ class DashboardService:
                 )
             )
 
-        # ── 8. Deals At Risk ──────────────────────────────────────────────────
+        # -- 8. Deals At Risk --------------------------------------------------
         # Criteria: open deals with expected_close_date passed OR high value
         risk_threshold = Decimal("50000")  # configurable
         seven_days_ago = now - timedelta(days=7)
@@ -1048,7 +1242,7 @@ class DashboardService:
                 days_since = (now.date() - deal.expected_close_date).days
 
             if deal.amount and deal.amount >= risk_threshold:
-                reasons.append(f"High-value deal (≥{risk_threshold:,.0f})")
+                reasons.append(f"High-value deal (={risk_threshold:,.0f})")
 
             if deal.updated_at and deal.updated_at < seven_days_ago:
                 days_inactive = (now - deal.updated_at).days
@@ -1073,7 +1267,7 @@ class DashboardService:
 
         deals_at_risk.sort(key=lambda d: d.days_since_last_activity, reverse=True)
 
-        # ── 9. Manager Alerts ─────────────────────────────────────────────────
+        # -- 9. Manager Alerts -------------------------------------------------
         alerts: list[ManagerAlert] = []
 
         # Alert: team quota below pace
@@ -1121,7 +1315,7 @@ class DashboardService:
             alerts.append(
                 ManagerAlert(
                     severity="low",
-                    message=f"🎉 Team revenue target achieved! {team_revenue_won:,.2f} of {team_target:,.2f}.",
+                    message=f"?? Team revenue target achieved! {team_revenue_won:,.2f} of {team_target:,.2f}.",
                     timestamp=now,
                 )
             )
@@ -1137,7 +1331,7 @@ class DashboardService:
                     )
                 )
 
-        # ── 10. Recent Team Activity (latest 30) ──────────────────────────────
+        # -- 10. Recent Team Activity (latest 30) ------------------------------
         relevant_actions = [
             "lead_assigned", "lead_updated", "lead_created",
             "deal_created", "deal_won", "deal_lost",
@@ -1167,7 +1361,7 @@ class DashboardService:
             for row in recent_rows
         ]
 
-        # ── 11. Team Performance Metrics ──────────────────────────────────────
+        # -- 11. Team Performance Metrics --------------------------------------
         total_deals_count = await _deal_count()
         won_deals_count = await _deal_count(Deal.status == DealStatus.WON.value)
         lost_deals_count = await _deal_count(Deal.status == DealStatus.LOST.value)
@@ -1212,7 +1406,7 @@ class DashboardService:
             forecast_accuracy=forecast_acc,
         )
 
-        # ── Summary ───────────────────────────────────────────────────────────
+        # -- Summary -----------------------------------------------------------
         summary = ManagerDashboardSummary(
             team_revenue=team_revenue_won,
             forecast_projection=projected_revenue,
@@ -1239,9 +1433,9 @@ class DashboardService:
             generated_at=now,
         )
 
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Sales Representative Dashboard KPI  (rep-scoped, owner_id = user_id)
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     async def sales_rep_kpi(  # noqa: C901
         self,
@@ -1275,7 +1469,7 @@ class DashboardService:
 
         now = datetime.now(timezone.utc)
 
-        # ── Period windows ────────────────────────────────────────────────────
+        # -- Period windows ----------------------------------------------------
         if period == "week":
             period_start = now - timedelta(days=now.weekday())
             period_start = period_start.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -1297,7 +1491,7 @@ class DashboardService:
         last_month_start, last_month_end = self._month_bounds(now, 1)
         thirty_days_ago = now - timedelta(days=30)
 
-        # ── Core helpers ──────────────────────────────────────────────────────
+        # -- Core helpers ------------------------------------------------------
         def _rep_deals(*extra):
             """Base filter: this rep's deals, not deleted."""
             return [
@@ -1336,7 +1530,7 @@ class DashboardService:
             r = await self.db.execute(select(func.count(ActivityTimeline.id)).where(*conds))
             return int(r.scalar_one() or 0)
 
-        # ── 1. Total Revenue ──────────────────────────────────────────────────
+        # -- 1. Total Revenue --------------------------------------------------
         total_revenue = await _deal_sum(Deal.status == DealStatus.WON.value)
         prev_revenue = await _deal_sum(
             Deal.status == DealStatus.WON.value,
@@ -1351,7 +1545,7 @@ class DashboardService:
             growth_pct=rev_growth,
         )
 
-        # ── 2. Won Deals ──────────────────────────────────────────────────────
+        # -- 2. Won Deals ------------------------------------------------------
         won_deals = await _deal_count(Deal.status == DealStatus.WON.value)
         prev_won = await _deal_count(
             Deal.status == DealStatus.WON.value,
@@ -1366,7 +1560,7 @@ class DashboardService:
             growth_pct=won_growth,
         )
 
-        # ── 3. Win Rate ───────────────────────────────────────────────────────
+        # -- 3. Win Rate -------------------------------------------------------
         lost_deals = await _deal_count(Deal.status == DealStatus.LOST.value)
         win_rate = self._percentage(won_deals, max(won_deals + lost_deals, 1))
         prev_lost = await _deal_count(
@@ -1383,7 +1577,7 @@ class DashboardService:
             growth_pct=win_rate_growth,
         )
 
-        # ── 4. Average Deal Size ──────────────────────────────────────────────
+        # -- 4. Average Deal Size ----------------------------------------------
         avg_stmt = select(func.coalesce(func.avg(Deal.amount), 0)).where(
             *_rep_deals(Deal.status == DealStatus.WON.value)
         )
@@ -1404,7 +1598,7 @@ class DashboardService:
             growth_pct=avg_growth,
         )
 
-        # ── 5. Average Sales Cycle ────────────────────────────────────────────
+        # -- 5. Average Sales Cycle --------------------------------------------
         cycle_stmt = (
             select(
                 func.coalesce(
@@ -1455,7 +1649,7 @@ class DashboardService:
             difference_days=avg_cycle - prev_cycle,
         )
 
-        # ── 6. Revenue Over Time (12 months) ──────────────────────────────────
+        # -- 6. Revenue Over Time (12 months) ----------------------------------
         revenue_trend: list[RepRevenuePoint] = []
         for offset in range(11, -1, -1):
             start, end = self._month_bounds(now, offset)
@@ -1466,7 +1660,7 @@ class DashboardService:
             )
             revenue_trend.append(RepRevenuePoint(period=start.strftime("%Y-%m"), revenue=m_rev))
 
-        # ── 7. Deals by Stage ─────────────────────────────────────────────────
+        # -- 7. Deals by Stage -------------------------------------------------
         stage_stmt = (
             select(Deal.status, func.count(Deal.id), func.coalesce(func.sum(Deal.amount), 0))
             .where(*_rep_deals())
@@ -1487,7 +1681,7 @@ class DashboardService:
                 )
             )
 
-        # ── 8. Deals by Source ────────────────────────────────────────────────
+        # -- 8. Deals by Source ------------------------------------------------
         source_stmt = (
             select(
                 Lead.source,
@@ -1512,7 +1706,7 @@ class DashboardService:
             for r in source_rows
         ]
 
-        # ── 9. Revenue by Company Size ────────────────────────────────────────
+        # -- 9. Revenue by Company Size ----------------------------------------
         size_buckets = [
             ("1-10", 1, 10),
             ("11-50", 11, 50),
@@ -1542,7 +1736,7 @@ class DashboardService:
                 )
             )
 
-        # ── 10. Activity Heatmap (last 90 days) ───────────────────────────────
+        # -- 10. Activity Heatmap (last 90 days) -------------------------------
         ninety_days_ago = now - timedelta(days=90)
         heatmap_actions = {
             "call": ["call", "call_logged"],
@@ -1582,7 +1776,7 @@ class DashboardService:
                     )
                 )
 
-        # ── 11. My Performance Row ────────────────────────────────────────────
+        # -- 11. My Performance Row --------------------------------------------
         my_stmt = (
             select(
                 User.id,
@@ -1623,7 +1817,7 @@ class DashboardService:
                 )
             )
 
-        # ── 12. Activity Overview (current vs previous month) ─────────────────
+        # -- 12. Activity Overview (current vs previous month) -----------------
         call_actions = ["call", "call_logged"]
         email_actions = ["email_sent", "email"]
         meeting_actions = ["meeting", "meeting_scheduled"]
@@ -1653,7 +1847,7 @@ class DashboardService:
             tasks_growth_pct=self._percentage(tasks_cur - tasks_prev, max(tasks_prev, 1)),
         )
 
-        # ── 13. Key Metrics ───────────────────────────────────────────────────
+        # -- 13. Key Metrics ---------------------------------------------------
         open_deals = await _deal_count(
             Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
         )
@@ -1699,7 +1893,7 @@ class DashboardService:
             ),
         )
 
-        # ── 14. Recent Reports (from ActivityTimeline with action=report) ─────
+        # -- 14. Recent Reports (from ActivityTimeline with action=report) -----
         report_stmt = (
             select(ActivityTimeline)
             .where(
@@ -1721,7 +1915,7 @@ class DashboardService:
             for row in report_rows
         ]
 
-        # ── 15. Report Templates (static catalog) ─────────────────────────────
+        # -- 15. Report Templates (static catalog) -----------------------------
         report_templates = [
             RepReportTemplate(
                 name="Sales Funnel Analysis",
@@ -1755,7 +1949,7 @@ class DashboardService:
             ),
         ]
 
-        # ── Summary ───────────────────────────────────────────────────────────
+        # -- Summary -----------------------------------------------------------
         summary = SalesRepDashboardSummary(
             total_revenue=total_revenue,
             won_deals=won_deals,
@@ -1783,3 +1977,5 @@ class DashboardService:
             report_templates=report_templates,
             generated_at=now,
         )
+
+

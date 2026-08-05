@@ -67,28 +67,6 @@ class LeadScoringService:
         }
 
         # ── Build engagement_features dict ────────────────────────────────────
-<<<<<<< HEAD
-        # Fetch latest email summary for this lead to get summary_word
-        # (single query with LEFT JOIN instead of two sequential queries)
-        summary_word = None
-        try:
-            stmt_summary = (
-                select(EmailSummary.summary_word)
-                .join(Email, Email.thread_id == EmailSummary.thread_id)
-                .where(
-                    Email.external_entity_id == lead_id,
-                    Email.is_active.is_(True),
-                )
-                .order_by(Email.sent_at.desc())
-                .limit(1)
-            )
-            result_summary = await self.db.execute(stmt_summary)
-            summary_word = result_summary.scalar_one_or_none()
-        except Exception:
-            pass
-
-=======
->>>>>>> origin/new-ui
         engagement_features = {
             "intent_category_score": fv.ai_intent_category_score or 0,
             "buying_stage_score": fv.buying_stage_score or 0,

@@ -200,18 +200,7 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         except ValueError:
             built_in_role = None
 
-<<<<<<< HEAD
-        # Admin always has every permission — never stripped by DB edits.
-        if built_in_role is Role.ADMIN:
-            permissions.update(get_permissions_for_role(Role.ADMIN))
-            continue
-
         if built_in_role:
-            # Always include built-in baseline so permissions are never missing
-            # due to an incomplete seed. DB permissions extend, never shrink.
-=======
-        if built_in_role:
->>>>>>> origin/new-ui
             permissions.update(get_permissions_for_role(built_in_role))
 
     return sorted(permissions)

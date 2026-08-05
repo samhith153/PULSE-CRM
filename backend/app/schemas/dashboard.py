@@ -80,9 +80,109 @@ class DashboardStatsResponse(BaseModel):
     generated_at: datetime
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+class DashboardDealItem(BaseModel):
+    id: UUID
+    name: str
+    status: str
+    amount: Optional[Decimal] = None
+    expected_close_date: Optional[str] = None
+
+
+class DashboardOpenDealsCard(BaseModel):
+    count: int
+    recent_deals: list[DashboardDealItem] = Field(default_factory=list)
+
+
+class DashboardUntouchedDealsCard(BaseModel):
+    count: int
+    threshold_days: int
+    deal_ids: list[UUID] = Field(default_factory=list)
+
+
+class DashboardLeadsCard(BaseModel):
+    count: int
+
+
+class DashboardTaskItem(BaseModel):
+    id: UUID
+    title: str
+    due_date: datetime
+    priority: str
+    status: str
+    overdue: bool
+
+
+class DashboardTasksCard(BaseModel):
+    count: int
+    items: list[DashboardTaskItem] = Field(default_factory=list)
+
+
+class DashboardMeetingItem(BaseModel):
+    id: UUID
+    title: str
+    start_datetime: datetime
+    end_datetime: datetime
+    status: str
+    meeting_link: Optional[str] = None
+    location: Optional[str] = None
+
+
+class DashboardMeetingsCard(BaseModel):
+    count: int
+    today: list[DashboardMeetingItem] = Field(default_factory=list)
+    upcoming: list[DashboardMeetingItem] = Field(default_factory=list)
+
+
+class DashboardPriorityQueueItem(BaseModel):
+    task_id: UUID
+    title: str
+    priority_score: int
+    reasons: list[str] = Field(default_factory=list)
+    due_date: datetime
+    overdue: bool
+
+
+class DashboardPriorityQueueCard(BaseModel):
+    items: list[DashboardPriorityQueueItem] = Field(default_factory=list)
+
+
+class DashboardDealRiskItem(BaseModel):
+    deal_id: UUID
+    deal_name: str
+    risk_score: int
+    risk_reason: str
+    amount: Optional[Decimal] = None
+    company_name: Optional[str] = None
+
+
+class DashboardDealsAtRiskCard(BaseModel):
+    items: list[DashboardDealRiskItem] = Field(default_factory=list)
+
+
+class DashboardQuotaCard(BaseModel):
+    target: Optional[Decimal] = None
+    achieved: Decimal
+    expected: Optional[Decimal] = None
+    percentage: Optional[Decimal] = None
+    status: str
+
+
+class RedesignedDashboardResponse(BaseModel):
+    open_deals: DashboardOpenDealsCard = Field(alias="openDeals")
+    untouched_deals: DashboardUntouchedDealsCard = Field(alias="untouchedDeals")
+    my_leads: DashboardLeadsCard = Field(alias="myLeads")
+    tasks: DashboardTasksCard
+    meetings: DashboardMeetingsCard
+    priority_queue: DashboardPriorityQueueCard = Field(alias="priorityQueue")
+    deals_at_risk: DashboardDealsAtRiskCard = Field(alias="dealsAtRisk")
+    quota: DashboardQuotaCard
+    last_updated: datetime = Field(alias="lastUpdated")
+
+    model_config = {"populate_by_name": True}
+
+# -----------------------------------------------------------------------------
 # Admin Dashboard KPI Schemas
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 class AdminOrganizationStats(BaseModel):
     total: int
@@ -214,9 +314,9 @@ class AdminDashboardResponse(BaseModel):
     generated_at: datetime
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Manager Dashboard KPI Schemas
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 class ManagerRevenueStats(BaseModel):
     team_revenue_won: Decimal
@@ -335,9 +435,9 @@ class ManagerDashboardResponse(BaseModel):
     generated_at: datetime
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Sales Representative Dashboard KPI Schemas
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 class RepRevenueStat(BaseModel):
     total: Decimal
@@ -472,3 +572,5 @@ class SalesRepDashboardResponse(BaseModel):
     recent_reports: list[RepRecentReport] = Field(default_factory=list)
     report_templates: list[RepReportTemplate] = Field(default_factory=list)
     generated_at: datetime
+
+

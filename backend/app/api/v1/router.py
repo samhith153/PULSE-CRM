@@ -76,15 +76,11 @@ from app.api.v1.smtp import router as smtp_router
 from app.api.v1.summarization import router as summarization_router
 from app.api.v1.brevo import router as brevo_router
 from app.api.v1.calendar import router as calendar_router
+from app.api.v1.meetings import router as meetings_router
 from app.api.v1.ai_insights import router as ai_insights_router
-<<<<<<< HEAD
 from app.api.v1.notifications import router as notifications_router
-
 from app.api.v1.documents import router as documents_router
 from app.api.v1.assistant import router as assistant_router
-
-=======
->>>>>>> origin/new-ui
 api_router = APIRouter()
 
 api_router.include_router(health_router, prefix="/health", tags=["Health"])
@@ -133,12 +129,12 @@ api_router.include_router(
     tags=["Conversation Intelligence"],
 )
 api_router.include_router(calendar_router, prefix="/calendar", tags=["Calendar"])
+api_router.include_router(meetings_router, prefix="/meetings", tags=["Meetings"])
 api_router.include_router(ai_insights_router, prefix="/ai-insights", tags=["AI Insights"])
 api_router.include_router(roles_router, prefix="/roles", tags=["Roles & Permissions"])
 
-<<<<<<< HEAD
-
 api_router.include_router(documents_router, prefix="/documents", tags=["documents"])
 api_router.include_router(assistant_router, prefix="/assistant", tags=["Assistant"])
-=======
->>>>>>> origin/new-ui
+
+
+
