@@ -122,7 +122,9 @@ export default function PipelineView() {
   const handleDeleteSelectedDeals = async () => {
     if (!window.confirm(`Are you sure you want to delete the ${selectedIds.size} selected deal(s)?`)) return;
     try {
-      await Promise.all(Array.from(selectedIds).map(id => deleteDeal(id)));
+      for (const id of Array.from(selectedIds)) {
+        await deleteDeal(id);
+      }
       setDeals(prev => prev.filter(deal => !selectedIds.has(deal.id)));
       setSelectedIds(new Set());
       toast.success("Selected deals deleted successfully.");

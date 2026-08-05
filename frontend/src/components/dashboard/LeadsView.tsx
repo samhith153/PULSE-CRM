@@ -194,7 +194,9 @@ export default function LeadsView() {
   const handleDeleteSelectedLeads = async () => {
     if (!window.confirm(`Are you sure you want to delete the ${selectedIds.size} selected lead(s)?`)) return;
     try {
-      await Promise.all(Array.from(selectedIds).map(id => apiDeleteLead(String(id))));
+      for (const id of Array.from(selectedIds)) {
+        await apiDeleteLead(String(id));
+      }
       setLeads(prev => prev.filter(lead => !selectedIds.has(lead.id)));
       setSelectedIds(new Set());
       setSelectedLeadId(null);
@@ -229,25 +231,17 @@ export default function LeadsView() {
 
   // Form Fields State
   const [leadForm, setLeadForm] = useState({
-    // Personal Information
-    salutation: '',
-    firstName: '',
-    lastName: '',
-    title: '',
-    // Contact Information
+    name: '',
+    jobTitle: '',
     email: '',
     phone: '',
-    mobile: '',
-    // Company Information
     company: '',
     industry: '',
     location: '',
     numberOfEmployees: '',
-    // Lead Details
     source: '',
-    annualRevenue: '',
-    emailOptOut: false,
-    // Status
+    currentCRM: '',
+    operationalSystem: '',
     status: 'New' as Lead['status'],
     priority: 'Medium' as Lead['priority'],
     owner: 'Sarah Johnson',
@@ -438,6 +432,9 @@ export default function LeadsView() {
     : filteredLeads;
 
   const sortedLeads = React.useMemo(() => {
+    if (isPriorityView) {
+      return displayLeads;
+    }
     return [...displayLeads].sort((a, b) => {
       const ra = a as any;
       const rb = b as any;
@@ -451,7 +448,7 @@ export default function LeadsView() {
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [displayLeads, sortField, sortOrder]);
+  }, [displayLeads, sortField, sortOrder, isPriorityView]);
 
   // Action: Create Lead Submit
   const handleCreateLead = async (e: React.FormEvent) => {
@@ -968,7 +965,7 @@ export default function LeadsView() {
                   <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Priority</label>
                   <select
                     value={leadForm.priority}
-                    onChange={(e) => setLeadForm({ ...leadForm, priority: e.target.value })}
+                    onChange={(e) => setLeadForm({ ...leadForm, priority: e.target.value as any })}
                     className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
                   >
                     <option value="Low">Low</option>
@@ -980,7 +977,7 @@ export default function LeadsView() {
                   <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Status</label>
                   <select
                     value={leadForm.status}
-                    onChange={(e) => setLeadForm({ ...leadForm, status: e.target.value })}
+                    onChange={(e) => setLeadForm({ ...leadForm, status: e.target.value as any })}
                     className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
                   >
                     <option value="New">New</option>

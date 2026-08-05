@@ -101,7 +101,7 @@ function StatTile({ tile, delay = 0 }: { tile: KpiTile; delay?: number }) {
       animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
       whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-5 shadow-card transition-colors duration-200 cursor-pointer"
+      className="flex flex-col gap-[var(--space-2)] rounded-2xl border border-border bg-card p-[var(--space-4)] shadow-card transition-colors duration-200 cursor-pointer"
     >
       <div className="flex items-center justify-between">
         <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary text-brand-purple">
@@ -349,7 +349,7 @@ function DonutChart({
         {segments.map((seg, i) => (
           <div
             key={i}
-            className={`flex items-center justify-between rounded-lg px-2 py-1 transition-colors cursor-pointer ${hovered === i ? 'bg-secondary' : ''}`}
+            className={`flex items-center justify-between rounded-lg py-[var(--space-1)] px-[var(--space-2)] transition-colors cursor-pointer ${hovered === i ? 'bg-secondary' : ''}`}
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
           >
@@ -383,14 +383,14 @@ export default function AdminDashboardView() {
   /* ── Skeleton ── */
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
+      <div className="space-y-[var(--space-5)] animate-pulse">
         <div className="h-8 w-56 rounded-xl bg-secondary" />
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-[var(--space-4)] sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-36 rounded-2xl border border-border bg-card" />
           ))}
         </div>
-        <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
           <div className="h-80 rounded-2xl border border-border bg-card" />
           <div className="h-80 rounded-2xl border border-border bg-card" />
         </div>
@@ -460,7 +460,7 @@ export default function AdminDashboardView() {
   const topCompanies = data.top_companies ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--space-5)]">
 
       {/* Page title */}
       <div>
@@ -473,7 +473,7 @@ export default function AdminDashboardView() {
       </div>
 
       {/* KPI tiles */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-[var(--space-4)] sm:grid-cols-2 lg:grid-cols-4">
         {kpiTiles.map((tile, idx) => (
           <StatTile key={tile.title} tile={tile} delay={idx * 75} />
         ))}
@@ -483,10 +483,10 @@ export default function AdminDashboardView() {
       <div
         ref={chartRef}
         data-visible={chartVisible}
-        className="reveal grid gap-3 lg:grid-cols-[1.4fr_1fr]"
+        className="reveal grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]"
       >
         {/* Revenue over time */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
@@ -504,7 +504,7 @@ export default function AdminDashboardView() {
           <RevenueChart monthly={monthly} visible={chartVisible} />
 
           {/* Summary row */}
-          <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-4 sm:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-[var(--space-3)] border-t border-border pt-[var(--space-4)] sm:grid-cols-4">
             {[
               { label: 'Revenue (yr)',   value: formatINR(s.revenue.this_year) },
               { label: 'Converted leads', value: formatNum(s.leads.converted) },
@@ -520,7 +520,7 @@ export default function AdminDashboardView() {
         </div>
 
         {/* Lead sources donut */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
               Lead sources
@@ -538,7 +538,7 @@ export default function AdminDashboardView() {
       </div>
 
       {/* Top companies table */}
-      <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-semibold tracking-tight text-foreground">Top companies</h2>
           <span className="text-xs font-medium text-brand-purple cursor-pointer hover:underline">
@@ -551,7 +551,7 @@ export default function AdminDashboardView() {
             <thead>
               <tr className="border-b border-border">
                 {['Company', 'Revenue', 'Leads', 'Contacts', ''].map((h) => (
-                  <th key={h} className="pb-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pr-4 last:pr-0">
+                  <th key={h} className="pb-[var(--space-2)] px-[var(--space-3)] text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pr-4 last:pr-0">
                     {h}
                   </th>
                 ))}
@@ -567,7 +567,7 @@ export default function AdminDashboardView() {
               )}
               {topCompanies.map((row, idx) => (
                 <tr key={row.company_id || idx} className="group transition-colors hover:bg-secondary/50">
-                  <td className="py-3 pr-4">
+                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4">
                     <div className="flex items-center gap-2.5">
                       <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-secondary text-brand-purple text-xs font-semibold">
                         {row.name.charAt(0)}
@@ -578,10 +578,10 @@ export default function AdminDashboardView() {
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 pr-4 text-sm font-semibold text-foreground tabular-nums">{formatINR(row.revenue)}</td>
-                  <td className="py-3 pr-4 text-sm text-foreground tabular-nums">{formatNum(row.lead_count)}</td>
-                  <td className="py-3 pr-4 text-sm text-foreground tabular-nums">{formatNum(row.contact_count)}</td>
-                  <td className="py-3 text-right">
+                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm font-semibold text-foreground tabular-nums">{formatINR(row.revenue)}</td>
+                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm text-foreground tabular-nums">{formatNum(row.lead_count)}</td>
+                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm text-foreground tabular-nums">{formatNum(row.contact_count)}</td>
+                  <td className="py-[var(--space-2)] px-[var(--space-3)] text-right">
                     <button className="inline-flex size-7 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-brand-purple hover:text-primary-foreground transition-colors cursor-pointer">
                       <ArrowRight size={13} />
                     </button>

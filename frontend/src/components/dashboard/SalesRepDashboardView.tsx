@@ -209,7 +209,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--space-5)]">
       {/* Page header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -223,12 +223,12 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
       </div>
 
       {/* Grid containing Tasks, Meetings, and Leads */}
-      <div className="grid grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-12 gap-[var(--space-4)] items-start">
         {/* Column 1: Tasks & Meetings */}
-        <div className="col-span-12 lg:col-span-8 space-y-6">
+        <div className="col-span-12 lg:col-span-8 space-y-[var(--space-4)]">
           
           {/* Tasks Section */}
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
             <div className="flex items-center justify-between border-b border-border pb-2">
               <h3 className="font-semibold text-foreground text-sm flex items-center">
                 <CheckCircle2 className="h-4.5 w-4.5 mr-2 text-brand-purple" />
@@ -254,7 +254,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                   .map((task) => (
                     <div
                       key={task.id}
-                      className="flex items-start justify-between p-3 border border-border/60 rounded-xl hover:bg-secondary/30 transition-colors"
+                      className="flex items-start justify-between py-[var(--space-2)] px-[var(--space-3)] border border-border/60 rounded-xl hover:bg-secondary/30 transition-colors"
                     >
                       <div className="flex items-start space-x-3 min-w-0">
                         <button
@@ -306,7 +306,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
           </div>
 
           {/* Meetings Section */}
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
             <div className="border-b border-border pb-2">
               <h3 className="font-semibold text-foreground text-sm flex items-center">
                 <Calendar className="h-4.5 w-4.5 mr-2 text-brand-purple" />
@@ -327,7 +327,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                 {meetings.map((meeting) => (
                   <div
                     key={meeting.id}
-                    className="p-3.5 border border-border/60 rounded-xl hover:shadow-nav transition-all duration-200 bg-secondary/10 flex flex-col justify-between space-y-2.5"
+                    className="py-[var(--space-2)] px-[var(--space-3)] border border-border/60 rounded-xl hover:shadow-nav transition-all duration-200 bg-secondary/10 flex flex-col justify-between space-y-[var(--space-2)]"
                   >
                     <div>
                       <h4 className="text-xs font-bold text-foreground leading-snug">{meeting.title}</h4>
@@ -346,10 +346,10 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
         </div>
 
         {/* Column 2: My Leads & Quick Actions */}
-        <div className="col-span-12 lg:col-span-4 space-y-6">
+        <div className="col-span-12 lg:col-span-4 space-y-[var(--space-4)]">
           
           {/* Quick-add Shortcuts */}
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-3.5">
+          <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
             <h3 className="font-bold text-[10px] uppercase tracking-wider text-muted-foreground/60 border-b border-border pb-1.5">
               Quick Shortcuts
             </h3>
@@ -379,7 +379,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
           </div>
 
           {/* My Leads Section */}
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
             <div className="border-b border-border pb-2">
               <h3 className="font-semibold text-foreground text-sm flex items-center">
                 <Briefcase className="h-4.5 w-4.5 mr-2 text-brand-purple" />
@@ -400,7 +400,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                 {leads.slice(0, 5).map((lead) => (
                   <div
                     key={lead.id}
-                    className="p-3 border border-border/60 hover:bg-secondary/30 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
+                    className="py-[var(--space-2)] px-[var(--space-3)] border border-border/60 hover:bg-secondary/30 rounded-xl flex items-center justify-between cursor-pointer transition-colors"
                     onClick={() => {
                       onTabChange('leads');
                       // Wait a brief moment for component mounting, then trigger selection

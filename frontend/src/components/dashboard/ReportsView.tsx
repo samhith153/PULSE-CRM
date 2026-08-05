@@ -64,7 +64,7 @@ const AustraliaFlag = () => (
 );
 
 // Indian Rupee Formatting Helper with Lakhs/Crores grouping & exact decimals
-const formatRupee = (value: number, decimals = 2) => {
+const formatRupee = (value: number, decimals = 0) => {
   if (value >= 10000000) {
     return `₹${(value / 10000000).toFixed(decimals)} Cr`;
   }

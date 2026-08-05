@@ -49,9 +49,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface DashboardShellProps {
   requiredRole: 'sales_rep' | 'manager' | 'admin';
   defaultTab?: string;
+  activityId?: string;
 }
 
-export default function DashboardShell({ requiredRole, defaultTab = 'home' }: DashboardShellProps) {
+export default function DashboardShell({ requiredRole, defaultTab = 'home', activityId }: DashboardShellProps) {
   const [authorized, setAuthorized] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -233,7 +234,7 @@ export default function DashboardShell({ requiredRole, defaultTab = 'home' }: Da
           ) : activeTab === 'products' ? (
             <ProductsView />
           ) : activeTab === 'activities' ? (
-            <ActivitiesView />
+            <ActivitiesView activityId={activityId} />
           ) : activeTab === 'emails' ? (
             <EmailsView />
           ) : activeTab === 'documents' ? (

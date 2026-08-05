@@ -24,6 +24,15 @@ import {
   List
 } from 'lucide-react';
 
+const formatCompanyRevenue = (val: string | number) => {
+  if (!val) return '—';
+  const cleanStr = String(val).replace(/[^0-9.-]/g, '');
+  if (!cleanStr) return String(val);
+  const num = Math.round(Number(cleanStr));
+  if (isNaN(num)) return String(val);
+  return `₹${num.toLocaleString('en-IN')}`;
+};
+
 interface Company {
   id: number;
   name: string;
@@ -95,7 +104,9 @@ export default function CompaniesView() {
   const handleDeleteSelectedCompanies = async () => {
     if (!window.confirm(`Are you sure you want to delete the ${selectedIds.size} selected company/companies?`)) return;
     try {
-      await Promise.all(Array.from(selectedIds).map(id => deleteCompany(id)));
+      for (const id of Array.from(selectedIds)) {
+        await deleteCompany(id);
+      }
       setCompanies(prev => prev.filter(c => !selectedIds.has(c.id)));
       setSelectedIds(new Set());
       setSelectedId(null);
@@ -323,7 +334,7 @@ export default function CompaniesView() {
                           </td>
                           <td className="py-3.5 px-2 font-bold truncate" title={comp.name}>{comp.name}</td>
                           <td className="py-3.5 px-2 text-muted-foreground truncate" title={comp.industry}>{comp.industry}</td>
-                          <td className="py-3.5 px-2 text-muted-foreground tabular-nums truncate">{comp.revenue || '—'}</td>
+                          <td className="py-3.5 px-2 text-muted-foreground tabular-nums truncate">{formatCompanyRevenue(comp.revenue)}</td>
                           <td className="py-3.5 px-2 text-center tabular-nums">{comp.employees}</td>
                           <td className="py-3.5 px-2 text-center tabular-nums">{comp.openDeals}</td>
                           <td className="py-3.5 px-2 text-muted-foreground truncate" title={comp.owner}>{comp.owner}</td>
@@ -378,7 +389,7 @@ export default function CompaniesView() {
                     >
                       <td className="py-3.5 px-4 font-semibold text-foreground truncate max-w-[160px]">{comp.name}</td>
                       <td className="py-3.5 text-muted-foreground truncate max-w-[120px]">{comp.industry}</td>
-                      <td className="py-3.5 tabular-nums">{comp.revenue || '—'}</td>
+                      <td className="py-3.5 tabular-nums">{formatCompanyRevenue(comp.revenue)}</td>
                       <td className="py-3.5 text-center tabular-nums">{comp.employees}</td>
                       <td className="py-3.5 text-center tabular-nums">{comp.openDeals}</td>
                       <td className="py-3.5 text-right pr-4" onClick={e => e.stopPropagation()}>
@@ -434,7 +445,7 @@ export default function CompaniesView() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Revenue Size</span>
-              <span className="text-muted-foreground tabular-nums">{active.revenue || '—'}</span>
+              <span className="text-muted-foreground tabular-nums">{formatCompanyRevenue(active.revenue)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Employees</span>

@@ -117,12 +117,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
     default:
       return [
         {
-          label: 'Dashboard',
-          items: [
-            { name: 'Dashboard', icon: Home, tab: 'home' },
-          ],
-        },
-        {
           label: 'Productivity',
           items: [
             { name: 'Leads',        icon: Users,      tab: 'leads' },
@@ -131,7 +125,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
             { name: 'Deals',        icon: Layers,     tab: 'deals' },
             { name: 'Activities',   icon: Activity,   tab: 'activities' },
             { name: 'Emails',       icon: Mail,       tab: 'emails' },
-            { name: 'Integrations', icon: Link2,      tab: 'integrations' },
           ],
         },
         {

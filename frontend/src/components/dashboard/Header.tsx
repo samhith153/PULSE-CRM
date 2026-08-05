@@ -227,64 +227,7 @@ export default function Header({
           </span>
         </span>
 
-        {/* Quick Add pill button */}
-        <div className="relative" ref={quickAddRef}>
-          <button
-            onClick={() => setShowQuickAdd(!showQuickAdd)}
-            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 bg-ink text-primary-foreground hover:opacity-90 rounded-full text-xs font-semibold transition-all duration-200 cursor-pointer"
-          >
-            <Plus size={14} strokeWidth={2.5} />
-            <span>Quick Add</span>
-            <ChevronDown size={11} className={`transition-transform duration-200 ${showQuickAdd ? 'rotate-180' : ''}`} />
-          </button>
 
-          <AnimatePresence>
-            {showQuickAdd && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: 8 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 8 }}
-                transition={{ type: "spring", stiffness: 350, damping: 26 }}
-                className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-xl shadow-float overflow-hidden z-50"
-              >
-                <div className="py-1">
-                  <button
-                    type="button"
-                    onClick={() => { setShowQuickAdd(false); onTabChange?.('leads'); }}
-                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium"
-                  >
-                    <UserPlus size={14} className="text-muted-foreground" />
-                    <span>New Lead</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowQuickAdd(false); onTabChange?.('tasks'); }}
-                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium"
-                  >
-                    <CheckSquare size={14} className="text-muted-foreground" />
-                    <span>New Task</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowQuickAdd(false); onTabChange?.('calendar'); }}
-                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium"
-                  >
-                    <Calendar size={14} className="text-muted-foreground" />
-                    <span>Schedule Meeting</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowQuickAdd(false); onNewReportClick(); }}
-                    className="flex items-center gap-2.5 w-full text-left px-4 py-2.5 text-xs text-foreground hover:bg-secondary transition-colors cursor-pointer font-medium border-t border-border mt-1 pt-2.5"
-                  >
-                    <FileText size={14} className="text-muted-foreground" />
-                    <span>New Report</span>
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
 
         {/* Theme toggle */}
         <button

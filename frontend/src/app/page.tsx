@@ -122,14 +122,16 @@ export default function DashboardHome() {
     heatmap: true,
     leaderboard: true,
     productivity: true,
-    rightPanel: true
+    rightPanel: true,
+    quotaPace: true,
+    funnelChart: true,
   });
 
   useEffect(() => {
     const saved = localStorage.getItem('pulse-crm-layout');
     if (saved) {
       try {
-        setLayoutSettings(JSON.parse(saved));
+        setLayoutSettings(prev => ({ ...prev, ...JSON.parse(saved) }));
       } catch (e) {
         console.error('Failed to parse layout settings', e);
       }

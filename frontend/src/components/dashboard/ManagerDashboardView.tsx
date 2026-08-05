@@ -83,7 +83,7 @@ function KpiTile({
       animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
       whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className="flex items-center justify-between gap-4 rounded-2xl border border-border bg-card p-5 shadow-card transition-colors duration-200 cursor-pointer"
+      className="flex items-center justify-between gap-[var(--space-3)] rounded-2xl border border-border bg-card p-[var(--space-4)] shadow-card transition-colors duration-200 cursor-pointer"
     >
       <div className="flex-1 min-w-0 space-y-1.5">
         <div className="flex items-center gap-2">
@@ -251,14 +251,14 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
+      <div className="space-y-[var(--space-5)] animate-pulse">
         <div className="h-8 w-64 rounded-xl bg-secondary" />
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-[var(--space-4)] md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-36 rounded-2xl border border-border bg-card" />
           ))}
         </div>
-        <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
           <div className="h-72 rounded-2xl border border-border bg-card" />
           <div className="h-72 rounded-2xl border border-border bg-card" />
         </div>
@@ -294,7 +294,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
   const maxPct = Math.max(...pipelineStages.map((s) => s.pct), 1);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--space-5)]">
 
       {/* Page title — flat, no card wrapper */}
       <div>
@@ -308,7 +308,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
       </div>
 
       {/* 3 KPI tiles */}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-[var(--space-4)] md:grid-cols-3">
         <KpiTile
           title="Team Revenue Won"
           value={formatINR(revenue.team_revenue_won)}
@@ -341,10 +341,10 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
       </div>
 
       {/* Quota attainment + Pipeline stage breakdown */}
-      <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
 
         {/* Quota attainment bars */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
               <BarChart3 size={15} className="text-brand-purple" />
@@ -406,7 +406,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
         </div>
 
         {/* Pipeline stage breakdown — rounded-full bars */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
               <Layers size={15} className="text-brand-purple" />
@@ -450,7 +450,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
       </div>
 
       {/* Monthly revenue trend */}
-      <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
             <TrendingUp size={15} className="text-brand-purple" />
@@ -471,10 +471,10 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
       </div>
 
       {/* Leaderboard + Deals at risk */}
-      <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
 
         {/* Leaderboard */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
               <Award size={15} className="text-brand-purple" />
@@ -487,7 +487,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
           <div className="space-y-2.5">
             {leaderboards.map((rep) => (
               <div key={rep.user_id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-secondary/50 px-3 py-2.5 hover:bg-secondary transition-colors">
+                className="flex items-center gap-3 rounded-xl border border-border bg-secondary/50 py-[var(--space-2)] px-[var(--space-3)] hover:bg-secondary transition-colors">
                 <span className="text-xs font-semibold text-brand-purple w-4 shrink-0">#{rep.rank}</span>
                 <div className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary border border-border text-[11px] font-semibold text-brand-purple">
                   {rep.full_name.charAt(0)}

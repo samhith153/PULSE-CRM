@@ -88,7 +88,9 @@ export default function ContactsView() {
   const handleDeleteSelectedContacts = async () => {
     if (!window.confirm(`Are you sure you want to delete the ${selectedIds.size} selected contact(s)?`)) return;
     try {
-      await Promise.all(Array.from(selectedIds).map(id => deleteContact(id)));
+      for (const id of Array.from(selectedIds)) {
+        await deleteContact(id);
+      }
       setContacts(prev => prev.filter(c => !selectedIds.has(c.id)));
       setSelectedIds(new Set());
       setSelectedId(null);
