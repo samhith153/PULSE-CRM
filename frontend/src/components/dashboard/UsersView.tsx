@@ -236,7 +236,7 @@ export default function UsersView() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border text-[10px] uppercase font-semibold text-foreground">
+                  <tr className="border-b border-border text-[11px] uppercase font-black tracking-wider text-foreground bg-muted/40">
                     <th className="py-2.5">User</th>
                     <th className="py-2.5">Email</th>
                     <th className="py-2.5">Authorization Role</th>

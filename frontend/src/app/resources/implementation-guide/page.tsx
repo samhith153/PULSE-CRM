@@ -5,7 +5,7 @@ import { PageContainer } from '@/components/shared/PageTemplates';
 import {
   Zap, Target, TrendingUp,
   UserPlus, ClipboardList, Star, CalendarCheck, ArrowRightLeft, BarChart3,
-  Users, User, Building2, Activity, Sparkles, DollarSign,
+  Users, User, Building2, Activity, Sparkles, IndianRupee,
   CheckCircle, Filter, Mail,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -36,7 +36,7 @@ const MODULES = [
   { icon: Building2, title: 'Companies',  desc: 'Organize leads by company accounts.',                  color: '#059669', bg: '#ecfdf5' },
   { icon: Activity,  title: 'Activities', desc: 'Track calls, emails, tasks and meetings.',              color: '#d97706', bg: '#fffbeb' },
   { icon: Sparkles,  title: 'AI Scoring', desc: 'AI scores and ranks leads automatically.',              color: '#9333ea', bg: '#faf5ff' },
-  { icon: DollarSign,title: 'Deals',      desc: "Convert leads and track deals in the pipeline.",        color: '#dc2626', bg: '#fef2f2' },
+  { icon: IndianRupee,title: 'Deals',      desc: "Convert leads and track deals in the pipeline.",        color: '#dc2626', bg: '#fef2f2' },
 ];
 
 /* ─── Pipeline stages for hero illustration ─────── */

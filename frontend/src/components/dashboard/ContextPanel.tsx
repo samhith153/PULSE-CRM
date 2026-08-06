@@ -32,8 +32,10 @@ interface ContextPanelProps {
   openCounts?: {
     tasks: number;
     meetings: number;
+    colors?: string;
     calls: number;
   };
+  onTabChange?: (tab: string) => void;
 }
 
 export default function ContextPanel({
@@ -52,7 +54,8 @@ export default function ContextPanel({
     tasks: 3,
     meetings: 1,
     calls: 2
-  }
+  },
+  onTabChange
 }: ContextPanelProps) {
   const router = useRouter();
 
@@ -64,8 +67,13 @@ export default function ContextPanel({
 
   const handleEmailClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    window.location.href = `mailto:${emailAddress}`;
-    toast.info(`Drafting email to ${emailAddress}...`);
+    if (onTabChange) {
+      onTabChange('emails');
+      toast.info(`Redirecting to emails to compose mail to ${emailAddress}...`);
+    } else {
+      window.location.href = `mailto:${emailAddress}`;
+      toast.info(`Drafting email to ${emailAddress}...`);
+    }
   };
 
   const handleAddDealLink = () => {

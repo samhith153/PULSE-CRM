@@ -11,6 +11,7 @@ import {
 } from '@/utils/api';
 import { useReveal, useCountUp } from '@/hooks/use-reveal';
 import { motion, AnimatePresence } from 'framer-motion';
+import DealsAtRiskCard from './DealsAtRiskCard';
 
 interface ManagerDashboardViewProps { onTabChange?: (tab: string) => void; }
 
@@ -470,6 +471,288 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
         <RevenueChart trend={data.monthly_revenue_trend} />
       </div>
 
+      {/* Forecast Strip */}
+      <div 
+        className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--line,#2A323F)] overflow-hidden select-none"
+        style={{
+          backgroundColor: 'var(--panel, #181D25)',
+          borderRadius: '10px',
+          border: '1px solid var(--line, #2A323F)',
+          borderColor: 'var(--line, #2A323F)',
+        }}
+      >
+        {/* Block 1 */}
+        <div className="p-5 flex flex-col justify-center">
+          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
+            Forecast this month
+          </span>
+          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
+            ₹41.2L / ₹50L
+          </span>
+          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}>
+            82% &middot; confidence band &plusmn;6%
+          </span>
+        </div>
+
+        {/* Block 2 */}
+        <div className="p-5 flex flex-col justify-center" style={{ borderColor: 'var(--line, #2A323F)' }}>
+          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
+            Team win rate
+          </span>
+          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
+            31%
+          </span>
+          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--green, #4FB477)' }}>
+            &uarr; 4pts vs last month
+          </span>
+        </div>
+
+        {/* Block 3 */}
+        <div className="p-5 flex flex-col justify-center" style={{ borderColor: 'var(--line, #2A323F)' }}>
+          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
+            Avg deal velocity
+          </span>
+          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
+            18d
+          </span>
+          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}>
+            &uarr; 2d slower
+          </span>
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-[20px]">
+        
+        {/* Card 1 — Team Quota Pace */}
+        <div 
+          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+          style={{
+            backgroundColor: 'var(--panel, #181D25)',
+            borderRadius: '10px',
+            padding: '20px',
+            border: '1px solid var(--line, #2A323F)',
+          }}
+        >
+          <div>
+            <h2 
+              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
+              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+            >
+              Team Quota Pace
+            </h2>
+            <div className="space-y-4">
+              {[
+                { name: 'Meera', pct: 29, status: 'danger' },
+                { name: 'Rohan', pct: 52, status: 'warning' },
+                { name: 'Deepak', pct: 61, status: 'warning' },
+                { name: 'Priya', pct: 78, status: 'success' },
+                { name: 'Kavya', pct: 85, status: 'success' },
+                { name: 'Aarav', pct: 91, status: 'success' },
+              ].map((rep) => {
+                const repColor = 
+                  rep.status === 'success' ? 'var(--green, #4FB477)' :
+                  rep.status === 'warning' ? 'var(--amber, #E8A33D)' :
+                  'var(--red, #E2604F)';
+                return (
+                  <div key={rep.name} className="flex items-center justify-between gap-4">
+                    {/* Status dot + Name */}
+                    <div className="flex items-center gap-2.5 w-[110px] shrink-0">
+                      <span 
+                        className="size-2 rounded-full shrink-0 animate-pulse" 
+                        style={{ backgroundColor: repColor }}
+                      />
+                      <span 
+                        className="font-bold text-xs"
+                        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
+                      >
+                        {rep.name}
+                      </span>
+                    </div>
+
+                    {/* Progress track & fill */}
+                    <div 
+                      className="flex-1 h-2 rounded-full overflow-hidden relative"
+                      style={{ backgroundColor: 'var(--line, #2A323F)' }}
+                    >
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${rep.pct}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: repColor }}
+                      />
+                    </div>
+
+                    {/* Mono percentage */}
+                    <span 
+                      className="text-xs font-semibold text-right w-10 shrink-0"
+                      style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
+                    >
+                      {rep.pct}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2 — Coaching Signals */}
+        <div 
+          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+          style={{
+            backgroundColor: 'var(--panel, #181D25)',
+            borderRadius: '10px',
+            padding: '20px',
+            border: '1px solid var(--line, #2A323F)',
+          }}
+        >
+          <div>
+            <h2 
+              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
+              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+            >
+              Coaching Signals
+            </h2>
+            <div className="space-y-4">
+              {[
+                { name: 'Meera D.', reason: 'Activity down 40% this week' },
+                { name: 'Rohan M.', reason: '6 overdue follow-ups' },
+                { name: 'Deepak V.', reason: 'Call quality score dropped' },
+              ].map((item) => (
+                <div key={item.name} className="flex flex-col gap-1 border-b border-[var(--line, #2A323F)]/40 pb-3 last:border-b-0 last:pb-0">
+                  <span 
+                    className="text-xs font-bold"
+                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
+                  >
+                    {item.name}
+                  </span>
+                  <span 
+                    className="text-[11px] font-medium"
+                    style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}
+                  >
+                    {item.reason}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3 — Deal Risk Radar */}
+        <div 
+          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+          style={{
+            backgroundColor: 'var(--panel, #181D25)',
+            borderRadius: '10px',
+            padding: '20px',
+            border: '1px solid var(--line, #2A323F)',
+          }}
+        >
+          <div>
+            <h2 
+              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
+              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+            >
+              Deal Risk Radar
+            </h2>
+            <div className="space-y-4">
+              {[
+                { name: 'Orbit Pharma', reason: 'No movement 14d &middot; Meera', value: '₹9.4L' },
+                { name: 'Delta Freight', reason: 'Stuck in negotiation &middot; Priya', value: '₹6.1L' },
+                { name: 'Kavya Traders', reason: 'Champion went silent &middot; Rohan', value: '₹4.8L' },
+              ].map((deal) => (
+                <div key={deal.name} className="flex justify-between items-center gap-4 py-2 border-b border-[var(--line, #2A323F)]/40 last:border-b-0 last:pb-0">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <span 
+                      className="text-xs font-bold text-foreground truncate"
+                      style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
+                    >
+                      {deal.name}
+                    </span>
+                    <span 
+                      className="text-[10px] font-medium truncate"
+                      style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--red, #E2604F)' }}
+                      dangerouslySetInnerHTML={{ __html: deal.reason }}
+                    />
+                  </div>
+                  <span 
+                    className="text-xs font-bold tabular-nums shrink-0"
+                    style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
+                  >
+                    {deal.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4 — Pipeline by Stage */}
+        <div 
+          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+          style={{
+            backgroundColor: 'var(--panel, #181D25)',
+            borderRadius: '10px',
+            padding: '20px',
+            border: '1px solid var(--line, #2A323F)',
+          }}
+        >
+          <div>
+            <h2 
+              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
+              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+            >
+              Pipeline by Stage
+            </h2>
+            <div className="space-y-4">
+              {[
+                { label: 'Prospecting', count: 142, width: 100 },
+                { label: 'Qualified', count: 98, width: 70 },
+                { label: 'Proposal', count: 54, width: 38 },
+                { label: 'Negotiation', count: 26, width: 18 },
+                { label: 'Closed won', count: 13, width: 9, isWon: true },
+              ].map((stage) => {
+                const barColor = stage.isWon ? 'var(--green, #4FB477)' : 'var(--blue, #5B9BD5)';
+                return (
+                  <div key={stage.label} className="space-y-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <span 
+                        className="font-bold"
+                        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+                      >
+                        {stage.label}
+                      </span>
+                      <span 
+                        className="font-semibold tabular-nums"
+                        style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
+                      >
+                        {stage.count}
+                      </span>
+                    </div>
+
+                    <div 
+                      className="h-4 w-full rounded overflow-hidden relative flex items-center"
+                      style={{ backgroundColor: 'var(--line, #2A323F)' }}
+                    >
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${stage.width}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full rounded"
+                        style={{ backgroundColor: barColor }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
       {/* Leaderboard + Deals at risk */}
       <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
 
@@ -519,40 +802,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
         </div>
 
         {/* Deals at risk */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <AlertTriangle size={15} className="text-destructive" />
-              Deals at risk
-            </h2>
-            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive uppercase tracking-wide">
-              Escalated
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            {riskDeals.map((deal) => (
-              <div key={deal.deal_id}
-                className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 hover:bg-destructive/8 transition-colors">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-medium text-foreground">{deal.deal_name}</p>
-                    <p className="text-[10px] text-brand-purple font-medium mt-0.5">{deal.company ?? '—'}</p>
-                  </div>
-                  <span className="shrink-0 text-xs font-semibold text-destructive tabular-nums">{formatINR(deal.deal_value)}</span>
-                </div>
-                <div className="mt-2.5 flex items-center justify-between border-t border-destructive/15 pt-2 text-[10px]">
-                  <span className="text-muted-foreground">{deal.owner_name ?? 'Unassigned'}</span>
-                  <span className="rounded bg-destructive/15 px-1.5 py-0.5 font-semibold text-destructive uppercase tracking-wide">
-                    {deal.risk_reason}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {riskDeals.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">No deals currently at risk.</p>
-            )}
-          </div>
-        </div>
+        <DealsAtRiskCard deals={riskDeals} />
       </div>
 
       {/* Alerts */}

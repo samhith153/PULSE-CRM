@@ -83,7 +83,7 @@ export function HeroDashboard() {
       <div className="mt-3 grid gap-3 lg:grid-cols-[1.4fr_1fr]">
         <div className="rounded-2xl border border-primary-foreground/12 bg-primary-foreground/8 p-4">
           <p className="text-xs text-primary-foreground/70">Pipeline value</p>
-          <p className="text-2xl font-semibold text-primary-foreground">$278,600</p>
+          <p className="text-2xl font-semibold text-primary-foreground">₹2,78,600</p>
           <p className="text-[11px] text-primary-foreground/55">Total pipeline value</p>
           <svg
             viewBox="0 0 100 90"

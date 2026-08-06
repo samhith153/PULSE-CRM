@@ -3,7 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { PageContainer } from '@/components/shared/PageTemplates';
 import {
-  Code2, Users, User, DollarSign,
+  Code2, Users, User, IndianRupee,
   CalendarCheck, Sparkles, Building2, Copy, Check,
   Activity,
 } from 'lucide-react';
@@ -35,7 +35,7 @@ const FEATURES = [
     bg: '#f5f3ff',
   },
   {
-    icon: DollarSign,
+    icon: IndianRupee,
     title: 'Deals',
     desc: 'Track sales opportunities.',
     color: '#7c3aed',

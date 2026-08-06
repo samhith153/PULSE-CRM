@@ -86,10 +86,12 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
       const hStart = heights[i];
       const hEnd = heights[i + 1];
 
-      const yTopStart = 120 - hStart / 2;
-      const yBottomStart = 120 + hStart / 2;
-      const yTopEnd = 120 - hEnd / 2;
-      const yBottomEnd = 120 + hEnd / 2;
+      // Center vertically in 280-tall viewBox (leave 40px top for counts, 40px bottom for labels)
+      const centerY = 140;
+      const yTopStart = centerY - hStart / 2;
+      const yBottomStart = centerY + hStart / 2;
+      const yTopEnd = centerY - hEnd / 2;
+      const yBottomEnd = centerY + hEnd / 2;
 
       // Cubic Bezier spline curves for S-curve wave-like taper
       const d = `
@@ -102,6 +104,7 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
       return d.trim();
     });
   }, [funnelStages]);
+
 
   // Stylings for each stage
   const stageStyles = [
@@ -141,27 +144,32 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-nav transition-all duration-300 w-full relative">
-      <div className="flex items-center justify-between mb-[var(--space-4)] border-b border-border pb-[var(--space-2)]">
-        <div className="flex items-center space-x-2">
-          <div className="h-7 w-7 rounded-lg bg-brand-purple/10 flex items-center justify-center text-brand-purple">
-            <Layers size={15} />
+    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 w-full relative overflow-hidden group">
+      {/* Background ambient radial aura pulse */}
+      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-border/60 relative">
+        <div className="flex items-center space-x-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+            <Layers size={18} />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-foreground font-sans">Pipeline Funnel Analysis</h4>
-            <p className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider mt-0.5 font-sans">Conversion and Drop-offs</p>
+            <h4 className="text-sm font-extrabold text-foreground tracking-tight">Pipeline Funnel Analysis</h4>
+            <p className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider mt-0.5">Conversion & Drop-offs</p>
           </div>
         </div>
-        <div className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1 cursor-help select-none">
+        <div className="text-[10px] text-muted-foreground font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border border-border/40 cursor-help select-none">
           <HelpCircle size={12} />
-          <span>Conversion relative to top</span>
+          <span>Top Relative Conversion</span>
         </div>
       </div>
 
-      <div className="relative w-full overflow-hidden select-none">
+      <div className="relative w-full select-none">
         <svg 
-          viewBox="0 0 1000 240" 
-          className="w-full h-auto overflow-visible cursor-pointer"
+          viewBox="0 0 1000 280" 
+          className="w-full h-auto cursor-pointer"
+          style={{ overflow: 'visible' }}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoveredIndex(null)}
         >
@@ -185,7 +193,7 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                     filter: isHovered 
                       ? `drop-shadow(0px 8px 16px ${style.glowColor})`
                       : 'none',
-                    transformOrigin: `${idx * 200 + 100}px 120px`
+                    transformOrigin: `${idx * 200 + 100}px 140px`
                   }}
                   animate={{
                     scale: isHovered ? 1.025 : 1,
@@ -202,11 +210,16 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                 {/* Count value text (Top) */}
                 <motion.text
                   x={idx * 200 + 100}
-                  y={32}
+                  y={22}
                   textAnchor="middle"
-                  className="text-sm font-black text-foreground font-sans fill-foreground select-none tabular-nums"
-                  initial={{ opacity: 0, y: 40 }}
-                  whileInView={{ opacity: 1, y: 32 }}
+                  dominantBaseline="middle"
+                  fontSize="14"
+                  fontWeight="800"
+                  fontFamily="sans-serif"
+                  fill="currentColor"
+                  className="fill-foreground select-none tabular-nums"
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.15 + 0.3, duration: 0.4 }}
                 >
@@ -216,11 +229,16 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                 {/* Stage label text (Bottom) */}
                 <motion.text
                   x={idx * 200 + 100}
-                  y={215}
+                  y={258}
                   textAnchor="middle"
-                  className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider font-sans fill-muted-foreground select-none"
-                  initial={{ opacity: 0, y: 200 }}
-                  whileInView={{ opacity: 1, y: 215 }}
+                  dominantBaseline="middle"
+                  fontSize="9"
+                  fontWeight="700"
+                  fontFamily="sans-serif"
+                  className="fill-muted-foreground select-none"
+                  style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                  initial={{ opacity: 0 }}
+                  whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.15 + 0.3, duration: 0.4 }}
                 >
@@ -231,10 +249,12 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
           })}
         </svg>
 
-        {/* Floating pill percentage badges */}
-        <div className="absolute inset-0 pointer-events-none">
+        {/* Floating pill percentage badges — positioned in SVG coordinate space mapped to % */}
+        <div className="absolute pointer-events-none" style={{ inset: 0 }}>
           {funnelStages.map((stage, idx) => {
-            const leftPercent = idx * 20 + 10; // Center of segment
+            const leftPercent = idx * 20 + 10;
+            // Segments centered at y=140 in a 280-tall viewBox → 50% vertically
+            const topPercent = 50;
             const style = stageStyles[idx];
             return (
               <div 
@@ -242,7 +262,7 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                 className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
                 style={{ 
                   left: `${leftPercent}%`, 
-                  top: '50%'
+                  top: `${topPercent}%`
                 }}
               >
                 <motion.span 

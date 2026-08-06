@@ -1290,3 +1290,13 @@ a:hover { color: var(--accent-hover); }
   background-color: var(--accent-muted) !important;
   color: var(--accent-color) !important;
 }
+
+@keyframes shimmerSweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+

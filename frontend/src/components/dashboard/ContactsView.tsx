@@ -349,7 +349,7 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
             <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card custom-scrollbar">
               <table className="w-full border-collapse text-left table-fixed">
                 <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
-                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
+                  <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
                     <th className="py-3 px-4 w-[5%] text-left">
                       <input 
                         type="checkbox" 
@@ -433,7 +433,7 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
             <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card">
               <table className="w-full border-collapse text-left">
                 <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
-                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
+                  <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
                     <th className="py-3 px-4 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>Contact Name</th>
                     <th className="py-3 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('company')}>Company</th>
                     <th className="py-3 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('designation')}>Designation</th>

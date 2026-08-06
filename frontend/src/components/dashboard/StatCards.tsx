@@ -149,41 +149,48 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
       ref={ref as React.RefObject<HTMLDivElement>}
       initial={{ opacity: 0, y: 20 }}
       animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-      whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 md:p-6 shadow-card transition-colors duration-200 cursor-pointer"
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
+      className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group cursor-pointer flex flex-col justify-between"
     >
+      {/* Background ambient radial aura pulse */}
+      <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-primary/5 blur-2xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+
       {/* Row 1 — Icon + Label */}
-      <div className="flex items-center gap-2">
-        <stat.icon size={16} strokeWidth={1.5} className="text-muted-foreground/75" />
-        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 leading-none">
-          {stat.title}
-        </p>
-      </div>
+      <div className="flex items-center justify-between pb-2 border-b border-border/40">
+        <div className="flex items-center gap-2.5">
+          <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+            <stat.icon size={16} strokeWidth={2} />
+          </div>
+          <p className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground leading-none">
+            {stat.title}
+          </p>
+        </div>
 
-      {/* Row 2 — Animated value */}
-      <p className="stat-value text-2xl sm:text-3xl lg:text-2xl xl:text-3xl font-bold leading-none text-foreground tracking-tight mt-1.5 tabular-nums truncate" title={displayValue}>
-        {displayValue}
-      </p>
-
-      {/* Row 3 — Premium Trend pill badge & aligned label */}
-      <div className={`mt-1 flex items-center justify-between transition-all duration-500 ease-out transform ${
-        showDelta ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1'
-      }`}>
+        {/* Trend pill badge */}
         <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
           stat.isPositive 
-            ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/15' 
-            : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/15'
+            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
         }`}>
           <Delta size={9} className="shrink-0" strokeWidth={3} />
           <span>{stat.change}</span>
         </span>
-        <span className="text-[10px] font-bold text-muted-foreground/50">vs last week</span>
       </div>
 
-      {/* Row 4 — Sparkline */}
-      <div className="mt-3.5 pt-1 border-t border-border/20">
-        <Spark points={stat.points} positive={stat.isPositive} />
+      {/* Row 2 — Main Value */}
+      <div className="my-2">
+        <p className="text-2xl sm:text-3xl font-black leading-none text-foreground tracking-tight tabular-nums truncate" title={displayValue}>
+          {displayValue}
+        </p>
+      </div>
+
+      {/* Row 3 — Sparkline */}
+      <div className="pt-2 border-t border-border/30 flex items-center justify-between gap-2">
+        <div className="flex-1">
+          <Spark points={stat.points} positive={stat.isPositive} />
+        </div>
+        <span className="text-[9px] font-bold text-muted-foreground/60 shrink-0">vs last week</span>
       </div>
     </motion.div>
   );
