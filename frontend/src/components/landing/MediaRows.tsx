@@ -8,7 +8,7 @@ type Row = {
   eyebrow: string;
   title: string;
   desc: string;
-  image: string;
+  image: any;
   alt: string;
   reversed?: boolean;
 };
@@ -62,7 +62,7 @@ function MediaRow({ row }: { row: Row }) {
         style={{ transitionDelay: "120ms" }}
       >
         <img
-          src={row.image}
+          src={typeof row.image === "object" ? row.image.src : row.image}
           alt={row.alt}
           loading="lazy"
           width={1200}

@@ -93,6 +93,22 @@ export default function CalendarView() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    const handleOpen = () => {
+      setForm({
+        title: '',
+        type: 'meeting',
+        date: new Date().toISOString().slice(0, 10),
+        time: '10:00 AM',
+        attendees: '',
+        details: '',
+      });
+      setIsAddOpen(true);
+    };
+    window.addEventListener('pulse-open-create-calendar-event-modal', handleOpen);
+    return () => window.removeEventListener('pulse-open-create-calendar-event-modal', handleOpen);
+  }, []);
+
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
     const newEvent: EventItem = {

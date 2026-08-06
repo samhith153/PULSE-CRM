@@ -24,8 +24,7 @@ interface HeaderProps {
   onTabChange?: (tab: string) => void;
   onOpenCommandPalette?: () => void;
   onSignOut?: () => void;
-  userRole: 'sales_rep' | 'manager' | 'admin';
-  currentUser?: { full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null;
+  userRole: 'representative' | 'manager' | 'admin';
 }
 
 export default function Header({ 
@@ -35,8 +34,7 @@ export default function Header({
   onTabChange, 
   onOpenCommandPalette, 
   onSignOut,
-  userRole,
-  currentUser
+  userRole
 }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -129,11 +127,6 @@ export default function Header({
           avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
         };
     }
-    return {
-      name: userRole === 'admin' ? 'Admin' : userRole === 'manager' ? 'Manager' : 'Sales Rep',
-      email: '',
-      avatar: null,
-    };
   };
 
   const profile = getUserProfile();
@@ -263,22 +256,6 @@ export default function Header({
             className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-border transition-all cursor-pointer overflow-hidden"
             aria-label="Profile menu"
           >
-<<<<<<< HEAD
-            <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden border border-brand-border-purple/20 flex items-center justify-center">
-              {profile.avatar ? (
-                <Image 
-                  src={profile.avatar} 
-                  alt={`${profile.name} Avatar`} 
-                  width={28} height={28}
-                  className="h-full w-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                <User className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
-              )}
-            </div>
-            <span className="text-xs font-bold text-brand-text hidden md:inline-block">{profile.name}</span>
-=======
             <Image
               src={profile.avatar}
               alt={`${profile.name} avatar`}
@@ -286,7 +263,6 @@ export default function Header({
               className="h-full w-full object-cover"
               unoptimized
             />
->>>>>>> origin/new-ui
           </button>
 
           {showProfileMenu && (

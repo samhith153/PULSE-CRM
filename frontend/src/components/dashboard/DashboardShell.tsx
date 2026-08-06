@@ -1,6 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useDashboardLayout } from '@/components/dashboard/DashboardLayoutContext';
+import QuotaPaceCard from '@/components/dashboard/QuotaPaceCard';
+import FunnelChartCard from '@/components/dashboard/FunnelChartCard';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
 import StatCards from '@/components/dashboard/StatCards';
@@ -31,23 +34,30 @@ import ManagerDashboardView from '@/components/dashboard/ManagerDashboardView';
 import ForecastView from '@/components/dashboard/ForecastView';
 import TeamPerformanceView from '@/components/dashboard/TeamPerformanceView';
 import AdminDashboardView from '@/components/dashboard/AdminDashboardView';
+import SalesRepDashboardView from '@/components/dashboard/SalesRepDashboardView';
 import UsersView from '@/components/dashboard/UsersView';
 import RolesPermissionsView from '@/components/dashboard/RolesPermissionsView';
 import IntegrationsView from '@/components/dashboard/IntegrationsView';
 import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
+import HomeView from '@/components/dashboard/HomeView';
 import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
 import { clearToken, setToken } from '@/utils/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useDashboardOverview } from '@/hooks/use-dashboard';
+import { useCrmStream } from '@/hooks/use-crm-stream';
 
 interface DashboardShellProps {
   requiredRole: 'sales_rep' | 'manager' | 'admin';
+  defaultTab?: string;
+  activityId?: string;
 }
 
-export default function DashboardShell({ requiredRole }: DashboardShellProps) {
+export default function DashboardShell({ requiredRole, defaultTab = 'home', activityId }: DashboardShellProps) {
   const [authorized, setAuthorized] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [dashboardSubTab, setDashboardSubTab] = useState('overview');
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -57,16 +67,34 @@ export default function DashboardShell({ requiredRole }: DashboardShellProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
 
+  // ── Unified dashboard data hook (GET /api/v1/dashboard/me) ──────────────
+  // Returns null gracefully when the backend endpoint is not yet deployed.
+  // Individual widgets continue to use their own API calls as fallback.
+  const { data: dashboardData, refetch: refetchDashboard } = useDashboardOverview();
+
+  // ── Real-time SSE stream — invalidates dashboardData on AI events ────────
+  useCrmStream({
+    enabled: authorized,
+    onInvalidate: refetchDashboard,
+  });
+
+  const [isFabOpen, setIsFabOpen] = useState(false);
+  const fabRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (fabRef.current && !fabRef.current.contains(event.target as Node)) {
+        setIsFabOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+
   // Layout Customization States
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
-  const [layoutSettings, setLayoutSettings] = useState({
-    statCards: true,
-    charts: true,
-    heatmap: true,
-    leaderboard: true,
-    productivity: true,
-    rightPanel: true
-  });
+  const { settings: layoutSettings, toggleSetting, resetLayout } = useDashboardLayout();
 
   // Auth & Role Protection Guard
   useEffect(() => {
@@ -110,21 +138,11 @@ export default function DashboardShell({ requiredRole }: DashboardShellProps) {
     setAuthorized(true);
   }, [requiredRole]);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('pulse-crm-layout');
-    if (saved) {
-      try {
-        setLayoutSettings(JSON.parse(saved));
-      } catch (e) {
-        console.error('Failed to parse layout settings', e);
-      }
-    }
-  }, []);
+// The DashboardLayoutContext now handles persistence.
+// No localStorage sync needed here.
 
   const handleToggleLayoutSetting = (key: keyof typeof layoutSettings) => {
-    const updated = { ...layoutSettings, [key]: !layoutSettings[key] };
-    setLayoutSettings(updated);
-    localStorage.setItem('pulse-crm-layout', JSON.stringify(updated));
+    toggleSetting(key);
   };
 
   // Global listener for Ctrl+K
@@ -183,14 +201,14 @@ export default function DashboardShell({ requiredRole }: DashboardShellProps) {
 
   if (!authorized) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-surface-warm">
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex bg-surface-warm h-screen overflow-hidden font-sans antialiased">
+    <div className="flex bg-background h-screen overflow-hidden font-sans antialiased">
       {/* Sidebar navigation */}
       <Sidebar 
         activeTab={activeTab} 
@@ -216,7 +234,15 @@ export default function DashboardShell({ requiredRole }: DashboardShellProps) {
 
         {/* Dashboard inner scroll view */}
         <main className="flex-1 overflow-y-auto px-4 py-8 md:px-6 space-y-6">
-          {activeTab === 'leads' ? (
+          {activeTab === 'home' ? (
+            requiredRole === 'manager' ? (
+              <ManagerDashboardView onTabChange={setActiveTab} />
+            ) : requiredRole === 'admin' ? (
+              <AdminDashboardView />
+            ) : (
+              <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
+            )
+          ) : activeTab === 'leads' ? (
             <LeadsView />
           ) : activeTab === 'contacts' ? (
             <ContactsView />
@@ -227,7 +253,7 @@ export default function DashboardShell({ requiredRole }: DashboardShellProps) {
           ) : activeTab === 'products' ? (
             <ProductsView />
           ) : activeTab === 'activities' ? (
-            <ActivitiesView />
+            <ActivitiesView activityId={activityId} onTabChange={setActiveTab} />
           ) : activeTab === 'emails' ? (
             <EmailsView />
           ) : activeTab === 'documents' ? (
@@ -266,6 +292,8 @@ export default function DashboardShell({ requiredRole }: DashboardShellProps) {
             <ManagerDashboardView onTabChange={setActiveTab} />
           ) : activeTab === 'dashboard' && requiredRole === 'admin' ? (
             <AdminDashboardView />
+          ) : activeTab === 'dashboard' ? (
+            <SalesRepDashboardView onTabChange={setActiveTab} />
           ) : (
             <>
               {/* Page heading */}
@@ -293,13 +321,17 @@ export default function DashboardShell({ requiredRole }: DashboardShellProps) {
                 </div>
               </div>
 
-              {/* KPI Stat Cards */}
-              {layoutSettings.statCards && (
-                <StatCards timeFilter={dashboardSubTab} loading={isLoading} />
-              )}
+                {/* KPI Stat Cards */}
+                {layoutSettings.statCards && (
+                  <StatCards timeFilter={dashboardSubTab} loading={isLoading} />
+                )}
 
-              {/* Stacked Dashboard Row Layout */}
-              <div className="space-y-6">
+                {/* New Quota Pace and Funnel Chart cards */}
+                {layoutSettings.quotaPace && <QuotaPaceCard />}
+                {layoutSettings.funnelChart && <FunnelChartCard />}
+
+                {/* Stacked Dashboard Row Layout */}
+                <div className="space-y-6">
                 
                 {/* Charts */}
                 {layoutSettings.charts && (
@@ -449,6 +481,63 @@ export default function DashboardShell({ requiredRole }: DashboardShellProps) {
         setActiveTab={setActiveTab}
         onNewReportClick={() => setIsReportModalOpen(true)}
       />
+
+      {/* Floating Quick Actions FAB */}
+      <div className="fixed bottom-6 right-22 z-50 flex flex-col items-end" ref={fabRef}>
+        <AnimatePresence>
+          {isFabOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 12, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className="mb-3 bg-popover border border-border shadow-float rounded-2xl p-2 w-48 flex flex-col gap-0.5"
+            >
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-3 py-1.5 border-b border-border/60 mb-1 select-none">Quick Actions</p>
+              
+              <button
+                onClick={() => { setIsFabOpen(false); setActiveTab('leads'); }}
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+              >
+                <Plus size={14} className="text-brand-blue" />
+                <span>New Lead</span>
+              </button>
+              
+              <button
+                onClick={() => { setIsFabOpen(false); setActiveTab('tasks'); }}
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+              >
+                <Plus size={14} className="text-brand-purple" />
+                <span>New Task</span>
+              </button>
+
+              <button
+                onClick={() => { setIsFabOpen(false); setActiveTab('calendar'); }}
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+              >
+                <Plus size={14} className="text-emerald-500" />
+                <span>New Meeting</span>
+              </button>
+
+              <button
+                onClick={() => { setIsFabOpen(false); alert('New Invoice action triggered: Invoice layout will open shortly.'); }}
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+              >
+                <Plus size={14} className="text-amber-500" />
+                <span>New Invoice</span>
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <button
+          onClick={() => setIsFabOpen(!isFabOpen)}
+          className="h-14 w-14 rounded-full bg-ink text-primary-foreground border border-border shadow-float flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group"
+          aria-label="Quick Actions"
+        >
+          <Plus size={24} className={`transition-transform duration-300 ${isFabOpen ? 'rotate-45' : ''}`} />
+        </button>
+      </div>
 
       <AICopilotChat />
 

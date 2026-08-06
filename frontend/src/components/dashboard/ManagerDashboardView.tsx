@@ -9,7 +9,9 @@ import {
 import {
   getManagerDashboard, asNumber, formatINR, formatPct, ManagerDashboardData,
 } from '@/utils/api';
-import { useReveal } from '@/hooks/use-reveal';
+import { useReveal, useCountUp } from '@/hooks/use-reveal';
+import { motion, AnimatePresence } from 'framer-motion';
+import DealsAtRiskCard from './DealsAtRiskCard';
 
 interface ManagerDashboardViewProps { onTabChange?: (tab: string) => void; }
 
@@ -23,38 +25,82 @@ const STAGE_COLORS = [
   'bg-muted-foreground/40',
 ];
 
+/* ── Radial progress ring ───────────────────────────────────────────── */
+function RadialProgressRing({ progress, size = 50, strokeWidth = 4.5 }: { progress: number; size?: number; strokeWidth?: number }) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const strokeDashoffset = circumference - (Math.min(progress, 100) / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="transform -rotate-90">
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--secondary)"
+          strokeWidth={strokeWidth}
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="var(--brand-purple)"
+          strokeWidth={strokeWidth}
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          strokeLinecap="round"
+        />
+      </svg>
+      <span className="absolute text-[10px] font-bold text-foreground tabular-nums">
+        {Math.round(progress)}%
+      </span>
+    </div>
+  );
+}
+
 /* ── KPI summary tile ────────────────────────────────────────────────── */
 function KpiTile({
-  title, value, sub, progress, badge, delay = 0,
+  title, value, sub, progress, badge, delay = 0, targetValue, prefix = ''
 }: {
   title: string; value: string; sub: string;
   progress: number; badge?: string; delay?: number;
+  targetValue: number; prefix?: string;
 }) {
-  const { ref, visible } = useReveal<HTMLDivElement>();
+  const { ref, value: animatedVal, visible } = useCountUp(targetValue, 1000);
+
+  const displayVal = targetValue === 0 
+    ? value 
+    : `${prefix}${animatedVal.toLocaleString()}`;
+
   return (
-    <div
-      ref={ref} data-visible={visible}
-      style={{ transitionDelay: `${delay}ms` }}
-      className="reveal flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-nav"
+    <motion.div
+      ref={ref as React.RefObject<HTMLDivElement>}
+      initial={{ opacity: 0, y: 15 }}
+      animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
+      whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
+      className="flex items-center justify-between gap-[var(--space-3)] rounded-2xl border border-border bg-card p-[var(--space-4)] shadow-card transition-colors duration-200 cursor-pointer"
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{title}</p>
-        {badge && (
-          <span className="shrink-0 rounded-full bg-brand-purple/10 px-2 py-0.5 text-[10px] font-semibold text-brand-purple">
-            {badge}
-          </span>
-        )}
+      <div className="flex-1 min-w-0 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{title}</p>
+          {badge && (
+            <span className="shrink-0 rounded-full bg-brand-purple/10 px-2 py-0.5 text-[10px] font-semibold text-brand-purple">
+              {badge}
+            </span>
+          )}
+        </div>
+        <p className="text-2xl font-semibold text-foreground tabular-nums leading-none">{displayVal}</p>
+        <p className="text-xs text-muted-foreground leading-snug">{sub}</p>
+        <p className="text-[10px] text-muted-foreground/60 font-semibold">{Math.round(progress)}% Target Achieved</p>
       </div>
-      <p className="text-2xl font-semibold text-foreground tabular-nums leading-none">{value}</p>
-      <p className="text-xs text-muted-foreground leading-snug">{sub}</p>
-      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-        <div
-          className="h-full rounded-full bg-brand-purple transition-[width] duration-700 ease-out"
-          style={{ width: visible ? `${Math.min(progress, 100)}%` : '0%' }}
-        />
-      </div>
-      <p className="text-[10px] text-muted-foreground tabular-nums">{Math.round(progress)}% complete</p>
-    </div>
+      <RadialProgressRing progress={progress} size={54} strokeWidth={4.5} />
+    </motion.div>
   );
 }
 
@@ -75,28 +121,80 @@ function RevenueChart({ trend }: { trend: ManagerDashboardData['monthly_revenue_
   const actualCoords = toCoords(actuals);
   const targetCoords = toCoords(targets);
 
-  const linePath = (coords: { x: number; y: number }[]) =>
-    coords.map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(1)},${c.y.toFixed(1)}`).join(' ');
+  const curvePath = (coords: { x: number; y: number }[]) => {
+    if (coords.length === 0) return '';
+    let path = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[i];
+      const p1 = coords[i + 1];
+      const cpX1 = p0.x + (p1.x - p0.x) / 3;
+      const cpY1 = p0.y;
+      const cpX2 = p0.x + 2 * (p1.x - p0.x) / 3;
+      const cpY2 = p1.y;
+      path += ` C ${cpX1.toFixed(1)} ${cpY1.toFixed(1)}, ${cpX2.toFixed(1)} ${cpY2.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+    }
+    return path;
+  };
+
+  const actualPathStr = curvePath(actualCoords);
+  const actualAreaStr = `${actualPathStr} L 100 90 L 0 90 Z`;
+  const targetPathStr = curvePath(targetCoords);
 
   return (
-    <div ref={ref} data-visible={visible} className="reveal mt-4">
+    <div ref={ref as React.RefObject<HTMLDivElement>} className="reveal mt-4 relative">
       <svg viewBox="0 0 100 90" preserveAspectRatio="none" className="h-40 w-full overflow-visible" aria-hidden>
+        <defs>
+          <linearGradient id="managerRevGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--brand-purple)" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="var(--brand-purple)" stopOpacity="0.0" />
+          </linearGradient>
+        </defs>
+
         {[0, 22, 44, 66, 88].map((y) => (
           <line key={y} x1="0" x2="100" y1={y} y2={y}
-            stroke="currentColor" strokeWidth="1" vectorEffect="non-scaling-stroke" className="text-border" />
+            stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" strokeOpacity={0.4} vectorEffect="non-scaling-stroke" className="text-border" />
         ))}
-        {/* Target dashed */}
-        <path d={linePath(targetCoords)} fill="none" stroke="currentColor" strokeWidth="1.5"
-          strokeDasharray="3 2" vectorEffect="non-scaling-stroke" className="text-muted-foreground/40" />
-        {/* Actual area + line */}
-        <path d={`${linePath(actualCoords)} L100,90 L0,90 Z`}
-          fill="var(--brand-purple)" fillOpacity="0.10" stroke="none" />
-        <path d={linePath(actualCoords)} fill="none" stroke="var(--brand-purple)"
-          strokeWidth="2" vectorEffect="non-scaling-stroke" />
+
+        {/* Target dashed line */}
+        <motion.path 
+          d={targetPathStr} 
+          fill="none" 
+          stroke="var(--muted-foreground)" 
+          strokeWidth="1.5"
+          strokeDasharray="3 3"
+          strokeOpacity={0.5} 
+          vectorEffect="non-scaling-stroke"
+          initial={{ pathLength: 0 }}
+          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
+          transition={{ duration: 1 }}
+        />
+
+        {/* Actual area */}
+        <motion.path 
+          d={actualAreaStr}
+          fill="url(#managerRevGrad)" 
+          initial={{ opacity: 0 }}
+          animate={visible ? { opacity: 1 } : { opacity: 0 }}
+          transition={{ duration: 0.8 }}
+        />
+
+        {/* Actual line */}
+        <motion.path 
+          d={actualPathStr} 
+          fill="none" 
+          stroke="var(--brand-purple)"
+          strokeWidth="2.5" 
+          strokeLinecap="round"
+          vectorEffect="non-scaling-stroke"
+          initial={{ pathLength: 0 }}
+          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
+          transition={{ duration: 1.2, ease: "easeInOut" }}
+        />
+
         {actualCoords.map((c, i) => (
           <g key={i}>
             <circle cx={c.x.toFixed(1)} cy={c.y.toFixed(1)}
-              r={hovered === i ? '2.5' : '1.6'} fill="var(--brand-cyan)"
+              r={hovered === i ? '2.5' : '1.8'} fill="var(--brand-cyan)" stroke="var(--background)" strokeWidth="1.5"
               vectorEffect="non-scaling-stroke" className="transition-all duration-150" />
             <rect x={`${c.x - 4}`} y="0" width="8" height="90"
               fill="transparent" className="cursor-pointer"
@@ -104,9 +202,36 @@ function RevenueChart({ trend }: { trend: ManagerDashboardData['monthly_revenue_
           </g>
         ))}
       </svg>
+
       <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
         {trend.map((m) => <span key={m.month}>{m.month}</span>)}
       </div>
+
+      {/* Hover tooltip */}
+      <AnimatePresence>
+        {hovered !== null && (
+          <motion.div 
+            initial={{ opacity: 0, y: 8, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="absolute top-2 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-float p-3 text-xs flex gap-4 z-20"
+          >
+            <div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground">Month</p>
+              <p className="font-semibold text-foreground mt-0.5">{trend[hovered].month}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-brand-purple">Actual</p>
+              <p className="font-semibold text-foreground mt-0.5">{formatINR(asNumber(trend[hovered].revenue))}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground/60">Target</p>
+              <p className="font-semibold text-foreground mt-0.5">{formatINR(asNumber(trend[hovered].target))}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -127,14 +252,14 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse">
+      <div className="space-y-[var(--space-5)] animate-pulse">
         <div className="h-8 w-64 rounded-xl bg-secondary" />
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-[var(--space-4)] md:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-36 rounded-2xl border border-border bg-card" />
           ))}
         </div>
-        <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+        <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
           <div className="h-72 rounded-2xl border border-border bg-card" />
           <div className="h-72 rounded-2xl border border-border bg-card" />
         </div>
@@ -170,7 +295,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
   const maxPct = Math.max(...pipelineStages.map((s) => s.pct), 1);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[var(--space-5)]">
 
       {/* Page title — flat, no card wrapper */}
       <div>
@@ -184,13 +309,15 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
       </div>
 
       {/* 3 KPI tiles */}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-[var(--space-4)] md:grid-cols-3">
         <KpiTile
           title="Team Revenue Won"
           value={formatINR(revenue.team_revenue_won)}
           sub={`Target ${formatINR(revenue.team_target)}`}
           progress={asNumber(revenue.achievement_pct)}
           badge={formatPct(revenue.monthly_growth_pct)}
+          targetValue={asNumber(revenue.team_revenue_won)}
+          prefix="₹"
           delay={0}
         />
         <KpiTile
@@ -198,6 +325,8 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
           value={formatINR(forecast.projected_revenue)}
           sub={`Confidence ${Math.round(asNumber(forecast.confidence_score))}% · Accuracy ${Math.round(asNumber(forecast.forecast_accuracy))}%`}
           progress={asNumber(forecast.confidence_score)}
+          targetValue={asNumber(forecast.projected_revenue)}
+          prefix="₹"
           delay={75}
         />
         <KpiTile
@@ -206,15 +335,17 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
           sub={`${pipeline.total_deals} active deals`}
           progress={asNumber(pipeline.health_score)}
           badge={asNumber(pipeline.health_score) >= 70 ? 'Strong' : 'Watch'}
+          targetValue={asNumber(pipeline.active_pipeline_value)}
+          prefix="₹"
           delay={150}
         />
       </div>
 
       {/* Quota attainment + Pipeline stage breakdown */}
-      <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
 
         {/* Quota attainment bars */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
               <BarChart3 size={15} className="text-brand-purple" />
@@ -246,8 +377,12 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
                     </div>
                   </div>
                   <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <div className="h-full rounded-full bg-brand-purple transition-[width] duration-700 ease-out"
-                      style={{ width: `${Math.min(pct, 100)}%` }} />
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(pct, 100)}%` }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
+                      className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-brand-purple'}`}
+                    />
                   </div>
                 </div>
               );
@@ -272,7 +407,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
         </div>
 
         {/* Pipeline stage breakdown — rounded-full bars */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
               <Layers size={15} className="text-brand-purple" />
@@ -286,13 +421,15 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
             {pipelineStages.map((st, i) => (
               <li key={st.name} className="grid grid-cols-[7rem_minmax(0,1fr)_2.5rem] items-center gap-3">
                 <span className="truncate text-xs font-medium text-foreground">{st.name}</span>
-                <div className="h-6 overflow-hidden rounded-full bg-secondary">
-                  <div
-                    className={`grid h-full place-items-center rounded-full text-[10px] font-semibold text-primary-foreground transition-[width] duration-700 ease-out ${st.bg}`}
-                    style={{ width: `${(st.pct / maxPct) * 100}%`, transitionDelay: `${i * 70}ms` }}
+                <div className="h-6 overflow-hidden rounded-full bg-secondary block">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(st.pct / maxPct) * 100}%` }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: i * 0.07 }}
+                    className={`grid h-full place-items-center rounded-full text-[10px] font-semibold text-primary-foreground ${st.bg}`}
                   >
                     {st.count}
-                  </div>
+                  </motion.div>
                 </div>
                 <span className="text-right text-xs text-muted-foreground tabular-nums">{st.count}</span>
               </li>
@@ -314,7 +451,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
       </div>
 
       {/* Monthly revenue trend */}
-      <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
             <TrendingUp size={15} className="text-brand-purple" />
@@ -334,11 +471,293 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
         <RevenueChart trend={data.monthly_revenue_trend} />
       </div>
 
+      {/* Forecast Strip */}
+      <div 
+        className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--line,#2A323F)] overflow-hidden select-none"
+        style={{
+          backgroundColor: 'var(--panel, #181D25)',
+          borderRadius: '10px',
+          border: '1px solid var(--line, #2A323F)',
+          borderColor: 'var(--line, #2A323F)',
+        }}
+      >
+        {/* Block 1 */}
+        <div className="p-5 flex flex-col justify-center">
+          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
+            Forecast this month
+          </span>
+          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
+            ₹41.2L / ₹50L
+          </span>
+          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}>
+            82% &middot; confidence band &plusmn;6%
+          </span>
+        </div>
+
+        {/* Block 2 */}
+        <div className="p-5 flex flex-col justify-center" style={{ borderColor: 'var(--line, #2A323F)' }}>
+          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
+            Team win rate
+          </span>
+          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
+            31%
+          </span>
+          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--green, #4FB477)' }}>
+            &uarr; 4pts vs last month
+          </span>
+        </div>
+
+        {/* Block 3 */}
+        <div className="p-5 flex flex-col justify-center" style={{ borderColor: 'var(--line, #2A323F)' }}>
+          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
+            Avg deal velocity
+          </span>
+          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
+            18d
+          </span>
+          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}>
+            &uarr; 2d slower
+          </span>
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-[20px]">
+        
+        {/* Card 1 — Team Quota Pace */}
+        <div 
+          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+          style={{
+            backgroundColor: 'var(--panel, #181D25)',
+            borderRadius: '10px',
+            padding: '20px',
+            border: '1px solid var(--line, #2A323F)',
+          }}
+        >
+          <div>
+            <h2 
+              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
+              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+            >
+              Team Quota Pace
+            </h2>
+            <div className="space-y-4">
+              {[
+                { name: 'Meera', pct: 29, status: 'danger' },
+                { name: 'Rohan', pct: 52, status: 'warning' },
+                { name: 'Deepak', pct: 61, status: 'warning' },
+                { name: 'Priya', pct: 78, status: 'success' },
+                { name: 'Kavya', pct: 85, status: 'success' },
+                { name: 'Aarav', pct: 91, status: 'success' },
+              ].map((rep) => {
+                const repColor = 
+                  rep.status === 'success' ? 'var(--green, #4FB477)' :
+                  rep.status === 'warning' ? 'var(--amber, #E8A33D)' :
+                  'var(--red, #E2604F)';
+                return (
+                  <div key={rep.name} className="flex items-center justify-between gap-4">
+                    {/* Status dot + Name */}
+                    <div className="flex items-center gap-2.5 w-[110px] shrink-0">
+                      <span 
+                        className="size-2 rounded-full shrink-0 animate-pulse" 
+                        style={{ backgroundColor: repColor }}
+                      />
+                      <span 
+                        className="font-bold text-xs"
+                        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
+                      >
+                        {rep.name}
+                      </span>
+                    </div>
+
+                    {/* Progress track & fill */}
+                    <div 
+                      className="flex-1 h-2 rounded-full overflow-hidden relative"
+                      style={{ backgroundColor: 'var(--line, #2A323F)' }}
+                    >
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${rep.pct}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: repColor }}
+                      />
+                    </div>
+
+                    {/* Mono percentage */}
+                    <span 
+                      className="text-xs font-semibold text-right w-10 shrink-0"
+                      style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
+                    >
+                      {rep.pct}%
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2 — Coaching Signals */}
+        <div 
+          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+          style={{
+            backgroundColor: 'var(--panel, #181D25)',
+            borderRadius: '10px',
+            padding: '20px',
+            border: '1px solid var(--line, #2A323F)',
+          }}
+        >
+          <div>
+            <h2 
+              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
+              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+            >
+              Coaching Signals
+            </h2>
+            <div className="space-y-4">
+              {[
+                { name: 'Meera D.', reason: 'Activity down 40% this week' },
+                { name: 'Rohan M.', reason: '6 overdue follow-ups' },
+                { name: 'Deepak V.', reason: 'Call quality score dropped' },
+              ].map((item) => (
+                <div key={item.name} className="flex flex-col gap-1 border-b border-[var(--line, #2A323F)]/40 pb-3 last:border-b-0 last:pb-0">
+                  <span 
+                    className="text-xs font-bold"
+                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
+                  >
+                    {item.name}
+                  </span>
+                  <span 
+                    className="text-[11px] font-medium"
+                    style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}
+                  >
+                    {item.reason}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3 — Deal Risk Radar */}
+        <div 
+          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+          style={{
+            backgroundColor: 'var(--panel, #181D25)',
+            borderRadius: '10px',
+            padding: '20px',
+            border: '1px solid var(--line, #2A323F)',
+          }}
+        >
+          <div>
+            <h2 
+              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
+              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+            >
+              Deal Risk Radar
+            </h2>
+            <div className="space-y-4">
+              {[
+                { name: 'Orbit Pharma', reason: 'No movement 14d &middot; Meera', value: '₹9.4L' },
+                { name: 'Delta Freight', reason: 'Stuck in negotiation &middot; Priya', value: '₹6.1L' },
+                { name: 'Kavya Traders', reason: 'Champion went silent &middot; Rohan', value: '₹4.8L' },
+              ].map((deal) => (
+                <div key={deal.name} className="flex justify-between items-center gap-4 py-2 border-b border-[var(--line, #2A323F)]/40 last:border-b-0 last:pb-0">
+                  <div className="flex flex-col gap-1 min-w-0">
+                    <span 
+                      className="text-xs font-bold text-foreground truncate"
+                      style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
+                    >
+                      {deal.name}
+                    </span>
+                    <span 
+                      className="text-[10px] font-medium truncate"
+                      style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--red, #E2604F)' }}
+                      dangerouslySetInnerHTML={{ __html: deal.reason }}
+                    />
+                  </div>
+                  <span 
+                    className="text-xs font-bold tabular-nums shrink-0"
+                    style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
+                  >
+                    {deal.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4 — Pipeline by Stage */}
+        <div 
+          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
+          style={{
+            backgroundColor: 'var(--panel, #181D25)',
+            borderRadius: '10px',
+            padding: '20px',
+            border: '1px solid var(--line, #2A323F)',
+          }}
+        >
+          <div>
+            <h2 
+              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
+              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+            >
+              Pipeline by Stage
+            </h2>
+            <div className="space-y-4">
+              {[
+                { label: 'Prospecting', count: 142, width: 100 },
+                { label: 'Qualified', count: 98, width: 70 },
+                { label: 'Proposal', count: 54, width: 38 },
+                { label: 'Negotiation', count: 26, width: 18 },
+                { label: 'Closed won', count: 13, width: 9, isWon: true },
+              ].map((stage) => {
+                const barColor = stage.isWon ? 'var(--green, #4FB477)' : 'var(--blue, #5B9BD5)';
+                return (
+                  <div key={stage.label} className="space-y-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <span 
+                        className="font-bold"
+                        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
+                      >
+                        {stage.label}
+                      </span>
+                      <span 
+                        className="font-semibold tabular-nums"
+                        style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
+                      >
+                        {stage.count}
+                      </span>
+                    </div>
+
+                    <div 
+                      className="h-4 w-full rounded overflow-hidden relative flex items-center"
+                      style={{ backgroundColor: 'var(--line, #2A323F)' }}
+                    >
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${stage.width}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full rounded"
+                        style={{ backgroundColor: barColor }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+      </div>
+
       {/* Leaderboard + Deals at risk */}
-      <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
 
         {/* Leaderboard */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
               <Award size={15} className="text-brand-purple" />
@@ -351,7 +770,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
           <div className="space-y-2.5">
             {leaderboards.map((rep) => (
               <div key={rep.user_id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-secondary/50 px-3 py-2.5 hover:bg-secondary transition-colors">
+                className="flex items-center gap-3 rounded-xl border border-border bg-secondary/50 py-[var(--space-2)] px-[var(--space-3)] hover:bg-secondary transition-colors">
                 <span className="text-xs font-semibold text-brand-purple w-4 shrink-0">#{rep.rank}</span>
                 <div className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary border border-border text-[11px] font-semibold text-brand-purple">
                   {rep.full_name.charAt(0)}
@@ -361,8 +780,12 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
                   <p className="text-[10px] text-muted-foreground tabular-nums">{formatINR(rep.revenue_generated)}</p>
                 </div>
                 <div className="w-20 h-1.5 overflow-hidden rounded-full bg-border shrink-0">
-                  <div className="h-full rounded-full bg-brand-purple"
-                    style={{ width: `${Math.min(asNumber(rep.quota_achievement_pct), 100)}%` }} />
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(asNumber(rep.quota_achievement_pct), 100)}%` }}
+                    transition={{ duration: 0.8 }}
+                    className="h-full rounded-full bg-brand-purple"
+                  />
                 </div>
               </div>
             ))}
@@ -379,40 +802,7 @@ export default function ManagerDashboardView({ onTabChange }: ManagerDashboardVi
         </div>
 
         {/* Deals at risk */}
-        <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <AlertTriangle size={15} className="text-destructive" />
-              Deals at risk
-            </h2>
-            <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-[10px] font-semibold text-destructive uppercase tracking-wide">
-              Escalated
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            {riskDeals.map((deal) => (
-              <div key={deal.deal_id}
-                className="rounded-xl border border-destructive/20 bg-destructive/5 p-3 hover:bg-destructive/8 transition-colors">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-xs font-medium text-foreground">{deal.deal_name}</p>
-                    <p className="text-[10px] text-brand-purple font-medium mt-0.5">{deal.company ?? '—'}</p>
-                  </div>
-                  <span className="shrink-0 text-xs font-semibold text-destructive tabular-nums">{formatINR(deal.deal_value)}</span>
-                </div>
-                <div className="mt-2.5 flex items-center justify-between border-t border-destructive/15 pt-2 text-[10px]">
-                  <span className="text-muted-foreground">{deal.owner_name ?? 'Unassigned'}</span>
-                  <span className="rounded bg-destructive/15 px-1.5 py-0.5 font-semibold text-destructive uppercase tracking-wide">
-                    {deal.risk_reason}
-                  </span>
-                </div>
-              </div>
-            ))}
-            {riskDeals.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">No deals currently at risk.</p>
-            )}
-          </div>
-        </div>
+        <DealsAtRiskCard deals={riskDeals} />
       </div>
 
       {/* Alerts */}

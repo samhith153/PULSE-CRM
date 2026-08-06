@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { getContacts, createContact, updateContact } from '@/utils/api';
-import { toast } from '@/lib/toast';
 import { 
   Contact, 
   Search, 
@@ -36,7 +35,7 @@ interface ContactItem {
 
 const EMPTY_CONTACTS: ContactItem[] = [];
 
-export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {}) {
+export default function ContactsView() {
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
 
@@ -67,11 +66,7 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
         if (data.length && !selectedId) setSelectedId((data as any)[0].id);
       }
     }).catch(() => {
-      if (!cancelled) {
-        setLoading(false);
-        onLoaded?.();
-        toast.error('Failed to load contacts');
-      }
+      if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
   }, []);
@@ -123,7 +118,6 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
       setIsAddModalOpen(false);
       setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
     } catch {
-      toast.error('Failed to save contact');
     }
   };
 
@@ -154,7 +148,6 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
       } : c));
       setIsEditModalOpen(false);
     } catch {
-      toast.error('Failed to save contact');
     }
   };
 

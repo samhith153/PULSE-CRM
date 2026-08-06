@@ -7,6 +7,9 @@ class DocumentResponse(BaseModel):
     id: UUID
     organization_id: UUID
     uploaded_by: Optional[UUID]
+    contact_id: Optional[UUID] = None
+    deal_id: Optional[UUID] = None
+    company_id: Optional[UUID] = None
     file_name: str
     file_path: str
     file_type: str

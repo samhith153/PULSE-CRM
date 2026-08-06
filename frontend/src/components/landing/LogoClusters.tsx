@@ -13,7 +13,7 @@ import samaya from "../../../public/images/landing/logos/samaya.svg";
 import consensus from "../../../public/images/landing/logos/consensus.svg";
 import cartesia from "../../../public/images/landing/logos/cartesia.svg";
 
-type Logo = { src: string; alt: string };
+type Logo = { src: any; alt: string };
 
 type Segment = Logo[];
 
@@ -73,7 +73,7 @@ function LogoSegment({ logos, offset }: { logos: Logo[]; offset: number }) {
     >
       <img
         key={current.alt}
-        src={current.src}
+        src={typeof current.src === "object" ? current.src.src : current.src}
         alt={current.alt}
         loading="lazy"
         className="absolute h-7 w-auto max-w-[80%] object-contain opacity-45 grayscale transition-[opacity,filter] duration-300 group-hover:opacity-100 group-hover:grayscale-0 md:h-8"

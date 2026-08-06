@@ -84,7 +84,7 @@ export default function IntegrationsView() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {toast && (
         <div className="fixed bottom-5 right-5 z-55 bg-ink text-primary-foreground px-4 py-2.5 rounded-xl flex items-center space-x-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
           <Check className="h-4 w-4" />
@@ -92,67 +92,94 @@ export default function IntegrationsView() {
         </div>
       )}
 
-      <div>
-        <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">System Integrations</h1>
-        <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">Connect third-party communications channels and synchronization agents.</p>
-      </div>
-
       {gmailError && (
-        <div className="bg-amber-50 border border-amber-200 text-foreground rounded-xl px-4 py-3 text-xs font-bold flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>{gmailError}</span>
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-foreground rounded-xl px-4 py-3 text-xs font-bold flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+          <span className="text-amber-850 dark:text-amber-300">{gmailError}</span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {integrations.map((item) => {
-          const Icon = item.icon;
-          const isGmail = item.id === 'gmail';
-          return (
-            <div key={item.id} className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between space-y-4">
-              <div className="flex items-start space-x-4">
-                <div className="h-10 w-10 rounded-xl bg-secondary border border-border flex items-center justify-center text-brand-purple shrink-0">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center space-x-2">
-                    <h3 className="text-xs font-semibold text-foreground">{item.name}</h3>
-                    <span className="text-[9px] text-muted-foreground font-semibold">{item.provider}</span>
+      <div className="border border-border/80 rounded-2xl bg-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-border/80 bg-secondary/30">
+          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Active Integrations</h3>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Manage connected data-sources and external synchronization channels.</p>
+        </div>
+
+        <div className="divide-y divide-border/60">
+          {integrations.map((item) => {
+            const Icon = item.icon;
+            const isGmail = item.id === 'gmail';
+            return (
+              <div key={item.id} className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-secondary/10 transition-colors">
+                <div className="flex items-start space-x-3.5 min-w-0 flex-1">
+                  <div className="h-9.5 w-9.5 rounded-xl bg-secondary border border-border flex items-center justify-center text-brand-purple shrink-0">
+                    <Icon className="h-4.5 w-4.5" />
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1 font-semibold leading-relaxed">{item.description}</p>
-                  {isGmail && gmailConnection && (
-                    <p className="text-[10px] text-brand-purple font-semibold mt-2 truncate">{gmailConnection.email_address} - {gmailConnection.sync_status}</p>
-                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-xs font-bold text-foreground">{item.name}</h4>
+                      <span className="text-[9px] bg-secondary border border-border text-muted-foreground px-1.5 py-0.5 rounded-md font-semibold">{item.provider}</span>
+                      
+                      {/* Connection status badge */}
+                      <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                        item.status === 'Connected' 
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                          : item.status === 'Configure'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                          : 'bg-secondary text-muted-foreground border border-border'
+                      }`}>
+                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                          item.status === 'Connected' ? 'bg-emerald-500' : item.status === 'Configure' ? 'bg-amber-500' : 'bg-slate-400'
+                        }`} />
+                        <span>{isGmail && isLoadingGmail ? 'Checking...' : item.status}</span>
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground mt-1 font-semibold leading-relaxed">{item.description}</p>
+                    {isGmail && gmailConnection && (
+                      <p className="text-[10px] text-brand-purple font-extrabold mt-1.5 bg-brand-purple/5 border border-brand-purple/10 px-2 py-0.5 rounded inline-block max-w-full truncate">
+                        Active Account: {gmailConnection.email_address} ({gmailConnection.sync_status})
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
 
-              <div className="flex justify-between items-center pt-4 border-t border-border">
-                <div className="flex items-center space-x-1.5">
-                  <span className={`h-2 w-2 rounded-full ${item.status === 'Connected' ? 'bg-brand-cyan/150' : item.status === 'Configure' ? 'bg-amber-500' : 'bg-slate-300'}`} />
-                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{isGmail && isLoadingGmail ? 'Checking' : item.status}</span>
-                </div>
-
-                <div className="flex space-x-2">
+                <div className="flex items-center space-x-2 self-end sm:self-center shrink-0">
                   {isGmail ? (
                     <>
-                      <button onClick={gmailConnection?.is_active ? handleDisconnectGmail : handleConnectGmail} disabled={isLoadingGmail} className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:opacity-60 ${gmailConnection?.is_active ? 'bg-destructive/10 hover:bg-rose-100 text-destructive' : 'bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground'}`}>
-                        {isLoadingGmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : gmailConnection?.is_active ? 'Disconnect' : 'Connect Gmail'}
+                      <button 
+                        onClick={gmailConnection?.is_active ? handleDisconnectGmail : handleConnectGmail} 
+                        disabled={isLoadingGmail} 
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-60 flex items-center space-x-1.5 ${
+                          gmailConnection?.is_active 
+                            ? 'bg-destructive/10 hover:bg-rose-100 dark:hover:bg-rose-950/20 text-destructive border border-destructive/20' 
+                            : 'bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground shadow-sm'
+                        }`}
+                      >
+                        {isLoadingGmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : gmailConnection?.is_active ? 'Disconnect' : 'Connect'}
                       </button>
-                      <button onClick={loadGmailStatus} disabled={isLoadingGmail} className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-60" title="Refresh status">
+                      <button 
+                        onClick={loadGmailStatus} 
+                        disabled={isLoadingGmail} 
+                        className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-60 bg-card" 
+                        title="Refresh status"
+                      >
                         <RefreshCw className={`h-4 w-4 ${isLoadingGmail ? 'animate-spin' : ''}`} />
                       </button>
                     </>
                   ) : (
-                    <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-secondary text-muted-foreground cursor-not-allowed">Coming Soon</button>
+                    <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-secondary/80 text-muted-foreground cursor-not-allowed border border-border/50">Coming Soon</button>
                   )}
-                  {item.status !== 'Disconnected' && <button className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-colors cursor-pointer"><Settings className="h-4 w-4" /></button>}
+                  {item.status !== 'Disconnected' && (
+                    <button className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-all cursor-pointer bg-card">
+                      <Settings className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
-

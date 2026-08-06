@@ -366,6 +366,10 @@ export async function updateContact(contactId: string | number, contactData: any
   });
 }
 
+export async function deleteContact(contactId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/contacts/${contactId}`, { method: 'DELETE' });
+}
+
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
   const dbResult = await apiFetch<any>('/api/v1/companies');
@@ -401,6 +405,10 @@ export async function updateCompany(companyId: string | number, companyData: any
     method: 'PUT',
     body: JSON.stringify(companyData)
   });
+}
+
+export async function deleteCompany(companyId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/companies/${companyId}`, { method: 'DELETE' });
 }
 
 // --- Deals API ---
@@ -936,6 +944,72 @@ export async function changePassword(currentPassword: string, newPassword: strin
   });
 }
 
+// --- Assistant AI API ---
+export async function sendAssistantChatMessage(message: string, context?: Record<string, any>): Promise<{ response: string; role?: string }> {
+  return apiFetch<{ response: string; role?: string }>('/api/v1/assistant/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, context: context || {} })
+  });
+}
+
+// --- Tasks API ---
+export async function getTasks(params?: { status?: string; lead_id?: string; deal_id?: string }): Promise<any[]> {
+  const query = new URLSearchParams();
+  if (params?.status) query.append('status', params.status);
+  if (params?.lead_id) query.append('lead_id', params.lead_id);
+  if (params?.deal_id) query.append('deal_id', params.deal_id);
+  const qStr = query.toString();
+  const res = await apiFetch<any>(`/api/v1/tasks${qStr ? `?${qStr}` : ''}`);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+export async function createTask(taskData: any): Promise<any> {
+  return apiFetch('/api/v1/tasks', {
+    method: 'POST',
+    body: JSON.stringify(taskData)
+  });
+}
+
+export async function updateTask(taskId: string, taskData: any): Promise<any> {
+  return apiFetch(`/api/v1/tasks/${taskId}`, {
+    method: 'PUT',
+    body: JSON.stringify(taskData)
+  });
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/tasks/${taskId}`, { method: 'DELETE' });
+}
+
+// --- Calendar & Meetings API ---
+export async function getCalendarEvents(start?: string, end?: string): Promise<any[]> {
+  const query = new URLSearchParams();
+  if (start) query.append('start', start);
+  if (end) query.append('end', end);
+  const qStr = query.toString();
+  const res = await apiFetch<any>(`/api/v1/calendar/events${qStr ? `?${qStr}` : ''}`);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+export async function createCalendarEvent(eventData: any): Promise<any> {
+  return apiFetch('/api/v1/calendar/events', {
+    method: 'POST',
+    body: JSON.stringify(eventData)
+  });
+}
+
+export async function getMeetings(): Promise<any[]> {
+  const res = await apiFetch<any>('/api/v1/meetings');
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+export async function createMeeting(meetingData: any): Promise<any> {
+  return apiFetch('/api/v1/meetings', {
+    method: 'POST',
+    body: JSON.stringify(meetingData)
+  });
+}
+
 // --- Roles & Permissions API ---
 
 export interface RoleData {
@@ -973,4 +1047,168 @@ export async function updateRolePermissions(roleId: string, permissionCodenames:
     method: 'PUT',
     body: JSON.stringify({ permission_codenames: permissionCodenames })
   });
+}
+
+// --- Documents / Attachments API ---
+export async function getDocuments(params: { contact_id?: string; deal_id?: string; company_id?: string }): Promise<any[]> {
+  const query = new URLSearchParams();
+  if (params.contact_id) query.append('contact_id', params.contact_id);
+  if (params.deal_id) query.append('deal_id', params.deal_id);
+  if (params.company_id) query.append('company_id', params.company_id);
+  
+  const queryString = query.toString();
+  const endpoint = `/api/v1/documents${queryString ? `?${queryString}` : ''}`;
+  const res = await apiFetch<any>(endpoint);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+export async function uploadDocument(
+  file: File,
+  params: { contact_id?: string; deal_id?: string; company_id?: string }
+): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+  if (params.contact_id) formData.append('contact_id', params.contact_id);
+  if (params.deal_id) formData.append('deal_id', params.deal_id);
+  if (params.company_id) formData.append('company_id', params.company_id);
+  
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders()
+    },
+    body: formData
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || 'Failed to upload document');
+  }
+  return res.json();
+}
+
+export async function deleteDocument(docId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/documents/${docId}`, { method: 'DELETE' });
+}
+
+export function getDocumentDownloadUrl(docId: string): string {
+  return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
+}
+
+// --- Avatar / Uploads API ---
+
+export interface FileUploadResponse {
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  storage_provider: string;
+  storage_key: string;
+  url: string;
+  uploaded_by: string;
+  organization_id: string;
+  uploaded_at: string;
+}
+
+export async function uploadAvatar(file: File): Promise<FileUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders()
+    },
+    body: formData
+  });
+  if (!res.ok) {
+    let message = `Avatar upload failed (${res.status})`;
+    try {
+      const err = await res.json();
+      if (err?.detail) message = typeof err.detail === 'string' ? err.detail : message;
+      else if (err?.message) message = err.message;
+    } catch {}
+    throw new Error(message);
+  }
+  const json = await res.json();
+  return (json.data ?? json) as FileUploadResponse;
+}
+
+// ─── Dashboard Unified Endpoint ─────────────────────────────────────────────
+// Powers all 6 core dashboard widgets via GET /api/v1/dashboard/me
+
+export interface DashboardKPI {
+  open_deals: number;
+  won_deals_this_month: number;
+  leads_today: number;
+  calls_today: number;
+  quota_achieved: number;   // ₹ value of won deals against sales_quota
+  quota_target: number;     // sales_quota from users table
+  quota_pct: number;        // 0–100 percentage
+}
+
+export interface DashboardPriorityItem {
+  lead_id: string;
+  name: string;
+  overall_score: number;    // from ai_scores.overall_score
+  tier: string;             // Hot | Warm | Cold
+  status: string;
+}
+
+export interface DashboardAtRiskDeal {
+  deal_id: string;
+  name: string;
+  value: number;
+  sentiment: string;        // negative | neutral | positive
+  days_stalled: number;     // derived from updated_at
+  owner_name: string | null;
+}
+
+export interface DashboardOpenTask {
+  task_id: string;
+  title: string;
+  due_date: string | null;
+  status: string;           // pending | completed
+  fit_score?: number | null;
+}
+
+export interface DashboardCalendarEvent {
+  event_id: string;
+  title: string;
+  start_time: string;
+  end_time?: string | null;
+}
+
+export interface DashboardOverviewData {
+  kpis: DashboardKPI;
+  priority_queue: DashboardPriorityItem[];
+  at_risk_deals: DashboardAtRiskDeal[];
+  open_tasks: DashboardOpenTask[];
+  calendar_events: DashboardCalendarEvent[];
+  calls_today: number;
+  // Raw lists for widgets that need full records
+  deals?: any[];
+  leads?: any[];
+}
+
+/**
+ * GET /api/v1/dashboard/me
+ * Executes 9 queries concurrently on the backend via asyncio.gather()
+ * to hydrate all 6 core dashboard widgets in a single request.
+ */
+export async function getDashboardMe(): Promise<DashboardOverviewData | null> {
+  try {
+    const data = await apiFetch<DashboardOverviewData>('/api/v1/dashboard/me');
+    return data ?? null;
+  } catch {
+    // Endpoint not yet deployed — return null so callers can fall back gracefully
+    return null;
+  }
+}
+
+/**
+ * Build the SSE URL for real-time dashboard stream updates.
+ * The token is passed as a query param because EventSource doesn't support headers.
+ */
+export function getDashboardStreamUrl(): string {
+  const token = getToken();
+  return `${API_BASE_URL}/api/v1/stream/dashboard${token ? `?token=${token}` : ''}`;
 }
