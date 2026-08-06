@@ -122,7 +122,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
     if (!auth) {
       // Redirect back to the landing page login, not the Next.js /login route
-      window.location.href = 'http://localhost:8081/login';
+      window.location.href = 'http://127.0.0.1:8081/login';
       return;
     }
 
@@ -189,7 +189,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     localStorage.removeItem('pulse-crm-role');
     localStorage.removeItem('pulse-crm-user');
     clearToken();
-    window.location.href = 'http://localhost:8081/login';
+    window.location.href = 'http://127.0.0.1:8081/login';
   };
 
   const mapRoleForLegacyComponent = (r: 'sales_rep' | 'manager' | 'admin'): 'representative' | 'manager' | 'admin' => {
