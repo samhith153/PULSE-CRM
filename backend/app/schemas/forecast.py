@@ -94,6 +94,30 @@ class ForecastInsight(BaseModel):
     type: str = "info"                  # info / warning / success / tip
 
 
+# ── 11. Forecast Risk ─────────────────────────────────────────────────────────
+
+class ForecastRisk(BaseModel):
+    deal_id: str
+    deal_name: str
+    company: Optional[str] = None
+    owner_name: Optional[str] = None
+    deal_value: Decimal
+    risk_type: str          # aging / overdue / low_probability / no_activity / pipeline_shrinkage
+    risk_description: str
+    days_overdue: int = 0
+    probability: int = 0
+
+
+# ── 12. Forecast Recommendation ──────────────────────────────────────────────
+
+class ForecastRecommendation(BaseModel):
+    priority: str           # high / medium / low
+    title: str
+    description: str
+    action: str             # what the manager should do
+    impact: str             # expected business impact
+
+
 # ── Root Response ─────────────────────────────────────────────────────────────
 
 class ManagerForecastResponse(BaseModel):
@@ -114,6 +138,10 @@ class ManagerForecastResponse(BaseModel):
 
     # AI-generated insights
     forecast_insights: list[ForecastInsight] = Field(default_factory=list)
+
+    # Risks & recommendations
+    forecast_risks: list[ForecastRisk] = Field(default_factory=list)
+    forecast_recommendations: list[ForecastRecommendation] = Field(default_factory=list)
 
     # Meta
     quarter: str
