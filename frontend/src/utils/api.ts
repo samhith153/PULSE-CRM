@@ -38,6 +38,8 @@ export interface Lead {
   score: number | null;
   fit_score: number | null;
   engagement_score: number | null;
+  fit_reasons: string[] | null;
+  engagement_reasons: string[] | null;
   top_reasons: string[] | null;
   priority: string | null;
   notes: string | null;
@@ -460,67 +462,6 @@ export async function getPipelineStages(): Promise<any[]> {
   return stages;
 }
 
-// --- Conversation Intelligence (Bhavani Summarization API) ---
-export interface SummaryMessage {
-  sender: string;
-  recipients: string[];
-  subject: string;
-  body: string;
-  timestamp: string;
-  direction: 'incoming' | 'outgoing';
-}
-
-export interface ConversationSummary {
-  thread_id: string;
-  summary: string;
-  summary_word: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  intent: 'demo' | 'buy' | 'negotiate' | 'followup' | 'decline' | 'other';
-  confidence: number;
-  key_points: string[];
-  action_items: string[];
-  category?: 'sales' | 'support' | 'general' | 'urgent';
-  draft_reply?: string;
-  follow_up_suggestion?: string;
-  follow_up_timing?: 'immediate' | 'today' | 'tomorrow' | '2_days' | '3_days' | '1_week' | '2_weeks' | 'no_followup';
-  processing_time_ms?: number;
-  model_version?: string;
-}
-
-export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders()
-    },
-    body: JSON.stringify({
-      thread_id: threadId,
-      messages,
-      contact_id: contactId,
-      deal_id: dealId
-    })
-  });
-  if (!res.ok) {
-    let message = `Summarization failed (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
-export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
-    headers: { ...getAuthHeaders() }
-  });
-  if (!res.ok) {
-    let message = `Failed to load summary (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
 
 function toQuery(params: Record<string, string | number | boolean | null | undefined>): string {
   const search = new URLSearchParams();
@@ -678,6 +619,24 @@ export async function getEmail(id: string): Promise<SyncedEmail> {
   return apiFetch<SyncedEmail>(`/api/v1/emails/${id}`);
 }
 
+export interface EmailSummaryData {
+  summary: string | null;
+  sentiment: string | null;
+  intent: string | null;
+  confidence: number | null;
+  key_points: string[];
+  action_items: string[];
+  category: string | null;
+  draft_reply: string | null;
+  follow_up_suggestion: string | null;
+  follow_up_timing: string | null;
+  model_version: string | null;
+}
+
+export async function getEmailSummary(threadId: string): Promise<EmailSummaryData | null> {
+  return apiFetch<EmailSummaryData | null>(`/api/v1/emails/summary/${threadId}`);
+}
+
 export async function getActivities(params: ActivityListParams = {}): Promise<PaginatedResult<ActivityTimelineItem>> {
   const { activity_type, ...rest } = params;
   return apiFetch<PaginatedResult<ActivityTimelineItem>>(
@@ -798,7 +757,7 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
 }
 
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
+export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean }> {
   return apiFetch('/api/v1/auth/me');
 }
 
@@ -879,7 +838,6 @@ export interface UserData {
   organization_id: string;
   is_active: boolean;
   is_verified: boolean;
-  is_superuser: boolean;
   roles: string[];
   last_login_at: string | null;
   created_at: string;

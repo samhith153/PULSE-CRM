@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import secrets
 import smtplib
 import ssl
@@ -348,22 +349,28 @@ class EmailService:
 
         # Sequential inbound processing: summarize FIRST, then assess
         if ingested:
-            inbound_threads = {
-                e.thread_id for e in ingested
-                if e.thread_id and e.direction == EmailDirection.INBOUND.value
-            }
-
             # Group inbound threads by lead_id for sequential processing
             lead_threads: dict[UUID, set[str]] = {}
+            standalone_threads: set[str] = set()
             for e in ingested:
-                if (
-                    e.direction == EmailDirection.INBOUND.value
-                    and e.external_entity_type == "lead"
-                    and e.external_entity_id
-                    and e.thread_id
-                ):
-                    lead_threads.setdefault(e.external_entity_id, set()).add(e.thread_id)
+                if e.thread_id and e.direction == EmailDirection.INBOUND.value:
+                    if (
+                        e.external_entity_type == "lead"
+                        and e.external_entity_id
+                    ):
+                        lead_threads.setdefault(e.external_entity_id, set()).add(e.thread_id)
+                    else:
+                        standalone_threads.add(e.thread_id)
 
+            # Summarize threads not linked to any lead
+            for tid in standalone_threads:
+                task = asyncio.create_task(
+                    self._safe_summarize(organization_id, tid)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
+
+            # For lead-linked threads: summarize then assess (sequential)
             for lid, tids in lead_threads.items():
                 task = asyncio.create_task(
                     self._summarize_and_assess(organization_id, lid, tids)
@@ -469,11 +476,17 @@ class EmailService:
                 },
             )
             # Best-effort: never let an assessment failure break email storage.
-            # Summarize thread first, then assess (sequential, not parallel).
+            # Summarize thread first, then assess only for lead-linked emails.
             if external_entity_type == "lead" and external_entity_id is not None:
                 thread_ids = {thread_id} if thread_id else set()
                 task = asyncio.create_task(
                     self._summarize_and_assess(organization_id, external_entity_id, thread_ids)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
+            elif thread_id:
+                task = asyncio.create_task(
+                    self._safe_summarize(organization_id, thread_id)
                 )
                 _background_tasks.add(task)
                 task.add_done_callback(_background_tasks.discard)
@@ -502,8 +515,12 @@ class EmailService:
 
             async with AsyncSessionFactory() as db:
                 svc = EmailSummaryService(db)
-                await svc.summarize_thread(organization_id, thread_id)
-                await db.commit()
+                result = await svc.summarize_thread(organization_id, thread_id)
+                if result:
+                    await db.commit()
+                    logger.info("Summarized thread %s successfully", thread_id)
+                else:
+                    logger.warning("No summary generated for thread %s (empty or no emails)", thread_id)
         except Exception:
             logger.exception("Email summarization failed for thread %s", thread_id)
 
@@ -668,7 +685,14 @@ class EmailService:
         if not connection:
             raise NotFoundException("GmailConnection", connection_id)
         access_token = await self._access_token_for_connection(organization_id, created_by, connection)
-        listed = await self.gmail_client.list_messages(access_token, page_token=connection.sync_cursor, max_results=25)
+        try:
+            listed = await self.gmail_client.list_messages(access_token, page_token=connection.sync_cursor, max_results=25)
+        except Exception as exc:
+            # Stale pageToken causes 400 — reset cursor and retry once
+            logger.warning("Gmail list_messages failed, resetting cursor: %s", exc)
+            connection.sync_cursor = None
+            await self.connection_repo.update(connection, sync_cursor=None)
+            listed = await self.gmail_client.list_messages(access_token, page_token=None, max_results=25)
         messages = []
         for item in listed.get("messages", []):
             try:
@@ -676,6 +700,43 @@ class EmailService:
                 messages.append(self._gmail_message_to_sync(connection, raw_message))
             except Exception as exc:
                 logger.warning("Skipping Gmail message after fetch failure", extra={"message_id": item.get("id"), "error": str(exc)})
+
+        # Link inbound messages to leads by matching sender email
+        from app.models.lead import Lead
+        from sqlalchemy import select as sa_select
+        for msg in messages:
+            if msg.direction == EmailDirection.INBOUND.value and not msg.external_entity_id:
+                sender_email = parseaddr(msg.sender)[1] if msg.sender else None
+                if sender_email:
+                    stmt = (
+                        sa_select(Lead.id, Lead.contact_id)
+                        .where(Lead.organization_id == organization_id, Lead.email == sender_email.lower(), Lead.is_active.is_(True))
+                        .limit(1)
+                    )
+                    row = (await self.db.execute(stmt)).first()
+                    if row:
+                        msg.external_entity_type = "lead"
+                        msg.external_entity_id = row[0]
+                    else:
+                        # Try matching via contact email
+                        from app.models.contact import Contact
+                        c_stmt = (
+                            sa_select(Contact.id)
+                            .where(Contact.organization_id == organization_id, Contact.email == sender_email.lower())
+                            .limit(1)
+                        )
+                        c_row = (await self.db.execute(c_stmt)).first()
+                        if c_row:
+                            l_stmt = (
+                                sa_select(Lead.id)
+                                .where(Lead.organization_id == organization_id, Lead.contact_id == c_row[0], Lead.is_active.is_(True))
+                                .limit(1)
+                            )
+                            l_row = (await self.db.execute(l_stmt)).first()
+                            if l_row:
+                                msg.external_entity_type = "lead"
+                                msg.external_entity_id = l_row[0]
+
         payload = EmailSyncRequest(
             gmail_connection_id=connection.id,
             sync_cursor=listed.get("nextPageToken") or listed.get("historyId") or connection.sync_cursor,

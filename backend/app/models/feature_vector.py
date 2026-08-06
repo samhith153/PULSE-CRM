@@ -4,8 +4,8 @@ Stores engineered features and scores for leads (audit/analytics only).
 """
 import uuid
 from typing import TYPE_CHECKING, Optional
-
-from sqlalchemy import Boolean, Float, ForeignKey, Integer, String
+from datetime import datetime
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

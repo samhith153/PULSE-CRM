@@ -133,7 +133,7 @@ class MeetingService:
 
     def _has_elevated_access(self, user: User) -> bool:
         roles = {ur.role.name for ur in user.user_roles if ur.role}
-        return bool({"admin", "manager"}.intersection(roles)) or user.is_superuser
+        return bool({"admin", "manager"}.intersection(roles))
 
     def _assert_access(self, user: User, owner_id: UUID | None, created_by: UUID | None) -> None:
         if self._has_elevated_access(user):

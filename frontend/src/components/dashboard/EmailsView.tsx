@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search } from 'lucide-react';
-import { getEmail, getEmails, SyncedEmail } from '@/utils/api';
+import { AlertCircle, Bot, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { getEmail, getEmails, getEmailSummary, EmailSummaryData, SyncedEmail } from '@/utils/api';
 
 type MailboxFilter = 'all' | 'inbound' | 'outbound' | 'unread';
 
@@ -31,6 +31,8 @@ export default function EmailsView({ onLoaded }: { onLoaded?: () => void } = {})
   const [isLoading, setIsLoading] = useState(true);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailSummary, setEmailSummary] = useState<EmailSummaryData | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
   const direction = filter === 'inbound' ? 'inbound' : filter === 'outbound' ? 'outbound' : '';
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -67,10 +69,23 @@ export default function EmailsView({ onLoaded }: { onLoaded?: () => void } = {})
 
   const openEmail = async (email: SyncedEmail) => {
     setSelectedEmail(email);
+    setEmailSummary(null);
     setIsDetailLoading(true);
     setError(null);
     try {
-      setSelectedEmail(await getEmail(email.id));
+      const detail = await getEmail(email.id);
+      setSelectedEmail(detail);
+      if (detail.thread_id) {
+        setIsSummaryLoading(true);
+        try {
+          const summary = await getEmailSummary(detail.thread_id);
+          setEmailSummary(summary);
+        } catch {
+          // Summary may not exist yet — not an error
+        } finally {
+          setIsSummaryLoading(false);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load email details.');
     } finally {
@@ -160,6 +175,50 @@ export default function EmailsView({ onLoaded }: { onLoaded?: () => void } = {})
               {selectedEmail.thread_id && <p><span className="font-semibold text-foreground">Thread:</span> {selectedEmail.thread_id}</p>}
             </div>
             <div className="text-xs text-foreground font-semibold leading-relaxed whitespace-pre-line border-b border-border pb-6 min-h-[140px]">{selectedEmail.body_preview || 'No message body was provided by the backend response.'}</div>
+            {(emailSummary || isSummaryLoading) && (
+              <div className="rounded-xl border border-brand-purple/20 bg-brand-purple/5 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-semibold text-brand-purple">
+                  {isSummaryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  <span>AI Summary</span>
+                  {emailSummary?.model_version && <span className="text-[10px] text-muted-foreground font-semibold ml-auto">{emailSummary.model_version}</span>}
+                </div>
+                {isSummaryLoading ? (
+                  <p className="text-[11px] text-muted-foreground font-semibold">Generating summary...</p>
+                ) : emailSummary?.summary && (
+                  <>
+                    <p className="text-xs text-foreground font-semibold leading-relaxed whitespace-pre-line">{emailSummary.summary}</p>
+                    <div className="flex flex-wrap gap-2 text-[10px] font-semibold">
+                      {emailSummary.sentiment && <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{emailSummary.sentiment}</span>}
+                      {emailSummary.intent && <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{emailSummary.intent}</span>}
+                      {emailSummary.category && <span className="px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">{emailSummary.category}</span>}
+                      {emailSummary.follow_up_suggestion && <span className="px-2 py-0.5 rounded-full bg-brand-purple/10 text-brand-purple">{emailSummary.follow_up_suggestion}</span>}
+                    </div>
+                    {emailSummary.key_points?.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Key Points</p>
+                        <ul className="list-disc list-inside text-[11px] text-foreground font-semibold space-y-0.5">
+                          {emailSummary.key_points.map((point, i) => <li key={i}>{point}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {emailSummary.action_items?.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Action Items</p>
+                        <ul className="list-disc list-inside text-[11px] text-foreground font-semibold space-y-0.5">
+                          {emailSummary.action_items.map((item, i) => <li key={i}>{item}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {emailSummary.draft_reply && (
+                      <div className="space-y-1">
+                        <p className="text-[9px] font-semibold text-muted-foreground uppercase tracking-widest">Suggested Reply</p>
+                        <p className="text-[11px] text-foreground font-semibold whitespace-pre-line border-l-2 border-brand-purple/30 pl-3">{emailSummary.draft_reply}</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
             <div className="space-y-2.5">
               <h4 className="text-[9px] font-semibold text-foreground uppercase tracking-widest">Attachments</h4>
               {selectedEmail.attachment_metadata?.length ? selectedEmail.attachment_metadata.map(file => (

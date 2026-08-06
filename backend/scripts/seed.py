@@ -149,7 +149,6 @@ async def seed_admin_user(
         hashed_password=hash_password(settings.FIRST_SUPERUSER_PASSWORD),
         organization_id=org.id,
         is_verified=True,
-        is_superuser=True,
         is_active=True,
     )
     db.add(user)

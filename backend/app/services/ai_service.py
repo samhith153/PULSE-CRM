@@ -216,7 +216,7 @@ class AIService:
             # Use the unified weighted formula engine via RecommendationService
             from app.services.recommendation_service import RecommendationService
             rec_svc = RecommendationService(self.db)
-            result = await rec_svc.generate_for_lead(entity_id, organization_id)
+            result = await rec_svc.get_for_lead(entity_id, organization_id)
             if result:
                 return AIRecommendationResponse(
                     entity_type=entity_type,

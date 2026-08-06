@@ -59,9 +59,6 @@ def require_permission(permission: str) -> Callable:
     """Dependency factory for a required permission."""
 
     async def _check(current_user: CurrentUser) -> None:
-        if current_user.is_superuser:
-            return
-
         permissions = resolve_permissions_for_user(current_user)
         if permission not in permissions:
             raise ForbiddenException(permission)
@@ -73,9 +70,6 @@ def require_any_permission(*permissions: str) -> Callable:
     """Pass if the user has at least one of the given permissions."""
 
     async def _check(current_user: CurrentUser) -> None:
-        if current_user.is_superuser:
-            return
-
         user_permissions = resolve_permissions_for_user(current_user)
         if not any(p in user_permissions for p in permissions):
             raise ForbiddenException(permissions[0])
@@ -90,9 +84,6 @@ def require_role(*roles: Role | str) -> Callable:
     """
 
     async def _check(current_user: CurrentUser) -> None:
-        if current_user.is_superuser:
-            return
-
         # Normalize all role names to strings for comparison
         required_role_names = {
             role.value if isinstance(role, Role) else str(role)

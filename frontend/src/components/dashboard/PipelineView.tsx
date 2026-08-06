@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages } from '@/utils/api';
+import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import { 
   Plus, 

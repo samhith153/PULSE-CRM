@@ -9,7 +9,8 @@ from dotenv import find_dotenv, load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _THIS_DIR = Path(__file__).resolve().parent.parent.parent  # ai-service/
-_ENV_FILES = [_THIS_DIR / ".env"]
+_ROOT_DIR = _THIS_DIR.parent  # project root
+_ENV_FILES = [_THIS_DIR / ".env", _ROOT_DIR / ".env"]
 
 for _f in reversed(_ENV_FILES):
     if _f.exists():
@@ -47,12 +48,18 @@ class Settings(BaseSettings):
 
     # ── LLM (Conversation AI) ─────────────────────────────────────────────
     LLM_API_KEY: Optional[str] = None
+    SUMMARIZATION_API_KEY: Optional[str] = None  # alias read from global .env
     LLM_MODEL: str = "llama-3.3-70b-versatile"
     LLM_TEMPERATURE: float = 0.3
     LLM_MAX_TOKENS: int = 800
     LLM_TIMEOUT: int = 30
     MIN_CONFIDENCE_THRESHOLD: float = 0.3
     MAX_RETRIES: int = 1
+
+    @property
+    def effective_llm_key(self) -> Optional[str]:
+        """Return the LLM API key, preferring LLM_API_KEY then SUMMARIZATION_API_KEY."""
+        return self.LLM_API_KEY or self.SUMMARIZATION_API_KEY
 
     # ── Scoring defaults ──────────────────────────────────────────────────
     DEFAULT_SCORE: int = 50
