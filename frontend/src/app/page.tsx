@@ -239,7 +239,13 @@ export default function DashboardHome() {
           <AnimatePresence mode="wait">
             <PageTransition key={activeTab}>
               {activeTab === 'home' ? (
-                <HomeView onTabChange={setActiveTab} />
+                userRole === 'manager' ? (
+                  <ManagerDashboardView onTabChange={setActiveTab} />
+                ) : userRole === 'admin' ? (
+                  <AdminDashboardView />
+                ) : (
+                  <HomeView onTabChange={setActiveTab} />
+                )
               ) : activeTab === 'leads' ? (
                 <LeadsView />
               ) : activeTab === 'contacts' ? (

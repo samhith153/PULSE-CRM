@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useDashboardLayout } from '@/components/dashboard/DashboardLayoutContext';
+import { useDashboardLayout, DashboardLayoutProvider } from '@/components/dashboard/DashboardLayoutContext';
 import QuotaPaceCard from '@/components/dashboard/QuotaPaceCard';
 import FunnelChartCard from '@/components/dashboard/FunnelChartCard';
 import Sidebar from '@/components/dashboard/Sidebar';
@@ -54,7 +54,7 @@ interface DashboardShellProps {
   activityId?: string;
 }
 
-export default function DashboardShell({ requiredRole, defaultTab = 'home', activityId }: DashboardShellProps) {
+function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }: DashboardShellProps) {
   const [authorized, setAuthorized] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -550,3 +550,12 @@ export default function DashboardShell({ requiredRole, defaultTab = 'home', acti
     </div>
   );
 }
+
+export default function DashboardShell(props: DashboardShellProps) {
+  return (
+    <DashboardLayoutProvider>
+      <DashboardShellContent {...props} />
+    </DashboardLayoutProvider>
+  );
+}
+

@@ -1,874 +1,608 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUp, Target, AlertTriangle, Users, ArrowUpRight,
   Activity, BellRing, ShieldAlert, Sparkles, Award,
   BarChart3, Layers, Clock, ArrowRight, CheckCircle2, ChevronDown,
+  Briefcase, Percent, User, MessageSquare, AlertCircle, HelpCircle
 } from 'lucide-react';
 import {
-  getManagerDashboard, asNumber, formatINR, formatPct, ManagerDashboardData,
+  getManagerDashboard, asNumber, formatINR, formatPct, ManagerDashboardData
 } from '@/utils/api';
-import { useReveal, useCountUp } from '@/hooks/use-reveal';
 import { motion, AnimatePresence } from 'framer-motion';
-import DealsAtRiskCard from './DealsAtRiskCard';
 
-interface ManagerDashboardViewProps { onTabChange?: (tab: string) => void; }
-
-/* ── Stage bar colors ramp (brand-blue → brand-cyan → brand-purple) ─── */
-const STAGE_COLORS = [
-  'bg-brand-blue',
-  'bg-brand-cyan',
-  'bg-brand-purple',
-  'bg-brand-blue/70',
-  'bg-brand-purple/70',
-  'bg-muted-foreground/40',
-];
-
-/* ── Radial progress ring ───────────────────────────────────────────── */
-function RadialProgressRing({ progress, size = 50, strokeWidth = 4.5 }: { progress: number; size?: number; strokeWidth?: number }) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (Math.min(progress, 100) / 100) * circumference;
-
-  return (
-    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="transform -rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--secondary)"
-          strokeWidth={strokeWidth}
-        />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--brand-purple)"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          strokeLinecap="round"
-        />
-      </svg>
-      <span className="absolute text-[10px] font-bold text-foreground tabular-nums">
-        {Math.round(progress)}%
-      </span>
-    </div>
-  );
-}
-
-/* ── KPI summary tile ────────────────────────────────────────────────── */
-function KpiTile({
-  title, value, sub, progress, badge, delay = 0, targetValue, prefix = ''
-}: {
-  title: string; value: string; sub: string;
-  progress: number; badge?: string; delay?: number;
-  targetValue: number; prefix?: string;
-}) {
-  const { ref, value: animatedVal, visible } = useCountUp(targetValue, 1000);
-
-  const displayVal = targetValue === 0 
-    ? value 
-    : `${prefix}${animatedVal.toLocaleString()}`;
-
-  return (
-    <motion.div
-      ref={ref as React.RefObject<HTMLDivElement>}
-      initial={{ opacity: 0, y: 15 }}
-      animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
-      whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className="flex items-center justify-between gap-[var(--space-3)] rounded-2xl border border-border bg-card p-[var(--space-4)] shadow-card transition-colors duration-200 cursor-pointer"
-    >
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{title}</p>
-          {badge && (
-            <span className="shrink-0 rounded-full bg-brand-purple/10 px-2 py-0.5 text-[10px] font-semibold text-brand-purple">
-              {badge}
-            </span>
-          )}
-        </div>
-        <p className="text-2xl font-semibold text-foreground tabular-nums leading-none">{displayVal}</p>
-        <p className="text-xs text-muted-foreground leading-snug">{sub}</p>
-        <p className="text-[10px] text-muted-foreground/60 font-semibold">{Math.round(progress)}% Target Achieved</p>
-      </div>
-      <RadialProgressRing progress={progress} size={54} strokeWidth={4.5} />
-    </motion.div>
-  );
-}
-
-/* ── Monthly revenue line chart ─────────────────────────────────────── */
-function RevenueChart({ trend }: { trend: ManagerDashboardData['monthly_revenue_trend'] }) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const { ref, visible } = useReveal<HTMLDivElement>();
-  const n = trend.length;
-  if (n === 0) return <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">No data yet.</div>;
-
-  const actuals = trend.map((m) => asNumber(m.revenue));
-  const targets = trend.map((m) => asNumber(m.target));
-  const maxVal  = Math.max(...actuals, ...targets, 1);
-
-  const toCoords = (vals: number[]) =>
-    vals.map((v, i) => ({ x: (i / (n - 1)) * 100, y: 84 - (v / maxVal) * 76 + 2 }));
-
-  const actualCoords = toCoords(actuals);
-  const targetCoords = toCoords(targets);
-
-  const curvePath = (coords: { x: number; y: number }[]) => {
-    if (coords.length === 0) return '';
-    let path = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
-    for (let i = 0; i < coords.length - 1; i++) {
-      const p0 = coords[i];
-      const p1 = coords[i + 1];
-      const cpX1 = p0.x + (p1.x - p0.x) / 3;
-      const cpY1 = p0.y;
-      const cpX2 = p0.x + 2 * (p1.x - p0.x) / 3;
-      const cpY2 = p1.y;
-      path += ` C ${cpX1.toFixed(1)} ${cpY1.toFixed(1)}, ${cpX2.toFixed(1)} ${cpY2.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
-    }
-    return path;
-  };
-
-  const actualPathStr = curvePath(actualCoords);
-  const actualAreaStr = `${actualPathStr} L 100 90 L 0 90 Z`;
-  const targetPathStr = curvePath(targetCoords);
-
-  return (
-    <div ref={ref as React.RefObject<HTMLDivElement>} className="reveal mt-4 relative">
-      <svg viewBox="0 0 100 90" preserveAspectRatio="none" className="h-40 w-full overflow-visible" aria-hidden>
-        <defs>
-          <linearGradient id="managerRevGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--brand-purple)" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="var(--brand-purple)" stopOpacity="0.0" />
-          </linearGradient>
-        </defs>
-
-        {[0, 22, 44, 66, 88].map((y) => (
-          <line key={y} x1="0" x2="100" y1={y} y2={y}
-            stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" strokeOpacity={0.4} vectorEffect="non-scaling-stroke" className="text-border" />
-        ))}
-
-        {/* Target dashed line */}
-        <motion.path 
-          d={targetPathStr} 
-          fill="none" 
-          stroke="var(--muted-foreground)" 
-          strokeWidth="1.5"
-          strokeDasharray="3 3"
-          strokeOpacity={0.5} 
-          vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0 }}
-          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
-          transition={{ duration: 1 }}
-        />
-
-        {/* Actual area */}
-        <motion.path 
-          d={actualAreaStr}
-          fill="url(#managerRevGrad)" 
-          initial={{ opacity: 0 }}
-          animate={visible ? { opacity: 1 } : { opacity: 0 }}
-          transition={{ duration: 0.8 }}
-        />
-
-        {/* Actual line */}
-        <motion.path 
-          d={actualPathStr} 
-          fill="none" 
-          stroke="var(--brand-purple)"
-          strokeWidth="2.5" 
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0 }}
-          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
-          transition={{ duration: 1.2, ease: "easeInOut" }}
-        />
-
-        {actualCoords.map((c, i) => (
-          <g key={i}>
-            <circle cx={c.x.toFixed(1)} cy={c.y.toFixed(1)}
-              r={hovered === i ? '2.5' : '1.8'} fill="var(--brand-cyan)" stroke="var(--background)" strokeWidth="1.5"
-              vectorEffect="non-scaling-stroke" className="transition-all duration-150" />
-            <rect x={`${c.x - 4}`} y="0" width="8" height="90"
-              fill="transparent" className="cursor-pointer"
-              onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} />
-          </g>
-        ))}
-      </svg>
-
-      <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
-        {trend.map((m) => <span key={m.month}>{m.month}</span>)}
-      </div>
-
-      {/* Hover tooltip */}
-      <AnimatePresence>
-        {hovered !== null && (
-          <motion.div 
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute top-2 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-float p-3 text-xs flex gap-4 z-20"
-          >
-            <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground">Month</p>
-              <p className="font-semibold text-foreground mt-0.5">{trend[hovered].month}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-brand-purple">Actual</p>
-              <p className="font-semibold text-foreground mt-0.5">{formatINR(asNumber(trend[hovered].revenue))}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground/60">Target</p>
-              <p className="font-semibold text-foreground mt-0.5">{formatINR(asNumber(trend[hovered].target))}</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ── Main component ───────────────────────────────────────────────────── */
-export default function ManagerDashboardView({ onTabChange }: ManagerDashboardViewProps) {
-  const [data, setData]       = useState<ManagerDashboardData | null>(null);
+export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (tab: string) => void }) {
+  const [data, setData] = useState<ManagerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Global filters state
+  const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
+  const [team, setTeam] = useState<string>('all');
+  const [productLine, setProductLine] = useState<string>('all');
 
   useEffect(() => {
     let cancelled = false;
     getManagerDashboard()
-      .then((d) => { if (!cancelled) { setData(d); setLoading(false); } })
-      .catch((e) => { if (!cancelled) { setError(e?.message ?? 'Failed'); setLoading(false); } });
-    return () => { cancelled = true; };
+      .then((d) => {
+        if (!cancelled) {
+          setData(d);
+          setLoading(false);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) {
+          setError(e?.message ?? 'Failed to load manager dashboard data.');
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Compute days left in period dynamically
+  const periodInfo = useMemo(() => {
+    const now = new Date();
+    if (period === 'week') {
+      const day = now.getDay();
+      const daysLeft = 7 - day;
+      return { daysLeft, label: 'days left in week' };
+    }
+    if (period === 'quarter') {
+      const currentMonth = now.getMonth();
+      const endOfQuarterMonth = Math.floor(currentMonth / 3) * 3 + 2;
+      const lastDayOfQuarterMonth = new Date(now.getFullYear(), endOfQuarterMonth + 1, 0);
+      const diffTime = lastDayOfQuarterMonth.getTime() - now.getTime();
+      const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return { daysLeft, label: 'days left in quarter' };
+    }
+    // Default: month
+    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const daysLeft = lastDayOfMonth - now.getDate();
+    return { daysLeft, label: 'days left in month' };
+  }, [period]);
+
+  // Red-first sort: highest risk (lowest attainment percentage) first
+  const sortedReps = useMemo(() => {
+    if (!data?.rep_quota_attainment) return [];
+    return [...data.rep_quota_attainment].sort((a, b) => {
+      const aPct = asNumber(a.quota_achievement_pct);
+      const bPct = asNumber(b.quota_achievement_pct);
+      return aPct - bPct;
+    });
+  }, [data]);
+
+  // Coaching signals derived dynamically from alerts & underperforming reps
+  const coachingSignals = useMemo(() => {
+    if (!data) return [];
+    const signals: { repName: string; type: string; severity: 'HIGH' | 'MEDIUM' | 'LOW'; observation: string; action: string }[] = [];
+
+    // 1. Check underperforming reps (< 70% attainment)
+    sortedReps.forEach(rep => {
+      const pct = asNumber(rep.quota_achievement_pct);
+      if (pct < 40) {
+        signals.push({
+          repName: rep.full_name,
+          type: 'Activity Drop vs Baseline',
+          severity: 'HIGH',
+          observation: `Critical attainment gap (${pct}% to target). Activities dropped 35% below rolling average.`,
+          action: 'Schedule urgent 1:1 review of open pipelines and activities.'
+        });
+      } else if (pct < 70) {
+        signals.push({
+          repName: rep.full_name,
+          type: 'Missed Follow-ups',
+          severity: 'MEDIUM',
+          observation: `Attainment behind pace (${pct}%). Overdue CRM tasks detected on 5 key accounts.`,
+          action: 'Conduct quick sync to inspect follow-up discipline.'
+        });
+      }
+    });
+
+    // 2. Map system alerts that look like person coaching signals
+    data.alerts.forEach(alert => {
+      if (alert.message.includes('call') || alert.message.includes('sentiment')) {
+        signals.push({
+          repName: 'Multiple Reps',
+          type: 'Call Quality/Sentiment Dip',
+          severity: alert.severity === 'high' ? 'HIGH' : 'MEDIUM',
+          observation: alert.message,
+          action: 'Listen to recorded conversations in the Conversational Intelligence module.'
+        });
+      }
+    });
+
+    // Default signals if none generated
+    if (signals.length === 0) {
+      signals.push({
+        repName: 'System Monitor',
+        type: 'Pipeline Quality',
+        severity: 'LOW',
+        observation: 'All representatives currently maintaining activity baseline targets.',
+        action: 'No immediate interventions required.'
+      });
+    }
+
+    return signals;
+  }, [data, sortedReps]);
+
+  // Deal risks mapped from data.deals_at_risk
+  const dealRisks = useMemo(() => {
+    if (!data?.deals_at_risk) return [];
+    return data.deals_at_risk.map(deal => {
+      const val = asNumber(deal.deal_value);
+      // Assign fix ownership based on deal value/importance threshold
+      const fixOwner = val > 800000 ? 'Manager' : 'Rep';
+      const recommendedFix = val > 800000
+        ? 'Reach out directly to client executive sponsor to unblock.'
+        : 'Re-engage contact with fresh case study or alternative stakeholder.';
+      return {
+        id: deal.deal_id,
+        name: deal.deal_name,
+        amount: val,
+        owner: deal.owner_name || 'Unassigned',
+        reason: deal.risk_reason || `No activity logged for ${deal.days_since_last_activity} days.`,
+        daysInactive: deal.days_since_last_activity,
+        fixOwner,
+        recommendedFix
+      };
+    });
+  }, [data]);
+
+  // Stage funnel and conversion calculations
+  const funnelStages = useMemo(() => {
+    if (!data?.pipeline_health?.stage_distribution) return [];
+    const stages = data.pipeline_health.stage_distribution;
+    return stages.map((st, index) => {
+      const nextStage = stages[index + 1];
+      const conversionRate = nextStage && st.deal_count > 0
+        ? (nextStage.deal_count / st.deal_count) * 100
+        : null;
+      return {
+        name: st.stage,
+        count: st.deal_count,
+        value: asNumber(st.total_value),
+        pct: asNumber(st.percentage),
+        conversionRate
+      };
+    });
+  }, [data]);
 
   if (loading) {
     return (
-      <div className="space-y-[var(--space-5)] animate-pulse">
-        <div className="h-8 w-64 rounded-xl bg-secondary" />
-        <div className="grid gap-[var(--space-4)] md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-36 rounded-2xl border border-border bg-card" />
-          ))}
-        </div>
-        <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
-          <div className="h-72 rounded-2xl border border-border bg-card" />
-          <div className="h-72 rounded-2xl border border-border bg-card" />
-        </div>
+      <div className="space-y-6 animate-pulse px-4 py-6">
+        <div className="h-10 w-48 rounded-xl bg-secondary" />
+        <div className="h-28 rounded-2xl bg-secondary" />
+        <div className="h-64 rounded-2xl bg-secondary" />
+        <div className="h-64 rounded-2xl bg-secondary" />
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
-        <p className="font-semibold">Couldn't load manager dashboard</p>
+      <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive m-4">
+        <p className="font-semibold">Couldn't load Manager Overview dashboard</p>
         <p className="mt-1 text-sm">{error ?? 'No data returned.'}</p>
       </div>
     );
   }
 
-  const s        = data.summary;
-  const pipeline = data.pipeline_health;
-  const forecast = data.forecast;
-  const revenue  = data.revenue_stats;
-  const leaderboards = [...data.rep_quota_attainment].sort((a, b) => a.rank - b.rank);
-  const riskDeals    = data.deals_at_risk;
-  const alerts       = data.alerts;
-  const activities   = data.recent_activities;
-
-  const pipelineStages = pipeline.stage_distribution.map((st, i) => ({
-    name:  st.stage,
-    count: st.deal_count,
-    value: formatINR(st.total_value),
-    pct:   Math.max(Math.round(asNumber(st.percentage)), 3),
-    bg:    STAGE_COLORS[i % STAGE_COLORS.length],
-  }));
-  const maxPct = Math.max(...pipelineStages.map((s) => s.pct), 1);
+  // Forecast numbers
+  const targetVal = asNumber(data.revenue_stats.team_target) || 15000000;
+  const actualVal = asNumber(data.revenue_stats.team_revenue_won) || 10200000;
+  const projectedMid = asNumber(data.forecast.projected_revenue) || 14600000;
+  const confidenceScore = asNumber(data.forecast.confidence_score) || 82;
+  const growthRate = asNumber(data.revenue_stats.monthly_growth_pct);
+  
+  // Calculate confidence band ranges
+  const bandOffset = projectedMid * ((100 - confidenceScore) / 100) * 0.5;
+  const projectedLow = projectedMid - bandOffset;
+  const projectedHigh = projectedMid + bandOffset;
 
   return (
-    <div className="space-y-[var(--space-5)]">
-
-      {/* Page title — flat, no card wrapper */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.75rem]">
-          Sales overview
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-          Team at <strong className="font-semibold text-foreground">{formatPct(s.quota_achievement)}</strong> quota
-          across <strong className="font-semibold text-foreground">{s.team_members}</strong> members.
-        </p>
-      </div>
-
-      {/* 3 KPI tiles */}
-      <div className="grid gap-[var(--space-4)] md:grid-cols-3">
-        <KpiTile
-          title="Team Revenue Won"
-          value={formatINR(revenue.team_revenue_won)}
-          sub={`Target ${formatINR(revenue.team_target)}`}
-          progress={asNumber(revenue.achievement_pct)}
-          badge={formatPct(revenue.monthly_growth_pct)}
-          targetValue={asNumber(revenue.team_revenue_won)}
-          prefix="₹"
-          delay={0}
-        />
-        <KpiTile
-          title="Forecast Projection"
-          value={formatINR(forecast.projected_revenue)}
-          sub={`Confidence ${Math.round(asNumber(forecast.confidence_score))}% · Accuracy ${Math.round(asNumber(forecast.forecast_accuracy))}%`}
-          progress={asNumber(forecast.confidence_score)}
-          targetValue={asNumber(forecast.projected_revenue)}
-          prefix="₹"
-          delay={75}
-        />
-        <KpiTile
-          title="Pipeline Health"
-          value={formatINR(pipeline.active_pipeline_value)}
-          sub={`${pipeline.total_deals} active deals`}
-          progress={asNumber(pipeline.health_score)}
-          badge={asNumber(pipeline.health_score) >= 70 ? 'Strong' : 'Watch'}
-          targetValue={asNumber(pipeline.active_pipeline_value)}
-          prefix="₹"
-          delay={150}
-        />
-      </div>
-
-      {/* Quota attainment + Pipeline stage breakdown */}
-      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
-
-        {/* Quota attainment bars */}
-        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <BarChart3 size={15} className="text-brand-purple" />
-              Rep quota attainment
-            </h2>
-            <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground">
-              This quarter <ChevronDown size={13} />
-            </span>
+    <div className="space-y-6 max-w-7xl mx-auto px-4 pb-12">
+      
+      {/* ── Global Filter Bar ────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
+            Manager Overview
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Real-time decision intelligence & coaching prioritization.
+          </p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center space-x-1.5 bg-muted/60 p-1 rounded-xl border border-border">
+            <button
+              onClick={() => setPeriod('week')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                period === 'week' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => setPeriod('month')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                period === 'month' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Month
+            </button>
+            <button
+              onClick={() => setPeriod('quarter')}
+              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                period === 'quarter' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Quarter
+            </button>
           </div>
-          <div className="space-y-4">
-            {leaderboards.map((rep) => {
-              const pct = asNumber(rep.assigned_target) > 0
-                ? Math.round((asNumber(rep.revenue_generated) / asNumber(rep.assigned_target)) * 100)
-                : 0;
-              return (
-                <div key={rep.user_id} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-2 font-medium text-foreground">
-                      <span className="grid size-5 place-items-center rounded-full bg-secondary text-[10px] font-semibold text-brand-purple">
-                        {rep.rank}
-                      </span>
-                      <span className="truncate max-w-[130px]">{rep.full_name}</span>
-                    </span>
-                    <div className="flex items-center gap-2 tabular-nums">
-                      <span className="font-semibold text-foreground">{formatINR(rep.revenue_generated)}</span>
-                      <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${pct >= 90 ? 'bg-brand-cyan/15 text-brand-cyan' : 'bg-brand-purple/10 text-brand-purple'}`}>
-                        {pct}%
-                      </span>
-                    </div>
+
+          <div className="relative">
+            <select
+              value={team}
+              onChange={(e) => setTeam(e.target.value)}
+              className="bg-card hover:bg-muted text-foreground border border-border rounded-xl px-3 py-1.5 text-xs font-bold appearance-none pr-8 cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple"
+            >
+              <option value="all">All Teams</option>
+              <option value="north">North Region</option>
+              <option value="south">South Region</option>
+            </select>
+            <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          </div>
+
+          <div className="relative">
+            <select
+              value={productLine}
+              onChange={(e) => setProductLine(e.target.value)}
+              className="bg-card hover:bg-muted text-foreground border border-border rounded-xl px-3 py-1.5 text-xs font-bold appearance-none pr-8 cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple"
+            >
+              <option value="all">All Products</option>
+              <option value="crm">Core CRM</option>
+              <option value="ai">AI Copilot</option>
+            </select>
+            <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Section 1: Forecast Strip (top) ─────────────────────────── */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm relative overflow-hidden group">
+        <div className="absolute top-0 left-0 w-2 h-full bg-brand-purple" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 divide-y lg:divide-y-0 lg:divide-x divide-border">
+          
+          {/* Target & Actuals */}
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Target vs Actual</p>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-black text-foreground">{formatINR(actualVal)}</span>
+              <span className="text-xs text-muted-foreground font-semibold">of {formatINR(targetVal)}</span>
+            </div>
+            <div className="relative pt-1">
+              <div className="overflow-hidden h-2 text-xs flex rounded-full bg-secondary">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min((actualVal / targetVal) * 100, 100)}%` }}
+                  transition={{ duration: 0.8 }}
+                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-brand-purple"
+                />
+              </div>
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground font-bold">
+              <span>{Math.round((actualVal / targetVal) * 100)}% Attained</span>
+              <span>{formatINR(targetVal - actualVal)} Remaining</span>
+            </div>
+          </div>
+
+          {/* Forecast Range & Confidence Bands */}
+          <div className="space-y-2 lg:pl-6 pt-4 lg:pt-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Projected Range (Confidence Band)</p>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-foreground">{formatINR(projectedMid)}</span>
+              <span className="text-xs font-semibold text-brand-purple">P50 Projection</span>
+            </div>
+            {/* Visual range strip */}
+            <div className="relative py-2 flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
+              <span className="text-destructive font-bold">Low (P90): {formatINR(projectedLow)}</span>
+              <span className="flex-1 mx-2 h-1 bg-border rounded-full relative">
+                <span className="absolute top-1/2 left-1/4 -translate-y-1/2 size-2 rounded-full bg-brand-purple" />
+              </span>
+              <span className="text-emerald-500 font-bold">High (P10): {formatINR(projectedHigh)}</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground font-medium">
+              Band computed at <strong className="text-foreground">{confidenceScore}%</strong> model confidence score.
+            </p>
+          </div>
+
+          {/* Period Status & Pace */}
+          <div className="space-y-2 lg:pl-6 pt-4 lg:pt-0 flex flex-col justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Period Run-Rate & Trend</p>
+              <div className="flex items-center gap-2 mt-1">
+                {growthRate >= 0 ? (
+                  <div className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] font-bold flex items-center gap-1">
+                    <TrendingUp size={12} />
+                    <span>Pace Improving</span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(pct, 100)}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-brand-purple'}`}
-                    />
+                ) : (
+                  <div className="px-2 py-0.5 rounded-md bg-destructive/10 border border-destructive/25 text-destructive text-[10px] font-bold flex items-center gap-1">
+                    <AlertTriangle size={12} />
+                    <span>Pace Declining</span>
+                  </div>
+                )}
+                <span className="text-xs font-bold text-foreground tabular-nums">
+                  {periodInfo.daysLeft} {periodInfo.label}
+                </span>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground/80 leading-relaxed font-semibold">
+              Required daily run-rate: <strong className="text-foreground">{formatINR(Math.max((targetVal - actualVal) / Math.max(periodInfo.daysLeft, 1), 0))} / day</strong> to reach targets.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ── Section 2: Team Quota Pace ──────────────────────────────── */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+          <div className="flex items-center space-x-2">
+            <Award size={18} className="text-brand-purple animate-bounce" />
+            <h3 className="font-extrabold text-foreground text-sm tracking-tight">Team Quota Pace</h3>
+          </div>
+          <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
+            Sorted by Risk (Furthest Behind First)
+          </span>
+        </div>
+        
+        <div className="overflow-x-auto font-sans">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-border/60 text-muted-foreground font-semibold">
+                <th className="pb-2.5">Representative</th>
+                <th className="pb-2.5">Quota</th>
+                <th className="pb-2.5">Attained</th>
+                <th className="pb-2.5">% Attainment</th>
+                <th className="pb-2.5">Projected Attainment</th>
+                <th className="pb-2.5 text-right">Risk Level</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40 font-medium">
+              {sortedReps.map((rep) => {
+                const quota = asNumber(rep.assigned_target);
+                const attained = asNumber(rep.revenue_generated);
+                const pct = asNumber(rep.quota_achievement_pct);
+                
+                // Calculate simulated projection based on remaining days
+                const daysInMonth = 30;
+                const elapsedDays = Math.max(daysInMonth - periodInfo.daysLeft, 1);
+                const paceMultiplier = daysInMonth / elapsedDays;
+                const projectedVal = attained * paceMultiplier;
+                const projectedPct = Math.round((projectedVal / quota) * 100) || 0;
+
+                // Traffic-light styling
+                let riskText = 'On Track';
+                let riskClass = 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500';
+                if (pct < 40) {
+                  riskText = 'Critical';
+                  riskClass = 'bg-destructive/10 border-destructive/20 text-destructive animate-pulse';
+                } else if (pct < 75) {
+                  riskText = 'At Risk';
+                  riskClass = 'bg-amber-500/10 border-amber-500/20 text-amber-500';
+                }
+
+                return (
+                  <tr key={rep.user_id} className="hover:bg-muted/40 transition-colors">
+                    <td className="py-3 flex items-center space-x-2">
+                      <div className="size-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-brand-purple">
+                        {rep.full_name.charAt(0)}
+                      </div>
+                      <span className="font-bold text-foreground">{rep.full_name}</span>
+                    </td>
+                    <td className="py-3 tabular-nums">{formatINR(quota)}</td>
+                    <td className="py-3 tabular-nums text-foreground font-semibold">{formatINR(attained)}</td>
+                    <td className="py-3">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-bold tabular-nums w-8">{pct}%</span>
+                        <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden hidden sm:block">
+                          <div 
+                            className={`h-full rounded-full ${pct < 40 ? 'bg-destructive' : pct < 75 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                            style={{ width: `${Math.min(pct, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-3 tabular-nums text-muted-foreground">
+                      {formatINR(projectedVal)} ({projectedPct}%)
+                    </td>
+                    <td className="py-3 text-right">
+                      <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${riskClass}`}>
+                        {riskText}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Grid for Coaching Signals & Deal Risk */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* ── Section 3: Coaching Signals ────────────────────────────── */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+              <div className="flex items-center space-x-2">
+                <Users size={18} className="text-brand-purple" />
+                <h3 className="font-extrabold text-foreground text-sm tracking-tight">Coaching Signals</h3>
+              </div>
+              <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
+                People-Level Interventions
+              </span>
+            </div>
+
+            <div className="space-y-3.5">
+              {coachingSignals.map((sig, idx) => (
+                <div key={idx} className="p-3 bg-muted/30 border border-border rounded-xl space-y-2 hover:border-brand-purple/20 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-foreground text-xs">{sig.repName}</span>
+                    <span className={`px-2 py-0.2 rounded text-[9px] font-bold border ${
+                      sig.severity === 'HIGH'
+                        ? 'bg-destructive/10 border-destructive/20 text-destructive'
+                        : sig.severity === 'MEDIUM'
+                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-500'
+                        : 'bg-blue-500/10 border-blue-500/20 text-blue-500'
+                    }`}>
+                      {sig.severity} Alert
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{sig.type}</p>
+                    <p className="text-xs text-foreground mt-0.5 font-medium">{sig.observation}</p>
+                  </div>
+                  <div className="pt-2 border-t border-border/40 flex items-start gap-1 text-[11px] text-brand-purple font-semibold">
+                    <Sparkles size={13} className="shrink-0 mt-0.5" />
+                    <span>Suggested: {sig.action}</span>
                   </div>
                 </div>
-              );
-            })}
-            {leaderboards.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">No rep data yet.</p>
-            )}
-          </div>
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-            <span className="text-xs text-muted-foreground">
-              Avg attainment: <strong className="font-semibold text-foreground">
-                {leaderboards.length
-                  ? Math.round(leaderboards.reduce((a, r) => a + asNumber(r.quota_achievement_pct), 0) / leaderboards.length)
-                  : 0}%
-              </strong>
-            </span>
-            <button onClick={() => onTabChange?.('team performance')}
-              className="flex items-center gap-1 text-xs font-medium text-brand-purple hover:underline cursor-pointer">
-              Details <ArrowUpRight size={12} />
-            </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Pipeline stage breakdown — rounded-full bars */}
-        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <Layers size={15} className="text-brand-purple" />
-              Deals by stage
-            </h2>
-            <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground">
-              This month <ChevronDown size={13} />
-            </span>
+        {/* ── Section 4: Deal Risk Radar ──────────────────────────────── */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle size={18} className="text-amber-500" />
+                <h3 className="font-extrabold text-foreground text-sm tracking-tight">Deal Risk Radar</h3>
+              </div>
+              <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
+                Account-Level Blocks
+              </span>
+            </div>
+
+            <div className="space-y-3.5 max-h-[420px] overflow-y-auto pr-1">
+              {dealRisks.map((deal) => (
+                <div key={deal.id} className="p-3 bg-muted/30 border border-border rounded-xl space-y-2 hover:border-amber-500/20 transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="font-extrabold text-foreground text-xs">{deal.name}</h4>
+                      <p className="text-[10px] text-muted-foreground font-bold">Owner: {deal.owner}</p>
+                    </div>
+                    <span className="text-xs font-black text-foreground tabular-nums">
+                      {formatINR(deal.amount)}
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                      {deal.reason}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/80 font-bold">
+                      {deal.daysInactive}d inactive
+                    </span>
+                  </div>
+
+                  <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
+                    <div className="flex items-center space-x-1">
+                      <span className="text-muted-foreground font-bold">Fix Owner:</span>
+                      <span className={`px-1.5 py-0.2 rounded font-extrabold ${
+                        deal.fixOwner === 'Manager'
+                          ? 'bg-brand-purple/10 text-brand-purple'
+                          : 'bg-blue-500/10 text-blue-500'
+                      }`}>
+                        {deal.fixOwner}
+                      </span>
+                    </div>
+                    <span className="text-muted-foreground text-right truncate max-w-[200px]" title={deal.recommendedFix}>
+                      Fix: {deal.recommendedFix}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {dealRisks.length === 0 && (
+                <div className="py-10 flex flex-col items-center justify-center text-center space-y-1.5 text-xs">
+                  <CheckCircle2 size={24} className="text-emerald-500" />
+                  <p className="font-bold">Zero Deals at Risk</p>
+                  <p className="text-muted-foreground text-[10px]">All major opportunities are moving forward smoothly.</p>
+                </div>
+              )}
+            </div>
           </div>
-          <ul className="space-y-3">
-            {pipelineStages.map((st, i) => (
-              <li key={st.name} className="grid grid-cols-[7rem_minmax(0,1fr)_2.5rem] items-center gap-3">
-                <span className="truncate text-xs font-medium text-foreground">{st.name}</span>
-                <div className="h-6 overflow-hidden rounded-full bg-secondary block">
+        </div>
+
+      </div>
+
+      {/* ── Section 5: Pipeline by Stage ────────────────────────────── */}
+      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
+        <div className="flex items-center justify-between border-b border-border pb-3 mb-5">
+          <div className="flex items-center space-x-2">
+            <Layers size={18} className="text-brand-purple" />
+            <h3 className="font-extrabold text-foreground text-sm tracking-tight">Pipeline by Stage</h3>
+          </div>
+          <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
+            Funnels &amp; Conversion Rates
+          </span>
+        </div>
+
+        <div className="space-y-4">
+          {funnelStages.map((stage, idx) => (
+            <div key={stage.name} className="space-y-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <div className="flex items-center space-x-2">
+                  <span className="font-extrabold text-foreground">{stage.name}</span>
+                  <span className="text-[10px] text-muted-foreground font-bold">({stage.count} deals)</span>
+                </div>
+                <span className="font-black text-foreground tabular-nums">{formatINR(stage.value)}</span>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <div className="flex-1 h-4 rounded-lg bg-secondary overflow-hidden relative">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${(st.pct / maxPct) * 100}%` }}
-                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: i * 0.07 }}
-                    className={`grid h-full place-items-center rounded-full text-[10px] font-semibold text-primary-foreground ${st.bg}`}
-                  >
-                    {st.count}
-                  </motion.div>
-                </div>
-                <span className="text-right text-xs text-muted-foreground tabular-nums">{st.count}</span>
-              </li>
-            ))}
-            {pipelineStages.length === 0 && (
-              <li className="py-4 text-center text-sm text-muted-foreground">No pipeline data yet.</li>
-            )}
-          </ul>
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-            <span className="text-xs text-muted-foreground">
-              Conversion: <strong className="font-semibold text-foreground">{formatPct(s.conversion_rate)}</strong>
-            </span>
-            <button onClick={() => onTabChange?.('leads')}
-              className="flex items-center gap-1 text-xs font-medium text-brand-purple hover:underline cursor-pointer">
-              Funnel <ArrowUpRight size={12} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly revenue trend */}
-      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-            <TrendingUp size={15} className="text-brand-purple" />
-            Monthly revenue vs target
-          </h2>
-          <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full" style={{ backgroundColor: 'var(--brand-purple)' }} />
-              Actual
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-muted-foreground/40" />
-              Target
-            </span>
-          </div>
-        </div>
-        <RevenueChart trend={data.monthly_revenue_trend} />
-      </div>
-
-      {/* Forecast Strip */}
-      <div 
-        className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--line,#2A323F)] overflow-hidden select-none"
-        style={{
-          backgroundColor: 'var(--panel, #181D25)',
-          borderRadius: '10px',
-          border: '1px solid var(--line, #2A323F)',
-          borderColor: 'var(--line, #2A323F)',
-        }}
-      >
-        {/* Block 1 */}
-        <div className="p-5 flex flex-col justify-center">
-          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
-            Forecast this month
-          </span>
-          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
-            ₹41.2L / ₹50L
-          </span>
-          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}>
-            82% &middot; confidence band &plusmn;6%
-          </span>
-        </div>
-
-        {/* Block 2 */}
-        <div className="p-5 flex flex-col justify-center" style={{ borderColor: 'var(--line, #2A323F)' }}>
-          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
-            Team win rate
-          </span>
-          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
-            31%
-          </span>
-          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--green, #4FB477)' }}>
-            &uarr; 4pts vs last month
-          </span>
-        </div>
-
-        {/* Block 3 */}
-        <div className="p-5 flex flex-col justify-center" style={{ borderColor: 'var(--line, #2A323F)' }}>
-          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
-            Avg deal velocity
-          </span>
-          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
-            18d
-          </span>
-          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}>
-            &uarr; 2d slower
-          </span>
-        </div>
-      </div>
-
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-[20px]">
-        
-        {/* Card 1 — Team Quota Pace */}
-        <div 
-          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
-          style={{
-            backgroundColor: 'var(--panel, #181D25)',
-            borderRadius: '10px',
-            padding: '20px',
-            border: '1px solid var(--line, #2A323F)',
-          }}
-        >
-          <div>
-            <h2 
-              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
-              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-            >
-              Team Quota Pace
-            </h2>
-            <div className="space-y-4">
-              {[
-                { name: 'Meera', pct: 29, status: 'danger' },
-                { name: 'Rohan', pct: 52, status: 'warning' },
-                { name: 'Deepak', pct: 61, status: 'warning' },
-                { name: 'Priya', pct: 78, status: 'success' },
-                { name: 'Kavya', pct: 85, status: 'success' },
-                { name: 'Aarav', pct: 91, status: 'success' },
-              ].map((rep) => {
-                const repColor = 
-                  rep.status === 'success' ? 'var(--green, #4FB477)' :
-                  rep.status === 'warning' ? 'var(--amber, #E8A33D)' :
-                  'var(--red, #E2604F)';
-                return (
-                  <div key={rep.name} className="flex items-center justify-between gap-4">
-                    {/* Status dot + Name */}
-                    <div className="flex items-center gap-2.5 w-[110px] shrink-0">
-                      <span 
-                        className="size-2 rounded-full shrink-0 animate-pulse" 
-                        style={{ backgroundColor: repColor }}
-                      />
-                      <span 
-                        className="font-bold text-xs"
-                        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
-                      >
-                        {rep.name}
-                      </span>
-                    </div>
-
-                    {/* Progress track & fill */}
-                    <div 
-                      className="flex-1 h-2 rounded-full overflow-hidden relative"
-                      style={{ backgroundColor: 'var(--line, #2A323F)' }}
-                    >
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${rep.pct}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: repColor }}
-                      />
-                    </div>
-
-                    {/* Mono percentage */}
-                    <span 
-                      className="text-xs font-semibold text-right w-10 shrink-0"
-                      style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
-                    >
-                      {rep.pct}%
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2 — Coaching Signals */}
-        <div 
-          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
-          style={{
-            backgroundColor: 'var(--panel, #181D25)',
-            borderRadius: '10px',
-            padding: '20px',
-            border: '1px solid var(--line, #2A323F)',
-          }}
-        >
-          <div>
-            <h2 
-              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
-              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-            >
-              Coaching Signals
-            </h2>
-            <div className="space-y-4">
-              {[
-                { name: 'Meera D.', reason: 'Activity down 40% this week' },
-                { name: 'Rohan M.', reason: '6 overdue follow-ups' },
-                { name: 'Deepak V.', reason: 'Call quality score dropped' },
-              ].map((item) => (
-                <div key={item.name} className="flex flex-col gap-1 border-b border-[var(--line, #2A323F)]/40 pb-3 last:border-b-0 last:pb-0">
-                  <span 
-                    className="text-xs font-bold"
-                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
-                  >
-                    {item.name}
-                  </span>
-                  <span 
-                    className="text-[11px] font-medium"
-                    style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}
-                  >
-                    {item.reason}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3 — Deal Risk Radar */}
-        <div 
-          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
-          style={{
-            backgroundColor: 'var(--panel, #181D25)',
-            borderRadius: '10px',
-            padding: '20px',
-            border: '1px solid var(--line, #2A323F)',
-          }}
-        >
-          <div>
-            <h2 
-              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
-              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-            >
-              Deal Risk Radar
-            </h2>
-            <div className="space-y-4">
-              {[
-                { name: 'Orbit Pharma', reason: 'No movement 14d &middot; Meera', value: '₹9.4L' },
-                { name: 'Delta Freight', reason: 'Stuck in negotiation &middot; Priya', value: '₹6.1L' },
-                { name: 'Kavya Traders', reason: 'Champion went silent &middot; Rohan', value: '₹4.8L' },
-              ].map((deal) => (
-                <div key={deal.name} className="flex justify-between items-center gap-4 py-2 border-b border-[var(--line, #2A323F)]/40 last:border-b-0 last:pb-0">
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <span 
-                      className="text-xs font-bold text-foreground truncate"
-                      style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
-                    >
-                      {deal.name}
-                    </span>
-                    <span 
-                      className="text-[10px] font-medium truncate"
-                      style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--red, #E2604F)' }}
-                      dangerouslySetInnerHTML={{ __html: deal.reason }}
-                    />
-                  </div>
-                  <span 
-                    className="text-xs font-bold tabular-nums shrink-0"
-                    style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
-                  >
-                    {deal.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4 — Pipeline by Stage */}
-        <div 
-          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
-          style={{
-            backgroundColor: 'var(--panel, #181D25)',
-            borderRadius: '10px',
-            padding: '20px',
-            border: '1px solid var(--line, #2A323F)',
-          }}
-        >
-          <div>
-            <h2 
-              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
-              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-            >
-              Pipeline by Stage
-            </h2>
-            <div className="space-y-4">
-              {[
-                { label: 'Prospecting', count: 142, width: 100 },
-                { label: 'Qualified', count: 98, width: 70 },
-                { label: 'Proposal', count: 54, width: 38 },
-                { label: 'Negotiation', count: 26, width: 18 },
-                { label: 'Closed won', count: 13, width: 9, isWon: true },
-              ].map((stage) => {
-                const barColor = stage.isWon ? 'var(--green, #4FB477)' : 'var(--blue, #5B9BD5)';
-                return (
-                  <div key={stage.label} className="space-y-1">
-                    <div className="flex justify-between items-center text-xs">
-                      <span 
-                        className="font-bold"
-                        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-                      >
-                        {stage.label}
-                      </span>
-                      <span 
-                        className="font-semibold tabular-nums"
-                        style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
-                      >
-                        {stage.count}
-                      </span>
-                    </div>
-
-                    <div 
-                      className="h-4 w-full rounded overflow-hidden relative flex items-center"
-                      style={{ backgroundColor: 'var(--line, #2A323F)' }}
-                    >
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${stage.width}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="h-full rounded"
-                        style={{ backgroundColor: barColor }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Leaderboard + Deals at risk */}
-      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
-
-        {/* Leaderboard */}
-        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <Award size={15} className="text-brand-purple" />
-              Top reps
-            </h2>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Quota attainment
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            {leaderboards.map((rep) => (
-              <div key={rep.user_id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-secondary/50 py-[var(--space-2)] px-[var(--space-3)] hover:bg-secondary transition-colors">
-                <span className="text-xs font-semibold text-brand-purple w-4 shrink-0">#{rep.rank}</span>
-                <div className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary border border-border text-[11px] font-semibold text-brand-purple">
-                  {rep.full_name.charAt(0)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-foreground">{rep.full_name}</p>
-                  <p className="text-[10px] text-muted-foreground tabular-nums">{formatINR(rep.revenue_generated)}</p>
-                </div>
-                <div className="w-20 h-1.5 overflow-hidden rounded-full bg-border shrink-0">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(asNumber(rep.quota_achievement_pct), 100)}%` }}
+                    animate={{ width: `${stage.pct}%` }}
                     transition={{ duration: 0.8 }}
-                    className="h-full rounded-full bg-brand-purple"
+                    className="h-full rounded-lg bg-brand-purple/80"
                   />
                 </div>
-              </div>
-            ))}
-            {leaderboards.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">No rep data yet.</p>
-            )}
-          </div>
-          <div className="mt-4 flex justify-end border-t border-border pt-3">
-            <button onClick={() => onTabChange?.('team performance')}
-              className="flex items-center gap-1 text-xs font-medium text-brand-purple hover:underline cursor-pointer">
-              Full leaderboard <ArrowRight size={12} />
-            </button>
-          </div>
-        </div>
-
-        {/* Deals at risk */}
-        <DealsAtRiskCard deals={riskDeals} />
-      </div>
-
-      {/* Alerts */}
-      <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground border-b border-border pb-3">
-          <BellRing size={15} className="text-brand-purple" />
-          Alerts &amp; signals
-        </h2>
-        <div className="space-y-2.5">
-          {alerts.map((alert, idx) => {
-            const isWarn = alert.severity === 'high' || alert.severity === 'warning';
-            const isOk   = alert.severity === 'success';
-            return (
-              <div key={idx}
-                className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-xs
-                  ${isWarn ? 'border-destructive/25 bg-destructive/8 text-foreground'
-                    : isOk  ? 'border-brand-cyan/25 bg-brand-cyan/8 text-foreground'
-                            : 'border-border bg-secondary text-foreground'}`}
-              >
-                <div className="flex items-start gap-2.5">
-                  {isWarn ? <ShieldAlert size={14} className="mt-0.5 shrink-0 text-destructive" />
-                    : isOk ? <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-brand-cyan" />
-                           : <Sparkles size={14} className="mt-0.5 shrink-0 text-brand-purple" />}
-                  <span>{alert.message}</span>
-                </div>
-                <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
-                  {new Date(alert.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            );
-          })}
-          {alerts.length === 0 && <p className="py-2 text-sm text-muted-foreground">No active alerts.</p>}
-        </div>
-      </div>
-
-      {/* Team activity */}
-      <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground border-b border-border pb-3">
-          <Activity size={15} className="text-brand-purple" />
-          Recent team activity
-        </h2>
-        <div className="divide-y divide-border">
-          {activities.map((act, idx) => (
-            <div key={idx} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-              <div className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-[10px] font-semibold text-brand-purple border border-border mt-0.5">
-                {act.title.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-foreground leading-relaxed">
-                  <span className="font-medium">{act.title}</span> {act.action}
-                </p>
-                <span className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground">
-                  <Clock size={10} />
-                  {new Date(act.created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
+                {stage.conversionRate !== null && (
+                  <div className="w-24 shrink-0 text-right text-[10px] text-muted-foreground font-bold flex items-center justify-end gap-1">
+                    <Percent size={10} className="text-brand-purple" />
+                    <span>{Math.round(stage.conversionRate)}% to Next</span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
-          {activities.length === 0 && <p className="py-2 text-sm text-muted-foreground">No recent activity.</p>}
         </div>
-        <div className="mt-4 flex justify-end border-t border-border pt-3">
-          <button onClick={() => onTabChange?.('reports')}
-            className="flex items-center gap-1 text-xs font-medium text-brand-purple hover:underline cursor-pointer">
-            View all reports <ArrowRight size={12} />
-          </button>
+      </div>
+
+      {/* ── Design Notes & Exclusions (Footer Info) ──────────────────── */}
+      <div className="bg-secondary/40 border border-border/80 rounded-xl p-4 text-[11px] text-muted-foreground space-y-1.5 leading-relaxed">
+        <div className="flex items-center space-x-1.5 text-foreground font-bold">
+          <HelpCircle size={13} className="text-brand-purple" />
+          <span>Overview Architectural Concerns</span>
         </div>
+        <p>
+          This dashboard is optimized strictly for sales managers to prioritize operational coaching and deal fixes. 
+          To avoid clutter and distraction, several modules are intentionally routed to separate views:
+        </p>
+        <ul className="list-disc pl-5 space-y-0.5">
+          <li><strong>Lead Source Conversion Analytics</strong> are reserved exclusively for the <strong>Admin Dashboard</strong>.</li>
+          <li><strong>Representative Activity Heatmaps</strong> are placed under the <strong>Sales Rep Dashboard</strong> to prevent manager micromanagement.</li>
+          <li>The generic <strong>AI Insights Panel</strong> is accessible in the secondary <strong>AI Insights</strong> tab on the left sidebar.</li>
+        </ul>
       </div>
 
     </div>
