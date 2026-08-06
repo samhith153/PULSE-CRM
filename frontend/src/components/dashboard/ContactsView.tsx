@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getContacts, createContact, updateContact } from '@/utils/api';
+import { getContacts, createContact, updateContact, deleteContact } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Contact, 
   Search, 

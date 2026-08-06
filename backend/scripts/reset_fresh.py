@@ -46,9 +46,9 @@ TABLES_TO_CLEAR = [
 ]
 
 NEW_ACCOUNTS = [
-    ("admin",     "admin@pulsecrm.com",  "Admin@123456",  "System Administrator", True),
-    ("manager",   "manager@pulsecrm.com", "Manager@123456", "Sales Manager",       False),
-    ("sales_rep", "sales@pulsecrm.com",   "Sales@123456",   "Sales Representative", False),
+    ("admin",     "admin@pulsecrm.com",  "Admin@123456",  "System Administrator"),
+    ("manager",   "manager@pulsecrm.com", "Manager@123456", "Sales Manager"),
+    ("sales_rep", "sales@pulsecrm.com",   "Sales@123456",   "Sales Representative"),
 ]
 
 
@@ -91,7 +91,7 @@ async def reset() -> None:
 
         # ── 6. Create 3 fresh user accounts ───────────────────────────────
         created_users: dict[str, User] = {}
-        for role_name, email, password, full_name, is_super in NEW_ACCOUNTS:
+        for role_name, email, password, full_name in NEW_ACCOUNTS:
             role = role_map[role_name]
             user = User(
                 email=email,
@@ -99,7 +99,6 @@ async def reset() -> None:
                 hashed_password=hash_password(password),
                 organization_id=org.id,
                 is_verified=True,
-                is_superuser=is_super,
                 is_active=True,
             )
             db.add(user)

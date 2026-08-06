@@ -1,6 +1,7 @@
 import os
 from uuid import UUID, uuid4
-from fastapi import APIRouter, UploadFile, File, Form, status, HTTPException, Response, Query, Depends
+
+from fastapi import APIRouter, UploadFile, File, Form, status, HTTPException, Response, Query
 from typing import Optional
 from sqlalchemy import select
 from supabase import create_client, Client

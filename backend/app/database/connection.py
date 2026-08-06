@@ -33,7 +33,10 @@ ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
 connect_args = {}
-if DATABASE_URL.startswith("postgresql") and "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
+# Disable asyncpg prepared statement cache — required for pgbouncer
+# transaction/statement pooling (e.g. Supabase pooler on port 6543).
+connect_args["statement_cache_size"] = 0
+if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
     connect_args["ssl"] = ssl_context
 
 engine = create_async_engine(

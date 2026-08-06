@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getCompanies, updateCompany } from '@/utils/api';
+import { getCompanies, updateCompany, deleteCompany } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Building2, 
   Search, 

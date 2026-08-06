@@ -127,6 +127,26 @@ export default function Header({
           avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
         };
     }
+
+    let defaultAvatar = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80";
+    if (userRole === 'admin') {
+      defaultAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80";
+      if (!name) name = "System Admin";
+      if (!email) email = "admin@pulse.crm";
+    } else if (userRole === 'manager') {
+      defaultAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80";
+      if (!name) name = "Alex Johnson";
+      if (!email) email = "alex.johnson@pulse.crm";
+    } else {
+      if (!name) name = "Sarah Johnson";
+      if (!email) email = "sarah.johnson@pulse.crm";
+    }
+
+    return {
+      name: name,
+      email: email,
+      avatar: defaultAvatar
+    };
   };
 
   const profile = getUserProfile();

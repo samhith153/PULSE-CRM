@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages } from '@/utils/api';
-import { toast } from '@/lib/toast';
+import React, { useState, useEffect, useRef } from 'react';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -59,6 +58,8 @@ function backendToLocal(b: BackendLead): Lead {
     score: b.score ?? 0,
     fit_score: b.fit_score ?? null,
     engagement_score: b.engagement_score ?? null,
+    fitReasons: b.fit_reasons ?? [],
+    engagementReasons: b.engagement_reasons ?? [],
     priorityTier: b.priority ?? null,
     topReasons: b.top_reasons ?? [],
     status: STATUS_UNMAP[b.status] || 'New',
@@ -80,6 +81,48 @@ function backendToLocal(b: BackendLead): Lead {
     calls: [],
     meetings: [],
   };
+}
+
+function getEngagementDetails(emails: EmailItem[]): { score: number; level: string } {
+  if (!emails || emails.length === 0) return { score: 0, level: 'LOW' };
+  const score = Math.min(100, emails.length * 15);
+  const level = score >= 60 ? 'HIGH' : score >= 30 ? 'MEDIUM' : 'LOW';
+  return { score, level };
+}
+
+function getReplyDetails(emails: EmailItem[]): { rate: number; level: string } {
+  if (!emails || emails.length === 0) return { rate: 0, level: 'SLOW' };
+  const rate = Math.min(100, Math.round((emails.length / Math.max(emails.length, 3)) * 100));
+  const level = rate >= 70 ? 'FAST' : rate >= 40 ? 'MEDIUM' : 'SLOW';
+  return { rate, level };
+}
+
+function getRecencyDays(timeline: ActivityItem[]): number {
+  if (!timeline || timeline.length === 0) return 999;
+  const now = Date.now();
+  let earliest = now;
+  for (const act of timeline) {
+    const t = new Date(act.time).getTime();
+    if (!isNaN(t) && t < earliest) earliest = t;
+  }
+  return Math.max(0, Math.floor((now - earliest) / (1000 * 60 * 60 * 24)));
+}
+
+function getCompanyBand(company: string): string {
+  if (!company) return 'Unknown';
+  const lower = company.toLowerCase();
+  if (lower.includes('corp') || lower.includes('inc') || lower.includes('ltd') || lower.includes('llc')) return 'Enterprise';
+  if (lower.includes('studio') || lower.includes('lab') || lower.includes('co')) return 'SMB';
+  return 'Mid-Market';
+}
+
+function getSourceQuality(source?: string): string {
+  if (!source) return 'N/A';
+  const s = source.toLowerCase();
+  if (s.includes('referral') || s.includes('partner')) return 'A';
+  if (s.includes('website') || s.includes('organic') || s.includes('linkedin')) return 'B';
+  if (s.includes('cold') || s.includes('purchase') || s.includes('list')) return 'C';
+  return 'B';
 }
 
 // Types Definition
@@ -122,6 +165,8 @@ interface Lead {
   score: number;
   fit_score: number | null;
   engagement_score: number | null;
+  fitReasons: string[];
+  engagementReasons: string[];
   priorityTier: string | null;
   topReasons: string[];
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
@@ -147,6 +192,8 @@ interface Lead {
 export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
+  const leadsRef = useRef<Lead[]>([]);
+  leadsRef.current = leads;
 
   const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
     if (typeof window !== 'undefined') {
@@ -267,20 +314,24 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     };
   };
 
+  // Helper: fetch recommendations for all leads
+  const refreshRecommendations = (leadIds: string[]) => {
+    if (leadIds.length === 0) return;
+    fetchBatchRecommendations(leadIds).then(res => {
+      const recs: Record<string, string> = {};
+      for (const [id, item] of Object.entries(res.recommendations || {})) {
+        recs[id] = item.recommended_action || 'No recommendation available.';
+      }
+      setLeadRecommendations(recs);
+    }).catch(() => {});
+  };
+
   useEffect(() => {
     getLeads().then(data => {
       const mapped = (data ?? []).map(backendToLocal);
       setLeads(mapped);
-      const ids = mapped.map(l => l.id).filter(Boolean);
-      if (ids.length > 0) {
-        fetchBatchRecommendations(ids).then(res => {
-          const recs: Record<string, string> = {};
-          for (const [id, item] of Object.entries(res.recommendations || {})) {
-            recs[id] = item.recommended_action || 'No recommendation available.';
-          }
-          setLeadRecommendations(recs);
-        }).catch(() => {});
-      }
+      const ids = mapped.map(l => l.id).filter(Boolean) as string[];
+      refreshRecommendations(ids);
     }).finally(() => {
       onLoaded?.();
     });
@@ -295,44 +346,14 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     getPipelineStages().then(data => {
       setPipelineStages(data as any);
     }).catch(() => {});
-  }, []);
 
-  useEffect(() => {
-    const handleOpenCreateLead = () => {
-      setLeadForm({
-        name: '', jobTitle: '', email: '', phone: '',
-        company: '', industry: '', location: '', numberOfEmployees: '',
-        source: '', currentCRM: '', operationalSystem: '',
-        status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: ''
-      });
-      setIsCreatingFullPage(true);
-    };
-    const handleOpenNote = () => {
-      if (selectedLeadId) {
-        setCallForm({ outcome: 'Spoke with Lead', notes: '' });
-        setIsCallModalOpen(true);
-      } else {
-        alert('Please select a lead from the list first to add a note.');
-      }
-    };
-    const handleOpenMeeting = () => {
-      if (selectedLeadId) {
-        setMeetingForm({ title: '', date: '', time: '', desc: '' });
-        setIsMeetingModalOpen(true);
-      } else {
-        alert('Please select a lead from the list first to schedule a meeting.');
-      }
-    };
-    
-    window.addEventListener('pulse-open-create-lead-modal', handleOpenCreateLead);
-    window.addEventListener('pulse-open-create-note-modal', handleOpenNote);
-    window.addEventListener('pulse-open-create-meeting-modal', handleOpenMeeting);
-    return () => {
-      window.removeEventListener('pulse-open-create-lead-modal', handleOpenCreateLead);
-      window.removeEventListener('pulse-open-create-note-modal', handleOpenNote);
-      window.removeEventListener('pulse-open-create-meeting-modal', handleOpenMeeting);
-    };
-  }, [selectedLeadId]);
+    // Periodically refresh recommendations (assessments run in background)
+    const intervalId = window.setInterval(() => {
+      const ids = leadsRef.current.map(l => l.id).filter(Boolean) as string[];
+      refreshRecommendations(ids);
+    }, 30000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   // Get currently active lead object
   const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
@@ -1619,9 +1640,9 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                   <span className="text-muted-foreground">Fit Score</span>
                   <span className="font-semibold text-foreground">{activeLead.fit_score ?? 0}%</span>
                 </div>
-                {activeLead.fit_score !== null && activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).length > 0 && (
+                {activeLead.fitReasons.length > 0 && (
                   <div className="reason-subtext">
-                    {activeLead.topReasons.filter(r => r.includes('company') || r.includes('industry') || r.includes('CRM') || r.includes('automation') || r.includes('customization')).slice(0, 2).map((r, i) => (
+                    {activeLead.fitReasons.slice(0, 2).map((r, i) => (
                       <div key={i} className="mb-0.5">• {r}</div>
                     ))}
                   </div>
@@ -1631,9 +1652,9 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                   <span className="text-muted-foreground">Engagement Score</span>
                   <span className="font-semibold text-foreground">{activeLead.engagement_score ?? 0}%</span>
                 </div>
-                {activeLead.engagement_score !== null && activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).length > 0 && (
+                {activeLead.engagementReasons.length > 0 && (
                   <div className="reason-subtext">
-                    {activeLead.topReasons.filter(r => r.includes('intent') || r.includes('response') || r.includes('engagement') || r.includes('interest')).slice(0, 2).map((r, i) => (
+                    {activeLead.engagementReasons.slice(0, 2).map((r, i) => (
                       <div key={i} className="mb-0.5">• {r}</div>
                     ))}
                   </div>

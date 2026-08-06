@@ -31,8 +31,8 @@ try:
         try:
             cursor.execute("""
                 INSERT INTO users 
-                (id, email, full_name, hashed_password, organization_id, is_verified, is_superuser, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, 1, 0, datetime('now'), datetime('now'))
+                (id, email, full_name, hashed_password, organization_id, is_verified, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
             """, (user_id, email, full_name, hashed_pw, 'org-test'))
             
             # Insert user role

@@ -19,6 +19,8 @@ from app.schemas.forecast import (
     ExpectedRevenueStats,
     ForecastAccuracyStats,
     ForecastInsight,
+    ForecastRecommendation,
+    ForecastRisk,
     ForecastTrendPoint,
     ManagerForecastResponse,
     MonthlyForecastPoint,
@@ -190,6 +192,21 @@ class ForecastService:
             confidence=confidence,
         )
 
+        # ── 11. Forecast Risks ────────────────────────────────────────────────
+        raw_risks = await self.repo.get_forecast_risks(organization_id)
+        forecast_risks = self._build_forecast_risks(raw_risks)
+
+        # ── 12. Forecast Recommendations ─────────────────────────────────────
+        forecast_recommendations = self._generate_recommendations(
+            expected_revenue=expected_revenue,
+            quarter_target=quarter_target,
+            target_achievement_pct=target_achievement_pct,
+            coverage_ratio=coverage_ratio,
+            raw_risks=raw_risks,
+            historical_win_rate=historical_win_rate,
+            avg_probability=avg_probability,
+        )
+
         return ManagerForecastResponse(
             expected_revenue=expected_revenue_stats,
             best_case_pipeline=best_case_stats,
@@ -201,6 +218,8 @@ class ForecastService:
             forecast_accuracy=accuracy_stats,
             sales_velocity=velocity_stats,
             forecast_insights=insights,
+            forecast_risks=forecast_risks,
+            forecast_recommendations=forecast_recommendations,
             quarter=quarter_label,
             period=period,
             generated_at=now,
@@ -243,11 +262,18 @@ class ForecastService:
                 q_end_year += 1
             q_end = q_start.replace(year=q_end_year, month=q_end_month, day=1)
 
+            # Won revenue closed in this quarter
             won_rev = await self.repo.get_quarterly_won_revenue(organization_id, q_start, q_end)
+
+            # Open pipeline (all active open deals whose effective date is in this quarter)
             open_pipe = await self.repo.get_quarterly_open_pipeline(organization_id, q_start, q_end)
 
-            # Expected: won + weighted open
-            expected_closed = won_rev
+            # Expected revenue from open deals (weighted by probability)
+            expected_open = await self.repo.get_quarterly_expected_revenue(organization_id, q_start, q_end)
+
+            # For past/current quarters: expected = won + weighted open
+            # For future quarters: expected = weighted open only (nothing closed yet)
+            expected_closed = won_rev + expected_open
             best_close = won_rev + open_pipe
             achievement_pct = self._percentage(expected_closed, _DEFAULT_QUARTER_QUOTA)
 
@@ -446,6 +472,121 @@ class ForecastService:
         return insights
 
     # ── Helpers ───────────────────────────────────────────────────────────────
+
+    def _build_forecast_risks(self, raw_risks: list[dict]) -> list[ForecastRisk]:
+        """Convert raw risk dicts from repository into ForecastRisk schema objects."""
+        return [
+            ForecastRisk(
+                deal_id=r["deal_id"],
+                deal_name=r["deal_name"],
+                company=r.get("company"),
+                owner_name=r.get("owner_name"),
+                deal_value=r["deal_value"],
+                risk_type=r["risk_type"],
+                risk_description=r["risk_description"],
+                days_overdue=r["days_overdue"],
+                probability=r["probability"],
+            )
+            for r in raw_risks
+        ]
+
+    def _generate_recommendations(
+        self,
+        expected_revenue: Decimal,
+        quarter_target: Decimal,
+        target_achievement_pct: Decimal,
+        coverage_ratio: Decimal,
+        raw_risks: list[dict],
+        historical_win_rate: Decimal,
+        avg_probability: Decimal,
+    ) -> list[ForecastRecommendation]:
+        """Rule-based recommendation engine driven by live CRM data."""
+        recs: list[ForecastRecommendation] = []
+        pct = float(target_achievement_pct)
+
+        # 1. Target at risk
+        if pct < 60:
+            recs.append(ForecastRecommendation(
+                priority="high",
+                title="Increase Pipeline Volume",
+                description=f"Current forecast covers only {pct:.0f}% of quarterly target. More opportunities are needed.",
+                action="Review lead sources and increase outbound prospecting to fill pipeline gaps.",
+                impact="Each new qualified deal with 50% probability adds directly to expected revenue.",
+            ))
+
+        # 2. Overdue deals
+        overdue = [r for r in raw_risks if r["risk_type"] == "overdue"]
+        if overdue:
+            recs.append(ForecastRecommendation(
+                priority="high",
+                title=f"Follow Up on {len(overdue)} Overdue Deal(s)",
+                description=f"{len(overdue)} deal(s) have passed their expected close date without being won or lost.",
+                action="Schedule immediate discovery calls to assess deal health and update close dates.",
+                impact="Recovering even one overdue deal can meaningfully improve quarterly close rate.",
+            ))
+
+        # 3. Low probability deals
+        low_prob = [r for r in raw_risks if r["risk_type"] == "low_probability"]
+        if low_prob:
+            recs.append(ForecastRecommendation(
+                priority="medium",
+                title=f"Recover {len(low_prob)} Low-Probability Deal(s)",
+                description=f"{len(low_prob)} deal(s) have probability below 25%. These inflate pipeline without contributing to forecast.",
+                action="Reassess deal fit or disqualify to maintain an accurate pipeline.",
+                impact="Cleaning up low-probability deals improves forecast accuracy and focus.",
+            ))
+
+        # 4. Stale deals
+        stale = [r for r in raw_risks if r["risk_type"] in ("no_activity", "aging")]
+        if stale:
+            recs.append(ForecastRecommendation(
+                priority="medium",
+                title=f"Re-engage {len(stale)} Inactive Deal(s)",
+                description=f"{len(stale)} deal(s) have had no activity for 14+ days or have been open 60+ days.",
+                action="Assign follow-up tasks, schedule calls, and send personalised check-ins to reactivate.",
+                impact="Consistent engagement improves win rates by 20–30% on stalled deals.",
+            ))
+
+        # 5. Coverage healthy — accelerate
+        if float(coverage_ratio) >= Decimal("2.0"):
+            recs.append(ForecastRecommendation(
+                priority="low",
+                title="Strong Coverage — Focus on Velocity",
+                description=f"Pipeline coverage is {float(coverage_ratio):.1f}x target. The priority now is closing, not filling.",
+                action="Prioritise deals in proposal and negotiation stages to accelerate closes this quarter.",
+                impact="Reducing average sales cycle by 10% can increase quarterly revenue by 5–8%.",
+            ))
+
+        # 6. Win rate low
+        if float(historical_win_rate) < 30:
+            recs.append(ForecastRecommendation(
+                priority="medium",
+                title="Improve Win Rate Through Better Qualification",
+                description=f"Historical win rate is {float(historical_win_rate):.1f}%. Below 30% typically indicates qualification issues.",
+                action="Review ICP (Ideal Customer Profile), tighten qualification criteria, and add discovery steps.",
+                impact="Improving win rate from 25% to 35% can increase revenue by 40% on the same pipeline.",
+            ))
+
+        # 7. Deal pricing review
+        if float(avg_probability) < 50 and pct < 80:
+            recs.append(ForecastRecommendation(
+                priority="low",
+                title="Review Pricing and Proposal Quality",
+                description="Average deal probability is below 50% and forecast is behind target. Pricing may be a friction point.",
+                action="Audit recent lost deals for pricing objections. Consider introducing flexible payment terms.",
+                impact="Addressing pricing objections can increase close rates on proposals by 15–25%.",
+            ))
+
+        # 8. Meetings — universal recommendation
+        recs.append(ForecastRecommendation(
+            priority="low",
+            title="Increase Customer Meetings",
+            description="Consistent face-time with decision-makers is one of the strongest predictors of close.",
+            action="Each rep should target at least 3 discovery or closing calls per week with top opportunities.",
+            impact="Deals with 3+ recorded meetings close at 2x the rate of deals with fewer interactions.",
+        ))
+
+        return recs
 
     def _calc_velocity(self, velocity_data: dict) -> Decimal:
         """

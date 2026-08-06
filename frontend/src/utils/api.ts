@@ -38,6 +38,8 @@ export interface Lead {
   score: number | null;
   fit_score: number | null;
   engagement_score: number | null;
+  fit_reasons: string[] | null;
+  engagement_reasons: string[] | null;
   top_reasons: string[] | null;
   priority: string | null;
   notes: string | null;
@@ -460,67 +462,6 @@ export async function getPipelineStages(): Promise<any[]> {
   return stages;
 }
 
-// --- Conversation Intelligence (Bhavani Summarization API) ---
-export interface SummaryMessage {
-  sender: string;
-  recipients: string[];
-  subject: string;
-  body: string;
-  timestamp: string;
-  direction: 'incoming' | 'outgoing';
-}
-
-export interface ConversationSummary {
-  thread_id: string;
-  summary: string;
-  summary_word: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  intent: 'demo' | 'buy' | 'negotiate' | 'followup' | 'decline' | 'other';
-  confidence: number;
-  key_points: string[];
-  action_items: string[];
-  category?: 'sales' | 'support' | 'general' | 'urgent';
-  draft_reply?: string;
-  follow_up_suggestion?: string;
-  follow_up_timing?: 'immediate' | 'today' | 'tomorrow' | '2_days' | '3_days' | '1_week' | '2_weeks' | 'no_followup';
-  processing_time_ms?: number;
-  model_version?: string;
-}
-
-export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders()
-    },
-    body: JSON.stringify({
-      thread_id: threadId,
-      messages,
-      contact_id: contactId,
-      deal_id: dealId
-    })
-  });
-  if (!res.ok) {
-    let message = `Summarization failed (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
-export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
-    headers: { ...getAuthHeaders() }
-  });
-  if (!res.ok) {
-    let message = `Failed to load summary (${res.status})`;
-    try { const body = await res.json(); if (body?.message) message = body.message; } catch {}
-    throw new Error(message);
-  }
-  return res.json() as Promise<ConversationSummary>;
-}
-
 
 function toQuery(params: Record<string, string | number | boolean | null | undefined>): string {
   const search = new URLSearchParams();
@@ -678,6 +619,24 @@ export async function getEmail(id: string): Promise<SyncedEmail> {
   return apiFetch<SyncedEmail>(`/api/v1/emails/${id}`);
 }
 
+export interface EmailSummaryData {
+  summary: string | null;
+  sentiment: string | null;
+  intent: string | null;
+  confidence: number | null;
+  key_points: string[];
+  action_items: string[];
+  category: string | null;
+  draft_reply: string | null;
+  follow_up_suggestion: string | null;
+  follow_up_timing: string | null;
+  model_version: string | null;
+}
+
+export async function getEmailSummary(threadId: string): Promise<EmailSummaryData | null> {
+  return apiFetch<EmailSummaryData | null>(`/api/v1/emails/summary/${threadId}`);
+}
+
 export async function getActivities(params: ActivityListParams = {}): Promise<PaginatedResult<ActivityTimelineItem>> {
   const { activity_type, ...rest } = params;
   return apiFetch<PaginatedResult<ActivityTimelineItem>>(
@@ -774,22 +733,16 @@ export interface ManagerDashboardData {
 }
 
 export interface SalesRepDashboardData {
-  summary: { total_revenue: number; won_deals: number; win_rate: number; average_deal_size: number; average_sales_cycle: number };
-  revenue_stat: { total: number; previous_period: number; growth_pct: number };
-  won_deals_stat: { count: number; previous_period: number; growth_pct: number };
-  win_rate_stat: { win_rate: number; previous_win_rate: number; growth_pct: number };
-  avg_deal_size_stat: { avg_deal_value: number; previous_avg: number; growth_pct: number };
-  avg_sales_cycle_stat: { avg_days: number; previous_avg_days: number; difference_days: number };
-  revenue_trend: { period: string; revenue: number }[];
-  deals_by_stage: { stage: string; count: number; percentage: number; conversion_rate: number }[];
-  deals_by_source: { source: string; count: number; percentage: number; revenue: number }[];
-  revenue_by_company_size: { size_bucket: string; revenue: number; percentage: number }[];
-  activity_heatmap: { date: string; activity_type: string; count: number; intensity: string }[];
-  team_performance: { user_id: string; full_name: string; revenue: number; won_deals: number; win_rate: number }[];
-  activity_overview: { emails_sent: number; calls_made: number; meetings_held: number; tasks_completed: number; notes_added: number; emails_growth_pct: number; calls_growth_pct: number; meetings_growth_pct: number; tasks_growth_pct: number };
-  key_metrics: { open_deals: number; pipeline_value: number; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: number; deals_created_growth_pct: number; activities_growth_pct: number };
-  recent_reports: { report_name: string; created_at: string; created_by: string | null; report_type: string }[];
-  report_templates: { name: string; description: string; primary_metrics: string[]; group_by_options: string[] }[];
+  summary: { total_revenue: Decimal; won_deals: number; win_rate: Decimal; average_deal_size: Decimal; average_sales_cycle: Decimal };
+  revenue_stat: { total: Decimal; previous_period: Decimal; growth_pct: Decimal };
+  won_deals_stat: { count: number; previous_period: number; growth_pct: Decimal };
+  win_rate_stat: { win_rate: Decimal; previous_win_rate: Decimal; growth_pct: Decimal };
+  avg_deal_size_stat: { avg_deal_value: Decimal; previous_avg: Decimal; growth_pct: Decimal };
+  avg_sales_cycle_stat: { avg_days: Decimal; previous_avg_days: Decimal; difference_days: Decimal };
+  revenue_trend: { period: string; revenue: Decimal }[];
+  deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
+  deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
+  key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
@@ -804,7 +757,7 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
 }
 
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
+export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean }> {
   return apiFetch('/api/v1/auth/me');
 }
 
@@ -885,7 +838,6 @@ export interface UserData {
   organization_id: string;
   is_active: boolean;
   is_verified: boolean;
-  is_superuser: boolean;
   roles: string[];
   last_login_at: string | null;
   created_at: string;
@@ -1049,41 +1001,151 @@ export async function updateRolePermissions(roleId: string, permissionCodenames:
   });
 }
 
-// --- Documents / Attachments API ---
-export async function getDocuments(params: { contact_id?: string; deal_id?: string; company_id?: string }): Promise<any[]> {
-  const query = new URLSearchParams();
-  if (params.contact_id) query.append('contact_id', params.contact_id);
-  if (params.deal_id) query.append('deal_id', params.deal_id);
-  if (params.company_id) query.append('company_id', params.company_id);
-  
-  const queryString = query.toString();
-  const endpoint = `/api/v1/documents${queryString ? `?${queryString}` : ''}`;
-  const res = await apiFetch<any>(endpoint);
-  return Array.isArray(res) ? res : (res?.data ?? []);
+// --- Sales Manager Forecast API ---
+
+export interface ManagerForecastData {
+  expected_revenue: {
+    expected_revenue: Decimal;
+    quarter: string;
+    previous_forecast: Decimal;
+    growth_pct: Decimal;
+    target_achievement_pct: Decimal;
+  };
+  best_case_pipeline: {
+    best_case_pipeline: Decimal;
+    active_pipeline_value: Decimal;
+    difference_from_expected: Decimal;
+  };
+  pipeline_coverage: {
+    coverage_ratio: Decimal;
+    coverage_status: string;  // Critical / Moderate / Healthy / Excellent
+  };
+  confidence_score: {
+    score: number;
+    status: string;   // Very High / High / Medium / Low
+    description: string;
+  };
+  monthly_forecast: {
+    month: string;
+    pipeline: Decimal;
+    expected: Decimal;
+    maximum: Decimal;
+  }[];
+  quarterly_projection: {
+    quarter: string;
+    quota_target: Decimal;
+    expected_closed_revenue: Decimal;
+    best_case_close: Decimal;
+    open_pipeline: Decimal;
+    target_achievement_pct: Decimal;
+  }[];
+  forecast_trend: { month: string; forecast: Decimal }[];
+  forecast_accuracy: {
+    current_accuracy_pct: Decimal;
+    previous_accuracy_pct: Decimal;
+    difference_pct: Decimal;
+  };
+  sales_velocity: {
+    sales_velocity: Decimal;
+    previous_velocity: Decimal;
+    growth_pct: Decimal;
+  };
+  forecast_insights: { message: string; type: string }[];
+  forecast_risks: {
+    deal_id: string;
+    deal_name: string;
+    company: string | null;
+    owner_name: string | null;
+    deal_value: Decimal;
+    risk_type: string;
+    risk_description: string;
+    days_overdue: number;
+    probability: number;
+  }[];
+  forecast_recommendations: {
+    priority: string;
+    title: string;
+    description: string;
+    action: string;
+    impact: string;
+  }[];
+  quarter: string;
+  period: string;
+  generated_at: string;
 }
 
-export async function uploadDocument(
-  file: File,
-  params: { contact_id?: string; deal_id?: string; company_id?: string }
-): Promise<any> {
+export async function getManagerForecast(
+  period: 'monthly' | 'quarterly' | 'yearly' = 'monthly'
+): Promise<ManagerForecastData> {
+  return apiFetch<ManagerForecastData>(
+    `/api/v1/dashboard/manager/forecast${toQuery({ period })}`
+  );
+}
+
+// --- Dashboard Command Center (Sales Rep /me) ---
+
+export interface DashboardOverviewData {
+  kpis: { open_deals: number; untouched_deals: number; calls_today: number; leads_assigned: number; leads_today?: number };
+  open_tasks: { id: string; title: string; due_date: string; status: string; source?: string; lead_id?: string; deal_id?: string }[];
+  meetings_today: { id: string; title: string; start_time: string; end_time: string; zoom_link?: string; contact_name?: string; transcript_status?: string }[];
+  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string }[];
+  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string }[];
+  quota_pace: { closed_won_revenue: Decimal; target_revenue: Decimal; attained_percentage: Decimal; pace_status: string };
+  deals?: { id: string; name: string; value: number; stage: string; owner: string; closeDate: string }[];
+  leads?: { id: string; name: string; company: string; score: number; status: string; owner: string }[];
+  generated_at: string;
+}
+
+export async function getDashboardMe(): Promise<DashboardOverviewData> {
+  return apiFetch<DashboardOverviewData>('/api/v1/dashboard/me');
+}
+
+// --- SSE Stream URL ---
+
+export function getDashboardStreamUrl(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  return `${API_BASE_URL}/api/v1/stream/dashboard?token=${encodeURIComponent(token)}`;
+}
+
+// --- Documents API ---
+
+export interface DocumentData {
+  id: string;
+  organization_id: string;
+  uploaded_by?: string;
+  contact_id?: string;
+  deal_id?: string;
+  company_id?: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size_bytes: number;
+  created_at: string;
+}
+
+export async function getDocuments(params: { contact_id?: string; deal_id?: string; company_id?: string } = {}): Promise<DocumentData[]> {
+  return apiFetch<DocumentData[]>(`/api/v1/documents${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`);
+}
+
+export async function uploadDocument(file: File, params: { contact_id?: string; deal_id?: string; company_id?: string } = {}): Promise<DocumentData> {
   const formData = new FormData();
   formData.append('file', file);
-  if (params.contact_id) formData.append('contact_id', params.contact_id);
-  if (params.deal_id) formData.append('deal_id', params.deal_id);
-  if (params.company_id) formData.append('company_id', params.company_id);
-  
-  const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) formData.append(key, value);
+  });
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents`, {
     method: 'POST',
-    headers: {
-      ...getAuthHeaders()
-    },
-    body: formData
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
   });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail || 'Failed to upload document');
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Upload failed');
   }
-  return res.json();
+  const json = await res.json();
+  return (json.data ?? json) as DocumentData;
 }
 
 export async function deleteDocument(docId: string): Promise<void> {
@@ -1094,121 +1156,18 @@ export function getDocumentDownloadUrl(docId: string): string {
   return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
 }
 
-// --- Avatar / Uploads API ---
-
-export interface FileUploadResponse {
-  filename: string;
-  content_type: string;
-  size_bytes: number;
-  storage_provider: string;
-  storage_key: string;
-  url: string;
-  uploaded_by: string;
-  organization_id: string;
-  uploaded_at: string;
-}
-
-export async function uploadAvatar(file: File): Promise<FileUploadResponse> {
+export async function uploadAvatar(file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append('file', file);
-
+  const token = getToken();
   const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
     method: 'POST',
-    headers: {
-      ...getAuthHeaders()
-    },
-    body: formData
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
   });
   if (!res.ok) {
-    let message = `Avatar upload failed (${res.status})`;
-    try {
-      const err = await res.json();
-      if (err?.detail) message = typeof err.detail === 'string' ? err.detail : message;
-      else if (err?.message) message = err.message;
-    } catch {}
-    throw new Error(message);
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Avatar upload failed');
   }
-  const json = await res.json();
-  return (json.data ?? json) as FileUploadResponse;
-}
-
-// ─── Dashboard Unified Endpoint ─────────────────────────────────────────────
-// Powers all 6 core dashboard widgets via GET /api/v1/dashboard/me
-
-export interface DashboardKPI {
-  open_deals: number;
-  won_deals_this_month: number;
-  leads_today: number;
-  calls_today: number;
-  quota_achieved: number;   // ₹ value of won deals against sales_quota
-  quota_target: number;     // sales_quota from users table
-  quota_pct: number;        // 0–100 percentage
-}
-
-export interface DashboardPriorityItem {
-  lead_id: string;
-  name: string;
-  overall_score: number;    // from ai_scores.overall_score
-  tier: string;             // Hot | Warm | Cold
-  status: string;
-}
-
-export interface DashboardAtRiskDeal {
-  deal_id: string;
-  name: string;
-  value: number;
-  sentiment: string;        // negative | neutral | positive
-  days_stalled: number;     // derived from updated_at
-  owner_name: string | null;
-}
-
-export interface DashboardOpenTask {
-  task_id: string;
-  title: string;
-  due_date: string | null;
-  status: string;           // pending | completed
-  fit_score?: number | null;
-}
-
-export interface DashboardCalendarEvent {
-  event_id: string;
-  title: string;
-  start_time: string;
-  end_time?: string | null;
-}
-
-export interface DashboardOverviewData {
-  kpis: DashboardKPI;
-  priority_queue: DashboardPriorityItem[];
-  at_risk_deals: DashboardAtRiskDeal[];
-  open_tasks: DashboardOpenTask[];
-  calendar_events: DashboardCalendarEvent[];
-  calls_today: number;
-  // Raw lists for widgets that need full records
-  deals?: any[];
-  leads?: any[];
-}
-
-/**
- * GET /api/v1/dashboard/me
- * Executes 9 queries concurrently on the backend via asyncio.gather()
- * to hydrate all 6 core dashboard widgets in a single request.
- */
-export async function getDashboardMe(): Promise<DashboardOverviewData | null> {
-  try {
-    const data = await apiFetch<DashboardOverviewData>('/api/v1/dashboard/me');
-    return data ?? null;
-  } catch {
-    // Endpoint not yet deployed — return null so callers can fall back gracefully
-    return null;
-  }
-}
-
-/**
- * Build the SSE URL for real-time dashboard stream updates.
- * The token is passed as a query param because EventSource doesn't support headers.
- */
-export function getDashboardStreamUrl(): string {
-  const token = getToken();
-  return `${API_BASE_URL}/api/v1/stream/dashboard${token ? `?token=${token}` : ''}`;
+  return res.json();
 }

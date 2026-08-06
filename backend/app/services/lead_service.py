@@ -38,30 +38,18 @@ VALID_TRANSITIONS: dict[LeadStatus, list[LeadStatus]] = {
 _lead_ai_tasks: set[asyncio.Task] = set()
 
 
-async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUID) -> None:
-    """Run feature-vector + scoring in a fresh DB session, off the request path."""
+async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:
+    """Run unified assessment pipeline in a fresh DB session, off the request path."""
     from app.database.connection import AsyncSessionFactory
-    from app.services.feature_vector_service import FeatureVectorService
-    from app.services.lead_scoring_service import LeadScoringService
+    from app.services.ai_pipeline import run_lead_assessment
 
     try:
         async with AsyncSessionFactory() as db:
             try:
-                await FeatureVectorService(db).compute_and_store_for_lead(
-                    lead_id, organization_id, created_by
-                )
+                await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
             except Exception as exc:
                 logger.warning(
-                    "Background feature-vector compute failed for lead %s: %s",
-                    lead_id, exc,
-                )
-            try:
-                await LeadScoringService(db).compute_and_store_scores(
-                    lead_id, organization_id, created_by
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Background lead scoring failed for lead %s: %s",
+                    "Background AI assessment failed for lead %s: %s",
                     lead_id, exc,
                 )
             await db.commit()
@@ -69,9 +57,9 @@ async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUI
         logger.warning("Background AI session failed for lead %s: %s", lead_id, exc)
 
 
-def _enqueue_lead_ai(lead_id: UUID, organization_id: UUID, created_by: UUID) -> None:
-    """Fire-and-forget feature-vector + scoring; does NOT block the caller."""
-    task = asyncio.create_task(_lead_ai_compute(lead_id, organization_id, created_by))
+def _enqueue_lead_ai(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:
+    """Fire-and-forget assessment; does NOT block the caller."""
+    task = asyncio.create_task(_lead_ai_compute(lead_id, organization_id, created_by, trigger=trigger))
     _lead_ai_tasks.add(task)
     task.add_done_callback(_lead_ai_tasks.discard)
 
@@ -136,8 +124,8 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "owner_id": str(lead.owner_id)},
                 topic="lead",
             )
-        # Fire-and-forget: feature vector + scoring refresh in background
-        _enqueue_lead_ai(lead.id, organization_id, created_by)
+        # Fire-and-forget: unified assessment pipeline
+        _enqueue_lead_ai(lead.id, organization_id, created_by, trigger="lead_created")
         logger.info("Lead created", extra={"lead_id": str(lead.id)})
         return lead
 
@@ -189,8 +177,8 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "changes": list(update_data.keys())},
                 topic="lead",
             )
-        # Fire-and-forget: feature vector + scoring refresh in background
-        _enqueue_lead_ai(lead.id, organization_id, lead.created_by)
+        # Fire-and-forget: unified assessment pipeline
+        _enqueue_lead_ai(lead.id, organization_id, lead.created_by, trigger="lead_updated")
         return await self.get(lead_id, organization_id)
 
     async def update_status(
@@ -229,6 +217,9 @@ class LeadService:
             payload={"lead_id": str(lead.id), "status": new_status.value},
             topic="lead",
         )
+        # Fire-and-forget: unified assessment pipeline
+        _enqueue_lead_ai(lead.id, organization_id, lead.created_by, trigger="lead_updated")
+
         logger.info("Lead status updated", extra={"lead_id": str(lead_id), "new_status": new_status.value})
         return await self.get(lead_id, organization_id)
 

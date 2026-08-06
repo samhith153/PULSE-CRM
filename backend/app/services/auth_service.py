@@ -91,7 +91,6 @@ class AuthService:
             hashed_password=hash_password(payload.password),
             organization_id=organization.id,
             is_verified=True,
-            is_superuser=True,
             last_login_ip=client_ip,
             last_login_at=datetime.now(timezone.utc),
         )
@@ -321,7 +320,6 @@ class AuthService:
                 organization_id=organization.id,
                 avatar_url=avatar_url,
                 is_verified=True,
-                is_superuser=True,
                 last_login_ip=client_ip,
                 last_login_at=datetime.now(timezone.utc),
             )

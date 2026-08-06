@@ -1,7 +1,7 @@
 ﻿"""
 Dashboard and Analytics Schemas
 """
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -579,3 +579,93 @@ class SalesRepDashboardResponse(BaseModel):
     generated_at: datetime
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Sales Command Center (6 Core Widgets + Top KPIs)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class RepDashboardKPIs(BaseModel):
+    """Top 4 Stat Cards for Individual Sales Reps."""
+    open_deals: int = Field(default=0, description="Total open deals owned by rep")
+    untouched_deals: int = Field(default=0, description="Deals with no activity in >5 days")
+    calls_today: int = Field(default=0, description="Phone/call activities logged today")
+    leads_assigned: int = Field(default=0, description="Total active leads assigned to rep")
+
+
+class RepQuotaPace(BaseModel):
+    """Widget 5: Live Quota Progress vs Target."""
+    closed_won_revenue: Decimal = Field(default=Decimal("0.00"), description="Closed won revenue this month/quarter")
+    target_revenue: Decimal = Field(default=Decimal("50000.00"), description="Target quota set for rep")
+    attained_percentage: Decimal = Field(default=Decimal("0.0"), description="Percentage of quota completed")
+    pace_status: str = Field(default="Behind Pace", description="'On Pace' | 'Behind Pace' | 'Ahead of Pace'")
+
+
+class RepTaskItem(BaseModel):
+    """Widget 1: My Tasks Today (AI-extracted & manual)."""
+    id: UUID
+    title: str
+    due_date: date
+    status: str  # "pending" | "completed" | "overdue"
+    source: Optional[str] = "manual"  # "ai_extracted" | "manual"
+    lead_id: Optional[UUID] = None
+    deal_id: Optional[UUID] = None
+
+
+class RepMeetingItem(BaseModel):
+    """Widget 2: My Meetings Today."""
+    id: UUID
+    title: str
+    start_time: datetime
+    end_time: datetime
+    zoom_link: Optional[str] = None
+    contact_name: Optional[str] = None
+    transcript_status: Optional[str] = "pending"  # "pending" | "processing" | "completed"
+
+
+class RepPriorityLeadItem(BaseModel):
+    """Widget 3: Priority Leads (Fit + Engagement Score >= 70)."""
+    lead_id: UUID
+    first_name: str
+    last_name: str
+    company_name: Optional[str] = None
+    email: str
+    score: int
+    tier: str  # "Hot" | "Warm" | "Cold"
+    top_reason: Optional[str] = None  # e.g., "+25 Demo Requested"
+
+
+class RepDealAtRiskItem(BaseModel):
+    """Widget 4: At-Risk Deals (Stalled > 5 Days or Negative Sentiment)."""
+    deal_id: UUID
+    deal_title: str
+    value: Decimal
+    stalled_days: int
+    risk_reason: str  # "Stalled >5 Days" | "Negative Buyer Sentiment"
+    sentiment: Optional[str] = None  # "positive" | "neutral" | "negative"
+
+
+class RepQuickCaptureRequest(BaseModel):
+    """Widget 6: Quick Log / Capture (Ctrl+K Hotkey)."""
+    entry_type: str  # "quick_note" | "create_lead" | "log_call"
+    content: str
+    lead_id: Optional[UUID] = None
+    deal_id: Optional[UUID] = None
+
+
+class RepQuickCaptureResponse(BaseModel):
+    status: str = "success"
+    message: str
+    created_id: Optional[UUID] = None
+
+
+class SalesRepCommandDashboardResponse(BaseModel):
+    """
+    Unified Payload returned by GET /api/v1/dashboard/me 
+    Hydrates all 6 core widgets + 4 top KPI cards in 1 single HTTP request.
+    """
+    kpis: RepDashboardKPIs
+    open_tasks: list[RepTaskItem] = Field(default_factory=list)
+    meetings_today: list[RepMeetingItem] = Field(default_factory=list)
+    priority_queue: list[RepPriorityLeadItem] = Field(default_factory=list)
+    deals_at_risk: list[RepDealAtRiskItem] = Field(default_factory=list)
+    quota_pace: RepQuotaPace
+    generated_at: datetime

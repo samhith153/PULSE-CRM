@@ -190,7 +190,7 @@ Sales Manager, Pulse CRM`;
       {/* Floating Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-gradient-to-tr from-brand-accent to-brand-secondary-accent border border-border flex items-center justify-center text-primary-foreground shadow-[0_8px_30px_rgba(121,87,251,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-brand-purple/15 hover:bg-brand-purple/25 dark:bg-brand-purple/25 dark:hover:bg-brand-purple/35 backdrop-blur-md border border-brand-purple/30 flex items-center justify-center text-brand-purple dark:text-sky-400 shadow-[0_8px_32px_rgba(29,78,216,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
         aria-label="Ask PulseAI"
       >
         {isOpen ? (
@@ -216,10 +216,10 @@ Sales Manager, Pulse CRM`;
                 <Sparkles className="h-5.5 w-5.5 text-primary-foreground" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold tracking-wide">PulseAI Copilot</h3>
+                <h3 className="text-sm font-semibold tracking-wide text-white">PulseAI Copilot</h3>
                 <div className="flex items-center space-x-1 mt-0.5">
                   <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span className="text-[10px] text-primary-foreground/85 font-bold uppercase tracking-wider">Online Sync</span>
+                  <span className="text-[10px] text-white/90 font-bold uppercase tracking-wider">Online Sync</span>
                 </div>
               </div>
             </div>
@@ -358,7 +358,7 @@ Sales Manager, Pulse CRM`;
               <button
                 key={btn.text}
                 onClick={() => triggerShortcut(btn.text)}
-                className="py-1 px-2.5 bg-brand-bg border border-border hover:border-brand-accent hover:text-brand-purple rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer "
+                className="py-1 px-2.5 bg-card border border-border hover:border-brand-purple hover:text-brand-purple rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer "
               >
                 {btn.label}
               </button>
@@ -378,7 +378,7 @@ Sales Manager, Pulse CRM`;
               placeholder="Ask Copilot something..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              className="flex-1 px-3 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:border-brand-accent transition-colors bg-brand-sidebar-hover/10 text-muted-foreground placeholder-brand-text/50"
+              className="flex-1 px-3 py-1.5 border border-border rounded-lg text-xs focus:outline-none focus:border-brand-purple transition-colors bg-background text-foreground placeholder-muted-foreground"
             />
             <button
               type="submit"

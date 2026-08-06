@@ -59,7 +59,6 @@ class UserResponse(BaseModel):
     organization_id: UUID
     is_active: bool
     is_verified: bool
-    is_superuser: bool
     roles: List[str] = []
     last_login_at: Optional[datetime]
     created_at: datetime
@@ -81,7 +80,6 @@ class UserResponse(BaseModel):
             organization_id=user.organization_id,
             is_active=user.is_active,
             is_verified=user.is_verified,
-            is_superuser=user.is_superuser,
             roles=role_names,
             last_login_at=user.last_login_at,
             created_at=user.created_at,
