@@ -31,6 +31,7 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geist.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <head>
         <script

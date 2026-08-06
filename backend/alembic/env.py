@@ -47,6 +47,7 @@ def run_migrations_offline():
 
 async def run():
     connect_args = {}
+    connect_args["statement_cache_size"] = 0
     if settings.DATABASE_URL.startswith("postgresql") and "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATABASE_URL:
         connect_args["ssl"] = ssl_context
 

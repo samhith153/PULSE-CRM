@@ -1058,11 +1058,85 @@ export async function getManagerForecast(
   );
 }
 
+// --- Dashboard Command Center (Sales Rep /me) ---
+
+export interface DashboardOverviewData {
+  kpis: { open_deals: number; untouched_deals: number; calls_today: number; leads_assigned: number; leads_today?: number };
+  open_tasks: { id: string; title: string; due_date: string; status: string; source?: string; lead_id?: string; deal_id?: string }[];
+  meetings_today: { id: string; title: string; start_time: string; end_time: string; zoom_link?: string; contact_name?: string; transcript_status?: string }[];
+  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string }[];
+  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string }[];
+  quota_pace: { closed_won_revenue: Decimal; target_revenue: Decimal; attained_percentage: Decimal; pace_status: string };
+  deals?: { id: string; name: string; value: number; stage: string; owner: string; closeDate: string }[];
+  leads?: { id: string; name: string; company: string; score: number; status: string; owner: string }[];
+  generated_at: string;
+}
+
+export async function getDashboardMe(): Promise<DashboardOverviewData> {
+  return apiFetch<DashboardOverviewData>('/api/v1/dashboard/me');
+}
+
+// --- SSE Stream URL ---
+
+export function getDashboardStreamUrl(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  return `${API_BASE_URL}/api/v1/stream/dashboard?token=${encodeURIComponent(token)}`;
+}
+
+// --- Documents API ---
+
+export interface DocumentData {
+  id: string;
+  organization_id: string;
+  uploaded_by?: string;
+  contact_id?: string;
+  deal_id?: string;
+  company_id?: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size_bytes: number;
+  created_at: string;
+}
+
+export async function getDocuments(params: { contact_id?: string; deal_id?: string; company_id?: string } = {}): Promise<DocumentData[]> {
+  return apiFetch<DocumentData[]>(`/api/v1/documents${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`);
+}
+
+export async function uploadDocument(file: File, params: { contact_id?: string; deal_id?: string; company_id?: string } = {}): Promise<DocumentData> {
+  const formData = new FormData();
+  formData.append('file', file);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) formData.append(key, value);
+  });
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Upload failed');
+  }
+  const json = await res.json();
+  return (json.data ?? json) as DocumentData;
+}
+
+export async function deleteDocument(docId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/documents/${docId}`, { method: 'DELETE' });
+}
+
+export function getDocumentDownloadUrl(docId: string): string {
+  return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
+}
+
 export async function uploadAvatar(file: File): Promise<{ url: string }> {
   const formData = new FormData();
   formData.append('file', file);
   const token = getToken();
-  const res = await fetch(`${API_BASE}/api/v1/uploads/avatars`, {
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
