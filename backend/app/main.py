@@ -26,6 +26,7 @@ from app.middlewares.private_network import PrivateNetworkAccessMiddleware
 from app.middlewares.rate_limit import RateLimitMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
+from app.services.event_worker import EventWorker
 
 setup_logging(level=settings.LOG_LEVEL, fmt=settings.LOG_FORMAT)
 logger = get_logger(__name__)
