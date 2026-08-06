@@ -84,16 +84,16 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
       status = 'danger';
       statusText = `Behind Pace • ${percentage}%`;
       Icon = AlertCircle;
-      barGradient = 'linear-gradient(90deg, #ef4444 0%, #f87171 60%, #fca5a5 100%)';
-      glowColor = 'rgba(239,68,68,0.45)';
-      badgeBg = 'var(--status-danger-bg)';
-      badgeBorder = 'var(--status-danger-text)';
-      badgeText = 'var(--status-danger-text)';
-      cardAccentClass = 'border-rose-500/30 dark:border-rose-500/20 hover:border-rose-500/50';
-      iconBgClass = 'bg-rose-500/12';
-      iconTextClass = 'text-rose-600 dark:text-rose-400';
-      trackColor = 'rgba(239,68,68,0.08)';
-      themeColorHex = '#ef4444';
+      barGradient = 'linear-gradient(90deg, #d97706 0%, #f59e0b 60%, #fbbf24 100%)';
+      glowColor = 'rgba(217,119,6,0.35)';
+      badgeBg = 'var(--status-warning-bg)';
+      badgeBorder = 'var(--status-warning-text)';
+      badgeText = 'var(--status-warning-text)';
+      cardAccentClass = 'border-amber-500/25 dark:border-amber-500/20 hover:border-amber-500/40';
+      iconBgClass = 'bg-amber-500/12';
+      iconTextClass = 'text-amber-700 dark:text-amber-400';
+      trackColor = 'rgba(245,158,11,0.1)';
+      themeColorHex = '#f59e0b';
     }
 
     return {

@@ -107,27 +107,27 @@ export default function DealsAtRiskCard({
 
   return (
     <div
-      className={`bg-card/90 backdrop-blur-md border border-destructive/20 dark:border-destructive/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-destructive/5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group ${className}`}
+      className={`bg-card/90 backdrop-blur-md border border-amber-500/20 dark:border-amber-500/25 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-amber-500/5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group ${className}`}
     >
-      {/* Background ambient red aura pulse */}
-      <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-destructive/10 blur-3xl pointer-events-none group-hover:bg-destructive/15 transition-all duration-500" />
-      <div className="absolute -bottom-12 -right-12 w-36 h-36 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+      {/* Background ambient warm amber aura pulse */}
+      <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-500/8 blur-3xl pointer-events-none group-hover:bg-amber-500/12 transition-all duration-500" />
+      <div className="absolute -bottom-12 -right-12 w-36 h-36 rounded-full bg-amber-500/8 blur-3xl pointer-events-none" />
 
-      {/* Left Glowing Risk Accent Stripe */}
-      <div className="absolute left-0 top-0 bottom-0 w-[4.5px] bg-gradient-to-b from-rose-500 via-amber-500 to-rose-600 rounded-l-full" />
+      {/* Left Muted Amber Accent Stripe */}
+      <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-gradient-to-b from-amber-500 to-amber-600 rounded-l-full" />
 
       <div>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 mb-3.5 border-b border-border/60">
           <div className="flex items-center space-x-2.5">
             <div className="relative">
-              <div className="h-9 w-9 rounded-xl bg-destructive/12 flex items-center justify-center text-destructive border border-destructive/20 shadow-inner">
+              <div className="h-9 w-9 rounded-xl bg-amber-500/12 flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-inner">
                 <AlertTriangle size={18} className="animate-pulse" />
               </div>
               {normalizedDeals.length > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-rose-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
                 </span>
               )}
             </div>
@@ -135,7 +135,7 @@ export default function DealsAtRiskCard({
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-foreground text-sm tracking-tight">{title}</h3>
                 {normalizedDeals.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-destructive/12 border border-destructive/20 text-destructive text-[10px] font-bold tabular-nums">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/12 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-bold tabular-nums">
                     {normalizedDeals.length}
                   </span>
                 )}
@@ -146,8 +146,8 @@ export default function DealsAtRiskCard({
 
           {/* Total Value Pill */}
           {normalizedDeals.length > 0 && (
-            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-destructive/8 border border-destructive/20 text-destructive text-xs font-bold self-start sm:self-auto">
-              <Flame size={13} className="text-rose-500 animate-bounce" />
+            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-bold self-start sm:self-auto">
+              <Flame size={13} className="text-amber-500 animate-bounce" />
               <span>{formatINR(totalAtRiskValue)}</span>
             </div>
           )}
@@ -231,20 +231,20 @@ export default function DealsAtRiskCard({
                     }}
                     className={`group/item rounded-xl p-3 border transition-all duration-200 cursor-pointer relative overflow-hidden ${
                       deal.isCritical
-                        ? 'border-destructive/25 bg-destructive/5 hover:bg-destructive/10 hover:border-destructive/40'
-                        : 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 hover:border-amber-500/35'
-                    } ${isExpanded ? 'ring-1 ring-destructive/40 shadow-md' : ''}`}
+                        ? 'border-amber-500/30 bg-amber-500/8 hover:bg-amber-500/12 hover:border-amber-500/45'
+                        : 'border-border/80 bg-muted/30 hover:bg-muted/60 hover:border-amber-500/30'
+                    } ${isExpanded ? 'ring-1 ring-amber-500/40 shadow-md' : ''}`}
                   >
                     {/* Top Row: Name, Company, Value */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-extrabold text-foreground truncate group-hover/item:text-destructive transition-colors">
+                          <p className="text-xs font-extrabold text-foreground truncate group-hover/item:text-amber-600 dark:group-hover/item:text-amber-400 transition-colors">
                             {deal.name}
                           </p>
                           {deal.isCritical && (
-                            <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30">
-                              High Risk
+                            <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                              Attention
                             </span>
                           )}
                         </div>
@@ -254,7 +254,7 @@ export default function DealsAtRiskCard({
                       </div>
 
                       <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-destructive tabular-nums block">
+                        <span className="text-xs font-black text-foreground tabular-nums block">
                           {formatINR(deal.value)}
                         </span>
                         <div className="flex items-center justify-end gap-1 text-[9px] text-muted-foreground/80 mt-0.5">
@@ -274,7 +274,7 @@ export default function DealsAtRiskCard({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-destructive/12 text-destructive border border-destructive/20 truncate max-w-[130px]">
+                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-amber-500/12 text-amber-700 dark:text-amber-400 border border-amber-500/20 truncate max-w-[130px]">
                           {deal.reason}
                         </span>
 
@@ -285,7 +285,7 @@ export default function DealsAtRiskCard({
                           className={`px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 transition-all ${
                             isNudged
                               ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/30'
-                              : 'bg-card border border-border/80 hover:border-destructive/50 text-foreground hover:text-destructive hover:bg-destructive/10'
+                              : 'bg-card border border-border/80 hover:border-amber-500/50 text-foreground hover:text-amber-600 hover:bg-amber-500/10'
                           }`}
                         >
                           {isNudged ? (
@@ -311,9 +311,9 @@ export default function DealsAtRiskCard({
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.2 }}
-                          className="mt-2.5 pt-2 border-t border-destructive/20 text-[10px] space-y-2 bg-destructive/5 -mx-3 -mb-3 p-3 rounded-b-xl"
+                          className="mt-2.5 pt-2 border-t border-amber-500/20 text-[10px] space-y-2 bg-amber-500/5 -mx-3 -mb-3 p-3 rounded-b-xl"
                         >
-                          <div className="flex items-center gap-1.5 text-destructive font-bold">
+                          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold">
                             <Sparkles size={12} />
                             <span>AI Recommended Action:</span>
                           </div>
@@ -322,7 +322,7 @@ export default function DealsAtRiskCard({
                           </p>
 
                           <div className="flex justify-end gap-2 pt-1">
-                            <span className="text-[10px] font-bold text-destructive hover:underline inline-flex items-center gap-0.5">
+                            <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline inline-flex items-center gap-0.5">
                               Open Deal Details <ArrowUpRight size={11} />
                             </span>
                           </div>
