@@ -1,12 +1,10 @@
 """
 Email Summary Service
-Generates AI summaries for inbound email threads using the summarization agent.
+Generates AI summaries for inbound email threads by calling the AI service
+over HTTP, and persists the results to the email_summaries table.
 """
 from __future__ import annotations
 
-import os
-import sys
-import time
 from typing import Optional
 from uuid import UUID
 
@@ -16,26 +14,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.logging import get_logger
 from app.models.email_summary import EmailSummary
 from app.repositories.email_repository import EmailRepository
-
-# Add project root to path so we can import from ai.summarization
-_root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
-if _root_dir not in sys.path:
-    sys.path.insert(0, _root_dir)
-
-try:
-    from ai.summarization.src.agent import create_prompt, get_client, parse_response
-    from ai.summarization.src.config import config as llm_config
-except ImportError:
-    create_prompt = None  # type: ignore[assignment]
-    get_client = None  # type: ignore[assignment]
-    parse_response = None  # type: ignore[assignment]
-    llm_config = None  # type: ignore[assignment]
+from app.services.ai_client import AIClient
 
 logger = get_logger(__name__)
 
 
 class EmailSummaryService:
-    """Thin wrapper around the summarization agent that persists results to email_summaries."""
+    """Thin wrapper around the AI summarization service that persists results."""
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
@@ -52,10 +37,6 @@ class EmailSummaryService:
         Returns the existing summary if one already exists for this thread,
         or ``None`` if summarization is unavailable or the thread is empty.
         """
-        if create_prompt is None or get_client is None:
-            logger.warning("Summarization agent not available – skipping")
-            return None
-
         existing = await self._get_existing(thread_id)
         if existing:
             return existing
@@ -73,7 +54,7 @@ class EmailSummaryService:
             for e in emails
         ]
 
-        result = await self._call_llm(messages)
+        result = await self._call_ai_service(thread_id, messages)
 
         summary = EmailSummary(
             organization_id=organization_id,
@@ -103,47 +84,29 @@ class EmailSummaryService:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def _call_llm(self, messages: list[dict]) -> dict:
-        """Call Groq via the summarization agent with retry and return parsed dict."""
-        start = time.time()
+    async def _call_ai_service(self, thread_id: str, messages: list[dict]) -> dict:
+        """Call the AI summarization service and return the parsed result dict."""
+        ai_client = AIClient()
+        try:
+            result = await ai_client.summarise(thread_id=thread_id, messages=messages)
+        finally:
+            await ai_client.close()
 
-        prompt = create_prompt(messages)
-        model = llm_config.LLM_MODEL
+        if not result:
+            return {
+                "summary": "Unable to process thread",
+                "summary_word": "neutral",
+                "sentiment": "neutral",
+                "intent": "other",
+                "confidence": 0.1,
+                "key_points": [],
+                "action_items": [],
+                "category": "general",
+                "draft_reply": "Unable to process this thread.",
+                "follow_up_suggestion": "Unable to suggest follow-up.",
+                "follow_up_timing": "no_followup",
+                "model_version": "unknown",
+            }
 
-        for attempt in range(llm_config.MAX_RETRIES + 1):
-            try:
-                response = get_client().chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=llm_config.LLM_TEMPERATURE,
-                    max_tokens=llm_config.LLM_MAX_TOKENS,
-                )
-                result_text = response.choices[0].message.content
-                result = parse_response(result_text)
-
-                if result.get("confidence", 0) >= llm_config.MIN_CONFIDENCE_THRESHOLD:
-                    break
-            except Exception as e:
-                logger.warning("LLM call failed (attempt %d): %s", attempt + 1, e)
-                if attempt == llm_config.MAX_RETRIES:
-                    result = {
-                        "summary": "Unable to process thread",
-                        "summary_word": "neutral",
-                        "sentiment": "neutral",
-                        "intent": "other",
-                        "confidence": 0.1,
-                        "key_points": [],
-                        "action_items": [],
-                        "category": "general",
-                        "draft_reply": "Unable to process this thread.",
-                        "follow_up_suggestion": "Unable to suggest follow-up.",
-                        "follow_up_timing": "no_followup",
-                    }
-
-        processing_ms = int((time.time() - start) * 1000)
-        result["processing_time_ms"] = processing_ms
-        result["model_version"] = llm_config.LLM_MODEL
+        result.setdefault("model_version", "unknown")
         return result

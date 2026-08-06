@@ -61,43 +61,6 @@ logger = get_logger(__name__)
 # does not cancel them mid-flight.
 _background_tasks: set[asyncio.Task] = set()  # noqa: F811
 
-# Per-lead debounce: when bursty inbound mail arrives for the same lead we
-# only want one subprocess running at a time.  Maps lead_id -> asyncio.Event
-# that is *set* while a recompute is in progress.
-_recompute_locks: dict[str, asyncio.Event] = {}
-
-
-async def _run_recompute_background(
-    organization_id: UUID,
-    lead_id: UUID,
-) -> None:
-    """Run the feature-recompute subprocess in a thread pool, with per-lead
-    debounce so concurrent inbound emails for the same lead don't spawn
-    multiple subprocesses.
-    """
-    from app.services.feature_recompute_service import recompute_lead_features
-
-    key = f"{organization_id}:{lead_id}"
-    lock = _recompute_locks.get(key)
-    if lock is not None and lock.is_set():
-        logger.debug("Recompute already running for lead %s, skipping", lead_id)
-        return
-
-    lock = asyncio.Event()
-    _recompute_locks[key] = lock
-    lock.set()
-    try:
-        await asyncio.to_thread(
-            recompute_lead_features,
-            str(organization_id),
-            str(lead_id),
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Background recompute failed for lead %s: %s", lead_id, exc)
-    finally:
-        lock.clear()
-        _recompute_locks.pop(key, None)
-
 
 class EmailService:
     def __init__(self, db: AsyncSession) -> None:
@@ -472,25 +435,30 @@ class EmailService:
             sync_status=EmailSyncStatus.ACTIVE.value,
         )
 
-        # Background email summarization for inbound threads
+        # Sequential inbound processing: summarize FIRST, then assess
         if ingested:
             inbound_threads = {
                 e.thread_id for e in ingested
                 if e.thread_id and e.direction == EmailDirection.INBOUND.value
             }
-            for tid in inbound_threads:
-                asyncio.create_task(self._safe_summarize(organization_id, tid))
 
-            # Background engagement feature computation for inbound threads
-            inbound_with_lead = {
-                (e.thread_id, e.external_entity_id)
-                for e in ingested
-                if e.thread_id
-                and e.direction == EmailDirection.INBOUND.value
-                and e.external_entity_id
-            }
-            for tid, lid in inbound_with_lead:
-                asyncio.create_task(self._safe_engagement_for_lead(organization_id, tid, lid))
+            # Group inbound threads by lead_id for sequential processing
+            lead_threads: dict[UUID, set[str]] = {}
+            for e in ingested:
+                if (
+                    e.direction == EmailDirection.INBOUND.value
+                    and e.external_entity_type == "lead"
+                    and e.external_entity_id
+                    and e.thread_id
+                ):
+                    lead_threads.setdefault(e.external_entity_id, set()).add(e.thread_id)
+
+            for lid, tids in lead_threads.items():
+                task = asyncio.create_task(
+                    self._summarize_and_assess(organization_id, lid, tids)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
 
         return EmailSyncResultResponse(
             gmail_connection_id=connection.id,
@@ -589,12 +557,12 @@ class EmailService:
                     "external_entity_id": str(external_entity_id) if external_entity_id else None,
                 },
             )
-            # Recompute engagement features for the linked lead so scores stay
-            # fresh on inbound mail (the 5-min batch job remains the fallback).
-            # Best-effort: never let a recompute failure break email storage.
+            # Best-effort: never let an assessment failure break email storage.
+            # Summarize thread first, then assess (sequential, not parallel).
             if external_entity_type == "lead" and external_entity_id is not None:
+                thread_ids = {thread_id} if thread_id else set()
                 task = asyncio.create_task(
-                    _run_recompute_background(organization_id, external_entity_id)
+                    self._summarize_and_assess(organization_id, external_entity_id, thread_ids)
                 )
                 _background_tasks.add(task)
                 task.add_done_callback(_background_tasks.discard)
@@ -627,53 +595,41 @@ class EmailService:
         except Exception:
             logger.exception("Email summarization failed for thread %s", thread_id)
 
-        await self._safe_engagement(organization_id, thread_id)
+    async def _summarize_and_assess(
+        self, organization_id: UUID, lead_id: UUID, thread_ids: set[str]
+    ) -> None:
+        """
+        Summarize inbound threads first, then run assessment.
 
-    async def _safe_engagement(self, organization_id: UUID, thread_id: str) -> None:
+        This ensures the intent/summary_word is available BEFORE
+        the lead assessment pipeline runs. Previously summarization
+        and assessment ran in parallel, causing stale/null intent.
+        """
+        try:
+            # Step 1: Summarize all inbound threads for this lead
+            for tid in thread_ids:
+                await self._safe_summarize(organization_id, tid)
+
+            # Step 2: Now run assessment (intent is available)
+            await self._run_assessment_background(
+                organization_id, lead_id, trigger="inbound_email"
+            )
+        except Exception:
+            logger.exception("Summarize+assess failed for lead %s", lead_id)
+
+    async def _run_assessment_background(
+        self, organization_id: UUID, lead_id: UUID, trigger: str = "inbound_email"
+    ) -> None:
+        """Run the unified assessment pipeline in a background task."""
         try:
             from app.database.connection import AsyncSessionFactory
-            from app.services.feature_vector_service import FeatureVectorService
-            from app.models.email import Email
-
-            lead_id = None
-            async with AsyncSessionFactory() as db:
-                from sqlalchemy import select as sa_select
-                stmt = (
-                    sa_select(Email.external_entity_id)
-                    .where(
-                        Email.organization_id == organization_id,
-                        Email.thread_id == thread_id,
-                        Email.external_entity_type == "lead",
-                        Email.is_active.is_(True),
-                    )
-                    .limit(1)
-                )
-                result = await db.execute(stmt)
-                row = result.scalar_one_or_none()
-                if row:
-                    lead_id = row
-
-            if not lead_id:
-                return
+            from app.services.ai_pipeline import run_lead_assessment
 
             async with AsyncSessionFactory() as db:
-                svc = FeatureVectorService(db)
-                await svc.compute_engagement_features(organization_id, thread_id, lead_id)
+                await run_lead_assessment(db, lead_id, organization_id, created_by=None, trigger=trigger)
                 await db.commit()
         except Exception:
-            logger.exception("Engagement feature computation failed for thread %s", thread_id)
-
-    async def _safe_engagement_for_lead(self, organization_id: UUID, thread_id: str, lead_id: UUID) -> None:
-        try:
-            from app.database.connection import AsyncSessionFactory
-            from app.services.feature_vector_service import FeatureVectorService
-
-            async with AsyncSessionFactory() as db:
-                svc = FeatureVectorService(db)
-                await svc.compute_engagement_features(organization_id, thread_id, lead_id)
-                await db.commit()
-        except Exception:
-            logger.exception("Engagement feature computation failed for thread %s lead %s", thread_id, lead_id)
+            logger.exception("Background assessment failed for lead %s", lead_id)
 
     async def send_email(
         self,
@@ -1008,19 +964,24 @@ class EmailService:
                 e.thread_id for e in ingested
                 if e.thread_id and e.direction == EmailDirection.INBOUND.value
             }
-            for tid in inbound_threads:
-                asyncio.create_task(self._safe_summarize(organization_id, tid))
 
-            # Background engagement feature computation for inbound threads
-            inbound_with_lead = {
-                (e.thread_id, e.external_entity_id)
-                for e in ingested
-                if e.thread_id
-                and e.direction == EmailDirection.INBOUND.value
-                and e.external_entity_id
-            }
-            for tid, lid in inbound_with_lead:
-                asyncio.create_task(self._safe_engagement_for_lead(organization_id, tid, lid))
+            # Group inbound threads by lead_id for sequential processing
+            lead_threads: dict[UUID, set[str]] = {}
+            for e in ingested:
+                if (
+                    e.direction == EmailDirection.INBOUND.value
+                    and e.external_entity_type == "lead"
+                    and e.external_entity_id
+                    and e.thread_id
+                ):
+                    lead_threads.setdefault(e.external_entity_id, set()).add(e.thread_id)
+
+            for lid, tids in lead_threads.items():
+                task = asyncio.create_task(
+                    self._summarize_and_assess(organization_id, lid, tids)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
 
         return EmailSyncResultResponse(
             gmail_connection_id=connection.id,

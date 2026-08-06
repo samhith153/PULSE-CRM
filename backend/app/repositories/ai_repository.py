@@ -1,6 +1,8 @@
 ﻿"""Repositories for AI-generated CRM artifacts."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import desc, select
@@ -47,6 +49,61 @@ class AIRecommendationRepository(BaseRepository[AIRecommendation]):
             stmt = stmt.where(AIRecommendation.entity_id == entity_id)
         result = await self.db.execute(stmt.order_by(desc(AIRecommendation.generated_at)).limit(5))
         return list(result.scalars().all())
+
+    async def upsert_for_lead(
+        self,
+        lead_id: UUID,
+        organization_id: UUID,
+        created_by: Optional[UUID],
+        recommendation: str,
+        reasoning: str,
+        priority: str = "medium",
+        metadata_json: Optional[dict] = None,
+    ) -> AIRecommendation:
+        existing = None
+        stmt = (
+            select(AIRecommendation)
+            .where(
+                AIRecommendation.lead_id == lead_id,
+                AIRecommendation.organization_id == organization_id,
+                AIRecommendation.is_active.is_(True),
+            )
+            .order_by(desc(AIRecommendation.generated_at))
+            .limit(1)
+        )
+        result = await self.db.execute(stmt)
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            existing.recommendation = recommendation
+            existing.reasoning = reasoning
+            existing.priority = priority
+            existing.metadata_json = metadata_json or {}
+            existing.generated_at = datetime.now(timezone.utc)
+            if created_by:
+                existing.created_by = created_by
+            self.db.add(existing)
+            await self.db.flush()
+            await self.db.refresh(existing)
+            return existing
+        else:
+            rec = AIRecommendation(
+                entity_type="lead",
+                entity_id=lead_id,
+                lead_id=lead_id,
+                recommendation=recommendation,
+                reasoning=reasoning,
+                priority=priority,
+                provider="ai_service",
+                metadata_json=metadata_json or {},
+                generated_at=datetime.now(timezone.utc),
+                organization_id=organization_id,
+                created_by=created_by,
+            )
+            self.db.add(rec)
+            await self.db.flush()
+            await self.db.refresh(rec)
+            return rec
 
 
 class AIConversationSummaryRepository(BaseRepository[AIConversationSummary]):

@@ -1,6 +1,6 @@
 """
 FeatureVector Model
-Stores engineered features and scores for leads.
+Stores engineered features and scores for leads (audit/analytics only).
 """
 import uuid
 from datetime import datetime
@@ -40,7 +40,7 @@ class FeatureVector(Base, TenantMixin):
         nullable=True,
     )
 
-    # ── Engagement Feature Scores ─────────────────────────────────────────────
+    # ── Engagement Feature Scores (audit) ───────────────────────────────
     average_response_time: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     response_time_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     days_since_last_outbound: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
@@ -50,18 +50,31 @@ class FeatureVector(Base, TenantMixin):
     customer_initiative_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     engagement_trend_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
-    # ── Response Time Accumulators ───────────────────────────────────────────
+    # ── Response Time Accumulators ──────────────────────────────────────
     num_response_pairs: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     last_processed_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    # ── Fit Feature Scores ────────────────────────────────────────────────────
+    # ── Fit Feature Scores ──────────────────────────────────────────────
     company_size_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     industry_complexity_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     software_gap_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     operational_system_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     customization_potential_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
 
-    # ── Relationships ─────────────────────────────────────────────────────────
+    # ── Email Analytics (audit) ─────────────────────────────────────────
+    inbound_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    initiated_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    last_inbound_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    days_since_last_inbound: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    intent: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # ── Assessment Metadata (audit) ─────────────────────────────────────
+    assessment_trigger: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    assessment_version: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    model_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    prompt_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
+    # ── Relationships ───────────────────────────────────────────────────
     lead: Mapped["Lead"] = relationship("Lead", back_populates="feature_vector", lazy="select")
     organization: Mapped["Organization"] = relationship("Organization", lazy="select")
     creator: Mapped[Optional["User"]] = relationship("User", lazy="select")

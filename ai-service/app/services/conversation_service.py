@@ -1,0 +1,214 @@
+"""
+Conversation Service — ported exactly from ai/summarization/src/agent.py.
+
+Uses Groq LLM to generate lead conversation summaries.
+"""
+
+import json
+import os
+from typing import Dict, Any, List
+from datetime import datetime
+
+from groq import Groq
+
+
+_groq_client = None
+
+
+def _get_client() -> Groq:
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY environment variable is not set")
+        _groq_client = Groq(api_key=api_key)
+    return _groq_client
+
+
+def create_prompt(messages: List[Dict], context: str = "") -> str:
+    formatted_messages = []
+    for msg in messages:
+        if isinstance(msg, dict):
+            direction = "From" if msg["direction"] == "incoming" else "To"
+            sender = msg["sender"]
+            body = msg["body"]
+        else:
+            direction = "From" if msg.direction == "incoming" else "To"
+            sender = msg.sender
+            body = msg.body
+
+        formatted_messages.append(f"{direction} {sender}:\n{body}\n")
+
+    thread_text = "\n".join(formatted_messages)
+
+    prompt = f"""
+You are an AI sales assistant for PULSE, a revenue platform.
+Your task is to analyse email conversations and provide structured insights.
+
+{context}
+
+Email Thread:
+{thread_text}
+
+=== TASK 1: SUMMARY ===
+Write a one-sentence summary of the email thread.
+
+=== TASK 2: SUMMARY WORD (For Lead Scoring) ===
+Choose ONE word that best represents this email:
+- "demo_request" - Asked for demo
+- "contract_signed" - Deal closed
+- "pricing_negotiation" - Discussing pricing
+- "interested" - Prospect shows interest
+- "proposal" - Proposal sent
+- "budget" - Budget discussion
+- "meeting" - Meeting requested
+- "follow_up" - Needs follow-up
+- "inquiry" - General question
+- "introduction" - Intro email
+- "positive" - Very positive
+- "neutral" - Neutral tone
+- "negative" - Very negative
+- "thank_you" - Thank you email
+- "referral" - Referral given
+- "support" - Support request
+- "complaint" - Negative feedback
+- "lost" - Deal lost
+- "urgent" - Urgent action needed
+
+=== TASK 3: SENTIMENT ===
+Choose ONE: positive / neutral / negative
+
+=== TASK 4: INTENT ===
+Choose ONE: demo / buy / negotiate / followup / decline / other
+
+=== TASK 5: CONFIDENCE ===
+Rate your confidence (0.0 to 1.0)
+
+=== TASK 6: KEY POINTS ===
+Extract 2-5 key points from the conversation
+
+=== TASK 7: ACTION ITEMS ===
+Extract any action items or next steps
+
+=== TASK 8: EMAIL CATEGORY (For Classification) ===
+Choose ONE category:
+- "sales" - Sales-related conversation
+- "support" - Support/help request
+- "general" - General conversation
+- "urgent" - Urgent/important matters
+
+=== TASK 9: DRAFT REPLY ===
+Write a 1-2 sentence suggested draft reply.
+
+=== TASK 10: FOLLOW-UP SUGGESTION ===
+Suggest the best follow-up action and timing.
+
+Examples:
+- "Follow up in 2 days with pricing details"
+- "Follow up tomorrow morning regarding demo availability"
+- "Follow up in 1 week with proposal"
+- "Follow up immediately - urgent response needed"
+- "Follow up in 3 days to check if they received the document"
+- "No follow-up needed - deal is closed"
+- "Follow up after the meeting scheduled for Tuesday"
+
+=== TASK 11: FOLLOW-UP TIMING ===
+Choose ONE timing:
+- "immediate" - Need to respond right away
+- "today" - Respond today
+- "tomorrow" - Respond tomorrow
+- "2_days" - Follow up in 2 days
+- "3_days" - Follow up in 3 days
+- "1_week" - Follow up in 1 week
+- "2_weeks" - Follow up in 2 weeks
+- "no_followup" - No follow-up needed
+
+Return ONLY valid JSON in this exact format:
+{{
+    "summary": "one sentence summary",
+    "summary_word": "single_word_tag",
+    "sentiment": "positive/neutral/negative",
+    "intent": "demo/buy/negotiate/followup/decline/other",
+    "confidence": 0.92,
+    "key_points": ["point 1", "point 2"],
+    "action_items": ["action 1", "action 2"],
+    "category": "sales/support/general/urgent",
+    "draft_reply": "Suggested reply...",
+    "follow_up_suggestion": "Follow up in X days with Y",
+    "follow_up_timing": "immediate/today/tomorrow/2_days/3_days/1_week/no_followup"
+}}
+"""
+    return prompt
+
+
+def parse_response(response_text: str) -> Dict[str, Any]:
+    try:
+        cleaned = response_text.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+
+        data = json.loads(cleaned)
+        required = ["summary", "summary_word", "sentiment", "intent", "confidence"]
+        for field in required:
+            if field not in data:
+                raise ValueError(f"Missing field: {field}")
+
+        summary_word = data.get("summary_word", "neutral")
+        if len(summary_word.split()) > 1:
+            data["summary_word"] = summary_word.split()[0]
+
+        if "category" not in data:
+            data["category"] = "general"
+        if "draft_reply" not in data:
+            data["draft_reply"] = "No reply suggested."
+        if "follow_up_suggestion" not in data:
+            data["follow_up_suggestion"] = "No follow-up suggested."
+        if "follow_up_timing" not in data:
+            data["follow_up_timing"] = "no_followup"
+
+        return data
+    except (json.JSONDecodeError, ValueError):
+        return {
+            "summary": response_text[:200] if len(response_text) > 200 else response_text,
+            "summary_word": "neutral",
+            "sentiment": "neutral",
+            "intent": "other",
+            "confidence": 0.5,
+            "key_points": [],
+            "action_items": [],
+            "category": "general",
+            "draft_reply": "Unable to generate reply.",
+            "follow_up_suggestion": "Unable to suggest follow-up.",
+            "follow_up_timing": "no_followup",
+        }
+
+
+def summarise_thread(thread: Dict[str, Any]) -> str:
+    """Summarise an email thread using Groq. Returns the raw summary text."""
+    messages = []
+    for msg in thread.get("inbound", []):
+        messages.append({"direction": "incoming", "sender": "lead", "body": msg.get("body", "")})
+    for msg in thread.get("outbound", []):
+        messages.append({"direction": "outgoing", "sender": "rep", "body": msg.get("body", "")})
+
+    if not messages:
+        return "No messages to summarise."
+
+    prompt = create_prompt(messages)
+
+    response = _get_client().chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.3,
+        max_tokens=500,
+    )
+
+    return response.choices[0].message.content.strip()

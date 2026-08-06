@@ -32,17 +32,38 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/pulse_crm
       ENVIRONMENT: production
+      AI_SERVICE_URL: http://ai-service:8001
     ports:
       - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
+      ai-service:
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/ping"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 15s
+
+  # ── AI Service ───────────────────────────────────────────────────────────
+  ai-service:
+    build:
+      context: ../ai-service
+      dockerfile: Dockerfile
+    container_name: pulse_crm_ai
+    restart: unless-stopped
+    env_file:
+      - ../ai-service/.env
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://localhost:8001/health').status==200 else sys.exit(1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
   # ── pgAdmin (optional dev tool) ───────────────────────────────────────────
   pgadmin:
