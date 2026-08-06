@@ -4,6 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
+import StatCards from '@/components/dashboard/StatCards';
+import Charts from '@/components/dashboard/Charts';
+import Widgets from '@/components/dashboard/Widgets';
+import RightPanel from '@/components/dashboard/RightPanel';
 import ReportBuilderModal from '@/components/dashboard/ReportBuilderModal';
 import LeadsView from '@/components/dashboard/LeadsView';
 import CompaniesView from '@/components/dashboard/CompaniesView';
@@ -22,6 +26,7 @@ import WorkflowsView from '@/components/dashboard/WorkflowsView';
 import CommandPalette from '@/components/dashboard/CommandPalette';
 import AICopilotChat from '@/components/dashboard/AICopilotChat';
 import DashboardCustomizer from '@/components/dashboard/DashboardCustomizer';
+import ActivityHeatmap from '@/components/dashboard/ActivityHeatmap';
 import CalendarView from '@/components/dashboard/CalendarView';
 import ManagerDashboardView from '@/components/dashboard/ManagerDashboardView';
 import ForecastView from '@/components/dashboard/ForecastView';
@@ -74,10 +79,6 @@ export default function DashboardHome() {
       return;
     }
 
-<<<<<<< HEAD
-  const handleLogin = (role: 'sales_rep' | 'manager' | 'admin') => {
-=======
->>>>>>> origin/new-ui
     setIsAuthenticated(true);
     let savedRole = localStorage.getItem('pulse-crm-role');
     if (savedRole === 'sales_rep') {
@@ -111,68 +112,9 @@ export default function DashboardHome() {
   const [reportType, setReportType] = useState('Sales Funnel');
   const [primaryMetric, setPrimaryMetric] = useState('Deal Value');
   const [groupBy, setGroupBy] = useState('Stage');
-<<<<<<< HEAD
-  
-  // User Role State — derived from the authenticated user's real roles.
-  // Initialise from localStorage to avoid a flash of wrong role before the API responds.
-  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('sales_rep');
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const cached = localStorage.getItem('pulse-crm-role');
-    if (cached === 'admin' || cached === 'manager' || cached === 'sales_rep') {
-      setUserRole(cached);
-    }
-  }, []);
-  const [token, setToken] = useState<string | null>(() => getToken());
-  const [currentUser, setCurrentUser] = useState<{ full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null>(null);
-
-  // Map backend role names -> UI role. Backend uses "sales_rep", "manager", "admin".
-  const mapBackendRole = (roles: string[]): 'sales_rep' | 'manager' | 'admin' => {
-    if (roles.includes('admin')) return 'admin';
-    if (roles.includes('manager')) return 'manager';
-    if (roles.includes('sales_rep')) return 'sales_rep';
-    // Fallback: a user without a recognized role defaults to sales_rep (least privilege).
-    return 'sales_rep';
-  };
-
-  // Resolve the real role from the API whenever the token changes. Each run is
-  // cancelled on the next, so a stale-token response can never override the
-  // logged-in user's role (e.g. signing in as manager right after an admin session).
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    getCurrentUser()
-      .then((me) => {
-        if (cancelled) return;
-        const role = mapBackendRole(me.roles || []);
-        setUserRole(role);
-        setCurrentUser({ full_name: me.full_name, email: me.email, avatar_url: me.avatar_url, job_title: me.job_title });
-        localStorage.setItem('pulse-crm-role', role);
-      })
-      .catch(() => {
-        if (cancelled) return;
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
-
-  // Role-scoped navigation: never let a tab the current role cannot access win.
-  const navigate = (tab: string) => {
-    setActiveTab(ROLE_TABS[userRole].has(tab) ? tab : ROLE_HOME[userRole]);
-  };
-
-  // Re-sanitize the active tab whenever the resolved role changes.
-  useEffect(() => {
-    setActiveTab(prev => (ROLE_TABS[userRole].has(prev) ? prev : ROLE_HOME[userRole]));
-  }, [userRole]);
-
-  // Layout Customization States
-=======
 
   const [showFiltersMenu, setShowFiltersMenu] = useState(false);
   const [selectedPipelineType, setSelectedPipelineType] = useState('All');
->>>>>>> origin/new-ui
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
   const [layoutSettings, setLayoutSettings] = useState({
     statCards: true,
@@ -223,47 +165,12 @@ export default function DashboardHome() {
     setIsEmpty(tabKey === 'marketing');
   };
 
-  // Reset loading state when activeTab or userRole changes
-  useEffect(() => {
-    setIsLoading(true);
-  }, [activeTab, userRole]);
-
-  // Safety-net: auto-clear skeleton after 1.5s for views without onLoaded
   useEffect(() => {
     if (!isLoading) return;
-    const timer = setTimeout(() => setIsLoading(false), 1500);
+    const timer = setTimeout(() => setIsLoading(false), 450);
     return () => clearTimeout(timer);
   }, [isLoading]);
 
-<<<<<<< HEAD
-  // Determine skeleton loader layout based on active tab
-  const getSkeletonLayout = (tab: string) => {
-    switch (tab) {
-      case 'dashboard':
-        return 'dashboard';
-      case 'leads':
-      case 'contacts':
-      case 'companies':
-      case 'products':
-      case 'users':
-      case 'audit logs':
-        return 'table';
-      case 'deals':
-      case 'pipeline':
-      case 'team pipeline':
-        return 'kanban';
-      case 'settings':
-      case 'profile':
-        return 'form';
-      case 'calendar':
-        return 'calendar';
-      default:
-        return 'list';
-    }
-  };
-
-=======
->>>>>>> origin/new-ui
   // Custom reports state
   const [recentReports, setRecentReports] = useState([
     { id: 1, title: "Sales Performance Overview", time: "Generated 2 hours ago" },
@@ -298,33 +205,12 @@ export default function DashboardHome() {
     );
   }
 
-<<<<<<< HEAD
-
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-slate-900">
-        <Loader2 className="h-8 w-8 text-brand-accent animate-spin" />
-      </div>
-    );
-  }
-
   if (!isAuthenticated) {
-    return <PulseLandingPage onLogin={handleLogin} />;
+    return <NewLandingPage onLogin={handleLogin} />;
   }
 
   return (
-    <div className="flex bg-slate-50 h-screen overflow-hidden font-sans text-brand-text antialiased">
-      {/* Sidebar navigation - toned down background */}
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={navigate} 
-        collapsed={sidebarCollapsed} 
-        setCollapsed={setSidebarCollapsed} 
-        userRole={userRole}
-        currentUser={currentUser}
-=======
-  return (
-    <div className="flex bg-surface-warm h-screen overflow-hidden font-sans text-foreground antialiased">
+    <div className="flex bg-background h-screen overflow-hidden font-sans text-foreground antialiased">
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 
@@ -332,7 +218,6 @@ export default function DashboardHome() {
         collapsed={sidebarCollapsed} 
         setCollapsed={setSidebarCollapsed} 
         userRole={userRole}
->>>>>>> origin/new-ui
       />
 
       {/* Main dashboard content container */}
@@ -343,223 +228,72 @@ export default function DashboardHome() {
           collapsed={sidebarCollapsed} 
           setCollapsed={setSidebarCollapsed} 
           onNewReportClick={() => setIsReportModalOpen(true)} 
-<<<<<<< HEAD
-          onTabChange={(tab) => navigate(tab)}
-          onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-          onSignOut={handleSignOut}
-          userRole={userRole}
-          currentUser={currentUser}
-=======
           onTabChange={(tab) => setActiveTab(tab)}
           onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
           onSignOut={handleSignOut}
           userRole={userRole}
->>>>>>> origin/new-ui
         />
 
         {/* Dashboard inner scroll view with increased whitespace */}
         <main className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-<<<<<<< HEAD
-          <SkeletonLoader isLoading={isLoading} layout={getSkeletonLayout(activeTab)}>
-            {!ROLE_TABS[userRole].has(activeTab) ? (
-              userRole === 'sales_rep' ? (
-                <SalesRepDashboardView onLoaded={() => setIsLoading(false)} onTabChange={navigate} timeFilter={dashboardSubTab} />
-              ) : userRole === 'manager' ? (
-                <ManagerDashboardView onTabChange={navigate} onLoaded={() => setIsLoading(false)} />
+          <AnimatePresence mode="wait">
+            <PageTransition key={activeTab}>
+              {activeTab === 'home' ? (
+                <HomeView onTabChange={setActiveTab} />
+              ) : activeTab === 'leads' ? (
+                <LeadsView />
+              ) : activeTab === 'contacts' ? (
+                <ContactsView />
+              ) : activeTab === 'companies' ? (
+                <CompaniesView />
+              ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
+                <PipelineView />
+              ) : activeTab === 'products' ? (
+                <ProductsView />
+              ) : activeTab === 'activities' ? (
+                <ActivitiesView />
+              ) : activeTab === 'emails' ? (
+                <EmailsView />
+              ) : activeTab === 'documents' ? (
+                <DocumentsView />
+              ) : activeTab === 'reports' ? (
+                <ReportsView />
+              ) : activeTab === 'workflows' ? (
+                <WorkflowsView />
+              ) : activeTab === 'ai insights' ? (
+                <AIInsightsView />
+              ) : activeTab === 'settings' ? (
+                <SettingsView userRole={userRole} />
+              ) : activeTab === 'profile' ? (
+                <ProfileView userRole={userRole} />
+              ) : activeTab === 'notifications' ? (
+                <NotificationsView />
+              ) : activeTab === 'calendar' ? (
+                <CalendarView />
+              ) : activeTab === 'forecast' ? (
+                <ForecastView />
+              ) : activeTab === 'team performance' ? (
+                <TeamPerformanceView />
+              ) : activeTab === 'users' ? (
+                <UsersView />
+              ) : activeTab === 'roles & permissions' ? (
+                <RolesPermissionsView />
+              ) : activeTab === 'integrations' ? (
+                <IntegrationsView />
+              ) : activeTab === 'automation' ? (
+                <AutomationView />
+              ) : activeTab === 'ai models' ? (
+                <AIModelsView />
+              ) : activeTab === 'audit logs' ? (
+                <AuditLogsView />
+              ) : activeTab === 'dashboard' && userRole === 'manager' ? (
+                <ManagerDashboardView onTabChange={setActiveTab} />
+              ) : activeTab === 'dashboard' && userRole === 'admin' ? (
+                <AdminDashboardView />
               ) : (
-                <AdminDashboardView onLoaded={() => setIsLoading(false)} />
-              )
-            ) : activeTab === 'leads' ? (
-              <LeadsView onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'contacts' ? (
-              <ContactsView onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'companies' ? (
-              <CompaniesView onLoaded={() => setIsLoading(false)} />
-            ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
-              <PipelineView onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'products' ? (
-              <ProductsView onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'activities' ? (
-              <ActivitiesView onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'emails' ? (
-              <EmailsView onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'documents' ? (
-              <DocumentsView onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'reports' ? (
-              <ReportsView userRole={userRole} onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'workflows' ? (
-              <WorkflowsView onLoaded={() => setIsLoading(false)} />
-            ) : activeTab === 'ai insights' ? (
-              <AIInsightsView />
-            ) : activeTab === 'settings' ? (
-              <SettingsView userRole={userRole} />
-            ) : activeTab === 'profile' ? (
-              <ProfileView userRole={userRole} />
-            ) : activeTab === 'notifications' ? (
-              <NotificationsView />
-            ) : activeTab === 'calendar' ? (
-              <CalendarView />
-            ) : activeTab === 'forecast' ? (
-              <ForecastView />
-            ) : activeTab === 'team performance' ? (
-              <TeamPerformanceView userRole={userRole} />
-            ) : activeTab === 'users' ? (
-              <UsersView />
-            ) : activeTab === 'roles & permissions' ? (
-              <RolesPermissionsView />
-            ) : activeTab === 'integrations' ? (
-              <IntegrationsView />
-            ) : activeTab === 'automation' ? (
-              <AutomationView />
-            ) : activeTab === 'ai models' ? (
-              <AIModelsView />
-            ) : activeTab === 'audit logs' ? (
-              <AuditLogsView />
-            ) : activeTab === 'dashboard' && userRole === 'manager' ? (
-              <ManagerDashboardView onTabChange={navigate} />
-            ) : activeTab === 'dashboard' && userRole === 'admin' ? (
-              <AdminDashboardView />
-            ) : (
-              <SalesRepDashboardView onLoaded={() => setIsLoading(false)} onTabChange={navigate} timeFilter={dashboardSubTab} />
-            )}
-          </SkeletonLoader>
-=======
-          {activeTab === 'leads' ? (
-            <LeadsView />
-          ) : activeTab === 'contacts' ? (
-            <ContactsView />
-          ) : activeTab === 'companies' ? (
-            <CompaniesView />
-          ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
-            <PipelineView />
-          ) : activeTab === 'products' ? (
-            <ProductsView />
-          ) : activeTab === 'activities' ? (
-            <ActivitiesView />
-          ) : activeTab === 'emails' ? (
-            <EmailsView />
-          ) : activeTab === 'documents' ? (
-            <DocumentsView />
-          ) : activeTab === 'reports' ? (
-            <ReportsView />
-          ) : activeTab === 'workflows' ? (
-            <WorkflowsView />
-          ) : activeTab === 'ai insights' ? (
-            <AIInsightsView />
-          ) : activeTab === 'settings' ? (
-            <SettingsView userRole={userRole} />
-          ) : activeTab === 'profile' ? (
-            <ProfileView userRole={userRole} />
-          ) : activeTab === 'notifications' ? (
-            <NotificationsView />
-          ) : activeTab === 'calendar' ? (
-            <CalendarView />
-          ) : activeTab === 'forecast' ? (
-            <ForecastView />
-          ) : activeTab === 'team performance' ? (
-            <TeamPerformanceView />
-          ) : activeTab === 'users' ? (
-            <UsersView />
-          ) : activeTab === 'roles & permissions' ? (
-            <RolesPermissionsView />
-          ) : activeTab === 'integrations' ? (
-            <IntegrationsView />
-          ) : activeTab === 'automation' ? (
-            <AutomationView />
-          ) : activeTab === 'ai models' ? (
-            <AIModelsView />
-          ) : activeTab === 'audit logs' ? (
-            <AuditLogsView />
-          ) : activeTab === 'dashboard' && userRole === 'manager' ? (
-            <ManagerDashboardView onTabChange={setActiveTab} />
-          ) : activeTab === 'dashboard' && userRole === 'admin' ? (
-            <AdminDashboardView />
-          ) : (
-            <>
-              {/* Header block with improved contrast & page title visual prominence */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-sans text-brand-heading tracking-tight font-bold">
-                    Reports & analytics
-                  </h1>
-                  <p className="text-xs md:text-sm text-brand-text/75 mt-2 leading-relaxed max-w-2xl font-medium tracking-wide">
-                    Track performance, analyze trends, and make data-driven decisions.
-                  </p>
-                </div>
-                
-                {/* Datepicker and Layout Customization (Tactile and premium style) */}
-                <div className="flex items-center space-x-2 shrink-0 self-start md:self-auto">
-                  <button className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition-all duration-200 cursor-pointer">
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
-                    <span className="tabular-nums">May 12 – May 18, 2025</span>
-                  </button>
-
-                  <button 
-                    onClick={() => setIsCustomizerOpen(true)}
-                    className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition-all duration-200 cursor-pointer"
-                  >
-                    <Settings2 className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
-                    <span>Customize Layout</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* KPI Stat Cards (Spans full horizontal width above grid split) */}
-              {layoutSettings.statCards && (
-                <StatCards timeFilter={dashboardSubTab} loading={isLoading} />
-              )}
-
-              {/* Stacked Dashboard Row Layout */}
-              <div className="space-y-6">
-                
-                {/* Charts (Revenue, stage funnel, source donuts) */}
-                {layoutSettings.charts && (
-                  <Charts loading={isLoading} empty={isEmpty} />
-                )}
-
-                {/* Sales Activity Heatmap */}
-                {layoutSettings.heatmap && (
-                  <ActivityHeatmap />
-                )}
-
-                {/* Widgets (Leaderboard & Activity Logs) */}
-                {(layoutSettings.leaderboard || layoutSettings.productivity) && (
-                  <Widgets 
-                    loading={isLoading} 
-                    showLeaderboard={layoutSettings.leaderboard}
-                    showProductivity={layoutSettings.productivity}
-                    onTabChange={setActiveTab}
-                  />
-                )}
-
-                {/* Right Panel Cards (Key Metrics Summary & Recent Reports) */}
-                {layoutSettings.rightPanel && (
-                  <RightPanel 
-                    onNewReportClick={() => setIsReportModalOpen(true)} 
-                    recentReports={recentReports}
-                    loading={isLoading}
-                  />
-                )}
-
-              </div>
-              {/* Report Builder Control Panel at the bottom of the page */}
-              <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 mt-6">
-                <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
-                  <div>
-                    <h3 className="font-bold text-foreground text-sm">Report builder</h3>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
-                      Configure template, metrics, and grouping to dynamically compile custom reports.
-                    </p>
-                  </div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-brand-purple/10 text-brand-purple uppercase tracking-wider">
-                    Customizer
-                  </span>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Selection Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    {/* Report Type */}
+                <>
+                  {/* Header block with improved contrast & page title visual prominence */}
+                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div>
                       <h1 className="text-3xl md:text-4xl font-sans text-brand-heading tracking-tight font-bold">
                         Reports & analytics
@@ -737,11 +471,10 @@ export default function DashboardHome() {
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </>
-          )}
->>>>>>> origin/new-ui
+                </>
+              )}
+            </PageTransition>
+          </AnimatePresence>
         </main>
       </div>
 
