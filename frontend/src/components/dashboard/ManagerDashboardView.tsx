@@ -4,8 +4,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUp, Target, AlertTriangle, Users, ArrowUpRight,
   Activity, BellRing, ShieldAlert, Sparkles, Award,
-  BarChart3, Layers, Clock, ArrowRight, CheckCircle2, ChevronDown,
-  Briefcase, Percent, User, MessageSquare, AlertCircle, HelpCircle
+  Layers, Clock, ArrowRight, CheckCircle2, ChevronDown,
+  Briefcase, Percent, User, MessageSquare, AlertCircle, HelpCircle,
+  TrendingDown, ArrowDownRight, Compass
 } from 'lucide-react';
 import {
   getManagerDashboard, asNumber, formatINR, formatPct, ManagerDashboardData
@@ -48,7 +49,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
     if (period === 'week') {
       const day = now.getDay();
       const daysLeft = 7 - day;
-      return { daysLeft, label: 'days left in week' };
+      return { daysLeft, total: 7, label: 'days left in week' };
     }
     if (period === 'quarter') {
       const currentMonth = now.getMonth();
@@ -56,12 +57,12 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       const lastDayOfQuarterMonth = new Date(now.getFullYear(), endOfQuarterMonth + 1, 0);
       const diffTime = lastDayOfQuarterMonth.getTime() - now.getTime();
       const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return { daysLeft, label: 'days left in quarter' };
+      return { daysLeft, total: 90, label: 'days left in quarter' };
     }
     // Default: month
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const daysLeft = lastDayOfMonth - now.getDate();
-    return { daysLeft, label: 'days left in month' };
+    return { daysLeft, total: lastDayOfMonth, label: 'days left in month' };
   }, [period]);
 
   // Red-first sort: highest risk (lowest attainment percentage) first
@@ -172,20 +173,29 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
 
   if (loading) {
     return (
-      <div className="space-y-6 animate-pulse px-4 py-6">
-        <div className="h-10 w-48 rounded-xl bg-secondary" />
-        <div className="h-28 rounded-2xl bg-secondary" />
-        <div className="h-64 rounded-2xl bg-secondary" />
-        <div className="h-64 rounded-2xl bg-secondary" />
+      <div className="space-y-8 animate-pulse px-6 py-8">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="h-8 w-64 rounded-xl bg-secondary" />
+            <div className="h-4 w-40 rounded bg-secondary" />
+          </div>
+          <div className="h-10 w-60 rounded-xl bg-secondary" />
+        </div>
+        <div className="h-40 rounded-2xl bg-secondary" />
+        <div className="h-96 rounded-2xl bg-secondary" />
+        <div className="grid grid-cols-2 gap-8">
+          <div className="h-72 rounded-2xl bg-secondary" />
+          <div className="h-72 rounded-2xl bg-secondary" />
+        </div>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive m-4">
-        <p className="font-semibold">Couldn't load Manager Overview dashboard</p>
-        <p className="mt-1 text-sm">{error ?? 'No data returned.'}</p>
+      <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-destructive m-6">
+        <p className="font-extrabold text-sm tracking-tight">Failed to Load Dashboard</p>
+        <p className="mt-1 text-xs font-semibold text-destructive/80">{error ?? 'No data was returned by the api.'}</p>
       </div>
     );
   }
@@ -202,53 +212,47 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
   const projectedLow = projectedMid - bandOffset;
   const projectedHigh = projectedMid + bandOffset;
 
+  // Calculate relative placement for confidence band visualization
+  const bandWidth = projectedHigh - projectedLow;
+  const actualPositionPercent = bandWidth > 0 
+    ? Math.max(0, Math.min(100, ((actualVal - projectedLow) / bandWidth) * 100))
+    : 50;
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 pb-12">
+    <div className="space-y-8 max-w-7xl mx-auto px-6 pb-16 font-sans">
       
-      {/* ── Global Filter Bar ────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-border pb-4">
+      {/* ── Global Filter Bar (Modern glass styling) ─────────────────── */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-border/40 pb-6">
         <div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight text-foreground">
+          <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
             Manager Overview
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
-            Real-time decision intelligence & coaching prioritization.
+          <p className="text-xs text-muted-foreground font-semibold mt-1.5 flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            Decision Intelligence & Quota Pace prioritization.
           </p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center space-x-1.5 bg-muted/60 p-1 rounded-xl border border-border">
-            <button
-              onClick={() => setPeriod('week')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                period === 'week' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Week
-            </button>
-            <button
-              onClick={() => setPeriod('month')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                period === 'month' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Month
-            </button>
-            <button
-              onClick={() => setPeriod('quarter')}
-              className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                period === 'quarter' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              Quarter
-            </button>
+          <div className="flex items-center space-x-1 bg-secondary/80 p-0.5 rounded-xl border border-border/40">
+            {(['week', 'month', 'quarter'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriod(p)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 capitalize ${
+                  period === p ? 'bg-card text-foreground shadow-sm border border-border/40' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
           </div>
 
           <div className="relative">
             <select
               value={team}
               onChange={(e) => setTeam(e.target.value)}
-              className="bg-card hover:bg-muted text-foreground border border-border rounded-xl px-3 py-1.5 text-xs font-bold appearance-none pr-8 cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple"
+              className="bg-card hover:bg-secondary/60 text-foreground border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple transition-all duration-200"
             >
               <option value="all">All Teams</option>
               <option value="north">North Region</option>
@@ -261,7 +265,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
             <select
               value={productLine}
               onChange={(e) => setProductLine(e.target.value)}
-              className="bg-card hover:bg-muted text-foreground border border-border rounded-xl px-3 py-1.5 text-xs font-bold appearance-none pr-8 cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple"
+              className="bg-card hover:bg-secondary/60 text-foreground border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple transition-all duration-200"
             >
               <option value="all">All Products</option>
               <option value="crm">Core CRM</option>
@@ -272,88 +276,123 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
         </div>
       </div>
 
-      {/* ── Section 1: Forecast Strip (top) ─────────────────────────── */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm relative overflow-hidden group">
-        <div className="absolute top-0 left-0 w-2 h-full bg-brand-purple" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 divide-y lg:divide-y-0 lg:divide-x divide-border">
-          
-          {/* Target & Actuals */}
-          <div className="space-y-2">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Target vs Actual</p>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-black text-foreground">{formatINR(actualVal)}</span>
-              <span className="text-xs text-muted-foreground font-semibold">of {formatINR(targetVal)}</span>
+      {/* ── Section 1: Elevated Forecast Hero Strip ─────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Target vs Actual */}
+        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-blue" />
+          <div className="space-y-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Target vs Actual</span>
+              <span className="text-xs font-bold text-brand-blue">{Math.round((actualVal / targetVal) * 100)}% Attained</span>
             </div>
-            <div className="relative pt-1">
-              <div className="overflow-hidden h-2 text-xs flex rounded-full bg-secondary">
+            <div className="space-y-1">
+              <h3 className="text-2xl sm:text-3xl font-black text-foreground tabular-nums tracking-tight">
+                {formatINR(actualVal)}
+              </h3>
+              <p className="text-[11px] text-muted-foreground font-semibold">
+                of {formatINR(targetVal)} target ({formatINR(targetVal - actualVal)} remaining)
+              </p>
+            </div>
+            <div className="relative pt-1.5">
+              <div className="overflow-hidden h-1.5 text-xs flex rounded-full bg-secondary">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${Math.min((actualVal / targetVal) * 100, 100)}%` }}
                   transition={{ duration: 0.8 }}
-                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-brand-purple"
+                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
                 />
               </div>
             </div>
-            <div className="flex justify-between text-[10px] text-muted-foreground font-bold">
-              <span>{Math.round((actualVal / targetVal) * 100)}% Attained</span>
-              <span>{formatINR(targetVal - actualVal)} Remaining</span>
-            </div>
           </div>
+        </div>
 
-          {/* Forecast Range & Confidence Bands */}
-          <div className="space-y-2 lg:pl-6 pt-4 lg:pt-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Projected Range (Confidence Band)</p>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-foreground">{formatINR(projectedMid)}</span>
-              <span className="text-xs font-semibold text-brand-purple">P50 Projection</span>
+        {/* Confidence Band Range Bar */}
+        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-purple" />
+          <div className="space-y-3.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground font-sans">Projected Range (Confidence Band)</span>
+              <span className="text-[10px] font-extrabold text-brand-purple uppercase tracking-widest font-mono">P50 Baseline</span>
             </div>
-            {/* Visual range strip */}
-            <div className="relative py-2 flex items-center justify-between text-[10px] text-muted-foreground font-semibold">
-              <span className="text-destructive font-bold">Low (P90): {formatINR(projectedLow)}</span>
-              <span className="flex-1 mx-2 h-1 bg-border rounded-full relative">
-                <span className="absolute top-1/2 left-1/4 -translate-y-1/2 size-2 rounded-full bg-brand-purple" />
-              </span>
-              <span className="text-emerald-500 font-bold">High (P10): {formatINR(projectedHigh)}</span>
+            
+            <div className="space-y-1">
+              <h3 className="text-2xl sm:text-3xl font-black text-foreground tabular-nums tracking-tight">
+                {formatINR(projectedMid)}
+              </h3>
+              <p className="text-[11px] text-muted-foreground font-semibold">
+                Model confidence score: {confidenceScore}%
+              </p>
             </div>
-            <p className="text-[10px] text-muted-foreground font-medium">
-              Band computed at <strong className="text-foreground">{confidenceScore}%</strong> model confidence score.
-            </p>
-          </div>
 
-          {/* Period Status & Pace */}
-          <div className="space-y-2 lg:pl-6 pt-4 lg:pt-0 flex flex-col justify-between">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Period Run-Rate & Trend</p>
-              <div className="flex items-center gap-2 mt-1">
-                {growthRate >= 0 ? (
-                  <div className="px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] font-bold flex items-center gap-1">
-                    <TrendingUp size={12} />
-                    <span>Pace Improving</span>
-                  </div>
-                ) : (
-                  <div className="px-2 py-0.5 rounded-md bg-destructive/10 border border-destructive/25 text-destructive text-[10px] font-bold flex items-center gap-1">
-                    <AlertTriangle size={12} />
-                    <span>Pace Declining</span>
-                  </div>
-                )}
-                <span className="text-xs font-bold text-foreground tabular-nums">
-                  {periodInfo.daysLeft} {periodInfo.label}
-                </span>
+            {/* Premium Range slider */}
+            <div className="space-y-2 pt-2 select-none">
+              <div className="relative h-1.5 bg-secondary rounded-full border border-border/20">
+                {/* Confidence Range Highlight */}
+                <div className="absolute left-[15%] right-[15%] h-full bg-brand-purple/20 rounded-full border-x border-brand-purple/40" />
+                
+                {/* Actual indicator dot */}
+                <motion.div
+                  initial={{ left: 0 }}
+                  animate={{ left: `${actualPositionPercent}%` }}
+                  transition={{ duration: 0.8 }}
+                  className="absolute -top-1.5 -translate-x-1/2 size-4.5 rounded-full bg-brand-purple border-3 border-card shadow-md flex items-center justify-center"
+                >
+                  <span className="size-1 bg-white rounded-full animate-ping" />
+                </motion.div>
+              </div>
+              <div className="flex justify-between text-[9px] font-bold text-muted-foreground/80 font-mono">
+                <span className="text-destructive/80">Low (P90): {formatINR(projectedLow)}</span>
+                <span className="text-emerald-500/80">High (P10): {formatINR(projectedHigh)}</span>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground/80 leading-relaxed font-semibold">
-              Required daily run-rate: <strong className="text-foreground">{formatINR(Math.max((targetVal - actualVal) / Math.max(periodInfo.daysLeft, 1), 0))} / day</strong> to reach targets.
-            </p>
           </div>
-
         </div>
+
+        {/* Run-Rate & Trend */}
+        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
+          <div className="space-y-3.5 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pacing &amp; Run-rate</span>
+              {growthRate >= 0 ? (
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] font-extrabold flex items-center gap-1">
+                  <TrendingUp size={11} />
+                  <span>Pace Improving</span>
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full bg-destructive/10 border border-destructive/25 text-destructive text-[10px] font-extrabold flex items-center gap-1">
+                  <TrendingDown size={11} />
+                  <span>Pace Declining</span>
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-2xl sm:text-3xl font-black text-foreground tabular-nums tracking-tight">
+                {formatINR(Math.max((targetVal - actualVal) / Math.max(periodInfo.daysLeft, 1), 0))}
+                <span className="text-xs font-bold text-muted-foreground ml-1">/ day</span>
+              </h3>
+              <p className="text-[11px] text-muted-foreground font-semibold">
+                Daily rate needed for {periodInfo.daysLeft} {periodInfo.label}
+              </p>
+            </div>
+
+            <div className="pt-2 border-t border-border/30 flex justify-between items-center text-[10px] font-bold text-muted-foreground/80">
+              <span className="flex items-center gap-1"><Clock size={12} /> {periodInfo.daysLeft}d remaining</span>
+              <span>{Math.round((elapsedDays => elapsedDays / periodInfo.total * 100)(Math.max(periodInfo.total - periodInfo.daysLeft, 1)))}% of period elapsed</span>
+            </div>
+          </div>
+        </div>
+
       </div>
 
-      {/* ── Section 2: Team Quota Pace ──────────────────────────────── */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+      {/* ── Section 2: Premium Team Quota Pace Table ─────────────────── */}
+      <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20">
+        <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
           <div className="flex items-center space-x-2">
-            <Award size={18} className="text-brand-purple animate-bounce" />
+            <Award size={18} className="text-brand-purple" />
             <h3 className="font-extrabold text-foreground text-sm tracking-tight">Team Quota Pace</h3>
           </div>
           <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
@@ -361,20 +400,20 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
           </span>
         </div>
         
-        <div className="overflow-x-auto font-sans">
+        <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-border/60 text-muted-foreground font-semibold">
-                <th className="pb-2.5">Representative</th>
-                <th className="pb-2.5">Quota</th>
-                <th className="pb-2.5">Attained</th>
-                <th className="pb-2.5">% Attainment</th>
-                <th className="pb-2.5">Projected Attainment</th>
-                <th className="pb-2.5 text-right">Risk Level</th>
+              <tr className="border-b border-border/60 text-muted-foreground/70 font-semibold select-none">
+                <th className="pb-3 text-[10px] uppercase tracking-wider font-bold">Representative</th>
+                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">Quota</th>
+                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">Attained</th>
+                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">% Attainment</th>
+                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">Projected Attainment</th>
+                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">Risk Level</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40 font-medium">
-              {sortedReps.map((rep) => {
+              {sortedReps.map((rep, idx) => {
                 const quota = asNumber(rep.assigned_target);
                 const attained = asNumber(rep.revenue_generated);
                 const pct = asNumber(rep.quota_achievement_pct);
@@ -386,31 +425,56 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                 const projectedVal = attained * paceMultiplier;
                 const projectedPct = Math.round((projectedVal / quota) * 100) || 0;
 
-                // Traffic-light styling
+                // Traffic-light status styling
                 let riskText = 'On Track';
+                let RiskIcon = CheckCircle2;
                 let riskClass = 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500';
+                
                 if (pct < 40) {
                   riskText = 'Critical';
+                  RiskIcon = AlertCircle;
                   riskClass = 'bg-destructive/10 border-destructive/20 text-destructive animate-pulse';
                 } else if (pct < 75) {
                   riskText = 'At Risk';
+                  RiskIcon = AlertTriangle;
                   riskClass = 'bg-amber-500/10 border-amber-500/20 text-amber-500';
                 }
 
+                // Distinct colors for user avatar rings
+                const colors = ['from-brand-blue to-brand-cyan', 'from-brand-purple to-pink-500', 'from-emerald-400 to-teal-500', 'from-amber-400 to-orange-500'];
+                const avatarGradient = colors[idx % colors.length];
+
                 return (
-                  <tr key={rep.user_id} className="hover:bg-muted/40 transition-colors">
-                    <td className="py-3 flex items-center space-x-2">
-                      <div className="size-6 rounded-full bg-secondary flex items-center justify-center text-[10px] font-bold text-brand-purple">
-                        {rep.full_name.charAt(0)}
+                  <motion.tr 
+                    key={rep.user_id} 
+                    className="hover:bg-muted/40 transition-all duration-200 cursor-pointer group"
+                    whileHover={{ x: 1 }}
+                  >
+                    {/* User Profile Info */}
+                    <td className="py-3.5 flex items-center space-x-3">
+                      <div className={`size-8 rounded-full bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-[10px] font-black text-white shadow-inner border border-white/10 shrink-0`}>
+                        {rep.full_name.split(' ').map(n=>n[0]).join('')}
                       </div>
-                      <span className="font-bold text-foreground">{rep.full_name}</span>
+                      <span className="font-extrabold text-foreground group-hover:text-brand-purple transition-colors duration-150">
+                        {rep.full_name}
+                      </span>
                     </td>
-                    <td className="py-3 tabular-nums">{formatINR(quota)}</td>
-                    <td className="py-3 tabular-nums text-foreground font-semibold">{formatINR(attained)}</td>
-                    <td className="py-3">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold tabular-nums w-8">{pct}%</span>
-                        <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden hidden sm:block">
+                    
+                    {/* Quota */}
+                    <td className="py-3.5 text-right tabular-nums text-muted-foreground/90 font-mono font-semibold">
+                      {formatINR(quota)}
+                    </td>
+                    
+                    {/* Attained */}
+                    <td className="py-3.5 text-right tabular-nums text-foreground font-bold font-mono">
+                      {formatINR(attained)}
+                    </td>
+                    
+                    {/* Attainment Progress Track */}
+                    <td className="py-3.5 text-right">
+                      <div className="inline-flex items-center space-x-2.5">
+                        <span className="font-bold tabular-nums font-mono text-foreground">{pct}%</span>
+                        <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden border border-border/20">
                           <div 
                             className={`h-full rounded-full ${pct < 40 ? 'bg-destructive' : pct < 75 ? 'bg-amber-500' : 'bg-emerald-500'}`}
                             style={{ width: `${Math.min(pct, 100)}%` }}
@@ -418,15 +482,20 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 tabular-nums text-muted-foreground">
-                      {formatINR(projectedVal)} ({projectedPct}%)
+                    
+                    {/* Projected */}
+                    <td className="py-3.5 text-right tabular-nums text-muted-foreground font-mono font-medium">
+                      {formatINR(projectedVal)} <span className="text-[10px] font-bold text-muted-foreground/60">({projectedPct}%)</span>
                     </td>
-                    <td className="py-3 text-right">
-                      <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold border ${riskClass}`}>
+                    
+                    {/* Risk Badge */}
+                    <td className="py-3.5 text-right">
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${riskClass} select-none`}>
+                        <RiskIcon size={10} className="shrink-0" />
                         {riskText}
                       </span>
                     </td>
-                  </tr>
+                  </motion.tr>
                 );
               })}
             </tbody>
@@ -438,24 +507,24 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* ── Section 3: Coaching Signals ────────────────────────────── */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
               <div className="flex items-center space-x-2">
                 <Users size={18} className="text-brand-purple" />
                 <h3 className="font-extrabold text-foreground text-sm tracking-tight">Coaching Signals</h3>
               </div>
               <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
-                People-Level Interventions
+                People-Level Alerts
               </span>
             </div>
 
-            <div className="space-y-3.5">
+            <div className="space-y-4">
               {coachingSignals.map((sig, idx) => (
-                <div key={idx} className="p-3 bg-muted/30 border border-border rounded-xl space-y-2 hover:border-brand-purple/20 transition-colors">
+                <div key={idx} className="p-4 bg-secondary/35 border border-border/40 rounded-xl space-y-2 hover:border-brand-purple/20 transition-all duration-200">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-foreground text-xs">{sig.repName}</span>
-                    <span className={`px-2 py-0.2 rounded text-[9px] font-bold border ${
+                    <span className="font-extrabold text-foreground text-xs">{sig.repName}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
                       sig.severity === 'HIGH'
                         ? 'bg-destructive/10 border-destructive/20 text-destructive'
                         : sig.severity === 'MEDIUM'
@@ -466,10 +535,10 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                     </span>
                   </div>
                   <div>
-                    <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">{sig.type}</p>
-                    <p className="text-xs text-foreground mt-0.5 font-medium">{sig.observation}</p>
+                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-wider font-mono">{sig.type}</p>
+                    <p className="text-xs text-foreground/90 mt-1.5 font-medium leading-relaxed">{sig.observation}</p>
                   </div>
-                  <div className="pt-2 border-t border-border/40 flex items-start gap-1 text-[11px] text-brand-purple font-semibold">
+                  <div className="pt-2.5 border-t border-border/30 flex items-start gap-1 text-[11px] text-brand-purple font-semibold">
                     <Sparkles size={13} className="shrink-0 mt-0.5" />
                     <span>Suggested: {sig.action}</span>
                   </div>
@@ -480,9 +549,9 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
         </div>
 
         {/* ── Section 4: Deal Risk Radar ──────────────────────────────── */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 flex flex-col justify-between">
           <div>
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
               <div className="flex items-center space-x-2">
                 <AlertTriangle size={18} className="text-amber-500" />
                 <h3 className="font-extrabold text-foreground text-sm tracking-tight">Deal Risk Radar</h3>
@@ -492,50 +561,52 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
               </span>
             </div>
 
-            <div className="space-y-3.5 max-h-[420px] overflow-y-auto pr-1">
+            <div className="space-y-4 max-h-[440px] overflow-y-auto pr-1">
               {dealRisks.map((deal) => (
-                <div key={deal.id} className="p-3 bg-muted/30 border border-border rounded-xl space-y-2 hover:border-amber-500/20 transition-colors">
+                <div key={deal.id} className="p-4 bg-secondary/35 border border-border/40 rounded-xl space-y-2.5 hover:border-amber-500/20 transition-all duration-200">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h4 className="font-extrabold text-foreground text-xs">{deal.name}</h4>
-                      <p className="text-[10px] text-muted-foreground font-bold">Owner: {deal.owner}</p>
+                      <h4 className="font-extrabold text-foreground text-xs hover:text-brand-purple transition-colors cursor-pointer">{deal.name}</h4>
+                      <p className="text-[10px] text-muted-foreground/80 font-bold mt-0.5">Owner: {deal.owner}</p>
                     </div>
-                    <span className="text-xs font-black text-foreground tabular-nums">
+                    <span className="text-xs font-black text-foreground tabular-nums font-mono">
                       {formatINR(deal.amount)}
                     </span>
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-500">
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-500">
                       {deal.reason}
                     </span>
-                    <span className="text-[10px] text-muted-foreground/80 font-bold">
+                    <span className="text-[10px] text-muted-foreground/70 font-semibold font-mono">
                       {deal.daysInactive}d inactive
                     </span>
                   </div>
 
-                  <div className="pt-2 border-t border-border/40 flex items-center justify-between text-[10px]">
-                    <div className="flex items-center space-x-1">
-                      <span className="text-muted-foreground font-bold">Fix Owner:</span>
-                      <span className={`px-1.5 py-0.2 rounded font-extrabold ${
+                  <div className="pt-2.5 border-t border-border/30 flex items-center justify-between text-[10px] font-medium">
+                    <div className="flex items-center space-x-1.5">
+                      <span className="text-muted-foreground/80 font-semibold">Fix Owner:</span>
+                      <span className={`px-2 py-0.5 rounded-md font-bold ${
                         deal.fixOwner === 'Manager'
-                          ? 'bg-brand-purple/10 text-brand-purple'
-                          : 'bg-blue-500/10 text-blue-500'
+                          ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20'
+                          : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
                       }`}>
                         {deal.fixOwner}
                       </span>
                     </div>
-                    <span className="text-muted-foreground text-right truncate max-w-[200px]" title={deal.recommendedFix}>
+                    <span className="text-muted-foreground text-right truncate max-w-[200px] font-semibold" title={deal.recommendedFix}>
                       Fix: {deal.recommendedFix}
                     </span>
                   </div>
                 </div>
               ))}
               {dealRisks.length === 0 && (
-                <div className="py-10 flex flex-col items-center justify-center text-center space-y-1.5 text-xs">
-                  <CheckCircle2 size={24} className="text-emerald-500" />
-                  <p className="font-bold">Zero Deals at Risk</p>
-                  <p className="text-muted-foreground text-[10px]">All major opportunities are moving forward smoothly.</p>
+                <div className="py-12 flex flex-col items-center justify-center text-center space-y-2 text-xs">
+                  <div className="size-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-inner">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <p className="font-extrabold text-foreground">Zero Deals at Risk</p>
+                  <p className="text-muted-foreground text-[10px] max-w-xs font-semibold">All high-value client opportunities are paced on schedule.</p>
                 </div>
               )}
             </div>
@@ -545,8 +616,8 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       </div>
 
       {/* ── Section 5: Pipeline by Stage ────────────────────────────── */}
-      <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
-        <div className="flex items-center justify-between border-b border-border pb-3 mb-5">
+      <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20">
+        <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
           <div className="flex items-center space-x-2">
             <Layers size={18} className="text-brand-purple" />
             <h3 className="font-extrabold text-foreground text-sm tracking-tight">Pipeline by Stage</h3>
@@ -564,22 +635,22 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                   <span className="font-extrabold text-foreground">{stage.name}</span>
                   <span className="text-[10px] text-muted-foreground font-bold">({stage.count} deals)</span>
                 </div>
-                <span className="font-black text-foreground tabular-nums">{formatINR(stage.value)}</span>
+                <span className="font-black text-foreground tabular-nums font-mono">{formatINR(stage.value)}</span>
               </div>
               
               <div className="flex items-center gap-4">
-                <div className="flex-1 h-4 rounded-lg bg-secondary overflow-hidden relative">
+                <div className="flex-1 h-3.5 rounded-lg bg-secondary overflow-hidden relative border border-border/20">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${stage.pct}%` }}
                     transition={{ duration: 0.8 }}
-                    className="h-full rounded-lg bg-brand-purple/80"
+                    className="h-full rounded-lg bg-gradient-to-r from-brand-purple to-brand-blue opacity-85"
                   />
                 </div>
                 {stage.conversionRate !== null && (
                   <div className="w-24 shrink-0 text-right text-[10px] text-muted-foreground font-bold flex items-center justify-end gap-1">
                     <Percent size={10} className="text-brand-purple" />
-                    <span>{Math.round(stage.conversionRate)}% to Next</span>
+                    <span className="font-mono">{Math.round(stage.conversionRate)}% to Next</span>
                   </div>
                 )}
               </div>
@@ -589,16 +660,16 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       </div>
 
       {/* ── Design Notes & Exclusions (Footer Info) ──────────────────── */}
-      <div className="bg-secondary/40 border border-border/80 rounded-xl p-4 text-[11px] text-muted-foreground space-y-1.5 leading-relaxed">
-        <div className="flex items-center space-x-1.5 text-foreground font-bold">
+      <div className="bg-secondary/20 border border-border/40 rounded-[22px] p-5 text-[11px] text-muted-foreground space-y-1.5 leading-relaxed">
+        <div className="flex items-center space-x-1.5 text-foreground font-extrabold">
           <HelpCircle size={13} className="text-brand-purple" />
           <span>Overview Architectural Concerns</span>
         </div>
-        <p>
+        <p className="font-medium text-muted-foreground/90">
           This dashboard is optimized strictly for sales managers to prioritize operational coaching and deal fixes. 
           To avoid clutter and distraction, several modules are intentionally routed to separate views:
         </p>
-        <ul className="list-disc pl-5 space-y-0.5">
+        <ul className="list-disc pl-5 space-y-0.5 font-medium text-muted-foreground/80">
           <li><strong>Lead Source Conversion Analytics</strong> are reserved exclusively for the <strong>Admin Dashboard</strong>.</li>
           <li><strong>Representative Activity Heatmaps</strong> are placed under the <strong>Sales Rep Dashboard</strong> to prevent manager micromanagement.</li>
           <li>The generic <strong>AI Insights Panel</strong> is accessible in the secondary <strong>AI Insights</strong> tab on the left sidebar.</li>

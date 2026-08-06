@@ -221,8 +221,8 @@ export default function Header({
         </span>
 
         {/* Role badge */}
-        <span className="hidden items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground lg:inline-flex select-none">
-          Role: <span className="font-semibold text-ink">
+        <span className="hidden items-center gap-1.5 rounded-full border border-border/40 bg-secondary/30 px-3 py-1 text-[11px] font-bold text-muted-foreground lg:inline-flex select-none">
+          Role: <span className="text-foreground">
             {userRole === 'representative' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
           </span>
         </span>
@@ -307,7 +307,7 @@ export default function Header({
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-border transition-all cursor-pointer overflow-hidden"
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-brand-purple/40 ring-1 ring-border/40 ring-offset-2 ring-offset-background transition-all duration-200 cursor-pointer overflow-hidden"
             aria-label="Profile menu"
           >
             <Image

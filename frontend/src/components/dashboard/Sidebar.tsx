@@ -197,8 +197,8 @@ export default function Sidebar({
     'text-brand-blue font-semibold',
   );
   const itemInactive = cn(
-    'text-sidebar-foreground/75 font-medium hover:text-sidebar-foreground',
-    'hover:bg-sidebar-accent/60',
+    'text-sidebar-foreground/55 font-medium hover:text-sidebar-foreground',
+    'hover:bg-sidebar-accent/40',
   );
 
   return (
