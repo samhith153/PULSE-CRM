@@ -111,11 +111,6 @@ export default function DealsAtRiskCard({
     >
       {/* Background ambient warm amber aura pulse */}
       <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-500/8 blur-3xl pointer-events-none group-hover:bg-amber-500/12 transition-all duration-500" />
-      <div className="absolute -bottom-12 -right-12 w-36 h-36 rounded-full bg-amber-500/8 blur-3xl pointer-events-none" />
-
-      {/* Left Muted Amber Accent Stripe */}
-      <div className="absolute left-0 top-0 bottom-0 w-[4px] bg-gradient-to-b from-amber-500 to-amber-600 rounded-l-full" />
-
       <div>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 mb-3.5 border-b border-border/60">

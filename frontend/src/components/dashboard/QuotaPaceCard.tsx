@@ -146,12 +146,6 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
         style={{ background: barGradient, filter: 'blur(32px)' }}
       />
 
-      {/* Left accent bar */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-[5px] z-10 transition-colors duration-300"
-        style={{ backgroundColor: themeColorHex }}
-      />
-
       {/* Header row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[var(--space-2)] mb-[var(--space-4)] relative">
         <div className="flex items-center space-x-3">
