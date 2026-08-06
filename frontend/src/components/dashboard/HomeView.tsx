@@ -41,6 +41,7 @@ import {
 
 import { getLeads, getDeals, getActivities, formatINR } from '@/utils/api';
 import QuotaPaceCard from './QuotaPaceCard';
+import DealsAtRiskCard from './DealsAtRiskCard';
 import FunnelChartCard from './FunnelChartCard';
 import QuickCaptureCard from './QuickCaptureCard';
 import ActivitySummaryCard from './ActivitySummaryCard';
@@ -1022,39 +1023,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                 );
               } else if (itemId === 'atRisk') {
                 // Deals at risk widget
-                cardContent = (
-                  <div className="bg-card border border-border rounded-xl p-[var(--space-4)] flex flex-col justify-between h-[360px] relative overflow-hidden">
-                    {/* Left accent bar (red/danger alert for Deals at Risk) */}
-                    <div className="absolute left-0 top-0 bottom-0 w-[5px] bg-[#E2604F]" />
-                    <div>
-                      <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] select-none">
-                        <AlertTriangle className="h-4.5 w-4.5 text-destructive" />
-                        <span>Deals at Risk</span>
-                      </h3>
-                      <div className="space-y-[var(--space-2)] overflow-y-auto max-h-[260px] custom-scrollbar pr-1">
-                        {riskDealsCalculated.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-10 font-semibold">All deals healthy.</p>
-                        ) : (
-                          riskDealsCalculated.map(deal => (
-                            <div key={deal.id} className="p-[var(--space-2)] rounded-xl border border-destructive/15 bg-destructive/5 hover:bg-destructive/10 transition-all flex flex-col gap-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0">
-                                  <p className="text-[10px] font-bold text-foreground truncate">{deal.name}</p>
-                                  <p className="text-[8px] text-muted-foreground font-semibold">{deal.company}</p>
-                                </div>
-                                <span className="text-[10px] font-extrabold text-destructive tabular-nums shrink-0">{formatINR(deal.value)}</span>
-                              </div>
-                              <div className="flex justify-between items-center mt-1 pt-[var(--space-2)] border-t border-destructive/10 text-[8px] font-bold">
-                                <span className="text-muted-foreground/80">{deal.owner}</span>
-                                <span className="text-destructive uppercase tracking-wide bg-destructive/15 px-1.5 py-0.5 rounded">{deal.reason}</span>
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
+                cardContent = <DealsAtRiskCard deals={riskDealsCalculated} />;
               } else if (itemId === 'activitySummary') {
                 // Render Today's Work summary card
                 cardContent = <ActivitySummaryCard onTabChange={onTabChange} />;
