@@ -108,6 +108,11 @@ class Settings(BaseSettings):
     SCORING_PROVIDER: str = "rule_based"
     AI_TIMEOUT: int = 30
 
+    # PULSE AI microservice (separate deployment). The backend calls this
+    # service over HTTP for lead scoring, recommendations, and summarization.
+    AI_SERVICE_URL: str = "http://localhost:8001"
+    AI_SERVICE_TIMEOUT: float = 30.0
+
     # Assistant (Groq free tier)
     ASSISTANT_API_KEY: Optional[str] = None
     ASSISTANT_MODEL: str = "llama-3.3-70b-versatile"

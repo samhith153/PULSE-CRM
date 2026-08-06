@@ -28,9 +28,6 @@ async def get_lead_feature_vector(
     svc = FeatureVectorService(db)
     fv = await svc.get_by_lead_id(lead_id, current_user.organization_id)
     if not fv:
-        # Compute if not exists
-        fv = await svc.compute_and_store_for_lead(lead_id, current_user.organization_id, current_user.id)
-    if not fv:
         raise NotFoundException("FeatureVector for lead", lead_id)
     return {
         "success": True,
@@ -42,7 +39,7 @@ async def get_lead_feature_vector(
 @router.post(
     "/leads/{lead_id}/compute",
     response_model=StandardResponse[FeatureVectorResponse],
-    summary="Compute or recompute feature vector for a lead",
+    summary="Trigger assessment pipeline and return feature vector",
     dependencies=[Depends(require_permission("lead:update"))],
 )
 async def compute_lead_feature_vector(
@@ -50,12 +47,19 @@ async def compute_lead_feature_vector(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
+    from app.services.ai_pipeline import run_lead_assessment
+    await run_lead_assessment(
+        db, lead_id, current_user.organization_id, current_user.id,
+        trigger="lead_updated",
+    )
+    await db.commit()
+
     svc = FeatureVectorService(db)
-    fv = await svc.compute_and_store_for_lead(lead_id, current_user.organization_id, current_user.id)
+    fv = await svc.get_by_lead_id(lead_id, current_user.organization_id)
     if not fv:
         raise NotFoundException("Lead", lead_id)
     return {
         "success": True,
-        "message": "Feature vector computed successfully.",
+        "message": "Assessment pipeline triggered; feature vector updated.",
         "data": FeatureVectorResponse.from_feature_vector(fv),
     }

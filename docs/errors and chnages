@@ -1,0 +1,547 @@
+# Pulse CRM - Required Architecture Changes
+
+This document describes the changes required to align the AI Service with the redesigned architecture. The goal is to make the AI service completely stateless, event-driven, and avoid duplicated business logic.
+
+---
+
+# 1. Fix Inbound Email Processing Flow (Highest Priority)
+
+## Current Flow
+
+Inbound Email
+    ├── Conversation Summarization
+    └── Lead Assessment
+
+Both execute simultaneously.
+
+### Problem
+
+Lead Assessment requires the latest AI Intent.
+
+Intent is generated only after Conversation Summarization finishes.
+
+Running both in parallel can result in:
+
+- stale intent
+- null intent
+- incorrect engagement score
+- incorrect recommendation
+
+---
+
+## New Flow
+
+Inbound Email
+        │
+        ▼
+Store Email
+        │
+        ▼
+Conversation AI
+        │
+        ▼
+Summary + Intent
+        │
+        ▼
+Store Summary
+        │
+        ▼
+Run Lead Assessment
+        │
+        ▼
+Update Scores
+        │
+        ▼
+Update Recommendation
+
+Lead Assessment must NEVER start before Conversation AI finishes.
+
+---
+
+# 2. Keep AI Service Stateless
+
+The AI Service must never:
+
+- update database
+- read database
+- perform SQL queries
+- own business state
+
+The Backend owns all persistence.
+
+AI Service only receives structured data and returns results.
+
+Example
+
+Backend
+
+↓
+
+Collect data
+
+↓
+
+AI Service
+
+↓
+
+Return scores
+
+↓
+
+Backend updates database
+
+---
+
+# 3. Remove Email Scanning From Engagement Features
+
+Current engagement_features.py still scans email history.
+
+Remove functions like:
+
+- average_response_time()
+- reply_recency()
+- thread scanning
+- email iteration
+
+The feature module should work only with prepared lead state.
+
+Input should be
+
+{
+    intent,
+    current_stage,
+    inbound_count,
+    initiated_count,
+    last_inbound_at
+}
+
+Output should be
+
+{
+    intent_score,
+    buying_stage_score,
+    initiative_score,
+    decay_penalty
+}
+
+No database access.
+
+No email parsing.
+
+No AI calls.
+
+---
+
+# 4. Remove Engagement Trend From Feature Engineering
+
+Current design includes Engagement Trend.
+
+Trend is NOT an independent feature.
+
+Trend depends on
+
+Current Engagement Score
+-
+Previous Engagement Score
+
+Therefore it creates a circular dependency if included in scoring.
+
+New design
+
+Features
+
+- Intent Score
+- Buying Stage Score
+- Initiative Score
+- Decay Penalty
+
+Trend
+
+Current Score
+-
+Previous Score
+
+Trend should only be used for:
+
+- UI
+- Analytics
+- Dashboard
+- Notifications
+
+NOT while calculating Engagement Score.
+
+---
+
+# 5. Simplify Engagement Feature Module
+
+engagement_features.py should only expose
+
+intent_score()
+
+buying_stage_score()
+
+initiative_score()
+
+days_since_last_inbound()
+
+decay_penalty()
+
+compute_engagement_features()
+
+No scoring.
+
+No overall calculation.
+
+No recommendation.
+
+No database.
+
+Pure feature engineering only.
+
+---
+
+# 6. Scoring Service Responsibilities
+
+scoring_service.py should be responsible for
+
+Input
+
+↓
+
+Feature Scores
+
+↓
+
+Engagement Score
+
+↓
+
+Overall Score
+
+Formula
+
+Engagement Score
+
+↓
+
+Weighted Sum
+
+↓
+
+Overall Score
+
+overall =
+
+0.6 × fit_score
+
++
+
+0.4 × engagement_score
+
+Trend (if required) should be computed AFTER engagement score.
+
+---
+
+# 7. Recommendation Flow
+
+Current project contains multiple recommendation paths.
+
+Replace with one single recommendation pipeline.
+
+Lead Assessment
+
+↓
+
+Fit Score
+
+↓
+
+Engagement Score
+
+↓
+
+Overall Score
+
+↓
+
+Recommendation
+
+↓
+
+Return Response
+
+Recommendation must always use the latest calculated scores.
+
+Never calculate recommendation independently.
+
+---
+
+# 8. Event Driven Assessment
+
+Assessment should be triggered only by events.
+
+Supported events
+
+Lead Created
+
+Lead Updated
+
+Inbound Email
+
+Stage Changed
+
+Future
+
+Daily Refresh
+
+Each event should calculate only the required scores.
+
+Example
+
+Lead Created
+
+↓
+
+Fit Score
+
+↓
+
+Overall Score
+
+Inbound Email
+
+↓
+
+Conversation AI
+
+↓
+
+Intent
+
+↓
+
+Engagement Score
+
+↓
+
+Overall Score
+
+↓
+
+Recommendation
+
+Stage Changed
+
+↓
+
+Buying Stage
+
+↓
+
+Engagement Score
+
+↓
+
+Overall Score
+
+↓
+
+Recommendation
+
+---
+
+# 9. Backend Responsibilities
+
+Backend should
+
+Store Email
+
+Run Conversation AI
+
+Store Summary
+
+Load Lead State
+
+Load Current Scores
+
+Call AI Assessment
+
+Receive Scores
+
+Update Database
+
+Backend is the single owner of the database.
+
+---
+
+# 10. AI Service Responsibilities
+
+Conversation Service
+
+Input
+
+Raw Email
+
+Output
+
+Summary
+
+Intent
+
+----------------------------------------
+
+Feature Engine
+
+Input
+
+Prepared Lead State
+
+Output
+
+Feature Values
+
+----------------------------------------
+
+Scoring Engine
+
+Input
+
+Feature Values
+
+Output
+
+Engagement Score
+
+Overall Score
+
+----------------------------------------
+
+Recommendation Engine
+
+Input
+
+Fit Score
+
+Engagement Score
+
+Overall Score
+
+Output
+
+Recommended Next Action
+
+---
+
+# 11. Final Lead Assessment Flow
+
+Lead Created
+
+↓
+
+Fit Score
+
+↓
+
+Overall Score
+
+↓
+
+Save
+
+------------------------------------------------
+
+Inbound Email
+
+↓
+
+Store Email
+
+↓
+
+Conversation AI
+
+↓
+
+Summary
+
+↓
+
+Intent
+
+↓
+
+Store Summary
+
+↓
+
+Lead Assessment
+
+↓
+
+Feature Engineering
+
+↓
+
+Engagement Score
+
+↓
+
+Overall Score
+
+↓
+
+Recommendation
+
+↓
+
+Save Results
+
+------------------------------------------------
+
+Stage Changed
+
+↓
+
+Lead Assessment
+
+↓
+
+Feature Engineering
+
+↓
+
+Engagement Score
+
+↓
+
+Overall Score
+
+↓
+
+Recommendation
+
+↓
+
+Save Results
+
+---
+
+# 12. Final Goal
+
+The AI Service should become a completely stateless computation engine.
+
+Backend owns:
+
+- Database
+- State
+- Event Processing
+
+AI Service owns:
+
+- Feature Engineering
+- Scoring
+- Recommendation
+- AI Summarization
+
+This separation ensures maintainability, scalability, and future replacement of rule-based scoring with ML models without changing the backend architecture.

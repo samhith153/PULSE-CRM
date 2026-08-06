@@ -1,10 +1,14 @@
 """
-Feature Vector Service
-Computes and persists feature vectors for leads using fit and engagement feature engineering modules.
+Feature Vector Service (audit-only)
+
+Stores assessment features for analytics, training, auditing, and debugging.
+All scoring logic lives in the ai-service; this service only persists
+the feature values returned by the assessment pipeline.
 """
 import asyncio
 import sys
 import os
+
 from typing import Optional
 from uuid import UUID
 
@@ -91,6 +95,22 @@ class FeatureVectorService:
             features=features_data,
         )
         return fv
+
+    async def store_from_assessment(
+        self,
+        lead_id: UUID,
+        organization_id: UUID,
+        features: dict,
+        created_by: Optional[UUID] = None,
+    ) -> Optional[FeatureVector]:
+        """Upsert feature vector from assessment pipeline results."""
+        return await self.repo.upsert_for_lead(
+            lead_id=lead_id,
+            organization_id=organization_id,
+            created_by=created_by,
+            features=features,
+        )
+
 
     async def get_by_lead_id(
         self, lead_id: UUID, organization_id: UUID
