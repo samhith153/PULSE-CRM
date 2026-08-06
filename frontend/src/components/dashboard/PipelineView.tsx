@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages } from '@/utils/api';
+import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import { 
   Plus, 
@@ -41,11 +41,11 @@ export default function PipelineView() {
 
   useEffect(() => {
     getPipelineStages().then(data => {
-      const sorted = (data as any[]).sort((a: any, b: any) => a.sort_order - b.sort_order);
+      const sorted = (Array.isArray(data) ? data : []).sort((a: any, b: any) => a.sort_order - b.sort_order);
       setStages(sorted);
     }).catch(() => {});
     getDeals().then(data => {
-      setDeals(data as any);
+      setDeals(Array.isArray(data) ? data : []);
     });
   }, []);
 
