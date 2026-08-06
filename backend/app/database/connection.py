@@ -33,7 +33,11 @@ ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
 connect_args = {}
-if DATABASE_URL.startswith("postgresql") and "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
+<<<<<<< HEAD
+if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL and "@db:" not in DATABASE_URL:
+=======
+if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
+>>>>>>> origin/main
     connect_args["ssl"] = ssl_context
 
 engine = create_async_engine(

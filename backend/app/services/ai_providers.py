@@ -353,4 +353,7 @@ def get_recommendation_provider() -> RecommendationProvider:
 
 
 def get_summary_provider() -> ConversationSummaryProvider:
+    if settings.AI_PROVIDER == "groq":
+        from app.services.groq_summary_provider import GroqConversationSummaryProvider
+        return GroqConversationSummaryProvider()
     return RuleBasedConversationSummaryProvider()

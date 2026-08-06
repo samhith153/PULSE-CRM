@@ -31,7 +31,7 @@ services:
       - ../backend/.env
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:password@db:5432/pulse_crm
-      ENVIRONMENT: production
+      ENVIRONMENT: development
     ports:
       - "8000:8000"
     depends_on:
