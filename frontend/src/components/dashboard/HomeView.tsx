@@ -730,13 +730,18 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                 cardContent = (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--space-4)] items-stretch">
                     {/* Left Column — My Open Tasks */}
-                    <div className="bg-card border border-border rounded-xl p-[var(--space-4)] shadow-card flex flex-col justify-between h-[450px]">
-                      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
+                      {/* Ambient light aura */}
+                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+
+                      <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
                         {/* Header / Title / Refresh */}
-                        <div className="flex items-center justify-between pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] h-10 shrink-0">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 select-none">
-                              <CheckCircle2 className="h-4.5 w-4.5 text-brand-purple" />
+                        <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border/60 h-10 shrink-0">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                              <CheckCircle2 size={16} />
+                            </div>
+                            <h3 className="font-extrabold text-foreground text-sm flex items-center gap-1.5 select-none tracking-tight">
                               <span>My Open Tasks</span>
                             </h3>
                             <button 
@@ -870,14 +875,21 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     </div>
 
                     {/* Right Column — My Meetings */}
-                    <div className="bg-card border border-border rounded-xl p-[var(--space-4)] shadow-card flex flex-col justify-between h-[450px]">
-                      <div className="flex-1 flex flex-col min-w-0 min-h-0">
+                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
+                      {/* Ambient light aura */}
+                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+
+                      <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
                         {/* Header / Title / Sort */}
-                        <div className="flex items-center justify-between pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] h-10 shrink-0">
-                          <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 select-none">
-                            <Calendar className="h-4.5 w-4.5 text-brand-blue" />
-                            <span>My Meetings</span>
-                          </h3>
+                        <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border/60 h-10 shrink-0">
+                          <div className="flex items-center gap-2.5">
+                            <div className="h-8 w-8 rounded-xl bg-brand-blue/10 text-brand-blue border border-brand-blue/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                              <Calendar size={16} />
+                            </div>
+                            <h3 className="font-extrabold text-foreground text-sm flex items-center gap-1.5 select-none tracking-tight">
+                              <span>My Meetings</span>
+                            </h3>
+                          </div>
 
                           {/* Sort Control Dropdown */}
                           <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 select-none">

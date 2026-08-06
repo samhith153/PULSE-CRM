@@ -144,20 +144,24 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-nav transition-all duration-300 w-full relative">
-      <div className="flex items-center justify-between mb-[var(--space-4)] border-b border-border pb-[var(--space-2)]">
-        <div className="flex items-center space-x-2">
-          <div className="h-7 w-7 rounded-lg bg-brand-purple/10 flex items-center justify-center text-brand-purple">
-            <Layers size={15} />
+    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 w-full relative overflow-hidden group">
+      {/* Background ambient radial aura pulse */}
+      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-border/60 relative">
+        <div className="flex items-center space-x-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+            <Layers size={18} />
           </div>
           <div>
-            <h4 className="text-xs font-bold text-foreground font-sans">Pipeline Funnel Analysis</h4>
-            <p className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider mt-0.5 font-sans">Conversion and Drop-offs</p>
+            <h4 className="text-sm font-extrabold text-foreground tracking-tight">Pipeline Funnel Analysis</h4>
+            <p className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider mt-0.5">Conversion & Drop-offs</p>
           </div>
         </div>
-        <div className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1 cursor-help select-none">
+        <div className="text-[10px] text-muted-foreground font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border border-border/40 cursor-help select-none">
           <HelpCircle size={12} />
-          <span>Conversion relative to top</span>
+          <span>Top Relative Conversion</span>
         </div>
       </div>
 

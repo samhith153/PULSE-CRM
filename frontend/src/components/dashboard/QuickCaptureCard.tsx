@@ -28,13 +28,23 @@ export default function QuickCaptureCard({ onTabChange }: QuickCaptureCardProps)
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 flex flex-col justify-between h-[360px]">
+    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-full relative overflow-hidden group">
+      {/* Background ambient radial aura pulse */}
+      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+
       <div>
-        <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] select-none">
-          <Plus className="h-4.5 w-4.5 text-brand-purple" />
-          <span>Quick Capture</span>
-        </h3>
-        <p className="text-xs text-muted-foreground mb-[var(--space-4)] leading-relaxed">
+        {/* Header */}
+        <div className="flex items-center space-x-3 pb-3.5 mb-3.5 border-b border-border/60 relative">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+            <Plus size={18} />
+          </div>
+          <div>
+            <h3 className="font-extrabold text-foreground text-sm tracking-tight select-none">Quick Capture</h3>
+            <p className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider mt-0.5">Instant Funnel Addition</p>
+          </div>
+        </div>
+
+        <p className="text-xs text-muted-foreground mb-4 leading-relaxed font-medium">
           Instantly add new items to your sales funnel. Select a category below to open the creation panel.
         </p>
 

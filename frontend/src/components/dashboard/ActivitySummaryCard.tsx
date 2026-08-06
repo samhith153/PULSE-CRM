@@ -56,17 +56,19 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
   const maxCount = Math.max(...allStats.map(s => s.count), 1);
 
   return (
-    <div className="bg-card border border-border rounded-2xl shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300 w-full overflow-hidden">
+    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 w-full relative overflow-hidden group">
+      {/* Background ambient radial aura pulse */}
+      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-[var(--space-4)] pt-[var(--space-4)] pb-[var(--space-3)] border-b border-border/60">
-        <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-xl bg-brand-purple/10 flex items-center justify-center text-brand-purple">
-            <ClipboardList size={15} />
+      <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-border/60 relative">
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+            <ClipboardList size={18} />
           </div>
           <div>
-            <h3 className="font-bold text-foreground text-sm leading-tight select-none">Today&apos;s Work Summary</h3>
-            <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 uppercase tracking-wider">
+            <h3 className="font-extrabold text-foreground text-sm tracking-tight select-none">Today&apos;s Work Summary</h3>
+            <p className="text-[10px] text-muted-foreground font-bold mt-0.5 uppercase tracking-wider">
               {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })}
             </p>
           </div>
