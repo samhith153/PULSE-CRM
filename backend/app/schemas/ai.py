@@ -82,6 +82,25 @@ class AIRecommendationRequest(BaseModel):
     context: dict[str, Any] = Field(default_factory=dict)
 
 
+class AIBatchRecommendationRequest(BaseModel):
+    lead_ids: list[UUID] = Field(min_length=1, max_length=100)
+
+
+class AIBatchRecommendationItem(BaseModel):
+    lead_id: UUID
+    recommended_action: str = ""
+    reason: str = ""
+    current_score: int = 0
+    current_stage: str = ""
+    all_candidates: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class AIBatchRecommendationResponse(BaseModel):
+    status: str = "generated"
+    recommendations: dict[str, AIBatchRecommendationItem] = Field(default_factory=dict)
+    generated_at: datetime
+
+
 class AIRecommendationResponse(BaseModel):
     entity_type: str
     entity_id: Optional[UUID] = None

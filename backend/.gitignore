@@ -17,9 +17,5 @@ htmlcov/
 .DS_Store
 uploads/*
 !uploads/.gitkeep
-alembic/versions/*.py
-!alembic/versions/.gitkeep
-!alembic/versions/20260723_0008_add_ai_tables.py
-!alembic/versions/20260723_0009_add_webhook_tables.py
-!alembic/versions/20260723_0010_add_event_processing_state.py
+
 

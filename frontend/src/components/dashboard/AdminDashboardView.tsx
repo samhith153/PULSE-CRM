@@ -73,6 +73,7 @@ function Spark({ values, positive }: { values: number[]; positive: boolean }) {
   );
 }
 
+
 /* ── KPI stat tile (spec §4 pattern) ─────────────────────────────────── */
 interface KpiTile {
   title: string;

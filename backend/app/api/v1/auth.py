@@ -167,7 +167,9 @@ async def get_me(current_user: CurrentUser) -> dict:
         roles=[ur.role.name for ur in current_user.user_roles if ur.role],
         permissions=permissions,
         is_verified=current_user.is_verified,
-        is_superuser=current_user.is_superuser,
+        avatar_url=current_user.avatar_url,
+        phone=current_user.phone,
+        job_title=current_user.job_title,
     )
     return {"success": True, "message": "OK", "data": response}
 

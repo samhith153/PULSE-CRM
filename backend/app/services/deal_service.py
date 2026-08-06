@@ -196,6 +196,18 @@ class DealService:
                 payload={"deal_id": str(deal.id), "changes": list(update_data.keys())},
                 topic="deal",
             )
+
+        # Trigger unified assessment if stage changed and deal has a linked lead
+        if deal.lead_id and "pipeline_stage_id" in update_data:
+            try:
+                from app.services.ai_pipeline import run_lead_assessment
+                await run_lead_assessment(
+                    self.db, deal.lead_id, organization_id, deal.created_by,
+                    trigger="deal_stage_changed",
+                )
+            except Exception as e:
+                logger.warning("Failed to run assessment on deal stage change", extra={"deal_id": str(deal_id), "error": str(e)})
+
         return await self.get(deal_id, organization_id)
 
     async def delete(self, deal_id: UUID, organization_id: UUID) -> None:

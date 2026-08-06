@@ -92,7 +92,7 @@ const fallbackWorkflows: Workflow[] = [
     { id: 5, name: "Q4 Marketing Inbound Scoring", desc: "Increments lead scores by 15 points when they open high-intent links.", triggerType: "form_submission", triggerLabel: "Pricing Link Clicked", totalRuns: 0, successRate: "--", activeContacts: 0, status: "Draft" }
   ];
 
-export default function WorkflowsView() {
+export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loadingWorkflows, setLoadingWorkflows] = useState(true);
   const [workflowError, setWorkflowError] = useState<string | null>(null);

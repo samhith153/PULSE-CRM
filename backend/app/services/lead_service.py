@@ -1,6 +1,7 @@
 """
 Lead Management Service
 """
+import asyncio
 from typing import List, Optional, Tuple
 from uuid import UUID
 
@@ -17,8 +18,6 @@ from app.repositories.lead_repository import LeadRepository
 from app.repositories.pipeline_repository import PipelineRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.lead import LeadAssignRequest, LeadCreateRequest, LeadStatusUpdateRequest, LeadUpdateRequest
-from app.services.feature_vector_service import FeatureVectorService
-from app.services.lead_scoring_service import LeadScoringService
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import ActivityEntityType, ActivityType, DealStatus, LeadStatus, PipelineStageSlug
 
@@ -35,6 +34,35 @@ VALID_TRANSITIONS: dict[LeadStatus, list[LeadStatus]] = {
     LeadStatus.LOST: [],
 }
 
+# ── Background-task infrastructure ──────────────────────────────────────
+_lead_ai_tasks: set[asyncio.Task] = set()
+
+
+async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:
+    """Run unified assessment pipeline in a fresh DB session, off the request path."""
+    from app.database.connection import AsyncSessionFactory
+    from app.services.ai_pipeline import run_lead_assessment
+
+    try:
+        async with AsyncSessionFactory() as db:
+            try:
+                await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
+            except Exception as exc:
+                logger.warning(
+                    "Background AI assessment failed for lead %s: %s",
+                    lead_id, exc,
+                )
+            await db.commit()
+    except Exception as exc:
+        logger.warning("Background AI session failed for lead %s: %s", lead_id, exc)
+
+
+def _enqueue_lead_ai(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:
+    """Fire-and-forget assessment; does NOT block the caller."""
+    task = asyncio.create_task(_lead_ai_compute(lead_id, organization_id, created_by, trigger=trigger))
+    _lead_ai_tasks.add(task)
+    task.add_done_callback(_lead_ai_tasks.discard)
+
 
 class LeadService:
     def __init__(self, db: AsyncSession) -> None:
@@ -46,8 +74,6 @@ class LeadService:
         self.company_repo = CompanyRepository(db)
         self.contact_repo = ContactRepository(db)
         self.user_repo = UserRepository(db)
-        self.feature_vector_service = FeatureVectorService(db)
-        self.lead_scoring_service = LeadScoringService(db)
 
     async def create(
         self,
@@ -56,6 +82,10 @@ class LeadService:
         created_by: UUID,
     ) -> Lead:
         data = payload.model_dump(exclude_none=True)
+
+        # Default owner to the creator if not explicitly assigned
+        if not data.get("owner_id"):
+            data["owner_id"] = created_by
 
         await self._validate_relations(
             organization_id,
@@ -94,20 +124,8 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "owner_id": str(lead.owner_id)},
                 topic="lead",
             )
-        # Auto-compute feature vector
-        try:
-            await self.feature_vector_service.compute_and_store_for_lead(
-                lead.id, organization_id, created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to compute feature vector on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
-        # Auto-compute lead scores
-        try:
-            await self.lead_scoring_service.compute_and_store_scores(
-                lead.id, organization_id, created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to compute lead scores on lead create", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Fire-and-forget: unified assessment pipeline
+        _enqueue_lead_ai(lead.id, organization_id, created_by, trigger="lead_created")
         logger.info("Lead created", extra={"lead_id": str(lead.id)})
         return lead
 
@@ -159,20 +177,8 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "changes": list(update_data.keys())},
                 topic="lead",
             )
-        # Auto-compute feature vector on update
-        try:
-            await self.feature_vector_service.compute_and_store_for_lead(
-                lead.id, organization_id, lead.created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to compute feature vector on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
-        # Auto-compute lead scores on update
-        try:
-            await self.lead_scoring_service.compute_and_store_scores(
-                lead.id, organization_id, lead.created_by
-            )
-        except Exception as e:
-            logger.warning("Failed to compute lead scores on lead update", extra={"lead_id": str(lead.id), "error": str(e)})
+        # Fire-and-forget: unified assessment pipeline
+        _enqueue_lead_ai(lead.id, organization_id, lead.created_by, trigger="lead_updated")
         return await self.get(lead_id, organization_id)
 
     async def update_status(
@@ -211,8 +217,11 @@ class LeadService:
             payload={"lead_id": str(lead.id), "status": new_status.value},
             topic="lead",
         )
+        # Fire-and-forget: unified assessment pipeline
+        _enqueue_lead_ai(lead.id, organization_id, lead.created_by, trigger="lead_updated")
+
         logger.info("Lead status updated", extra={"lead_id": str(lead_id), "new_status": new_status.value})
-        return lead
+        return await self.get(lead_id, organization_id)
 
     async def assign(
         self,
@@ -411,5 +420,3 @@ class LeadService:
             owner = await self.user_repo.get_by_id_with_roles(owner_id)
             if not owner or owner.organization_id != organization_id:
                 raise BusinessRuleException(f"Owner (user) '{owner_id}' not found.")
-
-

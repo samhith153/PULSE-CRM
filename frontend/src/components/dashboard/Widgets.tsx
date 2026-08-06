@@ -32,7 +32,7 @@ export default function Widgets({
       revenue: "â‚¹1.25M",
       revenueRaw: 1250000,
       winRate: "40.0%",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+      avatar: null
     },
     {
       name: "Sarah Johnson",
@@ -40,7 +40,7 @@ export default function Widgets({
       revenue: "â‚¹980K",
       revenueRaw: 980000,
       winRate: "33.0%",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80"
+      avatar: null
     },
     {
       name: "David Wilson",
@@ -48,7 +48,7 @@ export default function Widgets({
       revenue: "â‚¹750K",
       revenueRaw: 750000,
       winRate: "29.0%",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&q=80"
+      avatar: null
     },
     {
       name: "Lisa Martinez",
@@ -56,7 +56,7 @@ export default function Widgets({
       revenue: "â‚¹480K",
       revenueRaw: 480000,
       winRate: "25.0%",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&fit=crop&q=80"
+      avatar: null
     },
     {
       name: "Michael Brown",
@@ -64,7 +64,7 @@ export default function Widgets({
       revenue: "â‚¹360K",
       revenueRaw: 360000,
       winRate: "20.0%",
-      avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80"
+      avatar: null
     }
   ];
 

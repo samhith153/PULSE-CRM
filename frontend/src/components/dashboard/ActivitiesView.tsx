@@ -51,6 +51,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
   // --- Database State ---
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // --- Select Mode State ---
   const [isSelectMode, setIsSelectMode] = useState(false);

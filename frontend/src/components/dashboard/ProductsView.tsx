@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, X, Package, Tag, Filter } from 'lucide-react';
 
 interface Product {
@@ -15,7 +15,8 @@ interface Product {
   description: string;
 }
 
-export default function ProductsView() {
+export default function ProductsView({ onLoaded }: { onLoaded?: () => void } = {}) {
+  useEffect(() => { onLoaded?.(); }, []);
   const [products, setProducts] = useState<Product[]>([
     { id: 1, name: "Enterprise Database Cloud License", sku: "DB-CLD-ENT", category: "Software Licensing", categoryBg: "bg-blue-50 text-blue-700 border-blue-200/60", price: 15000, status: "Active", dealsCount: 14, description: "Full relational database cloud hosting license with auto-scale capacity." },
     { id: 2, name: "HIPAA Security Compliance SLA Add-on", sku: "SEC-HIPAA-SLA", category: "Compliance & Security", categoryBg: "bg-brand-purple/10 text-brand-purple border-purple-200/60", price: 4500, status: "Active", dealsCount: 8, description: "End-to-end encryption audit pipeline log sync for health enterprise." },

@@ -50,7 +50,6 @@ class User(Base, AuditMixin):
 
     # ── Account state ─────────────────────────────────────────────────────────
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # ── Email verification ────────────────────────────────────────────────────

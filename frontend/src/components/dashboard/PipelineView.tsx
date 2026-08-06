@@ -35,18 +35,20 @@ interface PipelineStage {
   probability: number;
 }
 
-export default function PipelineView() {
+export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
 
   useEffect(() => {
+    let loaded = 0;
+    const checkDone = () => { loaded++; if (loaded >= 2) onLoaded?.(); };
     getPipelineStages().then(data => {
       const sorted = (Array.isArray(data) ? data : []).sort((a: any, b: any) => a.sort_order - b.sort_order);
       setStages(sorted);
-    }).catch(() => {});
+    }).catch(() => {}).finally(checkDone);
     getDeals().then(data => {
       setDeals(Array.isArray(data) ? data : []);
-    });
+    }).catch(() => {}).finally(checkDone);
   }, []);
 
   const stageNames = stages.map(s => s.name);

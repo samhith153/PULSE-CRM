@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
   User,
@@ -13,8 +13,9 @@ import {
   Calendar,
   ShieldAlert,
   Loader2,
+  Camera,
 } from 'lucide-react';
-import { getCurrentUser, getSalesRepDashboard, asNumber, formatINR, formatPct, SalesRepDashboardData } from '@/utils/api';
+import { getCurrentUser, getSalesRepDashboard, asNumber, formatINR, formatPct, SalesRepDashboardData, uploadAvatar } from '@/utils/api';
 
 interface ProfileShape {
   id: string;
@@ -32,6 +33,8 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const [kpi, setKpi] = useState<SalesRepDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +71,22 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const quota = asNumber(kpi?.revenue_stat?.total) || achieved || 1;
   const progressPercent = Math.min(100, Math.round((achieved / (quota || 1)) * 100));
   const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'â€”';
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      await uploadAvatar(file);
+      const fresh = await getCurrentUser();
+      setProfile(fresh as unknown as ProfileShape);
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   return (
     <div className="space-y-6">

@@ -26,6 +26,7 @@ import {
   Link2,
   Cpu,
   Zap,
+  LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +35,8 @@ interface SidebarProps {
   setActiveTab: (tab: string) => void;
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  userRole: 'representative' | 'manager' | 'admin';
+  userRole: 'sales_rep' | 'manager' | 'admin';
+  currentUser?: { full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null;
 }
 
 /* ── Nav data per role ───────────────────────────────────────────────── */
@@ -234,22 +236,13 @@ export default function Sidebar({
             isActive('home') ? itemActive : itemInactive,
           )}
         >
-          {isActive('home') && (
-            <motion.div
-              layoutId="activeNavIndicator"
-              className="absolute inset-0 bg-brand-blue/[0.08] rounded-xl z-0"
-              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-            >
-              <div className="absolute left-0 top-2 bottom-2 w-0.75 rounded-r bg-brand-blue" />
-            </motion.div>
-          )}
-          <Home
+          <LayoutDashboard
             size={16}
             strokeWidth={2}
             fill={isActive('home') ? "rgba(37, 99, 235, 0.15)" : "none"}
             className={cn(
-              'shrink-0 transition-colors relative z-10',
-              isActive('home') ? 'text-brand-blue' : 'text-muted-foreground group-hover:text-sidebar-foreground',
+              'shrink-0 transition-colors',
+              isActive('dashboard') ? 'text-brand-purple' : 'text-muted-foreground group-hover:text-sidebar-foreground',
             )}
           />
           {!collapsed && <span className="truncate relative z-10">Home</span>}

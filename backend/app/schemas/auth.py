@@ -87,7 +87,9 @@ class CurrentUserResponse(BaseModel):
     roles: List[str]
     permissions: List[str]
     is_verified: bool
-    is_superuser: bool
+    avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    job_title: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

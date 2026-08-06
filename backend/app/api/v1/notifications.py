@@ -5,9 +5,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 
-from app.api.deps import CurrentUser, DBSession
+from app.api.deps import CurrentUser, DBSession, require_permission
 from app.schemas.common import StandardResponse
 from app.schemas.notification import (
     NotificationListResponse,
@@ -23,6 +23,7 @@ router = APIRouter()
     "",
     response_model=StandardResponse[NotificationListResponse],
     summary="List the current user's notifications",
+    dependencies=[Depends(require_permission("notification:read"))],
 )
 async def list_notifications(
     current_user: CurrentUser,
@@ -51,6 +52,7 @@ async def list_notifications(
     "/unread-count",
     response_model=StandardResponse[UnreadCountResponse],
     summary="Get the current user's unread notification count",
+    dependencies=[Depends(require_permission("notification:read"))],
 )
 async def unread_count(current_user: CurrentUser, db: DBSession) -> dict:
     service = NotificationService(db)
@@ -62,6 +64,7 @@ async def unread_count(current_user: CurrentUser, db: DBSession) -> dict:
     "/{notification_id}/read",
     response_model=StandardResponse[NotificationResponse],
     summary="Mark a single notification as read",
+    dependencies=[Depends(require_permission("notification:read"))],
 )
 async def mark_read(notification_id: UUID, current_user: CurrentUser, db: DBSession) -> dict:
     service = NotificationService(db)
@@ -77,6 +80,7 @@ async def mark_read(notification_id: UUID, current_user: CurrentUser, db: DBSess
     "/read-all",
     response_model=StandardResponse[dict],
     summary="Mark all of the current user's notifications as read",
+    dependencies=[Depends(require_permission("notification:read"))],
 )
 async def mark_all_read(current_user: CurrentUser, db: DBSession) -> dict:
     service = NotificationService(db)
@@ -88,6 +92,7 @@ async def mark_all_read(current_user: CurrentUser, db: DBSession) -> dict:
     "/{notification_id}",
     response_model=StandardResponse[NotificationResponse],
     summary="Dismiss (hide) a notification",
+    dependencies=[Depends(require_permission("notification:read"))],
 )
 async def dismiss_notification(notification_id: UUID, current_user: CurrentUser, db: DBSession) -> dict:
     service = NotificationService(db)

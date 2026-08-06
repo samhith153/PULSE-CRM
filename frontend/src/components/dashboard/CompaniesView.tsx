@@ -42,14 +42,14 @@ interface Company {
   contacts: string[];
   openDeals: number;
   owner: string;
-  ownerAvatar: string;
+  ownerAvatar: string | null;
   notes: string;
   timeline: { id: number; title: string; time: string }[];
   emails: { id: number; subject: string; time: string }[];
   files: { id: number; name: string; size: string }[];
 }
 
-export default function CompaniesView() {
+export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [companies, setCompanies] = useState<Company[]>([]);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
@@ -169,9 +169,7 @@ export default function CompaniesView() {
       contacts: [],
       openDeals: 0,
       owner: form.owner,
-      ownerAvatar: form.owner === 'Sarah Johnson' 
-        ? "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80" 
-        : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
+      ownerAvatar: null,
       notes: form.notes,
       timeline: [{ id: 1, title: "Company Profile Added", time: "Just now" }],
       emails: [],
@@ -204,6 +202,7 @@ export default function CompaniesView() {
       } : c));
       setIsEditModalOpen(false);
     } catch {
+      toast.error('Failed to save company');
     }
   };
 

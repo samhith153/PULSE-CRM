@@ -76,7 +76,6 @@ export interface CurrentUser {
   organization_id: string;
   roles: string[];
   is_verified: boolean;
-  is_superuser: boolean;
 }
 
 export async function apiLogin(email: string, password: string): Promise<AuthTokens> {

@@ -112,7 +112,7 @@ test.describe('Navigation Flow Performance', () => {
     await SIDEBAR.leads(page).click();
     await page.waitForLoadState('networkidle');
 
-    const leadRow = page.getByText('Alex Rivera').first();
+    const leadRow = page.locator('table tbody tr').first();
     if (await leadRow.isVisible({ timeout: 5000 }).catch(() => false)) {
       const openStart = Date.now();
       await leadRow.click();

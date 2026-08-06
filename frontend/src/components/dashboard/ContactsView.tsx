@@ -38,7 +38,7 @@ interface ContactItem {
 
 const EMPTY_CONTACTS: ContactItem[] = [];
 
-export default function ContactsView() {
+export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
 
@@ -125,9 +125,14 @@ export default function ContactsView() {
       if (!cancelled) {
         setContacts(data as any);
         setLoading(false);
+        if (data.length && !selectedId) setSelectedId((data as any)[0].id);
       }
     }).catch(() => {
-      if (!cancelled) setLoading(false);
+      if (!cancelled) {
+        setLoading(false);
+        onLoaded?.();
+        toast.error('Failed to load contacts');
+      }
     });
     return () => { cancelled = true; };
   }, []);
@@ -198,6 +203,7 @@ export default function ContactsView() {
       setIsAddModalOpen(false);
       setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
     } catch {
+      toast.error('Failed to save contact');
     }
   };
 
@@ -228,6 +234,7 @@ export default function ContactsView() {
       } : c));
       setIsEditModalOpen(false);
     } catch {
+      toast.error('Failed to save contact');
     }
   };
 

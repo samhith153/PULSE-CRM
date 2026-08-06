@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import AsyncIterator
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 from fastapi.responses import StreamingResponse
 
 from app.api.deps import CurrentUser, DBSession, require_permission
@@ -26,14 +26,15 @@ from app.schemas.ai import (
     AINextBestActionResponse,
     AIRecommendationRequest,
     AIRecommendationResponse,
+    AIBatchRecommendationRequest,
+    AIBatchRecommendationResponse,
+    AIBatchRecommendationItem,
     DealInsightRequest,
     DealInsightResponse,
-    EnhancedRecommendationResponse,
     SummaryRequest,
     SummaryResponse,
 )
 from app.services.ai_service import AIService
-from app.services.recommendation_engine_service import EnhancedRecommendationService
 
 router = APIRouter(dependencies=[Depends(require_permission("ai:access"))])
 
@@ -94,6 +95,49 @@ async def recommendations(
     return await service.recommendations(current_user.organization_id, payload.entity_type, payload.entity_id)
 
 
+@router.post(
+    "/recommendations/batch",
+    response_model=AIBatchRecommendationResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Batch generate recommendations for multiple leads",
+)
+async def batch_recommendations(
+    payload: AIBatchRecommendationRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> AIBatchRecommendationResponse:
+    from app.repositories.ai_repository import AIRecommendationRepository
+    from uuid import UUID
+
+    repo = AIRecommendationRepository(db)
+    items = {}
+    for lid in payload.lead_ids:
+        uuid_id = UUID(str(lid))
+        recs = await repo.latest_for_entity(
+            current_user.organization_id, entity_type="lead", entity_id=uuid_id
+        )
+        rec = recs[0] if recs else None
+        if rec and rec.recommendation:
+            items[str(lid)] = AIBatchRecommendationItem(
+                lead_id=lid,
+                recommended_action=rec.recommendation,
+                reason=rec.reasoning or "",
+                current_score=rec.metadata_json.get("score", 0) if rec.metadata_json else 0,
+                current_stage=rec.metadata_json.get("stage", "") if rec.metadata_json else "",
+                all_candidates=rec.metadata_json.get("recommendations", []) if rec.metadata_json else [],
+            )
+        else:
+            items[str(lid)] = AIBatchRecommendationItem(
+                lead_id=lid,
+                recommended_action="No recommendation available for this lead.",
+                reason="",
+            )
+    return AIBatchRecommendationResponse(
+        recommendations=items,
+        generated_at=datetime.now(timezone.utc),
+    )
+
+
 @router.post("/deal-insight", response_model=DealInsightResponse, status_code=status.HTTP_200_OK)
 async def deal_insight(payload: DealInsightRequest, current_user: CurrentUser, db: DBSession) -> DealInsightResponse:
     service = AIService(db)
@@ -104,24 +148,3 @@ async def deal_insight(payload: DealInsightRequest, current_user: CurrentUser, d
 async def summary(payload: SummaryRequest, current_user: CurrentUser, db: DBSession) -> SummaryResponse:
     service = AIService(db)
     return await service.summarize(current_user.organization_id, payload.entity_type, payload.prompt)
-
-
-@router.post(
-    "/enhanced-recommendation",
-    response_model=EnhancedRecommendationResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Get enhanced recommendation with 6 new features",
-)
-async def enhanced_recommendation(
-    lead_id: UUID = Query(..., description="Lead ID to generate recommendation for"),
-    current_user: CurrentUser = None,
-    db: DBSession = None,
-) -> EnhancedRecommendationResponse:
-    """Generate an enhanced recommendation for a lead with all 6 new features:
-    deal_value, email_open_count, email_opened_no_reply_flag,
-    meeting_attendance_status, rep_active_action_count, best_contact_time_slot."""
-    service = EnhancedRecommendationService(db)
-    return await service.get_enhanced_recommendation(
-        organization_id=current_user.organization_id,
-        lead_id=lead_id,
-    )

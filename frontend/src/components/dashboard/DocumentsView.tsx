@@ -4,57 +4,77 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, FileText, Download, UploadCloud, X, Calendar, User, Eye } from 'lucide-react';
 
 interface DocumentItem {
-  id: number;
+  id: string;
   name: string;
   type: 'SLA' | 'Proposal' | 'Contract' | 'NDA';
   size: string;
-  fileSize?: number; // in bytes
+  fileSize?: number;
   associatedDeal: string;
   uploadedBy: string;
   uploadedAt: string;
   status: 'Signed' | 'Draft' | 'Sent' | 'Approved';
-  filePath?: string; // stored file path
-  fileUrl?: string; // downloadable URL
+  dataUrl?: string;
 }
 
-export default function DocumentsView() {
+const STORAGE_KEY = 'pulse-crm-documents';
+
+function loadDocuments(): DocumentItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDocuments(docs: DocumentItem[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const SEED_DOCS: DocumentItem[] = [
+  { id: '1', name: 'TechCorp_SLA_2024', type: 'SLA', size: '245 KB', associatedDeal: 'Cloud Migration', uploadedBy: 'Sarah Johnson', uploadedAt: 'Jan 15, 2024', status: 'Signed' },
+  { id: '2', name: 'DataFlow_Proposal_v2', type: 'Proposal', size: '1.2 MB', associatedDeal: 'Data Pipeline Setup', uploadedBy: 'Mike Chen', uploadedAt: 'Feb 3, 2024', status: 'Sent' },
+  { id: '3', name: 'SecureNet_Contract', type: 'Contract', size: '890 KB', associatedDeal: 'Security Audit', uploadedBy: 'Sarah Johnson', uploadedAt: 'Feb 10, 2024', status: 'Draft' },
+  { id: '4', name: 'Innovate_NDA', type: 'NDA', size: '156 KB', associatedDeal: 'General / Unlinked', uploadedBy: 'Alex Rivera', uploadedAt: 'Mar 1, 2024', status: 'Approved' },
+];
+
+export default function DocumentsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [form, setForm] = useState({ 
-    name: '', 
-    type: 'SLA' as DocumentItem['type'], 
-    associatedDeal: '', 
-    status: 'Draft' as DocumentItem['status'] 
+  const [form, setForm] = useState({
+    name: '',
+    type: 'SLA' as DocumentItem['type'],
+    associatedDeal: '',
+    status: 'Draft' as DocumentItem['status']
   });
 
   const documentTypes: DocumentItem['type'][] = ['SLA', 'Proposal', 'Contract', 'NDA'];
 
-  // Load documents on mount
   useEffect(() => {
-    fetchDocuments();
+    const stored = loadDocuments();
+    if (stored.length === 0) {
+      saveDocuments(SEED_DOCS);
+      setDocuments(SEED_DOCS);
+    } else {
+      setDocuments(stored);
+    }
+    setIsLoading(false);
+    onLoaded?.();
   }, []);
 
-  const fetchDocuments = async () => {
-    try {
-      setIsLoading(true);
-      const response = await fetch('/api/documents');
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data);
-      }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const filteredDocs = documents.filter(d => {
-    const matchesSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           d.associatedDeal.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = typeFilter === 'All' || d.type === typeFilter;
     return matchesSearch && matchesType;
@@ -62,101 +82,65 @@ export default function DocumentsView() {
 
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedFile) {
       alert('Please select a file to upload');
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('name', form.name || selectedFile.name.replace(/\.[^/.]+$/, ''));
-    formData.append('type', form.type);
-    formData.append('associatedDeal', form.associatedDeal || 'General / Unlinked');
-    formData.append('status', form.status);
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(selectedFile);
+    });
 
-    try {
-      const response = await fetch('/api/documents', {
-        method: 'POST',
-        body: formData,
-      });
+    const newDoc: DocumentItem = {
+      id: Date.now().toString(),
+      name: form.name || selectedFile.name.replace(/\.[^/.]+$/, ''),
+      type: form.type,
+      size: formatSize(selectedFile.size),
+      fileSize: selectedFile.size,
+      associatedDeal: form.associatedDeal || 'General / Unlinked',
+      uploadedBy: 'You',
+      uploadedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      status: form.status,
+      dataUrl,
+    };
 
-      if (response.ok) {
-        const newDoc = await response.json();
-        setDocuments([newDoc, ...documents]);
-        setIsUploadOpen(false);
-        setSelectedFile(null);
-        setForm({ name: '', type: 'SLA', associatedDeal: '', status: 'Draft' });
-        // Refresh the list
-        await fetchDocuments();
-      } else {
-        const error = await response.json();
-        alert(error.error || 'Failed to upload document');
-      }
-    } catch (error) {
-      console.error('Error uploading document:', error);
-      alert('Failed to upload document');
-    }
+    const updated = [newDoc, ...documents];
+    setDocuments(updated);
+    saveDocuments(updated);
+    setIsUploadOpen(false);
+    setSelectedFile(null);
+    setForm({ name: '', type: 'SLA', associatedDeal: '', status: 'Draft' });
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Are you sure you want to delete this document?')) return;
-
-    try {
-      const response = await fetch(`/api/documents/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setDocuments(documents.filter(d => d.id !== id));
-      } else {
-        alert('Failed to delete document');
-      }
-    } catch (error) {
-      console.error('Error deleting document:', error);
-      alert('Failed to delete document');
-    }
+    const updated = documents.filter(d => d.id !== id);
+    setDocuments(updated);
+    saveDocuments(updated);
   };
 
-  const handleDownload = async (doc: DocumentItem) => {
-    try {
-      const response = await fetch(`/api/documents/${doc.id}/download`);
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = doc.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Failed to download document');
-      }
-    } catch (error) {
-      console.error('Error downloading document:', error);
-      alert('Failed to download document');
+  const handleDownload = (doc: DocumentItem) => {
+    if (!doc.dataUrl) {
+      alert('No file data available for this document.');
+      return;
     }
+    const link = document.createElement('a');
+    link.href = doc.dataUrl;
+    link.download = doc.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const handleView = async (doc: DocumentItem) => {
-    try {
-      const response = await fetch(`/api/documents/${doc.id}/download`);
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
-        window.URL.revokeObjectURL(url);
-      } else {
-        alert('Failed to view document');
-      }
-    } catch (error) {
-      console.error('Error viewing document:', error);
-      alert('Failed to view document');
+  const handleView = (doc: DocumentItem) => {
+    if (!doc.dataUrl) {
+      alert('No file data available for this document.');
+      return;
     }
+    window.open(doc.dataUrl, '_blank');
   };
 
   if (isLoading) {
@@ -170,7 +154,6 @@ export default function DocumentsView() {
   return (
     <div className="space-y-6">
       <div className="bg-card border border-border rounded-2xl p-5">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
           <div>
             <h2 className="font-sans text-2xl text-foreground font-bold">Documents Library</h2>
@@ -178,7 +161,7 @@ export default function DocumentsView() {
               Upload proposal attachments, manage signed NDAs, SLA drafts, and legal contracts linked to active deals.
             </p>
           </div>
-          <button 
+          <button
             onClick={() => setIsUploadOpen(true)}
             className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold/10 transition-colors cursor-pointer"
           >
@@ -187,15 +170,14 @@ export default function DocumentsView() {
           </button>
         </div>
 
-        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div className="relative">
             <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
               <Search className="h-3.5 w-3.5" />
             </span>
-            <input 
-              type="text" 
-              placeholder="Search by name, associated deal..." 
+            <input
+              type="text"
+              placeholder="Search by name, associated deal..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground bg-secondary focus:bg-card placeholder-muted-foreground focus:outline-none"
@@ -203,7 +185,7 @@ export default function DocumentsView() {
           </div>
 
           <div>
-            <select 
+            <select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value)}
               className="w-full px-3 py-1.5 border border-border bg-card text-muted-foreground rounded-lg text-xs focus:outline-none cursor-pointer"
@@ -214,7 +196,6 @@ export default function DocumentsView() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
@@ -264,21 +245,21 @@ export default function DocumentsView() {
                       </span>
                     </td>
                     <td className="py-3 text-right space-x-1 whitespace-nowrap">
-                      <button 
+                      <button
                         onClick={() => handleView(doc)}
-                        className="p-1 hover:text-brand-purple text-muted-foreground rounded transition-colors" 
+                        className="p-1 hover:text-brand-purple text-muted-foreground rounded transition-colors"
                         title="View Document"
                       >
                         <Eye className="h-3.5 w-3.5" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDownload(doc)}
-                        className="p-1 hover:text-brand-purple text-muted-foreground rounded transition-colors" 
+                        className="p-1 hover:text-brand-purple text-muted-foreground rounded transition-colors"
                         title="Download Document"
                       >
                         <Download className="h-3.5 w-3.5" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDelete(doc.id)}
                         className="p-1 hover:text-destructive text-muted-foreground rounded transition-colors"
                         title="Delete Document"
@@ -300,7 +281,6 @@ export default function DocumentsView() {
         </div>
       </div>
 
-      {/* Upload Modal */}
       {isUploadOpen && (
         <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
           <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
@@ -314,18 +294,18 @@ export default function DocumentsView() {
               <div>
                 <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Upload File</label>
                 <div className="flex items-center gap-2">
-                  <input 
-                    type="file" 
-                    id="doc-file" 
-                    onChange={e => { 
-                      const f = e.target.files?.[0] || null; 
-                      setSelectedFile(f); 
+                  <input
+                    type="file"
+                    id="doc-file"
+                    onChange={e => {
+                      const f = e.target.files?.[0] || null;
+                      setSelectedFile(f);
                       if (f) {
                         const nameWithoutExt = f.name.replace(/\.[^/.]+$/, '');
                         setForm({...form, name: nameWithoutExt });
                       }
-                    }} 
-                    className="hidden" 
+                    }}
+                    className="hidden"
                     accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
                   />
                   <label htmlFor="doc-file" className="flex-1 flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-lg text-xs text-muted-foreground bg-secondary hover:bg-secondary/50 cursor-pointer transition-colors">
@@ -342,13 +322,13 @@ export default function DocumentsView() {
               </div>
               <div>
                 <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Document Name</label>
-                <input 
-                  type="text" 
-                  required 
-                  placeholder="e.g., TechCorp_SLA_Signed" 
-                  value={form.name} 
-                  onChange={e => setForm({...form, name: e.target.value})} 
-                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20" 
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., TechCorp_SLA_Signed"
+                  value={form.name}
+                  onChange={e => setForm({...form, name: e.target.value})}
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -370,12 +350,12 @@ export default function DocumentsView() {
               </div>
               <div>
                 <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Associated Pipeline Deal</label>
-                <input 
-                  type="text" 
-                  placeholder="e.g., Database Cloud Migration" 
-                  value={form.associatedDeal} 
-                  onChange={e => setForm({...form, associatedDeal: e.target.value})} 
-                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20" 
+                <input
+                  type="text"
+                  placeholder="e.g., Database Cloud Migration"
+                  value={form.associatedDeal}
+                  onChange={e => setForm({...form, associatedDeal: e.target.value})}
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
                 />
               </div>
               <div className="pt-3 border-t border-border flex justify-end space-x-2.5">

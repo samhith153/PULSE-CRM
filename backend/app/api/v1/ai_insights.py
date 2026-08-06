@@ -438,7 +438,6 @@ async def get_going_cold_notifications(
         "Low (25-49) | Informational (<25)\n\n"
         "**RBAC:** Admin=org-wide, Manager=team, Sales Rep=own leads."
     ),
-    dependencies=[Depends(require_role("admin", "manager", "sales_rep"))],
     tags=["AI Insights"],
 )
 async def get_daily_priorities(
@@ -496,7 +495,6 @@ async def get_daily_priorities(
         "completed today, pending today, meetings today, follow-ups today, "
         "calls today, and deals closing this week."
     ),
-    dependencies=[Depends(require_role("admin", "manager", "sales_rep"))],
     tags=["AI Insights"],
 )
 async def get_daily_priorities_summary(
@@ -523,7 +521,6 @@ async def get_daily_priorities_summary(
         "- Proposals awaiting response\n"
         "- Cold leads requiring recovery"
     ),
-    dependencies=[Depends(require_role("admin", "manager", "sales_rep"))],
     tags=["AI Insights"],
 )
 async def get_daily_priorities_notifications(

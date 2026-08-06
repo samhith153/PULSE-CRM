@@ -7,12 +7,35 @@ from dotenv import find_dotenv, load_dotenv
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-_ = load_dotenv(find_dotenv())
+# Resolve .env: check backend/.env first, then walk up to project root
+_THIS_DIR = Path(__file__).resolve().parent          # app/core/
+_BACKEND_DIR = _THIS_DIR.parent.parent               # backend/
+_ROOT_DIR = _BACKEND_DIR.parent                      # PULSE-CRM/
+
+def _find_env_file() -> list[str]:
+    """Return list of .env paths that actually exist (pydantic-settings accepts a list)."""
+    candidates = [
+        _BACKEND_DIR / ".env",
+        _ROOT_DIR / ".env",
+    ]
+    found = [str(p) for p in candidates if p.exists()]
+    # Also try find_dotenv as a fallback
+    if not found:
+        discovered = find_dotenv(usecwd=True)
+        if discovered:
+            found = [discovered]
+    return found or [".env"]
+
+_env_files = _find_env_file()
+
+# Load into os.environ immediately so sub-imports also see the values
+for _f in reversed(_env_files):          # load root first, backend overrides
+    load_dotenv(_f, override=True)
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=Path(find_dotenv()) if find_dotenv() else ".env",
+        env_file=_env_files,
         env_file_encoding="utf-8-sig",
         case_sensitive=False,
         extra="ignore",
@@ -51,8 +74,8 @@ class Settings(BaseSettings):
     CORS_ALLOW_HEADERS: str = "*"
 
     ENABLE_RATE_LIMIT: bool = True
-    RATE_LIMIT_PER_MINUTE: int = 60
-    RATE_LIMIT_BURST: int = 10
+    RATE_LIMIT_PER_MINUTE: int = 600
+    RATE_LIMIT_BURST: int = 120
 
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
@@ -81,8 +104,18 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = "rule_based"
     MODEL_NAME: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     SCORING_PROVIDER: str = "rule_based"
     AI_TIMEOUT: int = 30
+
+    # PULSE AI microservice (separate deployment). The backend calls this
+    # service over HTTP for lead scoring, recommendations, and summarization.
+    AI_SERVICE_URL: str = "http://localhost:8001"
+    AI_SERVICE_TIMEOUT: float = 30.0
+
+    # Assistant (Groq free tier)
+    ASSISTANT_API_KEY: Optional[str] = None
+    ASSISTANT_MODEL: str = "llama-3.3-70b-versatile"
 
     WEBHOOK_MAX_ATTEMPTS: int = 5
     WEBHOOK_TIMEOUT_SECONDS: int = 10

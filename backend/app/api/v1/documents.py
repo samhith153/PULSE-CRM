@@ -1,14 +1,17 @@
 import os
 from uuid import UUID, uuid4
-from fastapi import APIRouter, UploadFile, File, Form, status, HTTPException, Response, Query
+from fastapi import APIRouter, Depends, UploadFile, File, Form, status, HTTPException, Response, Query
 from typing import Optional
 from sqlalchemy import select
 from supabase import create_client, Client
 
-from app.api.deps import CurrentUser, DBSession
+from app.api.deps import CurrentUser, DBSession, require_permission
 from app.models.document import Document
 from app.schemas.document import DocumentResponse
 from app.core.config import settings
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
@@ -26,7 +29,12 @@ def get_supabase() -> Client:
     return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
-@router.post("/upload", response_model=DocumentResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/upload",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_permission("file:upload"))],
+)
 async def upload_document(
     current_user: CurrentUser,
     db: DBSession,
@@ -92,7 +100,10 @@ async def list_documents(
     return result.scalars().all()
 
 
-@router.get("/{doc_id}/download")
+@router.get(
+    "/{doc_id}/download",
+    dependencies=[Depends(require_permission("document:read"))],
+)
 async def download_document(doc_id: UUID, current_user: CurrentUser, db: DBSession):
     query = select(Document).where(
         Document.id == doc_id, 
@@ -112,7 +123,11 @@ async def download_document(doc_id: UUID, current_user: CurrentUser, db: DBSessi
         raise HTTPException(status_code=404, detail="File missing from cloud storage")
 
 
-@router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{doc_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_permission("document:delete"))],
+)
 async def delete_document(doc_id: UUID, current_user: CurrentUser, db: DBSession):
     query = select(Document).where(
         Document.id == doc_id, 
@@ -128,7 +143,7 @@ async def delete_document(doc_id: UUID, current_user: CurrentUser, db: DBSession
         # Delete from cloud storage bucket
         get_supabase().storage.from_(BUCKET_NAME).remove([doc.file_path])
     except Exception as e:
-        print(f"Warning: Failed to delete cloud file: {e}")
+        logger.warning("Failed to delete cloud file: %s", e)
         
     await db.delete(doc)
     await db.commit()
