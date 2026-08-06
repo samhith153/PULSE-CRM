@@ -619,7 +619,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
             <div className="overflow-x-auto w-full">
               <table className="w-full text-left border-collapse table-fixed select-none">
                 <thead>
-                  <tr className="border-b border-border/80 bg-secondary/15 text-[11px] font-bold text-muted-foreground tracking-wider">
+                  <tr className="border-b border-border bg-muted/40 text-[11px] font-black uppercase text-foreground tracking-wider">
                     {isSelectMode && (
                       <th className="py-3 px-[var(--space-3)] text-center w-12">
                         <input 

@@ -124,7 +124,7 @@ export default function ProductsView() {
         <div className="overflow-x-auto select-none">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border text-[10px] uppercase font-semibold text-foreground tracking-wider">
+              <tr className="border-b border-border text-[11px] uppercase font-black text-foreground tracking-wider bg-muted/40">
                 <th className="py-3 px-4">PRODUCT INFO</th>
                 <th className="py-3 px-4">SKU CODE</th>
                 <th className="py-3 px-4">CATEGORY</th>

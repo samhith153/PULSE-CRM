@@ -8,7 +8,7 @@ import {
   MoreVertical, 
   ChevronDown, 
   TrendingUp, 
-  DollarSign, 
+  IndianRupee, 
   BarChart2, 
   Activity, 
   Globe, 

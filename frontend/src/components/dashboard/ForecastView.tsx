@@ -12,7 +12,7 @@ import {
   CheckCircle,
   HelpCircle,
   Sliders,
-  DollarSign
+  IndianRupee
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 

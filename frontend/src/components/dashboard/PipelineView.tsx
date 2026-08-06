@@ -323,7 +323,7 @@ export default function PipelineView() {
             </div>
             <div>
               <p className="text-[9px] font-semibold text-muted-foreground uppercase">Total Pipeline Value</p>
-              <p className="text-sm font-semibold text-foreground tabular-nums">${totalValue.toLocaleString()}</p>
+              <p className="text-sm font-semibold text-foreground tabular-nums">{formatINR(totalValue)}</p>
             </div>
           </div>
 
@@ -333,7 +333,7 @@ export default function PipelineView() {
             </div>
             <div>
               <p className="text-[9px] font-semibold text-muted-foreground uppercase">Weighted Revenue Forecast</p>
-              <p className="text-sm font-semibold text-foreground tabular-nums">${Math.round(weightedForecast).toLocaleString()}</p>
+              <p className="text-sm font-semibold text-foreground tabular-nums">{formatINR(Math.round(weightedForecast))}</p>
             </div>
           </div>
 
@@ -352,7 +352,7 @@ export default function PipelineView() {
           <div className="overflow-y-auto max-h-[600px] border border-border/60 rounded-xl bg-card custom-scrollbar">
             <table className="w-full border-collapse text-left table-fixed">
               <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
-                <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
+                <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
                   <th className="py-3 px-4 w-[4%] text-left">
                     <input 
                       type="checkbox" 

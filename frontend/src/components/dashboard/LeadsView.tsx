@@ -1208,8 +1208,8 @@ export default function LeadsView() {
             <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card custom-scrollbar">
               <table className="w-full border-collapse text-left table-fixed">
                 <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
-                  <tr className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground">
-                    <th className="py-3 px-4 w-[5%] text-left">
+                  <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
+                    <th className="py-3 px-4 text-left w-10">
                       <input 
                         type="checkbox" 
                         checked={sortedLeads.length > 0 && selectedIds.size === sortedLeads.length}
@@ -1217,14 +1217,14 @@ export default function LeadsView() {
                         className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
                       />
                     </th>
-                    <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>Name</th>
-                    <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('company')}>Company</th>
-                    <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('email')}>Email</th>
-                    <th className="py-3 px-2 w-[12%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('phone')}>Phone</th>
-                    <th className="py-3 px-2 w-[7%] cursor-pointer hover:text-foreground text-center" onClick={() => handleHeaderClick('score')}>Score</th>
-                    <th className="py-3 px-2 w-[11%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('status')}>Status</th>
-                    <th className="py-3 px-2 w-[11%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('priority')}>Priority</th>
-                    <th className="py-3 px-2 w-[10%] text-right pr-4">Actions</th>
+                    <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-primary transition-colors" onClick={() => handleHeaderClick('name')}>Name</th>
+                    <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-primary transition-colors" onClick={() => handleHeaderClick('company')}>Company</th>
+                    <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-primary transition-colors" onClick={() => handleHeaderClick('email')}>Email</th>
+                    <th className="py-3 px-2 w-[11%] cursor-pointer hover:text-primary transition-colors" onClick={() => handleHeaderClick('phone')}>Phone</th>
+                    <th className="py-3 px-2 w-[7%] cursor-pointer hover:text-primary transition-colors text-center" onClick={() => handleHeaderClick('score')}>Score</th>
+                    <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-primary transition-colors" onClick={() => handleHeaderClick('status')}>Status</th>
+                    <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-primary transition-colors" onClick={() => handleHeaderClick('priority')}>Priority</th>
+                    <th className="py-3 px-2 w-[14%] text-right pr-4">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
@@ -1330,22 +1330,22 @@ export default function LeadsView() {
               <table className="w-full border-collapse text-left table-fixed">
               <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
                 {isPriorityView ? (
-                  <tr className="text-[11px] uppercase font-extrabold tracking-wider text-muted-foreground/80 border-b border-border/60 bg-secondary/15">
+                  <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
                     <th className="py-3 px-4 w-[22%]">Company Name</th>
-                    <th className="py-3 text-center w-[14%] text-brand-blue">Fit Score</th>
-                    <th className="py-3 text-center w-[16%] text-[#E8A33D]">Engagement Score</th>
-                    <th className="py-3 text-center w-[14%] text-[#4FB477]">Overall Score</th>
-                    <th className="py-3 w-[26%]">Recommendation</th>
-                    <th className="py-3 text-right pr-4 w-[8%]">Actions</th>
+                    <th className="py-3 text-center w-[12%] text-brand-blue">Fit Score</th>
+                    <th className="py-3 text-center w-[14%] text-amber-600 dark:text-amber-400">Engagement Score</th>
+                    <th className="py-3 text-center w-[12%] text-emerald-600 dark:text-emerald-400">Overall Score</th>
+                    <th className="py-3 w-[22%]">Recommendation</th>
+                    <th className="py-3 text-right pr-4 w-[18%]">Actions</th>
                   </tr>
                 ) : (
-                  <tr className="text-[11px] uppercase font-extrabold tracking-wider text-muted-foreground/80 border-b border-border/60 bg-secondary/15">
-                    <th className="py-3 px-4 w-[30%]">Name & Company</th>
-                    <th className="py-3 text-center w-[12%]">Score</th>
-                    <th className="py-3 w-[18%]">Status</th>
-                    <th className="py-3 w-[16%]">Priority</th>
+                  <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
+                    <th className="py-3 px-4 w-[24%]">Name &amp; Company</th>
+                    <th className="py-3 text-center w-[10%]">Score</th>
+                    <th className="py-3 w-[15%]">Status</th>
+                    <th className="py-3 w-[15%]">Priority</th>
                     <th className="py-3 w-[16%]">Owner</th>
-                    <th className="py-3 text-right pr-4 w-[8%]">Actions</th>
+                    <th className="py-3 text-right pr-4 w-[20%]">Actions</th>
                   </tr>
                 )}
               </thead>
