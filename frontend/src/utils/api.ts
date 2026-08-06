@@ -1057,3 +1057,19 @@ export async function getManagerForecast(
     `/api/v1/dashboard/manager/forecast${toQuery({ period })}`
   );
 }
+
+export async function uploadAvatar(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = getToken();
+  const res = await fetch(`${API_BASE}/api/v1/uploads/avatars`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Avatar upload failed');
+  }
+  return res.json();
+}
