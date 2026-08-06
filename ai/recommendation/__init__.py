@@ -16,6 +16,7 @@ from ai.recommendation.feature_computer import (
     build_lead_features,
     compute_contact_time,
     compute_email_features,
+    compute_engagement_velocity,
     compute_meeting_attendance,
     compute_urgency,
     get_stage,
@@ -34,4 +35,5 @@ __all__ = [
     "compute_urgency",
     "compute_contact_time",
     "compute_meeting_attendance",
+    "compute_engagement_velocity",
 ]

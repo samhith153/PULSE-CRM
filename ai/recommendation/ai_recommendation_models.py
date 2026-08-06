@@ -32,6 +32,7 @@ class LeadFeatures:
     meeting_attendance_status: Optional[str] = None  # "ATTENDED", "NO_SHOW", "RESCHEDULED"
     rep_active_action_count: Optional[int] = None  # How many tasks this rep has?
     best_contact_time_slot: Optional[str] = None  # "10:00-12:00", "14:00-16:00", etc.
+    engagement_velocity: Optional[float] = None  # -1.0 to 1.0: declining to increasing engagement
 
     # Email direction counts (for reason building)
     outbound_email_count: int = 0
@@ -71,3 +72,4 @@ class RecommendationResponse:
     meeting_attendance_status: Optional[str] = None
     rep_active_action_count: Optional[int] = None
     best_contact_time_slot: Optional[str] = None
+    engagement_velocity: Optional[float] = None

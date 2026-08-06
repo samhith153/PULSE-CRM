@@ -6,9 +6,10 @@ All feature computation and scoring logic lives in ai/recommendation/.
 """
 from __future__ import annotations
 
+import asyncio
 import sys
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from uuid import UUID
 
@@ -35,6 +36,8 @@ except ImportError:
     build_lead_features = None
     generate_recommendation = None
 
+RECOMMENDATION_TTL = timedelta(hours=1)
+
 
 class RecommendationService:
     def __init__(self, db: AsyncSession) -> None:
@@ -48,10 +51,22 @@ class RecommendationService:
     async def generate_for_lead(
         self, lead_id: UUID, organization_id: UUID
     ) -> Optional[dict]:
-        """Generate a recommendation for a lead and store it."""
+        """Generate a recommendation for a lead and store it.
+
+        Returns cached result if a fresh recommendation exists (<1hr old).
+        """
         if not generate_recommendation or not build_lead_features:
             logger.warning("ai.recommendation module not available")
             return None
+
+        # Check for cached recommendation
+        cached = await self.get_for_lead(lead_id, organization_id)
+        if cached and not cached.get("is_terminal"):
+            cached_gen = cached.get("generated_at")
+            if cached_gen:
+                age = datetime.now(timezone.utc) - cached_gen
+                if age < RECOMMENDATION_TTL:
+                    return cached
 
         lead = await self.lead_repo.get_active_by_id(lead_id, organization_id)
         if not lead:
@@ -65,6 +80,18 @@ class RecommendationService:
 
         # Build features (logic lives in ai/recommendation/)
         features = build_lead_features(lead, deal, emails, activities, rep_active_count)
+
+        # Terminal leads (won/lost/converted) don't need recommendations
+        if features.current_stage == "Closed":
+            logger.info("Lead is in terminal stage, skipping recommendation", extra={"lead_id": str(lead_id)})
+            return {
+                "recommended_action": "No recommendation — deal is closed",
+                "reason": "This lead has been closed (won/lost/converted). No further actions needed.",
+                "current_score": features.current_score,
+                "current_stage": features.current_stage,
+                "is_terminal": True,
+                "all_candidates": [],
+            }
 
         # Convert features to dict for the engine
         from dataclasses import asdict
@@ -108,6 +135,7 @@ class RecommendationService:
                 "all_candidates": all_candidates,
                 "deal_value": features.deal_value,
                 "days_since_last_activity": features.days_since_last_activity,
+                "is_terminal": False,
             },
             generated_at=datetime.now(timezone.utc),
             organization_id=organization_id,
@@ -139,21 +167,24 @@ class RecommendationService:
             "current_score": rec.metadata_json.get("current_score", 0),
             "current_stage": rec.metadata_json.get("current_stage", ""),
             "all_candidates": rec.metadata_json.get("all_candidates", []),
+            "is_terminal": rec.metadata_json.get("is_terminal", False),
+            "generated_at": rec.generated_at,
         }
 
     async def batch_generate_for_leads(
         self, lead_ids: list, organization_id: UUID
     ) -> dict:
-        """Generate recommendations for multiple leads at once."""
-        results = {}
-        for lead_id in lead_ids:
+        """Generate recommendations for multiple leads in parallel."""
+        async def _safe_generate(lid: UUID) -> tuple[UUID, Optional[dict]]:
             try:
-                rec = await self.generate_for_lead(lead_id, organization_id)
-                if rec:
-                    results[lead_id] = rec
+                rec = await self.generate_for_lead(lid, organization_id)
+                return (lid, rec)
             except Exception as e:
-                logger.warning("Failed to generate recommendation", extra={"lead_id": str(lead_id), "error": str(e)})
-        return results
+                logger.warning("Failed to generate recommendation", extra={"lead_id": str(lid), "error": str(e)})
+                return (lid, None)
+
+        pairs = await asyncio.gather(*[_safe_generate(lid) for lid in lead_ids])
+        return {lid: rec for lid, rec in pairs if rec}
 
     # ── DB helpers (only these need SQLAlchemy) ───────────────────────────────
 

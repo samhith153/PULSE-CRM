@@ -21,9 +21,6 @@ STAGE_MAP = {
     "qualified": "Qualified",
     "proposal_sent": "Proposal Sent",
     "negotiation": "Negotiation",
-    "won": "Negotiation",
-    "lost": "Contacted",
-    "converted": "Qualified",
 }
 
 TERMINAL_STAGES = {"won", "lost", "converted"}
@@ -33,8 +30,6 @@ DEAL_STAGE_TO_ENGINE_STAGE = {
     "qualified": "Qualified",
     "proposal": "Proposal Sent",
     "negotiation": "Negotiation",
-    "won": "Won",
-    "lost": "Lost",
 }
 
 
@@ -75,6 +70,64 @@ def compute_email_features(emails: list) -> dict:
         "outbound_email_count": outbound_count,
         "inbound_email_count": inbound_count,
     }
+
+
+# ── Engagement velocity ──────────────────────────────────────────────────────
+
+def compute_engagement_velocity(activities: list, emails: list) -> float:
+    """
+    Compute engagement velocity: whether interest is increasing or decreasing.
+
+    Compares activity in the last 7 days vs 7-30 days ago.
+    Returns a value from -1.0 (declining) to 1.0 (increasing).
+    0.0 means stable or no data.
+    """
+    now = datetime.now(timezone.utc)
+    recent_cutoff = now - __import__('datetime').timedelta(days=7)
+    older_cutoff = now - __import__('datetime').timedelta(days=30)
+
+    recent_count = 0
+    older_count = 0
+
+    for activity in (activities or []):
+        t = getattr(activity, "created_at", None)
+        if t:
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            if t >= recent_cutoff:
+                recent_count += 1
+            elif t >= older_cutoff:
+                older_count += 1
+
+    for email in (emails or []):
+        t = getattr(email, "sent_at", None)
+        if t:
+            if t.tzinfo is None:
+                t = t.replace(tzinfo=timezone.utc)
+            if t >= recent_cutoff:
+                recent_count += 1
+            elif t >= older_cutoff:
+                older_count += 1
+
+    # No data = neutral
+    if recent_count == 0 and older_count == 0:
+        return 0.0
+
+    # If we have recent activity but no older activity, it's a new spike
+    if older_count == 0 and recent_count > 0:
+        return min(1.0, recent_count / 5)
+
+    # Compare recent vs older rate (normalized to per-week)
+    recent_weekly = recent_count  # already 1 week
+    older_weekly = older_count / 3  # 3 weeks → per week
+
+    if older_weekly == 0:
+        return min(1.0, recent_weekly / 5)
+
+    ratio = recent_weekly / older_weekly
+    # Map ratio to -1..1: ratio=2 → velocity=1, ratio=0.5 → velocity=-1, ratio=1 → velocity=0
+    velocity = max(-1.0, min(1.0, (ratio - 1)))
+    return round(velocity, 2)
 
 
 # ── Urgency (days since last activity) ───────────────────────────────────────
@@ -202,17 +255,22 @@ def build_lead_features(lead, deal, emails: list, activities: list, rep_active_c
     if lead.lead_score and lead.lead_score.overall_score is not None:
         current_score = float(lead.lead_score.overall_score)
 
-    # Stage: prefer deal's pipeline stage over lead's static status
-    # (lead.status becomes "converted" after deal creation, but the deal continues through the pipeline)
-    current_stage = None
-    if deal:
-        pipeline_stage = getattr(deal, "pipeline_stage", None)
-        if pipeline_stage:
-            deal_stage_slug = getattr(pipeline_stage, "slug", None)
-            if deal_stage_slug and deal_stage_slug in DEAL_STAGE_TO_ENGINE_STAGE:
-                current_stage = DEAL_STAGE_TO_ENGINE_STAGE[deal_stage_slug]
-    if not current_stage:
-        current_stage = get_stage(lead.status)
+    # Terminal leads (won/lost/converted) should not get recommendations
+    lead_status = str(getattr(lead, "status", "")).lower()
+    if is_terminal(lead_status):
+        current_stage = "Closed"
+    else:
+        # Stage: prefer deal's pipeline stage over lead's static status
+        # (lead.status becomes "converted" after deal creation, but the deal continues through the pipeline)
+        current_stage = None
+        if deal:
+            pipeline_stage = getattr(deal, "pipeline_stage", None)
+            if pipeline_stage:
+                deal_stage_slug = getattr(pipeline_stage, "slug", None)
+                if deal_stage_slug and deal_stage_slug in DEAL_STAGE_TO_ENGINE_STAGE:
+                    current_stage = DEAL_STAGE_TO_ENGINE_STAGE[deal_stage_slug]
+        if not current_stage:
+            current_stage = get_stage(lead.status)
 
     # Deal value
     deal_value = None
@@ -233,6 +291,9 @@ def build_lead_features(lead, deal, emails: list, activities: list, rep_active_c
     # Contact time
     best_time = compute_contact_time(activities, emails)
 
+    # Engagement velocity
+    ev = compute_engagement_velocity(activities, emails)
+
     return LeadFeatures(
         lead_id=str(lead.id),
         current_score=current_score,
@@ -245,6 +306,7 @@ def build_lead_features(lead, deal, emails: list, activities: list, rep_active_c
         meeting_attendance_status=meeting,
         rep_active_action_count=rep_active_count if rep_active_count > 0 else None,
         best_contact_time_slot=best_time,
+        engagement_velocity=ev if ev != 0.0 else None,
         outbound_email_count=email_features["outbound_email_count"],
         inbound_email_count=email_features["inbound_email_count"],
     )

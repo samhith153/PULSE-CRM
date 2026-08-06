@@ -15,7 +15,7 @@ Each action specifies:
 
 This table IS the Phase 1 "model" — no ML required yet. Stage 3 replaces
 this file's logic with a trained model, but keeps the same output shape
-(see engine.py), so nothing downstream needs to change.
+(see ai_recommendation_engine_enhanced.py), so nothing downstream needs to change.
 """
 
 from dataclasses import dataclass
@@ -26,7 +26,7 @@ from typing import Optional
 class ActionRule:
     name: str
     stages: list[str]
-    weights: dict[str, float]  # keys: "s" (score), "u" (urgency), "r" (reply), "dv" (deal value), "eo" (email open), "mt" (meeting), "rw" (rep workload), "ct" (contact time)
+    weights: dict[str, float]  # keys: "s" (score), "u" (urgency), "r" (reply), "dv" (deal value), "eo" (email open), "mt" (meeting), "rw" (rep workload), "ct" (contact time), "ev" (engagement velocity)
     invert_s: bool = False
     invert_u: bool = False
     invert_r: bool = False
@@ -35,6 +35,7 @@ class ActionRule:
     invert_mt: bool = False
     invert_rw: bool = False
     invert_ct: bool = False
+    invert_ev: bool = False
 
 
 ACTION_RULES: list[ActionRule] = [
@@ -42,18 +43,18 @@ ACTION_RULES: list[ActionRule] = [
     ActionRule(
         name="Research the prospect",
         stages=["New Lead"],
-        weights={"s": 0.6, "u": 0.2, "ct": 0.1, "dv": 0.05},
+        weights={"s": 0.65, "u": 0.2, "ct": 0.1, "dv": 0.05},
     ),
     ActionRule(
         name="Send introductory email",
         stages=["New Lead"],
-        weights={"s": 0.4, "u": 0.2, "dv": 0.15, "ct": 0.1},
+        weights={"s": 0.45, "u": 0.25, "dv": 0.15, "ct": 0.15},
     ),
     # ── Contacted ───────────────────────────────────────────────────────
     ActionRule(
         name="Send follow-up email",
         stages=["Contacted", "Qualified"],
-        weights={"u": 0.5, "r": 0.3, "s": 0.2, "dv": 0.1, "eo": 0.1},
+        weights={"u": 0.25, "r": 0.25, "s": 0.2, "dv": 0.1, "eo": 0.1, "ev": 0.1},
         invert_r=True,
     ),
     ActionRule(
@@ -65,38 +66,54 @@ ACTION_RULES: list[ActionRule] = [
     ActionRule(
         name="Try a different channel",
         stages=["Contacted"],
-        weights={"u": 0.5, "eo": 0.3, "r": 0.2},
+        weights={"u": 0.4, "eo": 0.3, "r": 0.2, "ev": 0.1},
         invert_r=True,
         invert_eo=True,
     ),
     ActionRule(
+        name="Send LinkedIn connection request",
+        stages=["Contacted"],
+        weights={"u": 0.3, "r": 0.25, "s": 0.2, "ct": 0.15, "ev": 0.1},
+        invert_r=True,
+    ),
+    ActionRule(
         name="Mark as stale",
         stages=["Contacted", "Qualified"],
-        weights={"u": 0.7, "s": 0.3, "eo": 0.05},
+        weights={"u": 0.6, "s": 0.25, "eo": 0.05, "ev": 0.1},
         invert_s=True,
     ),
     # ── Qualified ───────────────────────────────────────────────────────
     ActionRule(
         name="Schedule a product demo",
         stages=["Qualified"],
-        weights={"s": 0.6, "u": 0.2, "r": 0.2, "dv": 0.15, "mt": 0.1},
+        weights={"s": 0.35, "u": 0.15, "r": 0.2, "dv": 0.15, "mt": 0.05, "ev": 0.1},
         invert_u=True,
     ),
     ActionRule(
         name="Send relevant content",
         stages=["Qualified"],
-        weights={"s": 0.4, "eo": 0.3, "u": 0.2, "dv": 0.1},
+        weights={"s": 0.3, "eo": 0.3, "u": 0.2, "dv": 0.1, "ev": 0.1},
+    ),
+    ActionRule(
+        name="Send pricing information",
+        stages=["Qualified"],
+        weights={"s": 0.4, "dv": 0.3, "u": 0.15, "ev": 0.15},
+    ),
+    ActionRule(
+        name="Introduce to account executive",
+        stages=["Qualified"],
+        weights={"s": 0.5, "dv": 0.2, "u": 0.15, "ev": 0.15},
     ),
     # ── Proposal Sent ───────────────────────────────────────────────────
     ActionRule(
         name="Follow up on proposal",
         stages=["Proposal Sent"],
-        weights={"u": 0.5, "s": 0.3, "dv": 0.15, "ct": 0.05},
+        weights={"u": 0.4, "s": 0.3, "dv": 0.15, "ct": 0.05, "ev": 0.1},
     ),
     ActionRule(
         name="Send case study or testimonial",
         stages=["Proposal Sent", "Negotiation"],
-        weights={"s": 0.4, "dv": 0.3, "u": 0.2},
+        weights={"s": 0.4, "dv": 0.4, "u": 0.2},
     ),
     ActionRule(
         name="Address objections",
@@ -112,7 +129,7 @@ ACTION_RULES: list[ActionRule] = [
     ActionRule(
         name="Escalate to manager for approval",
         stages=["Negotiation"],
-        weights={"s": 0.4, "u": 0.4, "dv": 0.15, "mt": 0.1, "rw": 0.1},
+        weights={"s": 0.35, "u": 0.3, "dv": 0.15, "mt": 0.1, "rw": 0.1},
     ),
     ActionRule(
         name="Offer value-add services",

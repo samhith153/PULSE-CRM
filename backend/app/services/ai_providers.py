@@ -58,11 +58,14 @@ class ConversationSummaryProvider(Protocol):
 
 # -- Helper utilities for new features -------------------------------------
 
+# DEPRECATED: Use ai.recommendation.feature_computer.compute_email_features() instead.
+# Kept for backward compatibility with recommendation_engine_service.py and tests.
 def compute_email_opened_no_reply_flag(email_open_count: int, reply_received: bool) -> bool:
     """Detect interested-but-stuck leads: opened emails but never replied."""
     return email_open_count > 0 and not reply_received
 
 
+# DEPRECATED: Use ai.recommendation.feature_computer.compute_contact_time() instead.
 def compute_best_contact_time(activities: list[ActivityTimeline] | None = None, emails: list[Email] | None = None) -> str | None:
     """Analyze historical successful interactions to determine the best time slot."""
     hour_counts: dict[int, int] = {}
@@ -99,6 +102,7 @@ def compute_best_contact_time(activities: list[ActivityTimeline] | None = None, 
         return BestContactTimeSlot.MORNING_10_12.value
 
 
+# DEPRECATED: Use ai.recommendation.feature_computer.build_lead_features() instead.
 def compute_deal_value_from_lead(lead: Lead) -> float:
     """Get the deal value without triggering async lazy relationship loads."""
     deal = lead.__dict__.get("deal")
@@ -270,6 +274,8 @@ class RuleBasedScorer:
 
 # -- Recommendation Providers ----------------------------------------------
 
+# DEPRECATED: Use ai.recommendation.ai_recommendation_engine_enhanced.recommend() instead.
+# Kept for backward compatibility with recommendation_engine_service.py.
 class RuleBasedRecommendationProvider:
     provider_name = "rule_based"
 
