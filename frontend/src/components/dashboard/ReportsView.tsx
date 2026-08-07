@@ -510,18 +510,18 @@ export default function ReportsView() {
                 </thead>
                 <tbody className="divide-y divide-border/30 text-xs font-semibold text-foreground">
                   {[
-                    { name: 'Pisang Kepok', rate: 24, stats: '+4.2%', total: 2423.00, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&h=80&q=80' },
-                    { name: 'Adipati Dolken', rate: 18, stats: '+3.1%', total: 1890.00, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&h=80&q=80' },
-                    { name: 'Siti Nurhaliza', rate: 32, stats: '+5.0%', total: 3120.00, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&h=80&q=80' }
+                    { name: 'Pisang Kepok', rate: 24, stats: '+4.2%', total: 2423.00 },
+                    { name: 'Adipati Dolken', rate: 18, stats: '+3.1%', total: 1890.00 },
+                    { name: 'Siti Nurhaliza', rate: 32, stats: '+5.0%', total: 3120.00 }
                   ].map((seller, idx) => (
                     <tr key={idx} className="hover:bg-secondary/15 transition-colors">
                       <td className="py-2.5 pr-2 text-left overflow-hidden">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <img 
-                            src={seller.avatar} 
-                            alt={seller.name} 
-                            className="h-8.5 w-8.5 rounded-full object-cover shrink-0 border border-border/40"
-                          />
+                          <div 
+                            className="h-8.5 w-8.5 rounded-full shrink-0 border border-border/40 bg-brand-purple/10 flex items-center justify-center"
+                          >
+                            <span className="text-[10px] font-bold text-brand-purple">{seller.name.charAt(0)}</span>
+                          </div>
                           <div className="min-w-0">
                             <span className="truncate block font-bold text-foreground text-xs" title={seller.name}>
                               {seller.name}

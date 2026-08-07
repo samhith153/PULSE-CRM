@@ -216,7 +216,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export function resolveImageUrl(url: string | null | undefined): string {
-  if (!url) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80';
+  if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;

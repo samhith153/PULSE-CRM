@@ -154,14 +154,14 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
           <h3 className="font-bold text-foreground text-sm">Recent reports</h3>
           {/* Avatar Stack implied collaboration detail */}
           <div className="flex items-center -space-x-1.5 overflow-hidden select-none" title="3 teammates active on these templates">
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
-              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&fit=crop&q=80" alt="Teammate 1" />
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-brand-purple/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-brand-purple">S</span>
             </div>
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
-              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&fit=crop&q=80" alt="Teammate 2" />
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-brand-blue/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-brand-blue">A</span>
             </div>
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
-              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&fit=crop&q=80" alt="Teammate 3" />
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-[#4FB477]/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-[#4FB477]">K</span>
             </div>
           </div>
         </div>
