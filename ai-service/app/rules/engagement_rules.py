@@ -46,6 +46,13 @@ _INTENT_SCORE_MAP = {
     "complaint": -50,
     "negative": -70,
     "lost": -100,
+    # Coarse summarizer intent vocabulary (TASK 4 in the summarization prompt)
+    "buy": 85,
+    "demo": 85,
+    "negotiate": 90,
+    "followup": 40,
+    "decline": -70,
+    "other": 0,
 }
 
 
