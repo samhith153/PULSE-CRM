@@ -248,10 +248,14 @@ class LeadService:
         )
         return lead
 
-    async def delete(self, lead_id: UUID, organization_id: UUID) -> None:
+    async def delete(self, lead_id: UUID, organization_id: UUID, user_role: str | None = None) -> None:
         lead = await self.get(lead_id, organization_id)
 
-        if lead.status == LeadStatus.CONVERTED.value:
+        # Sales reps can only soft-delete (archive) leads
+        if user_role == "sales_rep":
+            await self.repo.soft_delete(lead)
+            logger.info("Lead archived (sales rep)", extra={"lead_id": str(lead_id)})
+        elif lead.status == LeadStatus.CONVERTED.value:
             await self.repo.soft_delete(lead)
             logger.info("Lead archived", extra={"lead_id": str(lead_id)})
         else:

@@ -189,7 +189,7 @@ async def convert_lead(
 @router.delete(
     "/{lead_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete lead (hard)",
+    summary="Delete lead (hard for admin, soft for sales rep)",
     dependencies=[Depends(require_permission("lead:delete"))],
 )
 async def delete_lead(
@@ -198,4 +198,4 @@ async def delete_lead(
     db: DBSession,
 ) -> None:
     svc = LeadService(db)
-    await svc.delete(lead_id, current_user.organization_id)
+    await svc.delete(lead_id, current_user.organization_id, user_role=current_user.primary_role)

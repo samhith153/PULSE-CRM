@@ -249,6 +249,7 @@ export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => 
       setLeads(prev => prev.filter(lead => !selectedIds.has(lead.id)));
       setSelectedIds(new Set());
       setSelectedLeadId(null);
+      window.dispatchEvent(new CustomEvent('pulse-leads-changed'));
       toast.success("Selected leads deleted successfully.");
     } catch (e: any) {
       console.error(e);
@@ -470,6 +471,7 @@ export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => 
       if (selectedLeadId === deleteConfirmId) {
         setSelectedLeadId(remaining.length > 0 ? remaining[0].id : null);
       }
+      window.dispatchEvent(new CustomEvent('pulse-leads-changed'));
     } catch (err) {
       console.error("Failed to delete lead:", err);
     }

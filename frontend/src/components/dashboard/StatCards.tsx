@@ -232,13 +232,23 @@ export default function StatCards({
 
   useEffect(() => {
     let cancelled = false;
-    setKpiLoading(true);
-    const period = timeFilter === 'all' ? 'quarter' : 'month';
-    getSalesRepDashboard(period as 'week' | 'month' | 'quarter' | 'year')
-      .then((d) => { if (!cancelled) setKpi(d); })
-      .catch(() => { if (!cancelled) setKpi(null); })
-      .finally(() => { if (!cancelled) setKpiLoading(false); });
-    return () => { cancelled = true; };
+    const fetchKpi = () => {
+      setKpiLoading(true);
+      const period = timeFilter === 'all' ? 'quarter' : 'month';
+      getSalesRepDashboard(period as 'week' | 'month' | 'quarter' | 'year')
+        .then((d) => { if (!cancelled) setKpi(d); })
+        .catch(() => { if (!cancelled) setKpi(null); })
+        .finally(() => { if (!cancelled) setKpiLoading(false); });
+    };
+    fetchKpi();
+
+    // Re-fetch when leads are created/deleted/updated
+    const handleRefresh = () => fetchKpi();
+    window.addEventListener('pulse-leads-changed', handleRefresh);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('pulse-leads-changed', handleRefresh);
+    };
   }, [timeFilter]);
 
   const getStats = (): Stat[] => {
