@@ -74,6 +74,7 @@ from app.api.v1.summarization import router as summarization_router
 from app.api.v1.brevo import router as brevo_router
 from app.api.v1.calendar import router as calendar_router
 from app.api.v1.ai_insights import router as ai_insights_router
+from app.api.v1.crm_activities import router as crm_activities_router
 api_router = APIRouter()
 
 api_router.include_router(health_router, prefix="/health", tags=["Health"])
@@ -113,4 +114,5 @@ api_router.include_router(
 )
 api_router.include_router(calendar_router, prefix="/calendar", tags=["Calendar"])
 api_router.include_router(ai_insights_router, prefix="/ai-insights", tags=["AI Insights"])
+api_router.include_router(crm_activities_router, prefix="/crm-activities", tags=["CRM Activities"])
 

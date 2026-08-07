@@ -50,7 +50,10 @@ class Permission(str, Enum):
 
     ACTIVITY_CREATE = "activity:create"
     ACTIVITY_READ = "activity:read"
+    ACTIVITY_UPDATE = "activity:update"
+    ACTIVITY_DELETE = "activity:delete"
 
+    EMAIL_SEND = "email:send"
     EMAIL_READ = "email:read"
     EMAIL_SYNC = "email:sync"
     GMAIL_CONNECT = "gmail:connect"
@@ -108,8 +111,11 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.PIPELINE_UPDATE,
         Permission.ACTIVITY_CREATE,
         Permission.ACTIVITY_READ,
+        Permission.ACTIVITY_UPDATE,
+        Permission.ACTIVITY_DELETE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
+        Permission.EMAIL_SEND,
         Permission.GMAIL_CONNECT,
         Permission.DASHBOARD_READ,
         Permission.AI_ACCESS,
@@ -135,8 +141,11 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.DEAL_UPDATE,
         Permission.PIPELINE_READ,
         Permission.ACTIVITY_READ,
+        Permission.ACTIVITY_CREATE,
+        Permission.ACTIVITY_DELETE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
+        Permission.EMAIL_SEND,
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
         Permission.REPORT_VIEW,
