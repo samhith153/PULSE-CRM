@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { IndianRupee, Trophy, Target, Wallet, Clock, CalendarDays, SlidersHorizontal } from "lucide-react";
+import { IndianRupee, Trophy, Target, Wallet, Clock } from "lucide-react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardTopbar } from "@/components/dashboard/DashboardTopbar";
@@ -7,6 +7,8 @@ import { StatCard, type Stat } from "@/components/dashboard/StatCard";
 import { RevenueChart } from "@/components/dashboard/RevenueChart";
 import { DealsByStage } from "@/components/dashboard/DealsByStage";
 import { ActivityPanel, InsightBanner } from "@/components/dashboard/Panels";
+import { useDashboardData } from "@/hooks/use-api";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const title = "Reports & analytics — Pulse CRM dashboard";
 const description =
@@ -26,36 +28,54 @@ export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
 });
 
-const stats: Stat[] = [
-  {
-    label: "Total revenue",
-    icon: IndianRupee,
-    value: 4280000,
-    prefix: "₹",
-    delta: 12.4,
-    spark: [3, 5, 4, 6, 7, 9, 11],
-  },
-  { label: "Won deals", icon: Trophy, value: 23, delta: 8.1, spark: [2, 3, 3, 5, 4, 6, 7] },
-  { label: "Win rate", icon: Target, value: 19, suffix: "%", delta: 2.6, spark: [4, 4, 5, 5, 6, 6, 7] },
-  {
-    label: "Avg. deal size",
-    icon: Wallet,
-    value: 186000,
-    prefix: "₹",
-    delta: 5.3,
-    spark: [5, 6, 5, 7, 8, 8, 9],
-  },
-  {
-    label: "Avg. sales cycle",
-    icon: Clock,
-    value: 27,
-    suffix: " d",
-    delta: -4.2,
-    spark: [9, 8, 8, 7, 6, 6, 5],
-  },
-];
-
 function DashboardPage() {
+  const { data, isLoading, error } = useDashboardData();
+
+  // Transform API data to Stat format
+  const stats: Stat[] = isLoading
+    ? []
+    : [
+        {
+          label: "Total revenue",
+          icon: IndianRupee,
+          value: data?.stats.total_revenue || 0,
+          prefix: "₹",
+          delta: data?.stats.revenue_delta || 0,
+          spark: data?.revenue?.slice(-7).map((r) => r.value) || [],
+        },
+        {
+          label: "Won deals",
+          icon: Trophy,
+          value: data?.stats.won_deals || 0,
+          delta: data?.stats.won_deals_delta || 0,
+          spark: [],
+        },
+        {
+          label: "Win rate",
+          icon: Target,
+          value: data?.stats.win_rate || 0,
+          suffix: "%",
+          delta: data?.stats.win_rate_delta || 0,
+          spark: [],
+        },
+        {
+          label: "Avg. deal size",
+          icon: Wallet,
+          value: data?.stats.avg_deal_size || 0,
+          prefix: "₹",
+          delta: data?.stats.avg_deal_size_delta || 0,
+          spark: [],
+        },
+        {
+          label: "Avg. sales cycle",
+          icon: Clock,
+          value: data?.stats.avg_sales_cycle || 0,
+          suffix: " d",
+          delta: data?.stats.avg_sales_cycle_delta || 0,
+          spark: [],
+        },
+      ];
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-surface-warm">
@@ -74,25 +94,19 @@ function DashboardPage() {
                   Track performance, analyze trends, and make data-driven decisions.
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium text-ink">
-                  <CalendarDays size={14} className="text-muted-foreground" /> May 12 – May 18, 2026
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium text-ink">
-                  <SlidersHorizontal size={14} className="text-muted-foreground" /> Customize layout
-                </span>
-              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {stats.map((s, i) => (
-                <StatCard key={s.label} stat={s} delay={i * 70} />
-              ))}
+              {isLoading
+                ? Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-40 rounded-2xl" />
+                  ))
+                : stats.map((s, i) => <StatCard key={s.label} stat={s} delay={i * 70} />)}
             </div>
 
             <div className="grid gap-3 xl:grid-cols-[1.4fr_1fr]">
-              <RevenueChart />
-              <DealsByStage />
+              <RevenueChart data={data?.revenue || []} isLoading={isLoading} />
+              <DealsByStage isLoading={isLoading} />
             </div>
 
             <div className="grid items-start gap-3 lg:grid-cols-[1fr_1.4fr]">

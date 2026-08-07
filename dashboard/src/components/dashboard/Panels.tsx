@@ -1,7 +1,14 @@
 import { CheckSquare, Mail, Phone, CalendarCheck, Sparkles, ArrowUpRight } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
+import { useActivityStats, useDashboardInsights } from "@/hooks/use-api";
 
-const activities = [
+interface ActivityStat {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: number;
+}
+
+const defaultActivities: ActivityStat[] = [
   { icon: CheckSquare, label: "Tasks completed", value: 24 },
   { icon: Mail, label: "Emails sent", value: 128 },
   { icon: Phone, label: "Calls made", value: 42 },
@@ -10,6 +17,21 @@ const activities = [
 
 export function ActivityPanel() {
   const { ref, visible } = useReveal<HTMLDivElement>();
+  const { data: apiData } = useActivityStats();
+  
+  // Use API data if available, otherwise use defaults
+  const activities: ActivityStat[] = !apiData || apiData.length === 0
+    ? defaultActivities
+    : apiData.map((activity) => ({
+        icon: 
+          activity.icon === "mail" ? Mail :
+          activity.icon === "phone" ? Phone :
+          activity.icon === "calendar" ? CalendarCheck :
+          CheckSquare,
+        label: activity.label,
+        value: activity.value,
+      }));
+
   return (
     <div
       ref={ref}
@@ -42,6 +64,11 @@ export function ActivityPanel() {
 
 export function InsightBanner() {
   const { ref, visible } = useReveal<HTMLDivElement>();
+  const { data: insights } = useDashboardInsights();
+  
+  // Use first insight from API or default message
+  const insight = insights && insights.length > 0 ? insights[0] : null;
+
   return (
     <div
       ref={ref}
@@ -59,12 +86,14 @@ export function InsightBanner() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-primary-foreground">AI insight</p>
           <p className="text-xs text-primary-foreground/75">
-            14 deals worth ₹1.2M are quietly slipping. Review them before Friday.
+            {insight?.description || "14 deals worth ₹1.2M are quietly slipping. Review them before Friday."}
           </p>
         </div>
-        <button className="arrow-nudge col-span-2 inline-flex items-center justify-center gap-1 rounded-full bg-primary-foreground/15 px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary-foreground/25 sm:col-span-1">
-          Review deals <ArrowUpRight size={13} />
-        </button>
+        {insight?.action_url && (
+          <button className="arrow-nudge col-span-2 inline-flex items-center justify-center gap-1 rounded-full bg-primary-foreground/15 px-4 py-2 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary-foreground/25 sm:col-span-1">
+            {insight.title || "Review deals"} <ArrowUpRight size={13} />
+          </button>
+        )}
       </div>
     </div>
   );

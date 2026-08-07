@@ -1,7 +1,13 @@
 import { ChevronDown } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
+import type { RevenuePoint } from "@/lib/api";
 
-const points = [
+interface RevenueChartProps {
+  data?: RevenuePoint[];
+  isLoading?: boolean;
+}
+
+const defaultPoints: [number, number][] = [
   [0, 82],
   [14, 70],
   [28, 62],
@@ -14,8 +20,19 @@ const points = [
 
 const labels = ["May 1", "May 4", "May 7", "May 10", "May 13", "May 16", "May 18"];
 
-export function RevenueChart() {
+export function RevenueChart({ data = [], isLoading = false }: RevenueChartProps) {
   const { ref, visible } = useReveal<HTMLDivElement>();
+  
+  // Use API data if available, otherwise use defaults for visualization
+  const points: [number, number][] = isLoading || data.length === 0 
+    ? defaultPoints
+    : data.map((d, i) => {
+        const x = (i / (data.length - 1 || 1)) * 100;
+        const maxValue = Math.max(...data.map((p) => p.value));
+        const y = 90 - ((d.value / (maxValue || 1)) * 82);
+        return [x, y];
+      });
+  
   const path = points.map(([x, y], i) => `${i === 0 ? "M" : "L"}${x},${y}`).join(" ");
 
   return (
@@ -82,9 +99,7 @@ export function RevenueChart() {
             ))}
           </svg>
           <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
-            {labels.map((l) => (
-              <span key={l}>{l}</span>
-            ))}
+            {isLoading || data.length === 0 ? labels : data.map((d) => d.date).slice(0, labels.length)}
           </div>
         </div>
       </div>
