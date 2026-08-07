@@ -31,13 +31,22 @@ def create_prompt(messages: List[Dict], context: str = "") -> str:
         if isinstance(msg, dict):
             direction = "From" if msg["direction"] == "incoming" else "To"
             sender = msg["sender"]
+            subject = msg.get("subject", "")
             body = msg["body"]
+            timestamp = msg.get("timestamp", "")
         else:
             direction = "From" if msg.direction == "incoming" else "To"
             sender = msg.sender
+            subject = getattr(msg, "subject", "")
             body = msg.body
+            timestamp = getattr(msg, "timestamp", "")
 
-        formatted_messages.append(f"{direction} {sender}:\n{body}\n")
+        header = f"{direction} {sender}"
+        if subject:
+            header += f" | Subject: {subject}"
+        if timestamp:
+            header += f" | {timestamp}"
+        formatted_messages.append(f"{header}:\n{body}\n")
 
     thread_text = "\n".join(formatted_messages)
 
@@ -192,9 +201,21 @@ def summarise_thread(thread: Dict[str, Any]) -> str:
     """Summarise an email thread using Groq. Returns the raw summary text."""
     messages = []
     for msg in thread.get("inbound", []):
-        messages.append({"direction": "incoming", "sender": "lead", "body": msg.get("body", "")})
+        messages.append({
+            "direction": "incoming",
+            "sender": msg.get("sender", "lead"),
+            "subject": msg.get("subject", ""),
+            "body": msg.get("body", ""),
+            "timestamp": msg.get("timestamp", ""),
+        })
     for msg in thread.get("outbound", []):
-        messages.append({"direction": "outgoing", "sender": "rep", "body": msg.get("body", "")})
+        messages.append({
+            "direction": "outgoing",
+            "sender": msg.get("sender", "rep"),
+            "subject": msg.get("subject", ""),
+            "body": msg.get("body", ""),
+            "timestamp": msg.get("timestamp", ""),
+        })
 
     if not messages:
         return "No messages to summarise."
@@ -208,7 +229,7 @@ def summarise_thread(thread: Dict[str, Any]) -> str:
             {"role": "user", "content": prompt},
         ],
         temperature=0.3,
-        max_tokens=500,
+        max_tokens=1500,
     )
 
     return response.choices[0].message.content.strip()

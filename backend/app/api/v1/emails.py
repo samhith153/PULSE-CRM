@@ -3,6 +3,7 @@ Email detail routes.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any, Optional
 from uuid import UUID
 
@@ -10,6 +11,8 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 
 from app.api.deps import CurrentUser, DBSession, require_permission
+from app.core.logging import get_logger
+from app.models.email import Email
 from app.models.email_summary import EmailSummary
 from app.schemas.common import PaginatedResponse, StandardResponse
 from app.schemas.email import EmailDetailResponse, EmailResponse
@@ -17,6 +20,7 @@ from app.services.email_service import EmailService
 from app.utils.enums import EmailDirection, SortOrder
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 
 @router.get(
@@ -97,6 +101,7 @@ async def get_email_summary(thread_id: str, current_user: CurrentUser, db: DBSes
         return {"success": True, "message": "No summary found", "data": None}
     data = {
         "summary": summary.summary,
+        "summary_word": summary.summary_word,
         "sentiment": summary.sentiment,
         "intent": summary.intent,
         "confidence": summary.confidence,
@@ -109,3 +114,104 @@ async def get_email_summary(thread_id: str, current_user: CurrentUser, db: DBSes
         "model_version": summary.model_version,
     }
     return {"success": True, "message": "OK", "data": data}
+
+
+@router.post(
+    "/backfill/{lead_id}",
+    response_model=StandardResponse[dict],
+    summary="Summarize all existing emails for a lead and run assessment pipeline",
+    dependencies=[Depends(require_permission("lead:update"))],
+)
+async def backfill_lead_email_summaries(
+    lead_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """Backfill email summaries + trigger assessment for leads that were
+    imported before the summarization pipeline was active.
+
+    Steps:
+      1. Find all unique thread_ids linked to this lead (inbound only)
+      2. Summarize each thread via the ai-service
+      3. Collect the latest intent
+      4. Run the assessment pipeline with that intent
+    """
+    from app.services.email_summary_service import EmailSummaryService
+    from app.services.ai_pipeline import run_lead_assessment
+    from app.database.connection import AsyncSessionFactory
+
+    stmt = (
+        select(Email.thread_id)
+        .where(
+            Email.organization_id == current_user.organization_id,
+            Email.external_entity_type == "lead",
+            Email.external_entity_id == lead_id,
+            Email.direction == EmailDirection.INBOUND.value,
+            Email.is_active.is_(True),
+        )
+        .distinct()
+    )
+    result = await db.execute(stmt)
+    thread_ids = [row[0] for row in result.all() if row[0]]
+
+    if not thread_ids:
+        return {
+            "success": True,
+            "message": "No inbound email threads found for this lead.",
+            "data": {"threads_summarized": 0, "scores_updated": False},
+        }
+
+    logger.info("[BACKFILL] Found %d threads for lead %s: %s", len(thread_ids), lead_id, thread_ids)
+
+    # Step 0: Delete existing summaries for these threads to force re-summarization
+    from sqlalchemy import delete as sa_delete
+    await db.execute(
+        sa_delete(EmailSummary).where(
+            EmailSummary.thread_id.in_(thread_ids),
+            EmailSummary.organization_id == current_user.organization_id,
+        )
+    )
+    await db.flush()
+    logger.info("[BACKFILL] Deleted existing summaries for %d threads", len(thread_ids))
+
+    # Step 1: Summarize each thread
+    svc = EmailSummaryService(db)
+    latest_intent = None
+    summarized = 0
+    for tid in thread_ids:
+        try:
+            summary = await svc.summarize_thread(current_user.organization_id, tid)
+            if summary:
+                summarized += 1
+                word = summary.summary_word or summary.intent
+                if word:
+                    latest_intent = word
+                logger.info("[BACKFILL] Thread %s → intent=%s summary_word=%s", tid, summary.intent, summary.summary_word)
+        except Exception as exc:
+            logger.warning("[BACKFILL] Failed to summarize thread %s: %s", tid, exc)
+
+    if summarized:
+        await db.commit()
+
+    # Step 2: Run assessment with intent
+    async with AsyncSessionFactory() as assess_db:
+        result = await run_lead_assessment(
+            assess_db, lead_id, current_user.organization_id,
+            current_user.id, trigger="inbound_email", intent=latest_intent,
+        )
+        if result:
+            await assess_db.commit()
+
+    return {
+        "success": True,
+        "message": f"Backfill complete: {summarized}/{len(thread_ids)} threads summarized, assessment {'updated' if result else 'skipped'}.",
+        "data": {
+            "threads_summarized": summarized,
+            "total_threads": len(thread_ids),
+            "latest_intent": latest_intent,
+            "scores_updated": result is not None,
+            "engagement_score": result.get("engagement", {}).get("score") if result else None,
+            "overall_score": result.get("overall", {}).get("score") if result else None,
+            "tier": result.get("overall", {}).get("tier") if result else None,
+        },
+    }

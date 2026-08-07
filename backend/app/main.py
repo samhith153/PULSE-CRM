@@ -203,7 +203,7 @@ async def lifespan(app: FastAPI):
 
     scheduler.add_job(daily_lead_assessment, "cron", hour=0, minute=0)
     scheduler.add_job(process_event_outbox, "interval", seconds=15)
-    scheduler.add_job(poll_gmail_replies, "interval", minutes=5)
+    scheduler.add_job(poll_gmail_replies, "interval", seconds=30, max_instances=1, misfire_grace_time=60)
     scheduler.start()
 
     yield
