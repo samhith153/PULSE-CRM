@@ -343,7 +343,7 @@ function DonutChart({
               initial={{ strokeDashoffset: CIRC }}
               animate={{ strokeDashoffset: seg.offset }}
               transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: i * 0.05 }}
-              className="cursor-pointer transition-all duration-200"
+              className="cursor-pointer transition duration-200"
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             />
@@ -495,7 +495,7 @@ export default function AdminDashboardView() {
       {/* Revenue chart + Lead Sources */}
       <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
         {/* Revenue over time */}
-        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
@@ -529,7 +529,7 @@ export default function AdminDashboardView() {
         </div>
 
         {/* Lead sources donut */}
-        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
           <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
               Lead sources
@@ -891,7 +891,7 @@ export default function AdminDashboardView() {
       </div>
 
       {/* Top companies table */}
-      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
+      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-semibold tracking-tight text-foreground">Top companies</h2>
           <span className="text-xs font-medium text-brand-purple cursor-pointer hover:underline">

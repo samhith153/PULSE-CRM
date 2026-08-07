@@ -149,7 +149,7 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
               <button
                 key={item.id}
                 onClick={() => setActiveSubTab(item.id as any)}
-                className={`w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition-all text-left cursor-pointer ${
+                className={`w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition text-left cursor-pointer ${
                   isSelected 
                     ? 'bg-brand-purple/10 text-brand-purple' 
                     : 'hover:bg-secondary text-muted-foreground hover:text-foreground'

@@ -305,7 +305,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               <button
                 type="button"
                 onClick={() => toggleViewMode('kanban')}
-                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                className={`p-1.5 rounded-md transition cursor-pointer ${
                   viewMode === 'kanban'
                     ? 'bg-card text-brand-purple shadow-sm font-bold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -317,7 +317,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               <button
                 type="button"
                 onClick={() => toggleViewMode('list')}
-                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                className={`p-1.5 rounded-md transition cursor-pointer ${
                   viewMode === 'list'
                     ? 'bg-card text-brand-purple shadow-sm font-bold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -500,7 +500,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                     return (
                       <tr 
                         key={deal.id}
-                        className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                        className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
                       >
                         <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
                           <input 
@@ -573,7 +573,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
         </div>
       ) : (
-        <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-brand-border-purple/20 scrollbar-track-transparent">
+        <div className="flex space-x-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
           {stages.map((stage) => {
             const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
             const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
@@ -614,7 +614,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       });
                       setIsEditModalOpen(true);
                     }}
-                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-200 cursor-pointer select-none"
+                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
                   >
                     <div className="flex justify-between items-start gap-1">
                       <h4 className="text-[11px] font-semibold text-foreground leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>

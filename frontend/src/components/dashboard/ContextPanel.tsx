@@ -84,7 +84,7 @@ export default function ContextPanel({
     <div className="space-y-[var(--space-4)]">
       
       {/* Contact Profile Card */}
-      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] hover:shadow-nav transition-all duration-300">
+      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] hover:shadow-nav transition duration-300">
         <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 border-b border-border pb-1.5 mb-[var(--space-3)]">
           Contact Information
         </h4>
@@ -133,14 +133,14 @@ export default function ContextPanel({
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button 
             onClick={handlePhoneClick}
-            className="flex items-center justify-center gap-1.5 py-1.5 border border-border bg-secondary/20 hover:bg-secondary/50 text-foreground rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 py-1.5 border border-border bg-secondary/20 hover:bg-secondary/50 text-foreground rounded-lg text-[10px] font-bold transition cursor-pointer"
           >
             <Phone className="size-3" />
             <span>Quick Call</span>
           </button>
           <button 
             onClick={handleEmailClick}
-            className="flex items-center justify-center gap-1.5 py-1.5 border border-border bg-secondary/20 hover:bg-secondary/50 text-foreground rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+            className="flex items-center justify-center gap-1.5 py-1.5 border border-border bg-secondary/20 hover:bg-secondary/50 text-foreground rounded-lg text-[10px] font-bold transition cursor-pointer"
           >
             <Mail className="size-3" />
             <span>Send Email</span>
@@ -149,7 +149,7 @@ export default function ContextPanel({
       </div>
 
       {/* Linked Deal card */}
-      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] hover:shadow-nav transition-all duration-300">
+      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] hover:shadow-nav transition duration-300">
         <div className="flex items-center justify-between border-b border-border pb-1.5 mb-[var(--space-3)]">
           <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 leading-none">
             Related Deal
@@ -199,7 +199,7 @@ export default function ContextPanel({
       </div>
 
       {/* Linked Open Activities Count Card */}
-      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] hover:shadow-nav transition-all duration-300">
+      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] hover:shadow-nav transition duration-300">
         <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 border-b border-border pb-1.5 mb-[var(--space-3)]">
           Open Activities Count
         </h4>
@@ -214,7 +214,7 @@ export default function ContextPanel({
               <button
                 key={idx}
                 onClick={() => router.push(`/activities?type=${item.filter}`)}
-                className="flex flex-col items-center justify-center p-2.5 border border-border/60 hover:border-brand-purple/20 bg-secondary/20 hover:bg-secondary/50 rounded-xl text-center group cursor-pointer transition-all duration-200"
+                className="flex flex-col items-center justify-center p-2.5 border border-border/60 hover:border-brand-purple/20 bg-secondary/20 hover:bg-secondary/50 rounded-xl text-center group cursor-pointer transition duration-200"
               >
                 <div className={`size-7 rounded-lg flex items-center justify-center border shrink-0 ${item.color}`}>
                   <Icon size={12} strokeWidth={2.25} />

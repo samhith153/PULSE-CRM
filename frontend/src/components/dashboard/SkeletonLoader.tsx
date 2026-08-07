@@ -110,7 +110,7 @@ export default function SkeletonLoader({
               {/* Simulated bars */}
               <div className="flex items-end justify-between h-48 pt-6">
                 {[40, 70, 45, 90, 60, 80, 50, 85, 30, 95].map((h, i) => (
-                  <div key={i} className="bg-slate-200/40 dark:bg-slate-700/30 rounded-t w-[8%] transition-all" style={{ height: `${h}%` }} />
+                  <div key={i} className="bg-slate-200/40 dark:bg-slate-700/30 rounded-t w-[8%] transition" style={{ height: `${h}%` }} />
                 ))}
               </div>
             </div>

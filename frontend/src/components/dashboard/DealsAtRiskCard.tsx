@@ -107,10 +107,10 @@ export default function DealsAtRiskCard({
 
   return (
     <div
-      className={`bg-card/90 backdrop-blur-md border border-amber-500/20 dark:border-amber-500/25 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-amber-500/5 transition-all duration-300 flex flex-col justify-between relative overflow-hidden group ${className}`}
+      className={`bg-card/90 backdrop-blur-md border border-amber-500/20 dark:border-amber-500/25 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-amber-500/5 transition duration-300 flex flex-col justify-between relative overflow-hidden group ${className}`}
     >
       {/* Background ambient warm amber aura pulse */}
-      <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-500/8 blur-3xl pointer-events-none group-hover:bg-amber-500/12 transition-all duration-500" />
+      <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-500/8 blur-3xl pointer-events-none group-hover:bg-amber-500/12 transition duration-500" />
       <div>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 mb-3.5 border-b border-border/60">
@@ -154,7 +154,7 @@ export default function DealsAtRiskCard({
             <div className="flex items-center space-x-1 bg-muted/50 p-0.5 rounded-lg border border-border/40">
               <button
                 onClick={() => setFilter('all')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition ${
                   filter === 'all'
                     ? 'bg-card text-foreground shadow-xs border border-border/60'
                     : 'text-muted-foreground hover:text-foreground'
@@ -164,7 +164,7 @@ export default function DealsAtRiskCard({
               </button>
               <button
                 onClick={() => setFilter('critical')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition ${
                   filter === 'critical'
                     ? 'bg-destructive/15 text-destructive shadow-xs border border-destructive/25'
                     : 'text-muted-foreground hover:text-foreground'
@@ -174,7 +174,7 @@ export default function DealsAtRiskCard({
               </button>
               <button
                 onClick={() => setFilter('high_value')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition ${
                   filter === 'high_value'
                     ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs border border-amber-500/25'
                     : 'text-muted-foreground hover:text-foreground'
@@ -224,7 +224,7 @@ export default function DealsAtRiskCard({
                       setExpandedId(isExpanded ? null : deal.id);
                       if (onSelectDeal) onSelectDeal(deal.raw);
                     }}
-                    className={`group/item rounded-xl p-3 border transition-all duration-200 cursor-pointer relative overflow-hidden ${
+                    className={`group/item rounded-xl p-3 border transition duration-200 cursor-pointer relative overflow-hidden ${
                       deal.isCritical
                         ? 'border-amber-500/30 bg-amber-500/8 hover:bg-amber-500/12 hover:border-amber-500/45'
                         : 'border-border/80 bg-muted/30 hover:bg-muted/60 hover:border-amber-500/30'
@@ -277,7 +277,7 @@ export default function DealsAtRiskCard({
                         <button
                           onClick={(e) => handleNudge(e, deal)}
                           title={`Send alert to ${deal.owner}`}
-                          className={`px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 transition-all ${
+                          className={`px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 transition ${
                             isNudged
                               ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/30'
                               : 'bg-card border border-border/80 hover:border-amber-500/50 text-foreground hover:text-amber-600 hover:bg-amber-500/10'

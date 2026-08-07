@@ -1,10 +1,13 @@
 """
 User Management Routes
 GET    /api/v1/users
+GET    /api/v1/users/deleted
 POST   /api/v1/users
 GET    /api/v1/users/{id}
 PUT    /api/v1/users/{id}
 DELETE /api/v1/users/{id}
+POST   /api/v1/users/{id}/restore
+DELETE /api/v1/users/{id}/permanent
 POST   /api/v1/users/{id}/activate
 POST   /api/v1/users/{id}/deactivate
 POST   /api/v1/users/{id}/roles
@@ -12,7 +15,7 @@ POST   /api/v1/users/{id}/roles
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, DBSession, require_permission
 from app.schemas.common import PaginatedResponse, StandardResponse
@@ -39,6 +42,32 @@ async def list_users(
 ) -> dict:
     svc = UserService(db)
     users, total = await svc.list_users(
+        current_user.organization_id, search, page, page_size
+    )
+    paginated = PaginatedResponse.create(
+        data=[UserResponse.from_orm_with_roles(u) for u in users],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.get(
+    "/deleted",
+    response_model=StandardResponse[PaginatedResponse[UserResponse]],
+    summary="List archived (soft-deleted) users",
+    dependencies=[Depends(require_permission("user:delete"))],
+)
+async def list_deleted_users(
+    current_user: CurrentUser,
+    db: DBSession,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    search: Optional[str] = Query(default=None),
+) -> dict:
+    svc = UserService(db)
+    users, total = await svc.list_deleted_users(
         current_user.organization_id, search, page, page_size
     )
     paginated = PaginatedResponse.create(
@@ -103,7 +132,7 @@ async def update_user(
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete user (soft)",
+    summary="Delete user (admin: permanent, manager: deactivate)",
     dependencies=[Depends(require_permission("user:delete"))],
 )
 async def delete_user(
@@ -112,7 +141,7 @@ async def delete_user(
     db: DBSession,
 ) -> None:
     svc = UserService(db)
-    await svc.delete_user(user_id, current_user.organization_id, current_user.id)
+    await svc.delete_user(user_id, current_user.organization_id, current_user.id, current_user)
 
 
 @router.post(
@@ -167,6 +196,37 @@ async def assign_roles(
 
 
 @router.post(
+    "/{user_id}/restore",
+    response_model=StandardResponse[UserResponse],
+    summary="Restore archived user",
+    dependencies=[Depends(require_permission("user:delete"))],
+)
+async def restore_user(
+    user_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    svc = UserService(db)
+    user = await svc.restore_user(user_id, current_user.organization_id, current_user.id)
+    return {"success": True, "message": "User restored.", "data": UserResponse.from_orm_with_roles(user)}
+
+
+@router.delete(
+    "/{user_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete archived user (admin only)",
+    dependencies=[Depends(require_permission("user:delete"))],
+)
+async def permanent_delete_user(
+    user_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> None:
+    svc = UserService(db)
+    await svc.permanent_delete_user(user_id, current_user.organization_id, current_user.id)
+
+
+@router.post(
     "/{user_id}/reset-password",
     response_model=StandardResponse[dict],
     summary="Reset user password (admin only)",
@@ -209,5 +269,5 @@ async def reset_user_password(
     return {
         "success": True,
         "message": "Password reset successfully. The user will be notified via email.",
-        "data": {},
+        "data": {"new_password": new_password},
     }

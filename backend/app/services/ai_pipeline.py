@@ -93,7 +93,9 @@ async def _fetch_latest_intent(db: AsyncSession, lead_id: UUID) -> Optional[str]
     result = await db.execute(stmt)
     summary = result.scalar_one_or_none()
     if summary:
-        return summary.intent or summary.summary_word
+        logger.info("[FETCH_INTENT] Found summary for lead=%s: intent=%s summary_word=%s", lead_id, summary.intent, summary.summary_word)
+        return summary.summary_word or summary.intent
+    logger.warning("[FETCH_INTENT] No summary found for lead=%s", lead_id)
     return None
 
 
@@ -126,6 +128,7 @@ async def run_lead_assessment(
     organization_id: UUID,
     created_by: UUID,
     trigger: str = "lead_updated",
+    intent: Optional[str] = None,
 ) -> Optional[dict]:
     """
     End-to-end lead assessment: gather data → call ai-service → persist.
@@ -181,7 +184,6 @@ async def run_lead_assessment(
 
     # ── Email analytics (only if engagement is needed) ──────────────────
     email_stats = None
-    intent = None
     if computation["engagement"]:
         email_svc = EmailStatsService(db)
         email_stats = await email_svc.get_lead_email_stats(lead_id, organization_id)
@@ -194,8 +196,15 @@ async def run_lead_assessment(
         raw_data["last_inbound_at"] = last_inbound.isoformat() if last_inbound else None
 
         # ── Intent ──────────────────────────────────────────────────────
-        intent = await _fetch_latest_intent(db, lead_id)
-        raw_data["intent"] = intent
+        # Use the intent passed from summarization (avoids race condition
+        # with uncommitted email rows). Fall back to DB query.
+        if intent:
+            raw_data["intent"] = intent
+        else:
+            intent = await _fetch_latest_intent(db, lead_id)
+            raw_data["intent"] = intent
+        logger.info("[ASSESS_PIPELINE] lead=%s trigger=%s intent=%s inbound=%s initiated=%s last_inbound=%s",
+            lead_id, trigger, intent, email_stats["inbound_count"], email_stats["initiated_count"], last_inbound)
     else:
         # Still include basic email stats for fit-only events
         email_svc = EmailStatsService(db)
@@ -211,8 +220,16 @@ async def run_lead_assessment(
         await ai_client.close()
 
     if not result:
-        logger.warning("AI service unavailable; lead %s not assessed", lead_id)
+        logger.warning("[ASSESS_PIPELINE] AI service returned None for lead %s — no scores persisted", lead_id)
         return None
+
+    logger.info("[ASSESS_PIPELINE] AI service responded for lead=%s: fit=%s engagement=%s overall=%s tier=%s",
+        lead_id,
+        result.get("fit", {}).get("score"),
+        result.get("engagement", {}).get("score"),
+        result.get("overall", {}).get("score"),
+        result.get("overall", {}).get("tier"),
+    )
 
     # ── Persist lead_scores ─────────────────────────────────────────────
     scores_data = {

@@ -50,7 +50,7 @@ async def list_leads(
 ) -> dict:
     svc = LeadService(db)
     leads, total = await svc.list(
-        current_user.organization_id,
+        current_user,
         search, status, owner_id, company_id, contact_id,
         page, page_size,
     )
@@ -92,7 +92,7 @@ async def get_lead(
     db: DBSession,
 ) -> dict:
     svc = LeadService(db)
-    lead = await svc.get(lead_id, current_user.organization_id)
+    lead = await svc.get(lead_id, current_user)
     return {"success": True, "message": "OK", "data": LeadResponse.from_lead(lead)}
 
 
@@ -109,7 +109,7 @@ async def update_lead(
     db: DBSession,
 ) -> dict:
     svc = LeadService(db)
-    lead = await svc.update(lead_id, current_user.organization_id, payload)
+    lead = await svc.update(lead_id, current_user, payload)
     return {"success": True, "message": "Lead updated.", "data": LeadResponse.from_lead(lead)}
 
 
@@ -131,7 +131,7 @@ async def update_lead_status(
     db: DBSession,
 ) -> dict:
     svc = LeadService(db)
-    lead = await svc.update_status(lead_id, current_user.organization_id, payload)
+    lead = await svc.update_status(lead_id, current_user, payload)
     return {"success": True, "message": "Lead status updated.", "data": LeadResponse.from_lead(lead)}
 
 
@@ -148,7 +148,7 @@ async def assign_lead(
     db: DBSession,
 ) -> dict:
     svc = LeadService(db)
-    lead = await svc.assign(lead_id, current_user.organization_id, payload)
+    lead = await svc.assign(lead_id, current_user, payload)
     return {"success": True, "message": "Lead assigned.", "data": LeadResponse.from_lead(lead)}
 
 
@@ -176,8 +176,7 @@ async def convert_lead(
     pipeline_stage_id = payload.pipeline_stage_id if payload else None
     deal = await svc.convert_to_deal(
         lead_id,
-        current_user.organization_id,
-        current_user.id,
+        current_user,
         industry=industry,
         revenue=revenue,
         employee_count=employee_count,
@@ -189,7 +188,7 @@ async def convert_lead(
 @router.delete(
     "/{lead_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete lead (hard)",
+    summary="Delete lead (hard for admin, soft for sales rep)",
     dependencies=[Depends(require_permission("lead:delete"))],
 )
 async def delete_lead(
@@ -198,4 +197,4 @@ async def delete_lead(
     db: DBSession,
 ) -> None:
     svc = LeadService(db)
-    await svc.delete(lead_id, current_user.organization_id)
+    await svc.delete(lead_id, current_user)

@@ -188,14 +188,14 @@ export function SiteHeader({ onOpenSignUp, onOpenSignIn }: SiteHeaderProps) {
       {/* Main nav */}
       <div
         className={cn(
-          "relative z-50 border-b border-border bg-background transition-all duration-300",
+          "relative z-50 border-b border-border bg-background transition duration-300",
           scrolled ? "shadow-nav" : "",
         )}
         onMouseLeave={() => setOpenMenu(null)}
       >
         <div
           className={cn(
-            "mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 transition-all duration-300 lg:grid-cols-[auto_1fr_auto]",
+            "mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-6 transition duration-300 lg:grid-cols-[auto_1fr_auto]",
             scrolled ? "h-14" : "h-18",
           )}
         >

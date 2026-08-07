@@ -174,7 +174,7 @@ export default function ForecastView() {
             <button
               key={q}
               onClick={() => setActiveTab(q as any)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition duration-200 cursor-pointer ${
                 activeTab === q 
                   ? 'bg-card text-foreground shadow-sm border border-border/40' 
                   : 'text-muted-foreground hover:text-foreground'
@@ -224,7 +224,7 @@ export default function ForecastView() {
         </div>
 
         {/* Confidence Score Gauge (Col 4) */}
-        <div className="col-span-12 lg:col-span-4 bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300 flex flex-col items-center justify-between text-center relative overflow-hidden">
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition duration-300 flex flex-col items-center justify-between text-center relative overflow-hidden">
           <div className="w-full flex justify-between items-center text-left mb-2">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">AI Confidence Score</span>
             <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
@@ -243,7 +243,7 @@ export default function ForecastView() {
       </div>
 
       {/* Monthly Forecast Breakdown */}
-      <div className="bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300">
+      <div className="bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition duration-300">
         <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/40">
           <h3 className="font-bold text-foreground text-sm flex items-center">
             <Calendar className="h-4.5 w-4.5 mr-2 text-[var(--accent-color)]" />
@@ -277,12 +277,12 @@ export default function ForecastView() {
                 <div className="relative h-6 w-full bg-slate-100 rounded-lg overflow-hidden flex items-center px-2.5">
                   {/* Expected bar */}
                   <div 
-                    className="absolute left-0 top-0 bottom-0 bg-brand-accent/35 border-r border-brand-accent/50 transition-all duration-300"
+                    className="absolute left-0 top-0 bottom-0 bg-brand-accent/35 border-r border-brand-accent/50 transition duration-300"
                     style={{ width: `${Math.min((item.expected / maxVal) * 100, 100)}%` }}
                   />
                   {/* Best Case bar */}
                   <div 
-                    className="absolute left-0 top-0 bottom-0 bg-brand-secondary-accent/15 border-r border-brand-secondary-accent/30 transition-all duration-300"
+                    className="absolute left-0 top-0 bottom-0 bg-brand-secondary-accent/15 border-r border-brand-secondary-accent/30 transition duration-300"
                     style={{ width: `${Math.min((item.bestCase / maxVal) * 100, 100)}%` }}
                   />
                   {/* Pipeline line marker */}
@@ -302,7 +302,7 @@ export default function ForecastView() {
       </div>
 
       {/* Quarterly Forecast Grid */}
-      <div className="bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300">
+      <div className="bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition duration-300">
         <h3 className="font-bold text-foreground text-sm flex items-center mb-4 pb-2 border-b border-border/40">
           <TrendingUp className="h-4.5 w-4.5 mr-2 text-[var(--accent-color)]" />
           <span>Quarterly Forecast Projections Matrix</span>
