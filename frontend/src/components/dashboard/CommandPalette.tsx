@@ -240,7 +240,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
                   <button
                     onClick={item.action}
                     onMouseEnter={() => handleItemHover(idx)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition-all duration-150 cmd-item ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition duration-150 cmd-item ${
                       isActive 
                         ? 'bg-brand-blue/[0.08] text-brand-blue border-l-3 border-brand-blue pl-2' 
                         : 'text-muted-foreground/75 hover:bg-secondary hover:text-muted-foreground border-l-3 border-transparent'

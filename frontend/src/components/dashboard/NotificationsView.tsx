@@ -87,7 +87,7 @@ export default function NotificationsView() {
               notifications.map((item) => (
                 <div 
                   key={item.id} 
-                  className={`p-4 border rounded-xl flex items-start justify-between space-x-4 transition-all duration-200 ${
+                  className={`p-4 border rounded-xl flex items-start justify-between space-x-4 transition duration-200 ${
                     item.is_read 
                       ? 'border-border bg-secondary/20 opacity-70' 
                       : 'border-border bg-card'

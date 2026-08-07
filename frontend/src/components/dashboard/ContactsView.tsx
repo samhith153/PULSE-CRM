@@ -310,7 +310,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
                 <button
                   type="button"
                   onClick={() => toggleViewMode('default')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'default'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -322,7 +322,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
                 <button
                   type="button"
                   onClick={() => toggleViewMode('list')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'list'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -398,7 +398,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
                         <tr 
                           key={con.id} 
                           onClick={() => setSelectedId(con.id)}
-                          className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                          className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
                         >
                           <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
                             <input 
@@ -475,7 +475,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
                         e.stopPropagation();
                         setSelectedId(prevId => prevId === con.id ? null : prevId);
                       }}
-                      className={`hover:bg-secondary/40 cursor-pointer transition-all duration-200 border-b border-border/40 ${con.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
+                      className={`hover:bg-secondary/40 cursor-pointer transition duration-200 border-b border-border/40 ${con.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
                     >
                       <td className="py-3.5 px-4 font-semibold text-foreground truncate max-w-[150px]">{con.name}</td>
                       <td className="py-3.5 text-muted-foreground truncate max-w-[130px]">{con.company}</td>
@@ -533,7 +533,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
             {/* Close Button */}
             <button 
               onClick={() => setSelectedId(null)}
-              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
+              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
               title="Close Summary"
               aria-label="Close Summary"
             >
@@ -602,7 +602,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
                 <button
                   key={tab}
                   onClick={() => setActiveHistoryTab(tab as any)}
-                  className={`pb-1.5 px-2 border-b-2 transition-all cursor-pointer ${
+                  className={`pb-1.5 px-2 border-b-2 transition cursor-pointer ${
                     activeHistoryTab === tab ? 'border-brand-purple text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >

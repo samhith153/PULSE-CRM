@@ -279,7 +279,7 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
 
   return (
     <div className="flex border border-border rounded-2xl overflow-hidden bg-card h-[650px] relative">
-      <aside className={`shrink-0 border-r border-border bg-secondary flex flex-col gap-2 transition-all duration-300 ${isAsideCollapsed ? 'w-12 p-1.5' : 'w-56 p-3'}`}>
+      <aside className={`shrink-0 border-r border-border bg-secondary flex flex-col gap-2 transition duration-300 ${isAsideCollapsed ? 'w-12 p-1.5' : 'w-56 p-3'}`}>
         <div className="flex items-center justify-between mb-2">
           {!isAsideCollapsed && <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider pl-2">Mailbox</span>}
           <button 
@@ -293,7 +293,7 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
 
         <button 
           onClick={openBlankCompose}
-          className={`flex items-center justify-center gap-2 py-2 bg-brand-purple hover:bg-brand-purple/95 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm mb-2 ${isAsideCollapsed ? 'w-8 h-8 rounded-full p-0 mx-auto' : 'w-full'}`}
+          className={`flex items-center justify-center gap-2 py-2 bg-brand-purple hover:bg-brand-purple/95 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-sm mb-2 ${isAsideCollapsed ? 'w-8 h-8 rounded-full p-0 mx-auto' : 'w-full'}`}
           title="Compose"
         >
           <Plus className="h-4 w-4" />
@@ -313,7 +313,7 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
               <button 
                 key={item.id} 
                 onClick={() => { setFilter(item.id as MailboxFilter); setPage(1); }} 
-                className={`flex items-center rounded-r-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center rounded-r-full text-xs font-semibold transition cursor-pointer ${
                   isAsideCollapsed 
                     ? 'justify-center p-2 rounded-full w-8 h-8 mx-auto' 
                     : 'w-full justify-between px-4 py-2'

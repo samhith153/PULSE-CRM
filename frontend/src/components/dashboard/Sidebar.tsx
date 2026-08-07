@@ -179,7 +179,7 @@ export default function Sidebar({
   /* Shared active / inactive styles */
   const itemBase = cn(
     'group relative w-full flex items-center rounded-xl py-2 text-sm z-0 overflow-hidden',
-    'transition-all duration-200 cursor-pointer',
+    'transition duration-200 cursor-pointer',
   );
   const itemActive = cn(
     'text-brand-blue font-semibold',

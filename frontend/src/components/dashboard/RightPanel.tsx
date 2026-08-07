@@ -108,7 +108,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
 
       {/* Key Metrics Summary */}
-      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300">
+      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300">
         <h3 className="font-bold text-foreground text-sm mb-4">Key metrics summary</h3>
         
         <div className="space-y-2">
@@ -117,7 +117,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
             return (
               <div 
                 key={idx} 
-                className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition-all duration-200 border border-transparent hover:border-border"
+                className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition duration-200 border border-transparent hover:border-border"
               >
                 {/* Icon (text-brand-purple, 14px/16px) */}
                 <div className="size-8 rounded-lg bg-background text-brand-purple flex items-center justify-center border border-border shrink-0">
@@ -149,7 +149,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
       </div>
 
       {/* Recent Reports */}
-      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300">
+      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-foreground text-sm">Recent reports</h3>
           {/* Avatar Stack implied collaboration detail */}
@@ -177,7 +177,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, delay: idx * 0.06 }}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition-all duration-200 border cursor-pointer hover:-translate-y-0.5 hover:shadow-nav hover:bg-secondary/70",
+                  "flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition duration-200 border cursor-pointer hover:-translate-y-0.5 hover:shadow-nav hover:bg-secondary/70",
                   isFirst ? "border-brand-purple/30 bg-brand-purple/5 shadow-[inset_3px_0_0_0_var(--brand-purple)] pl-4" : "border-transparent hover:border-border"
                 )}
               >
@@ -203,7 +203,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
         <div className="mt-4 pt-3 border-t border-border text-center">
           <a 
             href="#" 
-            className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+            className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
           >
             <span>View all reports</span>
             <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />

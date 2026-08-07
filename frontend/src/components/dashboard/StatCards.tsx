@@ -59,6 +59,14 @@ function Spark({
   const range = max - min || 1;
   const n = points.length;
 
+  if (n === 0) {
+    return (
+      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-8 w-full" aria-hidden>
+        <line x1="0" y1="34" x2="100" y2="34" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+      </svg>
+    );
+  }
+
   // Map to SVG coords: x 0→100, y 2→30 (leave margin top+bottom)
   const coords = points.map((p, i) => ({
     x: (i / (n - 1)) * 100,
@@ -151,10 +159,10 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
       animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 relative overflow-hidden group cursor-pointer flex flex-col justify-between"
+      className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 relative overflow-hidden group cursor-pointer flex flex-col justify-between"
     >
       {/* Background ambient radial aura pulse */}
-      <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-primary/5 blur-2xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+      <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-primary/5 blur-2xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
 
       {/* Row 1 — Icon + Label */}
       <div className="flex items-center justify-between pb-2 border-b border-border/40">
@@ -168,14 +176,16 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
         </div>
 
         {/* Trend pill badge */}
-        <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-          stat.isPositive 
-            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-        }`}>
-          <Delta size={9} className="shrink-0" strokeWidth={3} />
-          <span>{stat.change}</span>
-        </span>
+        {stat.change !== '—' && (
+          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+            stat.isPositive 
+              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+          }`}>
+            <Delta size={9} className="shrink-0" strokeWidth={3} />
+            <span>{stat.change}</span>
+          </span>
+        )}
       </div>
 
       {/* Row 2 — Main Value */}
@@ -209,6 +219,22 @@ function SkeletonTile() {
       <div className="mt-3.5 pt-1 border-t border-border/20">
         <div className="h-8 w-full rounded bg-secondary" />
       </div>
+    </div>
+  );
+}
+
+/* ─── Empty state (no data yet) ────────────────────────────────────── */
+function KpiEmptyState() {
+  return (
+    <div className="col-span-full rounded-2xl border border-dashed border-border bg-card/50 p-10 flex flex-col items-center justify-center text-center gap-3">
+      <div className="h-12 w-12 rounded-2xl bg-secondary flex items-center justify-center text-muted-foreground">
+        <TrendingUp size={22} strokeWidth={1.75} />
+      </div>
+      <p className="text-sm font-semibold text-foreground">No performance data yet</p>
+      <p className="text-xs text-muted-foreground max-w-sm">
+        Add deals, leads, and activities to your workspace — revenue, win rate, pipeline,
+        and more will appear here automatically.
+      </p>
     </div>
   );
 }
@@ -259,87 +285,70 @@ export default function StatCards({
     const cycle = kpi?.avg_sales_cycle_stat;
     const pipeline = kpi?.key_metrics;
 
-    // Muted/fallback data to avoid empty "—" states when backend is loading/unpopulated
-    const defaultData = {
-      revenue: { total: 12450000, growth: 18, points: [7.2, 7.8, 8.1, 8.5, 9.0, 9.4, 10.1, 10.8, 11.5, 12.45] },
-      wonDeals: { count: 248, growth: 12, points: [180, 192, 198, 205, 212, 220, 228, 235, 240, 248] },
-      winRate: { rate: 24.5, growth: 4, points: [22.1, 22.4, 22.8, 23.1, 23.4, 23.7, 24.0, 24.2, 24.3, 24.5] },
-      avgDeal: { val: 150000, growth: 8, points: [132, 135, 138, 140, 142, 145, 146, 148, 149, 150] },
-      salesCycle: { days: 18, diff: -3, points: [22, 21, 21, 20, 20, 19, 19, 18, 18, 18] },
-      pipeline: { total: 45200000, growth: 14, points: [32.0, 33.5, 35.0, 36.2, 38.0, 39.5, 41.0, 42.5, 44.0, 45.2] }
-    };
-
-    const useRealRevenue = rev && asNumber(rev.total) > 0;
-    const useRealWon = won && asNumber(won.count) > 0;
-    const useRealWin = win && asNumber(win.win_rate) > 0;
-    const useRealAvgDeal = avgDeal && asNumber(avgDeal.avg_deal_value) > 0;
-    const useRealCycle = cycle && asNumber(cycle.avg_days) > 0;
-    const useRealPipeline = pipeline && asNumber(pipeline.pipeline_value) > 0;
-
     return [
       {
         title: 'Total Revenue',
-        rawValue: formatINR(useRealRevenue ? rev.total : defaultData.revenue.total),
-        change: useRealRevenue ? `${Math.abs(Math.round(asNumber(rev.growth_pct)))}%` : `${defaultData.revenue.growth}%`,
-        isPositive: useRealRevenue ? asNumber(rev.growth_pct) >= 0 : true,
+        rawValue: formatINR(rev?.total),
+        change: rev ? `${Math.abs(Math.round(asNumber(rev.growth_pct)))}%` : '—',
+        isPositive: rev ? asNumber(rev.growth_pct) >= 0 : true,
         icon: IndianRupee,
         iconGrad: 'grad-blue-purple',
-        points: useRealRevenue ? buildSpark(asNumber(rev.total) / 10 || 10, asNumber(rev.growth_pct)) : defaultData.revenue.points,
-        targetValue: useRealRevenue ? asNumber(rev.total) : defaultData.revenue.total,
+        points: rev ? buildSpark(asNumber(rev.total) / 10 || 10, asNumber(rev.growth_pct)) : [],
+        targetValue: asNumber(rev?.total),
         prefix: '₹',
       },
       {
         title: 'Won Deals',
-        rawValue: useRealWon ? String(won.count) : String(defaultData.wonDeals.count),
-        change: useRealWon ? `${Math.abs(Math.round(asNumber(won.growth_pct)))}%` : `${defaultData.wonDeals.growth}%`,
-        isPositive: useRealWon ? asNumber(won.growth_pct) >= 0 : true,
+        rawValue: won ? String(won.count) : '0',
+        change: won ? `${Math.abs(Math.round(asNumber(won.growth_pct)))}%` : '—',
+        isPositive: won ? asNumber(won.growth_pct) >= 0 : true,
         icon: Award,
         iconGrad: 'grad-teal-purple',
-        points: useRealWon ? buildSpark(won.count * 2 || 10, asNumber(won.growth_pct)) : defaultData.wonDeals.points,
-        targetValue: useRealWon ? asNumber(won.count) : defaultData.wonDeals.count,
+        points: won ? buildSpark(won.count * 2 || 10, asNumber(won.growth_pct)) : [],
+        targetValue: asNumber(won?.count),
       },
       {
         title: 'Win Rate',
-        rawValue: useRealWin ? `${asNumber(win.win_rate).toFixed(1)}%` : `${defaultData.winRate.rate}%`,
-        change: useRealWin ? `${Math.abs(Math.round(asNumber(win.growth_pct)))}%` : `${defaultData.winRate.growth}%`,
-        isPositive: useRealWin ? asNumber(win.growth_pct) >= 0 : true,
+        rawValue: win ? `${asNumber(win.win_rate).toFixed(1)}%` : '0%',
+        change: win ? `${Math.abs(Math.round(asNumber(win.growth_pct)))}%` : '—',
+        isPositive: win ? asNumber(win.growth_pct) >= 0 : true,
         icon: Target,
         iconGrad: 'grad-blue-purple',
-        points: useRealWin ? buildSpark(asNumber(win.win_rate) * 2 || 10, asNumber(win.growth_pct)) : defaultData.winRate.points,
-        targetValue: useRealWin ? asNumber(win.win_rate) : defaultData.winRate.rate,
+        points: win ? buildSpark(asNumber(win.win_rate) * 2 || 10, asNumber(win.growth_pct)) : [],
+        targetValue: asNumber(win?.win_rate),
         suffix: '%',
       },
       {
         title: 'Avg. Deal Size',
-        rawValue: formatINR(useRealAvgDeal ? avgDeal.avg_deal_value : defaultData.avgDeal.val),
-        change: useRealAvgDeal ? `${Math.abs(Math.round(asNumber(avgDeal.growth_pct)))}%` : `${defaultData.avgDeal.growth}%`,
-        isPositive: useRealAvgDeal ? asNumber(avgDeal.growth_pct) >= 0 : true,
+        rawValue: formatINR(avgDeal?.avg_deal_value),
+        change: avgDeal ? `${Math.abs(Math.round(asNumber(avgDeal.growth_pct)))}%` : '—',
+        isPositive: avgDeal ? asNumber(avgDeal.growth_pct) >= 0 : true,
         icon: UserCheck,
         iconGrad: 'grad-pink-purple',
-        points: useRealAvgDeal ? buildSpark(asNumber(avgDeal.avg_deal_value) / 10 || 10, asNumber(avgDeal.growth_pct)) : defaultData.avgDeal.points,
-        targetValue: useRealAvgDeal ? asNumber(avgDeal.avg_deal_value) : defaultData.avgDeal.val,
+        points: avgDeal ? buildSpark(asNumber(avgDeal.avg_deal_value) / 10 || 10, asNumber(avgDeal.growth_pct)) : [],
+        targetValue: asNumber(avgDeal?.avg_deal_value),
         prefix: '₹',
       },
       {
         title: 'Avg. Sales Cycle',
-        rawValue: useRealCycle ? `${Math.round(asNumber(cycle.avg_days))} days` : `${defaultData.salesCycle.days} days`,
-        change: useRealCycle ? `${Math.abs(Math.round(asNumber(-cycle.difference_days)))}d` : `${Math.abs(defaultData.salesCycle.diff)}d`,
-        isPositive: useRealCycle ? asNumber(cycle.difference_days) <= 0 : true,
+        rawValue: cycle ? `${Math.round(asNumber(cycle.avg_days))} days` : '0 days',
+        change: cycle ? `${Math.abs(Math.round(asNumber(-cycle.difference_days)))}d` : '—',
+        isPositive: cycle ? asNumber(cycle.difference_days) <= 0 : true,
         icon: Clock,
         iconGrad: 'grad-teal-purple',
-        points: useRealCycle ? buildSpark(asNumber(cycle.avg_days) * 2 || 10, -asNumber(cycle.difference_days)) : defaultData.salesCycle.points,
-        targetValue: useRealCycle ? asNumber(cycle.avg_days) : defaultData.salesCycle.days,
+        points: cycle ? buildSpark(asNumber(cycle.avg_days) * 2 || 10, -asNumber(cycle.difference_days)) : [],
+        targetValue: asNumber(cycle?.avg_days),
         suffix: ' days',
       },
       {
         title: 'Pipeline Value',
-        rawValue: formatINR(useRealPipeline ? pipeline.pipeline_value : defaultData.pipeline.total),
-        change: useRealPipeline ? `${Math.abs(Math.round(asNumber(pipeline.pipeline_value_growth_pct)))}%` : `${defaultData.pipeline.growth}%`,
-        isPositive: useRealPipeline ? asNumber(pipeline.pipeline_value_growth_pct) >= 0 : true,
+        rawValue: formatINR(pipeline?.pipeline_value),
+        change: pipeline ? `${Math.abs(Math.round(asNumber(pipeline.pipeline_value_growth_pct)))}%` : '—',
+        isPositive: pipeline ? asNumber(pipeline.pipeline_value_growth_pct) >= 0 : true,
         icon: TrendingUp,
         iconGrad: 'grad-blue-purple',
-        points: useRealPipeline ? buildSpark(asNumber(pipeline.pipeline_value) / 10 || 10, asNumber(pipeline.pipeline_value_growth_pct)) : defaultData.pipeline.points,
-        targetValue: useRealPipeline ? asNumber(pipeline.pipeline_value) : defaultData.pipeline.total,
+        points: pipeline ? buildSpark(asNumber(pipeline.pipeline_value) / 10 || 10, asNumber(pipeline.pipeline_value_growth_pct)) : [],
+        targetValue: asNumber(pipeline?.pipeline_value),
         prefix: '₹',
       },
     ];
@@ -356,6 +365,17 @@ export default function StatCards({
       </div>
     );
   }
+
+  const hasData = !!(
+    kpi?.revenue_stat ||
+    kpi?.won_deals_stat ||
+    kpi?.win_rate_stat ||
+    kpi?.avg_deal_size_stat ||
+    kpi?.avg_sales_cycle_stat ||
+    kpi?.key_metrics
+  );
+
+  if (!hasData) return <KpiEmptyState />;
 
   const stats = getStats();
 

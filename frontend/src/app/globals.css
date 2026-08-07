@@ -416,17 +416,15 @@ body::before {
   opacity: 0.8;
 }
 
-/* Global 200ms transition helper */
-.transition-custom {
-  transition-property: all;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 200ms;
-}
-
 /* Force tabular lining numbers for alignment */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+}
+
+/* Balanced headings to avoid awkward orphan/widow lines */
+h1, h2, h3 {
+  text-wrap: balance;
 }
 
 /* Hide Turbopack / Next.js Development Issue Overlay & Debug Badges */

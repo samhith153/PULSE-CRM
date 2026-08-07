@@ -156,7 +156,7 @@ export default function CalendarView() {
                   <button
                     key={view}
                     onClick={() => setActiveView(view as any)}
-                    className={`py-1 px-3 rounded-lg font-semibold text-[10px] uppercase transition-all duration-200 cursor-pointer ${
+                    className={`py-1 px-3 rounded-lg font-semibold text-[10px] uppercase transition duration-200 cursor-pointer ${
                       activeView === view
                         ? 'bg-brand-purple text-primary-foreground'
                         : 'text-muted-foreground hover:text-foreground hover:bg-secondary'

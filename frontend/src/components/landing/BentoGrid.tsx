@@ -31,7 +31,7 @@ function Card({
 }) {
   return (
     <div
-      className={`reveal group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 backdrop-blur-sm transition-all duration-300 hover:shadow-card hover:-translate-y-0.5 ${className}`}
+      className={`reveal group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 backdrop-blur-sm transition duration-300 hover:shadow-card hover:-translate-y-0.5 ${className}`}
       data-visible={visible}
       style={{ transitionDelay: `${delay}ms` }}
     >
@@ -186,7 +186,7 @@ function SessionCard() {
           </p>
         </div>
       </div>
-      <button className="arrow-nudge mt-4 w-full justify-center inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-xs font-bold text-white bg-transparent transition-all duration-200 hover:bg-[#161B26]">
+      <button className="arrow-nudge mt-4 w-full justify-center inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-xs font-bold text-white bg-transparent transition duration-200 hover:bg-[#161B26]">
         View activity <ArrowRight size={13} />
       </button>
     </div>
@@ -204,7 +204,7 @@ function OneClickLogin() {
       {items.map((label, i) => (
         <button
           key={label}
-          className={`w-full flex items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-xs font-semibold transition-all duration-300 ${
+          className={`w-full flex items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-xs font-semibold transition duration-300 ${
             active === i
               ? "-translate-y-0.5 border-border bg-[#161B26] text-white shadow-nav"
               : "border-border/60 bg-[#161B26]/60 text-[#8A93A6]"
@@ -252,7 +252,7 @@ function OtpCard() {
         {digits.map((d, i) => (
           <span
             key={i}
-            className={`grid size-10 place-items-center rounded-full border font-mono text-sm font-semibold transition-all duration-200 ${
+            className={`grid size-10 place-items-center rounded-full border font-mono text-sm font-semibold transition duration-200 ${
               i < filled
                 ? "border-border bg-[#161B26] text-white"
                 : "border-border/30 bg-[#161B26]/30 text-white/20"
@@ -279,7 +279,7 @@ function MagicLink() {
       </div>
       {/* Outgoing message */}
       <div
-        className={`ml-auto flex max-w-[85%] flex-col items-end gap-1.5 transition-all duration-500 ${
+        className={`ml-auto flex max-w-[85%] flex-col items-end gap-1.5 transition duration-500 ${
           step >= 1 ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
         }`}
       >

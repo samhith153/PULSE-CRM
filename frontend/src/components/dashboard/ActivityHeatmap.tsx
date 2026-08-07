@@ -117,7 +117,7 @@ export default function ActivityHeatmap() {
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav hover:border-border transition-all duration-300 relative text-foreground">
+    <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav hover:border-border transition duration-300 relative text-foreground">
       
       {/* Title Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 pb-3 border-b border-border">
@@ -145,7 +145,7 @@ export default function ActivityHeatmap() {
               <button
                 key={type.id}
                 onClick={() => setFilterType(type.id as any)}
-                className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-[10px] font-bold transition cursor-pointer ${
                   isSelected 
                     ? 'bg-brand-purple text-primary-foreground' 
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary dark:hover:bg-slate-800'
@@ -190,7 +190,7 @@ export default function ActivityHeatmap() {
                         key={rowIdx}
                         onMouseEnter={(e) => handleMouseEnter(e, cell)}
                         onMouseLeave={handleMouseLeave}
-                        className={`h-3 w-3 rounded-[3px] border border-black/5 dark:border-white/5 transition-all duration-150 cursor-pointer hover:scale-120 ${getCellColor(count)}`}
+                        className={`h-3 w-3 rounded-[3px] border border-black/5 dark:border-white/5 transition duration-150 cursor-pointer hover:scale-120 ${getCellColor(count)}`}
                       />
                     );
                   })}

@@ -238,14 +238,14 @@ export default function UsersView() {
         <div className="flex items-center space-x-2">
           <button
             onClick={loadUsers}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 border border-border hover:bg-secondary rounded-lg text-xs font-bold text-muted-foreground transition-all cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3 py-2 border border-border hover:bg-secondary rounded-lg text-xs font-bold text-muted-foreground transition cursor-pointer"
           >
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
           </button>
           <button 
             onClick={handleOpenCreate}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition duration-200 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Create User</span>
@@ -315,14 +315,14 @@ export default function UsersView() {
                       <td className="py-3 text-right space-x-1 whitespace-nowrap">
                         <button 
                           onClick={() => handleOpenEdit(user)}
-                          className="p-1 text-muted-foreground hover:text-brand-purple rounded hover:bg-secondary transition-all cursor-pointer inline-block"
+                          className="p-1 text-muted-foreground hover:text-brand-purple rounded hover:bg-secondary transition cursor-pointer inline-block"
                           title="Edit Profile"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleToggleStatus(user)}
-                          className={`p-1 rounded hover:bg-secondary transition-all cursor-pointer inline-block ${
+                          className={`p-1 rounded hover:bg-secondary transition cursor-pointer inline-block ${
                             user.is_active ? 'text-destructive hover:text-destructive' : 'text-brand-cyan hover:text-brand-cyan'
                           }`}
                           title={user.is_active ? 'Disable User' : 'Enable User'}
@@ -331,14 +331,14 @@ export default function UsersView() {
                         </button>
                         <button 
                           onClick={() => handleResetPassword(user)}
-                          className="p-1 text-muted-foreground hover:text-amber-500 rounded hover:bg-secondary transition-all cursor-pointer inline-block"
+                          className="p-1 text-muted-foreground hover:text-amber-500 rounded hover:bg-secondary transition cursor-pointer inline-block"
                           title="Reset Password"
                         >
                           <Key className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleDeleteUser(user)}
-                          className="p-1 text-muted-foreground hover:text-destructive rounded hover:bg-secondary transition-all cursor-pointer inline-block"
+                          className="p-1 text-muted-foreground hover:text-destructive rounded hover:bg-secondary transition cursor-pointer inline-block"
                           title={isAdmin ? 'Permanently Delete' : 'Deactivate User'}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -445,14 +445,14 @@ export default function UsersView() {
                             <td className="py-3 text-right space-x-1 whitespace-nowrap">
                               <button 
                                 onClick={() => handleRestoreUser(user)}
-                                className="p-1 text-muted-foreground hover:text-brand-cyan rounded hover:bg-secondary transition-all cursor-pointer inline-block"
+                                className="p-1 text-muted-foreground hover:text-brand-cyan rounded hover:bg-secondary transition cursor-pointer inline-block"
                                 title="Restore User"
                               >
                                 <Undo2 className="h-4 w-4" />
                               </button>
                               <button 
                                 onClick={() => handlePermanentDelete(user)}
-                                className="p-1 text-muted-foreground hover:text-destructive rounded hover:bg-secondary transition-all cursor-pointer inline-block"
+                                className="p-1 text-muted-foreground hover:text-destructive rounded hover:bg-secondary transition cursor-pointer inline-block"
                                 title="Permanently Delete"
                               >
                                 <Trash2 className="h-4 w-4" />

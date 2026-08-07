@@ -190,7 +190,7 @@ Sales Manager, Pulse CRM`;
       {/* Floating Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-brand-purple/15 hover:bg-brand-purple/25 dark:bg-brand-purple/25 dark:hover:bg-brand-purple/35 backdrop-blur-md border border-brand-purple/30 flex items-center justify-center text-brand-purple dark:text-sky-400 shadow-[0_8px_32px_rgba(29,78,216,0.25)] hover:scale-105 active:scale-95 transition-all duration-200 z-50 cursor-pointer group"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-brand-purple/15 hover:bg-brand-purple/25 dark:bg-brand-purple/25 dark:hover:bg-brand-purple/35 backdrop-blur-md border border-brand-purple/30 flex items-center justify-center text-brand-purple dark:text-sky-400 shadow-[0_8px_32px_rgba(29,78,216,0.25)] hover:scale-105 active:scale-95 transition duration-200 z-50 cursor-pointer group"
         aria-label="Ask PulseAI"
       >
         {isOpen ? (
@@ -358,7 +358,7 @@ Sales Manager, Pulse CRM`;
               <button
                 key={btn.text}
                 onClick={() => triggerShortcut(btn.text)}
-                className="py-1 px-2.5 bg-card border border-border hover:border-brand-purple hover:text-brand-purple rounded-full text-[10px] font-bold transition-all whitespace-nowrap cursor-pointer "
+                className="py-1 px-2.5 bg-card border border-border hover:border-brand-purple hover:text-brand-purple rounded-full text-[10px] font-bold transition whitespace-nowrap cursor-pointer "
               >
                 {btn.label}
               </button>
@@ -383,7 +383,7 @@ Sales Manager, Pulse CRM`;
             <button
               type="submit"
               disabled={!inputValue.trim() || isTyping}
-              className="h-8 w-8 rounded-lg bg-brand-purple text-primary-foreground flex items-center justify-center hover:bg-brand-purple/90 disabled:opacity-50 transition-all cursor-pointer shrink-0"
+              className="h-8 w-8 rounded-lg bg-brand-purple text-primary-foreground flex items-center justify-center hover:bg-brand-purple/90 disabled:opacity-50 transition cursor-pointer shrink-0"
             >
               <Send className="h-3.5 w-3.5" />
             </button>

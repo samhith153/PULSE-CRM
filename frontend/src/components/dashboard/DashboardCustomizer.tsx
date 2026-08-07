@@ -133,7 +133,7 @@ export default function DashboardCustomizer({ isOpen, onClose, settings, onToggl
                   <div 
                     key={widget.key}
                     onClick={() => onToggleSetting(widget.key)}
-                    className={`p-4 border rounded-xl flex items-start justify-between gap-4 cursor-pointer transition-all duration-200 select-none ${
+                    className={`p-4 border rounded-xl flex items-start justify-between gap-4 cursor-pointer transition duration-200 select-none ${
                       isChecked 
                         ? 'border-brand-accent/35 bg-brand-purple/[0.03] dark:bg-brand-purple/[0.01]' 
                         : 'border-border hover:border-border bg-secondary/20'
@@ -174,7 +174,7 @@ export default function DashboardCustomizer({ isOpen, onClose, settings, onToggl
           <div className="p-4 border-t border-border bg-secondary/50 dark:bg-ink/50 flex justify-end">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold transition-all  hover: cursor-pointer"
+              className="px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold transition  hover: cursor-pointer"
             >
               Save layout preferences
             </button>

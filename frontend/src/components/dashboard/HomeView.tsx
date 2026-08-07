@@ -554,7 +554,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
         <div className="flex items-center gap-[var(--space-2)]">
           <button
             onClick={() => setIsEditMode(!isEditMode)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer select-none ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border cursor-pointer select-none ${
               isEditMode
                 ? 'bg-brand-purple text-primary-foreground border-transparent shadow-sm'
                 : 'bg-secondary/35 hover:bg-secondary border-border text-muted-foreground hover:text-foreground'
@@ -599,7 +599,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     <button
                       key={id}
                       onClick={() => handleShowCard(id)}
-                      className="px-2.5 py-1 bg-brand-purple/10 text-brand-purple hover:bg-brand-purple hover:text-primary-foreground border border-brand-purple/20 hover:border-transparent rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                      className="px-2.5 py-1 bg-brand-purple/10 text-brand-purple hover:bg-brand-purple hover:text-primary-foreground border border-brand-purple/20 hover:border-transparent rounded-lg text-[10px] font-bold transition cursor-pointer"
                     >
                       + {labelMap[id] || id}
                     </button>
@@ -609,7 +609,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
             )}
             <button
               onClick={handleResetLayout}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
             >
               <RotateCcw size={12} />
               <span>Reset Layout</span>
@@ -686,7 +686,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                       return (
                         <div 
                           key={i} 
-                          className="bg-card border border-border rounded-[8px] p-3 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between h-20 select-none"
+                          className="bg-card border border-border rounded-[8px] p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-300 flex items-center justify-between h-20 select-none"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
@@ -730,9 +730,9 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                 cardContent = (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--space-4)] items-stretch">
                     {/* Left Column — My Open Tasks */}
-                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
+                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
                       {/* Ambient light aura */}
-                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
 
                       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
                         {/* Header / Title / Refresh */}
@@ -768,7 +768,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                             </select>
                             <button 
                               onClick={() => setTaskSortOrder(taskSortOrder === 'asc' ? 'desc' : 'asc')}
-                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition"
                               title={taskSortOrder === 'asc' ? "Sort Descending" : "Sort Ascending"}
                             >
                               <ArrowUpDown size={11} />
@@ -811,7 +811,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                                       <div className="flex items-center gap-2 min-w-0">
                                         <button 
                                           onClick={() => handleToggleTask(task.id)}
-                                          className="text-muted-foreground hover:text-brand-purple transition-all shrink-0 cursor-pointer"
+                                          className="text-muted-foreground hover:text-brand-purple transition shrink-0 cursor-pointer"
                                           title="Mark Complete"
                                         >
                                           <Circle className="size-4 text-muted-foreground/60 hover:text-brand-purple" />
@@ -875,9 +875,9 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     </div>
 
                     {/* Right Column — My Meetings */}
-                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
+                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
                       {/* Ambient light aura */}
-                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
 
                       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
                         {/* Header / Title / Sort */}
@@ -904,7 +904,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                             </select>
                             <button 
                               onClick={() => setMeetingSortOrder(meetingSortOrder === 'asc' ? 'desc' : 'asc')}
-                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition"
                               title={meetingSortOrder === 'asc' ? "Sort Descending" : "Sort Ascending"}
                             >
                               <ArrowUpDown size={11} />
@@ -1009,7 +1009,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                           <p className="text-xs text-muted-foreground text-center py-10 font-semibold">No high priority items.</p>
                         ) : (
                           priorityItems.map(item => (
-                            <div key={item.id} className="p-[var(--space-2)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-secondary/20 transition-all flex items-start justify-between gap-[var(--space-2)]">
+                            <div key={item.id} className="p-[var(--space-2)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-secondary/20 transition flex items-start justify-between gap-[var(--space-2)]">
                               <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
                                   <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded ${

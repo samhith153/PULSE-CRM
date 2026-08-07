@@ -152,7 +152,7 @@ export default function Header({
 
       {/* Center: search bar */}
       <div
-        className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/60 bg-secondary/40 px-4 cursor-pointer hover:bg-secondary/70 hover:border-border transition-all duration-200"
+        className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/60 bg-secondary/40 px-4 cursor-pointer hover:bg-secondary/70 hover:border-border transition duration-200"
         onClick={() => onOpenCommandPalette?.()}
       >
         <Search size={16} className="shrink-0 text-muted-foreground" />
@@ -175,7 +175,7 @@ export default function Header({
       <div className="flex shrink-0 items-center gap-2">
 
         {/* Live sync pulsing badge */}
-        <span className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-background/55 px-2.5 py-1 text-[11px] font-semibold text-brand-purple lg:inline-flex select-none transition-all duration-300 min-w-[110px]">
+        <span className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-background/55 px-2.5 py-1 text-[11px] font-semibold text-brand-purple lg:inline-flex select-none transition duration-300 min-w-[110px]">
           <span className="relative flex h-1.5 w-1.5">
             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-purple ${isSyncing ? 'opacity-90 scale-150 duration-500' : 'opacity-60'}`}></span>
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-purple"></span>
@@ -281,7 +281,7 @@ export default function Header({
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-brand-purple/40 ring-1 ring-border/40 ring-offset-2 ring-offset-background transition-all duration-200 cursor-pointer overflow-hidden"
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-brand-purple/40 ring-1 ring-border/40 ring-offset-2 ring-offset-background transition duration-200 cursor-pointer overflow-hidden"
             aria-label="Profile menu"
           >
             {currentUser?.avatar_url ? (

@@ -757,7 +757,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                 setIsCreatingFullPage(false);
                 setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
               }}
-              className="p-2 border border-border hover:bg-secondary rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition-all hover:scale-105"
+              className="p-2 border border-border hover:bg-secondary rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition hover:scale-105"
               title="Back to Leads"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -784,7 +784,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             <button
               type="submit"
               form="full-page-lead-form"
-              className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition-all hover:-translate-y-0.5"
+              className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition hover:-translate-y-0.5"
             >
               Create Lead
             </button>
@@ -817,7 +817,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     placeholder="e.g. John Doe"
                     value={leadForm.name}
                     onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -827,7 +827,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     placeholder="e.g. VP of Engineering"
                     value={leadForm.jobTitle}
                     onChange={(e) => setLeadForm({ ...leadForm, jobTitle: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
               </div>
@@ -843,7 +843,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     placeholder="name@company.com"
                     value={leadForm.email}
                     onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -853,7 +853,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     placeholder="+1 (555) 000-0000"
                     value={leadForm.phone}
                     onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
               </div>
@@ -884,7 +884,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     placeholder="e.g. Acme Corp"
                     value={leadForm.company}
                     onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -895,7 +895,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     required
                     value={leadForm.industry}
                     onChange={(e) => setLeadForm({ ...leadForm, industry: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="">Select Industry</option>
                     <option value="Manufacturing">Manufacturing</option>
@@ -926,7 +926,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     placeholder="e.g. San Francisco, CA"
                     value={leadForm.location}
                     onChange={(e) => setLeadForm({ ...leadForm, location: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -934,7 +934,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   <select
                     value={leadForm.numberOfEmployees}
                     onChange={(e) => setLeadForm({ ...leadForm, numberOfEmployees: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="">Select Range</option>
                     <option value="1">1</option>
@@ -971,7 +971,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     required
                     value={leadForm.source}
                     onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="">Select Source</option>
                     <option value="Website">Website</option>
@@ -991,7 +991,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   <select
                     value={leadForm.priority}
                     onChange={(e) => setLeadForm({ ...leadForm, priority: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -1003,7 +1003,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   <select
                     value={leadForm.status}
                     onChange={(e) => setLeadForm({ ...leadForm, status: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="New">New</option>
                     <option value="Contacted">Contacted</option>
@@ -1021,7 +1021,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   placeholder="e.g. Sarah Johnson"
                   value={leadForm.owner}
                   onChange={(e) => setLeadForm({ ...leadForm, owner: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                 />
               </div>
             </div>
@@ -1048,7 +1048,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     placeholder="e.g. Salesforce, HubSpot"
                     value={leadForm.currentCRM}
                     onChange={(e) => setLeadForm({ ...leadForm, currentCRM: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -1058,7 +1058,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     placeholder="e.g. SAP, Oracle ERP"
                     value={leadForm.operationalSystem}
                     onChange={(e) => setLeadForm({ ...leadForm, operationalSystem: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
               </div>
@@ -1069,7 +1069,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   placeholder="Enter initial conversations, requirements or key context..."
                   value={leadForm.notes}
                   onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}
-                  className="w-full h-19 px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all resize-none"
+                  className="w-full h-19 px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition resize-none"
                 />
               </div>
             </div>
@@ -1093,7 +1093,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               </button>
               <button
                 type="submit"
-                className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition-all hover:-translate-y-0.5"
+                className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition hover:-translate-y-0.5"
               >
                 Create Lead
               </button>
@@ -1119,7 +1119,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                 <button
                   type="button"
                   onClick={() => setIsPriorityView(!isPriorityView)}
-                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all duration-200 cursor-pointer ${
+                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition duration-200 cursor-pointer ${
                     isPriorityView
                       ? 'bg-brand-purple text-primary-foreground ring-2 ring-brand-purple/25'
                       : 'bg-secondary hover:bg-secondary text-foreground hover:text-foreground'
@@ -1137,7 +1137,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                 <button
                   type="button"
                   onClick={() => toggleViewMode('default')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'default'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -1149,7 +1149,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                 <button
                   type="button"
                   onClick={() => toggleViewMode('list')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'list'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -1260,7 +1260,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                         <tr 
                           key={lead.id} 
                           onClick={() => setSelectedLeadId(lead.id)}
-                          className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                          className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
                         >
                           <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
                             <input 
@@ -1387,7 +1387,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           e.stopPropagation();
                           setSelectedLeadId(prevId => prevId === lead.id ? null : prevId);
                         }}
-                        className={`hover:bg-secondary/40 cursor-pointer transition-all duration-200 border-b border-border/40 ${
+                        className={`hover:bg-secondary/40 cursor-pointer transition duration-200 border-b border-border/40 ${
                           isSelected ? 'bg-brand-blue/[0.04]' : ''
                         } ${isTopPriority ? 'bg-brand-blue/[0.01]' : ''}`}
                       >
@@ -1569,7 +1569,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               {/* Close Button */}
               <button 
                 onClick={() => setSelectedLeadId(null)}
-                className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
+                className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
                 title="Close Summary"
                 aria-label="Close Summary"
               >
@@ -1758,7 +1758,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   <button
                     key={tabItem.id}
                     onClick={() => setActiveHistoryTab(tabItem.id)}
-                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg transition-all duration-200 cursor-pointer text-[9px] flex-grow min-w-[62px] shrink-0 ${
+                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg transition duration-200 cursor-pointer text-[9px] flex-grow min-w-[62px] shrink-0 ${
                       isActive 
                         ? 'bg-card text-brand-purple border border-border/50 shadow-sm font-bold scale-[1.02]' 
                         : 'text-muted-foreground hover:text-foreground hover:bg-background/20'
@@ -1784,7 +1784,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                       return (
                         <div key={act.id} className="relative text-[10px] leading-relaxed group/item">
                           {/* Dot/Icon indicator */}
-                          <div className="absolute -left-[29.5px] top-0.5 h-5 w-5 rounded-full bg-card border border-border/80 flex items-center justify-center shadow-sm group-hover/item:border-brand-purple transition-all duration-200">
+                          <div className="absolute -left-[29.5px] top-0.5 h-5 w-5 rounded-full bg-card border border-border/80 flex items-center justify-center shadow-sm group-hover/item:border-brand-purple transition duration-200">
                             {isEmail ? <Mail className="h-2.5 w-2.5 text-brand-purple" /> :
                              isCall ? <PhoneCall className="h-2.5 w-2.5 text-emerald-500" /> :
                              isMeeting ? <Calendar className="h-2.5 w-2.5 text-brand-blue" /> :
@@ -1812,7 +1812,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                 <div className="space-y-2.5">
                   {activeLead.emails.length > 0 ? (
                     activeLead.emails.map((e) => (
-                      <div key={e.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-brand-purple/20 transition-all duration-200 shadow-sm relative overflow-hidden group/item">
+                      <div key={e.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-brand-purple/20 transition duration-200 shadow-sm relative overflow-hidden group/item">
                         <div className="absolute top-0 left-0 w-1 h-full bg-brand-purple/50" />
                         <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1.5">
                           <span className="truncate max-w-[170px] text-brand-purple font-extrabold group-hover/item:underline">{e.subject}</span>
@@ -1836,7 +1836,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     activeLead.calls.map((c) => {
                       const isConnected = c.outcome?.toLowerCase().includes('connect');
                       return (
-                        <div key={c.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-emerald-500/20 transition-all duration-200 shadow-sm relative overflow-hidden group/item">
+                        <div key={c.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-emerald-500/20 transition duration-200 shadow-sm relative overflow-hidden group/item">
                           <div className={`absolute top-0 left-0 w-1 h-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
                           <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1.5">
                             <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider ${
@@ -1863,7 +1863,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                 <div className="space-y-2.5">
                   {activeLead.meetings.length > 0 ? (
                     activeLead.meetings.map((m) => (
-                      <div key={m.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-brand-blue/20 transition-all duration-200 shadow-sm relative overflow-hidden group/item">
+                      <div key={m.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-brand-blue/20 transition duration-200 shadow-sm relative overflow-hidden group/item">
                         <div className="absolute top-0 left-0 w-1 h-full bg-brand-blue" />
                         <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1">
                           <span className="text-brand-blue font-extrabold">{m.title}</span>

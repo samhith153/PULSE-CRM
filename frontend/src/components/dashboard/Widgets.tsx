@@ -94,7 +94,7 @@ export default function Widgets({
       
       {/* Team Performance Leaderboard */}
       {showLeaderboard && (
-        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 ${showProductivity ? 'lg:col-span-2' : 'lg:col-span-3'} flex flex-col justify-between`}>
+        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 ${showProductivity ? 'lg:col-span-2' : 'lg:col-span-3'} flex flex-col justify-between`}>
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-foreground text-sm">Team performance</h3>
@@ -158,7 +158,7 @@ export default function Widgets({
           <div className="mt-4 pt-3 border-t border-border text-center">
             <button 
               onClick={() => onTabChange?.('reports')}
-              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
             >
               <span>View full leaderboard</span>
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />
@@ -169,7 +169,7 @@ export default function Widgets({
 
       {/* Activity Overview */}
       {showProductivity && (
-        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 ${showLeaderboard ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col justify-between`}>
+        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 ${showLeaderboard ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col justify-between`}>
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-foreground text-sm">Activity overview</h3>
@@ -211,7 +211,7 @@ export default function Widgets({
           <div className="mt-4 pt-3 border-t border-border text-center">
             <button 
               onClick={() => onTabChange?.('reports')}
-              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
             >
               <span>View all reports</span>
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />
