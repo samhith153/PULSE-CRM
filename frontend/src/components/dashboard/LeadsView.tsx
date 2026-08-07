@@ -1,5 +1,6 @@
 'use client';
 
+import { toast } from '@/lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation } from '@/utils/api';
@@ -190,7 +191,22 @@ interface Lead {
   meetings: MeetingItem[];
 }
 
-export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => void; onTabChange?: (tab: string) => void } = {}) {
+interface LeadsViewProps {
+  onLoaded?: () => void;
+  onTabChange?: (tab: string) => void;
+  onComposeEmail?: (target: { 
+    to: string; 
+    name?: string; 
+    company?: string; 
+    designation?: string;
+    purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+    context?: string;
+    externalEntityType?: string | null;
+    externalEntityId?: string | null;
+  }) => void;
+}
+
+export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: LeadsViewProps = {}) {
   const router = useRouter();
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -1419,7 +1435,7 @@ export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => 
                             {/* Owner */}
                             <td className="py-3.5">
                               <div className="flex items-center space-x-1.5">
-                                <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-border" />
+                                <img src={lead.ownerAvatar || ''} alt={lead.owner} className="h-5 w-5 rounded-full border border-border" />
                                 <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
                               </div>
                             </td>
@@ -1539,7 +1555,7 @@ export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => 
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Owner</span>
               <div className="flex items-center space-x-1">
-                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-border" />
+                <img src={activeLead.ownerAvatar || ''} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-border" />
                 <span className="text-foreground">{activeLead.owner}</span>
               </div>
             </div>
@@ -1635,11 +1651,24 @@ export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => 
               <span>Email</span>
             </button>
             <button 
-              onClick={() => setIsCallModalOpen(true)}
+              onClick={() => {
+                if (onComposeEmail && activeLead) {
+                  onComposeEmail({
+                    to: activeLead.email,
+                    name: activeLead.name,
+                    company: activeLead.company,
+                    designation: activeLead.jobTitle,
+                    purpose: 'follow_up',
+                    context: activeLead.notes || `Lead Status: ${activeLead.status}, Score: ${activeLead.score}`,
+                    externalEntityType: 'lead',
+                    externalEntityId: activeLead.id
+                  });
+                }
+              }}
               className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
             >
-              <PhoneCall className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Log Call</span>
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Email</span>
             </button>
             <button 
               onClick={() => {

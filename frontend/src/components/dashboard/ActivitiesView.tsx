@@ -37,6 +37,7 @@ import { toast } from '@/lib/toast';
 interface ActivitiesViewProps {
   activityId?: string;
   onTabChange?: (tab: string) => void;
+  onComposeEmail?: (target: { to: string; name?: string; company?: string; designation?: string }) => void;
 }
 
 interface ActivitiesListContentProps {
@@ -1079,7 +1080,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
   );
 }
 
-export default function ActivitiesView({ activityId, onTabChange }: ActivitiesViewProps) {
+export default function ActivitiesView({ activityId, onTabChange, onComposeEmail }: ActivitiesViewProps) {
   const [selectedId, setSelectedId] = useState<string | undefined>(activityId);
 
   useEffect(() => {
