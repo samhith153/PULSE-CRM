@@ -1288,11 +1288,12 @@ export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => 
                 {isPriorityView ? (
                   <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
                     <th className="py-3 px-4 w-[22%]">Company Name</th>
-                    <th className="py-3 text-center w-[12%] text-brand-blue">Fit Score</th>
-                    <th className="py-3 text-center w-[14%] text-amber-600 dark:text-amber-400">Engagement Score</th>
-                    <th className="py-3 text-center w-[12%] text-emerald-600 dark:text-emerald-400">Overall Score</th>
-                    <th className="py-3 w-[22%]">Recommendation</th>
-                    <th className="py-3 text-right pr-4 w-[18%]">Actions</th>
+                    <th className="py-3 text-center w-[10%] text-brand-blue">Fit Score</th>
+                    <th className="py-3 text-center w-[10%] text-amber-600 dark:text-amber-400">Engagement</th>
+                    <th className="py-3 text-center w-[10%] text-emerald-600 dark:text-emerald-400">Overall</th>
+                    <th className="py-3 text-center w-[8%]">Tier</th>
+                    <th className="py-3 w-[28%]">Reasons &amp; Recommendation</th>
+                    <th className="py-3 text-right pr-4 w-[12%]">Actions</th>
                   </tr>
                 ) : (
                   <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
@@ -1355,10 +1356,38 @@ export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => 
                                 {lead.score}%
                               </span>
                             </td>
-                            {/* Recommendation */}
+                            {/* Priority Tier */}
+                            <td className="py-3.5 text-center">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                lead.priorityTier === 'Critical' ? 'text-emerald-600 bg-emerald-500/10 border-emerald-500/10' :
+                                lead.priorityTier === 'High' ? 'text-destructive bg-destructive/10 border-destructive/10' :
+                                lead.priorityTier === 'Medium' ? 'text-amber-600 bg-amber-500/10 border-amber-500/10' :
+                                'text-muted-foreground bg-secondary border-border/60'
+                              }`}>
+                                {lead.priorityTier || lead.priority}
+                              </span>
+                            </td>
+                            {/* Reasons & Recommendation */}
                             <td className="py-3.5">
-                              <div className="text-[10px] text-foreground/80 font-medium max-w-[220px] truncate" title={getAIRecommendation(lead)}>
-                                {getAIRecommendation(lead)}
+                              <div className="space-y-1 max-w-[260px]">
+                                {lead.topReasons.length > 0 && (
+                                  <div className="text-[10px] text-foreground/80 font-medium truncate" title={lead.topReasons.join('; ')}>
+                                    {lead.topReasons[0]}
+                                  </div>
+                                )}
+                                {lead.fitReasons.length > 0 && (
+                                  <div className="text-[9px] text-blue-600 dark:text-blue-400 truncate" title={lead.fitReasons.join('; ')}>
+                                    Fit: {lead.fitReasons[0]}
+                                  </div>
+                                )}
+                                {lead.engagementReasons.length > 0 && (
+                                  <div className="text-[9px] text-amber-600 dark:text-amber-400 truncate" title={lead.engagementReasons.join('; ')}>
+                                    Engage: {lead.engagementReasons[0]}
+                                  </div>
+                                )}
+                                <div className="text-[10px] text-brand-purple font-semibold truncate" title={getAIRecommendation(lead)}>
+                                  {getAIRecommendation(lead)}
+                                </div>
                               </div>
                             </td>
                           </>
