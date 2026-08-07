@@ -1,4 +1,4 @@
-"""
+﻿"""
 API v1 Router
 Aggregates all domain routers under /api/v1.
 """
@@ -85,6 +85,8 @@ from app.api.v1.assistant import router as assistant_router
 from app.api.v1.stream import router as stream_router
 from app.api.v1.crm_activities import router as crm_activities_router
 
+from app.api.v1.search import router as search_router
+
 api_router = APIRouter()
 
 api_router.include_router(health_router, prefix="/health", tags=["Health"])
@@ -139,3 +141,4 @@ api_router.include_router(calendar_router, prefix="/calendar", tags=["Calendar"]
 api_router.include_router(meetings_router, prefix="/meetings", tags=["Meetings"])
 api_router.include_router(ai_insights_router, prefix="/ai-insights", tags=["AI Insights"])
 api_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])
+api_router.include_router(search_router, prefix="/search", tags=["Search"])

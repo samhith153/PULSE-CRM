@@ -1279,3 +1279,32 @@ export interface EmailComposeTarget {
   /** Bumped on every open so EmailsView re-triggers even if the same contact is clicked twice. */
   requestId: number;
 }
+
+export async function searchGlobalCRM(query: string) {
+  const token = getToken(); // Assuming you have a getToken() utility in this file
+  if (!token) {
+    console.error('No auth token found for search');
+    return [];
+  }
+
+  try {
+    // Hits the new endpoint you just registered in router.py
+    const response = await fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search failed with status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data || []; 
+  } catch (error) {
+    console.error('Error fetching global search:', error);
+    return [];
+  }
+}
