@@ -256,14 +256,6 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     setNoteBody(''); setRelatedName(''); setRelatedLeadId(''); setRelatedContactId(''); setRelatedCompanyId(''); setRelatedDealId('');
   };
 
-  const relatedIds = () => ({
-    related_entity_type: relatedName ? relatedType : undefined,
-    related_lead_id:    relatedType === 'lead'    && relatedLeadId    ? relatedLeadId    : undefined,
-    related_contact_id: relatedType === 'contact' && relatedContactId ? relatedContactId : undefined,
-    related_company_id: relatedType === 'company' && relatedCompanyId ? relatedCompanyId : undefined,
-    related_deal_id:    relatedType === 'deal'    && relatedDealId    ? relatedDealId    : undefined,
-  });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setSubmitting(true);
     try {

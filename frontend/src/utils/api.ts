@@ -1544,3 +1544,35 @@ export interface EmailComposeTarget {
   /** Bumped on every open so EmailsView re-triggers even if the same contact is clicked twice. */
   requestId: number;
 }
+
+// =============================================================================
+// CRM EMAIL ACTIVITY
+// =============================================================================
+
+export async function createCrmEmail(payload: CrmActivityPayload & {
+  body?: string;
+  direction?: string;
+  recipient_email?: string;
+  recipient_name?: string;
+}): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/emails', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+// =============================================================================
+// USER MANAGEMENT (soft-delete / restore / permanent-delete)
+// =============================================================================
+
+export async function getDeletedUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
+  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users/deleted${toQuery({ page, page_size: pageSize, search })}`);
+}
+
+export async function restoreUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/restore`, { method: 'POST' });
+}
+
+export async function permanentDeleteUser(userId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
+}
