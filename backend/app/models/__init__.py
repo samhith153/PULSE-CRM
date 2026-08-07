@@ -24,6 +24,9 @@ from app.models.ai_summary import AISummary  # noqa: F401
 from app.models.webhook import WebhookEndpoint, WebhookDelivery  # noqa: F401
 from app.models.calendar_event import CalendarEvent  # noqa: F401
 from app.models.meeting import Meeting  # noqa: F401
+from app.models.crm_task import CrmTask  # noqa: F401
+from app.models.crm_call import CrmCall  # noqa: F401
+from app.models.crm_note import CrmNote  # noqa: F401
 
 
 

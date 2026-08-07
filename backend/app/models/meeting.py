@@ -40,51 +40,35 @@ class Meeting(Base, TenantMixin):
     reminder_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=15)
 
     organization_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
+        UUID(as_uuid=True), ForeignKey("organizations.id", ondelete="CASCADE"),
+        nullable=False, index=True,
     )
     owner_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True, index=True,
     )
     created_by: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True,
     )
-
     related_lead_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("leads.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
+        UUID(as_uuid=True), ForeignKey("leads.id", ondelete="SET NULL"),
+        nullable=True, index=True,
     )
     related_contact_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("contacts.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
+        UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL"),
+        nullable=True, index=True,
     )
     related_company_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("companies.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
+        UUID(as_uuid=True), ForeignKey("companies.id", ondelete="SET NULL"),
+        nullable=True, index=True,
     )
     related_deal_id: Mapped[Optional[uuid.UUID]] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("deals.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
+        UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL"),
+        nullable=True, index=True,
     )
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    organization: Mapped["Organization"] = relationship("Organization", lazy="select")
     owner: Mapped[Optional["User"]] = relationship("User", foreign_keys=[owner_id], lazy="select")
     related_lead: Mapped[Optional["Lead"]] = relationship("Lead", foreign_keys=[related_lead_id], lazy="select")
     related_contact: Mapped[Optional["Contact"]] = relationship("Contact", foreign_keys=[related_contact_id], lazy="select")

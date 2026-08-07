@@ -9,7 +9,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-
 MEETING_STATUSES = {"scheduled", "completed", "cancelled", "rescheduled", "missed", "in_progress"}
 
 
@@ -87,8 +86,3 @@ class MeetingResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
-
-
-class MeetingListResponse(BaseModel):
-    meetings: list[MeetingResponse] = Field(default_factory=list)
-    total: int

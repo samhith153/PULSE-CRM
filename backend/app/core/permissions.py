@@ -51,6 +51,7 @@ class Permission(str, Enum):
     ACTIVITY_CREATE = "activity:create"
     ACTIVITY_READ = "activity:read"
     ACTIVITY_UPDATE = "activity:update"
+    ACTIVITY_DELETE = "activity:delete"
 
     EMAIL_SEND = "email:send"
     EMAIL_READ = "email:read"
@@ -119,6 +120,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.ACTIVITY_CREATE,
         Permission.ACTIVITY_READ,
         Permission.ACTIVITY_UPDATE,
+        Permission.ACTIVITY_DELETE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
@@ -153,6 +155,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.PIPELINE_READ,
         Permission.ACTIVITY_READ,
         Permission.ACTIVITY_CREATE,
+        Permission.ACTIVITY_DELETE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,

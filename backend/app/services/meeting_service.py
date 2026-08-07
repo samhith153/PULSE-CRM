@@ -41,16 +41,9 @@ class MeetingService:
             organization_id=user.organization_id,
             created_by=user.id,
         )
-        await self.timeline.record_activity(
-            organization_id=user.organization_id,
-            created_by=user.id,
-            entity_type="meeting",
-            entity_id=meeting.id,
-            action="meeting_scheduled",
-            title=f"Meeting scheduled: {meeting.title}",
-            description=meeting.description,
-            payload={"meeting_id": str(meeting.id), "start_datetime": meeting.start_datetime.isoformat()},
-            topic="meetings",
+        await self.timeline.meeting_scheduled(
+            user.organization_id, user.id, meeting.id,
+            meeting.title, meeting.start_datetime
         )
         return await self.get_meeting(user, meeting.id)
 
@@ -96,21 +89,12 @@ class MeetingService:
         if not meeting:
             raise NotFoundException("Meeting", meeting_id)
         self._assert_access(user, meeting.owner_id, meeting.created_by)
-
         update_data = payload.model_dump(exclude_none=True)
         if update_data.get("end_datetime", meeting.end_datetime) <= update_data.get("start_datetime", meeting.start_datetime):
             raise ValueError("end_datetime must be after start_datetime")
         updated = await self.repo.update(meeting, **update_data)
-
-        await self.timeline.record_activity(
-            organization_id=user.organization_id,
-            created_by=user.id,
-            entity_type="meeting",
-            entity_id=updated.id,
-            action="meeting_updated",
-            title=f"Meeting updated: {updated.title}",
-            payload={"meeting_id": str(updated.id), "changes": list(update_data.keys())},
-            topic="meetings",
+        await self.timeline.meeting_updated(
+            user.organization_id, user.id, updated.id, updated.title, update_data
         )
         return await self.get_meeting(user, updated.id)
 
@@ -120,15 +104,8 @@ class MeetingService:
             raise NotFoundException("Meeting", meeting_id)
         self._assert_access(user, meeting.owner_id, meeting.created_by)
         await self.repo.soft_delete(meeting)
-        await self.timeline.record_activity(
-            organization_id=user.organization_id,
-            created_by=user.id,
-            entity_type="meeting",
-            entity_id=meeting_id,
-            action="meeting_deleted",
-            title=f"Meeting deleted: {meeting.title}",
-            payload={"meeting_id": str(meeting_id)},
-            topic="meetings",
+        await self.timeline.meeting_deleted(
+            user.organization_id, user.id, meeting_id, meeting.title
         )
 
     def _has_elevated_access(self, user: User) -> bool:

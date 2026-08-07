@@ -26,18 +26,19 @@ class MeetingRepository(BaseRepository[Meeting]):
 
     def _enriched_select(self):
         owner = aliased(User, name="meeting_owner")
+        contact = aliased(Contact, name="meeting_contact")
         return (
             select(
                 Meeting,
                 owner.full_name.label("owner_name"),
                 Lead.title.label("lead_name"),
-                Contact.full_name.label("contact_name"),
+                func.concat(contact.first_name, ' ', contact.last_name).label("contact_name"),
                 Company.name.label("company_name"),
                 Deal.name.label("deal_name"),
             )
             .outerjoin(owner, owner.id == Meeting.owner_id)
             .outerjoin(Lead, Lead.id == Meeting.related_lead_id)
-            .outerjoin(Contact, Contact.id == Meeting.related_contact_id)
+            .outerjoin(contact, contact.id == Meeting.related_contact_id)
             .outerjoin(Company, Company.id == Meeting.related_company_id)
             .outerjoin(Deal, Deal.id == Meeting.related_deal_id)
         )
@@ -128,9 +129,9 @@ class MeetingRepository(BaseRepository[Meeting]):
     def _row_to_dict(row) -> dict[str, Any]:
         meeting: Meeting = row[0]
         data = {column.name: getattr(meeting, column.name) for column in meeting.__table__.columns}
-        data["owner_name"] = row[1] if len(row) > 1 else None
-        data["lead_name"] = row[2] if len(row) > 2 else None
+        data["owner_name"]   = row[1] if len(row) > 1 else None
+        data["lead_name"]    = row[2] if len(row) > 2 else None
         data["contact_name"] = row[3] if len(row) > 3 else None
         data["company_name"] = row[4] if len(row) > 4 else None
-        data["deal_name"] = row[5] if len(row) > 5 else None
+        data["deal_name"]    = row[5] if len(row) > 5 else None
         return data
