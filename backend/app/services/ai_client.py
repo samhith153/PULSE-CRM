@@ -31,7 +31,16 @@ class AIClient:
         """POST JSON to the AI service and return parsed JSON or None on failure."""
         try:
             response = await self._client.post(f"{self.base_url}{path}", json=payload)
-            response.raise_for_status()
+            if response.status_code >= 400:
+                try:
+                    body = response.json()
+                except Exception:
+                    body = response.text
+                logger.warning(
+                    "AI service returned %d (%s %s): %s",
+                    response.status_code, path, self.base_url, body,
+                )
+                return None
             return response.json()
         except httpx.HTTPError as exc:
             logger.warning("AI service request failed (%s %s): %s", path, self.base_url, exc)
