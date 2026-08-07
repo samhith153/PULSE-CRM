@@ -144,13 +144,25 @@ class EmailHistoryResponse(BaseModel):
     page_size: int
     records: list[EmailResponse] = Field(default_factory=list)
 
-from pydantic import BaseModel, EmailStr
-from uuid import UUID
-
-
 class SMTPSendRequest(BaseModel):
     receiver: EmailStr
     subject: str
     html_body: str
     external_entity_type: str | None = None
-    external_entity_id: UUID | None = None
+    external_entity_id: UUID | None = None 
+
+class EmailDraftRequest(BaseModel):
+    recipient_name: str = Field(min_length=1)
+    recipient_email: EmailStr
+    company: Optional[str] = None
+    designation: Optional[str] = None
+    purpose: str = Field(default="follow_up")
+    context: Optional[str] = None
+    external_entity_type: Optional[str] = None
+    external_entity_id: Optional[UUID] = None
+
+
+class EmailDraftResponse(BaseModel):
+    subject: str
+    body: str
+    model_version: Optional[str] = None

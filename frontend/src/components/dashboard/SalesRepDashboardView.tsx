@@ -236,7 +236,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
               </h3>
               <button
                 onClick={() => setIsAddOpen(true)}
-                className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-[11px] font-bold transition-all cursor-pointer"
+                className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-[11px] font-bold transition cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add Task</span>
@@ -327,7 +327,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                 {meetings.map((meeting) => (
                   <div
                     key={meeting.id}
-                    className="py-[var(--space-2)] px-[var(--space-3)] border border-border/60 rounded-xl hover:shadow-nav transition-all duration-200 bg-secondary/10 flex flex-col justify-between space-y-[var(--space-2)]"
+                    className="py-[var(--space-2)] px-[var(--space-3)] border border-border/60 rounded-xl hover:shadow-nav transition duration-200 bg-secondary/10 flex flex-col justify-between space-y-[var(--space-2)]"
                   >
                     <div>
                       <h4 className="text-xs font-bold text-foreground leading-snug">{meeting.title}</h4>
@@ -356,21 +356,21 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
             <div className="grid grid-cols-3 gap-2.5">
               <button
                 onClick={() => triggerQuickAdd('lead')}
-                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition-all duration-200 group"
+                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
               >
                 <Users className="h-5 w-5 text-muted-foreground group-hover:text-brand-purple mb-1.5 transition-colors" />
                 <span className="text-[10px] font-bold text-foreground">Add Lead</span>
               </button>
               <button
                 onClick={() => triggerQuickAdd('deal')}
-                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition-all duration-200 group"
+                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
               >
                 <Layers className="h-5 w-5 text-muted-foreground group-hover:text-brand-purple mb-1.5 transition-colors" />
                 <span className="text-[10px] font-bold text-foreground">Add Deal</span>
               </button>
               <button
                 onClick={() => triggerQuickAdd('contact')}
-                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition-all duration-200 group"
+                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
               >
                 <Contact className="h-5 w-5 text-muted-foreground group-hover:text-brand-purple mb-1.5 transition-colors" />
                 <span className="text-[10px] font-bold text-foreground">Add Contact</span>

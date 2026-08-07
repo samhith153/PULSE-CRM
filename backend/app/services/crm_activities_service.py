@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ForbiddenException, NotFoundException
 from app.models.user import User
 from app.repositories.crm_call_repository import CrmCallRepository
+from app.repositories.crm_email_repository import CrmEmailRepository
 from app.repositories.crm_note_repository import CrmNoteRepository
 from app.repositories.crm_task_repository import CrmTaskRepository
 from app.repositories.meeting_repository import MeetingRepository
@@ -28,6 +29,9 @@ from app.schemas.crm_activities import (
     CallCreateRequest,
     CallResponse,
     CallUpdateRequest,
+    EmailCreateRequest,
+    EmailResponse,
+    EmailUpdateRequest,
     NoteCreateRequest,
     NoteResponse,
     NoteUpdateRequest,
@@ -47,7 +51,7 @@ class CrmActivitiesService:
         self.call_repo = CrmCallRepository(db)
         self.note_repo = CrmNoteRepository(db)
         self.meeting_repo = MeetingRepository(db)
-        self.email_repo = EmailRepository(db)
+        self.email_repo = CrmEmailRepository(db)
         self.user_repo = UserRepository(db)
         self.timeline = TimelineEngineService(db)
 
@@ -162,6 +166,35 @@ class CrmActivitiesService:
             user.organization_id, user.id, call.id,
             call.subject, call.outcome, call.duration_minutes, call.call_type
         )
+        # Cross-reference: also log on the related entity's timeline
+        if call.related_lead_id:
+            await self.timeline.record(
+                user.organization_id, user.id, "lead", call.related_lead_id,
+                "call_logged", f"Call logged: {call.subject}",
+                payload={"call_id": str(call.id), "outcome": call.outcome, "duration_minutes": call.duration_minutes},
+                topic="leads",
+            )
+        if call.related_contact_id:
+            await self.timeline.record(
+                user.organization_id, user.id, "contact", call.related_contact_id,
+                "call_logged", f"Call logged: {call.subject}",
+                payload={"call_id": str(call.id), "outcome": call.outcome},
+                topic="contacts",
+            )
+        if call.related_company_id:
+            await self.timeline.record(
+                user.organization_id, user.id, "company", call.related_company_id,
+                "call_logged", f"Call logged: {call.subject}",
+                payload={"call_id": str(call.id), "outcome": call.outcome},
+                topic="company",
+            )
+        if call.related_deal_id:
+            await self.timeline.record(
+                user.organization_id, user.id, "deal", call.related_deal_id,
+                "call_logged", f"Call logged: {call.subject}",
+                payload={"call_id": str(call.id), "outcome": call.outcome},
+                topic="deals",
+            )
         row = await self.call_repo.get_enriched_by_id(call.id, user.organization_id)
         return CallResponse(**row)
 
@@ -214,6 +247,21 @@ class CrmActivitiesService:
         await self.timeline.note_created(
             user.organization_id, user.id, note.id, note.title, note.body
         )
+        # Cross-reference on related entity
+        for entity_type, entity_id in [
+            ("lead", note.related_lead_id),
+            ("contact", note.related_contact_id),
+            ("company", note.related_company_id),
+            ("deal", note.related_deal_id),
+        ]:
+            if entity_id:
+                await self.timeline.record(
+                    user.organization_id, user.id, entity_type, entity_id,
+                    "internal_note_added", f"Note added: {note.title}",
+                    description=note.body,
+                    payload={"note_id": str(note.id)},
+                    topic=entity_type + "s",
+                )
         row = await self.note_repo.get_enriched_by_id(note.id, user.organization_id)
         return NoteResponse(**row)
 
@@ -244,6 +292,93 @@ class CrmActivitiesService:
         self._assert_ownership(user, note.owner_id, note.created_by)
         await self.note_repo.soft_delete(note)
         await self.timeline.note_deleted(user.organization_id, user.id, note_id, note.title)
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # EMAIL CRUD
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def create_email(self, user: User, payload: EmailCreateRequest) -> EmailResponse:
+        owner_id = payload.owner_id or user.id
+        email = await self.email_repo.create(
+            subject=payload.subject,
+            body=payload.body,
+            direction=payload.direction,
+            recipient_email=payload.recipient_email,
+            recipient_name=payload.recipient_name,
+            status=payload.status,
+            priority=payload.priority,
+            sent_at=payload.sent_at or datetime.now(timezone.utc),
+            owner_id=owner_id,
+            related_entity_type=payload.related_entity_type,
+            related_lead_id=payload.related_lead_id,
+            related_contact_id=payload.related_contact_id,
+            related_company_id=payload.related_company_id,
+            related_deal_id=payload.related_deal_id,
+            organization_id=user.organization_id,
+            created_by=user.id,
+        )
+        await self.timeline.email_sent(
+            user.organization_id, user.id, email.id,
+            email.subject, email.direction, email.recipient_email
+        )
+        row = await self.email_repo.get_enriched_by_id(email.id, user.organization_id)
+        return EmailResponse(**row)
+
+    async def get_email(self, user: User, email_id: UUID) -> EmailResponse:
+        row = await self.email_repo.get_enriched_by_id(email_id, user.organization_id)
+        if not row:
+            raise NotFoundException("Email", email_id)
+        self._assert_ownership(user, row.get("owner_id"), row.get("created_by"))
+        return EmailResponse(**row)
+
+    async def update_email(self, user: User, email_id: UUID, payload: EmailUpdateRequest) -> EmailResponse:
+        email = await self.email_repo.get_raw_by_id(email_id, user.organization_id)
+        if not email:
+            raise NotFoundException("Email", email_id)
+        self._assert_ownership(user, email.owner_id, email.created_by)
+        update_data = payload.model_dump(exclude_none=True)
+        await self.email_repo.update(email, **update_data)
+        row = await self.email_repo.get_enriched_by_id(email_id, user.organization_id)
+        return EmailResponse(**row)
+
+    async def delete_email(self, user: User, email_id: UUID) -> None:
+        email = await self.email_repo.get_raw_by_id(email_id, user.organization_id)
+        if not email:
+            raise NotFoundException("Email", email_id)
+        self._assert_ownership(user, email.owner_id, email.created_by)
+        await self.email_repo.soft_delete(email)
+        await self.timeline.email_deleted(user.organization_id, user.id, email_id, email.subject)
+
+    async def list_emails(
+        self,
+        user: User,
+        *,
+        owner_id: Optional[UUID] = None,
+        status: Optional[str] = None,
+        priority: Optional[str] = None,
+        direction: Optional[str] = None,
+        search: Optional[str] = None,
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+        page: int = 1,
+        page_size: int = 20,
+        sort_order: str = "desc",
+    ) -> Tuple[List[dict[str, Any]], int]:
+        scoped_owner = self._scoped_owner_id(user)
+        effective_owner = owner_id or scoped_owner
+        return await self.email_repo.list(
+            user.organization_id,
+            owner_id=effective_owner,
+            status=status,
+            priority=priority,
+            direction=direction,
+            search=search,
+            from_date=from_date,
+            to_date=to_date,
+            page=page,
+            page_size=page_size,
+            sort_order=sort_order,
+        )
 
     # ─────────────────────────────────────────────────────────────────────────
     # UNIFIED list (all types merged)

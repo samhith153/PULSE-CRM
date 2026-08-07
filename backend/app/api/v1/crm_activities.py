@@ -23,6 +23,9 @@ from app.schemas.crm_activities import (
     CallCreateRequest,
     CallResponse,
     CallUpdateRequest,
+    EmailCreateRequest,
+    EmailResponse,
+    EmailUpdateRequest,
     NoteCreateRequest,
     NoteResponse,
     NoteUpdateRequest,
@@ -302,6 +305,10 @@ async def list_calls(
     quick_tab: Optional[str] = Query(default=None),
     from_date: Optional[datetime] = Query(default=None),
     to_date: Optional[datetime] = Query(default=None),
+    related_lead_id: Optional[UUID] = Query(default=None),
+    related_contact_id: Optional[UUID] = Query(default=None),
+    related_company_id: Optional[UUID] = Query(default=None),
+    related_deal_id: Optional[UUID] = Query(default=None),
     sort_order: str = Query(default="desc"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -319,6 +326,10 @@ async def list_calls(
         from_date=from_date,
         to_date=to_date,
         quick_tab=quick_tab,
+        related_lead_id=related_lead_id,
+        related_contact_id=related_contact_id,
+        related_company_id=related_company_id,
+        related_deal_id=related_deal_id,
         page=page,
         page_size=page_size,
         sort_order=sort_order,
@@ -394,12 +405,25 @@ async def list_meetings(
     status: Optional[str] = Query(default=None),
     from_date: Optional[datetime] = Query(default=None),
     to_date: Optional[datetime] = Query(default=None),
+    related_lead_id: Optional[UUID] = Query(default=None),
+    related_contact_id: Optional[UUID] = Query(default=None),
+    related_company_id: Optional[UUID] = Query(default=None),
+    related_deal_id: Optional[UUID] = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ) -> dict:
     svc = MeetingService(db)
     meetings, total = await svc.list_meetings(
-        current_user, status=status, start=from_date, end=to_date, page=page, page_size=page_size
+        current_user,
+        status=status,
+        start=from_date,
+        end=to_date,
+        related_lead_id=related_lead_id,
+        related_contact_id=related_contact_id,
+        related_company_id=related_company_id,
+        related_deal_id=related_deal_id,
+        page=page,
+        page_size=page_size,
     )
     paginated = PaginatedResponse.create(data=meetings, total=total, page=page, page_size=page_size)
     return {"success": True, "message": "OK", "data": paginated}
@@ -458,6 +482,10 @@ async def list_notes(
     db: DBSession,
     owner_id: Optional[UUID] = Query(default=None),
     search: Optional[str] = Query(default=None),
+    related_lead_id: Optional[UUID] = Query(default=None),
+    related_contact_id: Optional[UUID] = Query(default=None),
+    related_company_id: Optional[UUID] = Query(default=None),
+    related_deal_id: Optional[UUID] = Query(default=None),
     sort_order: str = Query(default="desc"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
@@ -470,6 +498,10 @@ async def list_notes(
         current_user.organization_id,
         owner_id=owner_id or scoped_owner,
         search=search,
+        related_lead_id=related_lead_id,
+        related_contact_id=related_contact_id,
+        related_company_id=related_company_id,
+        related_deal_id=related_deal_id,
         page=page,
         page_size=page_size,
         sort_order=sort_order,
@@ -514,6 +546,95 @@ async def update_note(note_id: UUID, payload: NoteUpdateRequest, current_user: C
 async def delete_note(note_id: UUID, current_user: CurrentUser, db: DBSession) -> None:
     svc = CrmActivitiesService(db)
     await svc.delete_note(current_user, note_id)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EMAILS  /crm-activities/emails
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.post(
+    "/emails",
+    response_model=StandardResponse[EmailResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Log email activity",
+    dependencies=[Depends(require_permission("activity:create"))],
+)
+async def create_email(payload: EmailCreateRequest, current_user: CurrentUser, db: DBSession) -> dict:
+    svc = CrmActivitiesService(db)
+    data = await svc.create_email(current_user, payload)
+    return {"success": True, "message": "Email logged.", "data": data}
+
+
+@router.get(
+    "/emails",
+    response_model=StandardResponse[PaginatedResponse[EmailResponse]],
+    summary="List email activities",
+    dependencies=[Depends(require_permission("activity:read"))],
+)
+async def list_emails(
+    current_user: CurrentUser,
+    db: DBSession,
+    owner_id: Optional[UUID] = Query(default=None),
+    search: Optional[str] = Query(default=None),
+    status: Optional[str] = Query(default=None),
+    priority: Optional[str] = Query(default=None),
+    direction: Optional[str] = Query(default=None),
+    sort_order: str = Query(default="desc"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+) -> dict:
+    svc = CrmActivitiesService(db)
+    rows, total = await svc.list_emails(
+        current_user,
+        owner_id=owner_id,
+        search=search,
+        status=status,
+        priority=priority,
+        direction=direction,
+        page=page,
+        page_size=page_size,
+        sort_order=sort_order,
+    )
+    items = [EmailResponse(**r) for r in rows]
+    paginated = PaginatedResponse.create(data=items, total=total, page=page, page_size=page_size)
+    return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.get(
+    "/emails/{email_id}",
+    response_model=StandardResponse[EmailResponse],
+    summary="Get email activity",
+    dependencies=[Depends(require_permission("activity:read"))],
+)
+async def get_email(email_id: UUID, current_user: CurrentUser, db: DBSession) -> dict:
+    svc = CrmActivitiesService(db)
+    data = await svc.get_email(current_user, email_id)
+    return {"success": True, "message": "OK", "data": data}
+
+
+@router.patch(
+    "/emails/{email_id}",
+    response_model=StandardResponse[EmailResponse],
+    summary="Update email activity",
+    dependencies=[Depends(require_permission("activity:update"))],
+)
+async def update_email(email_id: UUID, payload: EmailUpdateRequest, current_user: CurrentUser, db: DBSession) -> dict:
+    svc = CrmActivitiesService(db)
+    data = await svc.update_email(current_user, email_id, payload)
+    return {"success": True, "message": "Email updated.", "data": data}
+
+
+@router.delete(
+    "/emails/{email_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
+    summary="Delete email activity",
+    dependencies=[Depends(require_permission("activity:delete"))],
+)
+async def delete_email(email_id: UUID, current_user: CurrentUser, db: DBSession) -> None:
+    svc = CrmActivitiesService(db)
+    await svc.delete_email(current_user, email_id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

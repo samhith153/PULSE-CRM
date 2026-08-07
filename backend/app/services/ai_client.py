@@ -31,7 +31,16 @@ class AIClient:
         """POST JSON to the AI service and return parsed JSON or None on failure."""
         try:
             response = await self._client.post(f"{self.base_url}{path}", json=payload)
-            response.raise_for_status()
+            if response.status_code >= 400:
+                try:
+                    body = response.json()
+                except Exception:
+                    body = response.text
+                logger.warning(
+                    "AI service returned %d (%s %s): %s",
+                    response.status_code, path, self.base_url, body,
+                )
+                return None
             return response.json()
         except httpx.HTTPError as exc:
             logger.warning("AI service request failed (%s %s): %s", path, self.base_url, exc)
@@ -78,3 +87,30 @@ class AIClient:
         if deal_id:
             payload["deal_id"] = deal_id
         return await self._post("/api/v1/conversations/summarise", payload)
+    
+
+    async def draft_email(
+        self,
+        recipient_name: str,
+        recipient_email: str,
+        company: Optional[str] = None,
+        designation: Optional[str] = None,
+        purpose: str = "follow_up",
+        context: Optional[str] = None,
+        sender_name: Optional[str] = None,
+    ) -> Optional[dict]:
+        """POST /api/v1/conversations/draft-email — generate a fresh outreach draft."""
+        payload: dict[str, Any] = {
+            "recipient_name": recipient_name,
+            "recipient_email": recipient_email,
+            "purpose": purpose,
+        }
+        if company:
+            payload["company"] = company
+        if designation:
+            payload["designation"] = designation
+        if context:
+            payload["context"] = context
+        if sender_name:
+            payload["sender_name"] = sender_name
+        return await self._post("/api/v1/conversations/draft-email", payload)

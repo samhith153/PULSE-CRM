@@ -1,24 +1,41 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from '@/lib/toast';
+import {
+  NotificationData,
+  getNotifications,
+  getUnreadNotificationCount,
+  markNotificationRead,
+  markAllNotificationsRead,
+  dismissNotification,
+} from '@/utils/api';
+
 export interface Notification {
   id: string;
   title: string;
   message: string;
   is_read: boolean;
   created_at: string;
+  type: string;
+  entity_type: string | null;
+  entity_id: string | null;
 }
 
-const getNotifications = async (params: { page: number; pageSize: number }) => ({
-  items: [] as Notification[],
-  unread_count: 0,
-});
-const getUnreadNotificationCount = async () => 0;
-const markNotificationRead = async (id: string) => {};
-const markAllNotificationsRead = async () => {};
-const dismissNotification = async (id: string) => {};
-
 const POLL_INTERVAL_MS = 20000;
+
+function toNotification(n: NotificationData): Notification {
+  return {
+    id: n.id,
+    title: n.title,
+    message: n.message || '',
+    is_read: n.is_read,
+    created_at: n.created_at,
+    type: n.type,
+    entity_type: n.entity_type,
+    entity_id: n.entity_id,
+  };
+}
 
 export function useNotifications(pageSize = 20) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -28,12 +45,12 @@ export function useNotifications(pageSize = 20) {
 
   const refresh = useCallback(async () => {
     try {
-      const result = await getNotifications({ page: 1, pageSize });
+      const result = await getNotifications(1, pageSize);
       if (!mounted.current) return;
-      setNotifications(result.items);
-      setUnreadCount(result.unread_count);
+      setNotifications((result.items || []).map(toNotification));
+      setUnreadCount(result.unread_count || 0);
     } catch {
-      toast.error('Failed to load notifications');
+      // Silently fail — notifications are non-critical
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -44,7 +61,7 @@ export function useNotifications(pageSize = 20) {
       const count = await getUnreadNotificationCount();
       if (mounted.current) setUnreadCount(count);
     } catch {
-      toast.error('Failed to load unread count');
+      // Silently fail
     }
   }, []);
 
@@ -92,5 +109,5 @@ export function useNotifications(pageSize = 20) {
     }
   }, [notifications, refresh]);
 
-  return { notifications, unreadCount, loading, refresh, markRead, markAllRead, dismiss };
+  return { notifications, unreadCount, loading, refresh, refreshUnreadCount, markRead, markAllRead, dismiss };
 }

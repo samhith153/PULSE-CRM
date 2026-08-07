@@ -46,7 +46,7 @@ async def list_deals(
 ) -> dict:
     svc = DealService(db)
     deals, total = await svc.list(
-        current_user.organization_id,
+        current_user,
         search,
         status,
         owner_id,
@@ -91,7 +91,7 @@ async def create_deal(payload: DealCreateRequest, current_user: CurrentUser, db:
 )
 async def get_deal(deal_id: UUID, current_user: CurrentUser, db: DBSession) -> dict:
     svc = DealService(db)
-    deal = await svc.get(deal_id, current_user.organization_id)
+    deal = await svc.get(deal_id, current_user)
     return {"success": True, "message": "OK", "data": DealResponse.from_deal(deal)}
 
 
@@ -103,7 +103,7 @@ async def get_deal(deal_id: UUID, current_user: CurrentUser, db: DBSession) -> d
 )
 async def update_deal(deal_id: UUID, payload: DealUpdateRequest, current_user: CurrentUser, db: DBSession) -> dict:
     svc = DealService(db)
-    deal = await svc.update(deal_id, current_user.organization_id, payload)
+    deal = await svc.update(deal_id, current_user, payload)
     return {"success": True, "message": "Deal updated.", "data": DealResponse.from_deal(deal)}
 
 
@@ -115,4 +115,4 @@ async def update_deal(deal_id: UUID, payload: DealUpdateRequest, current_user: C
 )
 async def delete_deal(deal_id: UUID, current_user: CurrentUser, db: DBSession) -> None:
     svc = DealService(db)
-    await svc.delete(deal_id, current_user.organization_id)
+    await svc.delete(deal_id, current_user)

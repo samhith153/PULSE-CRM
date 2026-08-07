@@ -491,7 +491,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             <>
               <button 
                 onClick={handleSave}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#4FB477] hover:bg-[#4FB477]/90 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#4FB477] hover:bg-[#4FB477]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Save size={13} />
                 <span>Save</span>
@@ -504,7 +504,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                   setPriority(activity.priority);
                   setNotes(activity.details.notes || activity.details.description || activity.details.body || '');
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <X size={13} />
                 <span>Cancel</span>
@@ -521,7 +521,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                       window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: relatedEmail } }));
                     }, 150);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-brand-purple rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-brand-purple rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
                   title={`Email ${relatedEmail}`}
                 >
                   <Mail size={13} />
@@ -530,14 +530,14 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
               )}
               <button 
                 onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Edit3 size={13} />
                 <span>Edit</span>
               </button>
               <button 
                 onClick={handleDelete}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#E2604F] hover:bg-[#E2604F]/90 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#E2604F] hover:bg-[#E2604F]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Trash2 size={13} />
                 <span>Delete</span>
@@ -575,7 +575,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
           <div className="flex space-x-1.5 p-1 bg-secondary border border-border rounded-xl w-fit select-none shadow-sm">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition duration-200 cursor-pointer ${
                 activeTab === 'overview' 
                   ? 'bg-brand-purple text-white shadow-sm font-black' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
@@ -585,7 +585,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             </button>
             <button
               onClick={() => setActiveTab('timeline')}
-              className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition duration-200 cursor-pointer ${
                 activeTab === 'timeline' 
                   ? 'bg-brand-purple text-white shadow-sm font-black' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
@@ -832,7 +832,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                     <button
                       key={key}
                       onClick={() => setTimelineFilter(key)}
-                      className={`px-2.5 py-1 rounded-full text-[9px] font-bold border transition-all cursor-pointer ${
+                      className={`px-2.5 py-1 rounded-full text-[9px] font-bold border transition cursor-pointer ${
                         timelineFilter === key
                           ? 'bg-brand-purple text-white border-brand-purple shadow-sm'
                           : 'bg-secondary text-muted-foreground border-border hover:text-foreground hover:border-foreground/20'

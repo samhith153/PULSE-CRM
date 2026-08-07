@@ -19,8 +19,12 @@ import {
   UserPlus,
   CheckSquare,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  Mail
 } from 'lucide-react';
+import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
+import { useNotifications } from '@/hooks/useNotifications';
+import { resolveImageUrl } from '@/utils/api';
 
 interface HeaderProps {
   collapsed: boolean;
@@ -96,6 +100,9 @@ export default function Header({
   const quickAddRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const { user: currentUser } = useCurrentUser();
+  const { notifications: notifItems, unreadCount, markAllRead } = useNotifications(10);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
@@ -127,53 +134,9 @@ export default function Header({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onOpenCommandPalette]);
 
-  const notifications = [
-    { id: 1, text: "Sarah Johnson won the 'Acme Enterprise' deal!", type: "won", time: "10m ago" },
-    { id: 2, text: "Gmail sync completed: 24 new threads pulled.", type: "sync", time: "1h ago" },
-    { id: 3, text: "High-value lead 'Global Tech' has been idle for 5 days.", type: "warning", time: "3h ago" },
-    { id: 4, text: "New report 'Q3 Sales Forecast' ready for review.", type: "report", time: "5h ago" },
-  ];
-
-  // Dynamic profile details mapping
-  const getUserProfile = () => {
-    let name = "";
-    let email = "";
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('pulse-crm-user');
-      if (storedUser) {
-        if (storedUser.includes('@')) {
-          email = storedUser;
-          const namePart = storedUser.split('@')[0];
-          name = namePart.replace(/[._-]/g, ' ');
-        } else {
-          name = storedUser;
-          email = `${storedUser.toLowerCase().replace(/\s+/g, '.')}@pulse.crm`;
-        }
-      }
-    }
-
-    let defaultAvatar = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80";
-    if (userRole === 'admin') {
-      defaultAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80";
-      if (!name) name = "System Admin";
-      if (!email) email = "admin@pulse.crm";
-    } else if (userRole === 'manager') {
-      defaultAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80";
-      if (!name) name = "Alex Johnson";
-      if (!email) email = "alex.johnson@pulse.crm";
-    } else {
-      if (!name) name = "Sarah Johnson";
-      if (!email) email = "sarah.johnson@pulse.crm";
-    }
-
-    return {
-      name: name,
-      email: email,
-      avatar: defaultAvatar
-    };
-  };
-
-  const profile = getUserProfile();
+  const profileName = currentUser?.full_name || 'User';
+  const profileEmail = currentUser?.email || '';
+  const profileInitials = userInitials(currentUser?.full_name);
 
   return (
     <header className="sticky top-0 z-30 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border/80 bg-background/70 px-4 py-3 backdrop-blur-xl md:px-6 text-foreground">
@@ -189,7 +152,7 @@ export default function Header({
 
       {/* Center: search bar */}
       <div
-        className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/60 bg-secondary/40 px-4 cursor-pointer hover:bg-secondary/70 hover:border-border transition-all duration-200"
+        className="flex h-11 min-w-0 items-center gap-2 rounded-full border border-border/60 bg-secondary/40 px-4 cursor-pointer hover:bg-secondary/70 hover:border-border transition duration-200"
         onClick={() => onOpenCommandPalette?.()}
       >
         <Search size={16} className="shrink-0 text-muted-foreground" />
@@ -212,7 +175,7 @@ export default function Header({
       <div className="flex shrink-0 items-center gap-2">
 
         {/* Live sync pulsing badge */}
-        <span className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-background/55 px-2.5 py-1 text-[11px] font-semibold text-brand-purple lg:inline-flex select-none transition-all duration-300 min-w-[110px]">
+        <span className="hidden items-center gap-1.5 rounded-full border border-border/80 bg-background/55 px-2.5 py-1 text-[11px] font-semibold text-brand-purple lg:inline-flex select-none transition duration-300 min-w-[110px]">
           <span className="relative flex h-1.5 w-1.5">
             <span className={`animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-purple ${isSyncing ? 'opacity-90 scale-150 duration-500' : 'opacity-60'}`}></span>
             <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-purple"></span>
@@ -246,9 +209,11 @@ export default function Header({
             className="relative grid size-9 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary cursor-pointer hover-wiggle"
           >
             <Bell size={15} />
-            <span className="absolute -top-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-brand-purple text-[9px] font-semibold text-primary-foreground">
-              4
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-brand-purple text-[9px] font-semibold text-primary-foreground">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           <AnimatePresence>
@@ -262,30 +227,39 @@ export default function Header({
               >
                 <div className="px-4 py-3 bg-secondary border-b border-border flex justify-between items-center">
                   <span className="font-semibold text-foreground text-xs">Notifications</span>
-                  <span className="text-[11px] bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full font-semibold">
-                    4 New
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="text-[11px] bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full font-semibold">
+                      {unreadCount} New
+                    </span>
+                  )}
                 </div>
                 <div className="divide-y divide-border max-h-72 overflow-y-auto">
-                  {notifications.map((n) => (
-                    <div key={n.id} className="p-3 hover:bg-secondary transition-colors flex items-start gap-2.5 text-xs">
-                      <div className="mt-0.5 shrink-0">
-                        {n.type === 'won' && <TrendingUp size={14} className="text-brand-cyan" strokeWidth={1.75} />}
-                        {n.type === 'warning' && <ShieldAlert size={14} className="text-destructive" strokeWidth={1.75} />}
-                        {n.type === 'report' && <FileText size={14} className="text-brand-purple" strokeWidth={1.75} />}
-                        {!['won', 'warning', 'report'].includes(n.type) && <Bell size={14} className="text-muted-foreground" strokeWidth={1.75} />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-foreground leading-relaxed">{n.text}</p>
-                        <span className="text-[11px] text-muted-foreground mt-0.5 block">{n.time}</span>
-                      </div>
+                  {notifItems.length === 0 ? (
+                    <div className="p-6 text-center text-muted-foreground text-xs font-semibold">
+                      No notifications yet.
                     </div>
-                  ))}
+                  ) : (
+                    notifItems.map((n) => (
+                      <div key={n.id} className="p-3 hover:bg-secondary transition-colors flex items-start gap-2.5 text-xs">
+                        <div className="mt-0.5 shrink-0">
+                          {n.type.includes('won') || n.type.includes('deal') ? <TrendingUp size={14} className="text-brand-cyan" strokeWidth={1.75} /> : 
+                           n.type.includes('lost') || n.type.includes('alert') ? <ShieldAlert size={14} className="text-destructive" strokeWidth={1.75} /> :
+                           n.type.includes('email') ? <Mail size={14} className="text-brand-purple" strokeWidth={1.75} /> :
+                           n.type.includes('lead') ? <UserPlus size={14} className="text-blue-600" strokeWidth={1.75} /> :
+                           <Bell size={14} className="text-muted-foreground" strokeWidth={1.75} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`leading-relaxed ${n.is_read ? 'text-muted-foreground' : 'text-foreground'}`}>{n.title}</p>
+                          {n.message && <p className="text-muted-foreground mt-0.5 truncate">{n.message}</p>}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className="p-2 border-t border-border bg-secondary flex justify-between px-4">
                   <button
                     type="button"
-                    onClick={() => setShowNotifications(false)}
+                    onClick={() => { markAllRead(); }}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer font-medium"
                   >
                     Mark all read
@@ -307,16 +281,20 @@ export default function Header({
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-brand-purple/40 ring-1 ring-border/40 ring-offset-2 ring-offset-background transition-all duration-200 cursor-pointer overflow-hidden"
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-brand-purple/40 ring-1 ring-border/40 ring-offset-2 ring-offset-background transition duration-200 cursor-pointer overflow-hidden"
             aria-label="Profile menu"
           >
-            <Image
-              src={profile.avatar}
-              alt={`${profile.name} avatar`}
-              width={36} height={36}
-              className="h-full w-full object-cover"
-              unoptimized
-            />
+            {currentUser?.avatar_url ? (
+              <Image
+                src={resolveImageUrl(currentUser.avatar_url)}
+                alt={`${profileName} avatar`}
+                width={36} height={36}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <span className="select-none">{profileInitials}</span>
+            )}
           </button>
 
           <AnimatePresence>
@@ -329,8 +307,8 @@ export default function Header({
                 className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-xl shadow-float overflow-hidden z-50"
               >
                 <div className="px-4 py-2.5 bg-secondary border-b border-border">
-                  <p className="text-xs font-semibold text-foreground truncate">{profile.name}</p>
-                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{profile.email}</p>
+                  <p className="text-xs font-semibold text-foreground truncate">{profileName}</p>
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{profileEmail}</p>
                 </div>
                 <div className="py-1">
                   <button

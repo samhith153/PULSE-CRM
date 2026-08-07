@@ -149,7 +149,7 @@ export default function IntegrationsView() {
                       <button 
                         onClick={gmailConnection?.is_active ? handleDisconnectGmail : handleConnectGmail} 
                         disabled={isLoadingGmail} 
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer disabled:opacity-60 flex items-center space-x-1.5 ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer disabled:opacity-60 flex items-center space-x-1.5 ${
                           gmailConnection?.is_active 
                             ? 'bg-destructive/10 hover:bg-rose-100 dark:hover:bg-rose-950/20 text-destructive border border-destructive/20' 
                             : 'bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground shadow-sm'
@@ -160,7 +160,7 @@ export default function IntegrationsView() {
                       <button 
                         onClick={loadGmailStatus} 
                         disabled={isLoadingGmail} 
-                        className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-all cursor-pointer disabled:opacity-60 bg-card" 
+                        className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition cursor-pointer disabled:opacity-60 bg-card" 
                         title="Refresh status"
                       >
                         <RefreshCw className={`h-4 w-4 ${isLoadingGmail ? 'animate-spin' : ''}`} />
@@ -170,7 +170,7 @@ export default function IntegrationsView() {
                     <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-secondary/80 text-muted-foreground cursor-not-allowed border border-border/50">Coming Soon</button>
                   )}
                   {item.status !== 'Disconnected' && (
-                    <button className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition-all cursor-pointer bg-card">
+                    <button className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition cursor-pointer bg-card">
                       <Settings className="h-4 w-4" />
                     </button>
                   )}

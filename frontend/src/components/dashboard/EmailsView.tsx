@@ -2,8 +2,8 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { AlertCircle, Bot, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Sparkles, Plus, X, Send, Menu } from 'lucide-react';
-import { getEmail, getEmails, getEmailSummary, EmailSummaryData, SyncedEmail, getGmailStatus, sendGmailEmail, getLeads, getContacts } from '@/utils/api';
+import { AlertCircle, Bot, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Sparkles, Plus, X, Send, Menu, PenSquare, Trash2 } from 'lucide-react';
+import { getEmail, getEmails, getEmailSummary, EmailSummaryData, SyncedEmail, getGmailStatus, sendGmailEmail, getLeads, getContacts, draftOutreachEmail, EmailComposeTarget } from '@/utils/api';
 import { toast } from '@/lib/toast';
 
 type MailboxFilter = 'all' | 'inbound' | 'outbound' | 'unread';
@@ -23,7 +23,14 @@ function formatSize(bytes?: number | null) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () => void; onTabChange?: (tab: string) => void } = {}) {
+interface EmailsViewProps {
+  onLoaded?: () => void;
+  onTabChange?: (tab: string) => void;
+  composeTarget?: EmailComposeTarget | null;
+  onComposeConsumed?: () => void;
+}
+
+export default function EmailsView({ onLoaded, onTabChange, composeTarget, onComposeConsumed }: EmailsViewProps = {}) {
   const [emails, setEmails] = useState<SyncedEmail[]>([]);
   const [selectedEmail, setSelectedEmail] = useState<SyncedEmail | null>(null);
   const [filter, setFilter] = useState<MailboxFilter>('all');
@@ -38,12 +45,14 @@ export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () =>
   const [isAsideCollapsed, setIsAsideCollapsed] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
-  // Compose State
-  const [isComposing, setIsComposing] = useState(false);
-  const [composeTo, setComposeTo] = useState('');
-  const [composeSubject, setComposeSubject] = useState('');
-  const [composeBody, setComposeBody] = useState('');
+  // --- Compose & AI Draft State ---
+  const [isComposeOpen, setIsComposeOpen] = useState(false);
+  const [composeForm, setComposeForm] = useState({ to: '', name: '', subject: '', body: '' });
+  const [isDrafting, setIsDrafting] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [composeError, setComposeError] = useState<string | null>(null);
+  const [composeContext, setComposeContext] = useState<EmailComposeTarget | null>(null);
+
   const [gmailConnected, setGmailConnected] = useState(false);
   const [gmailConnectionId, setGmailConnectionId] = useState<string | null>(null);
 
@@ -60,26 +69,67 @@ export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () =>
     }).catch(() => {});
   }, []);
 
-  // Listen to search param or custom event to trigger composing
+  const generateDraft = async (target: EmailComposeTarget) => {
+    setIsDrafting(true);
+    setComposeError(null);
+    try {
+      const draft = await draftOutreachEmail({
+        recipient_name: target.name || target.to,
+        recipient_email: target.to,
+        company: target.company,
+        designation: target.designation,
+        purpose: target.purpose || 'follow_up',
+        context: target.context,
+        external_entity_type: target.externalEntityType,
+        external_entity_id: target.externalEntityId
+      });
+      setComposeForm({ to: target.to, name: target.name || '', subject: draft.subject, body: draft.body });
+    } catch (err: any) {
+      setComposeError(err?.message || 'Could not generate an AI draft. You can still write the email manually.');
+      setComposeForm({ to: target.to, name: target.name || '', subject: '', body: '' });
+    } finally {
+      setIsDrafting(false);
+    }
+  };
+
+  // Listen for target from DashboardShell
+  useEffect(() => {
+    if (!composeTarget) return;
+    setIsComposeOpen(true);
+    setComposeContext(composeTarget);
+    generateDraft(composeTarget);
+    onComposeConsumed?.();
+  }, [composeTarget?.requestId]);
+
+  const openBlankCompose = () => {
+    setComposeForm({ to: '', name: '', subject: '', body: '' });
+    setComposeContext(null);
+    setComposeError(null);
+    setIsComposeOpen(true);
+  };
+
+  const closeCompose = () => {
+    setIsComposeOpen(false);
+    setComposeForm({ to: '', name: '', subject: '', body: '' });
+    setComposeContext(null);
+    setComposeError(null);
+  };
+
+  // Listen to search param or custom event to trigger composing (Legacy fallback)
   useEffect(() => {
     const handleCompose = (e: Event) => {
       const customEvent = e as CustomEvent<{ to: string }>;
       if (customEvent.detail?.to) {
-        setComposeTo(customEvent.detail.to);
-        setComposeSubject('');
-        setComposeBody('');
-        setIsComposing(true);
+        setComposeForm(prev => ({ ...prev, to: customEvent.detail.to }));
+        setIsComposeOpen(true);
       }
     };
     window.addEventListener('pulse-compose-email', handleCompose);
 
     const composeParam = searchParams.get('compose');
     if (composeParam) {
-      setComposeTo(composeParam);
-      setComposeSubject('');
-      setComposeBody('');
-      setIsComposing(true);
-      // Clear compose param to prevent compose screen re-opening on tab toggle
+      setComposeForm(prev => ({ ...prev, to: composeParam }));
+      setIsComposeOpen(true);
       const nextUrl = window.location.pathname;
       window.history.replaceState({}, '', nextUrl);
     }
@@ -89,40 +139,29 @@ export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () =>
     };
   }, [searchParams]);
 
-  const handleSendEmail = async () => {
+  const handleSendCompose = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!composeForm.to || !composeForm.subject || !composeForm.body) return;
     if (!gmailConnected || !gmailConnectionId) {
-      toast.error('Gmail is not connected. Please connect Gmail in integrations first.');
+      setComposeError('Gmail is not connected. Connect Gmail in Integrations settings first.');
       return;
     }
-    if (!composeTo.trim()) {
-      toast.error('Recipient email address is required.');
-      return;
-    }
-    if (!composeSubject.trim()) {
-      toast.error('Email subject is required.');
-      return;
-    }
-    if (!composeBody.trim()) {
-      toast.error('Email body is required.');
-      return;
-    }
-
     setIsSending(true);
+    setComposeError(null);
     try {
       await sendGmailEmail({
         gmail_connection_id: gmailConnectionId,
-        receiver: composeTo,
-        subject: composeSubject,
-        html_body: composeBody,
+        receiver: composeForm.to,
+        subject: composeForm.subject,
+        html_body: composeForm.body.replace(/\n/g, '<br/>'),
+        external_entity_type: composeContext?.externalEntityType ?? undefined,
+        external_entity_id: composeContext?.externalEntityId ?? undefined
       });
-      toast.success('Email sent successfully!');
-      setIsComposing(false);
-      setComposeTo('');
-      setComposeSubject('');
-      setComposeBody('');
+      toast.success(`Email sent to ${composeForm.to}.`);
+      closeCompose();
       loadEmails(); // Refresh emails list
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to send email.');
+      setComposeError(err?.message || 'Failed to send email. Please try again.');
     } finally {
       setIsSending(false);
     }
@@ -200,29 +239,32 @@ export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () =>
     if (!searchEmail) return;
     
     try {
-      const leads = await getLeads();
+      const leads = await getLeads() as any[];
       const foundLead = leads.find(l => 
         l.email?.toLowerCase() === searchEmail.toLowerCase() ||
-        l.name?.toLowerCase() === searchEmail.toLowerCase()
+        l.contact_email?.toLowerCase() === searchEmail.toLowerCase() ||
+        l.name?.toLowerCase() === searchEmail.toLowerCase() ||
+        l.title?.toLowerCase() === searchEmail.toLowerCase()
       );
       
       if (foundLead) {
         localStorage.setItem('pulse-selected-lead-id', String(foundLead.id));
         onTabChange?.('leads');
-        toast.success(`Opening Lead Summary for ${foundLead.name}`);
+        toast.success(`Opening Lead Summary for ${foundLead.name || foundLead.title || 'Lead'}`);
         return;
       }
       
-      const contacts = await getContacts();
+      const contacts = await getContacts() as any[];
       const foundContact = contacts.find(c => 
         c.email?.toLowerCase() === searchEmail.toLowerCase() ||
-        c.name?.toLowerCase() === searchEmail.toLowerCase()
+        c.name?.toLowerCase() === searchEmail.toLowerCase() ||
+        c.first_name?.toLowerCase() === searchEmail.toLowerCase()
       );
       
       if (foundContact) {
         localStorage.setItem('pulse-selected-contact-id', String(foundContact.id));
         onTabChange?.('contacts');
-        toast.success(`Opening Contact Summary for ${foundContact.name}`);
+        toast.success(`Opening Contact Summary for ${foundContact.name || foundContact.first_name || 'Contact'}`);
         return;
       }
       
@@ -237,7 +279,7 @@ export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () =>
 
   return (
     <div className="flex border border-border rounded-2xl overflow-hidden bg-card h-[650px] relative">
-      <aside className={`shrink-0 border-r border-border bg-secondary flex flex-col gap-2 transition-all duration-300 ${isAsideCollapsed ? 'w-12 p-1.5' : 'w-56 p-3'}`}>
+      <aside className={`shrink-0 border-r border-border bg-secondary flex flex-col gap-2 transition duration-300 ${isAsideCollapsed ? 'w-12 p-1.5' : 'w-56 p-3'}`}>
         <div className="flex items-center justify-between mb-2">
           {!isAsideCollapsed && <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider pl-2">Mailbox</span>}
           <button 
@@ -250,13 +292,8 @@ export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () =>
         </div>
 
         <button 
-          onClick={() => {
-            setComposeTo('');
-            setComposeSubject('');
-            setComposeBody('');
-            setIsComposing(true);
-          }}
-          className={`flex items-center justify-center gap-2 py-2 bg-brand-purple hover:bg-brand-purple/95 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm mb-2 ${isAsideCollapsed ? 'w-8 h-8 rounded-full p-0 mx-auto' : 'w-full'}`}
+          onClick={openBlankCompose}
+          className={`flex items-center justify-center gap-2 py-2 bg-brand-purple hover:bg-brand-purple/95 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-sm mb-2 ${isAsideCollapsed ? 'w-8 h-8 rounded-full p-0 mx-auto' : 'w-full'}`}
           title="Compose"
         >
           <Plus className="h-4 w-4" />
@@ -276,7 +313,7 @@ export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () =>
               <button 
                 key={item.id} 
                 onClick={() => { setFilter(item.id as MailboxFilter); setPage(1); }} 
-                className={`flex items-center rounded-r-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center rounded-r-full text-xs font-semibold transition cursor-pointer ${
                   isAsideCollapsed 
                     ? 'justify-center p-2 rounded-full w-8 h-8 mx-auto' 
                     : 'w-full justify-between px-4 py-2'
@@ -426,83 +463,91 @@ export default function EmailsView({ onLoaded, onTabChange }: { onLoaded?: () =>
         </div>
       )}
 
-      {/* Compose Slide-over Drawer (overlay) */}
-      {isComposing && (
-        <div className="absolute inset-y-0 right-0 w-[550px] max-w-full bg-card border-l border-border shadow-2xl z-20 flex flex-col animate-in slide-in-from-right duration-300">
-          <div className="flex items-center justify-between border-b border-border p-4 bg-secondary shrink-0">
-            <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">New Message</h3>
-            <button 
-              onClick={() => setIsComposing(false)}
-              className="p-1.5 hover:bg-secondary rounded text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-6 flex flex-col justify-between">
-            <div className="space-y-4">
-              <div className="space-y-3.5">
-                <div>
-                  <label className="block text-[9px] font-bold text-muted-foreground uppercase mb-1">To</label>
-                  <input
-                    type="email"
-                    value={composeTo}
-                    onChange={(e) => setComposeTo(e.target.value)}
-                    placeholder="recipient@example.com"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs text-foreground bg-secondary/30 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
-                  />
-                </div>
+      {/* AI Compose Modal */}
+      {isComposeOpen && (
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200" onClick={closeCompose}>
+          <div className="bg-card border border-border rounded-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                <PenSquare className="h-4 w-4 text-brand-purple" />
+                {composeForm.name ? `Email ${composeForm.name}` : 'New Email'}
+              </h3>
+              <button onClick={closeCompose} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+            </div>
 
-                <div>
-                  <label className="block text-[9px] font-bold text-muted-foreground uppercase mb-1">Subject</label>
-                  <input
-                    type="text"
-                    value={composeSubject}
-                    onChange={(e) => setComposeSubject(e.target.value)}
-                    placeholder="Enter email subject"
-                    className="w-full p-2.5 border border-border rounded-xl text-xs text-foreground bg-secondary/30 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
-                  />
-                </div>
+            {gmailConnected === false && (
+              <div className="mx-5 mt-4 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-700">
+                Gmail is not connected. Go to <strong>Integrations</strong> in the sidebar to connect your Gmail account, then try again.
+              </div>
+            )}
 
-                <div>
-                  <label className="block text-[9px] font-bold text-muted-foreground uppercase mb-1">Body</label>
-                  <textarea
-                    value={composeBody}
-                    onChange={(e) => setComposeBody(e.target.value)}
-                    placeholder="Type your message here..."
-                    rows={12}
-                    className="w-full p-2.5 border border-border rounded-xl text-xs text-foreground bg-secondary/30 placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-brand-purple/20 resize-none font-medium leading-relaxed"
-                  />
+            <form onSubmit={handleSendCompose} className="p-5 space-y-4">
+              <div>
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">To</label>
+                <input type="email" required placeholder="name@company.com" value={composeForm.to} onChange={e => setComposeForm({ ...composeForm, to: e.target.value })} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+              </div>
+              <div>
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Subject</label>
+                <input type="text" required placeholder="Subject line" value={composeForm.subject} onChange={e => setComposeForm({ ...composeForm, subject: e.target.value })} disabled={isDrafting} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background disabled:opacity-50" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider">Email Body</label>
+                  {isDrafting && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-purple">
+                      <Sparkles className="h-3 w-3 animate-pulse" /> AI drafting...
+                    </span>
+                  )}
+                </div>
+                {isDrafting ? (
+                  <div className="w-full min-h-[140px] border border-border rounded-lg bg-secondary flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-brand-purple" />
+                  </div>
+                ) : (
+                  <textarea required placeholder="Write message..." value={composeForm.body} onChange={e => setComposeForm({ ...composeForm, body: e.target.value })} className="w-full p-2.5 border border-border rounded-lg text-xs text-foreground focus:outline-none min-h-[140px] bg-background leading-relaxed" />
+                )}
+                {!isDrafting && composeForm.body && composeContext && (
+                  <p className="text-[10px] text-muted-foreground font-semibold mt-1.5 flex items-center gap-1"><Bot className="h-3 w-3" /> AI-drafted — review and edit before sending.</p>
+                )}
+              </div>
+
+              {composeError && <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-[11px] font-semibold text-destructive flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{composeError}</div>}
+
+              <div className="pt-3 border-t border-border flex justify-between items-center">
+                <button type="button" onClick={closeCompose} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive cursor-pointer">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Discard</span>
+                </button>
+                <div className="flex gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => generateDraft({
+                      to: composeForm.to,
+                      name: composeForm.name || composeContext?.name,
+                      company: composeContext?.company,
+                      designation: composeContext?.designation,
+                      purpose: composeContext?.purpose || 'follow_up',
+                      context: composeContext?.context,
+                      externalEntityType: composeContext?.externalEntityType,
+                      externalEntityId: composeContext?.externalEntityId,
+                      requestId: Date.now()
+                    })}
+                    disabled={isDrafting || !composeForm.to}
+                    className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Regenerate
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSending || isDrafting || gmailConnected === false || !composeForm.to || !composeForm.subject || !composeForm.body}
+                    className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    <span>{isSending ? 'Sending...' : 'Send Email'}</span>
+                  </button>
                 </div>
               </div>
-            </div>
-
-            <div className="flex justify-end gap-3 border-t border-border pt-4 mt-4 shrink-0 bg-background/50">
-              <button
-                type="button"
-                onClick={() => setIsComposing(false)}
-                className="px-4 py-2 border border-border rounded-xl text-xs font-bold text-foreground hover:bg-secondary cursor-pointer transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSendEmail}
-                disabled={isSending}
-                className="inline-flex items-center gap-1.5 px-5 py-2 bg-brand-purple hover:bg-brand-purple/90 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Sending...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="h-3.5 w-3.5" />
-                    <span>Send Email</span>
-                  </>
-                )}
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}

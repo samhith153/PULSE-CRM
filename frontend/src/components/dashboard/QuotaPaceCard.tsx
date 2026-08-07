@@ -134,7 +134,7 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className={`bg-card/95 backdrop-blur-md border ${cardAccentClass} rounded-[22px] p-6 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300 w-full overflow-hidden relative group ${className}`}
+      className={`bg-card/95 backdrop-blur-md border ${cardAccentClass} rounded-2xl p-6 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 transition duration-300 w-full overflow-hidden relative group ${className}`}
     >
       {/* Background radial glow effect matching status */}
       <div
@@ -256,7 +256,7 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
 
           {/* Expected pace marker */}
           <div
-            className="absolute z-20 pointer-events-none transition-all duration-500"
+            className="absolute z-20 pointer-events-none transition duration-500"
             style={{
               left: `${quota.expectedPacePct}%`,
               top: '50%',

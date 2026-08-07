@@ -239,7 +239,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
               <button
                 key={p}
                 onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 capitalize ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition duration-200 capitalize ${
                   period === p ? 'bg-card text-foreground shadow-sm border border-border/40' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -252,7 +252,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
             <select
               value={team}
               onChange={(e) => setTeam(e.target.value)}
-              className="bg-card hover:bg-secondary/60 text-foreground border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple transition-all duration-200"
+              className="bg-card hover:bg-secondary/60 text-foreground border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple transition duration-200"
             >
               <option value="all">All Teams</option>
               <option value="north">North Region</option>
@@ -265,7 +265,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
             <select
               value={productLine}
               onChange={(e) => setProductLine(e.target.value)}
-              className="bg-card hover:bg-secondary/60 text-foreground border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple transition-all duration-200"
+              className="bg-card hover:bg-secondary/60 text-foreground border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple transition duration-200"
             >
               <option value="all">All Products</option>
               <option value="crm">Core CRM</option>
@@ -280,7 +280,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Target vs Actual */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-blue" />
           <div className="space-y-3.5">
             <div className="flex items-center justify-between">
@@ -309,7 +309,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
         </div>
 
         {/* Confidence Band Range Bar */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-purple" />
           <div className="space-y-3.5">
             <div className="flex items-center justify-between">
@@ -351,7 +351,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
         </div>
 
         {/* Run-Rate & Trend */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
           <div className="space-y-3.5 flex flex-col justify-between h-full">
             <div className="flex items-center justify-between">
@@ -389,7 +389,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       </div>
 
       {/* ── Section 2: Premium Team Quota Pace Table ─────────────────── */}
-      <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20">
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20">
         <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
           <div className="flex items-center space-x-2">
             <Award size={18} className="text-brand-purple" />
@@ -447,7 +447,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                 return (
                   <motion.tr 
                     key={rep.user_id} 
-                    className="hover:bg-muted/40 transition-all duration-200 cursor-pointer group"
+                    className="hover:bg-muted/40 transition duration-200 cursor-pointer group"
                     whileHover={{ x: 1 }}
                   >
                     {/* User Profile Info */}
@@ -507,7 +507,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* ── Section 3: Coaching Signals ────────────────────────────── */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 flex flex-col justify-between">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
               <div className="flex items-center space-x-2">
@@ -521,7 +521,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
 
             <div className="space-y-4">
               {coachingSignals.map((sig, idx) => (
-                <div key={idx} className="p-4 bg-secondary/35 border border-border/40 rounded-xl space-y-2 hover:border-brand-purple/20 transition-all duration-200">
+                <div key={idx} className="p-4 bg-secondary/35 border border-border/40 rounded-xl space-y-2 hover:border-brand-purple/20 transition duration-200">
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-foreground text-xs">{sig.repName}</span>
                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
@@ -549,7 +549,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
         </div>
 
         {/* ── Section 4: Deal Risk Radar ──────────────────────────────── */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 flex flex-col justify-between">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
               <div className="flex items-center space-x-2">
@@ -563,7 +563,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
 
             <div className="space-y-4 max-h-[440px] overflow-y-auto pr-1">
               {dealRisks.map((deal) => (
-                <div key={deal.id} className="p-4 bg-secondary/35 border border-border/40 rounded-xl space-y-2.5 hover:border-amber-500/20 transition-all duration-200">
+                <div key={deal.id} className="p-4 bg-secondary/35 border border-border/40 rounded-xl space-y-2.5 hover:border-amber-500/20 transition duration-200">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <h4 className="font-extrabold text-foreground text-xs hover:text-brand-purple transition-colors cursor-pointer">{deal.name}</h4>
@@ -616,7 +616,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       </div>
 
       {/* ── Section 5: Pipeline by Stage ────────────────────────────── */}
-      <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20">
+      <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20">
         <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
           <div className="flex items-center space-x-2">
             <Layers size={18} className="text-brand-purple" />
@@ -660,7 +660,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       </div>
 
       {/* ── Design Notes & Exclusions (Footer Info) ──────────────────── */}
-      <div className="bg-secondary/20 border border-border/40 rounded-[22px] p-5 text-[11px] text-muted-foreground space-y-1.5 leading-relaxed">
+      <div className="bg-secondary/20 border border-border/40 rounded-2xl p-5 text-[11px] text-muted-foreground space-y-1.5 leading-relaxed">
         <div className="flex items-center space-x-1.5 text-foreground font-extrabold">
           <HelpCircle size={13} className="text-brand-purple" />
           <span>Overview Architectural Concerns</span>

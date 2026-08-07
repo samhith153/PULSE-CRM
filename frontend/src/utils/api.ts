@@ -216,7 +216,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export function resolveImageUrl(url: string | null | undefined): string {
-  if (!url) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80';
+  if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
@@ -1148,4 +1148,431 @@ export async function uploadAvatar(file: File): Promise<{ url: string }> {
     throw new Error(detail.detail || 'Avatar upload failed');
   }
   return res.json();
+}
+
+// =============================================================================
+// CRM ACTIVITIES API  (/api/v1/crm-activities)
+// =============================================================================
+
+export interface CrmActivityDetails {
+  description?: string | null;
+  reminder_minutes?: number | null;
+  completed_at?: string | null;
+  contact_name?: string | null;
+  phone_number?: string | null;
+  call_type?: string | null;
+  duration_minutes?: number | null;
+  outcome?: string | null;
+  notes?: string | null;
+  end_datetime?: string | null;
+  location?: string | null;
+  meeting_link?: string | null;
+  direction?: string | null;
+  sender?: string | null;
+  receiver?: string | null;
+  body_preview?: string | null;
+  thread_id?: string | null;
+  is_read?: boolean | null;
+  body?: string | null;
+}
+
+export interface CrmActivity {
+  id: string;
+  activity_type: 'task' | 'call' | 'meeting' | 'email' | 'note';
+  subject: string;
+  status: string;
+  priority: string;
+  due_date: string | null;
+  owner_id: string | null;
+  owner_name: string | null;
+  related_entity_type: string | null;
+  related_record_id: string | null;
+  related_record_name: string | null;
+  organization_id: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  details: CrmActivityDetails;
+}
+
+export interface CrmActivityOwner {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+export interface CrmActivitiesListParams {
+  view?: 'timeline' | 'task' | 'call' | 'meeting' | 'email' | 'note';
+  search?: string;
+  status?: string;
+  priority?: string;
+  owner_id?: string;
+  from_date?: string;
+  to_date?: string;
+  quick_tab?: 'all' | 'today' | 'upcoming' | 'overdue';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  page_size?: number;
+}
+
+export interface PaginatedCrmActivities {
+  data: CrmActivity[];
+  meta: {
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
+export async function getCrmActivities(
+  params: CrmActivitiesListParams = {}
+): Promise<PaginatedCrmActivities> {
+  const result = await apiFetch<PaginatedCrmActivities>(
+    `/api/v1/crm-activities${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`
+  );
+  return result ?? { data: [], meta: { total: 0, page: 1, page_size: 20, total_pages: 1, has_next: false, has_prev: false } };
+}
+
+export async function getCrmActivityOwners(): Promise<CrmActivityOwner[]> {
+  const result = await apiFetch<CrmActivityOwner[]>('/api/v1/crm-activities/owners');
+  return Array.isArray(result) ? result : [];
+}
+
+export async function downloadCrmActivitiesExport(
+  params: Omit<CrmActivitiesListParams, 'page' | 'page_size'>
+): Promise<void> {
+  const qs = toQuery(params as Record<string, string | number | boolean | null | undefined>);
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+  const res = await fetch(`${API_BASE_URL}/api/v1/crm-activities/export${qs}`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'text/csv' },
+  });
+  if (!res.ok) {
+    let msg = `Export failed (${res.status})`;
+    try { const b = await res.json(); if (b?.message) msg = b.message; } catch {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `activities_export_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+}
+
+export interface CreateTaskPayload {
+  subject: string; description?: string; due_date?: string; priority?: string;
+  status?: string; owner_id?: string; reminder_minutes?: number;
+  related_entity_type?: string; related_lead_id?: string;
+  related_contact_id?: string; related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmTask(payload: CreateTaskPayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/tasks', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmTask(id: string, payload: Partial<CreateTaskPayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmTask(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/tasks/${id}`, { method: 'DELETE' });
+}
+
+export interface CreateCallPayload {
+  subject: string; contact_name?: string; phone_number?: string; call_type?: string;
+  duration_minutes?: number; outcome?: string; notes?: string; priority?: string;
+  status?: string; called_at?: string; owner_id?: string;
+  related_entity_type?: string; related_lead_id?: string;
+  related_contact_id?: string; related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmCall(payload: CreateCallPayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/calls', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmCall(id: string, payload: Partial<CreateCallPayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/calls/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmCall(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/calls/${id}`, { method: 'DELETE' });
+}
+
+export interface CreateMeetingPayload {
+  title: string; description?: string; start_datetime: string; end_datetime: string;
+  status?: string; owner_id?: string; meeting_link?: string; location?: string;
+  reminder_minutes?: number; related_lead_id?: string; related_contact_id?: string;
+  related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmMeeting(payload: CreateMeetingPayload): Promise<any> {
+  return apiFetch<any>('/api/v1/crm-activities/meetings', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export interface CreateNotePayload {
+  title: string; body?: string; owner_id?: string; related_entity_type?: string;
+  related_lead_id?: string; related_contact_id?: string;
+  related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmNote(payload: CreateNotePayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/notes', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmNote(id: string, payload: Partial<CreateNotePayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/notes/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmNote(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/notes/${id}`, { method: 'DELETE' });
+}
+
+export async function bulkDeleteCrmActivities(ids: string[]): Promise<{ affected: number; message: string }> {
+  return apiFetch<{ affected: number; message: string }>('/api/v1/crm-activities/bulk-delete', {
+    method: 'POST', body: JSON.stringify({ ids }),
+  });
+}
+export async function bulkUpdateCrmActivities(payload: { ids: string[]; status?: string; owner_id?: string; archive?: boolean }): Promise<{ affected: number; message: string }> {
+  return apiFetch<{ affected: number; message: string }>('/api/v1/crm-activities/bulk-update', {
+    method: 'POST', body: JSON.stringify(payload),
+  });
+}
+
+// =============================================================================
+// LEAD DETAIL PANEL  — real data for Timeline / Emails / Calls / Meetings / Chart
+// =============================================================================
+
+export interface LeadTimelineEntry {
+  timeline_id: string;
+  activity_type: string;
+  title: string;
+  description?: string | null;
+  performed_by: string;
+  performed_by_avatar?: string | null;
+  icon: string;
+  color: string;
+  created_at: string;
+  relative_time: string;
+}
+
+export interface LeadPanelCall {
+  id: string;
+  subject: string;
+  call_type: string;
+  outcome?: string | null;
+  duration_minutes?: number | null;
+  notes?: string | null;
+  called_at?: string | null;
+  owner_name?: string | null;
+  created_at: string;
+}
+
+export interface LeadPanelMeeting {
+  id: string;
+  title: string;
+  status: string;
+  start_datetime: string;
+  end_datetime: string;
+  location?: string | null;
+  meeting_link?: string | null;
+  owner_name?: string | null;
+}
+
+export interface LeadPanelNote {
+  id: string;
+  title: string;
+  body?: string | null;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Fetch real timeline events for a lead */
+export async function getLeadTimeline(
+  leadId: string,
+  params: { page?: number; page_size?: number } = {}
+): Promise<{ entries: LeadTimelineEntry[]; total_records: number }> {
+  const qs = toQuery({ page: params.page ?? 1, page_size: params.page_size ?? 20 } as any);
+  const result = await apiFetch<any>(
+    `/api/v1/crm-activities/lead/${leadId}/timeline${qs}`
+  );
+  return result ?? { entries: [], total_records: 0 };
+}
+
+/** Fetch emails linked to a lead (via Gmail sync) */
+export async function getLeadEmails(leadId: string): Promise<SyncedEmail[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/emails${toQuery({ external_entity_type: 'lead', external_entity_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  if (Array.isArray(result)) return result;
+  if (result.data && Array.isArray(result.data)) return result.data;
+  if (result.records && Array.isArray(result.records)) return result.records;
+  return [];
+}
+
+/** Fetch calls linked to a lead */
+export async function getLeadCalls(leadId: string): Promise<LeadPanelCall[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/crm-activities/calls${toQuery({ related_lead_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  const items = result.data ?? result;
+  return Array.isArray(items) ? items : [];
+}
+
+/** Fetch meetings linked to a lead */
+export async function getLeadMeetings(leadId: string): Promise<LeadPanelMeeting[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/meetings${toQuery({ related_lead_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  const items = result.data ?? result;
+  return Array.isArray(items) ? items : [];
+}
+
+/** Fetch lead score for the chart */
+export async function getLeadScore(leadId: string): Promise<{ score: number; fit_score: number; engagement_score: number } | null> {
+  try {
+    const result = await apiFetch<any>(`/api/v1/lead-scores/leads/${leadId}`);
+    return result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// =============================================================================
+// AVATAR API
+// =============================================================================
+
+export async function deleteAvatar(): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Failed to remove avatar');
+  }
+}
+
+// =============================================================================
+// NOTIFICATIONS API
+// =============================================================================
+
+export interface NotificationData {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  payload: Record<string, unknown> | null;
+  is_read: boolean;
+  read_at: string | null;
+  is_dismissed: boolean;
+  created_at: string;
+}
+
+export interface NotificationListData {
+  items: NotificationData[];
+  total: number;
+  unread_count: number;
+}
+
+export async function getNotifications(page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationListData> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  if (unreadOnly) params.set('unread_only', 'true');
+  return apiFetch<NotificationListData>(`/api/v1/notifications?${params}`);
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const result = await apiFetch<{ unread_count: number }>('/api/v1/notifications/unread-count');
+  return result?.unread_count ?? 0;
+}
+
+export async function markNotificationRead(id: string): Promise<NotificationData> {
+  return apiFetch<NotificationData>(`/api/v1/notifications/${id}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await apiFetch(`/api/v1/notifications/read-all`, { method: 'POST' });
+}
+
+export async function dismissNotification(id: string): Promise<void> {
+  await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
+}
+
+// =============================================================================
+// EMAIL DRAFT API
+// =============================================================================
+
+export interface EmailDraftRequestPayload {
+  recipient_name: string;
+  recipient_email: string;
+  company?: string;
+  designation?: string;
+  purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+  context?: string;
+  external_entity_type?: string | null;
+  external_entity_id?: string | null;
+}
+
+export interface EmailDraftResult {
+  subject: string;
+  body: string;
+  model_version?: string | null;
+}
+
+export async function draftOutreachEmail(payload: EmailDraftRequestPayload): Promise<EmailDraftResult> {
+  return apiFetch<EmailDraftResult>('/api/v1/emails/draft-outreach', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/** Shared shape passed from any "Send Email" trigger to the Emails page's compose panel. */
+export interface EmailComposeTarget {
+  to: string;
+  name?: string;
+  company?: string;
+  designation?: string;
+  purpose?: EmailDraftRequestPayload['purpose'];
+  context?: string;
+  externalEntityType?: string | null;
+  externalEntityId?: string | null;
+  /** Bumped on every open so EmailsView re-triggers even if the same contact is clicked twice. */
+  requestId: number;
+}
+
+// =============================================================================
+// CRM EMAIL ACTIVITY
+// =============================================================================
+
+export async function createCrmEmail(payload: CrmActivityPayload & {
+  body?: string;
+  direction?: string;
+  recipient_email?: string;
+  recipient_name?: string;
+}): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/emails', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+// =============================================================================
+// USER MANAGEMENT (soft-delete / restore / permanent-delete)
+// =============================================================================
+
+export async function getDeletedUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
+  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users/deleted${toQuery({ page, page_size: pageSize, search })}`);
+}
+
+export async function restoreUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/restore`, { method: 'POST' });
+}
+
+export async function permanentDeleteUser(userId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
 }

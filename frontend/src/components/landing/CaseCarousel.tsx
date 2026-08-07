@@ -55,7 +55,7 @@ export function CaseCarousel() {
           {loop.map((c, i) => (
             <article
               key={`${c.company}-${i}`}
-              className="w-[86vw] shrink-0 rounded-3xl border border-border bg-surface-warm p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-float sm:w-[46vw] lg:w-[26rem]"
+              className="w-[86vw] shrink-0 rounded-3xl border border-border bg-surface-warm p-8 transition duration-300 hover:-translate-y-1 hover:shadow-float sm:w-[46vw] lg:w-[26rem]"
             >
               <p className="grad-blue-purple bg-clip-text text-2xl font-bold text-transparent">
                 {c.stat}

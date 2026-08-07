@@ -11,6 +11,21 @@ echo.
 set "ROOT=%~dp0"
 set "NEXT_PUBLIC_API_URL=http://localhost:8000"
 
+:: Detect venv python: prefer .venv, fall back to pulsevenv
+set "PY_EXE="
+if exist "%ROOT%backend\.venv\Scripts\python.exe" (
+    set "PY_EXE=%ROOT%backend\.venv\Scripts\python.exe"
+) else if exist "%ROOT%backend\pulsevenv\Scripts\python.exe" (
+    set "PY_EXE=%ROOT%backend\pulsevenv\Scripts\python.exe"
+) else (
+    echo ERROR: No Python virtualenv found in backend\
+    echo        Expected .venv\Scripts\python.exe or pulsevenv\Scripts\python.exe
+    pause
+    exit /b 1
+)
+echo   Using Python: %PY_EXE%
+echo.
+
 :: Kill existing processes on ports 8000, 8001, and 3000
 echo [1/6] Stopping existing servers...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":8000" ^| findstr "LISTENING"') do taskkill /PID %%a /F >nul 2>&1
@@ -32,12 +47,12 @@ if not "%BUILD_ERR%"=="0" (
 
 :: Start backend
 echo [3/6] Starting backend on port 8000...
-start "PULSE-CRM Backend" cmd /k "cd /d ""%ROOT%backend"" && pulsevenv\Scripts\python.exe main.py"
+start "PULSE-CRM Backend" cmd /k "cd /d ""%ROOT%backend"" && ""%PY_EXE%"" main.py"
 timeout /t 4 /nobreak >nul
 
 :: Start AI service
 echo [4/6] Starting AI service on port 8001...
-start "PULSE-CRM AI Service" cmd /k "cd /d ""%ROOT%ai-service"" && ""%ROOT%backend\pulsevenv\Scripts\python.exe"" -m uvicorn main:app --host 0.0.0.0 --port 8001"
+start "PULSE-CRM AI Service" cmd /k "cd /d ""%ROOT%ai-service"" && ""%PY_EXE%"" -m uvicorn main:app --host 0.0.0.0 --port 8001"
 timeout /t 4 /nobreak >nul
 
 :: Start frontend

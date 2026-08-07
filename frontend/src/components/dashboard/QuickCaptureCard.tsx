@@ -28,9 +28,9 @@ export default function QuickCaptureCard({ onTabChange }: QuickCaptureCardProps)
   };
 
   return (
-    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-full relative overflow-hidden group">
+    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 flex flex-col justify-between h-full relative overflow-hidden group">
       {/* Background ambient radial aura pulse */}
-      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
 
       <div>
         {/* Header */}
@@ -51,7 +51,7 @@ export default function QuickCaptureCard({ onTabChange }: QuickCaptureCardProps)
         <div className="space-y-[var(--space-2)]">
           <button
             onClick={() => triggerQuickAdd('lead')}
-            className="w-full flex items-center justify-between p-[var(--space-3)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-brand-purple/5 hover:border-brand-purple/30 text-foreground transition-all cursor-pointer group animate-transition"
+            className="w-full flex items-center justify-between p-[var(--space-3)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-brand-purple/5 hover:border-brand-purple/30 text-foreground transition cursor-pointer group animate-transition"
           >
             <div className="flex items-center space-x-2.5">
               <div className="h-8 w-8 rounded-lg bg-brand-purple/10 flex items-center justify-center text-brand-purple group-hover:scale-105 transition-transform">
@@ -64,7 +64,7 @@ export default function QuickCaptureCard({ onTabChange }: QuickCaptureCardProps)
 
           <button
             onClick={() => triggerQuickAdd('deal')}
-            className="w-full flex items-center justify-between p-[var(--space-3)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-brand-blue/5 hover:border-brand-blue/30 text-foreground transition-all cursor-pointer group animate-transition"
+            className="w-full flex items-center justify-between p-[var(--space-3)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-brand-blue/5 hover:border-brand-blue/30 text-foreground transition cursor-pointer group animate-transition"
           >
             <div className="flex items-center space-x-2.5">
               <div className="h-8 w-8 rounded-lg bg-brand-blue/10 flex items-center justify-center text-brand-blue group-hover:scale-105 transition-transform">
@@ -77,7 +77,7 @@ export default function QuickCaptureCard({ onTabChange }: QuickCaptureCardProps)
 
           <button
             onClick={() => triggerQuickAdd('contact')}
-            className="w-full flex items-center justify-between p-[var(--space-3)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-brand-cyan/5 hover:border-brand-cyan/30 text-foreground transition-all cursor-pointer group animate-transition"
+            className="w-full flex items-center justify-between p-[var(--space-3)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-brand-cyan/5 hover:border-brand-cyan/30 text-foreground transition cursor-pointer group animate-transition"
           >
             <div className="flex items-center space-x-2.5">
               <div className="h-8 w-8 rounded-lg bg-brand-cyan/10 flex items-center justify-center text-brand-cyan group-hover:scale-105 transition-transform">

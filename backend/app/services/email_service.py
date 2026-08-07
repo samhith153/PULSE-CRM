@@ -492,6 +492,17 @@ class EmailService:
                 )
                 _background_tasks.add(task)
                 task.add_done_callback(_background_tasks.discard)
+        elif direction == EmailDirection.OUTBOUND:
+            # Also run assessment for outbound emails linked to a lead
+            if external_entity_type == "lead" and external_entity_id is not None:
+                logger.info("[INGEST] Lead-linked outbound email: lead=%s thread=%s — triggering assess", external_entity_id, thread_id)
+                task = asyncio.create_task(
+                    self._run_assessment_background(
+                        organization_id, external_entity_id, trigger="outbound_email"
+                    )
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
         elif is_read:
 
             await self.events.record_event(

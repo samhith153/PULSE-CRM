@@ -233,3 +233,107 @@ def summarise_thread(thread: Dict[str, Any]) -> str:
     )
 
     return response.choices[0].message.content.strip()
+_PURPOSE_GUIDANCE = {
+    "cold_intro": "This is a first-touch introduction email to someone who has not been contacted before. Keep it short, friendly, and low-pressure.",
+    "follow_up": "This is a follow-up email to someone PULSE has already been in touch with. Reference that there's an existing relationship without inventing specific prior details unless given in context.",
+    "check_in": "This is a light check-in email to re-engage a contact who has gone quiet. Keep it brief and easy to reply to.",
+    "proposal": "This email should reference sending over a proposal or next steps and invite the recipient to discuss.",
+    "thank_you": "This is a short thank-you email, warm and genuine, with an optional light next-step.",
+    "custom": "Follow the free-text instruction given in the context field as closely as possible.",
+}
+
+
+def create_draft_prompt(
+    recipient_name: str,
+    recipient_email: str,
+    company: str = "",
+    designation: str = "",
+    purpose: str = "follow_up",
+    context: str = "",
+    sender_name: str = "",
+) -> str:
+    guidance = _PURPOSE_GUIDANCE.get(purpose, _PURPOSE_GUIDANCE["follow_up"])
+    sender_line = f"The email is being sent by {sender_name}." if sender_name else "The sender's name is not given; do not invent one — sign off generically (e.g. 'Best regards')."
+
+    prompt = f"""
+You are an AI sales assistant for PULSE, a CRM/revenue platform. Draft a brand-new outbound email
+(not a reply to any existing thread) for a sales rep to send to a contact.
+
+Recipient: {recipient_name}
+Recipient email: {recipient_email}
+Company: {company or "Unknown"}
+Designation: {designation or "Unknown"}
+Purpose: {purpose}
+{guidance}
+{sender_line}
+
+Additional context from the CRM (may be empty): {context or "None provided."}
+
+Rules:
+- Keep the body under 120 words.
+- Professional, warm, concise tone. No filler, no over-selling.
+- Do not fabricate specific facts, prices, dates, or prior conversations that were not given in the context.
+- Do not include a subject line inside the body.
+
+Return ONLY valid JSON in this exact format:
+{{
+    "subject": "short subject line",
+    "body": "the email body, with \\n for line breaks"
+}}
+"""
+    return prompt
+
+
+def parse_draft_response(response_text: str) -> Dict[str, str]:
+    try:
+        cleaned = response_text.strip()
+        if cleaned.startswith("```json"):
+            cleaned = cleaned[7:]
+        if cleaned.startswith("```"):
+            cleaned = cleaned[3:]
+        if cleaned.endswith("```"):
+            cleaned = cleaned[:-3]
+        cleaned = cleaned.strip()
+
+        data = json.loads(cleaned)
+        subject = str(data.get("subject", "")).strip() or "Following up"
+        body = str(data.get("body", "")).strip() or "Unable to generate a draft. Please write your message here."
+        return {"subject": subject, "body": body}
+    except (json.JSONDecodeError, ValueError):
+        return {
+            "subject": "Following up",
+            "body": response_text.strip()[:600] if response_text else "Unable to generate a draft. Please write your message here.",
+        }
+
+
+def generate_outreach_draft(
+    recipient_name: str,
+    recipient_email: str,
+    company: str = "",
+    designation: str = "",
+    purpose: str = "follow_up",
+    context: str = "",
+    sender_name: str = "",
+) -> Dict[str, str]:
+    """Generate a fresh outreach email (subject + body) using Groq."""
+    prompt = create_draft_prompt(
+        recipient_name=recipient_name,
+        recipient_email=recipient_email,
+        company=company,
+        designation=designation,
+        purpose=purpose,
+        context=context,
+        sender_name=sender_name,
+    )
+
+    response = _get_client().chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
+            {"role": "user", "content": prompt},
+        ],
+        temperature=0.4,
+        max_tokens=350,
+    )
+
+    return parse_draft_response(response.choices[0].message.content.strip())

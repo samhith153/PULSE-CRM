@@ -144,9 +144,9 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
   };
 
   return (
-    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 w-full relative overflow-hidden group">
+    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 w-full relative overflow-hidden group">
       {/* Background ambient radial aura pulse */}
-      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
 
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-border/60 relative">
@@ -183,12 +183,12 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
               <g 
                 key={idx}
                 onMouseEnter={() => setHoveredIndex(idx)}
-                className="transition-all duration-300"
+                className="transition duration-300"
               >
                 {/* Segment Path */}
                 <motion.path
                   d={d}
-                  className={`transition-all duration-300 ${style.fillClass}`}
+                  className={`transition duration-300 ${style.fillClass}`}
                   style={{
                     filter: isHovered 
                       ? `drop-shadow(0px 8px 16px ${style.glowColor})`

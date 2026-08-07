@@ -49,7 +49,7 @@ export function SiteFooter() {
                 key={i}
                 href="#"
                 aria-label="Social link"
-                className="grid size-9 place-items-center rounded-full border border-primary-foreground/15 text-primary-foreground/70 transition-all duration-200 hover:-translate-y-0.5 hover:text-primary-foreground"
+                className="grid size-9 place-items-center rounded-full border border-primary-foreground/15 text-primary-foreground/70 transition duration-200 hover:-translate-y-0.5 hover:text-primary-foreground"
               >
                 <Icon size={15} />
               </a>

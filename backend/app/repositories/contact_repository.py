@@ -52,9 +52,12 @@ class ContactRepository(BaseRepository[Contact]):
         company_id: Optional[UUID],
         page: int,
         page_size: int,
+        owner_id: Optional[UUID] = None,
     ) -> Tuple[List[Contact], int]:
         stmt = self._base_query(organization_id)
 
+        if owner_id:
+            stmt = stmt.where(Contact.owner_id == owner_id)
         if company_id:
             stmt = stmt.where(Contact.company_id == company_id)
 

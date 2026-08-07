@@ -65,14 +65,6 @@ class Permission(str, Enum):
     WEBHOOK_MANAGE = "webhook:manage"
     FILE_UPLOAD = "file:upload"
 
-    DOCUMENT_READ = "document:read"
-    DOCUMENT_DELETE = "document:delete"
-
-    EVENT_READ = "event:read"
-    EVENT_CREATE = "event:create"
-
-    NOTIFICATION_READ = "notification:read"
-
     REPORT_VIEW = "report:view"
     REPORT_EXPORT = "report:export"
 
@@ -93,6 +85,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.USER_READ,
         Permission.USER_CREATE,
         Permission.USER_UPDATE,
+        Permission.USER_DELETE,
         Permission.USER_ACTIVATE,
         Permission.USER_DEACTIVATE,
         Permission.ORG_READ,
@@ -119,21 +112,13 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.PIPELINE_UPDATE,
         Permission.ACTIVITY_CREATE,
         Permission.ACTIVITY_READ,
-        Permission.ACTIVITY_UPDATE,
-        Permission.ACTIVITY_DELETE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
-        Permission.EMAIL_SEND,
         Permission.GMAIL_CONNECT,
         Permission.DASHBOARD_READ,
         Permission.AI_ACCESS,
         Permission.WEBHOOK_MANAGE,
         Permission.FILE_UPLOAD,
-        Permission.DOCUMENT_READ,
-        Permission.DOCUMENT_DELETE,
-        Permission.EVENT_READ,
-        Permission.EVENT_CREATE,
-        Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
         Permission.REPORT_EXPORT,
     },
@@ -154,18 +139,10 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.DEAL_UPDATE,
         Permission.PIPELINE_READ,
         Permission.ACTIVITY_READ,
-        Permission.ACTIVITY_CREATE,
-        Permission.ACTIVITY_DELETE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
-        Permission.EMAIL_SEND,
-        Permission.AI_ACCESS,
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
-        Permission.DOCUMENT_READ,
-        Permission.EVENT_READ,
-        Permission.EVENT_CREATE,
-        Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
     },
 }

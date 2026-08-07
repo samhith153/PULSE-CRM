@@ -293,7 +293,7 @@ export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = 
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`py-1.5 px-4 rounded-lg font-semibold text-xs transition-all duration-200 cursor-pointer ${
+                  className={`py-1.5 px-4 rounded-lg font-semibold text-xs transition duration-200 cursor-pointer ${
                     activeTab === tab 
                       ? 'bg-brand-purple text-primary-foreground' 
                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -394,7 +394,7 @@ export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = 
               {templates.map((tpl, idx) => (
                 <div 
                   key={idx}
-                  className="border border-border hover:border-border rounded-xl p-4.5 bg-secondary/20 hover:bg-secondary transition-all flex flex-col justify-between"
+                  className="border border-border hover:border-border rounded-xl p-4.5 bg-secondary/20 hover:bg-secondary transition flex flex-col justify-between"
                 >
                   <div>
                     <span className="text-[9px] font-semibold uppercase bg-brand-secondary-accent/20 border border-border text-brand-purple px-1.5 py-0.5 rounded">
@@ -479,7 +479,7 @@ export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = 
                 {/* Trigger Adder */}
                 <button 
                   onClick={() => handleAddNode('trigger')}
-                  className="w-full flex items-center justify-between p-2.5 border border-brand-cyan/20 hover:border-emerald-300 bg-brand-cyan/15/30 hover:bg-brand-cyan/15/60 rounded-xl transition-all cursor-pointer group text-left"
+                  className="w-full flex items-center justify-between p-2.5 border border-brand-cyan/20 hover:border-emerald-300 bg-brand-cyan/15/30 hover:bg-brand-cyan/15/60 rounded-xl transition cursor-pointer group text-left"
                 >
                   <div className="flex items-center space-x-2">
                     <span className="h-7 w-7 rounded-lg bg-brand-cyan/150/10 text-brand-cyan flex items-center justify-center shrink-0 border border-brand-cyan/25">
@@ -496,7 +496,7 @@ export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = 
                 {/* Condition Adder */}
                 <button 
                   onClick={() => handleAddNode('condition')}
-                  className="w-full flex items-center justify-between p-2.5 border border-brand-purple/15 hover:border-indigo-300 bg-brand-purple/10/30 hover:bg-brand-purple/10/60 rounded-xl transition-all cursor-pointer group text-left"
+                  className="w-full flex items-center justify-between p-2.5 border border-brand-purple/15 hover:border-indigo-300 bg-brand-purple/10/30 hover:bg-brand-purple/10/60 rounded-xl transition cursor-pointer group text-left"
                 >
                   <div className="flex items-center space-x-2">
                     <span className="h-7 w-7 rounded-lg bg-brand-purple/100/10 text-brand-purple flex items-center justify-center shrink-0 border border-brand-purple/20">
@@ -513,7 +513,7 @@ export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = 
                 {/* Action Adder */}
                 <button 
                   onClick={() => handleAddNode('action')}
-                  className="w-full flex items-center justify-between p-2.5 border border-border hover:border-border bg-brand-secondary-accent/5 hover:bg-brand-purple/5 rounded-xl transition-all cursor-pointer group text-left"
+                  className="w-full flex items-center justify-between p-2.5 border border-border hover:border-border bg-brand-secondary-accent/5 hover:bg-brand-purple/5 rounded-xl transition cursor-pointer group text-left"
                 >
                   <div className="flex items-center space-x-2">
                     <span className="h-7 w-7 rounded-lg bg-brand-purple/10 text-brand-purple flex items-center justify-center shrink-0 border border-border">
@@ -631,7 +631,7 @@ export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = 
                     {/* Node Container Card */}
                     <div 
                       onClick={() => setActiveConfigNode(node.id)}
-                      className={`relative w-80 max-w-full p-4 border rounded-xl hover:shadow-nav cursor-pointer transition-all ${
+                      className={`relative w-80 max-w-full p-4 border rounded-xl hover:shadow-nav cursor-pointer transition ${
                         activeConfigNode === node.id 
                           ? 'border-brand-accent ring-2 ring-brand-accent/15 bg-brand-secondary-accent/5' 
                           : 'border-border bg-secondary/20'

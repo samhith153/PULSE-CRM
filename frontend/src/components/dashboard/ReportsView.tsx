@@ -151,11 +151,11 @@ export default function ReportsView() {
           </p>
         </div>
         <div className="flex items-center gap-3 select-none">
-          <button className="flex items-center gap-2 bg-card hover:bg-secondary/40 border border-border px-4 py-2 rounded-xl text-xs font-bold text-foreground transition-all shadow-sm cursor-pointer">
+          <button className="flex items-center gap-2 bg-card hover:bg-secondary/40 border border-border px-4 py-2 rounded-xl text-xs font-bold text-foreground transition shadow-sm cursor-pointer">
             <Upload size={14} className="rotate-180 text-muted-foreground" />
             <span>Export</span>
           </button>
-          <button className="flex items-center gap-2 bg-card hover:bg-secondary/40 border border-border px-4 py-2 rounded-xl text-xs font-bold text-foreground transition-all shadow-sm cursor-pointer">
+          <button className="flex items-center gap-2 bg-card hover:bg-secondary/40 border border-border px-4 py-2 rounded-xl text-xs font-bold text-foreground transition shadow-sm cursor-pointer">
             <Filter size={14} className="text-muted-foreground" />
             <span>Filter</span>
           </button>
@@ -171,7 +171,7 @@ export default function ReportsView() {
           <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:14px_24px] pointer-events-none" />
           
           {/* Rounded Top-Right Corner Cut-out */}
-          <div className="absolute top-0 right-0 bg-background dark:bg-zinc-950 w-14 h-14 rounded-bl-2xl flex items-center justify-center z-10 transition-all select-none">
+          <div className="absolute top-0 right-0 bg-background dark:bg-zinc-950 w-14 h-14 rounded-bl-2xl flex items-center justify-center z-10 transition select-none">
             <div className="bg-blue-600 hover:bg-blue-700 text-white p-2 rounded-full shadow transition-transform group-hover:scale-105 duration-350 cursor-pointer">
               <ArrowUpRight className="size-4.5" />
             </div>
@@ -196,7 +196,7 @@ export default function ReportsView() {
         </div>
 
         {/* Card 2: Total Insight */}
-        <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden h-36 flex flex-col justify-between hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 group">
+        <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden h-36 flex flex-col justify-between hover:shadow-nav hover:-translate-y-0.5 transition duration-300 group">
           <div className="absolute top-4 right-4 text-muted-foreground/40 group-hover:text-foreground transition-colors pointer-events-none select-none">
             <ArrowUpRight className="size-4.5" />
           </div>
@@ -219,7 +219,7 @@ export default function ReportsView() {
         </div>
 
         {/* Card 3: Organic Sales */}
-        <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden h-36 flex flex-col justify-between hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 group">
+        <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden h-36 flex flex-col justify-between hover:shadow-nav hover:-translate-y-0.5 transition duration-300 group">
           <div className="absolute top-4 right-4 text-muted-foreground/40 group-hover:text-foreground transition-colors pointer-events-none select-none">
             <ArrowUpRight className="size-4.5" />
           </div>
@@ -242,7 +242,7 @@ export default function ReportsView() {
         </div>
 
         {/* Card 4: Gross Margin */}
-        <div className="bg-card border border-border rounded-2xl pt-6 px-6 pb-0 relative overflow-hidden h-36 flex flex-col justify-between hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 group">
+        <div className="bg-card border border-border rounded-2xl pt-6 px-6 pb-0 relative overflow-hidden h-36 flex flex-col justify-between hover:shadow-nav hover:-translate-y-0.5 transition duration-300 group">
           <div className="absolute top-4 right-4 text-muted-foreground/40 group-hover:text-foreground transition-colors pointer-events-none select-none">
             <ArrowUpRight className="size-4.5" />
           </div>
@@ -327,7 +327,7 @@ export default function ReportsView() {
                     <span className="bg-secondary/70 border border-border text-[9px] font-black text-foreground px-1.5 py-0.5 rounded shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                       +9.9%
                     </span>
-                    <div className={`${bar.height} ${bar.color} w-full rounded-lg hover:brightness-105 hover:-translate-y-0.5 transition-all duration-300 shadow-sm`} />
+                    <div className={`${bar.height} ${bar.color} w-full rounded-lg hover:brightness-105 hover:-translate-y-0.5 transition duration-300 shadow-sm`} />
                     <span className="text-[10px] font-bold text-muted-foreground mt-1">
                       {bar.name}
                     </span>
@@ -510,18 +510,18 @@ export default function ReportsView() {
                 </thead>
                 <tbody className="divide-y divide-border/30 text-xs font-semibold text-foreground">
                   {[
-                    { name: 'Pisang Kepok', rate: 24, stats: '+4.2%', total: 2423.00, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&h=80&q=80' },
-                    { name: 'Adipati Dolken', rate: 18, stats: '+3.1%', total: 1890.00, avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&h=80&q=80' },
-                    { name: 'Siti Nurhaliza', rate: 32, stats: '+5.0%', total: 3120.00, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&h=80&q=80' }
+                    { name: 'Pisang Kepok', rate: 24, stats: '+4.2%', total: 2423.00 },
+                    { name: 'Adipati Dolken', rate: 18, stats: '+3.1%', total: 1890.00 },
+                    { name: 'Siti Nurhaliza', rate: 32, stats: '+5.0%', total: 3120.00 }
                   ].map((seller, idx) => (
                     <tr key={idx} className="hover:bg-secondary/15 transition-colors">
                       <td className="py-2.5 pr-2 text-left overflow-hidden">
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <img 
-                            src={seller.avatar} 
-                            alt={seller.name} 
-                            className="h-8.5 w-8.5 rounded-full object-cover shrink-0 border border-border/40"
-                          />
+                          <div 
+                            className="h-8.5 w-8.5 rounded-full shrink-0 border border-border/40 bg-brand-purple/10 flex items-center justify-center"
+                          >
+                            <span className="text-[10px] font-bold text-brand-purple">{seller.name.charAt(0)}</span>
+                          </div>
                           <div className="min-w-0">
                             <span className="truncate block font-bold text-foreground text-xs" title={seller.name}>
                               {seller.name}

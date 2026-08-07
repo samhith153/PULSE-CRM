@@ -189,7 +189,7 @@ export default function AutomationView() {
 
         <button
           onClick={() => handleTestWorkflow('New Custom Flow')}
-          className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer self-start sm:self-center"
+          className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition duration-200 cursor-pointer self-start sm:self-center"
         >
           <Plus className="h-4 w-4" />
           <span>New Workflow</span>
