@@ -29,6 +29,10 @@ async def list_meetings(
     status: Optional[str] = Query(default=None),
     start_datetime: Optional[datetime] = Query(default=None),
     end_datetime: Optional[datetime] = Query(default=None),
+    related_lead_id: Optional[UUID] = Query(default=None),
+    related_contact_id: Optional[UUID] = Query(default=None),
+    related_company_id: Optional[UUID] = Query(default=None),
+    related_deal_id: Optional[UUID] = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
 ) -> dict:
@@ -38,6 +42,10 @@ async def list_meetings(
         status=status,
         start=start_datetime,
         end=end_datetime,
+        related_lead_id=related_lead_id,
+        related_contact_id=related_contact_id,
+        related_company_id=related_company_id,
+        related_deal_id=related_deal_id,
         page=page,
         page_size=page_size,
     )

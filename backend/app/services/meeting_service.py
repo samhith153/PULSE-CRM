@@ -43,8 +43,22 @@ class MeetingService:
         )
         await self.timeline.meeting_scheduled(
             user.organization_id, user.id, meeting.id,
-            meeting.title, meeting.start_datetime
+            meeting.title, meeting.start_datetime,
         )
+        # Cross-reference on related entity
+        for entity_type, entity_id in [
+            ("lead", meeting.related_lead_id),
+            ("contact", meeting.related_contact_id),
+            ("company", meeting.related_company_id),
+            ("deal", meeting.related_deal_id),
+        ]:
+            if entity_id:
+                await self.timeline.record(
+                    user.organization_id, user.id, entity_type, entity_id,
+                    "meeting_scheduled", f"Meeting scheduled: {meeting.title}",
+                    payload={"meeting_id": str(meeting.id), "start_datetime": str(meeting.start_datetime)},
+                    topic=entity_type + "s",
+                )
         return await self.get_meeting(user, meeting.id)
 
     async def get_meeting(self, user: User, meeting_id: UUID) -> MeetingResponse:
@@ -61,6 +75,10 @@ class MeetingService:
         status: str | None,
         start: datetime | None,
         end: datetime | None,
+        related_lead_id: UUID | None = None,
+        related_contact_id: UUID | None = None,
+        related_company_id: UUID | None = None,
+        related_deal_id: UUID | None = None,
         page: int,
         page_size: int,
     ) -> tuple[list[MeetingResponse], int]:
@@ -71,6 +89,10 @@ class MeetingService:
             status=status,
             start=start,
             end=end,
+            related_lead_id=related_lead_id,
+            related_contact_id=related_contact_id,
+            related_company_id=related_company_id,
+            related_deal_id=related_deal_id,
             page=page,
             page_size=page_size,
         )
@@ -94,7 +116,7 @@ class MeetingService:
             raise ValueError("end_datetime must be after start_datetime")
         updated = await self.repo.update(meeting, **update_data)
         await self.timeline.meeting_updated(
-            user.organization_id, user.id, updated.id, updated.title, update_data
+            user.organization_id, user.id, updated.id, updated.title, update_data,
         )
         return await self.get_meeting(user, updated.id)
 
@@ -105,7 +127,7 @@ class MeetingService:
         self._assert_access(user, meeting.owner_id, meeting.created_by)
         await self.repo.soft_delete(meeting)
         await self.timeline.meeting_deleted(
-            user.organization_id, user.id, meeting_id, meeting.title
+            user.organization_id, user.id, meeting_id, meeting.title,
         )
 
     def _has_elevated_access(self, user: User) -> bool:

@@ -166,6 +166,35 @@ class CrmActivitiesService:
             user.organization_id, user.id, call.id,
             call.subject, call.outcome, call.duration_minutes, call.call_type
         )
+        # Cross-reference: also log on the related entity's timeline
+        if call.related_lead_id:
+            await self.timeline.record(
+                user.organization_id, user.id, "lead", call.related_lead_id,
+                "call_logged", f"Call logged: {call.subject}",
+                payload={"call_id": str(call.id), "outcome": call.outcome, "duration_minutes": call.duration_minutes},
+                topic="leads",
+            )
+        if call.related_contact_id:
+            await self.timeline.record(
+                user.organization_id, user.id, "contact", call.related_contact_id,
+                "call_logged", f"Call logged: {call.subject}",
+                payload={"call_id": str(call.id), "outcome": call.outcome},
+                topic="contacts",
+            )
+        if call.related_company_id:
+            await self.timeline.record(
+                user.organization_id, user.id, "company", call.related_company_id,
+                "call_logged", f"Call logged: {call.subject}",
+                payload={"call_id": str(call.id), "outcome": call.outcome},
+                topic="company",
+            )
+        if call.related_deal_id:
+            await self.timeline.record(
+                user.organization_id, user.id, "deal", call.related_deal_id,
+                "call_logged", f"Call logged: {call.subject}",
+                payload={"call_id": str(call.id), "outcome": call.outcome},
+                topic="deals",
+            )
         row = await self.call_repo.get_enriched_by_id(call.id, user.organization_id)
         return CallResponse(**row)
 
@@ -218,6 +247,21 @@ class CrmActivitiesService:
         await self.timeline.note_created(
             user.organization_id, user.id, note.id, note.title, note.body
         )
+        # Cross-reference on related entity
+        for entity_type, entity_id in [
+            ("lead", note.related_lead_id),
+            ("contact", note.related_contact_id),
+            ("company", note.related_company_id),
+            ("deal", note.related_deal_id),
+        ]:
+            if entity_id:
+                await self.timeline.record(
+                    user.organization_id, user.id, entity_type, entity_id,
+                    "internal_note_added", f"Note added: {note.title}",
+                    description=note.body,
+                    payload={"note_id": str(note.id)},
+                    topic=entity_type + "s",
+                )
         row = await self.note_repo.get_enriched_by_id(note.id, user.organization_id)
         return NoteResponse(**row)
 

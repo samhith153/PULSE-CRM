@@ -66,6 +66,10 @@ class CrmNoteRepository(BaseRepository[CrmNote]):
         *,
         owner_id: Optional[UUID] = None,
         search: Optional[str] = None,
+        related_lead_id: Optional[UUID] = None,
+        related_contact_id: Optional[UUID] = None,
+        related_company_id: Optional[UUID] = None,
+        related_deal_id: Optional[UUID] = None,
         page: int = 1,
         page_size: int = 20,
         sort_order: str = "desc",
@@ -76,6 +80,14 @@ class CrmNoteRepository(BaseRepository[CrmNote]):
         )
         if owner_id:
             stmt = stmt.where(CrmNote.owner_id == owner_id)
+        if related_lead_id:
+            stmt = stmt.where(CrmNote.related_lead_id == related_lead_id)
+        if related_contact_id:
+            stmt = stmt.where(CrmNote.related_contact_id == related_contact_id)
+        if related_company_id:
+            stmt = stmt.where(CrmNote.related_company_id == related_company_id)
+        if related_deal_id:
+            stmt = stmt.where(CrmNote.related_deal_id == related_deal_id)
         if search:
             term = f"%{search.lower()}%"
             stmt = stmt.where(

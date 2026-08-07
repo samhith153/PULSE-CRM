@@ -3,9 +3,6 @@ import { toast } from '@/lib/toast';
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
-// Tracks consecutive 401 errors — user gets 3 attempts before forced logout.
-let auth401Count = 0;
-
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   return sessionStorage.getItem(TOKEN_KEY);
@@ -60,7 +57,6 @@ export interface Lead {
   contact_email: string | null;
   contact_phone: string | null;
   owner_name: string | null;
-  owner_avatar_url: string | null;
 }
 
 export interface Contact {
@@ -248,12 +244,6 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       ...(options?.headers || {})
     }
   });
-
-  // Reset 401 counter on any successful response
-  if (res.ok) {
-    auth401Count = 0;
-  }
-
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {
@@ -272,20 +262,9 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     }
     // Show toast for permission errors so users get immediate feedback
     if (res.status === 403) {
-      toast.error(`Access denied: ${message}`);
+      toast.error(`Permission denied: ${message}`);
     } else if (res.status === 401) {
-      auth401Count++;
-      if (auth401Count >= 3) {
-        toast.error('Session expired. Please log in again.');
-        sessionStorage.removeItem('pulse-crm-auth');
-        localStorage.removeItem('pulse-crm-role');
-        localStorage.removeItem('pulse-crm-user');
-        window.location.href = 'http://127.0.0.1:8081/login';
-      } else {
-        const remaining = 3 - auth401Count;
-        toast.error(`Authentication error (${remaining} attempt${remaining > 1 ? 's' : ''} remaining).`);
-      }
-      throw new Error(message);
+      toast.error('Session expired. Please log in again.');
     } else if (res.status >= 500) {
       toast.error(`Server error: ${message}`);
     }
@@ -299,10 +278,8 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 // --- Leads API ---
-export async function getLeads(page = 1, pageSize = 20, search?: string): Promise<Lead[]> {
-  const params: Record<string, string | number> = { page, page_size: pageSize };
-  if (search) params.search = search;
-  const dbResult = await apiFetch<any>(`/api/v1/leads${toQuery(params)}`);
+export async function getLeads(): Promise<Lead[]> {
+  const dbResult = await apiFetch<any>('/api/v1/leads');
   const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return items.map((dl: any) => ({
     ...dl,
@@ -386,10 +363,8 @@ export async function convertLead(
 }
 
 // --- Contacts API ---
-export async function getContacts(page = 1, pageSize = 20, search?: string): Promise<Contact[]> {
-  const params: Record<string, string | number> = { page, page_size: pageSize };
-  if (search) params.search = search;
-  const dbResult = await apiFetch<any>(`/api/v1/contacts${toQuery(params)}`);
+export async function getContacts(): Promise<Contact[]> {
+  const dbResult = await apiFetch<any>('/api/v1/contacts');
   const dbContacts: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbContacts.map((dc: any) => ({
     id: dc.id,
@@ -425,10 +400,8 @@ export async function deleteContact(contactId: string | number): Promise<void> {
 }
 
 // --- Companies API ---
-export async function getCompanies(page = 1, pageSize = 20, search?: string): Promise<Company[]> {
-  const params: Record<string, string | number> = { page, page_size: pageSize };
-  if (search) params.search = search;
-  const dbResult = await apiFetch<any>(`/api/v1/companies${toQuery(params)}`);
+export async function getCompanies(): Promise<Company[]> {
+  const dbResult = await apiFetch<any>('/api/v1/companies');
   const dbCompanies: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbCompanies.map((dc, idx) => {
     return {
@@ -468,10 +441,8 @@ export async function deleteCompany(companyId: string | number): Promise<void> {
 }
 
 // --- Deals API ---
-export async function getDeals(page = 1, pageSize = 20, search?: string): Promise<Deal[]> {
-  const params: Record<string, string | number> = { page, page_size: pageSize };
-  if (search) params.search = search;
-  const dbResult = await apiFetch<any>(`/api/v1/deals${toQuery(params)}`);
+export async function getDeals(): Promise<Deal[]> {
+  const dbResult = await apiFetch<any>('/api/v1/deals');
   const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbDeals.map((dd, idx) => {
     return {
@@ -899,7 +870,6 @@ export interface UserData {
   organization_id: string;
   is_active: boolean;
   is_verified: boolean;
-  is_deleted: boolean;
   roles: string[];
   last_login_at: string | null;
   created_at: string;
@@ -932,18 +902,6 @@ export async function deleteUser(userId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/users/${userId}`, { method: 'DELETE' });
 }
 
-export async function getDeletedUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
-  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users/deleted${toQuery({ page, page_size: pageSize, search })}`);
-}
-
-export async function restoreUser(userId: string): Promise<UserData> {
-  return apiFetch<UserData>(`/api/v1/users/${userId}/restore`, { method: 'POST' });
-}
-
-export async function permanentDeleteUser(userId: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
-}
-
 export async function activateUser(userId: string): Promise<UserData> {
   return apiFetch<UserData>(`/api/v1/users/${userId}/activate`, { method: 'POST' });
 }
@@ -967,75 +925,6 @@ export async function changePassword(currentPassword: string, newPassword: strin
   await apiFetch<void>('/api/v1/auth/change-password', {
     method: 'POST',
     body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
-  });
-}
-
-// --- CRM Activities API ---
-
-export interface CrmActivityPayload {
-  subject: string;
-  description?: string;
-  priority?: string;
-  status?: string;
-  due_date?: string;
-  related_entity_type?: string;
-  related_lead_id?: string;
-  related_contact_id?: string;
-  related_company_id?: string;
-  related_deal_id?: string;
-}
-
-export async function createTask(payload: CrmActivityPayload): Promise<any> {
-  return apiFetch('/api/v1/crm-activities/tasks', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-
-export async function createCall(payload: CrmActivityPayload & {
-  contact_name?: string;
-  phone_number?: string;
-  call_type?: string;
-  duration_minutes?: number;
-  outcome?: string;
-  notes?: string;
-}): Promise<any> {
-  return apiFetch('/api/v1/crm-activities/calls', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-
-export async function createMeeting(payload: CrmActivityPayload & {
-  start_time?: string;
-  end_time?: string;
-  location?: string;
-  attendees?: string[];
-}): Promise<any> {
-  return apiFetch('/api/v1/crm-activities/meetings', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-
-export async function createNote(payload: CrmActivityPayload & {
-  body?: string;
-}): Promise<any> {
-  return apiFetch('/api/v1/crm-activities/notes', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
-
-export async function createCrmEmail(payload: CrmActivityPayload & {
-  body?: string;
-  direction?: string;
-  recipient_email?: string;
-  recipient_name?: string;
-}): Promise<any> {
-  return apiFetch('/api/v1/crm-activities/emails', {
-    method: 'POST',
-    body: JSON.stringify(payload)
   });
 }
 
@@ -1260,6 +1149,301 @@ export async function uploadAvatar(file: File): Promise<{ url: string }> {
   }
   return res.json();
 }
+
+// =============================================================================
+// CRM ACTIVITIES API  (/api/v1/crm-activities)
+// =============================================================================
+
+export interface CrmActivityDetails {
+  description?: string | null;
+  reminder_minutes?: number | null;
+  completed_at?: string | null;
+  contact_name?: string | null;
+  phone_number?: string | null;
+  call_type?: string | null;
+  duration_minutes?: number | null;
+  outcome?: string | null;
+  notes?: string | null;
+  end_datetime?: string | null;
+  location?: string | null;
+  meeting_link?: string | null;
+  direction?: string | null;
+  sender?: string | null;
+  receiver?: string | null;
+  body_preview?: string | null;
+  thread_id?: string | null;
+  is_read?: boolean | null;
+  body?: string | null;
+}
+
+export interface CrmActivity {
+  id: string;
+  activity_type: 'task' | 'call' | 'meeting' | 'email' | 'note';
+  subject: string;
+  status: string;
+  priority: string;
+  due_date: string | null;
+  owner_id: string | null;
+  owner_name: string | null;
+  related_entity_type: string | null;
+  related_record_id: string | null;
+  related_record_name: string | null;
+  organization_id: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  details: CrmActivityDetails;
+}
+
+export interface CrmActivityOwner {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+export interface CrmActivitiesListParams {
+  view?: 'timeline' | 'task' | 'call' | 'meeting' | 'email' | 'note';
+  search?: string;
+  status?: string;
+  priority?: string;
+  owner_id?: string;
+  from_date?: string;
+  to_date?: string;
+  quick_tab?: 'all' | 'today' | 'upcoming' | 'overdue';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  page_size?: number;
+}
+
+export interface PaginatedCrmActivities {
+  data: CrmActivity[];
+  meta: {
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
+export async function getCrmActivities(
+  params: CrmActivitiesListParams = {}
+): Promise<PaginatedCrmActivities> {
+  const result = await apiFetch<PaginatedCrmActivities>(
+    `/api/v1/crm-activities${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`
+  );
+  return result ?? { data: [], meta: { total: 0, page: 1, page_size: 20, total_pages: 1, has_next: false, has_prev: false } };
+}
+
+export async function getCrmActivityOwners(): Promise<CrmActivityOwner[]> {
+  const result = await apiFetch<CrmActivityOwner[]>('/api/v1/crm-activities/owners');
+  return Array.isArray(result) ? result : [];
+}
+
+export async function downloadCrmActivitiesExport(
+  params: Omit<CrmActivitiesListParams, 'page' | 'page_size'>
+): Promise<void> {
+  const qs = toQuery(params as Record<string, string | number | boolean | null | undefined>);
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+  const res = await fetch(`${API_BASE_URL}/api/v1/crm-activities/export${qs}`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'text/csv' },
+  });
+  if (!res.ok) {
+    let msg = `Export failed (${res.status})`;
+    try { const b = await res.json(); if (b?.message) msg = b.message; } catch {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `activities_export_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+}
+
+export interface CreateTaskPayload {
+  subject: string; description?: string; due_date?: string; priority?: string;
+  status?: string; owner_id?: string; reminder_minutes?: number;
+  related_entity_type?: string; related_lead_id?: string;
+  related_contact_id?: string; related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmTask(payload: CreateTaskPayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/tasks', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmTask(id: string, payload: Partial<CreateTaskPayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmTask(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/tasks/${id}`, { method: 'DELETE' });
+}
+
+export interface CreateCallPayload {
+  subject: string; contact_name?: string; phone_number?: string; call_type?: string;
+  duration_minutes?: number; outcome?: string; notes?: string; priority?: string;
+  status?: string; called_at?: string; owner_id?: string;
+  related_entity_type?: string; related_lead_id?: string;
+  related_contact_id?: string; related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmCall(payload: CreateCallPayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/calls', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmCall(id: string, payload: Partial<CreateCallPayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/calls/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmCall(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/calls/${id}`, { method: 'DELETE' });
+}
+
+export interface CreateMeetingPayload {
+  title: string; description?: string; start_datetime: string; end_datetime: string;
+  status?: string; owner_id?: string; meeting_link?: string; location?: string;
+  reminder_minutes?: number; related_lead_id?: string; related_contact_id?: string;
+  related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmMeeting(payload: CreateMeetingPayload): Promise<any> {
+  return apiFetch<any>('/api/v1/crm-activities/meetings', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export interface CreateNotePayload {
+  title: string; body?: string; owner_id?: string; related_entity_type?: string;
+  related_lead_id?: string; related_contact_id?: string;
+  related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmNote(payload: CreateNotePayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/notes', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmNote(id: string, payload: Partial<CreateNotePayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/notes/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmNote(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/notes/${id}`, { method: 'DELETE' });
+}
+
+export async function bulkDeleteCrmActivities(ids: string[]): Promise<{ affected: number; message: string }> {
+  return apiFetch<{ affected: number; message: string }>('/api/v1/crm-activities/bulk-delete', {
+    method: 'POST', body: JSON.stringify({ ids }),
+  });
+}
+export async function bulkUpdateCrmActivities(payload: { ids: string[]; status?: string; owner_id?: string; archive?: boolean }): Promise<{ affected: number; message: string }> {
+  return apiFetch<{ affected: number; message: string }>('/api/v1/crm-activities/bulk-update', {
+    method: 'POST', body: JSON.stringify(payload),
+  });
+}
+
+// =============================================================================
+// LEAD DETAIL PANEL  — real data for Timeline / Emails / Calls / Meetings / Chart
+// =============================================================================
+
+export interface LeadTimelineEntry {
+  timeline_id: string;
+  activity_type: string;
+  title: string;
+  description?: string | null;
+  performed_by: string;
+  performed_by_avatar?: string | null;
+  icon: string;
+  color: string;
+  created_at: string;
+  relative_time: string;
+}
+
+export interface LeadPanelCall {
+  id: string;
+  subject: string;
+  call_type: string;
+  outcome?: string | null;
+  duration_minutes?: number | null;
+  notes?: string | null;
+  called_at?: string | null;
+  owner_name?: string | null;
+  created_at: string;
+}
+
+export interface LeadPanelMeeting {
+  id: string;
+  title: string;
+  status: string;
+  start_datetime: string;
+  end_datetime: string;
+  location?: string | null;
+  meeting_link?: string | null;
+  owner_name?: string | null;
+}
+
+export interface LeadPanelNote {
+  id: string;
+  title: string;
+  body?: string | null;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Fetch real timeline events for a lead */
+export async function getLeadTimeline(
+  leadId: string,
+  params: { page?: number; page_size?: number } = {}
+): Promise<{ entries: LeadTimelineEntry[]; total_records: number }> {
+  const qs = toQuery({ page: params.page ?? 1, page_size: params.page_size ?? 20 } as any);
+  const result = await apiFetch<any>(
+    `/api/v1/crm-activities/lead/${leadId}/timeline${qs}`
+  );
+  return result ?? { entries: [], total_records: 0 };
+}
+
+/** Fetch emails linked to a lead (via Gmail sync) */
+export async function getLeadEmails(leadId: string): Promise<SyncedEmail[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/emails${toQuery({ external_entity_type: 'lead', external_entity_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  if (Array.isArray(result)) return result;
+  if (result.data && Array.isArray(result.data)) return result.data;
+  if (result.records && Array.isArray(result.records)) return result.records;
+  return [];
+}
+
+/** Fetch calls linked to a lead */
+export async function getLeadCalls(leadId: string): Promise<LeadPanelCall[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/crm-activities/calls${toQuery({ related_lead_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  const items = result.data ?? result;
+  return Array.isArray(items) ? items : [];
+}
+
+/** Fetch meetings linked to a lead */
+export async function getLeadMeetings(leadId: string): Promise<LeadPanelMeeting[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/meetings${toQuery({ related_lead_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  const items = result.data ?? result;
+  return Array.isArray(items) ? items : [];
+}
+
+/** Fetch lead score for the chart */
+export async function getLeadScore(leadId: string): Promise<{ score: number; fit_score: number; engagement_score: number } | null> {
+  try {
+    const result = await apiFetch<any>(`/api/v1/lead-scores/leads/${leadId}`);
+    return result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// =============================================================================
+// AVATAR API
+// =============================================================================
+
 export async function deleteAvatar(): Promise<void> {
   const token = getToken();
   const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
@@ -1272,7 +1456,9 @@ export async function deleteAvatar(): Promise<void> {
   }
 }
 
-// --- Notifications API ---
+// =============================================================================
+// NOTIFICATIONS API
+// =============================================================================
 
 export interface NotificationData {
   id: string;
@@ -1317,7 +1503,9 @@ export async function dismissNotification(id: string): Promise<void> {
   await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
 }
 
-// --- Email Draft API ---
+// =============================================================================
+// EMAIL DRAFT API
+// =============================================================================
 
 export interface EmailDraftRequestPayload {
   recipient_name: string;

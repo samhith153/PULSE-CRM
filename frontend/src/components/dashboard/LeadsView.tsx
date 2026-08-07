@@ -377,6 +377,57 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   // Get currently active lead object
   const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
 
+  // ── Load real panel data when a lead is selected ────────────────────────
+  useEffect(() => {
+    if (!selectedLeadId) return;
+    const lid = String(selectedLeadId);
+
+    // Fetch timeline
+    import('@/utils/api').then(({ getLeadTimeline, getLeadEmails, getLeadCalls, getLeadMeetings }) => {
+      getLeadTimeline(lid, { page_size: 30 }).then(tl => {
+        const entries = (tl.entries ?? []).map((e: any, idx: number) => ({
+          id: idx,
+          type: 'email' as const,
+          title: e.title,
+          desc: e.description || e.relative_time,
+          time: e.relative_time,
+        }));
+        setLeads(prev => prev.map(l => l.id === lid ? { ...l, timeline: entries } : l));
+      }).catch(() => {});
+
+      getLeadEmails(lid).then(emails => {
+        const mapped = (emails ?? []).map((e: any, idx: number) => ({
+          id: idx,
+          subject: e.subject || '(no subject)',
+          body: e.body_preview || '',
+          time: e.sent_at ? new Date(e.sent_at).toLocaleString() : '',
+        }));
+        setLeads(prev => prev.map(l => l.id === lid ? { ...l, emails: mapped } : l));
+      }).catch(() => {});
+
+      getLeadCalls(lid).then(calls => {
+        const mapped = (calls ?? []).map((c: any, idx: number) => ({
+          id: idx,
+          outcome: c.outcome || c.status || 'Logged',
+          notes: c.notes || c.subject || '',
+          time: c.called_at ? new Date(c.called_at).toLocaleString() : (c.created_at ? new Date(c.created_at).toLocaleString() : ''),
+        }));
+        setLeads(prev => prev.map(l => l.id === lid ? { ...l, calls: mapped } : l));
+      }).catch(() => {});
+
+      getLeadMeetings(lid).then(meetings => {
+        const mapped = (meetings ?? []).map((m: any, idx: number) => ({
+          id: idx,
+          title: m.title,
+          date: m.start_datetime ? new Date(m.start_datetime).toLocaleDateString() : '',
+          time: m.start_datetime ? new Date(m.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          desc: m.description || m.location || m.meeting_link || '',
+        }));
+        setLeads(prev => prev.map(l => l.id === lid ? { ...l, meetings: mapped } : l));
+      }).catch(() => {});
+    });
+  }, [selectedLeadId]);
+
   // AI Recommendation engine — returns cached backend recommendation or loading text
   const getAIRecommendation = (lead: Lead) => {
     return leadRecommendations[lead.id] || 'Loading recommendation...';
