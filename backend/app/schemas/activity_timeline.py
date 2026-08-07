@@ -15,6 +15,25 @@ from app.schemas.audit_log import _icon_for_action, _relative_time
 # ── Icon colour mapping ────────────────────────────────────────────────────────
 
 ACTION_COLOR_MAP: dict[str, str] = {
+    # company
+    "company_created":        "#7C3AED",
+    "company_updated":        "#5B9BD5",
+    "company_deleted":        "#E2604F",
+    "company_owner_changed":  "#7C3AED",
+    "company_industry_changed":"#E8A33D",
+    "company_revenue_updated":"#E8A33D",
+    "company_employees_updated":"#E8A33D",
+    "company_status_changed": "#5B9BD5",
+    "company_archived":       "#E2604F",
+    "company_restored":       "#4FB477",
+    "company_contact_linked": "#4FB477",
+    "company_contact_removed":"#E2604F",
+    "company_lead_linked":    "#4FB477",
+    "company_lead_removed":   "#E2604F",
+    "company_deal_linked":    "#4FB477",
+    "company_deal_removed":   "#E2604F",
+    "company_deal_won":       "#4FB477",
+    "company_deal_lost":      "#E2604F",
     # task
     "task_created":       "#7C3AED",
     "task_updated":       "#5B9BD5",
