@@ -33,6 +33,12 @@ class UserRepository(BaseRepository[User]):
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_by_email_any(self, email: str) -> Optional[User]:
+        """Check for email across ALL users including soft-deleted, for uniqueness enforcement."""
+        stmt = select(User).where(User.email == email.lower())
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_by_id_with_roles(self, user_id: UUID) -> Optional[User]:
         stmt = self._base_query().where(User.id == user_id)
         result = await self.db.execute(stmt)

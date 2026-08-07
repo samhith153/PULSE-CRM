@@ -5,6 +5,7 @@ All user business logic â€” create, update, activate, deactivate, assign ro
 from typing import List, Optional, Tuple
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
@@ -37,21 +38,25 @@ class UserService:
         organization_id: UUID,
         created_by: UUID,
     ) -> User:
-        existing = await self.user_repo.get_by_email(payload.email.lower())
+        existing = await self.user_repo.get_by_email_any(payload.email.lower())
         if existing:
             raise DuplicateException("User", "email", payload.email)
 
-        user = await self.user_repo.create(
-            email=payload.email.lower(),
-            full_name=payload.full_name.strip(),
-            hashed_password=hash_password(payload.password),
-            phone=payload.phone,
-            job_title=payload.job_title,
-            timezone=payload.timezone,
-            locale=payload.locale,
-            organization_id=organization_id,
-            is_verified=True,
-        )
+        try:
+            user = await self.user_repo.create(
+                email=payload.email.lower(),
+                full_name=payload.full_name.strip(),
+                hashed_password=hash_password(payload.password),
+                phone=payload.phone,
+                job_title=payload.job_title,
+                timezone=payload.timezone,
+                locale=payload.locale,
+                organization_id=organization_id,
+                is_verified=True,
+            )
+        except IntegrityError:
+            await self.db.rollback()
+            raise DuplicateException("User", "email", payload.email)
 
         if payload.role_id:
             await self.user_repo.assign_role(user, payload.role_id, created_by)
