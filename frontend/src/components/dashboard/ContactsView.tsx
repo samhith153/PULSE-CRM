@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getContacts, createContact, updateContact, deleteContact } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import { 
@@ -38,7 +39,8 @@ interface ContactItem {
 
 const EMPTY_CONTACTS: ContactItem[] = [];
 
-export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {}) {
+export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () => void; onTabChange?: (tab: string) => void } = {}) {
+  const router = useRouter();
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
 
@@ -125,7 +127,14 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
       if (!cancelled) {
         setContacts(data as any);
         setLoading(false);
-        if (data.length && !selectedId) setSelectedId((data as any)[0].id);
+        const storedId = localStorage.getItem('pulse-selected-contact-id');
+        if (storedId) {
+          const match = data.find((c: any) => String(c.id) === storedId);
+          if (match) {
+            setSelectedId(match.id);
+            localStorage.removeItem('pulse-selected-contact-id');
+          }
+        }
       }
     }).catch(() => {
       if (!cancelled) {
@@ -537,7 +546,13 @@ export default function ContactsView({ onLoaded }: { onLoaded?: () => void } = {
           {/* Communication triggers */}
           <div className="grid grid-cols-2 gap-2 py-3 border-b border-border">
             <button 
-              onClick={() => setIsEmailModalOpen(true)}
+              onClick={() => {
+                router.push(`?compose=${encodeURIComponent(active.email)}`);
+                onTabChange?.('emails');
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: active.email } }));
+                }, 150);
+              }}
               className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer"
             >
               <Mail className="h-3.5 w-3.5 text-muted-foreground" />

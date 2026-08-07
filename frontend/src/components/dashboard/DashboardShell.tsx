@@ -42,6 +42,7 @@ import AutomationView from '@/components/dashboard/AutomationView';
 import AIModelsView from '@/components/dashboard/AIModelsView';
 import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import HomeView from '@/components/dashboard/HomeView';
+import TasksView from '@/components/dashboard/TasksView';
 import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
 import { clearToken, setToken } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -243,11 +244,13 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
             )
           ) : activeTab === 'leads' ? (
-            <LeadsView />
+            <LeadsView onTabChange={setActiveTab} />
           ) : activeTab === 'contacts' ? (
-            <ContactsView />
+            <ContactsView onTabChange={setActiveTab} />
           ) : activeTab === 'companies' ? (
             <CompaniesView />
+          ) : activeTab === 'tasks' ? (
+            <TasksView />
           ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
             <PipelineView />
           ) : activeTab === 'products' ? (
@@ -255,7 +258,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           ) : activeTab === 'activities' ? (
             <ActivitiesView activityId={activityId} onTabChange={setActiveTab} />
           ) : activeTab === 'emails' ? (
-            <EmailsView />
+            <EmailsView onTabChange={setActiveTab} />
           ) : activeTab === 'documents' ? (
             <DocumentsView />
           ) : activeTab === 'reports' ? (

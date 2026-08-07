@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ClipboardList,
   Calendar,
@@ -18,6 +19,7 @@ interface ActivitySummaryCardProps {
 }
 
 export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCardProps) {
+  const router = useRouter();
   const [activities, setActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
@@ -104,7 +106,20 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
             return (
               <button
                 key={item.filter}
-                onClick={() => onTabChange?.('activities')}
+                onClick={() => {
+                  if (item.filter === 'today-tasks') {
+                    onTabChange?.('tasks');
+                  } else if (item.filter === 'overdue-tasks') {
+                    onTabChange?.('tasks');
+                  } else if (item.filter === 'pending-calls') {
+                    router.push('?tab=pending-calls&type=call');
+                    onTabChange?.('activities');
+                  } else if (item.filter === 'upcoming-meetings') {
+                    onTabChange?.('calendar');
+                  } else {
+                    onTabChange?.('activities');
+                  }
+                }}
                 className="w-full flex items-center gap-3 group cursor-pointer hover:bg-secondary/25 rounded-xl px-2 py-1.5 -mx-2 transition-colors duration-150"
               >
                 {/* Icon */}
@@ -145,7 +160,16 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
             return (
               <button
                 key={item.filter}
-                onClick={() => onTabChange?.('activities')}
+                onClick={() => {
+                  if (item.filter === 'emails-sent' || item.filter === 'emails-received') {
+                    onTabChange?.('emails');
+                  } else if (item.filter === 'completed') {
+                    router.push('?tab=completed');
+                    onTabChange?.('activities');
+                  } else {
+                    onTabChange?.('activities');
+                  }
+                }}
                 className="w-full flex items-center gap-3 group cursor-pointer hover:bg-secondary/25 rounded-xl px-2 py-1.5 -mx-2 transition-colors duration-150"
               >
                 <div className={`h-7 w-7 rounded-lg flex items-center justify-center border shrink-0 ${item.bg} ${item.color}`}>

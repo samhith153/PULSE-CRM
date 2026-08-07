@@ -14,6 +14,10 @@ import {
   Building2,
   LayoutGrid,
   List,
+  CalendarDays,
+  Search,
+  SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 
 interface Deal {
@@ -25,6 +29,7 @@ interface Deal {
   priority: 'High' | 'Medium' | 'Low';
   owner: string;
   closeDate: string;
+  createdAt?: string;
 }
 
 interface PipelineStage {
@@ -89,6 +94,12 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   const [sortField, setSortField] = useState<string>('title');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [ownerFilter, setOwnerFilter] = useState('All');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isOwnerDropdownOpen, setIsOwnerDropdownOpen] = useState(false);
+
   const toggleViewMode = (mode: 'kanban' | 'list') => {
     setViewMode(mode);
     localStorage.setItem('pulse-crm-view-mode-deals', mode);
@@ -136,8 +147,28 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     }
   };
 
+  const uniqueOwners = React.useMemo(() => {
+    const owners = new Set<string>();
+    deals.forEach(d => { if (d.owner) owners.add(d.owner); });
+    return Array.from(owners).sort();
+  }, [deals]);
+
+  const filteredDeals = React.useMemo(() => {
+    return deals.filter(deal => {
+      const matchesSearch = 
+        deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        deal.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (deal.owner || '').toLowerCase().includes(searchQuery.toLowerCase());
+        
+      const matchesPriority = priorityFilter === 'All' || deal.priority === priorityFilter;
+      const matchesOwner = ownerFilter === 'All' || deal.owner === ownerFilter;
+      
+      return matchesSearch && matchesPriority && matchesOwner;
+    });
+  }, [deals, searchQuery, priorityFilter, ownerFilter]);
+
   const sortedDeals = React.useMemo(() => {
-    return [...deals].sort((a: any, b: any) => {
+    return [...filteredDeals].sort((a: any, b: any) => {
       let valA: any = (a[sortField] || '').toString().toLowerCase();
       let valB: any = (b[sortField] || '').toString().toLowerCase();
       if (sortField === 'value') {
@@ -148,14 +179,14 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [deals, sortField, sortOrder]);
+  }, [filteredDeals, sortField, sortOrder]);
 
-  const totalValue = deals.reduce((acc, d) => {
+  const totalValue = filteredDeals.reduce((acc, d) => {
     const stage = stages.find(s => s.name === d.stage);
     if (stage && stage.slug !== 'lost') return acc + d.value;
     return acc;
   }, 0);
-  const weightedForecast = deals.reduce((acc, d) => acc + (d.value * (stageProbabilities[d.stage] || 0)), 0);
+  const weightedForecast = filteredDeals.reduce((acc, d) => acc + (d.value * (stageProbabilities[d.stage] || 0)), 0);
 
   const getAISuggestion = (deal: Deal) => {
     if (deal.stage === 'Proposal' && deal.priority === 'High') {
@@ -207,7 +238,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
         stage: form.stage,
         priority: form.priority,
         owner: form.owner,
-        closeDate: form.closeDate
+        closeDate: form.closeDate,
+        createdAt: created?.created_at || new Date().toISOString()
       };
       setDeals([...deals, newDeal]);
     } catch (err) {
@@ -315,6 +347,92 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               <Plus className="h-3.5 w-3.5" />
               <span>Create Deal</span>
             </button>
+          </div>
+        </div>
+
+        {/* Search, Sort, and Filters Toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
+          <div className="relative flex-1">
+            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
+              <Search className="h-3.5 w-3.5" />
+            </span>
+            <input 
+              type="text" 
+              placeholder="Search deals by title, company, owner..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-secondary/15"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Priority Filter */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setIsFilterDropdownOpen(!isFilterDropdownOpen); setIsOwnerDropdownOpen(false); }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  priorityFilter !== 'All' ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-card hover:bg-secondary text-foreground'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>{priorityFilter !== 'All' ? `Priority: ${priorityFilter}` : 'Filter Priority'}</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isFilterDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[150px]">
+                  {['All', 'High', 'Medium', 'Low'].map(prio => (
+                    <button
+                      key={prio}
+                      onClick={() => { setPriorityFilter(prio); setIsFilterDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        priorityFilter === prio ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {prio === 'All' ? 'All Priorities' : prio}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Owner Filter */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setIsOwnerDropdownOpen(!isOwnerDropdownOpen); setIsFilterDropdownOpen(false); }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  ownerFilter !== 'All' ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-card hover:bg-secondary text-foreground'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>{ownerFilter !== 'All' ? `Owner: ${ownerFilter}` : 'Filter Owner'}</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${isOwnerDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isOwnerDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[180px] max-h-60 overflow-y-auto">
+                  <button
+                    onClick={() => { setOwnerFilter('All'); setIsOwnerDropdownOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer mb-0.5 ${
+                      ownerFilter === 'All' ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    All Owners
+                  </button>
+                  {uniqueOwners.map(own => (
+                    <button
+                      key={own}
+                      onClick={() => { setOwnerFilter(own); setIsOwnerDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        ownerFilter === own ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {own}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -457,7 +575,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       ) : (
         <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-brand-border-purple/20 scrollbar-track-transparent">
           {stages.map((stage) => {
-            const stageDeals = deals.filter(d => d.stage === stage.name);
+            const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
             const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
 
             return (
@@ -483,7 +601,20 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                     key={deal.id}
                     draggable
                     onDragStart={() => handleDragStart(deal.id)}
-                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-200 cursor-grab active:cursor-grabbing"
+                    onClick={() => {
+                      setSelectedDeal(deal);
+                      setForm({
+                        title: deal.title,
+                        company: deal.company,
+                        value: deal.value,
+                        stage: deal.stage,
+                        priority: deal.priority,
+                        owner: deal.owner,
+                        closeDate: deal.closeDate
+                      });
+                      setIsEditModalOpen(true);
+                    }}
+                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-200 cursor-pointer select-none"
                   >
                     <div className="flex justify-between items-start gap-1">
                       <h4 className="text-[11px] font-semibold text-foreground leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
@@ -498,12 +629,20 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       {deal.company}
                     </div>
 
+                    {deal.createdAt && (
+                      <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+                        <CalendarDays className="h-2.5 w-2.5 text-muted-foreground/70" />
+                        <span>Created: {new Date(deal.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    )}
+
                     <div className="mt-3.5 pt-2.5 border-t border-border flex justify-between items-center">
                       <span className="text-[11px] font-semibold text-foreground tabular-nums">₹{deal.value.toLocaleString()}</span>
                       
                       <div className="flex space-x-1">
                         <button 
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedDeal(deal);
                             setForm({
                               title: deal.title,
@@ -522,7 +661,10 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                           <Edit className="h-3 w-3" />
                         </button>
                         <button 
-                          onClick={() => handleDelete(deal.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(deal.id);
+                          }}
                           className="p-0.5 text-muted-foreground hover:text-destructive rounded"
                            title="Delete Deal (cascades to contact and company if no other active deals)"
                         >
@@ -535,7 +677,9 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       <span>Shift Stage:</span>
                       <select 
                         value={deal.stage}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
+                          e.stopPropagation();
                           const newStage = e.target.value;
                           const stageId = stageIdByName[newStage];
                           setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));

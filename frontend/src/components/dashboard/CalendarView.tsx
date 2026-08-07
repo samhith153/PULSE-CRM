@@ -94,14 +94,16 @@ export default function CalendarView() {
   }, []);
 
   useEffect(() => {
-    const handleOpen = () => {
+    const handleOpen = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const data = customEvent.detail || {};
       setForm({
-        title: '',
-        type: 'meeting',
-        date: new Date().toISOString().slice(0, 10),
-        time: '10:00 AM',
-        attendees: '',
-        details: '',
+        title: data.title || '',
+        type: data.type || 'meeting',
+        date: data.date || new Date().toISOString().slice(0, 10),
+        time: data.time || '10:00 AM',
+        attendees: data.attendees || '',
+        details: data.details || '',
       });
       setIsAddOpen(true);
     };

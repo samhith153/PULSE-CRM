@@ -1,7 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
-import leadsImage from "../../../public/images/landing/product-leads.jpg";
-import pipelineImage from "../../../public/images/landing/product-pipeline.jpg";
+const leadsImage = "/images/landing/product-leads.jpg";
+const pipelineImage = "/images/landing/product-pipeline.jpg";
 import { cn } from "@/lib/utils";
 
 type Row = {
@@ -62,7 +62,7 @@ function MediaRow({ row }: { row: Row }) {
         style={{ transitionDelay: "120ms" }}
       >
         <img
-          src={typeof row.image === "object" ? row.image.src : row.image}
+          src={row.image}
           alt={row.alt}
           loading="lazy"
           width={1200}

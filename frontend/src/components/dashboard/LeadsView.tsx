@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation } from '@/utils/api';
 import { 
   Search, 
@@ -189,7 +190,8 @@ interface Lead {
   meetings: MeetingItem[];
 }
 
-export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) {
+export default function LeadsView({ onLoaded, onTabChange }: { onLoaded?: () => void; onTabChange?: (tab: string) => void } = {}) {
+  const router = useRouter();
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
   const leadsRef = useRef<Lead[]>([]);
@@ -1495,12 +1497,6 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
             </div>
             
             <div className="flex items-center space-x-2">
-              {/* Circular score progress indicator */}
-              <div className="flex items-center space-x-1 bg-secondary border border-border rounded-lg px-2 py-0.5">
-                <Award className="h-3.5 w-3.5 text-brand-purple" strokeWidth={2} />
-                <span className="text-[10px] font-semibold text-foreground tabular-nums">{activeLead.score}%</span>
-              </div>
-              
               {/* Close Button */}
               <button 
                 onClick={() => setSelectedLeadId(null)}
@@ -1547,147 +1543,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
             </div>
           </div>
 
-          {/* Engineered AI Features (ML Pipeline Integration) */}
-          <div className="py-3.5 border-b border-border space-y-3">
-            <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider flex items-center space-x-1">
-              <Award className="h-4 w-4 text-brand-purple" />
-              <span>AI Pipeline Features</span>
-            </h4>
-            
-            <div className="grid grid-cols-2 gap-2.5 text-[10px] font-semibold">
-              {/* Engagement Level */}
-              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Engagement Level</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-semibold">{getEngagementDetails(activeLead.emails).score} pts</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide ${
-                    getEngagementDetails(activeLead.emails).level === 'HIGH' 
-                      ? 'bg-brand-cyan/15 text-brand-cyan' 
-                      : getEngagementDetails(activeLead.emails).level === 'MEDIUM'
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-destructive/10 text-destructive'
-                  }`}>
-                    {getEngagementDetails(activeLead.emails).level}
-                  </span>
-                </div>
-              </div>
 
-              {/* Reply Rate */}
-              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Reply Velocity</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-semibold">{getReplyDetails(activeLead.emails).rate}%</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide ${
-                    getReplyDetails(activeLead.emails).level === 'FAST' 
-                      ? 'bg-brand-cyan/15 text-brand-cyan' 
-                      : getReplyDetails(activeLead.emails).level === 'MEDIUM'
-                      ? 'bg-amber-50 text-amber-700'
-                      : getReplyDetails(activeLead.emails).level === 'SLOW'
-                      ? 'bg-destructive/10 text-destructive'
-                      : 'bg-secondary text-muted-foreground'
-                  }`}>
-                    {getReplyDetails(activeLead.emails).level}
-                  </span>
-                </div>
-              </div>
-
-              {/* Recency */}
-              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Touchpoint Recency</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-semibold">
-                    {getRecencyDays(activeLead.timeline) === 999 ? 'No touch' : `${getRecencyDays(activeLead.timeline)} days`}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide bg-blue-50 text-blue-700">
-                    {getRecencyDays(activeLead.timeline) <= 3 ? 'Active' : getRecencyDays(activeLead.timeline) <= 7 ? 'Warm' : 'Cold'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Company Band & Source */}
-              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Firmographic Band</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-semibold truncate max-w-[55px]" title={activeLead.company}>
-                    {getCompanyBand(activeLead.company)}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide bg-brand-purple/10 text-brand-purple">
-                    Q: {getSourceQuality(activeLead.source)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Recommendation Alert box */}
-          <div className="mt-4 bg-brand-purple/5 border border-border rounded-xl p-3.5 flex items-start space-x-2">
-            <Sparkles className="h-4.5 w-4.5 text-brand-purple shrink-0 mt-0.5" strokeWidth={2} />
-            <div>
-              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider">AI Next Best Action</h4>
-              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{getAIRecommendation(activeLead)}</p>
-            </div>
-          </div>
-
-          {/* Priority View - Advanced Scoring Details (toggled on/off) */}
-          {isPriorityView && (
-            <div className="mt-4 border border-border rounded-xl p-3.5">
-              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider flex items-center space-x-1 mb-3">
-                <Award className="h-4 w-4 text-brand-purple" />
-                <span>Priority Scoring Details</span>
-              </h4>
-              <div className="space-y-2.5 text-[10px] font-semibold">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Fit Score</span>
-                  <span className="font-semibold text-foreground">{activeLead.fit_score ?? 0}%</span>
-                </div>
-                {activeLead.fitReasons.length > 0 && (
-                  <div className="reason-subtext">
-                    {activeLead.fitReasons.slice(0, 2).map((r, i) => (
-                      <div key={i} className="mb-0.5">• {r}</div>
-                    ))}
-                  </div>
-                )}
-                <div className="border-t border-border" />
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Engagement Score</span>
-                  <span className="font-semibold text-foreground">{activeLead.engagement_score ?? 0}%</span>
-                </div>
-                {activeLead.engagementReasons.length > 0 && (
-                  <div className="reason-subtext">
-                    {activeLead.engagementReasons.slice(0, 2).map((r, i) => (
-                      <div key={i} className="mb-0.5">• {r}</div>
-                    ))}
-                  </div>
-                )}
-                <div className="border-t border-border" />
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Overall Score</span>
-                  <span className={`font-semibold tabular-nums ${
-                    activeLead.score >= 80 ? 'text-brand-cyan' : activeLead.score >= 60 ? 'text-amber-600' : 'text-destructive'
-                  }`}>{activeLead.score}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Tier</span>
-                  <span className={`font-semibold ${
-                    activeLead.priorityTier === 'Critical' ? 'text-brand-cyan' :
-                    activeLead.priorityTier === 'High' ? 'text-amber-600' :
-                    activeLead.priorityTier === 'Medium' ? 'text-blue-600' :
-                    activeLead.priorityTier === 'Low' ? 'text-muted-foreground' : 'text-muted-foreground'
-                  }`}>{activeLead.priorityTier || activeLead.priority}</span>
-                </div>
-                {activeLead.topReasons.length > 0 && (
-                  <div className="border-t border-border pt-2">
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Top Reasons</span>
-                    <div className="mt-1 text-[9px] text-muted-foreground leading-relaxed">
-                      {activeLead.topReasons.slice(0, 3).map((r, i) => (
-                        <div key={i} className="mb-0.5">• {r}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Live Notes block */}
           <div className="mt-4">
@@ -1703,7 +1559,13 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
           {/* Action Triggers panel */}
           <div className="grid grid-cols-3 gap-2 mt-4">
             <button 
-              onClick={() => setIsEmailModalOpen(true)}
+              onClick={() => {
+                router.push(`?compose=${encodeURIComponent(activeLead.email)}`);
+                onTabChange?.('emails');
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } }));
+                }, 150);
+              }}
               className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
             >
               <Mail className="h-3.5 w-3.5 text-muted-foreground" />
@@ -1717,46 +1579,86 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
               <span>Log Call</span>
             </button>
             <button 
-              onClick={() => setIsMeetingModalOpen(true)}
+              onClick={() => {
+                onTabChange?.('calendar');
+                setTimeout(() => {
+                  const event = new CustomEvent('pulse-open-create-calendar-event-modal', {
+                    detail: {
+                      title: `Meet with ${activeLead.name}`,
+                      attendees: activeLead.email || activeLead.name,
+                      details: `Meeting scheduled from Leads page context. Lead: ${activeLead.name} at ${activeLead.company}.`,
+                      date: new Date().toISOString().slice(0, 10),
+                      time: '11:00 AM',
+                      type: 'meeting'
+                    }
+                  });
+                  window.dispatchEvent(event);
+                }, 150);
+              }}
               className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
             >
               <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Meet</span>
             </button>
-          </div>          {/* Activity Feeds Tabs toggles */}
-          <div className="mt-5 border-t border-border pt-4">
-            <div className="flex border-b border-border text-[10px] font-semibold uppercase flex-wrap">
-              {['timeline', 'emails', 'calls', 'meetings', 'activity chart'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveHistoryTab(tab)}
-                  className={`pb-1.5 px-2.5 border-b-2 transition-all cursor-pointer ${
-                    activeHistoryTab === tab 
-                      ? 'border-brand-purple text-foreground' 
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
+          </div>          <div className="mt-5 border-t border-border pt-4">
+            <div className="flex flex-wrap bg-secondary/60 dark:bg-secondary/35 p-1 rounded-xl gap-1 text-[9px] font-semibold uppercase mb-4 border border-border/40">
+              {[
+                { id: 'timeline', label: 'Timeline', icon: Clock },
+                { id: 'emails', label: 'Emails', icon: Mail },
+                { id: 'calls', label: 'Calls', icon: PhoneCall },
+                { id: 'meetings', label: 'Meetings', icon: Calendar },
+                { id: 'activity chart', label: 'Chart', icon: TrendingUp }
+              ].map((tabItem) => {
+                const IconComp = tabItem.icon;
+                const isActive = activeHistoryTab === tabItem.id;
+                return (
+                  <button
+                    key={tabItem.id}
+                    onClick={() => setActiveHistoryTab(tabItem.id)}
+                    className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg transition-all duration-200 cursor-pointer text-[9px] flex-grow min-w-[62px] shrink-0 ${
+                      isActive 
+                        ? 'bg-card text-brand-purple border border-border/50 shadow-sm font-bold scale-[1.02]' 
+                        : 'text-muted-foreground hover:text-foreground hover:bg-background/20'
+                    }`}
+                  >
+                    <IconComp className="h-3 w-3 shrink-0" />
+                    <span>{tabItem.label}</span>
+                  </button>
+                );
+              })}
             </div>
  
             {/* Tab content loops */}
-            <div className="mt-3.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
+            <div className="mt-3.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin space-y-3">
               {activeHistoryTab === 'timeline' && (
-                <div className="space-y-3 pl-2 border-l border-border">
+                <div className="relative pl-5 border-l border-border/60 dark:border-border/40 space-y-4 py-1 ml-2.5">
                   {activeLead.timeline.length > 0 ? (
-                    activeLead.timeline.map((act) => (
-                      <div key={act.id} className="relative text-[10px] font-semibold leading-relaxed">
-                        {/* Dot indicator */}
-                        <div className="absolute -left-[12.5px] top-1 h-2 w-2 rounded-full bg-brand-purple border border-card" />
-                        <div className="font-semibold text-foreground flex justify-between">
-                          <span>{act.title}</span>
-                          <span className="text-muted-foreground font-semibold">{act.time}</span>
+                    activeLead.timeline.map((act) => {
+                      const isEmail = act.title.toLowerCase().includes('email');
+                      const isCall = act.title.toLowerCase().includes('call');
+                      const isMeeting = act.title.toLowerCase().includes('meeting');
+                      const isConvert = act.title.toLowerCase().includes('convert');
+                      return (
+                        <div key={act.id} className="relative text-[10px] leading-relaxed group/item">
+                          {/* Dot/Icon indicator */}
+                          <div className="absolute -left-[29.5px] top-0.5 h-5 w-5 rounded-full bg-card border border-border/80 flex items-center justify-center shadow-sm group-hover/item:border-brand-purple transition-all duration-200">
+                            {isEmail ? <Mail className="h-2.5 w-2.5 text-brand-purple" /> :
+                             isCall ? <PhoneCall className="h-2.5 w-2.5 text-emerald-500" /> :
+                             isMeeting ? <Calendar className="h-2.5 w-2.5 text-brand-blue" /> :
+                             isConvert ? <Award className="h-2.5 w-2.5 text-amber-500" /> :
+                             <Clock className="h-2.5 w-2.5 text-muted-foreground" />}
+                          </div>
+                          <div className="font-bold text-foreground flex justify-between">
+                            <span className="group-hover/item:text-brand-purple transition-colors">{act.title}</span>
+                            <span className="text-muted-foreground font-semibold flex items-center gap-1 font-mono text-[9px]">
+                              <Clock className="h-2.5 w-2.5 text-muted-foreground/60" />
+                              {act.time}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mt-0.5 font-medium">{act.desc}</p>
                         </div>
-                        <p className="text-muted-foreground mt-0.5">{act.desc}</p>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <p className="text-center text-muted-foreground py-3 text-[10px]">No timeline logs recorded.</p>
                   )}
@@ -1767,12 +1669,16 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 <div className="space-y-2.5">
                   {activeLead.emails.length > 0 ? (
                     activeLead.emails.map((e) => (
-                      <div key={e.id} className="p-2 border border-border rounded-lg bg-secondary">
-                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
-                          <span className="truncate max-w-[150px]">{e.subject}</span>
-                          <span className="text-muted-foreground font-semibold">{e.time}</span>
+                      <div key={e.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-brand-purple/20 transition-all duration-200 shadow-sm relative overflow-hidden group/item">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-brand-purple/50" />
+                        <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1.5">
+                          <span className="truncate max-w-[170px] text-brand-purple font-extrabold group-hover/item:underline">{e.subject}</span>
+                          <span className="text-muted-foreground font-semibold flex items-center gap-1 font-mono text-[9px]">
+                            <Clock className="h-2.5 w-2.5 text-muted-foreground/60" />
+                            {e.time}
+                          </span>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{e.body}</p>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">{e.body}</p>
                       </div>
                     ))
                   ) : (
@@ -1784,15 +1690,26 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
               {activeHistoryTab === 'calls' && (
                 <div className="space-y-2.5">
                   {activeLead.calls.length > 0 ? (
-                    activeLead.calls.map((c) => (
-                      <div key={c.id} className="p-2 border border-border rounded-lg bg-secondary">
-                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
-                          <span>{c.outcome}</span>
-                          <span className="text-muted-foreground font-semibold">{c.time}</span>
+                    activeLead.calls.map((c) => {
+                      const isConnected = c.outcome?.toLowerCase().includes('connect');
+                      return (
+                        <div key={c.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-emerald-500/20 transition-all duration-200 shadow-sm relative overflow-hidden group/item">
+                          <div className={`absolute top-0 left-0 w-1 h-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1.5">
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider ${
+                              isConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                            }`}>
+                              {c.outcome}
+                            </span>
+                            <span className="text-muted-foreground font-semibold flex items-center gap-1 font-mono text-[9px]">
+                              <Clock className="h-2.5 w-2.5 text-muted-foreground/60" />
+                              {c.time}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">{c.notes}</p>
                         </div>
-                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{c.notes}</p>
-                      </div>
-                    ))
+                      );
+                    })
                   ) : (
                     <p className="text-center text-muted-foreground py-3 text-[10px]">No call notes logged.</p>
                   )}
@@ -1803,13 +1720,17 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 <div className="space-y-2.5">
                   {activeLead.meetings.length > 0 ? (
                     activeLead.meetings.map((m) => (
-                      <div key={m.id} className="p-2 border border-border rounded-lg bg-secondary">
-                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
-                          <span>{m.title}</span>
-                          <span className="text-brand-purple">{m.date}</span>
+                      <div key={m.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-brand-blue/20 transition-all duration-200 shadow-sm relative overflow-hidden group/item">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-brand-blue" />
+                        <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1">
+                          <span className="text-brand-blue font-extrabold">{m.title}</span>
+                          <span className="px-1.5 py-0.5 bg-brand-purple/10 text-brand-purple border border-brand-purple/15 rounded text-[8.5px] font-extrabold">{m.date}</span>
                         </div>
-                        <p className="text-[9px] text-muted-foreground mt-0.5 font-semibold">Time: {m.time}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{m.desc}</p>
+                        <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground font-semibold mb-1.5">
+                          <Clock className="h-2.5 w-2.5 text-brand-purple/70" />
+                          <span>{m.time}</span>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">{m.desc}</p>
                       </div>
                     ))
                   ) : (

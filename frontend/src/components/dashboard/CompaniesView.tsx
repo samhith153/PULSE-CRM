@@ -21,7 +21,10 @@ import {
   X,
   Check,
   LayoutGrid,
-  List
+  List,
+  SlidersHorizontal,
+  ArrowUpDown,
+  ChevronDown
 } from 'lucide-react';
 
 const formatCompanyRevenue = (val: string | number) => {
@@ -68,6 +71,9 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const [sortField, setSortField] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [filterIndustry, setFilterIndustry] = useState<string>('');
+  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
   const toggleViewMode = (mode: 'default' | 'list') => {
     setViewMode(mode);
@@ -140,9 +146,15 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
   const active = selectedId ? companies.find(c => c.id === selectedId) || null : null;
 
   const filtered = companies.filter(c => 
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    c.industry.toLowerCase().includes(searchQuery.toLowerCase())
+    (c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    c.industry.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (filterIndustry === '' || c.industry.toLowerCase() === filterIndustry.toLowerCase())
   );
+
+  const uniqueIndustries = React.useMemo(() => {
+    const set = new Set(companies.map(c => c.industry).filter(Boolean));
+    return Array.from(set).sort();
+  }, [companies]);
 
   const sortedCompanies = React.useMemo(() => {
     return [...filtered].sort((a: any, b: any) => {
@@ -222,13 +234,14 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
       {/* Companies List */}
       <div className={`col-span-12 ${active && viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-card border border-border rounded-2xl p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 border-b border-border/40 pb-3">
             <div>
               <h2 className="font-sans text-2xl text-foreground font-bold">Companies</h2>
               <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Monitor accounts, track revenue sizes, and view contact chains.</p>
             </div>
-            <div className="flex items-center gap-3">
-              {/* View Toggle Button */}
+            
+            {/* View Toggle + Actions Group */}
+            <div className="flex items-center gap-2">
               <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
                 <button
                   type="button"
@@ -258,13 +271,12 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
               {selectedIds.size > 0 && (
                 <button 
                   onClick={handleDeleteSelectedCompanies}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer mr-2"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  <span>Delete Selected ({selectedIds.size})</span>
+                  <span>Delete ({selectedIds.size})</span>
                 </button>
               )}
-
               <button 
                 onClick={() => {
                   setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
@@ -278,17 +290,99 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
             </div>
           </div>
 
-          <div className="relative mb-4">
-            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
-              <Search className="h-3.5 w-3.5" />
-            </span>
-            <input 
-              type="text" 
-              placeholder="Search companies..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
-            />
+          {/* Search, Sort, and Filters toolbar */}
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <div className="relative flex-1">
+              <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
+                <Search className="h-3.5 w-3.5" />
+              </span>
+              <input 
+                type="text" 
+                placeholder="Search companies..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-secondary/15"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* Sort Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setIsSortDropdownOpen(!isSortDropdownOpen); setIsFilterDropdownOpen(false); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border bg-card hover:bg-secondary rounded-lg text-xs font-bold text-foreground transition-colors cursor-pointer"
+                >
+                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span>Sort</span>
+                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isSortDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[160px]">
+                    {[
+                      { label: 'Name (A→Z)', field: 'name', order: 'asc' as const },
+                      { label: 'Name (Z→A)', field: 'name', order: 'desc' as const },
+                      { label: 'Revenue ↑', field: 'revenue', order: 'asc' as const },
+                      { label: 'Revenue ↓', field: 'revenue', order: 'desc' as const },
+                      { label: 'Employees ↑', field: 'employees', order: 'asc' as const },
+                      { label: 'Employees ↓', field: 'employees', order: 'desc' as const },
+                      { label: 'Open Deals ↑', field: 'openDeals', order: 'asc' as const },
+                      { label: 'Open Deals ↓', field: 'openDeals', order: 'desc' as const },
+                    ].map(({ label, field, order }) => (
+                      <button
+                        key={`${field}-${order}`}
+                        onClick={() => { setSortField(field); setSortOrder(order); setIsSortDropdownOpen(false); }}
+                        className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                          sortField === field && sortOrder === order
+                            ? 'bg-brand-purple/10 text-brand-purple font-bold'
+                            : 'text-foreground hover:bg-secondary'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Filter Dropdown */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setIsFilterDropdownOpen(!isFilterDropdownOpen); setIsSortDropdownOpen(false); }}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                    filterIndustry ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-card hover:bg-secondary text-foreground'
+                  }`}
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>{filterIndustry ? `Industry: ${filterIndustry}` : 'Filter'}</span>
+                  <ChevronDown className={`h-3 w-3 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isFilterDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[200px] max-h-60 overflow-y-auto">
+                    <button
+                      onClick={() => { setFilterIndustry(''); setIsFilterDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer mb-0.5 ${
+                        filterIndustry === '' ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      All Industries
+                    </button>
+                    {uniqueIndustries.map(ind => (
+                      <button
+                        key={ind}
+                        onClick={() => { setFilterIndustry(ind); setIsFilterDropdownOpen(false); }}
+                        className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                          filterIndustry === ind ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                        }`}
+                      >
+                        {ind}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {viewMode === 'list' ? (

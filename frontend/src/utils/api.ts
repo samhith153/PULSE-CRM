@@ -203,6 +203,26 @@ export async function loginWithGoogle(credential: string): Promise<{ access_toke
   return json.data ?? json;
 }
 
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password: newPassword })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.message || `Reset password failed (${res.status})`);
+  }
+}
+
+export function resolveImageUrl(url: string | null | undefined): string {
+  if (!url) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${cleanUrl}`;
+}
+
 
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   // Guard: skip the network call entirely if no auth token is available.
@@ -261,11 +281,18 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export async function getLeads(): Promise<Lead[]> {
   const dbResult = await apiFetch<any>('/api/v1/leads');
   const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return items as Lead[];
+  return items.map((dl: any) => ({
+    ...dl,
+    ownerAvatar: resolveImageUrl(dl.owner_avatar || dl.ownerAvatar),
+  })) as unknown as Lead[];
 }
 
 export async function getLead(leadId: string): Promise<Lead> {
-  return apiFetch<Lead>(`/api/v1/leads/${leadId}`);
+  const dl = await apiFetch<any>(`/api/v1/leads/${leadId}`);
+  if (dl) {
+    dl.ownerAvatar = resolveImageUrl(dl.owner_avatar || dl.ownerAvatar);
+  }
+  return dl as Lead;
 }
 
 export async function createLead(leadData: Record<string, unknown>): Promise<Lead> {
@@ -386,7 +413,7 @@ export async function getCompanies(): Promise<Company[]> {
       contacts: [],
       openDeals: dc.open_deals ?? 0,
       owner: dc.owner_name || dc.owner || '',
-      ownerAvatar: dc.owner_avatar || '',
+      ownerAvatar: resolveImageUrl(dc.owner_avatar || dc.ownerAvatar || ''),
       notes: dc.notes || '',
       timeline: [],
       emails: [],
@@ -427,6 +454,7 @@ export async function getDeals(): Promise<Deal[]> {
       priority: dd.priority || '',
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
+      createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
     };
   }) as unknown as Deal[];
 }
@@ -658,7 +686,7 @@ export function asNumber(v: Decimal | undefined | null): number {
 export function formatINR(v: Decimal | undefined | null): string {
   const n = asNumber(v);
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(2)}L`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}L`;
   if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
   return `₹${n.toLocaleString('en-IN')}`;
 }
@@ -757,8 +785,12 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
 }
 
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean }> {
-  return apiFetch('/api/v1/auth/me');
+export async function getCurrentUser(): Promise<any> {
+  const me = await apiFetch<any>('/api/v1/auth/me');
+  if (me && me.avatar_url) {
+    me.avatar_url = resolveImageUrl(me.avatar_url);
+  }
+  return me;
 }
 
 // --- Automation / Events API ---
@@ -1028,6 +1060,18 @@ export interface DashboardOverviewData {
   deals?: { id: string; name: string; value: number; stage: string; owner: string; closeDate: string }[];
   leads?: { id: string; name: string; company: string; score: number; status: string; owner: string }[];
   generated_at: string;
+}
+
+export interface DashboardDeal {
+  id: number | string;
+  title: string;
+  company: string;
+  value: number;
+  stage: string;
+  priority: 'High' | 'Medium' | 'Low';
+  owner: string;
+  closeDate: string;
+  createdAt?: string;
 }
 
 export async function getDashboardMe(): Promise<DashboardOverviewData> {

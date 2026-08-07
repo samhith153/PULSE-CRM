@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import TasksView from './TasksView';
+
 import { getAutomationEvents, triggerAutomationDelivery, type AutomationEvent } from '@/utils/api';
 import { 
   GitBranch, 
@@ -266,7 +266,7 @@ export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = 
       {!isBuilderOpen ? (
         // ----------------- LANDING SCREEN -----------------
         <div className="space-y-6">
-          <TasksView />
+
 
           <div className="bg-card border border-border rounded-2xl p-5">
             {/* Header */}

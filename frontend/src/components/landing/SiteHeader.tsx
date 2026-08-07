@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Menu, Search, X, ArrowUpRight, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { pillVariants } from "./PillButton";
-import promoImage from "../../../public/images/landing/promo-mega.jpg";
-import promoTeams from "../../../public/images/landing/promo-teams.jpg";
-import promoSolutions from "../../../public/images/landing/promo-solutions.jpg";
-import promoResources from "../../../public/images/landing/promo-resources.jpg";
+const promoImage = "/images/landing/promo-mega.jpg";
+const promoTeams = "/images/landing/promo-teams.jpg";
+const promoSolutions = "/images/landing/promo-solutions.jpg";
+const promoResources = "/images/landing/promo-resources.jpg";
 import { cn } from "@/lib/utils";
 
 const navLinks = ["Platform", "Products", "Solutions", "Pricing", "Resources"];
@@ -315,7 +315,7 @@ export function SiteHeader({ onOpenSignUp, onOpenSignIn }: SiteHeaderProps) {
                 <div className="overflow-hidden rounded-3xl bg-surface-warm">
                   {active.promo.image ? (
                     <img
-                      src={typeof active.promo.image === "object" ? active.promo.image.src : active.promo.image}
+                      src={active.promo.image}
                       alt={active.promo.heading}
                       loading="lazy"
                       width={800}

@@ -27,6 +27,7 @@ import {
   Activity as ActivityIcon
 } from 'lucide-react';
 import { getActivitiesFromStorage, saveActivitiesToStorage, Activity } from '@/utils/activityDb';
+import { getLeads, getContacts } from '@/utils/api';
 import ContextPanel from './ContextPanel';
 import { toast } from '@/lib/toast';
 
@@ -52,6 +53,216 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   const [priority, setPriority] = useState('');
   const [notes, setNotes] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [relatedEmail, setRelatedEmail] = useState<string | null>(null);
+  const [mergedTimeline, setMergedTimeline] = useState<any[]>([]);
+  const [timelineFilter, setTimelineFilter] = useState<'all' | 'timeline' | 'email' | 'call' | 'meeting'>('all');
+
+  useEffect(() => {
+    if (!activity) return;
+    
+    // Start with the activity's own timeline
+    let baseTimeline = (activity.timeline || []).map(t => ({
+      action: t.action,
+      time: t.time,
+      user: t.user || 'System',
+      desc: t.desc,
+      type: 'timeline'
+    }));
+
+    if (activity.type === 'email' && activity.details.to) {
+      setRelatedEmail(activity.details.to);
+    } else {
+      setRelatedEmail(null);
+    }
+
+    const rel = activity.relatedRecord;
+    if (!rel) {
+      setMergedTimeline(baseTimeline);
+      return;
+    }
+
+    if (rel.type === 'lead') {
+      getLeads().then((leadsList) => {
+        const found = leadsList.find((l) => String(l.id) === String(rel.id));
+        if (found) {
+          if (found.contact_email) {
+            setRelatedEmail(found.contact_email);
+          }
+          const extraLogs: any[] = [];
+          
+          // Add lead's timeline
+          if (found.timeline) {
+            found.timeline.forEach(t => {
+              extraLogs.push({
+                action: t.title,
+                time: t.time || new Date().toISOString(),
+                user: 'System',
+                desc: t.desc,
+                type: 'timeline'
+              });
+            });
+          }
+          
+          // Add lead's emails
+          if (found.emails) {
+            found.emails.forEach(e => {
+              extraLogs.push({
+                action: `Email: ${e.subject}`,
+                time: e.time || new Date().toISOString(),
+                user: 'Sarah Johnson',
+                desc: e.body,
+                type: 'email'
+              });
+            });
+          }
+          
+          // Add lead's calls
+          if (found.calls) {
+            found.calls.forEach(c => {
+              extraLogs.push({
+                action: `Call Logged: ${c.outcome}`,
+                time: c.time || new Date().toISOString(),
+                user: 'Sarah Johnson',
+                desc: c.notes,
+                type: 'call'
+              });
+            });
+          }
+          
+          // Add lead's meetings
+          if (found.meetings) {
+            found.meetings.forEach(m => {
+              extraLogs.push({
+                action: `Meeting: ${m.title}`,
+                time: m.date ? `${m.date}T${m.time || '00:00'}:00` : new Date().toISOString(),
+                user: 'Sarah Johnson',
+                desc: m.desc,
+                type: 'meeting'
+              });
+            });
+          }
+
+          setMergedTimeline([...baseTimeline, ...extraLogs]);
+        } else {
+          setMergedTimeline(baseTimeline);
+        }
+      }).catch(() => {
+        setMergedTimeline(baseTimeline);
+      });
+    } else if (rel.type === 'contact') {
+      getContacts().then((contactsList) => {
+        const found = contactsList.find((c) => String(c.id) === String(rel.id));
+        if (found) {
+          if (found.email) {
+            setRelatedEmail(found.email);
+          }
+          const extraLogs: any[] = [];
+          
+          if (found.timeline) {
+            found.timeline.forEach(t => {
+              extraLogs.push({
+                action: t.title,
+                time: t.time || new Date().toISOString(),
+                user: 'System',
+                desc: '',
+                type: 'timeline'
+              });
+            });
+          }
+          
+          if (found.emails) {
+            found.emails.forEach(e => {
+              extraLogs.push({
+                action: `Email: ${e.subject}`,
+                time: e.time || new Date().toISOString(),
+                user: 'Sarah Johnson',
+                desc: e.body,
+                type: 'email'
+              });
+            });
+          }
+          
+          if (found.calls) {
+            found.calls.forEach(c => {
+              extraLogs.push({
+                action: `Call Logged: ${c.outcome}`,
+                time: c.time || new Date().toISOString(),
+                user: 'Sarah Johnson',
+                desc: c.notes,
+                type: 'call'
+              });
+            });
+          }
+          
+          if (found.meetings) {
+            found.meetings.forEach(m => {
+              extraLogs.push({
+                action: `Meeting: ${m.title}`,
+                time: m.date ? `${m.date}T${m.time || '00:00'}:00` : new Date().toISOString(),
+                user: 'Sarah Johnson',
+                desc: '',
+                type: 'meeting'
+              });
+            });
+          }
+
+          setMergedTimeline([...baseTimeline, ...extraLogs]);
+        } else {
+          setMergedTimeline(baseTimeline);
+        }
+      }).catch(() => {
+        setMergedTimeline(baseTimeline);
+      });
+    } else if (rel.type === 'company' || rel.type === 'deal') {
+      const allActivities = getActivitiesFromStorage();
+      const relatedActivities = allActivities.filter(a => 
+        a.relatedRecord && 
+        String(a.relatedRecord.type) === String(rel.type) && 
+        String(a.relatedRecord.id) === String(rel.id)
+      );
+      const extraLogs: any[] = [];
+      relatedActivities.forEach(a => {
+        if (a.id === activity.id) return;
+        
+        if (a.type === 'email') {
+          extraLogs.push({
+            action: `Email: ${a.subject}`,
+            time: a.dueDate || new Date().toISOString(),
+            user: a.owner || 'Sarah Johnson',
+            desc: a.details.body || a.details.notes || '',
+            type: 'email'
+          });
+        } else if (a.type === 'call') {
+          extraLogs.push({
+            action: `Call Logged: ${a.details.outcome || 'Completed'}`,
+            time: a.dueDate || new Date().toISOString(),
+            user: a.owner || 'Sarah Johnson',
+            desc: a.details.notes || a.subject,
+            type: 'call'
+          });
+        } else if (a.type === 'meeting') {
+          extraLogs.push({
+            action: `Meeting: ${a.subject}`,
+            time: a.dueDate || new Date().toISOString(),
+            user: a.owner || 'Sarah Johnson',
+            desc: a.details.notes || a.details.agenda || '',
+            type: 'meeting'
+          });
+        } else {
+          extraLogs.push({
+            action: a.subject,
+            time: a.dueDate || new Date().toISOString(),
+            user: a.owner || 'System',
+            desc: a.details.description || a.details.notes || '',
+            type: 'timeline'
+          });
+        }
+      });
+      setMergedTimeline([...baseTimeline, ...extraLogs]);
+    } else {
+      setMergedTimeline(baseTimeline);
+    }
+  }, [activity]);
 
   // AI loading simulator
   const [aiGenerating, setAiGenerating] = useState(true);
@@ -301,6 +512,22 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             </>
           ) : (
             <>
+              {relatedEmail && (
+                <button
+                  onClick={() => {
+                    router.push(`?compose=${encodeURIComponent(relatedEmail)}`);
+                    onTabChange?.('emails');
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: relatedEmail } }));
+                    }, 150);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-brand-purple rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                  title={`Email ${relatedEmail}`}
+                >
+                  <Mail size={13} />
+                  <span>Email</span>
+                </button>
+              )}
               <button 
                 onClick={() => setIsEditing(true)}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
@@ -581,37 +808,87 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
 
             </div>
           ) : (
-            /* Timeline History Tab */
+            /* Timeline History Tab - uses mergedTimeline */
             <div className="bg-card border border-border rounded-[10px] p-5 shadow-sm space-y-5 animate-in fade-in duration-300">
               <h3 className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5 select-none font-['Space_Grotesk']">
                 <Clock className="h-4 w-4 text-brand-purple" />
                 <span>Lifecycle History Log</span>
+                <span className="ml-auto px-2 py-0.5 bg-brand-purple/10 text-brand-purple rounded-full text-[9px] font-bold">{mergedTimeline.length} events</span>
               </h3>
 
-              <div className="relative border-l border-border ml-3 space-y-6">
-                {[...(activity.timeline || [])]
-                  .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-                  .map((log, index) => (
-                    <div key={index} className="relative pl-8 animate-in slide-in-from-left-1 duration-200">
-                      <div className="absolute left-0 top-0.5 -translate-x-1/2 h-5 w-5 rounded-full bg-card border border-border flex items-center justify-center z-10 shadow-sm">
-                        <div className="size-2 rounded-full bg-brand-purple" />
-                      </div>
+              {/* Type filter pills */}
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    { label: 'All', key: 'all' },
+                    { label: 'Timelines', key: 'timeline' },
+                    { label: 'Emails', key: 'email' },
+                    { label: 'Calls', key: 'call' },
+                    { label: 'Meetings', key: 'meeting' },
+                  ] as { label: string; key: 'all' | 'timeline' | 'email' | 'call' | 'meeting' }[]
+                ).map(({ label, key }) => {
+                  const count = key === 'all' ? mergedTimeline.length : mergedTimeline.filter(e => e.type === key).length;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setTimelineFilter(key)}
+                      className={`px-2.5 py-1 rounded-full text-[9px] font-bold border transition-all cursor-pointer ${
+                        timelineFilter === key
+                          ? 'bg-brand-purple text-white border-brand-purple shadow-sm'
+                          : 'bg-secondary text-muted-foreground border-border hover:text-foreground hover:border-foreground/20'
+                      }`}
+                    >
+                      {label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
 
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <h4 className="text-xs font-bold text-foreground leading-none">{log.action}</h4>
-                          <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
-                            {new Date(log.time).toLocaleDateString('en-IN')} &middot; {new Date(log.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 font-semibold">{log.desc}</p>
-                        <p className="text-[9px] text-brand-purple font-extrabold mt-0.5">by {log.user}</p>
-                      </div>
-                    </div>
-                  ))}
-                
-                {(activity.timeline || []).length === 0 && (
+              <div className="relative border-l-2 border-brand-purple/20 ml-3 space-y-5">
+                {mergedTimeline.filter(e => timelineFilter === 'all' || e.type === timelineFilter).length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center font-semibold select-none">No lifecycle events logged yet.</p>
+                ) : (
+                  [...mergedTimeline.filter(e => timelineFilter === 'all' || e.type === timelineFilter)]
+                    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+                    .map((log, index) => {
+                      const typeColors: Record<string, string> = {
+                        email: 'bg-brand-purple',
+                        call: 'bg-emerald-500',
+                        meeting: 'bg-blue-500',
+                        timeline: 'bg-amber-500',
+                      };
+                      const typeBadge: Record<string, string> = {
+                        email: 'bg-brand-purple/10 text-brand-purple',
+                        call: 'bg-emerald-500/10 text-emerald-600',
+                        meeting: 'bg-blue-500/10 text-blue-600',
+                        timeline: 'bg-amber-500/10 text-amber-600',
+                      };
+                      const dotColor = typeColors[log.type] ?? 'bg-brand-purple';
+                      const badgeColor = typeBadge[log.type] ?? 'bg-secondary text-muted-foreground';
+                      return (
+                        <div key={index} className="relative pl-8 animate-in slide-in-from-left-1 duration-200 group">
+                          <div className={`absolute left-0 top-1 -translate-x-1/2 h-5 w-5 rounded-full bg-card border-2 border-border flex items-center justify-center z-10 shadow-sm group-hover:scale-110 transition-transform`}>
+                            <div className={`size-2 rounded-full ${dotColor}`} />
+                          </div>
+
+                          <div className="bg-secondary/30 dark:bg-secondary/20 border border-border/60 rounded-xl p-3 group-hover:bg-secondary/50 transition-colors">
+                            <div className="flex justify-between items-start gap-2 mb-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider shrink-0 ${badgeColor}`}>
+                                  {log.type}
+                                </span>
+                                <h4 className="text-xs font-bold text-foreground leading-none truncate">{log.action}</h4>
+                              </div>
+                              <span className="text-[9px] text-muted-foreground font-mono tabular-nums shrink-0">
+                                {new Date(log.time).toLocaleDateString('en-IN')} &middot; {new Date(log.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {log.desc && <p className="text-[10px] text-muted-foreground font-semibold leading-relaxed">{log.desc}</p>}
+                            <p className="text-[9px] text-brand-purple font-extrabold mt-1">by {log.user}</p>
+                          </div>
+                        </div>
+                      );
+                    })
                 )}
               </div>
             </div>

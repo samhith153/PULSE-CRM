@@ -34,6 +34,7 @@ import TeamPerformanceView from '@/components/dashboard/TeamPerformanceView';
 import AdminDashboardView from '@/components/dashboard/AdminDashboardView';
 import SalesRepDashboardView from '@/components/dashboard/SalesRepDashboardView';
 import HomeView from '@/components/dashboard/HomeView';
+import TasksView from '@/components/dashboard/TasksView';
 import UsersView from '@/components/dashboard/UsersView';
 import RolesPermissionsView from '@/components/dashboard/RolesPermissionsView';
 import IntegrationsView from '@/components/dashboard/IntegrationsView';
@@ -247,19 +248,21 @@ export default function DashboardHome() {
                   <HomeView onTabChange={setActiveTab} />
                 )
               ) : activeTab === 'leads' ? (
-                <LeadsView />
+                <LeadsView onTabChange={setActiveTab} />
               ) : activeTab === 'contacts' ? (
-                <ContactsView />
+                <ContactsView onTabChange={setActiveTab} />
               ) : activeTab === 'companies' ? (
                 <CompaniesView />
+              ) : activeTab === 'tasks' ? (
+                <TasksView />
               ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
                 <PipelineView />
               ) : activeTab === 'products' ? (
                 <ProductsView />
               ) : activeTab === 'activities' ? (
-                <ActivitiesView />
+                <ActivitiesView onTabChange={setActiveTab} />
               ) : activeTab === 'emails' ? (
-                <EmailsView />
+                <EmailsView onTabChange={setActiveTab} />
               ) : activeTab === 'documents' ? (
                 <DocumentsView />
               ) : activeTab === 'reports' ? (
