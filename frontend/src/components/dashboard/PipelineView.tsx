@@ -573,7 +573,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
         </div>
       ) : (
-        <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-brand-border-purple/20 scrollbar-track-transparent">
+        <div className="flex space-x-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
           {stages.map((stage) => {
             const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
             const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
