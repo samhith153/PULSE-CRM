@@ -303,6 +303,89 @@ class NoteResponse(BaseModel):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# EMAIL schemas (CRM email activity — user-created, not Gmail sync)
+# ─────────────────────────────────────────────────────────────────────────────
+
+EMAIL_DIRECTIONS = {"inbound", "outbound"}
+
+
+class EmailCreateRequest(BaseModel):
+    subject: str = Field(min_length=1, max_length=255)
+    body: Optional[str] = None
+    direction: str = Field(default="outbound")
+    recipient_email: Optional[str] = None
+    recipient_name: Optional[str] = None
+    status: str = Field(default="completed")
+    priority: str = Field(default="medium")
+    sent_at: Optional[datetime] = None
+    owner_id: Optional[UUID] = None
+    related_entity_type: Optional[str] = None
+    related_lead_id: Optional[UUID] = None
+    related_contact_id: Optional[UUID] = None
+    related_company_id: Optional[UUID] = None
+    related_deal_id: Optional[UUID] = None
+
+    @field_validator("related_entity_type")
+    @classmethod
+    def _validate_entity_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v.lower() not in ENTITY_TYPES:
+            raise ValueError(f"related_entity_type must be one of {ENTITY_TYPES}")
+        return v.lower() if v else v
+
+    @field_validator("direction")
+    @classmethod
+    def _validate_direction(cls, v: str) -> str:
+        if v.lower() not in EMAIL_DIRECTIONS:
+            raise ValueError(f"direction must be one of {EMAIL_DIRECTIONS}")
+        return v.lower()
+
+
+class EmailUpdateRequest(BaseModel):
+    subject: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    body: Optional[str] = None
+    direction: Optional[str] = None
+    recipient_email: Optional[str] = None
+    recipient_name: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    sent_at: Optional[datetime] = None
+    owner_id: Optional[UUID] = None
+    related_entity_type: Optional[str] = None
+    related_lead_id: Optional[UUID] = None
+    related_contact_id: Optional[UUID] = None
+    related_company_id: Optional[UUID] = None
+    related_deal_id: Optional[UUID] = None
+
+
+class EmailResponse(BaseModel):
+    id: UUID
+    activity_type: str = "email"
+    subject: str
+    body: Optional[str]
+    direction: str
+    recipient_email: Optional[str]
+    recipient_name: Optional[str]
+    status: str
+    priority: str
+    sent_at: Optional[datetime]
+    owner_id: Optional[UUID]
+    owner_name: Optional[str] = None
+    related_entity_type: Optional[str]
+    related_lead_id: Optional[UUID]
+    related_contact_id: Optional[UUID]
+    related_company_id: Optional[UUID]
+    related_deal_id: Optional[UUID]
+    related_record_name: Optional[str] = None
+    organization_id: UUID
+    created_by: Optional[UUID]
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # UNIFIED activity item — one shape for the Activities table / timeline
 # ─────────────────────────────────────────────────────────────────────────────
 

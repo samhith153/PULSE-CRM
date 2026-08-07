@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Plus, 
@@ -31,6 +31,7 @@ import {
   List
 } from 'lucide-react';
 import { getActivitiesFromStorage, saveActivitiesToStorage, Activity, RelatedRecord } from '@/utils/activityDb';
+import { getLeads, getContacts, getCompanies, getDeals, createTask, createCall, createMeeting, createNote, createCrmEmail } from '@/utils/api';
 import ActivityDetailView from './ActivityDetailView';
 import { toast } from '@/lib/toast';
 
@@ -111,6 +112,93 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
   const [relatedType, setRelatedType] = useState<'lead' | 'contact' | 'company' | 'deal'>('lead');
   const [relatedName, setRelatedName] = useState('');
   const [relatedId, setRelatedId] = useState('');
+
+  // Autocomplete search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; subtitle?: string }>>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // --- Entity search for Linked CRM Context ---
+  const searchEntities = useCallback(async (query: string, type: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    setIsSearching(true);
+    setShowDropdown(true);
+    try {
+      let results: Array<{ id: string; name: string; subtitle?: string }> = [];
+      if (type === 'lead') {
+        const items = await getLeads(1, 10, query);
+        results = items.map((l: any) => ({
+          id: l.id,
+          name: l.title || l.company_name || 'Untitled Lead',
+          subtitle: l.company_name || l.status || '',
+        }));
+      } else if (type === 'contact') {
+        const items = await getContacts(1, 10, query);
+        results = items.map((c: any) => ({
+          id: c.id,
+          name: c.name || `${c.first_name} ${c.last_name}`,
+          subtitle: c.company || c.email || '',
+        }));
+      } else if (type === 'company') {
+        const items = await getCompanies(1, 10, query);
+        results = items.map((c: any) => ({
+          id: c.id,
+          name: c.name || 'Untitled Company',
+          subtitle: c.industry || '',
+        }));
+      } else if (type === 'deal') {
+        const items = await getDeals(1, 10, query);
+        results = items.map((d: any) => ({
+          id: d.id,
+          name: d.title || d.name || 'Untitled Deal',
+          subtitle: d.company || d.stage || '',
+        }));
+      }
+      setSearchResults(results);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Debounced search
+  const handleSearchInput = useCallback((value: string) => {
+    setSearchQuery(value);
+    setRelatedName(value);
+    setRelatedId('');
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      searchEntities(value, relatedType);
+    }, 300);
+  }, [relatedType, searchEntities]);
+
+  // Reset selection when type changes
+  useEffect(() => {
+    setRelatedName('');
+    setRelatedId('');
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowDropdown(false);
+  }, [relatedType]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Initial Load & Query Params Pre-filtering
   useEffect(() => {
@@ -231,7 +319,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
   };
 
   // --- Create Activity Submit ---
-  const handleCreateActivity = (e: React.FormEvent) => {
+  const handleCreateActivity = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formSubject.trim() && activeFormType !== 'note') {
@@ -239,81 +327,117 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
       return;
     }
 
-    const newId = `act-${Date.now()}`;
     const rRecord: RelatedRecord | undefined = relatedName.trim() ? {
       id: relatedId || `rel-${Date.now()}`,
       name: relatedName,
       type: relatedType
     } : undefined;
 
-    let detailsPayload: any = {};
-    let finalSubject = formSubject;
-
-    if (activeFormType === 'task') {
-      detailsPayload = {
-        title: formSubject,
-        description: taskDesc,
-        assignedTo: 'Sarah Johnson',
-        reminder: taskReminder,
-        repeat: taskRepeat
-      };
-    } else if (activeFormType === 'call') {
-      detailsPayload = {
-        contactName: callContactName || relatedName,
-        phoneNumber: callPhoneNumber,
-        callType,
-        duration: callDuration,
-        outcome: callOutcome,
-        notes: callNotes
-      };
-    } else if (activeFormType === 'meeting') {
-      detailsPayload = {
-        agenda: meetingAgenda,
-        participants: meetingParticipants.split(',').map(p => p.trim()),
-        date: formDueDate.slice(0, 10),
-        time: formDueDate.slice(11, 16),
-        location: meetingLocation,
-        meetingUrl: meetingLocation.startsWith('http') ? meetingLocation : undefined
-      };
-    } else if (activeFormType === 'email') {
-      detailsPayload = {
-        from: emailFrom,
-        to: emailTo,
-        sentTime: 'Just now',
-        thread: emailThread || formSubject,
-        body: emailBody,
-        isRead: true
-      };
-    } else if (activeFormType === 'note') {
-      finalSubject = `Internal Note: ${noteBody.slice(0, 30)}...`;
-      detailsPayload = {
-        body: noteBody
-      };
+    // Build related IDs payload
+    const relatedPayload: Record<string, any> = {};
+    if (relatedId) {
+      relatedPayload.related_entity_type = relatedType;
+      if (relatedType === 'lead') relatedPayload.related_lead_id = relatedId;
+      else if (relatedType === 'contact') relatedPayload.related_contact_id = relatedId;
+      else if (relatedType === 'company') relatedPayload.related_company_id = relatedId;
+      else if (relatedType === 'deal') relatedPayload.related_deal_id = relatedId;
     }
 
-    const newActivity: Activity = {
-      id: newId,
-      type: activeFormType!,
-      subject: finalSubject,
-      status: activeFormType === 'task' ? formStatus : 'Completed',
-      priority: formPriority,
-      dueDate: formDueDate ? new Date(formDueDate).toISOString() : new Date().toISOString(),
-      owner: 'Sarah Johnson',
-      relatedRecord: rRecord,
-      details: detailsPayload,
-      timeline: [
-        { action: 'Created', time: new Date().toISOString(), user: 'Sarah Johnson', desc: `Activity manually logged as ${activeFormType}.` }
-      ]
-    };
+    try {
+      if (activeFormType === 'task') {
+        await createTask({
+          subject: formSubject,
+          description: taskDesc,
+          priority: formPriority.toLowerCase(),
+          status: formStatus.toLowerCase(),
+          due_date: formDueDate || undefined,
+          ...relatedPayload,
+        });
+      } else if (activeFormType === 'call') {
+        await createCall({
+          subject: formSubject,
+          contact_name: callContactName || relatedName,
+          phone_number: callPhoneNumber,
+          call_type: callType.toLowerCase(),
+          duration_minutes: parseInt(callDuration) || undefined,
+          outcome: callOutcome.toLowerCase(),
+          notes: callNotes,
+          priority: formPriority.toLowerCase(),
+          status: 'completed',
+          ...relatedPayload,
+        });
+      } else if (activeFormType === 'meeting') {
+        await createMeeting({
+          subject: formSubject,
+          description: meetingAgenda,
+          start_time: formDueDate || undefined,
+          location: meetingLocation,
+          priority: formPriority.toLowerCase(),
+          status: 'scheduled',
+          ...relatedPayload,
+        });
+      } else if (activeFormType === 'note') {
+        await createNote({
+          title: formSubject || `Note: ${noteBody.slice(0, 30)}`,
+          body: noteBody,
+          ...relatedPayload,
+        });
+      } else if (activeFormType === 'email') {
+        await createCrmEmail({
+          subject: formSubject,
+          body: emailBody,
+          direction: 'outbound',
+          recipient_email: emailTo,
+          recipient_name: relatedName,
+          priority: formPriority.toLowerCase(),
+          status: 'completed',
+          ...relatedPayload,
+        });
+      }
 
-    const updatedList = [newActivity, ...activities];
-    saveActivitiesToStorage(updatedList);
-    setActivities(updatedList);
-    
-    // Close modal & reset fields
-    setActiveFormType(null);
-    resetFormFields();
-    toast.success("Activity logged successfully.");
+      // Also save to localStorage for the local activity feed
+      const newId = `act-${Date.now()}`;
+      let finalSubject = formSubject;
+      let detailsPayload: any = {};
+
+      if (activeFormType === 'task') {
+        detailsPayload = { title: formSubject, description: taskDesc, assignedTo: 'Sarah Johnson', reminder: taskReminder, repeat: taskRepeat };
+      } else if (activeFormType === 'call') {
+        detailsPayload = { contactName: callContactName || relatedName, phoneNumber: callPhoneNumber, callType, duration: callDuration, outcome: callOutcome, notes: callNotes };
+      } else if (activeFormType === 'meeting') {
+        detailsPayload = { agenda: meetingAgenda, participants: meetingParticipants.split(',').map(p => p.trim()), date: formDueDate.slice(0, 10), time: formDueDate.slice(11, 16), location: meetingLocation };
+      } else if (activeFormType === 'email') {
+        detailsPayload = { from: emailFrom, to: emailTo, sentTime: 'Just now', thread: emailThread || formSubject, body: emailBody, isRead: true };
+      } else if (activeFormType === 'note') {
+        finalSubject = `Internal Note: ${noteBody.slice(0, 30)}...`;
+        detailsPayload = { body: noteBody };
+      }
+
+      const newActivity: Activity = {
+        id: newId,
+        type: activeFormType!,
+        subject: finalSubject,
+        status: activeFormType === 'task' ? formStatus : 'Completed',
+        priority: formPriority,
+        dueDate: formDueDate ? new Date(formDueDate).toISOString() : new Date().toISOString(),
+        owner: 'Sarah Johnson',
+        relatedRecord: rRecord,
+        details: detailsPayload,
+        timeline: [
+          { action: 'Created', time: new Date().toISOString(), user: 'Sarah Johnson', desc: `Activity manually logged as ${activeFormType}.` }
+        ]
+      };
+
+      const updatedList = [newActivity, ...activities];
+      saveActivitiesToStorage(updatedList);
+      setActivities(updatedList);
+      
+      setActiveFormType(null);
+      resetFormFields();
+      toast.success("Activity logged successfully.");
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to create activity.');
+    }
   };
 
   const resetFormFields = () => {
@@ -334,6 +458,9 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
     setNoteBody('');
     setRelatedName('');
     setRelatedId('');
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowDropdown(false);
   };
 
   const handleExportCSV = () => {
@@ -784,7 +911,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
               {/* Common Related Record Selector */}
               <div className="bg-secondary/20 border border-border/85 rounded-xl p-3 space-y-3">
                 <span className="text-[8px] font-black uppercase text-brand-purple tracking-widest block leading-none font-['Space_Grotesk']">Linked CRM Context</span>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   {[
                     { id: 'lead', label: 'Lead' },
                     { id: 'contact', label: 'Contact' },
@@ -806,28 +933,68 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: ActivitiesList
                   ))}
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[8px] font-extrabold text-muted-foreground/80 uppercase">Record Name {activeFormType !== 'email' && activeFormType !== 'note' && <span className="text-rose-500">*</span>}</label>
+                <div className="relative" ref={dropdownRef}>
+                  <label className="block text-[8px] font-extrabold text-muted-foreground/80 uppercase">
+                    Search {relatedType.charAt(0).toUpperCase() + relatedType.slice(1)} {activeFormType !== 'email' && activeFormType !== 'note' && <span className="text-rose-500">*</span>}
+                  </label>
+                  <div className="relative mt-1">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                     <input
                       type="text"
-                      placeholder="e.g. Acme Corp"
-                      value={relatedName}
-                      onChange={(e) => setRelatedName(e.target.value)}
-                      required={activeFormType !== 'email' && activeFormType !== 'note'}
-                      className="mt-1 w-full bg-card border border-border rounded-lg px-2.5 py-1 text-xs text-foreground focus:outline-none"
+                      placeholder={`Search ${relatedType}s by name...`}
+                      value={searchQuery}
+                      onChange={(e) => handleSearchInput(e.target.value)}
+                      onFocus={() => searchQuery.length >= 2 && setShowDropdown(true)}
+                      className="w-full bg-card border border-border rounded-lg pl-7 pr-8 py-1.5 text-xs text-foreground focus:outline-none"
                     />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => { setSearchQuery(''); setRelatedName(''); setRelatedId(''); setSearchResults([]); setShowDropdown(false); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-[8px] font-extrabold text-muted-foreground/80 uppercase">Record ID (optional)</label>
-                    <input
-                      type="text"
-                      placeholder="UUID or Slug"
-                      value={relatedId}
-                      onChange={(e) => setRelatedId(e.target.value)}
-                      className="mt-1 w-full bg-card border border-border rounded-lg px-2.5 py-1 text-xs text-foreground focus:outline-none"
-                    />
-                  </div>
+
+                  {/* Dropdown */}
+                  {showDropdown && (
+                    <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {isSearching ? (
+                        <div className="px-3 py-2 text-[10px] text-muted-foreground">Searching...</div>
+                      ) : searchResults.length === 0 ? (
+                        <div className="px-3 py-2 text-[10px] text-muted-foreground">No results found</div>
+                      ) : (
+                        searchResults.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setRelatedName(item.name);
+                              setRelatedId(item.id);
+                              setSearchQuery(item.name);
+                              setShowDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-secondary transition-colors cursor-pointer border-b border-border/50 last:border-0"
+                          >
+                            <div className="text-xs font-semibold text-foreground truncate">{item.name}</div>
+                            {item.subtitle && (
+                              <div className="text-[10px] text-muted-foreground truncate">{item.subtitle}</div>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {/* Selected indicator */}
+                  {relatedId && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-brand-purple font-semibold">
+                      <Check className="h-3 w-3" />
+                      <span>Linked: {relatedName}</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

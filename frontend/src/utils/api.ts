@@ -299,8 +299,10 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 // --- Leads API ---
-export async function getLeads(): Promise<Lead[]> {
-  const dbResult = await apiFetch<any>('/api/v1/leads');
+export async function getLeads(page = 1, pageSize = 20, search?: string): Promise<Lead[]> {
+  const params: Record<string, string | number> = { page, page_size: pageSize };
+  if (search) params.search = search;
+  const dbResult = await apiFetch<any>(`/api/v1/leads${toQuery(params)}`);
   const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return items.map((dl: any) => ({
     ...dl,
@@ -384,8 +386,10 @@ export async function convertLead(
 }
 
 // --- Contacts API ---
-export async function getContacts(): Promise<Contact[]> {
-  const dbResult = await apiFetch<any>('/api/v1/contacts');
+export async function getContacts(page = 1, pageSize = 20, search?: string): Promise<Contact[]> {
+  const params: Record<string, string | number> = { page, page_size: pageSize };
+  if (search) params.search = search;
+  const dbResult = await apiFetch<any>(`/api/v1/contacts${toQuery(params)}`);
   const dbContacts: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbContacts.map((dc: any) => ({
     id: dc.id,
@@ -421,8 +425,10 @@ export async function deleteContact(contactId: string | number): Promise<void> {
 }
 
 // --- Companies API ---
-export async function getCompanies(): Promise<Company[]> {
-  const dbResult = await apiFetch<any>('/api/v1/companies');
+export async function getCompanies(page = 1, pageSize = 20, search?: string): Promise<Company[]> {
+  const params: Record<string, string | number> = { page, page_size: pageSize };
+  if (search) params.search = search;
+  const dbResult = await apiFetch<any>(`/api/v1/companies${toQuery(params)}`);
   const dbCompanies: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbCompanies.map((dc, idx) => {
     return {
@@ -462,8 +468,10 @@ export async function deleteCompany(companyId: string | number): Promise<void> {
 }
 
 // --- Deals API ---
-export async function getDeals(): Promise<Deal[]> {
-  const dbResult = await apiFetch<any>('/api/v1/deals');
+export async function getDeals(page = 1, pageSize = 20, search?: string): Promise<Deal[]> {
+  const params: Record<string, string | number> = { page, page_size: pageSize };
+  if (search) params.search = search;
+  const dbResult = await apiFetch<any>(`/api/v1/deals${toQuery(params)}`);
   const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbDeals.map((dd, idx) => {
     return {
@@ -959,6 +967,75 @@ export async function changePassword(currentPassword: string, newPassword: strin
   await apiFetch<void>('/api/v1/auth/change-password', {
     method: 'POST',
     body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
+  });
+}
+
+// --- CRM Activities API ---
+
+export interface CrmActivityPayload {
+  subject: string;
+  description?: string;
+  priority?: string;
+  status?: string;
+  due_date?: string;
+  related_entity_type?: string;
+  related_lead_id?: string;
+  related_contact_id?: string;
+  related_company_id?: string;
+  related_deal_id?: string;
+}
+
+export async function createTask(payload: CrmActivityPayload): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/tasks', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createCall(payload: CrmActivityPayload & {
+  contact_name?: string;
+  phone_number?: string;
+  call_type?: string;
+  duration_minutes?: number;
+  outcome?: string;
+  notes?: string;
+}): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/calls', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createMeeting(payload: CrmActivityPayload & {
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  attendees?: string[];
+}): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/meetings', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createNote(payload: CrmActivityPayload & {
+  body?: string;
+}): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/notes', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function createCrmEmail(payload: CrmActivityPayload & {
+  body?: string;
+  direction?: string;
+  recipient_email?: string;
+  recipient_name?: string;
+}): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/emails', {
+    method: 'POST',
+    body: JSON.stringify(payload)
   });
 }
 

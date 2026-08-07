@@ -27,6 +27,7 @@ from app.models.meeting import Meeting  # noqa: F401
 from app.models.crm_task import CrmTask  # noqa: F401
 from app.models.crm_call import CrmCall  # noqa: F401
 from app.models.crm_note import CrmNote  # noqa: F401
+from app.models.crm_email import CrmEmail  # noqa: F401
 
 
 
