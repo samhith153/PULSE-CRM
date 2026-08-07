@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import { 
@@ -8,6 +8,8 @@ import {
   IndianRupee, 
   TrendingUp, 
   Sparkles, 
+  Trophy,
+  XCircle,
   X, 
   Edit, 
   Trash2, 
@@ -466,6 +468,102 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
         </div>
       </div>
+
+      {/* Won / Lost Analytics */}
+      {(() => {
+        const wonStage = stages.find(s => s.slug === 'won');
+        const lostStage = stages.find(s => s.slug === 'lost');
+        const wonDeals = filteredDeals.filter(d => wonStage && d.stage === wonStage.name);
+        const lostDeals = filteredDeals.filter(d => lostStage && d.stage === lostStage.name);
+        const wonCount = wonDeals.length;
+        const lostCount = lostDeals.length;
+        const wonValue = wonDeals.reduce((s, d) => s + d.value, 0);
+        const lostValue = lostDeals.reduce((s, d) => s + d.value, 0);
+        const totalClosed = wonCount + lostCount;
+        const winRate = totalClosed > 0 ? Math.round((wonCount / totalClosed) * 100) : 0;
+
+        const stageCounts = stages.map(s => ({
+          name: s.name,
+          slug: s.slug,
+          count: filteredDeals.filter(d => d.stage === s.name).length,
+        }));
+        const maxStageCount = Math.max(...stageCounts.map(s => s.count), 1);
+
+        if (totalClosed === 0) return null;
+
+        const donutSize = 120;
+        const donutRadius = 45;
+        const donutStroke = 16;
+        const circumference = 2 * Math.PI * donutRadius;
+        const wonArc = totalClosed > 0 ? (wonCount / totalClosed) * circumference : 0;
+
+        return (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+            {/* Won vs Lost Donut */}
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <h3 className="text-xs font-bold text-foreground mb-4">Won vs Lost</h3>
+              <div className="flex items-center gap-6">
+                <div className="relative shrink-0" style={{ width: donutSize, height: donutSize }}>
+                  <svg width={donutSize} height={donutSize} className="-rotate-90">
+                    <circle cx={donutSize / 2} cy={donutSize / 2} r={donutRadius} fill="none" stroke="hsl(var(--destructive) / 0.15)" strokeWidth={donutStroke} />
+                    <circle cx={donutSize / 2} cy={donutSize / 2} r={donutRadius} fill="none" stroke="hsl(142 71% 45%)" strokeWidth={donutStroke} strokeDasharray={`${wonArc} ${circumference - wonArc}`} strokeLinecap="round" />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-lg font-bold text-foreground tabular-nums">{winRate}%</span>
+                    <span className="text-[8px] font-semibold text-muted-foreground uppercase">Win Rate</span>
+                  </div>
+                </div>
+                <div className="flex-1 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="text-xs font-semibold text-foreground">Won</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-foreground tabular-nums">{wonCount}</span>
+                      <span className="text-[10px] text-muted-foreground font-semibold ml-1.5 tabular-nums">{formatINR(wonValue)}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full bg-destructive shrink-0" />
+                      <span className="text-xs font-semibold text-foreground">Lost</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-foreground tabular-nums">{lostCount}</span>
+                      <span className="text-[10px] text-muted-foreground font-semibold ml-1.5 tabular-nums">{formatINR(lostValue)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Stage Distribution Bar */}
+            <div className="bg-card border border-border rounded-2xl p-5">
+              <h3 className="text-xs font-bold text-foreground mb-4">Pipeline by Stage</h3>
+              <div className="space-y-2.5">
+                {stageCounts.map(sc => {
+                  const pct = maxStageCount > 0 ? (sc.count / maxStageCount) * 100 : 0;
+                  const isWon = sc.slug === 'won';
+                  const isLost = sc.slug === 'lost';
+                  return (
+                    <div key={sc.name} className="flex items-center gap-3">
+                      <span className="text-[10px] font-semibold text-muted-foreground w-24 truncate shrink-0" title={sc.name}>{sc.name}</span>
+                      <div className="flex-1 h-5 bg-secondary rounded-md overflow-hidden border border-border/50">
+                        <div
+                          className={`h-full rounded-md transition-all duration-500 ${isWon ? 'bg-emerald-500' : isLost ? 'bg-destructive' : 'bg-brand-purple/60'}`}
+                          style={{ width: `${Math.max(pct, sc.count > 0 ? 8 : 0)}%` }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-foreground tabular-nums w-6 text-right">{sc.count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {viewMode === 'list' ? (
         <div className="bg-card border border-border rounded-2xl p-5">
