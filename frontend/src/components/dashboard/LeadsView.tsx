@@ -3,7 +3,8 @@
 import { toast } from '@/lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl, Deal, Company } from '@/utils/api';
+import { onLeadCreated, onDealStageChanged, onDealWon, onDealLost } from '@/utils/activityAutomation';
 import { 
   Search, 
   Filter, 
@@ -441,8 +442,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       };
       setLeads([newLead, ...leads]);
       setSelectedLeadId(newLead.id);
+      
+      // Trigger automation for new lead
+      const userId = localStorage.getItem('pulse-crm-user') || 'system';
+      const userName = userId;
+      await onLeadCreated(created, userId, userName);
+      toast.success("Lead created and automation rules triggered!");
     } catch (err) {
       console.error("Failed to create lead:", err);
+      toast.error("Failed to create lead");
     }
     setIsCreatingFullPage(false);
     setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
