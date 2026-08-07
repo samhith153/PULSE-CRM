@@ -11,7 +11,6 @@ export interface CurrentUserProfile {
   roles: string[];
   permissions: string[];
   is_verified: boolean;
-  is_superuser: boolean;
   avatar_url?: string | null;
 }
 

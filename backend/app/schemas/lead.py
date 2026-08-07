@@ -107,6 +107,7 @@ class LeadResponse(BaseModel):
     contact_email: Optional[str] = None
     contact_phone: Optional[str] = None
     owner_name: Optional[str] = None
+    owner_avatar_url: Optional[str] = None
     score: Optional[int] = None
     fit_score: Optional[int] = None
     engagement_score: Optional[int] = None
@@ -158,4 +159,5 @@ class LeadResponse(BaseModel):
             contact_email=lead.email or (lead.contact.email if lead.contact else None),
             contact_phone=lead.phone or (lead.contact.phone if lead.contact else None),
             owner_name=lead.owner.full_name if lead.owner else None,
+            owner_avatar_url=lead.owner.avatar_url if lead.owner else None,
         )

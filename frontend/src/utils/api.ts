@@ -57,6 +57,7 @@ export interface Lead {
   contact_email: string | null;
   contact_phone: string | null;
   owner_name: string | null;
+  owner_avatar_url: string | null;
 }
 
 export interface Contact {

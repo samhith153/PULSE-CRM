@@ -15,7 +15,7 @@ import {
   Loader2,
   Camera,
 } from 'lucide-react';
-import { getCurrentUser, getSalesRepDashboard, asNumber, formatINR, formatPct, SalesRepDashboardData, uploadAvatar } from '@/utils/api';
+import { getCurrentUser, getSalesRepDashboard, asNumber, formatINR, formatPct, SalesRepDashboardData, uploadAvatar, resolveImageUrl } from '@/utils/api';
 
 interface ProfileShape {
   id: string;
@@ -54,7 +54,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground text-xs font-semibold">
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading profileâ€¦
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading profile...
       </div>
     );
   }
@@ -70,7 +70,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const achieved = asNumber(kpi?.summary?.total_revenue);
   const quota = asNumber(kpi?.revenue_stat?.total) || achieved || 1;
   const progressPercent = Math.min(100, Math.round((achieved / (quota || 1)) * 100));
-  const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'â€”';
+  const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '–';
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -92,17 +92,31 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
     <div className="space-y-6">
       <div className="bg-card border border-border rounded-2xl p-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5">
-          <div className="h-20 w-20 rounded-full overflow-hidden border border-border shrink-0 bg-secondary flex items-center justify-center">
+          <div className="h-20 w-20 rounded-full overflow-hidden border border-border shrink-0 bg-secondary flex items-center justify-center relative group cursor-pointer" onClick={() => !uploading && fileInputRef.current?.click()}>
             {profile.avatar_url ? (
-              <Image src={profile.avatar_url} alt={profile.full_name} width={80} height={80} className="h-full w-full object-cover" unoptimized />
+              <Image src={resolveImageUrl(profile.avatar_url)} alt={profile.full_name} width={80} height={80} className="h-full w-full object-cover" unoptimized />
             ) : (
               <User className="h-8 w-8 text-muted-foreground" />
             )}
+            <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+              {uploading ? (
+                <Loader2 className="h-5 w-5 text-white animate-spin" />
+              ) : (
+                <Camera className="h-5 w-5 text-white" />
+              )}
+            </div>
           </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleAvatarUpload}
+          />
 
           <div className="flex-1 text-center sm:text-left min-w-0">
             <h2 className="font-sans text-2xl text-foreground font-bold">{profile.full_name}</h2>
-            <p className="text-xs text-brand-purple font-semibold mt-0.5">{roleLabel} â€” {dept}</p>
+            <p className="text-xs text-brand-purple font-semibold mt-0.5">{roleLabel} – {dept}</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-[11px] font-semibold text-muted-foreground">
               <div className="flex items-center space-x-2">
@@ -111,7 +125,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.phone || 'â€”'}</span>
+                <span>{profile.phone || '–'}</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Building2 className="h-4 w-4 text-muted-foreground" />

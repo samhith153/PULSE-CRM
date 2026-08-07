@@ -30,6 +30,8 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
+import { resolveImageUrl } from '@/utils/api';
 
 interface SidebarProps {
   activeTab: string;
@@ -156,39 +158,20 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
   }
 }
 
-function getUserProfile(userRole: SidebarProps['userRole']) {
-  switch (userRole) {
-    case 'admin':
-      return {
-        name: 'System Admin',
-        role: 'Administrator',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80',
-      };
-    case 'manager':
-      return {
-        name: 'Alex Johnson',
-        role: 'Sales Manager',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80',
-      };
-    default:
-      return {
-        name: 'Sarah Johnson',
-        role: 'Sales Rep',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80',
-      };
-  }
-}
-
 /* ── Component ───────────────────────────────────────────────────────── */
 
 export default function Sidebar({
   activeTab,
   setActiveTab,
   collapsed,
+  setCollapsed,
   userRole,
 }: SidebarProps) {
   const sections = getSections(userRole);
-  const profile  = getUserProfile(userRole);
+  const { user: currentUser } = useCurrentUser();
+  const profileName = currentUser?.full_name || 'User';
+  const profileRoleLabel = userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative';
+  const profileInitials = userInitials(currentUser?.full_name);
 
   const isActive = (tab: string) =>
     activeTab.toLowerCase() === tab.toLowerCase();
@@ -330,24 +313,28 @@ export default function Sidebar({
             collapsed && 'justify-center',
           )}
         >
-          <div className="size-8 shrink-0 overflow-hidden rounded-full border border-sidebar-border">
-            <Image
-              src={profile.avatar}
-              alt={profile.name}
-              width={32}
-              height={32}
-              className="h-full w-full object-cover"
-              unoptimized
-            />
+          <div className="size-8 shrink-0 overflow-hidden rounded-full border border-sidebar-border flex items-center justify-center bg-secondary">
+            {currentUser?.avatar_url ? (
+              <Image
+                src={resolveImageUrl(currentUser.avatar_url)}
+                alt={profileName}
+                width={32}
+                height={32}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <span className="text-[10px] font-bold text-muted-foreground select-none">{profileInitials}</span>
+            )}
           </div>
           {!collapsed && (
             <>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-sidebar-foreground">
-                  {profile.name}
+                  {profileName}
                 </p>
                 <p className="truncate text-[10px] text-muted-foreground">
-                  {profile.role}
+                  {profileRoleLabel}
                 </p>
               </div>
               <ChevronsUpDown size={13} className="shrink-0 text-muted-foreground" />

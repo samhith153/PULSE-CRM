@@ -21,6 +21,8 @@ import {
   Calendar,
   ChevronDown
 } from 'lucide-react';
+import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
+import { resolveImageUrl } from '@/utils/api';
 
 interface HeaderProps {
   collapsed: boolean;
@@ -96,6 +98,8 @@ export default function Header({
   const quickAddRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const { user: currentUser } = useCurrentUser();
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
@@ -134,46 +138,9 @@ export default function Header({
     { id: 4, text: "New report 'Q3 Sales Forecast' ready for review.", type: "report", time: "5h ago" },
   ];
 
-  // Dynamic profile details mapping
-  const getUserProfile = () => {
-    let name = "";
-    let email = "";
-    if (typeof window !== 'undefined') {
-      const storedUser = localStorage.getItem('pulse-crm-user');
-      if (storedUser) {
-        if (storedUser.includes('@')) {
-          email = storedUser;
-          const namePart = storedUser.split('@')[0];
-          name = namePart.replace(/[._-]/g, ' ');
-        } else {
-          name = storedUser;
-          email = `${storedUser.toLowerCase().replace(/\s+/g, '.')}@pulse.crm`;
-        }
-      }
-    }
-
-    let defaultAvatar = "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80";
-    if (userRole === 'admin') {
-      defaultAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80";
-      if (!name) name = "System Admin";
-      if (!email) email = "admin@pulse.crm";
-    } else if (userRole === 'manager') {
-      defaultAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80";
-      if (!name) name = "Alex Johnson";
-      if (!email) email = "alex.johnson@pulse.crm";
-    } else {
-      if (!name) name = "Sarah Johnson";
-      if (!email) email = "sarah.johnson@pulse.crm";
-    }
-
-    return {
-      name: name,
-      email: email,
-      avatar: defaultAvatar
-    };
-  };
-
-  const profile = getUserProfile();
+  const profileName = currentUser?.full_name || 'User';
+  const profileEmail = currentUser?.email || '';
+  const profileInitials = userInitials(currentUser?.full_name);
 
   return (
     <header className="sticky top-0 z-30 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border/80 bg-background/70 px-4 py-3 backdrop-blur-xl md:px-6 text-foreground">
@@ -310,13 +277,17 @@ export default function Header({
             className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-xs font-semibold text-ink hover:ring-2 hover:ring-brand-purple/40 ring-1 ring-border/40 ring-offset-2 ring-offset-background transition-all duration-200 cursor-pointer overflow-hidden"
             aria-label="Profile menu"
           >
-            <Image
-              src={profile.avatar}
-              alt={`${profile.name} avatar`}
-              width={36} height={36}
-              className="h-full w-full object-cover"
-              unoptimized
-            />
+            {currentUser?.avatar_url ? (
+              <Image
+                src={resolveImageUrl(currentUser.avatar_url)}
+                alt={`${profileName} avatar`}
+                width={36} height={36}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <span className="select-none">{profileInitials}</span>
+            )}
           </button>
 
           <AnimatePresence>
@@ -329,8 +300,8 @@ export default function Header({
                 className="absolute right-0 mt-2 w-48 bg-popover border border-border rounded-xl shadow-float overflow-hidden z-50"
               >
                 <div className="px-4 py-2.5 bg-secondary border-b border-border">
-                  <p className="text-xs font-semibold text-foreground truncate">{profile.name}</p>
-                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{profile.email}</p>
+                  <p className="text-xs font-semibold text-foreground truncate">{profileName}</p>
+                  <p className="text-[11px] text-muted-foreground truncate mt-0.5">{profileEmail}</p>
                 </div>
                 <div className="py-1">
                   <button

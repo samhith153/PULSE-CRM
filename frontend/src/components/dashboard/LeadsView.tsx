@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -66,7 +66,7 @@ function backendToLocal(b: BackendLead): Lead {
     status: STATUS_UNMAP[b.status] || 'New',
     priority: (b.priority as Lead['priority']) ?? 'Low',
     owner: b.owner_name || 'Unassigned',
-    ownerAvatar: null,
+    ownerAvatar: resolveImageUrl(b.owner_avatar_url),
     notes: b.notes || '',
     source: mappedSource,
     industry: b.industry || undefined,
@@ -173,7 +173,7 @@ interface Lead {
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
   priority: 'Critical' | 'High' | 'Medium' | 'Low';
   owner: string;
-  ownerAvatar: string | null;
+  ownerAvatar: string;
   notes: string;
   source?: string;
   value?: string | number;
