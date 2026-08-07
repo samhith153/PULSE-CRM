@@ -39,7 +39,22 @@ interface ContactItem {
 
 const EMPTY_CONTACTS: ContactItem[] = [];
 
-export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () => void; onTabChange?: (tab: string) => void } = {}) {
+interface ContactsViewProps {
+  onLoaded?: () => void;
+  onTabChange?: (tab: string) => void;
+  onComposeEmail?: (target: { 
+    to: string; 
+    name?: string; 
+    company?: string; 
+    designation?: string;
+    purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+    context?: string;
+    externalEntityType?: string | null;
+    externalEntityId?: string | null;
+  }) => void;
+}
+
+export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: ContactsViewProps = {}) {
   const router = useRouter();
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
@@ -559,11 +574,24 @@ export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () 
               <span>Email Contact</span>
             </button>
             <button 
-              onClick={() => setIsCallModalOpen(true)}
+              onClick={() => {
+                if (onComposeEmail && active) {
+                  onComposeEmail({
+                    to: active.email,
+                    name: active.name,
+                    company: active.company,
+                    designation: active.designation,
+                    purpose: 'follow_up',
+                    context: active.notes || '',
+                    externalEntityType: 'contact',
+                    externalEntityId: String(active.id)
+                  });
+                }
+              }}
               className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer"
             >
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Log Call</span>
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Email Contact</span>
             </button>
           </div>
 

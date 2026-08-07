@@ -44,7 +44,7 @@ import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import HomeView from '@/components/dashboard/HomeView';
 import TasksView from '@/components/dashboard/TasksView';
 import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
-import { clearToken, setToken } from '@/utils/api';
+import { clearToken, setToken, EmailComposeTarget } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardOverview } from '@/hooks/use-dashboard';
 import { useCrmStream } from '@/hooks/use-crm-stream';
@@ -67,6 +67,15 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
   const [groupBy, setGroupBy] = useState('Stage');
   const [isLoading, setIsLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
+
+  const [composeTarget, setComposeTarget] = useState<EmailComposeTarget | null>(null);
+
+  // Opens the Emails page with a one-click AI draft ready for the given recipient.
+  const openEmailCompose = (target: Omit<EmailComposeTarget, 'requestId'>) => {
+    if (!target.to) return;
+    setComposeTarget({ ...target, requestId: Date.now() });
+    setActiveTab('emails');
+  };
 
   // ── Unified dashboard data hook (GET /api/v1/dashboard/me) ──────────────
   // Returns null gracefully when the backend endpoint is not yet deployed.
@@ -216,7 +225,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
         setActiveTab={setActiveTab} 
         collapsed={sidebarCollapsed} 
         setCollapsed={setSidebarCollapsed} 
-        userRole={legacyRole}
+        userRole={requiredRole}
       />
 
       {/* Main dashboard content container */}
@@ -244,9 +253,9 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
             )
           ) : activeTab === 'leads' ? (
-            <LeadsView onTabChange={setActiveTab} />
+            <LeadsView onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
           ) : activeTab === 'contacts' ? (
-            <ContactsView onTabChange={setActiveTab} />
+            <ContactsView onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
           ) : activeTab === 'companies' ? (
             <CompaniesView />
           ) : activeTab === 'tasks' ? (
@@ -256,9 +265,9 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           ) : activeTab === 'products' ? (
             <ProductsView />
           ) : activeTab === 'activities' ? (
-            <ActivitiesView activityId={activityId} onTabChange={setActiveTab} />
+            <ActivitiesView activityId={activityId} onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
           ) : activeTab === 'emails' ? (
-            <EmailsView onTabChange={setActiveTab} />
+            <EmailsView onTabChange={setActiveTab} composeTarget={composeTarget} onComposeConsumed={() => setComposeTarget(null)} />
           ) : activeTab === 'documents' ? (
             <DocumentsView />
           ) : activeTab === 'reports' ? (
@@ -561,4 +570,3 @@ export default function DashboardShell(props: DashboardShellProps) {
     </DashboardLayoutProvider>
   );
 }
-

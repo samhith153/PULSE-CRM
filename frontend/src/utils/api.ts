@@ -1183,7 +1183,6 @@ export async function uploadAvatar(file: File): Promise<{ url: string }> {
   }
   return res.json();
 }
-
 export async function deleteAvatar(): Promise<void> {
   const token = getToken();
   const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
@@ -1239,4 +1238,44 @@ export async function markAllNotificationsRead(): Promise<void> {
 
 export async function dismissNotification(id: string): Promise<void> {
   await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
+}
+
+// --- Email Draft API ---
+
+export interface EmailDraftRequestPayload {
+  recipient_name: string;
+  recipient_email: string;
+  company?: string;
+  designation?: string;
+  purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+  context?: string;
+  external_entity_type?: string | null;
+  external_entity_id?: string | null;
+}
+
+export interface EmailDraftResult {
+  subject: string;
+  body: string;
+  model_version?: string | null;
+}
+
+export async function draftOutreachEmail(payload: EmailDraftRequestPayload): Promise<EmailDraftResult> {
+  return apiFetch<EmailDraftResult>('/api/v1/emails/draft-outreach', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/** Shared shape passed from any "Send Email" trigger to the Emails page's compose panel. */
+export interface EmailComposeTarget {
+  to: string;
+  name?: string;
+  company?: string;
+  designation?: string;
+  purpose?: EmailDraftRequestPayload['purpose'];
+  context?: string;
+  externalEntityType?: string | null;
+  externalEntityId?: string | null;
+  /** Bumped on every open so EmailsView re-triggers even if the same contact is clicked twice. */
+  requestId: number;
 }

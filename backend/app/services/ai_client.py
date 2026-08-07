@@ -78,3 +78,30 @@ class AIClient:
         if deal_id:
             payload["deal_id"] = deal_id
         return await self._post("/api/v1/conversations/summarise", payload)
+    
+
+    async def draft_email(
+        self,
+        recipient_name: str,
+        recipient_email: str,
+        company: Optional[str] = None,
+        designation: Optional[str] = None,
+        purpose: str = "follow_up",
+        context: Optional[str] = None,
+        sender_name: Optional[str] = None,
+    ) -> Optional[dict]:
+        """POST /api/v1/conversations/draft-email — generate a fresh outreach draft."""
+        payload: dict[str, Any] = {
+            "recipient_name": recipient_name,
+            "recipient_email": recipient_email,
+            "purpose": purpose,
+        }
+        if company:
+            payload["company"] = company
+        if designation:
+            payload["designation"] = designation
+        if context:
+            payload["context"] = context
+        if sender_name:
+            payload["sender_name"] = sender_name
+        return await self._post("/api/v1/conversations/draft-email", payload)
