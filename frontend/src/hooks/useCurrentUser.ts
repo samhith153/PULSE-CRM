@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/utils/api';
+import { toast } from '@/lib/toast';
 
 export interface CurrentUserProfile {
   id: string;
@@ -61,14 +62,27 @@ export function useCurrentUser() {
           if (!cancelled) setUser(me as CurrentUserProfile);
         })
         .catch(() => {
-          if (!cancelled) setUser(null);
+          if (!cancelled) {
+            setUser(null);
+            toast.error('Unable to load user profile. Please log in again.');
+            sessionStorage.removeItem('pulse-crm-auth');
+            localStorage.removeItem('pulse-crm-role');
+            window.location.href = 'http://127.0.0.1:8081/login';
+          }
         })
         .finally(() => {
           if (!cancelled) setLoading(false);
         });
     };
     run();
-    return () => { cancelled = true; };
+
+    const handleProfileUpdated = () => run();
+    window.addEventListener('pulse-profile-updated', handleProfileUpdated);
+
+    return () => {
+      cancelled = true;
+      window.removeEventListener('pulse-profile-updated', handleProfileUpdated);
+    };
   }, []);
 
   /** Re-pull the profile (e.g. after uploading an avatar). */

@@ -19,9 +19,11 @@ import {
   UserPlus,
   CheckSquare,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  Mail
 } from 'lucide-react';
 import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
+import { useNotifications } from '@/hooks/useNotifications';
 import { resolveImageUrl } from '@/utils/api';
 
 interface HeaderProps {
@@ -99,6 +101,7 @@ export default function Header({
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { user: currentUser } = useCurrentUser();
+  const { notifications: notifItems, unreadCount, markAllRead } = useNotifications(10);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -130,13 +133,6 @@ export default function Header({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onOpenCommandPalette]);
-
-  const notifications = [
-    { id: 1, text: "Sarah Johnson won the 'Acme Enterprise' deal!", type: "won", time: "10m ago" },
-    { id: 2, text: "Gmail sync completed: 24 new threads pulled.", type: "sync", time: "1h ago" },
-    { id: 3, text: "High-value lead 'Global Tech' has been idle for 5 days.", type: "warning", time: "3h ago" },
-    { id: 4, text: "New report 'Q3 Sales Forecast' ready for review.", type: "report", time: "5h ago" },
-  ];
 
   const profileName = currentUser?.full_name || 'User';
   const profileEmail = currentUser?.email || '';
@@ -213,9 +209,11 @@ export default function Header({
             className="relative grid size-9 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-secondary cursor-pointer hover-wiggle"
           >
             <Bell size={15} />
-            <span className="absolute -top-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-brand-purple text-[9px] font-semibold text-primary-foreground">
-              4
-            </span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-brand-purple text-[9px] font-semibold text-primary-foreground">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           <AnimatePresence>
@@ -229,30 +227,39 @@ export default function Header({
               >
                 <div className="px-4 py-3 bg-secondary border-b border-border flex justify-between items-center">
                   <span className="font-semibold text-foreground text-xs">Notifications</span>
-                  <span className="text-[11px] bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full font-semibold">
-                    4 New
-                  </span>
+                  {unreadCount > 0 && (
+                    <span className="text-[11px] bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full font-semibold">
+                      {unreadCount} New
+                    </span>
+                  )}
                 </div>
                 <div className="divide-y divide-border max-h-72 overflow-y-auto">
-                  {notifications.map((n) => (
-                    <div key={n.id} className="p-3 hover:bg-secondary transition-colors flex items-start gap-2.5 text-xs">
-                      <div className="mt-0.5 shrink-0">
-                        {n.type === 'won' && <TrendingUp size={14} className="text-brand-cyan" strokeWidth={1.75} />}
-                        {n.type === 'warning' && <ShieldAlert size={14} className="text-destructive" strokeWidth={1.75} />}
-                        {n.type === 'report' && <FileText size={14} className="text-brand-purple" strokeWidth={1.75} />}
-                        {!['won', 'warning', 'report'].includes(n.type) && <Bell size={14} className="text-muted-foreground" strokeWidth={1.75} />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-foreground leading-relaxed">{n.text}</p>
-                        <span className="text-[11px] text-muted-foreground mt-0.5 block">{n.time}</span>
-                      </div>
+                  {notifItems.length === 0 ? (
+                    <div className="p-6 text-center text-muted-foreground text-xs font-semibold">
+                      No notifications yet.
                     </div>
-                  ))}
+                  ) : (
+                    notifItems.map((n) => (
+                      <div key={n.id} className="p-3 hover:bg-secondary transition-colors flex items-start gap-2.5 text-xs">
+                        <div className="mt-0.5 shrink-0">
+                          {n.type.includes('won') || n.type.includes('deal') ? <TrendingUp size={14} className="text-brand-cyan" strokeWidth={1.75} /> : 
+                           n.type.includes('lost') || n.type.includes('alert') ? <ShieldAlert size={14} className="text-destructive" strokeWidth={1.75} /> :
+                           n.type.includes('email') ? <Mail size={14} className="text-brand-purple" strokeWidth={1.75} /> :
+                           n.type.includes('lead') ? <UserPlus size={14} className="text-blue-600" strokeWidth={1.75} /> :
+                           <Bell size={14} className="text-muted-foreground" strokeWidth={1.75} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`leading-relaxed ${n.is_read ? 'text-muted-foreground' : 'text-foreground'}`}>{n.title}</p>
+                          {n.message && <p className="text-muted-foreground mt-0.5 truncate">{n.message}</p>}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
                 <div className="p-2 border-t border-border bg-secondary flex justify-between px-4">
                   <button
                     type="button"
-                    onClick={() => setShowNotifications(false)}
+                    onClick={() => { markAllRead(); }}
                     className="text-xs text-muted-foreground hover:text-foreground transition-colors py-1 cursor-pointer font-medium"
                   >
                     Mark all read

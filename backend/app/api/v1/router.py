@@ -134,3 +134,8 @@ api_router.include_router(documents_router, prefix="/documents", tags=["document
 api_router.include_router(assistant_router, prefix="/assistant", tags=["Assistant"])
 api_router.include_router(stream_router, prefix="/stream", tags=["Real-time Stream"])
 api_router.include_router(crm_activities_router, prefix="/crm-activities", tags=["CRM Activities"])
+api_router.include_router(roles_router, prefix="/roles", tags=["Roles"])
+api_router.include_router(calendar_router, prefix="/calendar", tags=["Calendar"])
+api_router.include_router(meetings_router, prefix="/meetings", tags=["Meetings"])
+api_router.include_router(ai_insights_router, prefix="/ai-insights", tags=["AI Insights"])
+api_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])

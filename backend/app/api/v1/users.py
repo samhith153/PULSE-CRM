@@ -12,7 +12,7 @@ POST   /api/v1/users/{id}/roles
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.deps import CurrentUser, DBSession, require_permission
 from app.schemas.common import PaginatedResponse, StandardResponse
@@ -209,5 +209,5 @@ async def reset_user_password(
     return {
         "success": True,
         "message": "Password reset successfully. The user will be notified via email.",
-        "data": {},
+        "data": {"new_password": new_password},
     }

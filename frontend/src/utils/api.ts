@@ -3,6 +3,9 @@ import { toast } from '@/lib/toast';
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
+// Tracks consecutive 401 errors — user gets 3 attempts before forced logout.
+let auth401Count = 0;
+
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   return sessionStorage.getItem(TOKEN_KEY);
@@ -245,6 +248,12 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       ...(options?.headers || {})
     }
   });
+
+  // Reset 401 counter on any successful response
+  if (res.ok) {
+    auth401Count = 0;
+  }
+
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {
@@ -263,9 +272,20 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     }
     // Show toast for permission errors so users get immediate feedback
     if (res.status === 403) {
-      toast.error(`Permission denied: ${message}`);
+      toast.error(`Access denied: ${message}`);
     } else if (res.status === 401) {
-      toast.error('Session expired. Please log in again.');
+      auth401Count++;
+      if (auth401Count >= 3) {
+        toast.error('Session expired. Please log in again.');
+        sessionStorage.removeItem('pulse-crm-auth');
+        localStorage.removeItem('pulse-crm-role');
+        localStorage.removeItem('pulse-crm-user');
+        window.location.href = 'http://127.0.0.1:8081/login';
+      } else {
+        const remaining = 3 - auth401Count;
+        toast.error(`Authentication error (${remaining} attempt${remaining > 1 ? 's' : ''} remaining).`);
+      }
+      throw new Error(message);
     } else if (res.status >= 500) {
       toast.error(`Server error: ${message}`);
     }
@@ -1149,4 +1169,61 @@ export async function uploadAvatar(file: File): Promise<{ url: string }> {
     throw new Error(detail.detail || 'Avatar upload failed');
   }
   return res.json();
+}
+
+export async function deleteAvatar(): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Failed to remove avatar');
+  }
+}
+
+// --- Notifications API ---
+
+export interface NotificationData {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  payload: Record<string, unknown> | null;
+  is_read: boolean;
+  read_at: string | null;
+  is_dismissed: boolean;
+  created_at: string;
+}
+
+export interface NotificationListData {
+  items: NotificationData[];
+  total: number;
+  unread_count: number;
+}
+
+export async function getNotifications(page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationListData> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  if (unreadOnly) params.set('unread_only', 'true');
+  return apiFetch<NotificationListData>(`/api/v1/notifications?${params}`);
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const result = await apiFetch<{ unread_count: number }>('/api/v1/notifications/unread-count');
+  return result?.unread_count ?? 0;
+}
+
+export async function markNotificationRead(id: string): Promise<NotificationData> {
+  return apiFetch<NotificationData>(`/api/v1/notifications/${id}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await apiFetch(`/api/v1/notifications/read-all`, { method: 'POST' });
+}
+
+export async function dismissNotification(id: string): Promise<void> {
+  await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
 }

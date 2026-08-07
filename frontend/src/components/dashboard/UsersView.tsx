@@ -9,7 +9,6 @@ import {
   Key, 
   UserPlus, 
   X, 
-  Check, 
   Ban,
   RefreshCw,
   Loader2
@@ -20,8 +19,11 @@ import {
   activateUser, deactivateUser, assignUserRole, resetUserPassword,
   getRoles
 } from '@/utils/api';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { toast } from '@/lib/toast';
 
 export default function UsersView() {
+  const { user: currentUser } = useCurrentUser();
   const [users, setUsers] = useState<UserData[]>([]);
   const [roles, setRoles] = useState<RoleData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,33 +41,29 @@ export default function UsersView() {
     full_name: '', email: '', password: '', role_id: '' as string
   });
 
-  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-
-  const triggerToast = (type: 'success' | 'error', message: string) => {
-    setToast({ type, message });
-    setTimeout(() => setToast(null), 3000);
-  };
-
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getUsers(page, pageSize);
       const data = Array.isArray(result) ? result : (result.data ?? []);
+      const filtered = currentUser ? data.filter((u: UserData) => u.id !== currentUser.id) : data;
       const t = (result as any).total ?? data.length;
-      setUsers(data);
-      setTotal(t);
+      setUsers(filtered);
+      setTotal(currentUser ? t - 1 : t);
     } catch {
-      triggerToast('error', 'Failed to load users.');
+      toast.error('Failed to load users.');
     } finally {
       setLoading(false);
     }
-  }, [page]);
+  }, [page, currentUser]);
 
   const loadRoles = useCallback(async () => {
     try {
       const data = await getRoles();
       setRoles(Array.isArray(data) ? data : []);
-    } catch {}
+    } catch {
+      toast.error('Failed to load roles. Please refresh the page.');
+    }
   }, []);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
@@ -99,18 +97,18 @@ export default function UsersView() {
         const payload: any = { full_name: form.full_name.trim(), email: form.email.trim(), password: form.password };
         if (form.role_id) payload.role_id = form.role_id;
         await createUser(payload);
-        triggerToast('success', `User "${form.full_name}" created successfully.`);
+        toast.success(`User "${form.full_name}" created successfully.`);
       } else if (modalType === 'edit' && editingUserId) {
         await updateUser(editingUserId, { full_name: form.full_name.trim() });
         if (form.role_id) {
           await assignUserRole(editingUserId, form.role_id);
         }
-        triggerToast('success', `User "${form.full_name}" updated successfully.`);
+        toast.success(`User "${form.full_name}" updated successfully.`);
       }
       setIsModalOpen(false);
       loadUsers();
     } catch (err: any) {
-      triggerToast('error', err?.message || 'Operation failed.');
+      toast.error(err?.message || 'Operation failed.');
     } finally {
       setSaving(false);
     }
@@ -120,14 +118,14 @@ export default function UsersView() {
     try {
       if (user.is_active) {
         await deactivateUser(user.id);
-        triggerToast('success', `User "${user.full_name}" deactivated.`);
+        toast.success(`User "${user.full_name}" deactivated.`);
       } else {
         await activateUser(user.id);
-        triggerToast('success', `User "${user.full_name}" activated.`);
+        toast.success(`User "${user.full_name}" activated.`);
       }
       loadUsers();
     } catch (err: any) {
-      triggerToast('error', err?.message || 'Failed to update user status.');
+      toast.error(err?.message || 'Failed to update user status.');
     }
   };
 
@@ -135,10 +133,10 @@ export default function UsersView() {
     if (!window.confirm(`Permanently delete user "${user.full_name}"? This action cannot be undone.`)) return;
     try {
       await deleteUser(user.id);
-      triggerToast('success', `User "${user.full_name}" deleted.`);
+      toast.success(`User "${user.full_name}" deleted.`);
       loadUsers();
     } catch (err: any) {
-      triggerToast('error', err?.message || 'Failed to delete user.');
+      toast.error(err?.message || 'Failed to delete user.');
     }
   };
 
@@ -146,9 +144,9 @@ export default function UsersView() {
     try {
       const result = await resetUserPassword(user.id);
       setShowPassword(result.new_password);
-      triggerToast('success', `Password reset for "${user.full_name}".`);
+      toast.success(`Password reset for "${user.full_name}".`);
     } catch (err: any) {
-      triggerToast('error', err?.message || 'Failed to reset password.');
+      toast.error(err?.message || 'Failed to reset password.');
     }
   };
 
@@ -161,15 +159,6 @@ export default function UsersView() {
 
   return (
     <div className="space-y-6">
-      {toast && (
-        <div className={`fixed bottom-5 right-5 z-55 px-4 py-2.5 rounded-xl flex items-center space-x-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300 ${
-          toast.type === 'success' ? 'bg-ink text-primary-foreground' : 'bg-destructive text-primary-foreground'
-        }`}>
-          <Check className="h-4 w-4" />
-          <span>{toast.message}</span>
-        </div>
-      )}
-
       {showPassword && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4">
           <div className="bg-card border rounded-xl w-full max-w-md p-6 space-y-4">
