@@ -1,6 +1,6 @@
 ﻿"""
 User Management Service
-All user business logic â€” create, update, activate, deactivate, assign roles.
+All user business logic — create, update, activate, deactivate, assign roles.
 """
 from typing import List, Optional, Tuple
 from uuid import UUID
@@ -31,6 +31,10 @@ class UserService:
         self.user_repo = UserRepository(db)
         self.role_repo = RoleRepository(db)
         self.events = EventService(db)
+
+    def _is_admin(self, user: User) -> bool:
+        """Check if user has admin role."""
+        return any(ur.role.name == "admin" for ur in user.user_roles if ur.role)
 
     async def create_user(
         self,
@@ -177,18 +181,85 @@ class UserService:
         )
         return updated
 
-    async def delete_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID) -> None:
+    async def delete_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID, requestor: User) -> None:
+        """Role-based delete: admin = hard delete, manager = soft delete (deactivate)."""
         if user_id == requestor_id:
             raise ForbiddenException("You cannot delete your own account.")
         user = await self.get_user(user_id, organization_id)
-        await self.user_repo.soft_delete(user)
-        logger.info("User soft-deleted", extra={"user_id": str(user_id)})
+
+        if self._is_admin(requestor):
+            await self.user_repo.delete(user)
+            logger.info("User hard-deleted by admin", extra={"user_id": str(user_id), "requestor_id": str(requestor_id)})
+            await self.events.record_event(
+                "USER_PERMANENTLY_DELETED",
+                organization_id=organization_id,
+                actor_id=requestor_id,
+                aggregate_type="user",
+                aggregate_id=str(user_id),
+                source="user_service",
+                payload={"user_id": str(user_id), "requestor_id": str(requestor_id)},
+            )
+        else:
+            await self.user_repo.soft_delete(user)
+            logger.info("User soft-deleted (deactivated)", extra={"user_id": str(user_id), "requestor_id": str(requestor_id)})
+            await self.events.record_event(
+                "USER_DEACTIVATED",
+                organization_id=organization_id,
+                actor_id=requestor_id,
+                aggregate_type="user",
+                aggregate_id=str(user_id),
+                source="user_service",
+                payload={"user_id": str(user_id), "requestor_id": str(requestor_id)},
+            )
+
+    async def list_deleted_users(
+        self,
+        organization_id: UUID,
+        search: Optional[str],
+        page: int,
+        page_size: int,
+    ) -> Tuple[List[User], int]:
+        """List soft-deleted (archived) users — admin only."""
+        return await self.user_repo.list_deleted_by_organization(
+            organization_id, search, page, page_size
+        )
+
+    async def restore_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID) -> User:
+        """Restore a soft-deleted user — admin only."""
+        user = await self.user_repo.get_by_id_any(user_id)
+        if not user or user.organization_id != organization_id:
+            raise NotFoundException("User", user_id)
+        if not user.is_deleted:
+            raise ConflictException("User is not archived.")
+        await self.user_repo.update(user, is_deleted=False, is_active=True)
+        restored = await self.user_repo.get_by_id_with_roles(user.id)
+        logger.info("User restored", extra={"user_id": str(user_id), "requestor_id": str(requestor_id)})
         await self.events.record_event(
-            "USER_DELETED",
+            "USER_RESTORED",
             organization_id=organization_id,
             actor_id=requestor_id,
             aggregate_type="user",
-            aggregate_id=str(user.id),
+            aggregate_id=str(user_id),
             source="user_service",
-            payload={"user_id": str(user.id), "requestor_id": str(requestor_id)},
+            payload={"user_id": str(user_id), "requestor_id": str(requestor_id)},
+        )
+        return restored
+
+    async def permanent_delete_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID) -> None:
+        """Permanently delete a soft-deleted user — admin only. Frees up the email."""
+        user = await self.user_repo.get_by_id_any(user_id)
+        if not user or user.organization_id != organization_id:
+            raise NotFoundException("User", user_id)
+        if not user.is_deleted:
+            raise ConflictException("User must be archived before permanent deletion.")
+        await self.user_repo.delete(user)
+        logger.info("User permanently deleted", extra={"user_id": str(user_id), "requestor_id": str(requestor_id)})
+        await self.events.record_event(
+            "USER_PERMANENTLY_DELETED",
+            organization_id=organization_id,
+            actor_id=requestor_id,
+            aggregate_type="user",
+            aggregate_id=str(user_id),
+            source="user_service",
+            payload={"user_id": str(user_id), "requestor_id": str(requestor_id)},
         )

@@ -891,6 +891,7 @@ export interface UserData {
   organization_id: string;
   is_active: boolean;
   is_verified: boolean;
+  is_deleted: boolean;
   roles: string[];
   last_login_at: string | null;
   created_at: string;
@@ -921,6 +922,18 @@ export async function updateUser(userId: string, data: { full_name?: string; pho
 
 export async function deleteUser(userId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/users/${userId}`, { method: 'DELETE' });
+}
+
+export async function getDeletedUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
+  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users/deleted${toQuery({ page, page_size: pageSize, search })}`);
+}
+
+export async function restoreUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/restore`, { method: 'POST' });
+}
+
+export async function permanentDeleteUser(userId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
 }
 
 export async function activateUser(userId: string): Promise<UserData> {

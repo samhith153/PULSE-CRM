@@ -72,6 +72,40 @@ class UserRepository(BaseRepository[User]):
             )
         return await self.get_paginated(stmt, page, page_size)
 
+    async def list_deleted_by_organization(
+        self,
+        organization_id: UUID,
+        search: Optional[str],
+        page: int,
+        page_size: int,
+    ) -> Tuple[List[User], int]:
+        """List soft-deleted users in the organization (admin archived users view)."""
+        stmt = (
+            select(User)
+            .options(selectinload(User.user_roles).selectinload(UserRole.role))
+            .where(User.organization_id == organization_id)
+            .where(User.is_deleted == True)
+        )
+        if search:
+            term = f"%{search.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    User.full_name.ilike(term),
+                    User.email.ilike(term),
+                )
+            )
+        return await self.get_paginated(stmt, page, page_size)
+
+    async def get_by_id_any(self, user_id: UUID) -> Optional[User]:
+        """Get user by ID including soft-deleted, for restore/permanent delete operations."""
+        stmt = (
+            select(User)
+            .options(selectinload(User.user_roles).selectinload(UserRole.role))
+            .where(User.id == user_id)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def assign_role(
         self,
         user: User,

@@ -93,6 +93,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.USER_READ,
         Permission.USER_CREATE,
         Permission.USER_UPDATE,
+        Permission.USER_DELETE,
         Permission.USER_ACTIVATE,
         Permission.USER_DEACTIVATE,
         Permission.ORG_READ,
