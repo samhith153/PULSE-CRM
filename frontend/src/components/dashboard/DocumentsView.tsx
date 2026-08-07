@@ -1,104 +1,194 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, FileText, Download, UploadCloud, X, Calendar, User, Eye } from 'lucide-react';
 
 interface DocumentItem {
-  id: number;
+  id: string;
   name: string;
   type: 'SLA' | 'Proposal' | 'Contract' | 'NDA';
   size: string;
+  fileSize?: number;
   associatedDeal: string;
   uploadedBy: string;
   uploadedAt: string;
   status: 'Signed' | 'Draft' | 'Sent' | 'Approved';
+  dataUrl?: string;
 }
 
-export default function DocumentsView() {
-  const [documents, setDocuments] = useState<DocumentItem[]>([
-    { id: 1, name: "TechCorp_Enterprise_SLA_Draft.pdf", type: "SLA", size: "2.4 MB", associatedDeal: "Database Cloud Migration", uploadedBy: "Sarah Johnson", uploadedAt: "2025-05-12", status: "Draft" },
-    { id: 2, name: "MedSaaS_Solutions_ComplianceNDA_Signed.pdf", type: "NDA", size: "1.1 MB", associatedDeal: "Compliance Suite Expansion", uploadedBy: "Alex Johnson", uploadedAt: "2025-05-10", status: "Signed" },
-    { id: 3, name: "SpartaCreative_SSOIntegration_Proposal.pdf", type: "Proposal", size: "3.8 MB", associatedDeal: "SSO Integration Scope", uploadedBy: "Sarah Johnson", uploadedAt: "2025-05-09", status: "Sent" },
-    { id: 4, name: "EmpiricLogistics_GlobalAPI_Contract_Final.pdf", type: "Contract", size: "4.5 MB", associatedDeal: "Global Logistics API", uploadedBy: "David Wilson", uploadedAt: "2025-05-08", status: "Approved" },
-    { id: 5, name: "ByteSized_Co_CustomAnalytics_SLA_Signed.pdf", type: "SLA", size: "2.2 MB", associatedDeal: "Analytics Custom Tier", uploadedBy: "Alex Johnson", uploadedAt: "2025-05-07", status: "Signed" }
-  ]);
+const STORAGE_KEY = 'pulse-crm-documents';
 
+function loadDocuments(): DocumentItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveDocuments(docs: DocumentItem[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+const SEED_DOCS: DocumentItem[] = [
+  { id: '1', name: 'TechCorp_SLA_2024', type: 'SLA', size: '245 KB', associatedDeal: 'Cloud Migration', uploadedBy: 'Sarah Johnson', uploadedAt: 'Jan 15, 2024', status: 'Signed' },
+  { id: '2', name: 'DataFlow_Proposal_v2', type: 'Proposal', size: '1.2 MB', associatedDeal: 'Data Pipeline Setup', uploadedBy: 'Mike Chen', uploadedAt: 'Feb 3, 2024', status: 'Sent' },
+  { id: '3', name: 'SecureNet_Contract', type: 'Contract', size: '890 KB', associatedDeal: 'Security Audit', uploadedBy: 'Sarah Johnson', uploadedAt: 'Feb 10, 2024', status: 'Draft' },
+  { id: '4', name: 'Innovate_NDA', type: 'NDA', size: '156 KB', associatedDeal: 'General / Unlinked', uploadedBy: 'Alex Rivera', uploadedAt: 'Mar 1, 2024', status: 'Approved' },
+];
+
+export default function DocumentsView({ onLoaded }: { onLoaded?: () => void } = {}) {
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [form, setForm] = useState({ name: '', type: 'SLA' as DocumentItem['type'], associatedDeal: '', status: 'Draft' as DocumentItem['status'] });
+  const [isLoading, setIsLoading] = useState(true);
+  const [form, setForm] = useState({
+    name: '',
+    type: 'SLA' as DocumentItem['type'],
+    associatedDeal: '',
+    status: 'Draft' as DocumentItem['status']
+  });
 
   const documentTypes: DocumentItem['type'][] = ['SLA', 'Proposal', 'Contract', 'NDA'];
 
+  useEffect(() => {
+    const stored = loadDocuments();
+    if (stored.length === 0) {
+      saveDocuments(SEED_DOCS);
+      setDocuments(SEED_DOCS);
+    } else {
+      setDocuments(stored);
+    }
+    setIsLoading(false);
+    onLoaded?.();
+  }, []);
+
   const filteredDocs = documents.filter(d => {
-    const matchesSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase()) || d.associatedDeal.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          d.associatedDeal.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = typeFilter === 'All' || d.type === typeFilter;
     return matchesSearch && matchesType;
   });
 
-  const handleUploadSubmit = (e: React.FormEvent) => {
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const fileSize = selectedFile ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB` : `${(Math.random() * 3 + 1).toFixed(1)} MB`;
-    const docName = selectedFile ? selectedFile.name : (form.name.endsWith('.pdf') ? form.name : `${form.name}.pdf`);
+
+    if (!selectedFile) {
+      alert('Please select a file to upload');
+      return;
+    }
+
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(selectedFile);
+    });
+
     const newDoc: DocumentItem = {
-      id: Date.now(),
-      name: docName,
+      id: Date.now().toString(),
+      name: form.name || selectedFile.name.replace(/\.[^/.]+$/, ''),
       type: form.type,
-      size: fileSize,
+      size: formatSize(selectedFile.size),
+      fileSize: selectedFile.size,
       associatedDeal: form.associatedDeal || 'General / Unlinked',
-      uploadedBy: "Alex Johnson",
-      uploadedAt: new Date().toISOString().split('T')[0],
-      status: form.status
+      uploadedBy: 'You',
+      uploadedAt: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      status: form.status,
+      dataUrl,
     };
-    setDocuments([newDoc, ...documents]);
+
+    const updated = [newDoc, ...documents];
+    setDocuments(updated);
+    saveDocuments(updated);
     setIsUploadOpen(false);
     setSelectedFile(null);
     setForm({ name: '', type: 'SLA', associatedDeal: '', status: 'Draft' });
   };
 
-  const handleDelete = (id: number) => {
-    setDocuments(documents.filter(d => d.id !== id));
+  const handleDelete = (id: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) return;
+    const updated = documents.filter(d => d.id !== id);
+    setDocuments(updated);
+    saveDocuments(updated);
   };
+
+  const handleDownload = (doc: DocumentItem) => {
+    if (!doc.dataUrl) {
+      alert('No file data available for this document.');
+      return;
+    }
+    const link = document.createElement('a');
+    link.href = doc.dataUrl;
+    link.download = doc.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleView = (doc: DocumentItem) => {
+    if (!doc.dataUrl) {
+      alert('No file data available for this document.');
+      return;
+    }
+    window.open(doc.dataUrl, '_blank');
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-gray-500">Loading documents...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
-        {/* Header */}
+      <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
           <div>
-            <h2 className="font-sans text-2xl text-brand-heading font-bold">Documents Library</h2>
-            <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Upload proposal attachments, manage signed NDAs, SLA drafts, and legal contracts linked to active deals.</p>
+            <h2 className="font-sans text-2xl text-foreground font-bold">Documents Library</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-bold">
+              Upload proposal attachments, manage signed NDAs, SLA drafts, and legal contracts linked to active deals.
+            </p>
           </div>
-          <button 
+          <button
             onClick={() => setIsUploadOpen(true)}
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 transition-colors cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold/10 transition-colors cursor-pointer"
           >
             <UploadCloud className="h-3.5 w-3.5" strokeWidth={2.25} />
             <span>Upload Document</span>
           </button>
         </div>
 
-        {/* Filters */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
           <div className="relative">
-            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-slate-400">
+            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
               <Search className="h-3.5 w-3.5" />
             </span>
-            <input 
-              type="text" 
-              placeholder="Search by name, associated deal..." 
+            <input
+              type="text"
+              placeholder="Search by name, associated deal..."
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text bg-slate-50/50 focus:bg-white placeholder-slate-400 focus:outline-none"
+              className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground bg-secondary focus:bg-card placeholder-muted-foreground focus:outline-none"
             />
           </div>
 
           <div>
-            <select 
+            <select
               value={typeFilter}
               onChange={e => setTypeFilter(e.target.value)}
-              className="w-full px-3 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text/80 rounded-lg text-xs focus:outline-none cursor-pointer"
+              className="w-full px-3 py-1.5 border border-border bg-card text-muted-foreground rounded-lg text-xs focus:outline-none cursor-pointer"
             >
               <option value="All">All Types</option>
               {documentTypes.map(type => <option key={type} value={type}>{type}</option>)}
@@ -106,11 +196,10 @@ export default function DocumentsView() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-brand-border-purple/20 text-[9px] uppercase font-extrabold tracking-wider text-black pb-2">
+              <tr className="border-b border-border text-[9px] uppercase font-semibold tracking-wider text-foreground pb-2">
                 <th className="pb-2">Document Name</th>
                 <th className="pb-2">Type</th>
                 <th className="pb-2">Size</th>
@@ -120,51 +209,59 @@ export default function DocumentsView() {
                 <th className="pb-2 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-brand-border-purple/15 text-xs text-brand-text font-semibold">
+            <tbody className="divide-y divide-border text-xs text-foreground font-semibold">
               {filteredDocs.length > 0 ? (
                 filteredDocs.map((doc) => (
-                  <tr key={doc.id} className="hover:bg-slate-50/30 transition-colors">
+                  <tr key={doc.id} className="hover:bg-secondary/30 transition-colors">
                     <td className="py-3 pr-4 max-w-[220px]">
-                      <div className="font-extrabold text-brand-heading flex items-center gap-1.5">
-                        <FileText className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                      <div className="font-semibold text-foreground flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5 text-destructive shrink-0" />
                         <span className="truncate">{doc.name}</span>
                       </div>
                     </td>
                     <td className="py-3">
-                      <span className="font-bold text-brand-text/80">{doc.type}</span>
+                      <span className="font-bold text-muted-foreground">{doc.type}</span>
                     </td>
-                    <td className="py-3 font-mono text-[10px] text-slate-500">{doc.size}</td>
-                    <td className="py-3 font-medium text-brand-heading truncate max-w-[150px]" title={doc.associatedDeal}>
+                    <td className="py-3 font-mono text-[10px] text-muted-foreground">{doc.size}</td>
+                    <td className="py-3 font-medium text-foreground truncate max-w-[150px]" title={doc.associatedDeal}>
                       {doc.associatedDeal}
                     </td>
                     <td className="py-3 pr-4">
                       <div className="flex items-center space-x-1.5">
-                        <User className="h-3 w-3 text-slate-400" />
-                        <span className="text-[10px] font-bold text-brand-text/75">{doc.uploadedBy}</span>
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[10px] font-bold text-muted-foreground">{doc.uploadedBy}</span>
                       </div>
-                      <div className="text-[9px] text-slate-400 font-semibold flex items-center mt-0.5">
+                      <div className="text-[9px] text-muted-foreground font-semibold flex items-center mt-0.5">
                         <Calendar className="h-2.5 w-2.5 mr-0.5" />
                         {doc.uploadedAt}
                       </div>
                     </td>
                     <td className="py-3">
                       <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                        doc.status === 'Signed' || doc.status === 'Approved' ? 'text-emerald-700 bg-emerald-50 border border-emerald-100' :
-                        doc.status === 'Sent' ? 'text-indigo-700 bg-indigo-50 border border-indigo-100' : 'text-slate-650 bg-slate-50 border border-slate-100'
+                        doc.status === 'Signed' || doc.status === 'Approved' ? 'text-brand-cyan bg-brand-cyan/15 border border-brand-cyan/20' :
+                        doc.status === 'Sent' ? 'text-brand-purple bg-brand-purple/10 border border-brand-purple/15' : 'text-slate-650 bg-secondary border border-border'
                       }`}>
                         {doc.status}
                       </span>
                     </td>
                     <td className="py-3 text-right space-x-1 whitespace-nowrap">
-                      <button className="p-1 hover:text-brand-accent text-slate-400 rounded transition-colors" title="View Document">
+                      <button
+                        onClick={() => handleView(doc)}
+                        className="p-1 hover:text-brand-purple text-muted-foreground rounded transition-colors"
+                        title="View Document"
+                      >
                         <Eye className="h-3.5 w-3.5" />
                       </button>
-                      <button className="p-1 hover:text-brand-accent text-slate-400 rounded transition-colors" title="Download Document">
+                      <button
+                        onClick={() => handleDownload(doc)}
+                        className="p-1 hover:text-brand-purple text-muted-foreground rounded transition-colors"
+                        title="Download Document"
+                      >
                         <Download className="h-3.5 w-3.5" />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDelete(doc.id)}
-                        className="p-1 hover:text-rose-600 text-slate-400 rounded transition-colors"
+                        className="p-1 hover:text-destructive text-muted-foreground rounded transition-colors"
                         title="Delete Document"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -174,7 +271,7 @@ export default function DocumentsView() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-slate-400 font-medium">
+                  <td colSpan={7} className="text-center py-8 text-muted-foreground font-medium">
                     No documents found matching your search.
                   </td>
                 </tr>
@@ -184,44 +281,66 @@ export default function DocumentsView() {
         </div>
       </div>
 
-      {/* Upload Modal */}
       {isUploadOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Upload Legal or Sales Document</h3>
-              <button onClick={() => setIsUploadOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-bold text-foreground text-sm">Upload Legal or Sales Document</h3>
+              <button onClick={() => setIsUploadOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer">
+                <X className="h-4.5 w-4.5" />
+              </button>
             </div>
             <form onSubmit={handleUploadSubmit} className="p-5 space-y-4">
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Upload File</label>
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Upload File</label>
                 <div className="flex items-center gap-2">
-                  <input type="file" id="doc-file" onChange={e => { const f = e.target.files?.[0] || null; setSelectedFile(f); if (f) setForm({...form, name: f.name.replace(/\.[^/.]+$/, '') }); }} className="hidden" />
-                  <label htmlFor="doc-file" className="flex-1 flex items-center gap-2 px-3 py-2 border border-dashed border-brand-border-purple/40 rounded-lg text-xs text-brand-text/60 bg-slate-50/50 hover:bg-slate-100/50 cursor-pointer transition-colors">
-                    <UploadCloud className="h-4 w-4 text-brand-accent" />
-                    <span>{selectedFile ? selectedFile.name : 'Click to select a PDF file...'}</span>
+                  <input
+                    type="file"
+                    id="doc-file"
+                    onChange={e => {
+                      const f = e.target.files?.[0] || null;
+                      setSelectedFile(f);
+                      if (f) {
+                        const nameWithoutExt = f.name.replace(/\.[^/.]+$/, '');
+                        setForm({...form, name: nameWithoutExt });
+                      }
+                    }}
+                    className="hidden"
+                    accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                  />
+                  <label htmlFor="doc-file" className="flex-1 flex items-center gap-2 px-3 py-2 border border-dashed border-border rounded-lg text-xs text-muted-foreground bg-secondary hover:bg-secondary/50 cursor-pointer transition-colors">
+                    <UploadCloud className="h-4 w-4 text-brand-purple" />
+                    <span>{selectedFile ? selectedFile.name : 'Click to select a file...'}</span>
                   </label>
                   {selectedFile && (
-                    <button type="button" onClick={() => { setSelectedFile(null); }} className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer">
+                    <button type="button" onClick={() => { setSelectedFile(null); }} className="p-1.5 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer">
                       <X className="h-4 w-4" />
                     </button>
                   )}
                 </div>
+                <p className="text-[8px] text-muted-foreground mt-1">Supported: PDF, DOC, DOCX, TXT, XLS, XLSX (Max 10MB)</p>
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Document Name (without extension)</label>
-                <input type="text" required placeholder="e.g., TechCorp_SLA_Signed" value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Document Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g., TechCorp_SLA_Signed"
+                  value={form.name}
+                  onChange={e => setForm({...form, name: e.target.value})}
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
+                />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Document Type</label>
-                  <select value={form.type} onChange={e => setForm({...form, type: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs focus:outline-none cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Document Type</label>
+                  <select value={form.type} onChange={e => setForm({...form, type: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-card text-foreground rounded-lg text-xs focus:outline-none cursor-pointer">
                     {documentTypes.map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Status</label>
-                  <select value={form.status} onChange={e => setForm({...form, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs focus:outline-none cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Status</label>
+                  <select value={form.status} onChange={e => setForm({...form, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-card text-foreground rounded-lg text-xs focus:outline-none cursor-pointer">
                     <option>Draft</option>
                     <option>Sent</option>
                     <option>Signed</option>
@@ -230,12 +349,22 @@ export default function DocumentsView() {
                 </div>
               </div>
               <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Associated Pipeline Deal</label>
-                <input type="text" placeholder="e.g., Database Cloud Migration" value={form.associatedDeal} onChange={e => setForm({...form, associatedDeal: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none focus:ring-1 focus:ring-brand-accent/20" />
+                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Associated Pipeline Deal</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Database Cloud Migration"
+                  value={form.associatedDeal}
+                  onChange={e => setForm({...form, associatedDeal: e.target.value})}
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
+                />
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsUploadOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Upload File</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsUploadOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground hover:bg-secondary cursor-pointer">
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold/10 cursor-pointer">
+                  Upload File
+                </button>
               </div>
             </form>
           </div>

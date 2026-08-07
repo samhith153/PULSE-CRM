@@ -18,6 +18,8 @@ from app.api.deps import CurrentUser, DBSession, require_permission
 from app.schemas.common import PaginatedResponse, StandardResponse
 from app.schemas.user import UserCreateRequest, UserResponse, UserRoleAssignRequest, UserUpdateRequest
 from app.services.user_service import UserService
+from app.core.security import hash_password
+from app.repositories.user_repository import UserRepository
 
 router = APIRouter()
 
@@ -158,7 +160,54 @@ async def assign_roles(
     db: DBSession,
 ) -> dict:
     svc = UserService(db)
-    user = await svc.assign_roles(
-        user_id, current_user.organization_id, payload.role_ids, current_user.id
+    user = await svc.assign_role(
+        user_id, current_user.organization_id, payload.role_id, current_user.id
     )
-    return {"success": True, "message": "Roles assigned.", "data": UserResponse.from_orm_with_roles(user)}
+    return {"success": True, "message": "Role assigned.", "data": UserResponse.from_orm_with_roles(user)}
+
+
+@router.post(
+    "/{user_id}/reset-password",
+    response_model=StandardResponse[dict],
+    summary="Reset user password (admin only)",
+    dependencies=[Depends(require_permission("user:update"))],
+)
+async def reset_user_password(
+    user_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    from app.models.user import User
+    import secrets
+    import string
+
+    if user_id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot reset your own password via this endpoint. Use change-password instead.",
+        )
+
+    svc = UserService(db)
+    user = await svc.get_user(user_id, current_user.organization_id)
+
+    new_password = ''.join(secrets.choice(string.ascii_letters + string.digits + "!@#$%") for _ in range(14))
+    hashed = hash_password(new_password)
+
+    repo = UserRepository(db)
+    await repo.update(user, hashed_password=hashed)
+
+    await svc.events.record_event(
+        "USER_PASSWORD_RESET",
+        organization_id=current_user.organization_id,
+        actor_id=current_user.id,
+        aggregate_type="user",
+        aggregate_id=str(user.id),
+        source="user_service",
+        payload={"user_id": str(user.id), "reset_by": str(current_user.id)},
+    )
+
+    return {
+        "success": True,
+        "message": "Password reset successfully. The user will be notified via email.",
+        "data": {},
+    }

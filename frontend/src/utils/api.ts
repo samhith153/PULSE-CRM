@@ -1,4 +1,6 @@
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+import { toast } from '@/lib/toast';
+
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
 export function getToken(): string | null {
@@ -20,285 +22,123 @@ export function getAuthHeaders(): Record<string, string> {
 }
 
 export interface Lead {
-  id: number | string;
-  name: string;
-  company: string;
-  email: string;
-  phone: string;
-  score: number;
-  status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
-  priority: 'High' | 'Medium' | 'Low';
-  owner: string;
-  ownerAvatar: string;
-  notes: string;
-  value?: string | number;
-  source?: string;
-  timeline: { id: number; type: string; title: string; desc: string; time: string }[];
-  emails: { id: number; subject: string; body: string; time: string }[];
-  calls: { id: number; outcome: string; notes: string; time: string }[];
-  meetings: { id: number; title: string; date: string; time: string; desc: string }[];
+  id: string;
+  title: string;
+  description: string | null;
+  status: string;
+  source: string | null;
+  interest: string | null;
+  industry: string | null;
+  employee_count: number | null;
+  current_crm: string | null;
+  location: string | null;
+  operational_systems: string | null;
+  estimated_value: number | null;
+  currency: string;
+  score: number | null;
+  fit_score: number | null;
+  engagement_score: number | null;
+  fit_reasons: string[] | null;
+  engagement_reasons: string[] | null;
+  top_reasons: string[] | null;
+  priority: string | null;
+  notes: string | null;
+  close_reason: string | null;
+  company_id: string | null;
+  contact_id: string | null;
+  owner_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  company_name: string | null;
+  job_title: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  owner_name: string | null;
 }
 
 export interface Contact {
-  id: number | string;
-  name: string;
-  company: string;
-  designation: string;
-  phone: string;
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
   email: string;
-  notes: string;
-  timeline: { id: number; title: string; time: string }[];
-  calls: { id: number; outcome: string; notes: string; time: string }[];
-  meetings: { id: number; title: string; date: string; time: string }[];
-  emails: { id: number; subject: string; body: string; time: string }[];
+  phone: string | null;
+  mobile: string | null;
+  job_title: string | null;
+  department: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
+  address: string | null;
+  city: string | null;
+  country: string | null;
+  notes: string | null;
+  company_id: string | null;
+  owner_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  company_name: string | null;
 }
 
 export interface Company {
-  id: number | string;
+  id: string;
   name: string;
-  industry: string;
-  revenue: string;
-  employees: number;
-  contacts: string[];
-  openDeals: number;
-  owner: string;
-  ownerAvatar: string;
-  notes: string;
-  domain?: string;
-  timeline: { id: number; title: string; time: string }[];
-  emails: { id: number; subject: string; time: string }[];
-  files: { id: number; name: string; size: string }[];
+  domain: string | null;
+  website: string | null;
+  description: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  country: string | null;
+  zip_code: string | null;
+  industry: string | null;
+  current_crm: string | null;
+  operational_system: string | null;
+  company_type: string | null;
+  employee_count: number | null;
+  annual_revenue: string | null;
+  linkedin_url: string | null;
+  twitter_url: string | null;
+  owner_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  owner_name: string | null;
 }
 
 export interface Deal {
-  id: number | string;
-  title: string;
-  company: string;
-  value: number;
-  stage: 'Qualified' | 'Proposal' | 'Under Review' | 'Won' | 'Lost';
-  priority: 'High' | 'Medium' | 'Low';
-  owner: string;
-  closeDate: string;
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  amount: number | null;
+  currency: string;
+  expected_close_date: string | null;
+  probability: number;
+  priority: string | null;
+  notes: string | null;
+  close_reason: string | null;
+  closed_at: string | null;
+  owner_id: string | null;
+  pipeline_stage_id: string | null;
+  company_id: string | null;
+  contact_id: string | null;
+  lead_id: string | null;
+  organization_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  company_name: string | null;
+  contact_name: string | null;
+  owner_name: string | null;
 }
-
-// Default High-Fidelity Fallback Mock Data
-export const MOCK_LEADS: Lead[] = [
-  {
-    id: 1,
-    name: "Alex Rivera",
-    company: "TechCorp Inc.",
-    email: "alex.rivera@techcorp.com",
-    phone: "+1 (555) 019-2834",
-    score: 88,
-    status: "Qualified",
-    priority: "High",
-    owner: "Sarah Johnson",
-    ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-    notes: "Met at TechEx 2025. Interested in migrating their legacy database to our unified SaaS solution. Has a budget of ₹120K. Ready for proposal stage next week.",
-    source: "Referral",
-    timeline: [
-      { id: 1, type: "creation", title: "Lead Ingestion", desc: "Lead created from TechEx 2025 conference scan.", time: "4 days ago" },
-      { id: 2, type: "call", title: "Discovery Call Logged", desc: "Spoke to Alex. Confirmed decision matrix and budget availability.", time: "2 days ago" }
-    ],
-    emails: [
-      { id: 1, subject: "Pulse CRM Info Request", body: "Hi Alex, thank you for stopping by our booth. Here is the migration documentation we discussed.", time: "3 days ago" }
-    ],
-    calls: [
-      { id: 1, outcome: "Spoke with Lead", notes: "Alex is highly technical. Focus proposal on database security and speed.", time: "2 days ago" }
-    ],
-    meetings: []
-  },
-  {
-    id: 2,
-    name: "Marcus Aurelius",
-    company: "MedSaaS Solutions",
-    email: "marcus.aurelius@medsaas.org",
-    phone: "+1 (555) 304-9843",
-    score: 72,
-    status: "Contacted",
-    priority: "Medium",
-    owner: "Alex Johnson",
-    ownerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
-    notes: "Currently evaluating competitor pricing. Emphasized compliance standards (HIPAA/GDPR) as critical factors. Scheduled a follow-up demo.",
-    source: "Website",
-    timeline: [
-      { id: 1, type: "creation", title: "Lead Form Submission", desc: "Lead created from inbound marketing landing page.", time: "6 days ago" },
-      { id: 2, type: "email", title: "Introduction Email Sent", desc: "Shared introduction and pricing tiers overview.", time: "5 days ago" }
-    ],
-    emails: [
-      { id: 1, subject: "Welcome to Pulse CRM", body: "Hello Marcus, introducing Pulse and attaching compliance guidelines.", time: "5 days ago" }
-    ],
-    calls: [],
-    meetings: []
-  },
-  {
-    id: 3,
-    name: "Helena Troy",
-    company: "Sparta Creative",
-    email: "helena.t@spartacreative.io",
-    phone: "+1 (555) 834-0192",
-    score: 95,
-    status: "New",
-    priority: "High",
-    owner: "Sarah Johnson",
-    ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-    notes: "Inbound contact request. Enterprise customer asking about custom SSO support and priority SLA details. Immediate response required.",
-    source: "LinkedIn",
-    timeline: [
-      { id: 1, type: "creation", title: "Inbound Request Recieved", desc: "Submitted custom enterprise contact form.", time: "10 hours ago" }
-    ],
-    emails: [],
-    calls: [],
-    meetings: []
-  },
-  {
-    id: 4,
-    name: "David Hume",
-    company: "Empiric Logistics",
-    email: "david.hume@empiric.co.uk",
-    phone: "+44 20 7946 0192",
-    score: 41,
-    status: "Lost",
-    priority: "Low",
-    owner: "David Wilson",
-    ownerAvatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&fit=crop&q=80",
-    notes: "Small business prospect. Rejected pricing packages as out of scope for budget limit. Keep in cold nurturing list for low-tier launch.",
-    source: "Cold Email",
-    timeline: [
-      { id: 1, type: "creation", title: "API Ingestion", desc: "Lead created through automated developer partner API.", time: "10 days ago" },
-      { id: 2, type: "call", title: "Call Outcome: Busy", desc: "Tried logging call, prospect rejected due to resource limits.", time: "8 days ago" }
-    ],
-    emails: [],
-    calls: [
-      { id: 1, outcome: "Lead Not Interested", notes: "No budget availability. Moving to cold nurturing.", time: "8 days ago" }
-    ],
-    meetings: []
-  }
-];
-
-export const MOCK_CONTACTS: Contact[] = [
-  {
-    id: 1,
-    name: "Alex Rivera",
-    company: "TechCorp Inc.",
-    designation: "VP of Engineering",
-    phone: "+1 (555) 019-2834",
-    email: "alex.rivera@techcorp.com",
-    notes: "Preferred contact method is email. High technical authority.",
-    timeline: [
-      { id: 1, title: "SSO blueprint sent", time: "2 days ago" },
-      { id: 2, title: "Intro call logged", time: "1 week ago" }
-    ],
-    calls: [
-      { id: 1, outcome: "Spoke with Lead", notes: "Discussed cloud migration scope.", time: "1 week ago" }
-    ],
-    meetings: [],
-    emails: [
-      { id: 1, subject: "Cloud migration outline", body: "Shared guidelines and specs document.", time: "2 days ago" }
-    ]
-  },
-  {
-    id: 2,
-    name: "Marcus Aurelius",
-    company: "MedSaaS Solutions",
-    designation: "Director of Compliance",
-    phone: "+1 (555) 304-9843",
-    email: "marcus.aurelius@medsaas.org",
-    notes: "Extremely detail oriented. Highly concerned with security guidelines.",
-    timeline: [
-      { id: 1, title: "Product walkthrough demo", time: "3 days ago" }
-    ],
-    calls: [],
-    meetings: [
-      { id: 1, title: "Security compliance review", date: "2025-05-20", time: "10:00 AM" }
-    ],
-    emails: []
-  },
-  {
-    id: 3,
-    name: "Helena Troy",
-    company: "Sparta Creative",
-    designation: "CEO & Founder",
-    phone: "+1 (555) 834-0192",
-    email: "helena.t@spartacreative.io",
-    notes: "Met at local design panel. Interested in CRM team workflows onboarding.",
-    timeline: [
-      { id: 1, title: "Profile created", time: "10 hours ago" }
-    ],
-    calls: [],
-    meetings: [],
-    emails: []
-  }
-];
-
-export const MOCK_COMPANIES: Company[] = [
-  {
-    id: 1,
-    name: "TechCorp Inc.",
-    industry: "Software & IT",
-    revenue: "₹12,400,000",
-    employees: 320,
-    contacts: ["Alex Rivera (VP Eng)", "Jane Doe (Product Manager)"],
-    openDeals: 2,
-    owner: "Sarah Johnson",
-    ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-    notes: "Expanding cloud migration contracts. Security SLA signed in Q1.",
-    timeline: [
-      { id: 1, title: "SSO Config Approved", time: "2 days ago" },
-      { id: 2, title: "Discovery meeting logged", time: "1 week ago" }
-    ],
-    emails: [
-      { id: 1, subject: "SSO integration guidelines", time: "3 days ago" }
-    ],
-    files: [
-      { id: 1, name: "Migration_Blueprint.pdf", size: "2.4 MB" }
-    ]
-  },
-  {
-    id: 2,
-    name: "MedSaaS Solutions",
-    industry: "Healthcare tech",
-    revenue: "₹4,500,000",
-    employees: 85,
-    contacts: ["Marcus Aurelius (Director)"],
-    openDeals: 1,
-    owner: "Alex Johnson",
-    ownerAvatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80",
-    notes: "Evaluating compliance guidelines. Demo was well received.",
-    timeline: [
-      { id: 1, title: "Product Demo Scheduled", time: "3 days ago" }
-    ],
-    emails: [
-      { id: 1, subject: "Sandbox login requests", time: "4 days ago" }
-    ],
-    files: []
-  },
-  {
-    id: 3,
-    name: "Sparta Creative",
-    industry: "Marketing & Design",
-    revenue: "₹1,200,000",
-    employees: 24,
-    contacts: ["Helena Troy (CEO)"],
-    openDeals: 0,
-    owner: "Sarah Johnson",
-    ownerAvatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80",
-    notes: "SSO and custom branding design requirements are priority.",
-    timeline: [
-      { id: 1, title: "Form Ingestion", time: "10 hours ago" }
-    ],
-    emails: [],
-    files: []
-  }
-];
-
-export const MOCK_DEALS: Deal[] = [
-  { id: 1, title: "Database Cloud Migration", company: "TechCorp Inc.", value: 120000, stage: "Proposal", priority: "High", owner: "Sarah Johnson", closeDate: "2025-06-30" },
-  { id: 2, title: "SSO Integration Scope", company: "Sparta Creative", value: 45000, stage: "Qualified", priority: "Medium", owner: "Sarah Johnson", closeDate: "2025-07-15" },
-  { id: 3, title: "Compliance Suite Expansion", company: "MedSaaS Solutions", value: 85000, stage: "Under Review", priority: "High", owner: "Alex Johnson", closeDate: "2025-05-25" },
-  { id: 4, title: "Global Logistics API", company: "Empiric Logistics", value: 380000, stage: "Proposal", priority: "High", owner: "David Wilson", closeDate: "2025-08-01" },
-  { id: 5, title: "Analytics Custom Tier", company: "ByteSized Co.", value: 18000, stage: "Won", priority: "Low", owner: "Alex Johnson", closeDate: "2025-05-10" }
-];
 
 export async function register(fullName: string, email: string, password: string, organizationName: string): Promise<{ access_token: string; refresh_token: string }> {
   const res = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
@@ -309,20 +149,16 @@ export async function register(fullName: string, email: string, password: string
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     let message = `Registration failed (${res.status})`;
-    const detail = err?.detail;
-    if (Array.isArray(detail) && detail.length) {
-      const first = detail[0];
-      const field = String(first?.loc ? Array.isArray(first.loc) ? first.loc.join(' ') : first.loc : first?.field || '').replace('body -> ', '').replace(/->/g, ' ').trim();
-      const msg = String(first?.msg || first?.message || '');
-      if (/password/i.test(field) || /password/i.test(msg)) {
-        message = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
-      } else if (/organization with name/i.test(msg) || /already exists/i.test(msg)) {
-        message = 'An organization with this name already exists. Please choose a different name.';
-      } else {
-        message = field ? `${field}: ${msg}` : msg;
+    if (err?.details && Array.isArray(err.details) && err.details.length > 0) {
+      const d = err.details[0];
+      if (d?.message && /password/i.test(d?.field || '')) {
+        message = d.message.replace(/^Value error,\s*/i, '');
+      } else if (d?.message) {
+        message = d.message;
       }
-    } else if (typeof detail === 'string') {
-      message = detail;
+    } else if (err?.message) {
+      const weakMatch = err.message.match(/^Password is too weak:\s*(.*)$/i);
+      message = weakMatch ? `Password ${weakMatch[1].trim()}` : err.message;
     }
     throw new Error(message);
   }
@@ -338,13 +174,68 @@ export async function login(email: string, password: string): Promise<{ access_t
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).detail || `Login failed (${res.status})`);
+    throw new Error((err as any).message || `Login failed (${res.status})`);
   }
   const json = await res.json();
   return json.data ?? json;
 }
 
+export async function getAuthConfig(): Promise<{ google_client_id: string | null }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/config`);
+  if (!res.ok) {
+    throw new Error(`Failed to load auth config (${res.status})`);
+  }
+  const json = await res.json();
+  return json.data ?? json;
+}
+
+export async function loginWithGoogle(credential: string): Promise<{ access_token: string; refresh_token: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).message || `Google Sign-In failed (${res.status})`);
+  }
+  const json = await res.json();
+  return json.data ?? json;
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password: newPassword })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.message || `Reset password failed (${res.status})`);
+  }
+}
+
+export function resolveImageUrl(url: string | null | undefined): string {
+  if (!url) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${cleanUrl}`;
+}
+
+
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  // Guard: skip the network call entirely if no auth token is available.
+  // This prevents a flood of 401s from components mounting before the auth
+  // guard in DashboardShell has finished running.
+  const token = getToken();
+  if (!token) {
+    // Return a safe empty value so callers don't crash while unauthenticated.
+    // Array endpoints get [], object endpoints get undefined — components
+    // that handle empty arrays or undefined data won't error.
+    return undefined as T;
+  }
+
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
@@ -354,7 +245,33 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     }
   });
   if (!res.ok) {
-    throw new Error(`API error ${res.status}`);
+    let message = `Request failed (${res.status})`;
+    try {
+      const body = await res.json();
+      if (body?.message) message = body.message;
+      else if (body?.detail) message = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
+      if (body?.details && Array.isArray(body.details) && body.details.length > 0) {
+        const d = body.details[0];
+        if (d?.field && d?.message && /password/.test(d.field)) {
+          message = d.message.replace(/^Value error,\s*/i, '');
+        } else if (d?.message && d.message !== message) {
+          message = d.message;
+        }
+      }
+    } catch {
+    }
+    // Show toast for permission errors so users get immediate feedback
+    if (res.status === 403) {
+      toast.error(`Permission denied: ${message}`);
+    } else if (res.status === 401) {
+      toast.error('Session expired. Please log in again.');
+    } else if (res.status >= 500) {
+      toast.error(`Server error: ${message}`);
+    }
+    throw new Error(message);
+  }
+  if (res.status === 204) {
+    return undefined as T;
   }
   const json = await res.json();
   return (json.data ?? json) as T;
@@ -363,29 +280,81 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 // --- Leads API ---
 export async function getLeads(): Promise<Lead[]> {
   const dbResult = await apiFetch<any>('/api/v1/leads');
-  const dbLeads: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return dbLeads.map((dl, idx) => {
-    const fallback = MOCK_LEADS[idx] || MOCK_LEADS[0];
-    return {
-      ...fallback,
-      id: dl.id,
-      status: dl.status || fallback.status,
-      value: String(dl.value || fallback.value || ''),
-      notes: dl.description || fallback.notes
-    };
-  });
+  const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
+  return items.map((dl: any) => ({
+    ...dl,
+    ownerAvatar: resolveImageUrl(dl.owner_avatar || dl.ownerAvatar),
+  })) as unknown as Lead[];
 }
 
-export async function createLead(leadData: any): Promise<any> {
-  return apiFetch('/api/v1/leads', {
+export async function getLead(leadId: string): Promise<Lead> {
+  const dl = await apiFetch<any>(`/api/v1/leads/${leadId}`);
+  if (dl) {
+    dl.ownerAvatar = resolveImageUrl(dl.owner_avatar || dl.ownerAvatar);
+  }
+  return dl as Lead;
+}
+
+export async function createLead(leadData: Record<string, unknown>): Promise<Lead> {
+  return apiFetch<Lead>('/api/v1/leads', {
     method: 'POST',
     body: JSON.stringify(leadData)
   });
 }
 
+export async function updateLead(leadId: string, leadData: Record<string, unknown>): Promise<Lead> {
+  return apiFetch<Lead>(`/api/v1/leads/${leadId}`, {
+    method: 'PUT',
+    body: JSON.stringify(leadData)
+  });
+}
+
+export async function deleteLead(leadId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/leads/${leadId}`, { method: 'DELETE' });
+}
+
+export interface LeadRecommendation {
+  entity_type: string;
+  entity_id: string | null;
+  status: string;
+  recommendations: string[];
+  reasoning: string[];
+  metadata: Record<string, unknown>;
+  generated_at: string;
+}
+
+export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecommendation> {
+  return apiFetch<LeadRecommendation>('/api/v1/ai/recommendations', {
+    method: 'POST',
+    body: JSON.stringify({ entity_type: 'lead', entity_id: leadId }),
+  });
+}
+
+export interface BatchRecommendationItem {
+  lead_id: string;
+  recommended_action: string;
+  reason: string;
+  current_score: number;
+  current_stage: string;
+  all_candidates: Record<string, unknown>[];
+}
+
+export interface BatchRecommendationResponse {
+  status: string;
+  recommendations: Record<string, BatchRecommendationItem>;
+  generated_at: string;
+}
+
+export async function fetchBatchRecommendations(leadIds: string[]): Promise<BatchRecommendationResponse> {
+  return apiFetch<BatchRecommendationResponse>('/api/v1/ai/recommendations/batch', {
+    method: 'POST',
+    body: JSON.stringify({ lead_ids: leadIds }),
+  });
+}
+
 export async function convertLead(
-  leadId: string | number,
-  payload: { industry?: string; revenue?: string; employee_count?: number }
+  leadId: string,
+  payload: { industry?: string; revenue?: number; employee_count?: number; pipeline_stage_id?: string }
 ): Promise<any> {
   return apiFetch(`/api/v1/leads/${leadId}/convert`, {
     method: 'POST',
@@ -397,17 +366,19 @@ export async function convertLead(
 export async function getContacts(): Promise<Contact[]> {
   const dbResult = await apiFetch<any>('/api/v1/contacts');
   const dbContacts: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return dbContacts.map((dc, idx) => {
-    const fallback = MOCK_CONTACTS[idx] || MOCK_CONTACTS[0];
-    return {
-      ...fallback,
-      id: dc.id,
-      name: `${dc.first_name} ${dc.last_name}`,
-      email: dc.email,
-      phone: dc.phone || fallback.phone,
-      designation: dc.job_title || fallback.designation
-    };
-  });
+  return dbContacts.map((dc: any) => ({
+    id: dc.id,
+    name: `${dc.first_name || ''} ${dc.last_name || ''}`.trim() || dc.full_name || 'Unnamed Contact',
+    company: dc.company?.name || dc.company_name || '',
+    designation: dc.job_title || dc.department || '',
+    phone: dc.phone || dc.mobile || '',
+    email: dc.email,
+    notes: dc.notes || '',
+    timeline: [],
+    calls: [],
+    meetings: [],
+    emails: [],
+  })) as unknown as Contact[];
 }
 
 export async function createContact(contactData: any): Promise<any> {
@@ -417,20 +388,38 @@ export async function createContact(contactData: any): Promise<any> {
   });
 }
 
+export async function updateContact(contactId: string | number, contactData: any): Promise<any> {
+  return apiFetch(`/api/v1/contacts/${contactId}`, {
+    method: 'PUT',
+    body: JSON.stringify(contactData)
+  });
+}
+
+export async function deleteContact(contactId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/contacts/${contactId}`, { method: 'DELETE' });
+}
+
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
   const dbResult = await apiFetch<any>('/api/v1/companies');
   const dbCompanies: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbCompanies.map((dc, idx) => {
-    const fallback = MOCK_COMPANIES[idx] || MOCK_COMPANIES[0];
     return {
-      ...fallback,
       id: dc.id,
-      name: dc.name,
-      domain: dc.domain || fallback.domain || '',
-      industry: dc.industry || fallback.industry
+      name: dc.name || `Company ${dc.id}`,
+      industry: dc.industry || '',
+      revenue: String(dc.annual_revenue || ''),
+      employees: dc.employee_count || 0,
+      contacts: [],
+      openDeals: dc.open_deals ?? 0,
+      owner: dc.owner_name || dc.owner || '',
+      ownerAvatar: resolveImageUrl(dc.owner_avatar || dc.ownerAvatar || ''),
+      notes: dc.notes || '',
+      timeline: [],
+      emails: [],
+      files: [],
     };
-  });
+  }) as unknown as Company[];
 }
 
 export async function createCompany(companyData: any): Promise<any> {
@@ -440,83 +429,65 @@ export async function createCompany(companyData: any): Promise<any> {
   });
 }
 
+export async function updateCompany(companyId: string | number, companyData: any): Promise<any> {
+  return apiFetch(`/api/v1/companies/${companyId}`, {
+    method: 'PUT',
+    body: JSON.stringify(companyData)
+  });
+}
+
+export async function deleteCompany(companyId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/companies/${companyId}`, { method: 'DELETE' });
+}
+
 // --- Deals API ---
 export async function getDeals(): Promise<Deal[]> {
   const dbResult = await apiFetch<any>('/api/v1/deals');
   const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbDeals.map((dd, idx) => {
-    const fallback = MOCK_DEALS[idx] || MOCK_DEALS[0];
     return {
-      ...fallback,
       id: dd.id,
-      title: dd.name,
-      value: Number(dd.value || fallback.value),
-      stage: dd.stage_id === 'd1f60c42-b0c6-4767-88ea-d4b68e9f2918' ? 'Qualified' :
-             dd.stage_id === 'e2f50c42-b0c6-4767-88ea-d4b68e9f2919' ? 'Proposal' :
-             dd.stage_id === 'f3f40c42-b0c6-4767-88ea-d4b68e9f2920' ? 'Under Review' :
-             dd.stage_id === 'a4f30c42-b0c6-4767-88ea-d4b68e9f2921' ? 'Won' : 'Lost'
+      title: dd.name || `Deal ${dd.id}`,
+      company: dd.company_name || dd.company?.name || '',
+      value: Number(dd.amount || 0),
+      stage: dd.stage_name || dd.stage_slug || 'New',
+      priority: dd.priority || '',
+      owner: dd.owner_name || dd.owner || '',
+      closeDate: dd.expected_close_date || '',
+      createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
     };
-  });
+  }) as unknown as Deal[];
 }
 
 export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
-  return apiFetch(`/api/v1/deals/${dealId}/stage`, {
-    method: 'PUT',
-    body: JSON.stringify({ stage_id: stageId })
+  return apiFetch(`/api/v1/pipeline/move`, {
+    method: 'PATCH',
+    body: JSON.stringify({ deal_id: dealId, stage_id: stageId })
   });
 }
 
-// --- Conversation Intelligence (Bhavani Summarization API) ---
-export interface SummaryMessage {
-  sender: string;
-  recipients: string[];
-  subject: string;
-  body: string;
-  timestamp: string;
-  direction: 'incoming' | 'outgoing';
-}
-
-export interface ConversationSummary {
-  thread_id: string;
-  summary: string;
-  summary_word: string;
-  sentiment: 'positive' | 'neutral' | 'negative';
-  intent: 'demo' | 'buy' | 'negotiate' | 'followup' | 'decline' | 'other';
-  confidence: number;
-  key_points: string[];
-  action_items: string[];
-  category?: 'sales' | 'support' | 'general' | 'urgent';
-  draft_reply?: string;
-  follow_up_suggestion?: string;
-  follow_up_timing?: 'immediate' | 'today' | 'tomorrow' | '2_days' | '3_days' | '1_week' | '2_weeks' | 'no_followup';
-  processing_time_ms?: number;
-  model_version?: string;
-}
-
-export async function summarizeThread(threadId: string, messages: SummaryMessage[], contactId?: string, dealId?: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summarise`, {
+export async function createDeal(dealData: any): Promise<any> {
+  return apiFetch('/api/v1/deals', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders()
-    },
-    body: JSON.stringify({
-      thread_id: threadId,
-      messages,
-      contact_id: contactId,
-      deal_id: dealId
-    })
+    body: JSON.stringify(dealData)
   });
-  if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
-  return res.json() as Promise<ConversationSummary>;
 }
 
-export async function getSummaryByThread(threadId: string): Promise<ConversationSummary | null> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/summarization/summary/${threadId}`, {
-    headers: { ...getAuthHeaders() }
+export async function updateDeal(dealId: string | number, dealData: any): Promise<any> {
+  return apiFetch(`/api/v1/deals/${dealId}`, {
+    method: 'PUT',
+    body: JSON.stringify(dealData)
   });
-  if (!res.ok) throw new Error(`Summarization API error ${res.status}`);
-  return res.json() as Promise<ConversationSummary>;
+}
+
+export async function deleteDeal(dealId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/deals/${dealId}`, { method: 'DELETE' });
+}
+
+export async function getPipelineStages(): Promise<any[]> {
+  const dbResult = await apiFetch<any>('/api/v1/pipeline/stages');
+  const stages: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
+  return stages;
 }
 
 
@@ -669,11 +640,29 @@ export async function sendGmailEmail(payload: SendEmailPayload): Promise<SyncedE
 }
 
 export async function getEmails(params: EmailListParams = {}): Promise<PaginatedResult<SyncedEmail>> {
-  return apiFetch<PaginatedResult<SyncedEmail>>(`/api/v1/emails${toQuery(params)}`);
+  return apiFetch<PaginatedResult<SyncedEmail>>(`/api/v1/emails${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`);
 }
 
 export async function getEmail(id: string): Promise<SyncedEmail> {
   return apiFetch<SyncedEmail>(`/api/v1/emails/${id}`);
+}
+
+export interface EmailSummaryData {
+  summary: string | null;
+  sentiment: string | null;
+  intent: string | null;
+  confidence: number | null;
+  key_points: string[];
+  action_items: string[];
+  category: string | null;
+  draft_reply: string | null;
+  follow_up_suggestion: string | null;
+  follow_up_timing: string | null;
+  model_version: string | null;
+}
+
+export async function getEmailSummary(threadId: string): Promise<EmailSummaryData | null> {
+  return apiFetch<EmailSummaryData | null>(`/api/v1/emails/summary/${threadId}`);
 }
 
 export async function getActivities(params: ActivityListParams = {}): Promise<PaginatedResult<ActivityTimelineItem>> {
@@ -697,7 +686,7 @@ export function asNumber(v: Decimal | undefined | null): number {
 export function formatINR(v: Decimal | undefined | null): string {
   const n = asNumber(v);
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(2)}L`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}L`;
   if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
   return `₹${n.toLocaleString('en-IN')}`;
 }
@@ -796,8 +785,12 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
 }
 
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean }> {
-  return apiFetch('/api/v1/auth/me');
+export async function getCurrentUser(): Promise<any> {
+  const me = await apiFetch<any>('/api/v1/auth/me');
+  if (me && me.avatar_url) {
+    me.avatar_url = resolveImageUrl(me.avatar_url);
+  }
+  return me;
 }
 
 // --- Automation / Events API ---
@@ -877,7 +870,6 @@ export interface UserData {
   organization_id: string;
   is_active: boolean;
   is_verified: boolean;
-  is_superuser: boolean;
   roles: string[];
   last_login_at: string | null;
   created_at: string;
@@ -1054,4 +1046,106 @@ export async function getManagerForecast(
   return apiFetch<ManagerForecastData>(
     `/api/v1/dashboard/manager/forecast${toQuery({ period })}`
   );
+}
+
+// --- Dashboard Command Center (Sales Rep /me) ---
+
+export interface DashboardOverviewData {
+  kpis: { open_deals: number; untouched_deals: number; calls_today: number; leads_assigned: number; leads_today?: number };
+  open_tasks: { id: string; title: string; due_date: string; status: string; source?: string; lead_id?: string; deal_id?: string }[];
+  meetings_today: { id: string; title: string; start_time: string; end_time: string; zoom_link?: string; contact_name?: string; transcript_status?: string }[];
+  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string }[];
+  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string }[];
+  quota_pace: { closed_won_revenue: Decimal; target_revenue: Decimal; attained_percentage: Decimal; pace_status: string };
+  deals?: { id: string; name: string; value: number; stage: string; owner: string; closeDate: string }[];
+  leads?: { id: string; name: string; company: string; score: number; status: string; owner: string }[];
+  generated_at: string;
+}
+
+export interface DashboardDeal {
+  id: number | string;
+  title: string;
+  company: string;
+  value: number;
+  stage: string;
+  priority: 'High' | 'Medium' | 'Low';
+  owner: string;
+  closeDate: string;
+  createdAt?: string;
+}
+
+export async function getDashboardMe(): Promise<DashboardOverviewData> {
+  return apiFetch<DashboardOverviewData>('/api/v1/dashboard/me');
+}
+
+// --- SSE Stream URL ---
+
+export function getDashboardStreamUrl(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  return `${API_BASE_URL}/api/v1/stream/dashboard?token=${encodeURIComponent(token)}`;
+}
+
+// --- Documents API ---
+
+export interface DocumentData {
+  id: string;
+  organization_id: string;
+  uploaded_by?: string;
+  contact_id?: string;
+  deal_id?: string;
+  company_id?: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size_bytes: number;
+  created_at: string;
+}
+
+export async function getDocuments(params: { contact_id?: string; deal_id?: string; company_id?: string } = {}): Promise<DocumentData[]> {
+  return apiFetch<DocumentData[]>(`/api/v1/documents${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`);
+}
+
+export async function uploadDocument(file: File, params: { contact_id?: string; deal_id?: string; company_id?: string } = {}): Promise<DocumentData> {
+  const formData = new FormData();
+  formData.append('file', file);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) formData.append(key, value);
+  });
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Upload failed');
+  }
+  const json = await res.json();
+  return (json.data ?? json) as DocumentData;
+}
+
+export async function deleteDocument(docId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/documents/${docId}`, { method: 'DELETE' });
+}
+
+export function getDocumentDownloadUrl(docId: string): string {
+  return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
+}
+
+export async function uploadAvatar(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Avatar upload failed');
+  }
+  return res.json();
 }

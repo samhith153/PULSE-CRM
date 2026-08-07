@@ -94,7 +94,6 @@ class AIService:
             regenerated_from_id=previous.id if previous else None,
             generated_at=datetime.now(timezone.utc),
         )
-        lead.score = result.score
         await self.db.flush()
         recommendation = self.recommender.recommend("lead", lead, features, result.score)
         return AILeadScoreResponse(
@@ -213,6 +212,34 @@ class AIService:
 
     async def recommendations(self, organization_id: UUID, entity_type: str, entity_id: UUID | None = None) -> AIRecommendationResponse:
         self._ensure_enabled()
+        if entity_id and entity_type == "lead":
+            # Use the unified weighted formula engine via RecommendationService
+            from app.services.recommendation_service import RecommendationService
+            rec_svc = RecommendationService(self.db)
+            result = await rec_svc.get_for_lead(entity_id, organization_id)
+            if result:
+                return AIRecommendationResponse(
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    status="generated",
+                    recommendations=[result.get("recommended_action", "")],
+                    reasoning=[result.get("reason", "")],
+                    metadata={
+                        "current_score": result.get("current_score", 0),
+                        "current_stage": result.get("current_stage", ""),
+                        "all_candidates": result.get("all_candidates", []),
+                    },
+                    generated_at=datetime.now(timezone.utc),
+                )
+            return AIRecommendationResponse(
+                entity_type=entity_type,
+                entity_id=entity_id,
+                status="no_recommendation",
+                recommendations=["No recommendation available for this lead."],
+                reasoning=["Lead may be in a terminal stage or insufficient data."],
+                metadata={},
+                generated_at=datetime.now(timezone.utc),
+            )
         if entity_id:
             action = await self.next_best_action(organization_id, entity_type, entity_id)
             return AIRecommendationResponse(

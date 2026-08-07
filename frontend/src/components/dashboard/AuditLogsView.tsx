@@ -44,24 +44,24 @@ export default function AuditLogsView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">
+          <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
             Audit Trails & Logs
           </h1>
-          <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
             Track root level events, authorization access parameters, and security breach signals.
           </p>
         </div>
 
-        <button className="inline-flex items-center space-x-1.5 px-3.5 py-2 border border-slate-205 hover:bg-slate-50 text-xs font-bold rounded-lg text-brand-text transition-colors cursor-pointer shadow-sm self-start sm:self-center">
-          <Download className="h-4 w-4 text-slate-400" />
+        <button className="inline-flex items-center space-x-1.5 px-3.5 py-2 border border-slate-205 hover:bg-secondary text-xs font-bold rounded-lg text-foreground transition-colors cursor-pointer self-start sm:self-center">
+          <Download className="h-4 w-4 text-muted-foreground" />
           <span>Export Logs</span>
         </button>
       </div>
 
       {/* Filter panel */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-4 shadow-sm/5 flex flex-col md:flex-row items-center gap-4">
+      <div className="bg-card border border-border rounded-2xl p-4 flex flex-col md:flex-row items-center gap-4">
         <div className="relative flex-1 w-full">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-muted-foreground">
             <Search className="h-4 w-4" />
           </div>
           <input 
@@ -69,27 +69,27 @@ export default function AuditLogsView() {
             placeholder="Filter logs by actor, action, or target..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-slate-50/60 text-brand-text focus:outline-none focus:border-brand-accent transition-colors"
+            className="w-full pl-9 pr-4 py-1.5 border border-border rounded-lg text-xs bg-secondary/60 text-foreground focus:outline-none focus:border-brand-accent transition-colors"
           />
         </div>
 
-        <button className="inline-flex items-center space-x-1 px-3.5 py-1.5 border border-brand-border-purple/35 hover:border-brand-border-purple bg-white rounded-lg text-xs font-bold text-brand-text/80 transition-colors cursor-pointer shadow-sm w-full md:w-auto justify-center">
-          <Filter className="h-3.5 w-3.5 text-slate-400" />
+        <button className="inline-flex items-center space-x-1 px-3.5 py-1.5 border border-border hover:border-border bg-card rounded-lg text-xs font-bold text-muted-foreground transition-colors cursor-pointer w-full md:w-auto justify-center">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground" />
           <span>Filter Status</span>
         </button>
       </div>
 
       {/* Logs Table */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-        <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-          <Activity className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm flex items-center">
+          <Activity className="h-4.5 w-4.5 mr-2 text-brand-purple" />
           <span>Root Authorization Audits</span>
         </h3>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
+              <tr className="border-b border-border text-[10px] uppercase font-semibold text-foreground">
                 <th className="px-4 py-3.5">Audit ID</th>
                 <th className="px-4 py-3.5">Timestamp</th>
                 <th className="px-4 py-3.5">Actor</th>
@@ -99,22 +99,22 @@ export default function AuditLogsView() {
                 <th className="px-4 py-3.5 text-right">Access Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-semibold text-brand-text">
+            <tbody className="divide-y divide-border text-xs font-semibold text-foreground">
               {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-4 py-3.5 font-extrabold text-slate-450 uppercase text-[10px] tracking-wide whitespace-nowrap">{log.id}</td>
-                  <td className="px-4 py-3.5 text-slate-450 tabular-nums whitespace-nowrap">{log.timestamp}</td>
-                  <td className="px-4 py-3.5 font-extrabold whitespace-nowrap">{log.actor}</td>
+                <tr key={log.id} className="hover:bg-secondary transition-colors">
+                  <td className="px-4 py-3.5 font-semibold text-muted-foreground uppercase text-[10px] tracking-wide whitespace-nowrap">{log.id}</td>
+                  <td className="px-4 py-3.5 text-muted-foreground tabular-nums whitespace-nowrap">{log.timestamp}</td>
+                  <td className="px-4 py-3.5 font-semibold whitespace-nowrap">{log.actor}</td>
                   <td className="px-4 py-3.5 max-w-[200px] truncate" title={log.action}>{log.action}</td>
-                  <td className="px-4 py-3.5 text-slate-500 max-w-[250px] truncate" title={log.target}>{log.target}</td>
-                  <td className="px-4 py-3.5 text-slate-450 tabular-nums whitespace-nowrap">{log.ipAddress}</td>
+                  <td className="px-4 py-3.5 text-muted-foreground max-w-[250px] truncate" title={log.target}>{log.target}</td>
+                  <td className="px-4 py-3.5 text-muted-foreground tabular-nums whitespace-nowrap">{log.ipAddress}</td>
                   <td className="px-4 py-3.5 text-right whitespace-nowrap">
-                    <span className={`px-2 py-0.5 rounded font-extrabold uppercase tracking-wide text-[8px] ${
+                    <span className={`px-2 py-0.5 rounded font-semibold uppercase tracking-wide text-[8px] ${
                       log.status === 'Authorized' 
-                        ? 'bg-emerald-50 text-emerald-700' 
+                        ? 'bg-brand-cyan/15 text-brand-cyan' 
                         : log.status === 'Warning'
                         ? 'bg-amber-50 text-amber-700'
-                        : 'bg-rose-50 text-rose-700'
+                        : 'bg-destructive/10 text-destructive'
                     }`}>
                       {log.status}
                     </span>
@@ -123,7 +123,7 @@ export default function AuditLogsView() {
               ))}
               {filteredLogs.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400 font-bold">
+                  <td colSpan={7} className="py-8 text-center text-muted-foreground font-bold">
                     No audit records matched your filter criteria.
                   </td>
                 </tr>
@@ -135,3 +135,4 @@ export default function AuditLogsView() {
     </div>
   );
 }
+

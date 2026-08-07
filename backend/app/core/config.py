@@ -74,8 +74,8 @@ class Settings(BaseSettings):
     CORS_ALLOW_HEADERS: str = "*"
 
     ENABLE_RATE_LIMIT: bool = True
-    RATE_LIMIT_PER_MINUTE: int = 60
-    RATE_LIMIT_BURST: int = 10
+    RATE_LIMIT_PER_MINUTE: int = 600
+    RATE_LIMIT_BURST: int = 120
 
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
@@ -96,15 +96,26 @@ class Settings(BaseSettings):
     GMAIL_TOKEN_ENCRYPTION_KEY: Optional[str] = None
     GOOGLE_OAUTH_SCOPES: str = (
         "https://www.googleapis.com/auth/gmail.readonly,"
-        "https://www.googleapis.com/auth/gmail.modify"
+        "https://www.googleapis.com/auth/gmail.modify,"
+        "https://www.googleapis.com/auth/gmail.send"
     )
 
     ENABLE_AI: bool = True
     AI_PROVIDER: str = "rule_based"
     MODEL_NAME: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     SCORING_PROVIDER: str = "rule_based"
     AI_TIMEOUT: int = 30
+
+    # PULSE AI microservice (separate deployment). The backend calls this
+    # service over HTTP for lead scoring, recommendations, and summarization.
+    AI_SERVICE_URL: str = "http://localhost:8001"
+    AI_SERVICE_TIMEOUT: float = 30.0
+
+    # Assistant (Groq free tier)
+    ASSISTANT_API_KEY: Optional[str] = None
+    ASSISTANT_MODEL: str = "llama-3.3-70b-versatile"
 
     WEBHOOK_MAX_ATTEMPTS: int = 5
     WEBHOOK_TIMEOUT_SECONDS: int = 10

@@ -20,6 +20,7 @@ from app.models.contact import Contact
 from app.models.deal import Deal
 from app.models.email import Email
 from app.models.lead import Lead
+from app.models.lead_score import LeadScore
 from app.models.user import User
 from app.utils.enums import DealStatus
 
@@ -73,7 +74,7 @@ class ConversationIntelligenceRepository:
                 owner_alias.full_name.label("owner_name"),
                 Lead.id.label("lead_id"),
                 Lead.title.label("lead_name"),
-                Lead.score.label("lead_score"),
+                LeadScore.overall_score.label("lead_score"),
                 Deal.id.label("deal_id"),
                 Deal.name.label("deal_name"),
                 Deal.amount.label("deal_amount"),
@@ -88,6 +89,7 @@ class ConversationIntelligenceRepository:
                 (Lead.id == ActivityTimeline.entity_id)
                 & (ActivityTimeline.entity_type == "lead"),
             )
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .outerjoin(
                 Deal,
                 (Deal.id == ActivityTimeline.entity_id)

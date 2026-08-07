@@ -65,6 +65,14 @@ class Permission(str, Enum):
     WEBHOOK_MANAGE = "webhook:manage"
     FILE_UPLOAD = "file:upload"
 
+    DOCUMENT_READ = "document:read"
+    DOCUMENT_DELETE = "document:delete"
+
+    EVENT_READ = "event:read"
+    EVENT_CREATE = "event:create"
+
+    NOTIFICATION_READ = "notification:read"
+
     REPORT_VIEW = "report:view"
     REPORT_EXPORT = "report:export"
 
@@ -121,6 +129,11 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.AI_ACCESS,
         Permission.WEBHOOK_MANAGE,
         Permission.FILE_UPLOAD,
+        Permission.DOCUMENT_READ,
+        Permission.DOCUMENT_DELETE,
+        Permission.EVENT_READ,
+        Permission.EVENT_CREATE,
+        Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
         Permission.REPORT_EXPORT,
     },
@@ -146,8 +159,13 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
+        Permission.AI_ACCESS,
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
+        Permission.DOCUMENT_READ,
+        Permission.EVENT_READ,
+        Permission.EVENT_CREATE,
+        Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
     },
 }

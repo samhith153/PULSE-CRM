@@ -166,3 +166,22 @@ async def test_forgot_password_always_200(client: AsyncClient, seed_roles):
 async def test_logout(client: AsyncClient, auth_headers):
     resp = await client.post("/api/v1/auth/logout", headers=auth_headers)
     assert resp.status_code == 204
+
+
+# ── Google Sign-In Tests ──────────────────────────────────────────────────────
+
+async def test_get_auth_config(client: AsyncClient):
+    resp = await client.get("/api/v1/auth/config")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert "google_client_id" in data["data"]
+
+
+async def test_google_login_not_configured(client: AsyncClient):
+    # If GOOGLE_CLIENT_ID is not configured, the login attempt should raise a business exception
+    resp = await client.post("/api/v1/auth/google", json={"credential": "some-mock-credential-token"})
+    # It will either verify token failure (if Client ID is mock/set) or raise business exception (if None)
+    assert resp.status_code in (400, 401, 422)
+
+

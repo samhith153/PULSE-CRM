@@ -20,6 +20,7 @@ from app.models.activity import ActivityTimeline
 from app.models.company import Company
 from app.models.deal import Deal
 from app.models.lead import Lead
+from app.models.lead_score import LeadScore
 from app.models.user import User
 from app.utils.enums import DealStatus
 
@@ -105,22 +106,23 @@ class AIInsightsRepository:
                 Deal.status,
                 Deal.expected_close_date,
                 Lead.title.label("lead_title"),
-                Lead.score.label("lead_score"),
+                LeadScore.overall_score.label("lead_score"),
                 owner.full_name.label("owner_name"),
                 last_act.c.last_activity_at,
             )
             .outerjoin(owner, owner.id == Deal.owner_id)
             .outerjoin(Lead, Lead.id == Deal.lead_id)
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .outerjoin(last_act, last_act.c.entity_id == Deal.id)
             .where(
                 *self._open_deals(organization_id),
                 or_(
-                    Lead.score >= HIGH_VALUE_LEAD_SCORE,
+                    LeadScore.overall_score >= HIGH_VALUE_LEAD_SCORE,
                     Deal.amount >= HIGH_VALUE_DEAL_AMOUNT,
                     Deal.probability >= HIGH_PROB_THRESHOLD,
                 ),
             )
-            .order_by(Lead.score.desc().nullslast(), Deal.amount.desc().nullslast())
+            .order_by(LeadScore.overall_score.desc().nullslast(), Deal.amount.desc().nullslast())
             .limit(20)
         )
         stmt = self._team_filter(stmt, Deal.owner_id, user_id, team_ids)
@@ -257,8 +259,10 @@ class AIInsightsRepository:
             return float(r.scalar_one() or 0)
 
         # Lead quality: avg lead score (0-100)
-        lq_stmt = select(func.coalesce(func.avg(Lead.score), 0)).where(
-            *self._active_leads(organization_id)
+        lq_stmt = (
+            select(func.coalesce(func.avg(LeadScore.overall_score), 0))
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
+            .where(*self._active_leads(organization_id))
         )
         lead_quality = await _scalar(lq_stmt)
 
@@ -533,13 +537,14 @@ class AIInsightsRepository:
                 Deal.name,
                 Deal.amount,
                 Deal.probability,
-                Lead.score.label("lead_score"),
+                LeadScore.overall_score.label("lead_score"),
                 owner.full_name.label("owner_name"),
                 func.coalesce(last_act.c.act_count, 0).label("act_count"),
                 max_amount_sub.label("max_amount"),
             )
             .outerjoin(owner,    owner.id   == Deal.owner_id)
             .outerjoin(Lead,     Lead.id    == Deal.lead_id)
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .outerjoin(last_act, last_act.c.entity_id == Deal.id)
             .where(*self._open_deals(organization_id))
             .limit(100)
@@ -602,9 +607,13 @@ class AIInsightsRepository:
             })
 
         # High-score leads
-        hs_stmt = select(func.count(Lead.id)).where(
-            *self._active_leads(organization_id),
-            Lead.score >= NOTIFICATION_LEAD_SCORE,
+        hs_stmt = (
+            select(func.count(Lead.id))
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
+            .where(
+                *self._active_leads(organization_id),
+                LeadScore.overall_score >= NOTIFICATION_LEAD_SCORE,
+            )
         )
         hs_count = int((await self.db.execute(hs_stmt)).scalar_one() or 0)
         if hs_count:

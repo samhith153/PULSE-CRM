@@ -10,7 +10,10 @@ from sqlalchemy import Select, func, select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.base import Base
+from app.core.logging import get_logger
 from app.utils.pagination import paginate
+
+logger = get_logger(__name__)
 
 ModelT = TypeVar("ModelT", bound=Base)
 
@@ -28,16 +31,16 @@ class BaseRepository(Generic[ModelT]):
     # -- Create ---------------------------------------------------------------
 
     async def create(self, **data: Any) -> ModelT:
-        print(f"Creating {self.model.__name__}: {data}")
+        logger.debug("Creating %s: %s", self.model.__name__, data)
 
         instance = self.model(**data)
         self.db.add(instance)
 
         await self.db.flush()
-        print(f"Flushed {self.model.__name__}, id={instance.id}")
+        logger.debug("Flushed %s, id=%s", self.model.__name__, instance.id)
 
         await self.db.refresh(instance)
-        print(f"Refreshed {self.model.__name__}")
+        logger.debug("Refreshed %s", self.model.__name__)
 
         return instance
 

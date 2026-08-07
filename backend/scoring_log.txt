@@ -1,0 +1,257 @@
+
+======================================================================
+SCORING LOG — 2026-07-31T13:21:02.757235+00:00
+Lead ID:     4adce0a3-2177-4e57-8a15-292cc5deef38
+Thread ID:   test_thread_de94a228
+--- Engagement Features ---
+  average_response_time: 21.0
+  response_time_score: 75
+  num_response_pairs: 2
+  last_processed_sent_at: 2026-07-31 07:20:58.758424+00:00
+  days_since_last_outbound: 1
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 30
+  ai_intent_category_score: 85
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         0
+  Fit Reasons:
+    - 👥 Small company - 250 employees → Lower complexity
+    - ✔️ Good software - Using HubSpot → May not need replacement
+    - 📦 Standard solution likely sufficient
+  Engagement Score:  66
+  Engagement Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📧 EARLY STAGE - Pipeline: contacted → Just started (score: 30.0)
+    - ✅ RESPONSIVE - Average: 21.0h → Good engagement (score: 75.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 1 days ago → Still hot
+  Overall Score:     26
+  Tier:              Low
+  Top Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📧 EARLY STAGE - Pipeline: contacted → Just started (score: 30.0)
+======================================================================
+
+======================================================================
+SCORING LOG — 2026-07-31T13:21:03.531021+00:00
+Lead ID:     4adce0a3-2177-4e57-8a15-292cc5deef38
+Thread ID:   test_thread_de94a228
+--- Engagement Features ---
+  average_response_time: 21.33
+  response_time_score: 75
+  num_response_pairs: 3
+  last_processed_sent_at: 2026-07-31 11:21:02.763697+00:00
+  days_since_last_outbound: 1
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 30
+  ai_intent_category_score: 85
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         0
+  Fit Reasons:
+    - 👥 Small company - 250 employees → Lower complexity
+    - ✔️ Good software - Using HubSpot → May not need replacement
+    - 📦 Standard solution likely sufficient
+  Engagement Score:  66
+  Engagement Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📧 EARLY STAGE - Pipeline: contacted → Just started (score: 30.0)
+    - ✅ RESPONSIVE - Average: 21.33h → Good engagement (score: 75.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 1 days ago → Still hot
+  Overall Score:     26
+  Tier:              Low
+  Top Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📧 EARLY STAGE - Pipeline: contacted → Just started (score: 30.0)
+======================================================================
+
+======================================================================
+SCORING LOG — 2026-07-31T13:21:04.156697+00:00
+Lead ID:     4adce0a3-2177-4e57-8a15-292cc5deef38
+Thread ID:   test_thread_de94a228
+--- Engagement Features ---
+  average_response_time: 21.33
+  response_time_score: 75
+  num_response_pairs: 3
+  last_processed_sent_at: 2026-07-31 11:21:02.763697+00:00
+  days_since_last_outbound: 1
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 30
+  ai_intent_category_score: 85
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         0
+  Fit Reasons:
+    - 👥 Small company - 250 employees → Lower complexity
+    - ✔️ Good software - Using HubSpot → May not need replacement
+    - 📦 Standard solution likely sufficient
+  Engagement Score:  66
+  Engagement Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📧 EARLY STAGE - Pipeline: contacted → Just started (score: 30.0)
+    - ✅ RESPONSIVE - Average: 21.33h → Good engagement (score: 75.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 1 days ago → Still hot
+  Overall Score:     26
+  Tier:              Low
+  Top Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📧 EARLY STAGE - Pipeline: contacted → Just started (score: 30.0)
+======================================================================
+
+======================================================================
+SCORING LOG — 2026-07-31T13:30:15.469959+00:00
+Lead ID:     4b749cd2-5a70-4786-acdf-655689fc1ab5
+Thread ID:   19fb85bf9fec5b97
+--- Engagement Features ---
+  average_response_time: 0.02
+  response_time_score: 100
+  num_response_pairs: 2
+  last_processed_sent_at: 2026-07-31 13:28:50+00:00
+  days_since_last_outbound: 0
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 10
+  ai_intent_category_score: 85
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         73
+  Fit Reasons:
+    - 📊 Growing company - 50 employees → Coordination challenge
+    - ⚙️ Very complex industry - IT → Heavy workflows & regulations
+    - ❌ No CRM system - Using no crm → Major pain point
+    - 🎯 High customization potential - Will need tailored workflows
+  Engagement Score:  65
+  Engagement Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - ⚡ VERY RESPONSIVE - Average: 0.02h → Highly engaged (score: 100.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 0 days ago → Still hot
+  Overall Score:     71
+  Tier:              High
+  Top Reasons:
+    - 📊 Growing company - 50 employees → Coordination challenge
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - ⚙️ Very complex industry - IT → Heavy workflows & regulations
+======================================================================
+
+======================================================================
+SCORING LOG — 2026-08-01T07:24:46.956136+00:00
+Lead ID:     d7d854c3-978e-4657-887c-d4428e740d12
+Thread ID:   19fbc34e618b3c3e
+--- Engagement Features ---
+  average_response_time: 0.01
+  response_time_score: 100
+  num_response_pairs: 1
+  last_processed_sent_at: 2026-08-01 07:23:57+00:00
+  days_since_last_outbound: 0
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 50
+  ai_intent_category_score: 35
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         67
+  Fit Reasons:
+    - 👥 Small company - 10 employees → Lower complexity
+    - ⚙️ Very complex industry - Pharma → Heavy workflows & regulations
+    - ❌ No CRM system - Using no crm → Major pain point
+    - 🎯 High customization potential - Will need tailored workflows
+  Engagement Score:  57
+  Engagement Reasons:
+    - 🟠 WEAK INTENT - Lead said: 'inquiry' (score: 35.0)
+    - 📞 MID-STAGE - Pipeline: converted → In progress (score: 50.0)
+    - ⚡ VERY RESPONSIVE - Average: 0.01h → Highly engaged (score: 100.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 0 days ago → Still hot
+  Overall Score:     63
+  Tier:              Medium
+  Top Reasons:
+    - 🟠 WEAK INTENT - Lead said: 'inquiry' (score: 35.0)
+    - ⚙️ Very complex industry - Pharma → Heavy workflows & regulations
+======================================================================
+
+======================================================================
+SCORING LOG — 2026-08-01T12:43:46.145010+00:00
+Lead ID:     502e440d-3efb-411a-abf7-ce5f352fb1d0
+Thread ID:   19fbd5862c644e7e
+--- Engagement Features ---
+  average_response_time: 0.02
+  response_time_score: 100
+  num_response_pairs: 1
+  last_processed_sent_at: 2026-08-01 12:42:55+00:00
+  days_since_last_outbound: 0
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 50
+  ai_intent_category_score: 85
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         77
+  Fit Reasons:
+    - 🏢 Large organization - 500 employees → Higher CRM need
+    - ⚙️ Very complex industry - Healthcare → Heavy workflows & regulations
+    - ❌ No CRM system - Using no crm → Major pain point
+    - 🎯 High customization potential - Will need tailored workflows
+  Engagement Score:  75
+  Engagement Reasons:
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - 📞 MID-STAGE - Pipeline: converted → In progress (score: 50.0)
+    - ⚡ VERY RESPONSIVE - Average: 0.02h → Highly engaged (score: 100.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 0 days ago → Still hot
+  Overall Score:     100
+  Tier:              Critical
+  Top Reasons:
+    - 🏢 Large organization - 500 employees → Higher CRM need
+    - 🟢 STRONG INTENT - Lead said: 'demo_request' (score: 85.0)
+    - ⚙️ Very complex industry - Healthcare → Heavy workflows & regulations
+======================================================================
+
+======================================================================
+SCORING LOG — 2026-08-03T08:29:21.345739+00:00
+Lead ID:     4cd63c84-71b3-4fba-88f1-f74530e7d90f
+Thread ID:   19fc6bd04ab53b5a
+--- Engagement Features ---
+  average_response_time: 0.01
+  response_time_score: 100
+  num_response_pairs: 1
+  last_processed_sent_at: 2026-08-03 08:28:51+00:00
+  days_since_last_outbound: 0
+  engagement_decay_penalty: 0
+  customer_initiative_score: 100
+  buying_stage_score: 50
+  ai_intent_category_score: 35
+  engagement_trend_score: 50
+--- Scores ---
+  Fit Score:         67
+  Fit Reasons:
+    - 👥 Small company - 10 employees → Lower complexity
+    - ⚙️ Very complex industry - Manufacturing → Heavy workflows & regulations
+    - ❌ No CRM system - Using no crm → Major pain point
+    - 🎯 High customization potential - Will need tailored workflows
+  Engagement Score:  57
+  Engagement Reasons:
+    - 🟠 WEAK INTENT - Lead said: 'inquiry' (score: 35.0)
+    - 📞 MID-STAGE - Pipeline: converted → In progress (score: 50.0)
+    - ⚡ VERY RESPONSIVE - Average: 0.01h → Highly engaged (score: 100.0)
+    - ➡️ Engagement stable
+    - 🎯 CUSTOMER DRIVEN - Latest email from CUSTOMER → They're actively engaged
+    - ✅ RECENT - Last contact: 0 days ago → Still hot
+  Overall Score:     63
+  Tier:              Medium
+  Top Reasons:
+    - 🟠 WEAK INTENT - Lead said: 'inquiry' (score: 35.0)
+    - ⚙️ Very complex industry - Manufacturing → Heavy workflows & regulations
+======================================================================

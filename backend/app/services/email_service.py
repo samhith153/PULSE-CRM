@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 import secrets
 import smtplib
 import ssl
@@ -44,6 +45,11 @@ from app.utils.enums import EmailDirection, EmailSyncStatus, SortOrder
 
 
 logger = get_logger(__name__)
+
+# ── Background-task infrastructure ──────────────────────────────────────
+# Holds references to fire-and-forget tasks so the garbage collector
+# does not cancel them mid-flight.
+_background_tasks: set[asyncio.Task] = set()  # noqa: F811
 
 
 class EmailService:
@@ -341,6 +347,37 @@ class EmailService:
             sync_status=EmailSyncStatus.ACTIVE.value,
         )
 
+        # Sequential inbound processing: summarize FIRST, then assess
+        if ingested:
+            # Group inbound threads by lead_id for sequential processing
+            lead_threads: dict[UUID, set[str]] = {}
+            standalone_threads: set[str] = set()
+            for e in ingested:
+                if e.thread_id and e.direction == EmailDirection.INBOUND.value:
+                    if (
+                        e.external_entity_type == "lead"
+                        and e.external_entity_id
+                    ):
+                        lead_threads.setdefault(e.external_entity_id, set()).add(e.thread_id)
+                    else:
+                        standalone_threads.add(e.thread_id)
+
+            # Summarize threads not linked to any lead
+            for tid in standalone_threads:
+                task = asyncio.create_task(
+                    self._safe_summarize(organization_id, tid)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
+
+            # For lead-linked threads: summarize then assess (sequential)
+            for lid, tids in lead_threads.items():
+                task = asyncio.create_task(
+                    self._summarize_and_assess(organization_id, lid, tids)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
+
         return EmailSyncResultResponse(
             gmail_connection_id=connection.id,
             synced_count=len(ingested),
@@ -420,7 +457,41 @@ class EmailService:
             },
             topic = "gmail" if gmail_connection_id else "smtp",
         )
-        if is_read:
+        if direction == EmailDirection.INBOUND:
+            await self.events.record_event(
+                EventType.EMAIL_RECEIVED,
+                organization_id=organization_id,
+                actor_id=created_by,
+                aggregate_type="email",
+                aggregate_id=str(email.id),
+                source="gmail" if gmail_connection_id else "smtp",
+                payload={
+                    "email_id": str(email.id),
+                    "gmail_message_id": gmail_message_id,
+                    "thread_id": thread_id,
+                    "subject": subject,
+                    "body_preview": body_preview,
+                    "external_entity_type": external_entity_type,
+                    "external_entity_id": str(external_entity_id) if external_entity_id else None,
+                },
+            )
+            # Best-effort: never let an assessment failure break email storage.
+            # Summarize thread first, then assess only for lead-linked emails.
+            if external_entity_type == "lead" and external_entity_id is not None:
+                thread_ids = {thread_id} if thread_id else set()
+                task = asyncio.create_task(
+                    self._summarize_and_assess(organization_id, external_entity_id, thread_ids)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
+            elif thread_id:
+                task = asyncio.create_task(
+                    self._safe_summarize(organization_id, thread_id)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
+        elif is_read:
+
             await self.events.record_event(
                 EventType.EMAIL_READ,
                 organization_id=organization_id,
@@ -436,7 +507,59 @@ class EmailService:
                 },
             )
         return email, True
-    
+
+    async def _safe_summarize(self, organization_id: UUID, thread_id: str) -> None:
+        try:
+            from app.database.connection import AsyncSessionFactory
+            from app.services.email_summary_service import EmailSummaryService
+
+            async with AsyncSessionFactory() as db:
+                svc = EmailSummaryService(db)
+                result = await svc.summarize_thread(organization_id, thread_id)
+                if result:
+                    await db.commit()
+                    logger.info("Summarized thread %s successfully", thread_id)
+                else:
+                    logger.warning("No summary generated for thread %s (empty or no emails)", thread_id)
+        except Exception:
+            logger.exception("Email summarization failed for thread %s", thread_id)
+
+    async def _summarize_and_assess(
+        self, organization_id: UUID, lead_id: UUID, thread_ids: set[str]
+    ) -> None:
+        """
+        Summarize inbound threads first, then run assessment.
+
+        This ensures the intent/summary_word is available BEFORE
+        the lead assessment pipeline runs. Previously summarization
+        and assessment ran in parallel, causing stale/null intent.
+        """
+        try:
+            # Step 1: Summarize all inbound threads for this lead
+            for tid in thread_ids:
+                await self._safe_summarize(organization_id, tid)
+
+            # Step 2: Now run assessment (intent is available)
+            await self._run_assessment_background(
+                organization_id, lead_id, trigger="inbound_email"
+            )
+        except Exception:
+            logger.exception("Summarize+assess failed for lead %s", lead_id)
+
+    async def _run_assessment_background(
+        self, organization_id: UUID, lead_id: UUID, trigger: str = "inbound_email"
+    ) -> None:
+        """Run the unified assessment pipeline in a background task."""
+        try:
+            from app.database.connection import AsyncSessionFactory
+            from app.services.ai_pipeline import run_lead_assessment
+
+            async with AsyncSessionFactory() as db:
+                await run_lead_assessment(db, lead_id, organization_id, created_by=None, trigger=trigger)
+                await db.commit()
+        except Exception:
+            logger.exception("Background assessment failed for lead %s", lead_id)
+
 
     async def send_email(
         self,
@@ -450,12 +573,14 @@ class EmailService:
         external_entity_id: UUID | None = None,
     ):
         """
-        Send an email through Gmail and persist it in the CRM.
+        Send an email through Gmail API and persist it in the CRM.
         """
+        from email.mime.multipart import MIMEMultipart
+        from email.mime.text import MIMEText
 
         connection = await self.connection_repo.get_by_id_in_org(
-        organization_id,
-        gmail_connection_id,
+            organization_id,
+            gmail_connection_id,
         )
 
         if not connection:
@@ -464,17 +589,25 @@ class EmailService:
                 gmail_connection_id,
             )
 
-        message = self._build_message(
-            subject=subject,
-            to_email=receiver,
-            html_body=html_body,
-            text_body=html_body,
+        access_token = await self._access_token_for_connection(
+            organization_id, created_by, connection
         )
 
-        await self._send_smtp_message(message)
-        message_id = str(uuid4())
-        thread_id = message_id
-    
+        sender_email = connection.email_address
+
+        msg = MIMEMultipart("alternative")
+        msg["From"] = sender_email
+        msg["To"] = receiver
+        msg["Subject"] = subject
+        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(html_body, "plain"))
+
+        raw_mime = msg.as_string()
+
+        gmail_response = await self.gmail_client.send_message(access_token, raw_mime)
+
+        message_id = gmail_response.get("id", str(uuid4()))
+        thread_id = gmail_response.get("threadId", message_id)
 
         email, _ = await self.ingest_email(
             organization_id=organization_id,
@@ -483,15 +616,17 @@ class EmailService:
             gmail_message_id=message_id,
             thread_id=thread_id,
             direction=EmailDirection.OUTBOUND,
-            sender=settings.SMTP_FROM_EMAIL,
+            sender=sender_email,
             receiver=receiver,
             subject=subject,
             body_preview=html_body[:500],
             sent_at=datetime.now(timezone.utc),
             attachment_metadata=[],
             raw_payload={
-                "provider": "brevo_smtp",
+                "provider": "gmail_api",
                 "status": "sent",
+                "gmail_message_id": message_id,
+                "gmail_thread_id": thread_id,
                 "events": [
                     {
                         "event": "sent",
@@ -550,7 +685,14 @@ class EmailService:
         if not connection:
             raise NotFoundException("GmailConnection", connection_id)
         access_token = await self._access_token_for_connection(organization_id, created_by, connection)
-        listed = await self.gmail_client.list_messages(access_token, page_token=connection.sync_cursor, max_results=25)
+        try:
+            listed = await self.gmail_client.list_messages(access_token, page_token=connection.sync_cursor, max_results=25)
+        except Exception as exc:
+            # Stale pageToken causes 400 — reset cursor and retry once
+            logger.warning("Gmail list_messages failed, resetting cursor: %s", exc)
+            connection.sync_cursor = None
+            await self.connection_repo.update(connection, sync_cursor=None)
+            listed = await self.gmail_client.list_messages(access_token, page_token=None, max_results=25)
         messages = []
         for item in listed.get("messages", []):
             try:
@@ -558,12 +700,213 @@ class EmailService:
                 messages.append(self._gmail_message_to_sync(connection, raw_message))
             except Exception as exc:
                 logger.warning("Skipping Gmail message after fetch failure", extra={"message_id": item.get("id"), "error": str(exc)})
+
+        # Link inbound messages to leads by matching sender email
+        from app.models.lead import Lead
+        from sqlalchemy import select as sa_select
+        for msg in messages:
+            if msg.direction == EmailDirection.INBOUND.value and not msg.external_entity_id:
+                sender_email = parseaddr(msg.sender)[1] if msg.sender else None
+                if sender_email:
+                    stmt = (
+                        sa_select(Lead.id, Lead.contact_id)
+                        .where(Lead.organization_id == organization_id, Lead.email == sender_email.lower(), Lead.is_active.is_(True))
+                        .limit(1)
+                    )
+                    row = (await self.db.execute(stmt)).first()
+                    if row:
+                        msg.external_entity_type = "lead"
+                        msg.external_entity_id = row[0]
+                    else:
+                        # Try matching via contact email
+                        from app.models.contact import Contact
+                        c_stmt = (
+                            sa_select(Contact.id)
+                            .where(Contact.organization_id == organization_id, Contact.email == sender_email.lower())
+                            .limit(1)
+                        )
+                        c_row = (await self.db.execute(c_stmt)).first()
+                        if c_row:
+                            l_stmt = (
+                                sa_select(Lead.id)
+                                .where(Lead.organization_id == organization_id, Lead.contact_id == c_row[0], Lead.is_active.is_(True))
+                                .limit(1)
+                            )
+                            l_row = (await self.db.execute(l_stmt)).first()
+                            if l_row:
+                                msg.external_entity_type = "lead"
+                                msg.external_entity_id = l_row[0]
+
         payload = EmailSyncRequest(
             gmail_connection_id=connection.id,
             sync_cursor=listed.get("nextPageToken") or listed.get("historyId") or connection.sync_cursor,
             messages=messages,
         )
         return await self.sync_messages(organization_id, created_by, payload)
+
+    async def _ingest_gmail_message(
+        self,
+        organization_id: UUID,
+        created_by: Optional[UUID],
+        connection: GmailConnection,
+        msg: dict,
+    ) -> tuple[Email | None, bool]:
+        """Reply-match a single Gmail message and ingest it against the original.
+
+        Returns (email, created); (None, False) when no matching original is found.
+        """
+        headers = headers_map(msg)
+
+        # 1) Same Gmail thread as an outbound email — replies share the threadId
+        #    of the message they answer, so this is the most reliable signal.
+        original = None
+        thread_id = msg.get("threadId")
+        if thread_id:
+            original = await self.email_repo.get_outbound_by_thread(organization_id, thread_id)
+
+        # 2) In-Reply-To / References → RFC 5322 Message-ID local part. The local
+        #    part is stored on the outbound email (raw_payload) when we send it.
+        if not original:
+            raw_ref = headers.get("in-reply-to") or (
+                headers.get("references", "").split()[-1] if headers.get("references") else ""
+            )
+            in_reply_to = raw_ref.strip("<>").split("@")[0] if raw_ref else ""
+            if in_reply_to:
+                original = await self.email_repo.get_by_raw_message_id_local(in_reply_to)
+                if not original:
+                    original = await self.email_repo.get_by_message_id_global(in_reply_to)
+
+        # 3) Subject + participants fallback (handles clients that rewrite threads).
+        if not original:
+            subject = headers.get("subject", "")
+            normalized = self._normalize_subject(subject)
+            from_email = parseaddr(headers.get("from", ""))[1]
+            original = await self.email_repo.get_latest_outbound_by_subject_and_participants(
+                organization_id, normalized, from_email
+            )
+
+        if not original:
+            return None, False
+
+        merged = dict(original.raw_payload or {})
+        merged["status"] = "replied"
+        merged.setdefault("events", []).append({"event": "replied", "gmail_message_id": msg["id"]})
+        original.raw_payload = merged
+
+        body_preview = decode_gmail_body(msg.get("payload", {})) or msg.get("snippet", "")
+
+        return await self.ingest_email(
+            organization_id=organization_id,
+            created_by=created_by,
+            gmail_connection_id=connection.id,
+            gmail_message_id=msg["id"],
+            thread_id=original.thread_id,
+            direction=EmailDirection.INBOUND,
+            sender=headers.get("from", ""),
+            receiver=headers.get("to", ""),
+            subject=headers.get("subject", ""),
+            body_preview=body_preview[:2000],
+            sent_at=gmail_datetime(msg),
+            raw_payload={"provider": "gmail", "status": "received"},
+            external_entity_type=original.external_entity_type,
+            external_entity_id=original.external_entity_id,
+        )
+
+    async def _incremental_sync_from_gmail(
+        self,
+        organization_id: UUID,
+        created_by: Optional[UUID],
+        connection: GmailConnection,
+        access_token: str,
+        start_history_id: str,
+    ) -> EmailSyncResultResponse:
+        """Incremental sync via the Gmail users.history API since the stored cursor."""
+        message_ids: list[str] = []
+        history_id: Optional[str] = None
+        page_token: Optional[str] = None
+        while True:
+            history = await self.gmail_client.list_history(
+                access_token,
+                start_history_id=start_history_id,
+                page_token=page_token,
+            )
+            history_id = history.get("historyId") or history_id
+            for entry in history.get("history", []) or []:
+                for group in ("messagesAdded", "messageUpdated"):
+                    for item in entry.get(group, []) or []:
+                        for message in item.get("messages", []) or []:
+                            if message.get("id"):
+                                message_ids.append(message["id"])
+            page_token = history.get("nextPageToken")
+            if not page_token:
+                break
+
+        ingested: list[Email] = []
+        skipped = 0
+        for message_id in dict.fromkeys(message_ids):
+            try:
+                msg = await self.gmail_client.get_message(access_token, message_id)
+            except Exception as exc:
+                logger.warning("Skipping Gmail message after fetch failure", extra={"message_id": message_id, "error": str(exc)})
+                skipped += 1
+                continue
+            email, created = await self._ingest_gmail_message(organization_id, created_by, connection, msg)
+            if created:
+                ingested.append(email)
+            else:
+                skipped += 1
+
+        connection.sync_cursor = (
+            history_id or start_history_id
+        )
+        await self.connection_repo.update(
+            connection, sync_cursor=connection.sync_cursor, sync_status=EmailSyncStatus.ACTIVE.value
+        )
+        await self.email_repo.save()
+
+        if ingested:
+            inbound_threads = {
+                e.thread_id for e in ingested
+                if e.thread_id and e.direction == EmailDirection.INBOUND.value
+            }
+
+            # Group inbound threads by lead_id for sequential processing
+            lead_threads: dict[UUID, set[str]] = {}
+            for e in ingested:
+                if (
+                    e.direction == EmailDirection.INBOUND.value
+                    and e.external_entity_type == "lead"
+                    and e.external_entity_id
+                    and e.thread_id
+                ):
+                    lead_threads.setdefault(e.external_entity_id, set()).add(e.thread_id)
+
+            for lid, tids in lead_threads.items():
+                task = asyncio.create_task(
+                    self._summarize_and_assess(organization_id, lid, tids)
+                )
+                _background_tasks.add(task)
+                task.add_done_callback(_background_tasks.discard)
+
+        return EmailSyncResultResponse(
+            gmail_connection_id=connection.id,
+            synced_count=len(ingested),
+            skipped_count=skipped,
+            next_cursor=connection.sync_cursor,
+            connection_status=EmailSyncStatus.ACTIVE.value,
+            emails=[EmailResponse.model_validate(item) for item in ingested],
+        )
+
+    def _normalize_subject(self, subject: str) -> str:
+        # Strips repeated reply/forward markers like "Re:", "RE:", "Re[2]:",
+        # "Re: Fwd: Re: ..." and locale variants ("Aw:", "Sv:").
+        return re.sub(
+            r"^((re|fwd|fw|aw|sv)(\s*\[\d+\])?\s*:\s*)+",
+            "",
+            subject.strip(),
+            flags=re.IGNORECASE,
+        ).lower()
+
     async def webhook_sync(self, organization_id: UUID, created_by: Optional[UUID], payload: GmailWebhookRequest) -> EmailSyncResultResponse:
         if payload.gmail_connection_id:
             return await self.fetch_from_gmail(organization_id, payload.gmail_connection_id, created_by)

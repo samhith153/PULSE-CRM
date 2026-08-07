@@ -53,8 +53,8 @@ class UserService:
             is_verified=True,
         )
 
-        if payload.role_ids:
-            await self.user_repo.assign_roles(user, payload.role_ids, created_by)
+        if payload.role_id:
+            await self.user_repo.assign_role(user, payload.role_id, created_by)
 
         user = await self.user_repo.get_by_id_with_roles(user.id)
         logger.info("User created", extra={"user_id": str(user.id), "created_by": str(created_by)})
@@ -69,7 +69,7 @@ class UserService:
                 "user_id": str(user.id),
                 "email": user.email,
                 "full_name": user.full_name,
-                "role_ids": [str(role_id) for role_id in (payload.role_ids or [])],
+                "role_id": str(payload.role_id) if payload.role_id else None,
             },
         )
         return user
@@ -147,18 +147,18 @@ class UserService:
         )
         return user
 
-    async def assign_roles(
+    async def assign_role(
         self,
         user_id: UUID,
         organization_id: UUID,
-        role_ids: List[UUID],
+        role_id: UUID,
         assigned_by: UUID,
     ) -> User:
         user = await self.get_user(user_id, organization_id)
-        await self.user_repo.assign_roles(user, role_ids, assigned_by)
+        await self.user_repo.assign_role(user, role_id, assigned_by)
         updated = await self.user_repo.get_by_id_with_roles(user.id)
         await self.events.record_event(
-            "USER_ROLES_ASSIGNED",
+            "USER_ROLE_ASSIGNED",
             organization_id=organization_id,
             actor_id=assigned_by,
             aggregate_type="user",
@@ -166,7 +166,7 @@ class UserService:
             source="user_service",
             payload={
                 "user_id": str(user.id),
-                "role_ids": [str(role_id) for role_id in role_ids],
+                "role_id": str(role_id),
                 "assigned_by": str(assigned_by),
             },
         )

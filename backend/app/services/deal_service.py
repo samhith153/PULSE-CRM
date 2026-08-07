@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BusinessRuleException, ConflictException, NotFoundException
@@ -195,11 +196,86 @@ class DealService:
                 payload={"deal_id": str(deal.id), "changes": list(update_data.keys())},
                 topic="deal",
             )
-        return deal
+
+        # Trigger unified assessment if stage changed and deal has a linked lead
+        if deal.lead_id and "pipeline_stage_id" in update_data:
+            try:
+                from app.services.ai_pipeline import run_lead_assessment
+                await run_lead_assessment(
+                    self.db, deal.lead_id, organization_id, deal.created_by,
+                    trigger="deal_stage_changed",
+                )
+            except Exception as e:
+                logger.warning("Failed to run assessment on deal stage change", extra={"deal_id": str(deal_id), "error": str(e)})
+
+        return await self.get(deal_id, organization_id)
 
     async def delete(self, deal_id: UUID, organization_id: UUID) -> None:
         deal = await self.get(deal_id, organization_id)
         await self.repo.soft_delete(deal)
+
+        # ── Cascade soft-delete to contact (if no other active deals remain) ──
+        if deal.contact_id:
+            other_deals = (
+                await self.db.execute(
+                    select(func.count()).select_from(Deal).where(
+                        Deal.contact_id == deal.contact_id,
+                        Deal.is_deleted == False,
+                        Deal.id != deal_id,
+                    )
+                )
+            ).scalar() or 0
+            if other_deals == 0:
+                from app.models.contact import Contact
+                contact = await self.db.get(Contact, deal.contact_id)
+                if contact and not contact.is_deleted:
+                    contact.is_deleted = True
+                    contact.is_active = False
+                    self.db.add(contact)
+                    await self.db.flush()
+                    await self.timeline.record_activity(
+                        organization_id=organization_id,
+                        created_by=contact.created_by,
+                        entity_type=ActivityEntityType.CONTACT.value,
+                        entity_id=contact.id,
+                        action="contact_deleted",
+                        title="Contact cascaded to deleted",
+                        description=f"Contact '{contact.full_name}' was soft-deleted when the deal was removed.",
+                        payload={"contact_id": str(contact.id), "cascaded_from_deal": str(deal.id)},
+                        topic="contact",
+                    )
+
+        # ── Cascade soft-delete to company (if no other active deals remain) ──
+        if deal.company_id:
+            other_deals = (
+                await self.db.execute(
+                    select(func.count()).select_from(Deal).where(
+                        Deal.company_id == deal.company_id,
+                        Deal.is_deleted == False,
+                        Deal.id != deal_id,
+                    )
+                )
+            ).scalar() or 0
+            if other_deals == 0:
+                from app.models.company import Company
+                company = await self.db.get(Company, deal.company_id)
+                if company and not company.is_deleted:
+                    company.is_deleted = True
+                    company.is_active = False
+                    self.db.add(company)
+                    await self.db.flush()
+                    await self.timeline.record_activity(
+                        organization_id=organization_id,
+                        created_by=company.created_by,
+                        entity_type=ActivityEntityType.COMPANY.value,
+                        entity_id=company.id,
+                        action="company_deleted",
+                        title="Company cascaded to deleted",
+                        description=f"Company '{company.name}' was soft-deleted when the deal was removed.",
+                        payload={"company_id": str(company.id), "cascaded_from_deal": str(deal.id)},
+                        topic="company",
+                    )
+
         await self.timeline.record_activity(
             organization_id=organization_id,
             created_by=deal.created_by,

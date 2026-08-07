@@ -20,7 +20,7 @@ from datetime import date
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 
 from app.api.deps import CurrentUser, DBSession, require_permission
 from app.schemas.calendar import (
@@ -253,7 +253,7 @@ async def get_calendar_event(
     "/event/{event_id}",
     response_model=StandardResponse[CalendarEventResponse],
     summary="Update a calendar event",
-    dependencies=[Depends(require_permission("activity:create"))],
+    dependencies=[Depends(require_permission("activity:update"))],
     tags=["Calendar"],
 )
 async def update_calendar_event(
@@ -270,8 +270,10 @@ async def update_calendar_event(
 @router.delete(
     "/event/{event_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    response_class=Response,
+    response_model=None,
     summary="Soft delete a calendar event",
-    dependencies=[Depends(require_permission("activity:create"))],
+    dependencies=[Depends(require_permission("activity:update"))],
     tags=["Calendar"],
 )
 async def delete_calendar_event(
