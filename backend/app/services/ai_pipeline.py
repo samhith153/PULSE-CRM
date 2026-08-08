@@ -213,14 +213,19 @@ async def run_lead_assessment(
         raw_data["initiated_count"] = email_stats["initiated_count"]
 
     # ── Call ai-service ─────────────────────────────────────────────────
+    logger.info("[ASSESS_PIPELINE] Sending payload to AI service for lead=%s trigger=%s raw_data=%s", lead_id, trigger, raw_data)
     ai_client = AIClient()
     try:
         result = await ai_client.assess_lead(str(lead_id), raw_data)
+        logger.info("[ASSESS_PIPELINE] AI service returned type=%s is_none=%s", type(result).__name__, result is None)
+    except Exception:
+        logger.exception("[ASSESS_PIPELINE] Exception calling AI service for lead=%s", lead_id)
+        result = None
     finally:
         await ai_client.close()
 
     if not result:
-        logger.warning("[ASSESS_PIPELINE] AI service returned None for lead %s — no scores persisted", lead_id)
+        logger.warning("[ASSESS_PIPELINE] AI service returned None for lead %s — raw payload was: %s", lead_id, raw_data)
         return None
 
     logger.info("[ASSESS_PIPELINE] AI service responded for lead=%s: fit=%s engagement=%s overall=%s tier=%s",
@@ -241,13 +246,16 @@ async def run_lead_assessment(
         "priority_tier": result["overall"]["tier"],
         "top_reasons": result["overall"]["top_reasons"],
     }
+    logger.info("[ASSESS_PIPELINE] Persisting scores for lead=%s: %s", lead_id, scores_data)
     score_repo = LeadScoreRepository(db)
     ls = await score_repo.upsert_for_lead(
         lead_id, organization_id, created_by, scores_data
     )
+    logger.info("[ASSESS_PIPELINE] Lead scores upserted: id=%s", ls.id if ls else "None")
 
     # ── Persist ai_recommendation ───────────────────────────────────────
     rec = result.get("recommendation", {})
+    logger.info("[ASSESS_PIPELINE] Recommendation: action=%s score=%s", rec.get("action"), rec.get("score"))
     if rec and rec.get("action"):
         rec_repo = AIRecommendationRepository(db)
         priority = "medium"
@@ -271,6 +279,7 @@ async def run_lead_assessment(
                 "trigger": trigger,
             },
         )
+        logger.info("[ASSESS_PIPELINE] Recommendation persisted for lead=%s", lead_id)
 
     # ── Persist feature_vectors (audit only) ────────────────────────────
     fv_repo = FeatureVectorRepository(db)
@@ -298,6 +307,8 @@ async def run_lead_assessment(
         "model_version": result.get("versions", {}).get("model_version"),
         "prompt_version": result.get("versions", {}).get("prompt_version"),
     }
-    await fv_repo.upsert_for_lead(lead_id, organization_id, created_by, fv_features)
+    logger.info("[ASSESS_PIPELINE] Persisting feature vector for lead=%s: %s", lead_id, fv_features)
+    fv = await fv_repo.upsert_for_lead(lead_id, organization_id, created_by, fv_features)
+    logger.info("[ASSESS_PIPELINE] Feature vector upserted: id=%s updated_at=%s", fv.id if fv else "None", fv.updated_at if fv else "None")
 
     return result

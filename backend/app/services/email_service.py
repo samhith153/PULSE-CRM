@@ -457,6 +457,11 @@ class EmailService:
             },
             topic = "gmail" if gmail_connection_id else "smtp",
         )
+
+        # Commit the email row so fresh-session background tasks (summarize/assess)
+        # can see it — otherwise the new email is invisible to the assessment.
+        await self.db.commit()
+
         if direction == EmailDirection.INBOUND:
             await self.events.record_event(
                 EventType.EMAIL_RECEIVED,
