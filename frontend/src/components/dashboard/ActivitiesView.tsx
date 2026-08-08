@@ -20,6 +20,7 @@ import {
 import ActivityDetailView from './ActivityDetailView';
 import { toast } from '@/lib/toast';
 
+
 interface ActivitiesViewProps {
   activityId?: string;
   onTabChange?: (tab: string) => void;
@@ -219,8 +220,42 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     finally { setLoading(false); }
   }, [currentPage, activeTabType, searchQuery, statusFilter, priorityFilter, ownerFilter, quickTab, owners]);
 
-  useEffect(() => { fetchActivities(); }, [fetchActivities]);
-  useEffect(() => { setCurrentPage(1); }, [activeTabType, searchQuery, statusFilter, priorityFilter, ownerFilter, quickTab]);
+  useEffect(() => {
+  fetchActivities();
+}, [fetchActivities]);
+
+/*
+ * When the Workflow page automatically creates an
+ * AI-recommended CRM task, refresh Activities immediately.
+ */
+useEffect(() => {
+  const handleWorkflowActivityCreated = () => {
+    void fetchActivities();
+  };
+
+  window.addEventListener(
+    'pulse-crm-activity-created',
+    handleWorkflowActivityCreated
+  );
+
+  return () => {
+    window.removeEventListener(
+      'pulse-crm-activity-created',
+      handleWorkflowActivityCreated
+    );
+  };
+}, [fetchActivities]);
+
+useEffect(() => {
+  setCurrentPage(1);
+}, [
+  activeTabType,
+  searchQuery,
+  statusFilter,
+  priorityFilter,
+  ownerFilter,
+  quickTab,
+]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSelectedIds(e.target.checked ? new Set(activities.map(a => a.id)) : new Set());
