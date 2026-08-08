@@ -200,8 +200,8 @@ export default function DashboardHome() {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-surface-warm">
-        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 text-brand animate-spin" />
       </div>
     );
   }
@@ -211,7 +211,7 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="flex bg-background h-screen overflow-hidden font-sans text-foreground antialiased">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 
@@ -314,14 +314,14 @@ export default function DashboardHome() {
                     
                     {/* Datepicker and Layout Customization (Tactile and premium style) */}
                     <div className="flex items-center space-x-2 shrink-0 self-start md:self-auto">
-                      <button className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition duration-200 cursor-pointer">
+                      <button className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition-all duration-200 cursor-pointer">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
                         <span className="tabular-nums">May 12 – May 18, 2025</span>
                       </button>
 
                       <button 
                         onClick={() => setIsCustomizerOpen(true)}
-                        className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition duration-200 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition-all duration-200 cursor-pointer"
                       >
                         <Settings2 className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
                         <span>Customize Layout</span>
@@ -375,7 +375,7 @@ export default function DashboardHome() {
 
                   </div>
                   {/* Report Builder Control Panel at the bottom of the page */}
-                  <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-nav hover:-translate-y-0.5 transition duration-300 mt-8">
+                  <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 mt-8">
                     <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
                       <div>
                         <h3 className="font-bold text-foreground text-sm">Report builder</h3>
@@ -400,7 +400,7 @@ export default function DashboardHome() {
                             <select
                               value={reportType}
                               onChange={(e) => setReportType(e.target.value)}
-                              className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition duration-200 cursor-pointer appearance-none pr-8 font-semibold"
+                              className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer appearance-none pr-8 font-semibold"
                             >
                               <option value="Sales Funnel">Sales Funnel Analysis</option>
                               <option value="Lead Conversion">Lead Conversion Rate</option>
@@ -422,7 +422,7 @@ export default function DashboardHome() {
                             <select
                               value={primaryMetric}
                               onChange={(e) => setPrimaryMetric(e.target.value)}
-                              className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition duration-200 cursor-pointer appearance-none pr-8 font-semibold"
+                              className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200 cursor-pointer appearance-none pr-8 font-semibold"
                             >
                               <option value="Deal Value">Deal Value (INR)</option>
                               <option value="Lead Score">AI Lead Score</option>
@@ -448,7 +448,7 @@ export default function DashboardHome() {
                                   key={group}
                                   type="button"
                                   onClick={() => setGroupBy(group)}
-                                  className={`py-1.5 rounded-lg text-[10px] font-extrabold border transition duration-200 cursor-pointer ${
+                                  className={`py-1.5 rounded-lg text-[10px] font-extrabold border transition-all duration-200 cursor-pointer ${
                                     isActive 
                                       ? 'border-brand-purple bg-brand-purple/5 text-brand-purple shadow-sm' 
                                       : 'border-border hover:border-muted-foreground text-muted-foreground hover:bg-secondary'
@@ -472,7 +472,7 @@ export default function DashboardHome() {
                         </div>
                         <button
                           onClick={() => setIsReportModalOpen(true)}
-                          className="inline-flex items-center justify-center space-x-1.5 bg-ink text-background hover:-translate-y-0.5 hover:shadow-nav py-2.5 px-5 rounded-full text-xs font-bold transition duration-200 cursor-pointer w-full sm:w-auto shrink-0 animate-pulse-slow"
+                          className="inline-flex items-center justify-center space-x-1.5 bg-ink text-background hover:-translate-y-0.5 hover:shadow-nav py-2.5 px-5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer w-full sm:w-auto shrink-0 animate-pulse-slow"
                         >
                           <Plus className="h-4 w-4" strokeWidth={2.5} />
                           <span>Generate Custom Report</span>
