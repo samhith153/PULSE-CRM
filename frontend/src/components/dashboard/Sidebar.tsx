@@ -72,7 +72,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           label: 'Productivity',
           items: [
             { name: 'Activities',   icon: Activity,  tab: 'activities' },
-            { name: 'Tasks',        icon: ClipboardList, tab: 'tasks' },
             { name: 'Calendar',     icon: Calendar,  tab: 'calendar' },
             { name: 'AI Insights',  icon: Sparkles,  tab: 'ai insights' },
           ],
@@ -130,7 +129,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
             { name: 'Companies',    icon: Building2,  tab: 'companies' },
             { name: 'Deals',        icon: Layers,     tab: 'deals' },
             { name: 'Activities',   icon: Activity,   tab: 'activities' },
-            { name: 'Tasks',        icon: ClipboardList, tab: 'tasks' },
             { name: 'Emails',       icon: Mail,       tab: 'emails' },
           ],
         },

@@ -148,6 +148,7 @@ function RevenueChart({
   visible: boolean;
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
+  const [activeMetric, setActiveMetric] = useState<'both' | 'revenue' | 'leads'>('both');
   const n = monthly.length;
   if (n === 0) return <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">No data yet.</div>;
 
@@ -155,6 +156,9 @@ function RevenueChart({
   const leads    = monthly.map((m) => m.leads_created);
   const maxRev   = Math.max(...revenues, 1);
   const maxLead  = Math.max(...leads, 1);
+
+  // Y-axis labels (revenue)
+  const yLabels = [maxRev, maxRev * 0.75, maxRev * 0.5, maxRev * 0.25, 0];
 
   const revCoords  = revenues.map((v, i) => ({ x: (i/(n-1))*100, y: 86 - (v/maxRev)*78 + 2 }));
   const leadCoords = leads.map((v, i)    => ({ x: (i/(n-1))*100, y: 86 - (v/maxLead)*78 + 2 }));
@@ -175,129 +179,240 @@ function RevenueChart({
   };
 
   const revPathStr = curvePath(revCoords);
-  const revAreaStr = `${revPathStr} L 100 90 L 0 90 Z`;
-
+  const revAreaStr = `${revPathStr} L ${((n-1)/(n-1))*100} 90 L 0 90 Z`;
   const leadPathStr = curvePath(leadCoords);
-  const leadAreaStr = `${leadPathStr} L 100 90 L 0 90 Z`;
+  const leadAreaStr = `${leadPathStr} L ${((n-1)/(n-1))*100} 90 L 0 90 Z`;
+
+  const showRev  = activeMetric === 'both' || activeMetric === 'revenue';
+  const showLead = activeMetric === 'both' || activeMetric === 'leads';
+
+  // Total sums for the legend
+  const totalRev  = revenues.reduce((a, b) => a + b, 0);
+  const totalLead = leads.reduce((a, b) => a + b, 0);
 
   return (
-    <div className="mt-4 relative">
-      <svg
-        viewBox="0 0 100 90"
-        preserveAspectRatio="none"
-        className="h-48 w-full overflow-visible"
-        aria-hidden
-      >
-        <defs>
-          <linearGradient id="adminRevGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--brand-purple)" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="var(--brand-purple)" stopOpacity="0.0" />
-          </linearGradient>
-          <linearGradient id="adminLeadGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--brand-cyan)" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="var(--brand-cyan)" stopOpacity="0.0" />
-          </linearGradient>
-        </defs>
+    <div className="mt-4 space-y-3">
+      {/* Legend + metric toggle pills */}
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setActiveMetric(activeMetric === 'revenue' ? 'both' : 'revenue')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
+              activeMetric === 'leads'
+                ? 'opacity-40 bg-transparent border-border text-muted-foreground'
+                : 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple shadow-sm'
+            }`}
+          >
+            <span className="size-2 rounded-full bg-brand-purple inline-block" />
+            Revenue
+            <span className="ml-1 font-black tabular-nums">{formatINR(totalRev)}</span>
+          </button>
+          <button
+            onClick={() => setActiveMetric(activeMetric === 'leads' ? 'both' : 'leads')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
+              activeMetric === 'revenue'
+                ? 'opacity-40 bg-transparent border-border text-muted-foreground'
+                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 shadow-sm'
+            }`}
+          >
+            <span className="size-2 rounded-full bg-emerald-500 inline-block" />
+            Leads
+            <span className="ml-1 font-black tabular-nums">{totalLead.toLocaleString()}</span>
+          </button>
+        </div>
+        {hovered !== null && (
+          <motion.span
+            initial={{ opacity: 0, x: 6 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="text-[11px] font-bold text-muted-foreground px-2 py-0.5 rounded-lg bg-secondary border border-border"
+          >
+            {new Date(`${monthly[hovered].month}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
+          </motion.span>
+        )}
+      </div>
 
-        {/* Grid lines */}
-        {[0, 22, 44, 66, 88].map((y) => (
-          <line key={y} x1="0" x2="100" y1={y} y2={y}
-            stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" strokeOpacity={0.4} vectorEffect="non-scaling-stroke"
-            className="text-border" />
-        ))}
+      {/* Chart area */}
+      <div className="relative">
+        <svg
+          viewBox="0 0 100 90"
+          preserveAspectRatio="none"
+          className="h-52 w-full overflow-visible"
+          aria-hidden
+        >
+          <defs>
+            <linearGradient id="adminRevGrad2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.32" />
+              <stop offset="60%" stopColor="#8b5cf6" stopOpacity="0.10" />
+              <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.00" />
+            </linearGradient>
+            <linearGradient id="adminLeadGrad2" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#10b981" stopOpacity="0.28" />
+              <stop offset="60%" stopColor="#10b981" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="#10b981" stopOpacity="0.00" />
+            </linearGradient>
+            {/* Hovered vertical line glow */}
+            <filter id="glowLine" x="-100%" y="-20%" width="300%" height="140%">
+              <feGaussianBlur stdDeviation="1.5" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
 
-        {/* Revenue area */}
-        <motion.path
-          d={revAreaStr}
-          fill="url(#adminRevGrad)"
-          initial={{ opacity: 0 }}
-          animate={visible ? { opacity: 1 } : { opacity: 0 }}
-          transition={{ duration: 0.8 }}
-        />
-        {/* Revenue line */}
-        <motion.path
-          d={revPathStr}
-          fill="none"
-          stroke="var(--brand-purple)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0 }}
-          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
-          transition={{ duration: 1.2, ease: "easeInOut" }}
-        />
+          {/* Subtle horizontal grid */}
+          {[10, 30, 50, 70, 88].map((y) => (
+            <line key={y} x1="0" x2="100" y1={y} y2={y}
+              stroke="currentColor" strokeWidth="0.6" strokeDasharray="1.5 3" strokeOpacity={0.25}
+              vectorEffect="non-scaling-stroke" className="text-border" />
+          ))}
 
-        {/* Leads area */}
-        <motion.path
-          d={leadAreaStr}
-          fill="url(#adminLeadGrad)"
-          initial={{ opacity: 0 }}
-          animate={visible ? { opacity: 1 } : { opacity: 0 }}
-          transition={{ duration: 0.8, delay: 0.2 }}
-        />
-        {/* Leads line */}
-        <motion.path
-          d={leadPathStr}
-          fill="none"
-          stroke="var(--brand-cyan)"
-          strokeWidth="1.5"
-          strokeDasharray="4 3"
-          vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0 }}
-          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
-          transition={{ duration: 1.2, ease: "easeInOut", delay: 0.2 }}
-        />
+          {/* Active vertical hover line */}
+          {hovered !== null && (
+            <line
+              x1={revCoords[hovered].x.toFixed(1)}
+              x2={revCoords[hovered].x.toFixed(1)}
+              y1="2" y2="88"
+              stroke="#8b5cf6"
+              strokeWidth="1"
+              strokeOpacity="0.5"
+              strokeDasharray="2 2"
+              vectorEffect="non-scaling-stroke"
+              filter="url(#glowLine)"
+            />
+          )}
 
-        {/* Data points + hover zones */}
-        {revCoords.map((c, i) => (
-          <g key={i}>
-            <circle cx={c.x.toFixed(1)} cy={c.y.toFixed(1)} r={hovered===i ? '2.5' : '1.8'}
-              fill="var(--brand-cyan)" stroke="var(--background)" strokeWidth="1.5" vectorEffect="non-scaling-stroke" className="transition-all duration-150" />
+          {/* Revenue fill */}
+          {showRev && (
+            <motion.path
+              d={revAreaStr}
+              fill="url(#adminRevGrad2)"
+              initial={{ opacity: 0 }}
+              animate={visible ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: 0.7 }}
+            />
+          )}
+          {/* Revenue line */}
+          {showRev && (
+            <motion.path
+              d={revPathStr}
+              fill="none"
+              stroke="#8b5cf6"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              initial={{ pathLength: 0 }}
+              animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
+              transition={{ duration: 1.1, ease: 'easeInOut' }}
+            />
+          )}
+
+          {/* Leads fill */}
+          {showLead && (
+            <motion.path
+              d={leadAreaStr}
+              fill="url(#adminLeadGrad2)"
+              initial={{ opacity: 0 }}
+              animate={visible ? { opacity: 1 } : { opacity: 0 }}
+              transition={{ duration: 0.7, delay: 0.15 }}
+            />
+          )}
+          {/* Leads line */}
+          {showLead && (
+            <motion.path
+              d={leadPathStr}
+              fill="none"
+              stroke="#10b981"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              initial={{ pathLength: 0 }}
+              animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
+              transition={{ duration: 1.1, ease: 'easeInOut', delay: 0.15 }}
+            />
+          )}
+
+          {/* Revenue data points */}
+          {showRev && revCoords.map((c, i) => (
+            <circle key={`rev-${i}`}
+              cx={c.x.toFixed(1)} cy={c.y.toFixed(1)}
+              r={hovered === i ? '2.8' : '1.6'}
+              fill={hovered === i ? '#8b5cf6' : '#a78bfa'}
+              stroke="white" strokeWidth={hovered === i ? '1.8' : '1.2'}
+              vectorEffect="non-scaling-stroke"
+              style={{ transition: 'all 0.15s' }}
+            />
+          ))}
+
+          {/* Leads data points */}
+          {showLead && leadCoords.map((c, i) => (
+            <circle key={`lead-${i}`}
+              cx={c.x.toFixed(1)} cy={c.y.toFixed(1)}
+              r={hovered === i ? '2.5' : '1.4'}
+              fill={hovered === i ? '#10b981' : '#34d399'}
+              stroke="white" strokeWidth={hovered === i ? '1.8' : '1.2'}
+              vectorEffect="non-scaling-stroke"
+              style={{ transition: 'all 0.15s' }}
+            />
+          ))}
+
+          {/* Invisible hover zones spanning full height */}
+          {revCoords.map((c, i) => (
             <rect
-              x={`${c.x - 4}`} y="0" width="8" height="90"
+              key={`hz-${i}`}
+              x={`${Math.max(0, c.x - 5)}`} y="0" width="10" height="90"
               fill="transparent" className="cursor-pointer"
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
             />
-          </g>
-        ))}
-      </svg>
+          ))}
+        </svg>
 
-      <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
-        {monthly.map((m) => (
-          <span key={m.month}>
-            {new Date(`${m.month}-01`).toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' })}
-          </span>
-        ))}
-      </div>
+        {/* X-axis month labels */}
+        <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground font-medium px-0.5">
+          {monthly.map((m) => (
+            <span key={m.month}>
+              {new Date(`${m.month}-01`).toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' })}
+            </span>
+          ))}
+        </div>
 
-      {/* Hover tooltip */}
-      <AnimatePresence>
-        {hovered !== null && (
-          <motion.div 
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute top-2 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-float p-3 text-xs flex gap-4 z-20"
-          >
-            <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground">Month</p>
-              <p className="font-semibold text-foreground mt-0.5">
-                {new Date(`${monthly[hovered].month}-01`).toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' })}
+        {/* Hover tooltip */}
+        <AnimatePresence>
+          {hovered !== null && (
+            <motion.div
+              initial={{ opacity: 0, y: 6, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 6, scale: 0.95 }}
+              transition={{ duration: 0.12 }}
+              className="absolute -top-2 left-1/2 -translate-x-1/2 bg-popover/95 backdrop-blur-md border border-border/80 rounded-2xl shadow-xl p-3.5 z-20 min-w-[180px] pointer-events-none"
+            >
+              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-wider mb-2">
+                {new Date(`${monthly[hovered].month}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
               </p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-brand-purple">Revenue</p>
-              <p className="font-semibold text-foreground mt-0.5">{formatINR(asNumber(monthly[hovered].revenue))}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-brand-cyan">Leads</p>
-              <p className="font-semibold text-foreground mt-0.5">{monthly[hovered].leads_created}</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div className="space-y-1.5">
+                {showRev && (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full bg-violet-500 shrink-0" />
+                      <span className="text-[11px] font-semibold text-muted-foreground">Revenue</span>
+                    </div>
+                    <span className="text-[11px] font-black text-foreground tabular-nums">{formatINR(asNumber(monthly[hovered].revenue))}</span>
+                  </div>
+                )}
+                {showLead && (
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="text-[11px] font-semibold text-muted-foreground">Leads</span>
+                    </div>
+                    <span className="text-[11px] font-black text-foreground tabular-nums">{monthly[hovered].leads_created.toLocaleString()}</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

@@ -116,7 +116,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
   const [error, setError] = useState<string | null>(null);
 
   // Global filters state
-  const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
+  const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month');
   const [team, setTeam] = useState<string>('all');
   const [productLine, setProductLine] = useState<string>('all');
 
@@ -288,6 +288,12 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
       const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return { daysLeft, total: 90, label: 'days left in quarter' };
     }
+    if (period === 'year') {
+      const endOfYear = new Date(now.getFullYear(), 11, 31);
+      const diffTime = endOfYear.getTime() - now.getTime();
+      const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return { daysLeft, total: 365, label: 'days left in year' };
+    }
     const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const daysLeft = lastDayOfMonth - now.getDate();
     return { daysLeft, total: lastDayOfMonth, label: 'days left in month' };
@@ -392,6 +398,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
   const funnelStages = useMemo(() => {
     if (!data?.pipeline_health?.stage_distribution) return [];
     const stages = data.pipeline_health.stage_distribution;
+    const maxCount = Math.max(...stages.map(st => st.deal_count), 1);
     return stages.map((st, index) => {
       const nextStage = stages[index + 1];
       const conversionRate = nextStage && st.deal_count > 0
@@ -401,7 +408,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
         name: st.stage,
         count: st.deal_count,
         value: asNumber(st.total_value),
-        pct: asNumber(st.percentage),
+        pct: Math.max((st.deal_count / maxCount) * 100, 5),
         conversionRate
       };
     });
@@ -522,21 +529,31 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
             <span>{isEditMode ? 'Save Layout' : 'Customize Layout'}</span>
           </button>
 
-          <div className="inline-flex items-center gap-1 h-10 p-1 rounded-xl bg-secondary/60 border border-border/70 shadow-sm">
-            {(['week', 'month', 'quarter'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`h-8 px-4 rounded-lg text-xs font-bold capitalize transition-all duration-200 ${
-                  period === p
-                    ? 'bg-card text-foreground shadow-sm border border-border/70'
-                    : 'text-muted-foreground hover:text-foreground border border-transparent'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
+<div className="inline-flex items-center gap-1 h-10 p-1 rounded-xl bg-muted/60 dark:bg-muted/30 border border-border/80 shadow-inner">
+  {[
+    { id: 'week', label: 'Week' },
+    { id: 'month', label: 'Month' },
+    { id: 'quarter', label: 'Quarter' },
+    { id: 'year', label: 'Year' }
+  ].map((p) => (
+    <button
+      key={p.id}
+      onClick={() => setPeriod(p.id as any)}
+      className={`relative h-8 px-4 rounded-lg text-xs font-bold transition-all duration-200 select-none cursor-pointer ${
+        period === p.id ? 'text-slate-900 font-extrabold' : 'text-muted-foreground hover:text-foreground'
+      }`}
+    >
+      {period === p.id && (
+        <motion.div
+          layoutId="activePeriodTab"
+          className="absolute inset-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.06)] rounded-lg border border-slate-200/80"
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+        />
+      )}
+      <span className="relative z-10">{p.label}</span>
+    </button>
+  ))}
+</div>
 
           <div className="relative">
             <Users size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
@@ -635,30 +652,31 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
               let cardContent = null;
               if (itemId === 'forecast') {
                 cardContent = (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Target vs Actual */}
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.1 }}
-                      className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden group h-full"
+                      onClick={() => onTabChange?.('forecast')}
+                      className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-5 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden group h-full cursor-pointer hover:border-brand-blue/40"
                     >
                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-blue to-brand-cyan/40" />
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Target vs Actual</span>
-                          <span className="text-sm font-bold text-brand-blue">{Math.round((actualVal / targetVal) * 100)}% Attained</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Target vs Actual</span>
+                          <span className="text-xs font-bold text-brand-blue">{Math.round((actualVal / targetVal) * 100)}% Attained</span>
                         </div>
-                        <div className="space-y-2">
-                          <h3 className="text-3xl sm:text-4xl font-black text-foreground tabular-nums tracking-tight">
+                        <div className="space-y-1.5">
+                          <h3 className="text-2xl sm:text-3.5xl font-black text-foreground tabular-nums tracking-tight">
                             {formatINR(actualVal)}
                           </h3>
-                          <p className="text-xs text-muted-foreground font-semibold">
+                          <p className="text-[11px] text-muted-foreground font-semibold">
                             of {formatINR(targetVal)} target ({formatINR(targetVal - actualVal)} remaining)
                           </p>
                         </div>
-                        <div className="relative pt-2">
-                          <div className="overflow-hidden h-2.5 text-xs flex rounded-full bg-secondary border border-border/50">
+                        <div className="relative pt-1.5">
+                          <div className="overflow-hidden h-2 text-xs flex rounded-full bg-secondary border border-border/50">
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${Math.min((actualVal / targetVal) * 100, 100)}%` }}
@@ -675,38 +693,39 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.2 }}
-                      className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden group h-full"
+                      onClick={() => onTabChange?.('forecast')}
+                      className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-5 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden group h-full cursor-pointer hover:border-brand-purple/40"
                     >
                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-purple to-pink-500/40" />
-                      <div className="space-y-5">
+                      <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground font-sans">Projected Range</span>
-                          <span className="text-[11px] font-extrabold text-brand-purple uppercase tracking-widest font-mono">P50 Baseline</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground font-sans">Projected Range</span>
+                          <span className="text-[10px] font-extrabold text-brand-purple uppercase tracking-widest font-mono">P50 Baseline</span>
                         </div>
 
-                        <div className="space-y-2">
-                          <h3 className="text-3xl sm:text-4xl font-black text-foreground tabular-nums tracking-tight">
+                        <div className="space-y-1.5">
+                          <h3 className="text-2xl sm:text-3.5xl font-black text-foreground tabular-nums tracking-tight">
                             {formatINR(projectedMid)}
                           </h3>
-                          <p className="text-xs text-muted-foreground font-semibold">
+                          <p className="text-[11px] text-muted-foreground font-semibold">
                             Model confidence score: {confidenceScore}%
                           </p>
                         </div>
 
-                        <div className="space-y-3 pt-2 select-none">
-                          <div className="relative h-2.5 bg-secondary rounded-full border border-border/30">
+                        <div className="space-y-2.5 pt-1.5 select-none">
+                          <div className="relative h-2 bg-secondary rounded-full border border-border/30">
                             <div className="absolute left-[15%] right-[15%] h-full bg-brand-purple/15 rounded-full border-x border-brand-purple/40" />
 
                             <motion.div
                               initial={{ left: 0 }}
                               animate={{ left: `${actualPositionPercent}%` }}
                               transition={{ duration: 1, ease: "easeOut" }}
-                              className="absolute -top-2 -translate-x-1/2 size-5 rounded-full bg-brand-purple border-[3px] border-card shadow-lg flex items-center justify-center"
+                              className="absolute -top-1.5 -translate-x-1/2 size-4.5 rounded-full bg-brand-purple border-[2.5px] border-card shadow-lg flex items-center justify-center"
                             >
                               <span className="size-1.5 bg-white rounded-full animate-ping" />
                             </motion.div>
                           </div>
-                          <div className="flex justify-between text-[10px] font-bold text-muted-foreground/80 font-mono">
+                          <div className="flex justify-between text-[9px] font-bold text-muted-foreground/80 font-mono">
                             <span className="text-destructive/80">Low: {formatINR(projectedLow)}</span>
                             <span className="text-emerald-500/80">High: {formatINR(projectedHigh)}</span>
                           </div>
@@ -719,37 +738,38 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.5, delay: 0.3 }}
-                      className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden group h-full flex flex-col justify-between"
+                      onClick={() => onTabChange?.('forecast')}
+                      className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-5 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden group h-full flex flex-col justify-between cursor-pointer hover:border-emerald-500/40"
                     >
                       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400/40" />
-                      <div className="space-y-5 flex flex-col justify-between h-full">
+                      <div className="space-y-4 flex flex-col justify-between h-full">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Pacing &amp; Run-rate</span>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pacing &amp; Run-rate</span>
                           {growthRate >= 0 ? (
-                            <span className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[11px] font-extrabold flex items-center gap-1.5">
-                              <TrendingUp size={14} />
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] font-extrabold flex items-center gap-1">
+                              <TrendingUp size={12} />
                               <span>Pace Improving</span>
                             </span>
                           ) : (
-                            <span className="px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/25 text-destructive text-[11px] font-extrabold flex items-center gap-1.5">
-                              <TrendingDown size={14} />
+                            <span className="px-2.5 py-1 rounded-full bg-destructive/10 border border-destructive/25 text-destructive text-[10px] font-extrabold flex items-center gap-1">
+                              <TrendingDown size={12} />
                               <span>Pace Declining</span>
                             </span>
                           )}
                         </div>
 
-                        <div className="space-y-2">
-                          <h3 className="text-3xl sm:text-4xl font-black text-foreground tabular-nums tracking-tight">
+                        <div className="space-y-1.5">
+                          <h3 className="text-2xl sm:text-3.5xl font-black text-foreground tabular-nums tracking-tight">
                             {formatINR(Math.max((targetVal - actualVal) / Math.max(periodInfo.daysLeft, 1), 0))}
-                            <span className="text-sm font-bold text-muted-foreground ml-2">/ day</span>
+                            <span className="text-xs font-bold text-muted-foreground ml-1">/ day</span>
                           </h3>
-                          <p className="text-xs text-muted-foreground font-semibold">
+                          <p className="text-[11px] text-muted-foreground font-semibold">
                             Daily rate needed for {periodInfo.daysLeft} {periodInfo.label}
                           </p>
                         </div>
 
-                        <div className="pt-3 border-t border-border/40 flex justify-between items-center text-xs font-bold text-muted-foreground/80">
-                          <span className="flex items-center gap-1.5"><Clock size={14} /> {periodInfo.daysLeft}d remaining</span>
+                        <div className="pt-2.5 border-t border-border/40 flex justify-between items-center text-[11px] font-bold text-muted-foreground/80">
+                          <span className="flex items-center gap-1"><Clock size={12} /> {periodInfo.daysLeft}d remaining</span>
                           <span>{Math.round(Math.max(periodInfo.total - periodInfo.daysLeft, 1) / periodInfo.total * 100)}% elapsed</span>
                         </div>
                       </div>
@@ -774,6 +794,12 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                           <p className="text-[11px] text-muted-foreground font-semibold mt-0.5">Sorted by Risk (Furthest Behind First)</p>
                         </div>
                       </div>
+                      <button
+                        onClick={() => onTabChange?.('team performance')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-brand-purple bg-brand-purple/10 border border-brand-purple/20 rounded-full hover:bg-brand-purple hover:text-white transition-all cursor-pointer"
+                      >
+                        View All <ArrowRight size={11} />
+                      </button>
                     </div>
 
                     <div className="overflow-x-auto">
@@ -818,7 +844,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                             const avatarGradient = colors[idx % colors.length];
 
                             return (
-                              <tr key={rep.user_id} className="hover:bg-secondary/30 transition-all duration-200 cursor-pointer group">
+                              <tr key={rep.user_id} onClick={() => onTabChange?.('team performance')} className="hover:bg-secondary/30 transition-all duration-200 cursor-pointer group">
                                 <td className="py-4 flex items-center gap-3">
                                   <div className={`size-9 rounded-full bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-[11px] font-black text-white shadow-lg border border-white/20 shrink-0`}>
                                     {rep.full_name.split(' ').map(n => n[0]).join('')}
@@ -868,11 +894,15 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                 );
               } else if (itemId === 'funnelChart') {
                 cardContent = (
-                  <ManagerFunnelChart stages={data?.pipeline_health?.stage_distribution} />
+                  <div onClick={() => onTabChange?.('pipeline')} className="cursor-pointer">
+                    <ManagerFunnelChart stages={data?.pipeline_health?.stage_distribution} />
+                  </div>
                 );
               } else if (itemId === 'conversionFunnel') {
                 cardContent = (
-                  <ManagerFunnelStageCard stages={data?.pipeline_health?.stage_distribution} />
+                  <div onClick={() => onTabChange?.('pipeline')} className="cursor-pointer">
+                    <ManagerFunnelStageCard stages={data?.pipeline_health?.stage_distribution} />
+                  </div>
                 );
               } else if (itemId === 'winRate') {
                 cardContent = (
@@ -880,7 +910,8 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
-                    className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden flex flex-col justify-between h-full"
+                    onClick={() => onTabChange?.('pipeline')}
+                    className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden flex flex-col justify-between h-full cursor-pointer hover:border-indigo-500/40"
                   >
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-violet-500/40" />
                     <div>
@@ -930,7 +961,8 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
-                    className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-5 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden flex flex-col h-full"
+                    onClick={() => onTabChange?.('pipeline')}
+                    className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-5 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 relative overflow-hidden flex flex-col h-full cursor-pointer hover:border-brand-cyan/40"
                   >
                     <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-brand-cyan to-sky-400/40" />
                     <div>
@@ -976,7 +1008,8 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
-                    className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-5 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 flex flex-col h-full"
+                    onClick={() => onTabChange?.('team performance')}
+                    className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-5 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 flex flex-col h-full cursor-pointer hover:border-brand-purple/40"
                   >
                     <div>
                       <div className="flex items-center justify-between border-b border-border/60 pb-3 mb-4">
@@ -1039,11 +1072,17 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                             <p className="text-[11px] text-muted-foreground font-semibold mt-0.5">Account-Level Blocks</p>
                           </div>
                         </div>
+                        <button
+                          onClick={() => onTabChange?.('pipeline')}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-full hover:bg-amber-500 hover:text-white transition-all cursor-pointer"
+                        >
+                          View Pipeline <ArrowRight size={11} />
+                        </button>
                       </div>
 
                       <div className="space-y-4 max-h-[440px] overflow-y-auto pr-1">
                         {dealRisks.map((deal) => (
-                          <div key={deal.id} className="p-5 bg-secondary/30 border border-border/50 rounded-2xl space-y-3 hover:border-amber-500/30 transition-all duration-200">
+                          <div key={deal.id} onClick={() => onTabChange?.('pipeline')} className="p-5 bg-secondary/30 border border-border/50 rounded-2xl space-y-3 hover:border-amber-500/30 transition-all duration-200 cursor-pointer">
                             <div className="flex items-start justify-between gap-3">
                               <div>
                                 <h4 className="font-extrabold text-foreground text-sm hover:text-brand-purple transition-colors cursor-pointer">{deal.name}</h4>
@@ -1099,7 +1138,8 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.1 }}
-                    className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 h-full"
+                    onClick={() => onTabChange?.('pipeline')}
+                    className="bg-gradient-to-br from-card via-card to-secondary/25 border border-border/60 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.30)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.45)] transition-all duration-300 h-full cursor-pointer hover:border-brand-purple/40"
                   >
                     <div className="flex items-center justify-between border-b border-border/60 pb-4 mb-5">
                       <div className="flex items-center gap-3">
@@ -1118,7 +1158,7 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                         <div key={stage.name} className="space-y-2.5">
                           <div className="flex justify-between items-center text-sm">
                             <div className="flex items-center gap-3">
-                              <span className="font-extrabold text-foreground">{stage.name}</span>
+                              <span className="font-extrabold text-foreground capitalize">{stage.name}</span>
                               <span className="text-[11px] text-muted-foreground font-bold">({stage.count} deals)</span>
                             </div>
                             <span className="font-black text-foreground tabular-nums font-mono">{formatINR(stage.value)}</span>
@@ -1163,6 +1203,12 @@ export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (t
                           <p className="text-[11px] text-muted-foreground font-semibold mt-0.5">Rolled Up across Reps</p>
                         </div>
                       </div>
+                      <button
+                        onClick={() => onTabChange?.('team performance')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 rounded-full hover:bg-emerald-500 hover:text-white transition-all cursor-pointer"
+                      >
+                        Team View <ArrowRight size={11} />
+                      </button>
                     </div>
 
                     <div className="space-y-4">
