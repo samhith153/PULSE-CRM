@@ -15,6 +15,7 @@ from string import Template
 from typing import Optional, Sequence, Tuple
 from uuid import UUID, uuid4
 
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -641,6 +642,28 @@ class EmailService:
         message_id = gmail_response.get("id", str(uuid4()))
         thread_id = gmail_response.get("threadId", message_id)
 
+        # Auto-link the outbound email to a lead by matching the recipient
+        # (compose modal may not pass entity info). Case-insensitive match.
+        if not external_entity_type or not external_entity_id:
+            from sqlalchemy import select as sa_outbound_select
+            from app.models.lead import Lead
+            recipient_email = parseaddr(receiver)[1] or receiver
+            if recipient_email:
+                o_row = (
+                    await self.db.execute(
+                        sa_outbound_select(Lead.id)
+                        .where(
+                            Lead.organization_id == organization_id,
+                            func.lower(Lead.email) == recipient_email.lower(),
+                            Lead.is_active.is_(True),
+                        )
+                        .limit(1)
+                    )
+                ).first()
+                if o_row:
+                    external_entity_type = "lead"
+                    external_entity_id = o_row[0]
+
         email, _ = await self.ingest_email(
             organization_id=organization_id,
             created_by=created_by,
@@ -754,7 +777,7 @@ class EmailService:
                 if sender_email:
                     stmt = (
                         sa_select(Lead.id, Lead.contact_id)
-                        .where(Lead.organization_id == organization_id, Lead.email == sender_email.lower(), Lead.is_active.is_(True))
+                        .where(Lead.organization_id == organization_id, func.lower(Lead.email) == sender_email.lower(), Lead.is_active.is_(True))
                         .limit(1)
                     )
                     row = (await self.db.execute(stmt)).first()
@@ -765,7 +788,7 @@ class EmailService:
                         from app.models.contact import Contact
                         c_stmt = (
                             sa_select(Contact.id)
-                            .where(Contact.organization_id == organization_id, Contact.email == sender_email.lower())
+                            .where(Contact.organization_id == organization_id, func.lower(Contact.email) == sender_email.lower())
                             .limit(1)
                         )
                         c_row = (await self.db.execute(c_stmt)).first()
@@ -852,7 +875,7 @@ class EmailService:
                 from app.models.lead import Lead
                 stmt = (
                     sa_select2(Lead.id, Lead.contact_id)
-                    .where(Lead.organization_id == organization_id, Lead.email == from_email.lower(), Lead.is_active.is_(True))
+                    .where(Lead.organization_id == organization_id, func.lower(Lead.email) == from_email.lower(), Lead.is_active.is_(True))
                     .limit(1)
                 )
                 row = (await self.db.execute(stmt)).first()
@@ -863,7 +886,7 @@ class EmailService:
                     from app.models.contact import Contact
                     c_stmt = (
                         sa_select2(Contact.id)
-                        .where(Contact.organization_id == organization_id, Contact.email == from_email.lower())
+                        .where(Contact.organization_id == organization_id, func.lower(Contact.email) == from_email.lower())
                         .limit(1)
                     )
                     c_row = (await self.db.execute(c_stmt)).first()
