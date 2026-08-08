@@ -8,18 +8,17 @@ import {
   ArrowRight,
   Plus,
   Activity,
+  CheckCircle,
   AlertTriangle,
-  Loader2,
-  X
+  Loader2
 } from 'lucide-react';
 import {
-  createAutomationEvent,
   getAutomationEvents,
   getWebhookEndpoints,
+  triggerAutomationDelivery,
   type AutomationEvent,
   type WebhookEndpoint
 } from '@/utils/api';
-import { toast } from '@/lib/toast';
 
 type AutomationLog = {
   id: string;
@@ -110,17 +109,12 @@ export default function AutomationView() {
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [savingWorkflow, setSavingWorkflow] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
-  const [workflowForm, setWorkflowForm] = useState({
-    name: '',
-    description: '',
-    trigger: 'CRM Activity Event',
-    status: 'Draft' as 'Active' | 'Draft' | 'Paused'
-  });
+  const [toast, setToast] = useState<string | null>(null);
 
-  const loadAutomationData = async (cancelled = false) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAutomationData() {
       setLoading(true);
       setError(null);
       try {
@@ -143,11 +137,9 @@ export default function AutomationView() {
       } finally {
         if (!cancelled) setLoading(false);
       }
-  };
+    }
 
-  useEffect(() => {
-    let cancelled = false;
-    loadAutomationData(cancelled);
+    loadAutomationData();
     return () => { cancelled = true; };
   }, []);
 
@@ -166,106 +158,38 @@ export default function AutomationView() {
   const primaryTrigger = triggers[0] ?? fallbackTriggers[0];
   const primaryAction = actions[0] ?? fallbackActions[0];
 
-  const handleCreateWorkflow = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const name = workflowForm.name.trim();
-    if (!name) {
-      setCreateError('Workflow name is required.');
-      return;
-    }
-
-    setSavingWorkflow(true);
-    setCreateError(null);
+  const handleTestWorkflow = async (name: string) => {
     try {
-      await createAutomationEvent({
-        event_type: 'WORKFLOW_DRAFT_CREATED',
-        aggregate_type: 'workflow',
-        aggregate_id: crypto.randomUUID(),
-        source: 'admin_automation_dashboard',
-        payload: {
-          workflow_name: name,
-          description: workflowForm.description.trim(),
-          trigger: workflowForm.trigger,
-          status: workflowForm.status.toLowerCase(),
-          nodes: [
-            { type: 'trigger', label: workflowForm.trigger },
-            { type: 'action', label: 'CRM automation action' }
-          ],
-          total_runs: 0,
-          active_contacts: 0
-        }
-      });
-      await loadAutomationData(false);
-      setIsCreateOpen(false);
-      setWorkflowForm({ name: '', description: '', trigger: 'CRM Activity Event', status: 'Draft' });
-      toast.success('Workflow created successfully.');
-    } catch (e: any) {
-      const message = e?.message || 'Failed to create workflow.';
-      setCreateError(message);
-      toast.error(message);
-    } finally {
-      setSavingWorkflow(false);
+      const deliveries = await triggerAutomationDelivery('AUTOMATION_TEST', { workflow_name: name, source: 'admin_automation_dashboard' });
+      setToast(`Test execution queued for ${deliveries.length} endpoint${deliveries.length === 1 ? '' : 's'}.`);
+    } catch {
+      setToast(`Test execution could not be queued for workflow: "${name}".`);
     }
+    setTimeout(() => setToast(null), 3000);
   };
-
 
   return (
     <div className="space-y-6">
-      {isCreateOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Create Workflow</h3>
-              <button onClick={() => setIsCreateOpen(false)} disabled={savingWorkflow} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer disabled:opacity-50"><X className="h-4.5 w-4.5" /></button>
-            </div>
-            <form onSubmit={handleCreateWorkflow} className="p-5 space-y-4">
-              {createError && <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-bold text-amber-800">{createError}</div>}
-              <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Workflow Name</label>
-                <input type="text" required value={workflowForm.name} onChange={e => setWorkflowForm({...workflowForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Description</label>
-                <textarea rows={3} value={workflowForm.description} onChange={e => setWorkflowForm({...workflowForm, description: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none resize-none" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Trigger</label>
-                  <select value={workflowForm.trigger} onChange={e => setWorkflowForm({...workflowForm, trigger: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    {triggers.map(trigger => <option key={trigger.id} value={trigger.name}>{trigger.name}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Status</label>
-                  <select value={workflowForm.status} onChange={e => setWorkflowForm({...workflowForm, status: e.target.value as 'Active' | 'Draft' | 'Paused'})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    <option>Draft</option><option>Active</option><option>Paused</option>
-                  </select>
-                </div>
-              </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" disabled={savingWorkflow} onClick={() => setIsCreateOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer disabled:opacity-50">Cancel</button>
-                <button type="submit" disabled={savingWorkflow} className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer disabled:opacity-60 inline-flex items-center gap-1.5">
-                  {savingWorkflow && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>{savingWorkflow ? 'Creating...' : 'Create Workflow'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
+      {toast && (
+        <div className="fixed bottom-5 right-5 z-55 bg-ink dark:bg-brand-purple text-primary-foreground px-4 py-2.5 rounded-xl flex items-center space-x-2 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <CheckCircle className="h-4 w-4 text-brand-cyan" />
+          <span>{toast}</span>
         </div>
       )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">
+          <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
             Automation & Workflows
           </h1>
-          <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
             Design automated triggers and notification chains to accelerate outbound client conversions.
           </p>
         </div>
 
         <button
-          onClick={() => { setCreateError(null); setWorkflowForm({ name: '', description: '', trigger: primaryTrigger.name, status: 'Draft' }); setIsCreateOpen(true); }}
-          className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm self-start sm:self-center"
+          onClick={() => handleTestWorkflow('New Custom Flow')}
+          className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition duration-200 cursor-pointer self-start sm:self-center"
         >
           <Plus className="h-4 w-4" />
           <span>New Workflow</span>
@@ -273,100 +197,100 @@ export default function AutomationView() {
       </div>
 
       {loading && (
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl px-4 py-3 text-xs font-bold text-brand-text/70 flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-brand-accent" />
+        <div className="bg-card border border-border rounded-2xl px-4 py-3 text-xs font-bold text-muted-foreground flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin text-brand-purple" />
           <span>Loading live automation data...</span>
         </div>
       )}
 
       {error && !loading && (
-        <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs font-bold text-amber-800 flex items-center gap-2">
+        <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs font-bold text-foreground flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" />
           <span>{error}</span>
         </div>
       )}
 
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-        <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-          <GitBranch className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm flex items-center">
+          <GitBranch className="h-4.5 w-4.5 mr-2 text-brand-purple" />
           <span>Visual Workflow Builder Canvas</span>
         </h3>
 
-        <div className="p-6 bg-slate-50 border border-slate-100 rounded-xl flex flex-col md:flex-row items-center justify-center gap-4 text-center md:text-left relative overflow-hidden">
-          <div className="bg-white border border-brand-border-purple/35 rounded-xl p-4 shadow-sm/5 w-60 space-y-1.5 relative z-10">
-            <span className="text-[9px] font-black text-brand-accent bg-brand-accent/10 px-2 py-0.5 rounded uppercase tracking-wider">
+        <div className="p-6 bg-secondary border border-border rounded-xl flex flex-col md:flex-row items-center justify-center gap-4 text-center md:text-left relative overflow-hidden">
+          <div className="bg-card border border-border rounded-xl p-4 w-60 space-y-1.5 relative z-10">
+            <span className="text-[9px] font-semibold text-brand-purple bg-brand-purple/10 px-2 py-0.5 rounded uppercase tracking-wider">
               Trigger Node
             </span>
-            <h4 className="text-xs font-extrabold text-brand-text">{primaryTrigger.name}</h4>
-            <p className="text-[10px] text-slate-450 leading-relaxed font-semibold">{primaryTrigger.desc}</p>
+            <h4 className="text-xs font-semibold text-foreground">{primaryTrigger.name}</h4>
+            <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">{primaryTrigger.desc}</p>
           </div>
 
           <ArrowRight className="h-5 w-5 text-brand-border-purple/65 hidden md:block shrink-0" strokeWidth={2} />
 
-          <div className="bg-white border border-brand-border-purple/35 rounded-xl p-4 shadow-sm/5 w-60 space-y-1.5 relative z-10">
-            <span className="text-[9px] font-black text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded uppercase tracking-wider">
+          <div className="bg-card border border-border rounded-xl p-4 w-60 space-y-1.5 relative z-10">
+            <span className="text-[9px] font-semibold text-brand-blue bg-brand-blue/10 px-2 py-0.5 rounded uppercase tracking-wider">
               Condition Node
             </span>
-            <h4 className="text-xs font-extrabold text-brand-text">Organization scope check</h4>
-            <p className="text-[10px] text-slate-450 leading-relaxed font-semibold">Uses tenant-scoped backend event data</p>
+            <h4 className="text-xs font-semibold text-foreground">Organization scope check</h4>
+            <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">Uses tenant-scoped backend event data</p>
           </div>
 
           <ArrowRight className="h-5 w-5 text-brand-border-purple/65 hidden md:block shrink-0" strokeWidth={2} />
 
-          <div className="bg-white border border-brand-border-purple/35 rounded-xl p-4 shadow-sm/5 w-60 space-y-1.5 relative z-10">
-            <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider">
+          <div className="bg-card border border-border rounded-xl p-4 w-60 space-y-1.5 relative z-10">
+            <span className="text-[9px] font-semibold text-brand-cyan bg-brand-cyan/15 px-2 py-0.5 rounded uppercase tracking-wider">
               Action Node
             </span>
-            <h4 className="text-xs font-extrabold text-brand-text">{primaryAction.name}</h4>
-            <p className="text-[10px] text-slate-450 leading-relaxed font-semibold">{primaryAction.desc}</p>
+            <h4 className="text-xs font-semibold text-foreground">{primaryAction.name}</h4>
+            <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">{primaryAction.desc}</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-          <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-            <Cpu className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <h3 className="font-semibold text-foreground text-sm flex items-center">
+            <Cpu className="h-4.5 w-4.5 mr-2 text-brand-purple" />
             <span>Available Trigger Conditions</span>
           </h3>
 
           <div className="space-y-3">
             {triggers.map(t => (
-              <div key={t.id} className="p-3 border border-brand-border-purple/15 rounded-lg bg-slate-50/50">
-                <h4 className="text-xs font-extrabold text-brand-text">{t.name}</h4>
-                <p className="text-[10px] text-brand-text/70 mt-1 leading-relaxed font-semibold">{t.desc}</p>
+              <div key={t.id} className="p-3 border border-border rounded-lg bg-secondary">
+                <h4 className="text-xs font-semibold text-foreground">{t.name}</h4>
+                <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{t.desc}</p>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-          <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-            <ListTodo className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <h3 className="font-semibold text-foreground text-sm flex items-center">
+            <ListTodo className="h-4.5 w-4.5 mr-2 text-brand-purple" />
             <span>Available Actions Matrix</span>
           </h3>
 
           <div className="space-y-3">
             {actions.map(a => (
-              <div key={a.id} className="p-3 border border-brand-border-purple/15 rounded-lg bg-slate-50/50">
-                <h4 className="text-xs font-extrabold text-brand-text">{a.name}</h4>
-                <p className="text-[10px] text-brand-text/70 mt-1 leading-relaxed font-semibold">{a.desc}</p>
+              <div key={a.id} className="p-3 border border-border rounded-lg bg-secondary">
+                <h4 className="text-xs font-semibold text-foreground">{a.name}</h4>
+                <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{a.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-        <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-          <Activity className="h-4.5 w-4.5 mr-2 text-brand-accent" />
+      <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <h3 className="font-semibold text-foreground text-sm flex items-center">
+          <Activity className="h-4.5 w-4.5 mr-2 text-brand-purple" />
           <span>Workflow execution history Logs</span>
         </h3>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
+              <tr className="border-b border-border text-[10px] uppercase font-semibold text-foreground">
                 <th className="py-2.5">Log ID</th>
                 <th className="py-2.5">Workflow Name</th>
                 <th className="py-2.5">Fired Trigger</th>
@@ -375,29 +299,29 @@ export default function AutomationView() {
                 <th className="py-2.5 text-right">Runtime Latency</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-semibold text-brand-text">
+            <tbody className="divide-y divide-border text-xs font-semibold text-foreground">
               {logs.length > 0 ? logs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="py-3 font-extrabold text-slate-450 uppercase text-[10px] tracking-wide">{log.id}</td>
-                  <td className="py-3 font-extrabold">{log.workflow}</td>
-                  <td className="py-3 text-slate-500">{log.trigger}</td>
-                  <td className="py-3 text-slate-450 tabular-nums">{log.time}</td>
+                <tr key={log.id} className="hover:bg-secondary transition-colors">
+                  <td className="py-3 font-semibold text-muted-foreground uppercase text-[10px] tracking-wide">{log.id}</td>
+                  <td className="py-3 font-semibold">{log.workflow}</td>
+                  <td className="py-3 text-muted-foreground">{log.trigger}</td>
+                  <td className="py-3 text-muted-foreground tabular-nums">{log.time}</td>
                   <td className="py-3">
-                    <span className={`px-2 py-0.5 rounded font-extrabold uppercase tracking-wide text-[8px] ${
+                    <span className={`px-2 py-0.5 rounded font-semibold uppercase tracking-wide text-[8px] ${
                       log.status === 'Success'
-                        ? 'bg-emerald-50 text-emerald-700'
+                        ? 'bg-brand-cyan/15 text-brand-cyan'
                         : log.status === 'Pending'
                           ? 'bg-amber-50 text-amber-700'
-                          : 'bg-rose-50 text-rose-700'
+                          : 'bg-destructive/10 text-destructive'
                     }`}>
                       {log.status}
                     </span>
                   </td>
-                  <td className="py-3 text-right text-slate-450 tabular-nums">{log.duration}</td>
+                  <td className="py-3 text-right text-muted-foreground tabular-nums">{log.duration}</td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-xs font-bold text-brand-text/55">
+                  <td colSpan={6} className="py-6 text-center text-xs font-bold text-foreground/55">
                     No live automation events found yet.
                   </td>
                 </tr>
@@ -409,4 +333,3 @@ export default function AutomationView() {
     </div>
   );
 }
-

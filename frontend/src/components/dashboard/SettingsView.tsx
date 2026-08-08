@@ -16,6 +16,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { getCurrentUser, changePassword, updateUser } from '@/utils/api';
+import IntegrationsView from './IntegrationsView';
 
 export default function SettingsView({ userRole = 'manager' }: { userRole?: string }) {
   const [activeSubTab, setActiveSubTab] = useState<'profile' | 'password' | 'notifications' | 'integrations'>('password');
@@ -103,30 +104,30 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
 
   if (loading) {
     return (
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex items-center justify-center py-12">
-        <Loader2 className="h-5 w-5 mr-2 animate-spin text-slate-400" />
-        <span className="text-xs text-slate-400 font-medium">Loading settings...</span>
+      <div className="bg-card border border-border rounded-2xl p-5 flex items-center justify-center py-12">
+        <Loader2 className="h-5 w-5 mr-2 animate-spin text-muted-foreground" />
+        <span className="text-xs text-muted-foreground font-medium">Loading settings...</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+    <div className="bg-card border border-border rounded-xl p-5 ">
       
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 border-b border-brand-border-purple/15 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 border-b border-border pb-4">
         <div>
-          <h2 className="font-sans text-2xl text-brand-heading font-bold">System Settings</h2>
-          <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Configure personal parameters, account passwords, alerts rules, and third-party integrations.</p>
+          <h2 className="font-sans text-2xl text-foreground font-bold">System Settings</h2>
+          <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Configure personal parameters, account passwords, alerts rules, and third-party integrations.</p>
         </div>
         
         {saveSuccess && (
-          <div className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3.5 py-1.5 rounded-lg border border-emerald-150 flex items-center space-x-1.5 animate-in fade-in duration-200">
+          <div className="bg-brand-cyan/15 text-brand-cyan text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-brand-cyan/20 flex items-center space-x-1.5 animate-in fade-in duration-200">
             <Check className="h-4 w-4" />
             <span>Settings saved successfully</span>
           </div>
         )}
         {saveError && (
-          <div className="bg-rose-50 text-rose-700 text-xs font-bold px-3.5 py-1.5 rounded-lg border border-rose-200 flex items-center space-x-1.5 animate-in fade-in duration-200">
+          <div className="bg-destructive/10 text-destructive text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-destructive/20 flex items-center space-x-1.5 animate-in fade-in duration-200">
             <XCircle className="h-4 w-4" />
             <span>{saveError}</span>
           </div>
@@ -148,10 +149,10 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
               <button
                 key={item.id}
                 onClick={() => setActiveSubTab(item.id as any)}
-                className={`w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-lg text-xs font-bold transition-all text-left cursor-pointer ${
+                className={`w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-lg text-xs font-semibold transition text-left cursor-pointer ${
                   isSelected 
-                    ? 'bg-brand-secondary-accent/15 text-brand-accent' 
-                    : 'hover:bg-slate-50 text-brand-text/75 hover:text-brand-text'
+                    ? 'bg-brand-purple/10 text-brand-purple' 
+                    : 'hover:bg-secondary text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -161,139 +162,114 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
           })}
         </div>
 
-        <div className="col-span-12 md:col-span-9 bg-slate-50/50 border border-brand-border-purple/15 rounded-xl p-5">
-          <form onSubmit={handleSave} className="space-y-4">
-            
-            {activeSubTab === 'password' && (
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Password Update</h3>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Current Password</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={passwordForm.current}
-                    onChange={e => setPasswordForm({...passwordForm, current: e.target.value})}
-                    className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
+        <div className="col-span-12 md:col-span-9 bg-secondary border border-border rounded-xl p-5">
+          {activeSubTab === 'integrations' ? (
+            <IntegrationsView />
+          ) : (
+            <form onSubmit={handleSave} className="space-y-4">
+              
+              {activeSubTab === 'password' && (
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">Password Update</h3>
                   <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">New Password</label>
+                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Current Password</label>
                     <input
                       type="password"
-                      placeholder="Min 8 characters"
-                      value={passwordForm.next}
-                      onChange={e => setPasswordForm({...passwordForm, next: e.target.value})}
-                      className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none"
+                      placeholder="••••••••"
+                      value={passwordForm.current}
+                      onChange={e => setPasswordForm({...passwordForm, current: e.target.value})}
+                      className="w-full px-3 py-1.5 border border-border rounded-lg text-xs bg-background text-foreground focus:outline-none"
                       required
-                      minLength={8}
                     />
                   </div>
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Confirm New Password</label>
-                    <input
-                      type="password"
-                      placeholder="Min 8 characters"
-                      value={passwordForm.confirm}
-                      onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})}
-                      className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none"
-                      required
-                      minLength={8}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">New Password</label>
+                      <input
+                        type="password"
+                        placeholder="Min 8 characters"
+                        value={passwordForm.next}
+                        onChange={e => setPasswordForm({...passwordForm, next: e.target.value})}
+                        className="w-full px-3 py-1.5 border border-border rounded-lg text-xs bg-background text-foreground focus:outline-none"
+                        required
+                        minLength={8}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Confirm New Password</label>
+                      <input
+                        type="password"
+                        placeholder="Min 8 characters"
+                        value={passwordForm.confirm}
+                        onChange={e => setPasswordForm({...passwordForm, confirm: e.target.value})}
+                        className="w-full px-3 py-1.5 border border-border rounded-lg text-xs bg-background text-foreground focus:outline-none"
+                        required
+                        minLength={8}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {activeSubTab === 'profile' && (
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Profile Setup</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Full Name</label>
-                    <input
-                      type="text"
-                      value={profileForm.full_name}
-                      onChange={e => setProfileForm({...profileForm, full_name: e.target.value})}
-                      className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs bg-white text-brand-text focus:outline-none"
-                    />
+              {activeSubTab === 'profile' && (
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">Profile Setup</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Full Name</label>
+                      <input
+                        type="text"
+                        value={profileForm.full_name}
+                        onChange={e => setProfileForm({...profileForm, full_name: e.target.value})}
+                        className="w-full px-3 py-1.5 border border-border rounded-lg text-xs bg-background text-foreground focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Role Title</label>
+                      <input
+                        type="text"
+                        readOnly
+                        value={profileForm.job_title || profileForm.email}
+                        className="w-full px-3 py-1.5 border border-border rounded-lg text-xs bg-secondary text-muted-foreground focus:outline-none cursor-not-allowed"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Role Title</label>
+                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Contact Email</label>
                     <input
-                      type="text"
+                      type="email"
                       readOnly
-                      value={profileForm.job_title || profileForm.email}
-                      className="w-full px-3 py-1.5 border border-brand-border-purple/20 rounded-lg text-xs bg-slate-100/50 text-brand-text/60 focus:outline-none cursor-not-allowed"
+                      value={profileForm.email}
+                      className="w-full px-3 py-1.5 border border-border rounded-lg text-xs bg-secondary text-muted-foreground focus:outline-none cursor-not-allowed"
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Contact Email</label>
-                  <input
-                    type="email"
-                    readOnly
-                    value={profileForm.email}
-                    className="w-full px-3 py-1.5 border border-brand-border-purple/20 rounded-lg text-xs bg-slate-100/50 text-brand-text/60 focus:outline-none cursor-not-allowed"
-                  />
+              )}
+
+              {activeSubTab === 'notifications' && (
+                <div className="space-y-4">
+                  <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">Notification Preferences</h3>
+                  <p className="text-[10px] text-muted-foreground italic">Notification preferences will be available in a future update.</p>
                 </div>
+              )}
+
+              <div className="pt-4 border-t border-border flex justify-end">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-5 py-2 bg-brand-purple hover:bg-brand-purple/90 disabled:opacity-50 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer inline-flex items-center space-x-1.5"
+                >
+                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  <span>{saving ? 'Saving...' : 'Save Settings Preferences'}</span>
+                </button>
               </div>
-            )}
 
-            {activeSubTab === 'notifications' && (
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Notification Preferences</h3>
-                <p className="text-[10px] text-slate-400 italic">Notification preferences will be available in a future update.</p>
-              </div>
-            )}
-
-            {activeSubTab === 'integrations' && (
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-brand-heading uppercase tracking-wider mb-2">Integrations Sync</h3>
-                
-                <div className="space-y-4 font-semibold text-brand-text text-xs">
-                  <div className="flex items-center justify-between p-3 border border-brand-border-purple/15 bg-white rounded-xl">
-                    <div className="flex items-center space-x-3">
-                      <Mail className="h-5 w-5 text-indigo-600" />
-                      <div>
-                        <h4 className="font-extrabold text-brand-heading">Gmail Integration Link</h4>
-                        <p className="text-[10px] text-slate-450 mt-0.5">Sync sent emails and inbox replies history with prospects timeline.</p>
-                      </div>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium">Managed from Gmail Sync page</div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 border border-brand-border-purple/15 bg-white rounded-xl">
-                    <div className="flex items-center space-x-3">
-                      <ShieldCheck className="h-5 w-5 text-purple-600" />
-                      <div>
-                        <h4 className="font-extrabold text-brand-heading">Google Calendar Sync</h4>
-                        <p className="text-[10px] text-slate-450 mt-0.5">Coordinate calls and client briefs calendar dates directly inside Pulse calendar.</p>
-                      </div>
-                    </div>
-                    <div className="text-[10px] text-slate-400 font-medium">Coming soon</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-brand-border-purple/15 flex justify-end">
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-5 py-2 bg-brand-accent hover:bg-brand-accent-hover disabled:opacity-50 text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer inline-flex items-center space-x-1.5"
-              >
-                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                <span>{saving ? 'Saving...' : 'Save Settings Preferences'}</span>
-              </button>
-            </div>
-
-          </form>
+            </form>
+          )}
         </div>
 
       </div>
     </div>
   );
 }
+

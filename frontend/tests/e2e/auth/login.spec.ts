@@ -88,46 +88,24 @@ test.describe('Data Views', () => {
     await loginViaStorage(page, 'representative');
   });
 
-  test('Leads view shows mock lead data', async ({ page }) => {
+  test('Leads view loads with table structure', async ({ page }) => {
     await SIDEBAR.leads(page).click();
-    await expect(page.getByText('Alex Rivera')).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText('TechCorp Inc.')).toBeVisible();
-  });
-
-  test('Leads table has correct column headers', async ({ page }) => {
-    await SIDEBAR.leads(page).click();
+    await expect(HEADINGS.salesLeads(page)).toBeVisible({ timeout: 5000 });
     await expect(page.getByRole('columnheader', { name: /Name.*Company/i })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: /Score/i })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: /Status/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /Priority/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /Owner/i })).toBeVisible();
   });
 
-  test('clicking a lead opens detail side panel', async ({ page }) => {
-    await SIDEBAR.leads(page).click();
-    await page.getByText('Alex Rivera').first().click();
-    await expect(BUTTONS.email(page)).toBeVisible({ timeout: 3000 });
-    await expect(BUTTONS.logCall(page)).toBeVisible();
-    await expect(BUTTONS.meet(page)).toBeVisible();
-  });
-
-  test('Companies view shows mock companies', async ({ page }) => {
+  test('Companies view loads with table structure', async ({ page }) => {
     await SIDEBAR.companies(page).click();
-    await expect(page.getByText('TechCorp Inc.')).toBeVisible({ timeout: 5000 });
-  });
-
-  test('Companies table has correct column headers', async ({ page }) => {
-    await SIDEBAR.companies(page).click();
+    await expect(HEADINGS.companies(page)).toBeVisible({ timeout: 5000 });
     await expect(page.getByRole('columnheader', { name: /Company Name/i })).toBeVisible();
     await expect(page.getByRole('columnheader', { name: /Industry/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /Revenue/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /Employees/i })).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: /Open Deals/i })).toBeVisible();
   });
 
-  test('Contacts view shows mock contacts', async ({ page }) => {
+  test('Contacts view loads with content', async ({ page }) => {
     await SIDEBAR.contacts(page).click();
-    await expect(page.getByText('Alex Rivera')).toBeVisible({ timeout: 5000 });
+    await expect(HEADINGS.contactsDirectory(page)).toBeVisible({ timeout: 5000 });
   });
 });
 

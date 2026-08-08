@@ -123,7 +123,6 @@ deals     ──< activities
 | `organization_id` | UUID FK | NOT NULL | — | → organizations (RESTRICT) |
 | `is_active` | BOOLEAN | NOT NULL | `true` | |
 | `is_verified` | BOOLEAN | NOT NULL | `false` | email verified |
-| `is_superuser` | BOOLEAN | NOT NULL | `false` | |
 | `is_deleted` | BOOLEAN | NOT NULL | `false` | soft delete |
 | `email_verification_token` | VARCHAR(255) | NULL | — | |
 | `email_verification_sent_at` | TIMESTAMPTZ | NULL | — | |

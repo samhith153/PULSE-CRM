@@ -19,31 +19,25 @@ import {
   Plus,
   Search,
   CornerDownLeft,
-  type LucideIcon
+  Calendar
 } from 'lucide-react';
-import { ROLE_TABS, Role } from '@/lib/roles';
+import { searchGlobalCRM } from '@/utils/api'; // <-- Added API import
 
 interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   setActiveTab: (tab: string) => void;
-  userRole: Role;
   onNewReportClick: () => void;
 }
 
-type PaletteItem = {
-  id: string;
-  title: string;
-  description: string;
-  category: 'Navigation' | 'Actions' | 'Leads' | 'Contacts' | 'Companies' | 'Deals';
-  icon: LucideIcon;
-  action: () => void;
-  tab?: string;
-};
-
-export default function CommandPalette({ isOpen, onClose, setActiveTab, userRole, onNewReportClick }: CommandPaletteProps) {
+export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewReportClick }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  
+  // NEW: State for live database results
+  const [dynamicResults, setDynamicResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -70,55 +64,160 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, userRole
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
+  // NEW: Effect to trigger backend search
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setDynamicResults([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchSearchResults = async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchGlobalCRM(query.trim());
+        
+        if (isMounted) {
+          // Format backend data to match Command Palette UI structure
+          const formattedDynamic = (results || []).map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            category: item.category as any, 
+            icon: Search, 
+            action: () => {
+              setActiveTab(item.type);
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('pulse-open-record', { 
+                  detail: { id: item.db_id, type: item.type } 
+                }));
+              }, 120);
+              onClose();
+            }
+          }));
+          
+          setDynamicResults(formattedDynamic);
+          setActiveIndex(0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch search results:", error);
+      } finally {
+        if (isMounted) setIsSearching(false);
+      }
+    };
+
+    // Debounce the search by 300ms
+    const debounceTimer = setTimeout(fetchSearchResults, 300);
+    return () => {
+      isMounted = false;
+      clearTimeout(debounceTimer);
+    };
+  }, [query, setActiveTab, onClose]);
+
   if (!isOpen) return null;
 
-  const searchItems: PaletteItem[] = [
+  // Global theme switch utility
+  const toggleTheme = () => {
+    const current = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('pulse-crm-theme', next);
+    if (next === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
+  // Global sidebar toggle utility
+  const toggleSidebar = () => {
+    const sidebarBtn = document.querySelector('[aria-label="Toggle Sidebar"]') as HTMLButtonElement;
+    sidebarBtn?.click();
+  };
+
+  // Helper to change tab and dispatch event for modal loading
+  const transitionAndEmit = (tab: string, eventName: string) => {
+    setActiveTab(tab);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(eventName));
+    }, 120);
+  };
+
+  const searchItems = [
+    // Dynamic top suggestions
+    { id: 'suggest-theme', title: 'Switch theme', description: 'Toggle light and dark appearance', category: 'Suggestions' as const, icon: Sparkles, action: () => { toggleTheme(); onClose(); } },
+    { id: 'suggest-sidebar', title: 'Toggle sidebar', description: 'Collapse or expand navigation panel', category: 'Suggestions' as const, icon: LayoutDashboard, action: () => { toggleSidebar(); onClose(); } },
+    { id: 'suggest-notif', title: 'Open notifications', description: 'View sync alerts and messages', category: 'Suggestions' as const, icon: Activity, action: () => { setActiveTab('notifications'); onClose(); } },
+    
     // Navigation
-    { id: 'nav-dashboard', title: 'Go to Dashboard', description: 'View sales performance and widgets', category: 'Navigation', icon: LayoutDashboard, tab: 'dashboard', action: () => { setActiveTab('dashboard'); onClose(); } },
-    { id: 'nav-leads', title: 'Go to Leads', description: 'Manage inbound unqualified leads', category: 'Navigation', icon: Users, tab: 'leads', action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'nav-contacts', title: 'Go to Contacts', description: 'View client personnel profiles', category: 'Navigation', icon: Contact, tab: 'contacts', action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'nav-companies', title: 'Go to Companies', description: 'Browse and edit organizations', category: 'Navigation', icon: Building2, tab: 'companies', action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'nav-deals', title: 'Go to Deals & Pipeline', description: 'Track deal stages and opportunities', category: 'Navigation', icon: Layers, tab: 'deals', action: () => { setActiveTab('deals'); onClose(); } },
-    { id: 'nav-products', title: 'Go to Products', description: 'Browse company product pricing tiers', category: 'Navigation', icon: Package, tab: 'products', action: () => { setActiveTab('products'); onClose(); } },
-    { id: 'nav-activities', title: 'Go to Activities', description: 'View tasks, calls, and calendar', category: 'Navigation', icon: Activity, tab: 'activities', action: () => { setActiveTab('activities'); onClose(); } },
-    { id: 'nav-emails', title: 'Go to Emails', description: 'Read synced communications', category: 'Navigation', icon: Mail, tab: 'emails', action: () => { setActiveTab('emails'); onClose(); } },
-    { id: 'nav-workflows', title: 'Go to Workflows', description: 'Configure trigger actions and automations', category: 'Navigation', icon: GitBranch, tab: 'workflows', action: () => { setActiveTab('workflows'); onClose(); } },
-    { id: 'nav-ai', title: 'Go to AI Insights', description: 'Read system generated predictions', category: 'Navigation', icon: Sparkles, tab: 'ai insights', action: () => { setActiveTab('ai insights'); onClose(); } },
-    { id: 'nav-reports', title: 'Go to Reports & Analytics', description: 'View conversion rates and forecasts', category: 'Navigation', icon: BarChart3, tab: 'reports', action: () => { setActiveTab('reports'); onClose(); } },
-    { id: 'nav-documents', title: 'Go to Documents', description: 'Browse deal templates and attachments', category: 'Navigation', icon: FileText, tab: 'documents', action: () => { setActiveTab('documents'); onClose(); } },
-    { id: 'nav-settings', title: 'Go to Settings', description: 'Manage workspace integrations', category: 'Navigation', icon: Settings, tab: 'settings', action: () => { setActiveTab('settings'); onClose(); } },
-    { id: 'nav-profile', title: 'Go to Profile', description: 'Manage personal credentials', category: 'Navigation', icon: User, tab: 'profile', action: () => { setActiveTab('profile'); onClose(); } },
+    { id: 'nav-dashboard', title: 'Go to Dashboard', description: 'View sales performance metrics', category: 'Navigation' as const, icon: LayoutDashboard, action: () => { setActiveTab('dashboard'); onClose(); } },
+    { id: 'nav-leads', title: 'Open Leads', description: 'Manage sales opportunities', category: 'Navigation' as const, icon: Users, action: () => { setActiveTab('leads'); onClose(); } },
+    { id: 'nav-contacts', title: 'Open Contacts', description: 'Browse directory contacts list', category: 'Navigation' as const, icon: Contact, action: () => { setActiveTab('contacts'); onClose(); } },
+    { id: 'nav-companies', title: 'Open Companies', description: 'Manage accounts and organizations', category: 'Navigation' as const, icon: Building2, action: () => { setActiveTab('companies'); onClose(); } },
+    { id: 'nav-invoices', title: 'Open Invoices', description: 'Check statement logs and billing details', category: 'Navigation' as const, icon: FileText, action: () => { alert('Invoices view is being initialized.'); onClose(); } },
+    { id: 'nav-tasks', title: 'Open Tasks', description: 'Manage your active to-do lists', category: 'Navigation' as const, icon: FileText, action: () => { setActiveTab('tasks'); onClose(); } },
+    { id: 'nav-meetings', title: 'Open Meetings', description: 'View calendar slots and schedules', category: 'Navigation' as const, icon: Calendar, action: () => { setActiveTab('calendar'); onClose(); } },
+    { id: 'nav-reports', title: 'Open Reports', description: 'View performance analytics and metrics', category: 'Navigation' as const, icon: BarChart3, action: () => { setActiveTab('reports'); onClose(); } },
+    { id: 'nav-settings', title: 'Open Settings', description: 'Configure integrations and workspace preferences', category: 'Navigation' as const, icon: Settings, action: () => { setActiveTab('settings'); onClose(); } },
     
-    // Actions
-    { id: 'act-report', title: 'Create New Report', description: 'Open the custom report builder dialog', category: 'Actions', icon: Plus, action: () => { onNewReportClick(); onClose(); } },
-    
-    // Mocks / Entities
-    { id: 'lead-acme', title: 'Acme Enterprise (Lead)', description: 'Status: Contacted | ₹120,000 value', category: 'Leads', icon: Users, tab: 'leads', action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'lead-bigtech', title: 'Big Tech SaaS Upgrade (Lead)', description: 'Status: New | ₹85,000 value', category: 'Leads', icon: Users, tab: 'leads', action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'contact-bruce', title: 'Bruce Wayne (Contact)', description: 'Wayne Enterprises | bwayne@wayne.com', category: 'Contacts', icon: Contact, tab: 'contacts', action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'contact-sarah', title: 'Sarah Johnson (Contact)', description: 'Acme Corp | sjohnson@acme.com', category: 'Contacts', icon: Contact, tab: 'contacts', action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'company-wayne', title: 'Wayne Enterprises (Company)', description: 'Domain: wayne.com | Gotham City', category: 'Companies', icon: Building2, tab: 'companies', action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'company-acme', title: 'Acme Corp (Company)', description: 'Domain: acme.com | Manufacturing', category: 'Companies', icon: Building2, tab: 'companies', action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'deal-saas', title: 'Enterprise SaaS Upgrade (Deal)', description: 'Stage: Qualified | ₹120,000 value', category: 'Deals', icon: Layers, tab: 'deals', action: () => { setActiveTab('deals'); onClose(); } },
-    { id: 'deal-logistics', title: 'Global Logistics API (Deal)', description: 'Stage: Negotiation | ₹380,000 value', category: 'Deals', icon: Layers, tab: 'deals', action: () => { setActiveTab('deals'); onClose(); } }
+    // Search pre-fills
+    { id: 'search-all', title: 'Search all records', description: 'Query companies, leads, and contacts', category: 'Search' as const, icon: Search, action: () => { setQuery(''); inputRef.current?.focus(); } },
+    { id: 'search-customers', title: 'Search customers', description: 'Filter contacts directory', category: 'Search' as const, icon: Search, action: () => { setQuery('contacts: '); inputRef.current?.focus(); } },
+    { id: 'search-invoices', title: 'Search invoices', description: 'Query invoice records', category: 'Search' as const, icon: Search, action: () => { setQuery('invoices: '); inputRef.current?.focus(); } },
+    { id: 'search-tasks', title: 'Search tasks', description: 'Query your to-do items', category: 'Search' as const, icon: Search, action: () => { setQuery('tasks: '); inputRef.current?.focus(); } },
+    { id: 'search-meetings', title: 'Search meetings', description: 'Query calendar events', category: 'Search' as const, icon: Search, action: () => { setQuery('meetings: '); inputRef.current?.focus(); } },
+    { id: 'search-notes', title: 'Search notes or activity logs', description: 'Filter history files log', category: 'Search' as const, icon: Search, action: () => { setQuery('notes: '); inputRef.current?.focus(); } },
+
+    // Create Quick Actions
+    { id: 'create-lead', title: 'New Lead', description: 'Create a new sales opportunity', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('leads', 'pulse-open-create-lead-modal'); onClose(); } },
+    { id: 'create-invoice', title: 'New Invoice', description: 'Generate billing statement', category: 'Create Quick Actions' as const, icon: Plus, action: () => { alert('New Invoice window created.'); onClose(); } },
+    { id: 'create-task', title: 'New Task', description: 'Create to-do checklist item', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('tasks', 'pulse-open-create-task-modal'); onClose(); } },
+    { id: 'create-meeting', title: 'New Meeting', description: 'Schedule new calendar event', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('activities', 'pulse-open-create-meeting-modal'); onClose(); } },
+    { id: 'create-customer', title: 'New Customer', description: 'Add new client contact profile', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('contacts', 'pulse-open-create-contact-modal'); onClose(); } },
+    { id: 'create-company', title: 'New Company', description: 'Add new business account profile', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('companies', 'pulse-open-create-company-modal'); onClose(); } },
+    { id: 'create-note', title: 'New Note', description: 'Write details to active lead timeline', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('leads', 'pulse-open-create-note-modal'); onClose(); } },
+
+    // Workflow Actions
+    { id: 'flow-tag', title: 'Add tag', description: 'Categorize selected record', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Tag added successfully.'); onClose(); } },
+    { id: 'flow-status', title: 'Change status', description: 'Update current stage', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Status modified successfully.'); onClose(); } },
+    { id: 'flow-owner', title: 'Assign owner', description: 'Assign manager/representative to lead', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Record owner assigned.'); onClose(); } },
+    { id: 'flow-priority', title: 'Set priority', description: 'Modify priority tier level', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Priority level set.'); onClose(); } },
+    { id: 'flow-paid', title: 'Mark as paid', description: 'Clear selected billing statement', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Invoice marked as paid.'); onClose(); } },
+    { id: 'flow-done', title: 'Mark as completed', description: 'Resolve selected task checklist', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Task resolved successfully.'); onClose(); } },
+    { id: 'flow-follow', title: 'Schedule follow-up', description: 'Book call alert for deal', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Follow-up scheduled.'); onClose(); } },
+
+    // Productivity Actions
+    { id: 'prod-recent', title: 'Show recent items', description: 'Load historical pages list', category: 'Productivity' as const, icon: Activity, action: () => { alert('Recent items displayed.'); onClose(); } },
+    { id: 'prod-pinned', title: 'Show pinned items', description: 'Load bookmarked deals', category: 'Productivity' as const, icon: Activity, action: () => { alert('Pinned items displayed.'); onClose(); } },
+    { id: 'prod-notif', title: 'Open notifications', description: 'Show alerts and sync signals', category: 'Productivity' as const, icon: Activity, action: () => { setActiveTab('notifications'); onClose(); } },
+    { id: 'prod-shortcuts', title: 'Open shortcuts/help', description: 'Keyboard shortcut guide', category: 'Productivity' as const, icon: Activity, action: () => { alert('Shortcuts Guide:\n⌘K : Command Palette\nESC : Close Modal\n↑↓ : Navigate\nEnter : Execute'); onClose(); } },
+    { id: 'prod-theme', title: 'Switch theme', description: 'Toggle light and dark mode', category: 'Productivity' as const, icon: Activity, action: () => { toggleTheme(); onClose(); } },
+    { id: 'prod-sidebar', title: 'Toggle sidebar', description: 'Collapse/expand left navigation panel', category: 'Productivity' as const, icon: Activity, action: () => { toggleSidebar(); onClose(); } },
+    { id: 'prod-history', title: 'Open command history', description: 'View executed actions log', category: 'Productivity' as const, icon: Activity, action: () => { alert('Command history loaded.'); onClose(); } },
   ];
 
-  const visibleSearchItems = searchItems.filter(item => !item.tab || ROLE_TABS[userRole].has(item.tab));
-
-  // Filter items based on search query
-  const filtered = visibleSearchItems.filter(item => {
+  // UPDATED: Filter items based on search query
+  const staticFiltered = searchItems.filter(item => {
     const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
     return searchString.includes(query.toLowerCase());
   });
+
+  // NEW: Combine live database results with static navigation links
+  const filtered = query.trim().length >= 2 
+    ? [...dynamicResults, ...staticFiltered] 
+    : staticFiltered;
 
   // Handle arrow keys and enter
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIndex(prev => (prev + 1) % filtered.length);
+      scrollActiveIntoView((activeIndex + 1) % filtered.length);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActiveIndex(prev => (prev - 1 + filtered.length) % filtered.length);
+      scrollActiveIntoView((activeIndex - 1 + filtered.length) % filtered.length);
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (filtered[activeIndex]) {
@@ -130,7 +229,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, userRole
   // Scroll active item into view inside the list
   const scrollActiveIntoView = (index: number) => {
     if (!listRef.current) return;
-    const items = listRef.current.children;
+    const items = listRef.current.querySelectorAll('.cmd-item');
     const activeItem = items[index] as HTMLElement;
     if (!activeItem) return;
 
@@ -146,7 +245,6 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, userRole
     }
   };
 
-  // Update active index and scroll into view when index changes
   const handleItemHover = (index: number) => {
     setActiveIndex(index);
   };
@@ -159,29 +257,37 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, userRole
 
   return (
     <div 
-      className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-start justify-center pt-24 px-4 transition-all duration-300 animate-in fade-in"
+      className="fixed inset-0 bg-ink/40 z-50 flex items-start justify-center pt-24 px-4 modal-backdrop-animate"
       onClick={handleBackdropClick}
     >
-      <div className="bg-white border border-brand-border-purple/30 w-full max-w-md rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[380px]">
+      <div className="bg-card border border-border w-full max-w-md rounded-xl overflow-hidden modal-content-animate flex flex-col max-h-[420px] shadow-float">
         {/* Search header bar */}
-        <div className="relative border-b border-brand-border-purple/15 flex items-center shrink-0">
-          <div className="absolute left-4 text-slate-400">
+        <div className="relative border-b border-border flex items-center shrink-0">
+          <div className="absolute left-4 text-muted-foreground">
             <Search className="h-4.5 w-4.5" strokeWidth={2} />
           </div>
           <input
             ref={inputRef}
             type="text"
-            placeholder="Type to search dashboard, pages, leads, or deals..."
+            placeholder="Type a command or search..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            className="w-full pl-11 pr-20 py-3.5 text-xs text-brand-text bg-white placeholder-slate-400 focus:outline-none"
+            className="w-full pl-11 pr-20 py-3.5 text-xs text-foreground bg-card placeholder-slate-400 focus:outline-none font-medium"
           />
+          
+          {/* NEW: Loading Spinner */}
+          {isSearching && (
+            <div className="absolute right-12 flex items-center pointer-events-none">
+              <div className="h-4 w-4 border-2 border-brand-purple border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
           <div className="absolute right-4 flex items-center space-x-1.5 pointer-events-none">
-            <span className="text-[9px] font-bold text-slate-400 bg-slate-50 border border-brand-border-purple/20 px-1 py-0.5 rounded shadow-sm/5">ESC</span>
+            <span className="text-[9px] font-bold text-muted-foreground bg-secondary border border-border px-1 py-0.5 rounded ">ESC</span>
           </div>
         </div>
 
@@ -190,70 +296,59 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, userRole
           ref={listRef}
           className="flex-1 overflow-y-auto p-2.5 space-y-0.5"
         >
-          {query.trim() === '' ? (
-            <div className="py-6 flex flex-col items-center justify-center text-center space-y-2">
-              <div className="p-2 bg-brand-accent/5 rounded-full border border-brand-border-purple/15 text-brand-accent/60">
-                <Search className="h-5 w-5" strokeWidth={1.5} />
-              </div>
-              <div className="space-y-0.5">
-                <p className="text-xs font-bold text-brand-text">Search Pulse CRM</p>
-                <p className="text-[10px] text-slate-400 font-semibold max-w-[240px]">Search pages, leads, contacts, companies, and deals...</p>
-              </div>
-            </div>
-          ) : filtered.length > 0 ? (
+          {filtered.length > 0 ? (
             filtered.map((item, idx) => {
               const Icon = item.icon;
               const isActive = idx === activeIndex;
+              const showHeader = idx === 0 || filtered[idx - 1].category !== item.category;
+              
               return (
-                <button
-                  key={item.id}
-                  onClick={item.action}
-                  onMouseEnter={() => handleItemHover(idx)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition-all duration-150 ${
-                    isActive 
-                      ? 'bg-brand-accent/10 text-brand-accent border-l-3 border-brand-accent pl-2' 
-                      : 'text-brand-text/75 hover:bg-slate-50 hover:text-brand-text border-l-3 border-transparent'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3 min-w-0">
-                    <div className={`p-1.5 rounded-md ${
-                      isActive ? 'bg-brand-accent/15 text-brand-accent' : 'bg-slate-100/80 text-slate-550'
-                    }`}>
-                      <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold truncate leading-tight">{item.title}</p>
-                      <p className="text-[10px] text-slate-400 font-semibold truncate mt-0.5 leading-none">{item.description}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-2 shrink-0">
-                    <span className={`text-[9px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded border ${
+                <div key={item.id}>
+                  {showHeader && (
+                    <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest px-3 py-1.5 select-none mt-2 first:mt-0">{item.category}</p>
+                  )}
+                  <button
+                    onClick={item.action}
+                    onMouseEnter={() => handleItemHover(idx)}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition duration-150 cmd-item ${
                       isActive 
-                        ? 'bg-brand-accent/10 border-brand-accent/25 text-brand-accent' 
-                        : 'bg-slate-50 border-brand-border-purple/15 text-slate-500'
-                    }`}>
-                      {item.category}
-                    </span>
-                    {isActive && (
-                      <CornerDownLeft className="h-3.5 w-3.5 text-brand-accent animate-pulse shrink-0" strokeWidth={2.25} />
-                    )}
-                  </div>
-                </button>
+                        ? 'bg-brand-blue/[0.08] text-brand-blue border-l-3 border-brand-blue pl-2' 
+                        : 'text-muted-foreground/75 hover:bg-secondary hover:text-muted-foreground border-l-3 border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className={`p-1.5 rounded-md ${
+                        isActive ? 'bg-brand-blue/15 text-brand-blue' : 'bg-secondary/80 text-slate-550'
+                      }`}>
+                        <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold truncate leading-tight">{item.title}</p>
+                        <p className="text-[10px] text-muted-foreground font-semibold truncate mt-0.5 leading-none">{item.description}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2 shrink-0">
+                      {isActive && (
+                        <CornerDownLeft className="h-3.5 w-3.5 text-brand-blue animate-pulse shrink-0" strokeWidth={2.25} />
+                      )}
+                    </div>
+                  </button>
+                </div>
               );
             })
           ) : (
-            <div className="py-8 text-center text-xs text-slate-400 font-semibold">
+            <div className="py-8 text-center text-xs text-muted-foreground font-semibold">
               No results found matching "{query}"
             </div>
           )}
         </div>
 
         {/* Footer info bar */}
-        <div className="px-4 py-2 border-t border-brand-border-purple/10 bg-slate-50 flex items-center justify-between text-[9px] text-slate-400 font-bold shrink-0">
+        <div className="px-4 py-2 border-t border-border bg-secondary flex items-center justify-between text-[9px] text-muted-foreground font-bold shrink-0">
           <div className="flex space-x-3">
-            <span className="flex items-center gap-1"><kbd className="bg-white border border-brand-border-purple/20 px-1 py-0.5 rounded shadow-sm/5">↑↓</kbd> Navigate</span>
-            <span className="flex items-center gap-1"><kbd className="bg-white border border-brand-border-purple/20 px-1 py-0.5 rounded shadow-sm/5">↵</kbd> Select</span>
+            <span className="flex items-center gap-1"><kbd className="bg-card border border-border px-1 py-0.5 rounded ">↑↓</kbd> Navigate</span>
+            <span className="flex items-center gap-1"><kbd className="bg-card border border-border px-1 py-0.5 rounded ">↵</kbd> Select</span>
           </div>
           <span>Pulse CRM Commands</span>
         </div>

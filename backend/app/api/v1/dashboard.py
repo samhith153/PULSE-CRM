@@ -17,7 +17,9 @@ from app.schemas.dashboard import (
     TopSalesRepresentativeResponse,
     AdminDashboardResponse,
     ManagerDashboardResponse,
+    RedesignedDashboardResponse,
     SalesRepDashboardResponse,
+    SalesRepCommandDashboardResponse,
 )
 from app.schemas.forecast import (
     ManagerForecastResponse,
@@ -118,6 +120,19 @@ async def get_dashboard_trends(current_user: CurrentUser, db: DBSession) -> dict
     return {"success": True, "message": "OK", "data": trends}
 
 
+
+@router.get(
+    "/redesigned",
+    response_model=StandardResponse[RedesignedDashboardResponse],
+    summary="Get redesigned dashboard cards",
+    dependencies=[Depends(require_permission("dashboard:read"))],
+    tags=["Dashboard"],
+)
+async def get_redesigned_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+    svc = DashboardService(db)
+    data = await svc.redesigned_dashboard(current_user.id, current_user.organization_id)
+    return {"success": True, "message": "Dashboard cards retrieved successfully.", "data": data}
+
 @router.get(
     "/admin",
     response_model=StandardResponse[AdminDashboardResponse],
@@ -166,6 +181,42 @@ async def get_manager_dashboard(current_user: CurrentUser, db: DBSession) -> dic
     data = await svc.manager_kpi(current_user.id, current_user.organization_id)
     return {"success": True, "message": "Manager KPIs retrieved successfully.", "data": data}
 
+@router.get(
+    "/me",
+    response_model=StandardResponse[SalesRepCommandDashboardResponse],
+    summary="Sales Rep Command Center",
+    description=(
+        "Hydrates all 6 core widgets and top KPIs concurrently in a single request "
+        "for the Next.js Sales Command Center. "
+        "**Sales Rep, Manager, or Admin role required.**"
+    ),
+    dependencies=[Depends(require_role("sales_rep", "manager", "admin"))],
+    tags=["Dashboard"],
+)
+async def get_my_command_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """
+    GET /api/v1/dashboard/me
+
+    Secured: JWT required + sales_rep / manager / admin role.
+    All data is strictly scoped to owner_id == current_user.id.
+    Executes concurrent DB queries to prevent frontend waterfall loading.
+    """
+    svc = DashboardService(db)
+    
+    # Calls the new concurrent method built in DashboardService
+    data = await svc.sales_rep_command_center(
+        user_id=current_user.id, 
+        organization_id=current_user.organization_id
+    )
+    
+    return {
+        "success": True, 
+        "message": "Command Center data retrieved successfully.", 
+        "data": data
+    }
 
 @router.get(
     "/sales-rep",
@@ -191,36 +242,6 @@ async def get_sales_rep_dashboard(
 
     period options: week | month | quarter | year  (default: month)
     Secured: JWT required + sales_rep / manager / admin role.
-    All data scoped to owner_id == current_user.id.
-    """
-    svc = DashboardService(db)
-    data = await svc.sales_rep_kpi(current_user.id, current_user.organization_id, period)
-    return {"success": True, "message": "Sales rep KPIs retrieved successfully.", "data": data}
-
-
-@router.get(
-    "/sales",
-    response_model=StandardResponse[SalesRepDashboardResponse],
-    summary="Sales Representative Dashboard KPIs (canonical route)",
-    description=(
-        "Canonical Sales Rep dashboard endpoint. Returns the same data as "
-        "/sales-rep but is gated to the sales_rep role only, matching the "
-        "per-role dashboard pattern used by /admin and /manager. "
-        "**Sales Rep role required.**"
-    ),
-    dependencies=[Depends(require_role("sales_rep"))],
-    tags=["Dashboard"],
-)
-async def get_sales_dashboard(
-    current_user: CurrentUser,
-    db: DBSession,
-    period: str = "month",
-) -> dict:
-    """
-    GET /api/v1/dashboard/sales?period=month
-
-    period options: week | month | quarter | year  (default: month)
-    Secured: JWT required + sales_rep role.
     All data scoped to owner_id == current_user.id.
     """
     svc = DashboardService(db)

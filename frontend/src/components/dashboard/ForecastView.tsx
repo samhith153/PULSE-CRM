@@ -10,7 +10,9 @@ import {
   ArrowUpRight, 
   Percent,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
+  Sliders,
+  IndianRupee
 } from 'lucide-react';
 import {
   getManagerForecast,
@@ -39,12 +41,52 @@ function SkeletonBlock({ h = 'h-5', w = 'w-full' }: { h?: string; w?: string }) 
   return <div className={`${h} ${w} bg-slate-100 rounded animate-pulse`} />;
 }
 
+// ── Radial Progress Ring ────────────────────────────────────────────────────
+
+function RadialProgressRing({ progress }: { progress: number }) {
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.max(0, Math.min(100, progress));
+  const offset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center">
+      <svg width="140" height="140" viewBox="0 0 140 140" className="-rotate-90">
+        <circle cx="70" cy="70" r={radius} fill="none" strokeWidth="12" className="stroke-secondary" />
+        <circle
+          cx="70"
+          cy="70"
+          r={radius}
+          fill="none"
+          strokeWidth="12"
+          strokeLinecap="round"
+          stroke="url(#forecastRingGradient)"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="transition-all duration-700 ease-out"
+        />
+        <defs>
+          <linearGradient id="forecastRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--brand-purple)" />
+            <stop offset="100%" stopColor="var(--brand-blue)" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-3xl font-black text-foreground tabular-nums">{Math.round(clamped)}%</span>
+        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">Confidence</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function ForecastView() {
   const [data, setData]       = useState<ManagerForecastData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('Q4');
 
   useEffect(() => {
     let cancelled = false;
@@ -155,13 +197,33 @@ export default function ForecastView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">
-          Sales Forecast
-        </h1>
-        <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
-          Projections of revenue targets and confidence tiers generated from active pipeline pipelines.
-        </p>
+      {/* Title */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-sans text-foreground tracking-tight font-black">
+            Sales Forecast
+          </h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-semibold tracking-wide">
+            Interactive projections and confidence tiers modeled dynamically from active pipelines.
+          </p>
+        </div>
+
+        {/* Tab Selector */}
+        <div className="flex bg-secondary p-1 rounded-xl border border-border/60 shrink-0 w-fit">
+          {['Q3', 'Q4'].map((q) => (
+            <button
+              key={q}
+              onClick={() => setActiveTab(q as any)}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition duration-200 cursor-pointer ${
+                activeTab === q 
+                  ? 'bg-card text-foreground shadow-sm border border-border/40' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {q} Projections
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Headline Grid */}
@@ -185,7 +247,7 @@ export default function ForecastView() {
               : ' No pipeline data available.'}
           </p>
 
-          <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/60 mt-4">
             <div>
               <span className="text-[9px] font-bold text-slate-400 uppercase">Best Case Pipeline</span>
               <p className="text-sm font-extrabold text-brand-text mt-0.5">
@@ -201,33 +263,15 @@ export default function ForecastView() {
           </div>
         </div>
 
-        {/* Confidence Score Gauge (Col 5) */}
-        <div className="col-span-12 md:col-span-5 bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col items-center justify-between text-center space-y-4">
-          <div className="w-full flex justify-between items-center text-left">
-            <span className="text-[10px] font-extrabold text-brand-text/60 uppercase">AI Confidence Score</span>
-            <HelpCircle className="h-4 w-4 text-slate-400 cursor-pointer" />
+        {/* Confidence Score Gauge (Col 4) */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition duration-300 flex flex-col items-center justify-between text-center relative overflow-hidden">
+          <div className="w-full flex justify-between items-center text-left mb-2">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">AI Confidence Score</span>
+            <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
           </div>
 
-          <div className="relative flex items-center justify-center">
-            {/* Visual Ring */}
-            <svg className="w-32 h-32 transform -rotate-90">
-              <circle cx="64" cy="64" r="50" stroke="#f1f5f9" strokeWidth="10" fill="transparent" />
-              <circle 
-                cx="64" 
-                cy="64" 
-                r="50" 
-                stroke="var(--brand-accent)" 
-                strokeWidth="10" 
-                fill="transparent" 
-                strokeDasharray={314}
-                strokeDashoffset={314 - (314 * confidenceScore) / 100}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute text-center">
-              <span className="text-2xl font-black text-brand-heading tabular-nums">{confidenceScore}%</span>
-              <span className="text-[9px] font-bold text-slate-450 block uppercase tracking-wider">Reliability</span>
-            </div>
+          <div className="relative flex items-center justify-center py-4 my-2">
+            <RadialProgressRing progress={confidenceScore} />
           </div>
 
           <div className="w-full p-2.5 bg-brand-sidebar-hover/10 border border-brand-border-purple/15 rounded-xl">
@@ -239,11 +283,24 @@ export default function ForecastView() {
       </div>
 
       {/* Monthly Forecast Breakdown */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-        <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-          <Calendar className="h-4.5 w-4.5 mr-2 text-brand-accent" />
-          <span>Monthly Forecast Breakdown</span>
-        </h3>
+      <div className="bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition duration-300">
+        <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/40">
+          <h3 className="font-bold text-foreground text-sm flex items-center">
+            <Calendar className="h-4.5 w-4.5 mr-2 text-[var(--accent-color)]" />
+            <span>Monthly Projections Distribution</span>
+          </h3>
+          <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-[var(--accent-color)]/30" /> Expected
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="size-2 rounded-full bg-[var(--accent-color)]/10" /> Best Case
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-0.5 h-3 bg-[var(--accent-color)]" /> Pipeline Target
+            </span>
+          </div>
+        </div>
 
         {monthlyForecast.length === 0 ? (
           <p className="text-xs text-slate-400 py-4 text-center">No forecast data available.</p>
@@ -260,12 +317,12 @@ export default function ForecastView() {
                 <div className="relative h-6 w-full bg-slate-100 rounded-lg overflow-hidden flex items-center px-2.5">
                   {/* Expected bar */}
                   <div 
-                    className="absolute left-0 top-0 bottom-0 bg-brand-accent/35 border-r border-brand-accent/50 transition-all duration-300"
+                    className="absolute left-0 top-0 bottom-0 bg-brand-accent/35 border-r border-brand-accent/50 transition duration-300"
                     style={{ width: `${Math.min((item.expected / maxVal) * 100, 100)}%` }}
                   />
                   {/* Best Case bar */}
                   <div 
-                    className="absolute left-0 top-0 bottom-0 bg-brand-secondary-accent/15 border-r border-brand-secondary-accent/30 transition-all duration-300"
+                    className="absolute left-0 top-0 bottom-0 bg-brand-secondary-accent/15 border-r border-brand-secondary-accent/30 transition duration-300"
                     style={{ width: `${Math.min((item.bestCase / maxVal) * 100, 100)}%` }}
                   />
                   {/* Pipeline line marker */}
@@ -285,22 +342,22 @@ export default function ForecastView() {
       </div>
 
       {/* Quarterly Forecast Grid */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-        <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-          <TrendingUp className="h-4.5 w-4.5 mr-2 text-brand-accent" />
-          <span>Quarterly Projections Matrix</span>
+      <div className="bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition duration-300">
+        <h3 className="font-bold text-foreground text-sm flex items-center mb-4 pb-2 border-b border-border/40">
+          <TrendingUp className="h-4.5 w-4.5 mr-2 text-[var(--accent-color)]" />
+          <span>Quarterly Forecast Projections Matrix</span>
         </h3>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
-              <tr className="border-b border-slate-100 text-[10px] uppercase font-extrabold text-black">
-                <th className="py-2.5">Quarter</th>
-                <th className="py-2.5 text-right">Quota Target</th>
-                <th className="py-2.5 text-right">Expected Closed</th>
-                <th className="py-2.5 text-right">Best Case Close</th>
-                <th className="py-2.5 text-right">Open Pipeline</th>
-                <th className="py-2.5 text-right">Target Achievement</th>
+              <tr className="border-b border-border/60 text-[9px] uppercase font-bold text-muted-foreground tracking-wider">
+                <th className="py-3">Quarter</th>
+                <th className="py-3 text-right">Quota Target</th>
+                <th className="py-3 text-right">Expected Closed</th>
+                <th className="py-3 text-right">Best Case Close</th>
+                <th className="py-3 text-right">Open Pipeline</th>
+                <th className="py-3 text-right">Target Achievement</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs font-semibold text-brand-text">

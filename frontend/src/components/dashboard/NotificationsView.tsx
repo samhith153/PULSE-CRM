@@ -4,107 +4,125 @@ import React from 'react';
 import { 
   Bell, 
   UserPlus, 
-  TrendingUp, 
-  ShieldAlert,
+  Mail, 
+  Calendar, 
+  AlertTriangle, 
   Sparkles, 
   X, 
   CheckCheck,
+  CheckSquare,
+  Loader2,
+  FileText,
+  TrendingUp,
+  ShieldAlert,
 } from 'lucide-react';
-import { useNotifications } from '@/hooks/useNotifications';
+import { useNotifications, Notification } from '@/hooks/useNotifications';
 
-function getIcon(type: string) {
-  switch (type) {
-    case 'lead_assigned':
-      return <UserPlus className="h-4.5 w-4.5 text-blue-600" />;
-    case 'deal_won':
-      return <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />;
-    case 'deal_lost':
-      return <ShieldAlert className="h-4.5 w-4.5 text-rose-600" />;
-    case 'lead_converted':
-      return <Sparkles className="h-4.5 w-4.5 text-amber-600" />;
-    default:
-      return <Bell className="h-4.5 w-4.5 text-slate-400" />;
-  }
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diff = Math.floor((now - then) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function formatRelativeTime(iso: string) {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diffMs / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  lead_assigned: <UserPlus className="h-4.5 w-4.5 text-blue-600" />,
+  lead_created: <UserPlus className="h-4.5 w-4.5 text-blue-600" />,
+  lead_won: <TrendingUp className="h-4.5 w-4.5 text-brand-cyan" />,
+  lead_lost: <ShieldAlert className="h-4.5 w-4.5 text-destructive" />,
+  lead_converted: <Sparkles className="h-4.5 w-4.5 text-amber-600" />,
+  deal_created: <TrendingUp className="h-4.5 w-4.5 text-brand-cyan" />,
+  deal_won: <TrendingUp className="h-4.5 w-4.5 text-brand-cyan" />,
+  deal_lost: <ShieldAlert className="h-4.5 w-4.5 text-destructive" />,
+  email_received: <Mail className="h-4.5 w-4.5 text-brand-purple" />,
+  email_reply: <Mail className="h-4.5 w-4.5 text-brand-purple" />,
+  meeting_reminder: <Calendar className="h-4.5 w-4.5 text-purple-600" />,
+  task_due: <CheckSquare className="h-4.5 w-4.5 text-destructive" />,
+  ai_alert: <Sparkles className="h-4.5 w-4.5 text-amber-600" />,
+};
+
+function getIcon(type: string) {
+  return TYPE_ICONS[type] || <Bell className="h-4.5 w-4.5 text-muted-foreground" />;
 }
 
 export default function NotificationsView() {
-  const { notifications, unreadCount, loading, markRead, markAllRead, dismiss } = useNotifications(50);
+  const { notifications, unreadCount, loading, markAllRead, dismiss } = useNotifications(50);
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+      <div className="bg-card border border-border rounded-2xl p-5">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
           <div>
-            <h2 className="font-sans text-2xl text-brand-heading font-bold">Notifications Alert Inbox</h2>
-            <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Real-time alerts generated from deal, lead, and pipeline activity.</p>
+            <h2 className="font-sans text-2xl text-foreground font-bold">Notifications Alert Inbox</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">
+              {unreadCount > 0 ? `${unreadCount} unread notification${unreadCount > 1 ? 's' : ''}` : 'All caught up'}
+            </p>
           </div>
           
           {unreadCount > 0 && (
             <button 
               onClick={markAllRead}
-              className="inline-flex items-center space-x-1 px-3 py-1.5 border border-brand-border-purple/35 hover:border-brand-border-purple text-brand-text/80 hover:bg-slate-50 text-xs font-bold rounded-lg cursor-pointer"
+              className="inline-flex items-center space-x-1 px-3 py-1.5 border border-border hover:border-border text-foreground hover:bg-secondary text-xs font-semibold rounded-lg cursor-pointer"
             >
-              <CheckCheck className="h-4 w-4 mr-0.5 text-brand-accent" />
+              <CheckCheck className="h-4 w-4 mr-0.5 text-brand-purple" />
               <span>Mark all as read</span>
             </button>
           )}
         </div>
 
         {/* Notifications Feed list */}
-        <div className="space-y-3.5">
-          {loading ? (
-            <div className="text-center py-16 text-slate-400 text-xs font-semibold">Loading notifications…</div>
-          ) : notifications.length > 0 ? (
-            notifications.map((item) => (
-              <div 
-                key={item.id} 
-                onClick={() => !item.is_read && markRead(item.id)}
-                className={`p-4 border rounded-xl flex items-start justify-between space-x-4 transition-all duration-200 cursor-pointer ${
-                  item.is_read 
-                    ? 'border-brand-border-purple/15 bg-slate-50/20 opacity-70' 
-                    : 'border-brand-border-purple/25 bg-white shadow-sm/5'
-                }`}
-              >
-                <div className="flex items-start space-x-3.5">
-                  <div className="h-8.5 w-8.5 rounded-lg bg-slate-50 border border-brand-border-purple/15 flex items-center justify-center shrink-0">
-                    {getIcon(item.type)}
-                  </div>
-                  <div>
-                    <h4 className={`text-xs ${item.is_read ? 'font-bold text-brand-text/80' : 'font-extrabold text-brand-heading'}`}>{item.title}</h4>
-                    <p className="text-xs text-brand-text/75 mt-1 leading-relaxed font-semibold">{item.message}</p>
-                    <span className="text-[9px] text-slate-400 font-bold mt-2 inline-block tabular-nums">{formatRelativeTime(item.created_at)}</span>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={(e) => { e.stopPropagation(); dismiss(item.id); }}
-                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition-colors cursor-pointer shrink-0"
-                  aria-label="Dismiss notification"
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-muted-foreground text-xs font-semibold">
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            Loading notifications...
+          </div>
+        ) : (
+          <div className="space-y-3.5">
+            {notifications.length > 0 ? (
+              notifications.map((item) => (
+                <div 
+                  key={item.id} 
+                  className={`p-4 border rounded-xl flex items-start justify-between space-x-4 transition duration-200 ${
+                    item.is_read 
+                      ? 'border-border bg-secondary/20 opacity-70' 
+                      : 'border-border bg-card'
+                  }`}
                 >
-                  <X className="h-4 w-4" />
-                </button>
+                  <div className="flex items-start space-x-3.5">
+                    <div className="h-8.5 w-8.5 rounded-lg bg-secondary border border-border flex items-center justify-center shrink-0">
+                      {getIcon(item.type)}
+                    </div>
+                    <div>
+                      <h4 className={`text-xs ${item.is_read ? 'font-bold text-muted-foreground/80' : 'font-semibold text-foreground'}`}>{item.title}</h4>
+                      {item.message && (
+                        <p className="text-xs text-muted-foreground mt-1 leading-relaxed font-semibold">{item.message}</p>
+                      )}
+                      <span className="text-[9px] text-muted-foreground font-semibold mt-2 inline-block tabular-nums">{timeAgo(item.created_at)}</span>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => dismiss(item.id)} 
+                    className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer shrink-0"
+                    aria-label="Dismiss notification"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-16 text-muted-foreground text-xs font-semibold">
+                <Bell className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                <span>Notification queue cleared. No new alerts.</span>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-16 text-slate-400 text-xs font-semibold">
-              <Bell className="h-8 w-8 mx-auto text-slate-300 mb-2" />
-              <span>Notification queue cleared. No new alerts.</span>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

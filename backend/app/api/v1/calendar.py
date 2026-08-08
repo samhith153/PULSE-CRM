@@ -270,8 +270,8 @@ async def update_calendar_event(
 @router.delete(
     "/event/{event_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    response_model=None,
     response_class=Response,
+    response_model=None,
     summary="Soft delete a calendar event",
     dependencies=[Depends(require_permission("activity:update"))],
     tags=["Calendar"],

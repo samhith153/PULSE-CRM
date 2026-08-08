@@ -9,9 +9,10 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BusinessRuleException, ConflictException, NotFoundException
+from app.core.exceptions import BusinessRuleException, ConflictException, ForbiddenException, NotFoundException
 from app.core.logging import get_logger
 from app.models.deal import Deal
+from app.models.user import User
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.contact_repository import ContactRepository
 from app.repositories.deal_repository import DealRepository
@@ -42,6 +43,22 @@ class DealService:
         self.contact_repo = ContactRepository(db)
         self.lead_repo = LeadRepository(db)
         self.user_repo = UserRepository(db)
+
+    # ── RBAC helpers ────────────────────────────────────────────────────────
+
+    def _has_elevated_access(self, user: User) -> bool:
+        roles = {ur.role.name for ur in user.user_roles if ur.role}
+        return bool({"admin", "manager"}.intersection(roles))
+
+    def _assert_ownership(self, user: User, owner_id: Optional[UUID], created_by: Optional[UUID]) -> None:
+        if self._has_elevated_access(user):
+            return
+        if owner_id != user.id and created_by != user.id:
+            raise ForbiddenException("You do not have access to this deal.")
+
+    def _scoped_owner_id(self, user: User) -> Optional[UUID]:
+        """Returns owner_id filter for non-elevated users (sales_rep sees own only)."""
+        return None if self._has_elevated_access(user) else user.id
 
     async def create(self, payload: DealCreateRequest, organization_id: UUID, created_by: UUID) -> Deal:
         await self._validate_relations(
@@ -94,7 +111,7 @@ class DealService:
 
     async def list(
         self,
-        organization_id: UUID,
+        user: User,
         search: Optional[str],
         status: Optional[DealStatus],
         owner_id: Optional[UUID],
@@ -109,11 +126,12 @@ class DealService:
         page: int,
         page_size: int,
     ) -> Tuple[List[Deal], int]:
+        effective_owner_id = owner_id or self._scoped_owner_id(user)
         return await self.repo.list_by_organization(
-            organization_id,
+            user.organization_id,
             search,
             status,
-            owner_id,
+            effective_owner_id,
             company_id,
             contact_id,
             lead_id,
@@ -126,18 +144,19 @@ class DealService:
             page_size,
         )
 
-    async def get(self, deal_id: UUID, organization_id: UUID) -> Deal:
-        deal = await self.repo.get_active_by_id(deal_id, organization_id)
+    async def get(self, deal_id: UUID, user: User) -> Deal:
+        deal = await self.repo.get_active_by_id(deal_id, user.organization_id)
         if not deal:
             raise NotFoundException("Deal", deal_id)
+        self._assert_ownership(user, deal.owner_id, deal.created_by)
         return deal
 
-    async def update(self, deal_id: UUID, organization_id: UUID, payload: DealUpdateRequest) -> Deal:
-        deal = await self.get(deal_id, organization_id)
+    async def update(self, deal_id: UUID, user: User, payload: DealUpdateRequest) -> Deal:
+        deal = await self.get(deal_id, user)
         update_data = payload.model_dump(exclude_none=True)
 
         await self._validate_relations(
-            organization_id,
+            user.organization_id,
             update_data.get("company_id"),
             update_data.get("contact_id"),
             update_data.get("lead_id"),
@@ -147,14 +166,14 @@ class DealService:
 
         lead_id = update_data.get("lead_id")
         if lead_id:
-            existing = await self.repo.get_by_lead_id_in_org(lead_id, organization_id)
+            existing = await self.repo.get_by_lead_id_in_org(lead_id, user.organization_id)
             if existing and existing.id != deal_id:
                 raise ConflictException("A deal already exists for this lead.")
 
         stage = None
         if "pipeline_stage_id" in update_data:
             stage = await self._resolve_stage(
-                organization_id=organization_id,
+                organization_id=user.organization_id,
                 stage_id=update_data.get("pipeline_stage_id"),
                 created_by=deal.created_by,
             )
@@ -186,7 +205,7 @@ class DealService:
         activity_action = self._deal_activity_action(stage, update_data)
         if activity_action:
             await self.timeline.record_activity(
-                organization_id=organization_id,
+                organization_id=user.organization_id,
                 created_by=deal.created_by,
                 entity_type=ActivityEntityType.DEAL.value,
                 entity_id=deal.id,
@@ -197,30 +216,22 @@ class DealService:
                 topic="deal",
             )
 
-        # Trigger recommendation regeneration if stage changed and deal has a linked lead
+        # Trigger unified assessment if stage changed and deal has a linked lead
         if deal.lead_id and "pipeline_stage_id" in update_data:
             try:
-                from app.services.recommendation_service import RecommendationService
-                await RecommendationService(self.db).generate_for_lead(
-                    deal.lead_id, organization_id
+                from app.services.ai_pipeline import run_lead_assessment
+                await run_lead_assessment(
+                    self.db, deal.lead_id, user.organization_id, deal.created_by,
+                    trigger="deal_stage_changed",
                 )
             except Exception as e:
-                logger.warning("Failed to generate recommendation on deal update", extra={"deal_id": str(deal_id), "error": str(e)})
-            # Recompute lead scores (pipeline stage changed)
-            try:
-                from app.services.feature_vector_service import FeatureVectorService
-                from app.services.lead_scoring_service import LeadScoringService
-                fvs = FeatureVectorService(self.db)
-                await fvs.compute_and_store_for_lead(deal.lead_id, organization_id, deal.created_by)
-                lss = LeadScoringService(self.db)
-                await lss.compute_and_store_scores(deal.lead_id, organization_id, deal.created_by)
-            except Exception as e:
-                logger.warning("Failed to recompute lead scores on deal stage change", extra={"deal_id": str(deal_id), "error": str(e)})
+                logger.warning("Failed to run assessment on deal stage change", extra={"deal_id": str(deal_id), "error": str(e)})
 
-        return await self.get(deal_id, organization_id)
+        return await self.get(deal_id, user)
 
-    async def delete(self, deal_id: UUID, organization_id: UUID) -> None:
-        deal = await self.get(deal_id, organization_id)
+    async def delete(self, deal_id: UUID, user: User) -> None:
+        deal = await self.get(deal_id, user)
+        organization_id = user.organization_id
         await self.repo.soft_delete(deal)
 
         # ── Cascade soft-delete to contact (if no other active deals remain) ──
@@ -298,10 +309,10 @@ class DealService:
         )
         logger.info("Deal deleted", extra={"deal_id": str(deal_id)})
 
-    async def convert_from_lead(self, lead_id: UUID, organization_id: UUID, created_by: UUID) -> Deal:
+    async def convert_from_lead(self, lead_id: UUID, user: User) -> Deal:
         from app.services.lead_service import LeadService
 
-        return await LeadService(self.db).convert_to_deal(lead_id, organization_id, created_by)
+        return await LeadService(self.db).convert_to_deal(lead_id, user)
 
     async def _validate_relations(
         self,

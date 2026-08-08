@@ -33,14 +33,11 @@ ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
 connect_args = {}
+# Disable asyncpg prepared statement cache — required for pgbouncer
+# transaction/statement pooling (e.g. Supabase pooler on port 6543).
+connect_args["statement_cache_size"] = 0
 if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
     connect_args["ssl"] = ssl_context
-
-# asyncpg + PgBouncer (Supabase pooler) are incompatible with asyncpg's
-# prepared-statement cache: pgbouncer resets server-side prepared statements
-# between transactions, which desyncs asyncpg's transaction state and raises
-# "cannot use Connection.transaction() in a manually started transaction".
-connect_args["statement_cache_size"] = 0
 
 engine = create_async_engine(
     DATABASE_URL,
@@ -87,9 +84,15 @@ async def check_db_connection() -> bool:
     """Quick health check — verifies we can query the database."""
     try:
         async with engine.connect() as conn:
-            result = await conn.execute(text("SELECT current_user"))
-            user = result.scalar()
-            logger.info("Database Connected - current_user=%s", user)
+            if engine.url.drivername.startswith("sqlite"):
+                result = await conn.execute(text("SELECT 1"))
+                user = "sqlite_user"
+            else:
+                result = await conn.execute(text("SELECT current_user"))
+                user = result.scalar()
+            logger.info("Database connected - current_user=%s", user)
+            print(f"Database Connected!")
+            print(f"Current User: {user}")
         return True
     except Exception as exc:
         logger.exception(

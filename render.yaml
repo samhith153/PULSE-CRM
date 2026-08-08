@@ -1,4 +1,5 @@
 services:
+  # ── Backend API ───────────────────────────────────────────────────────────
   - type: web
     name: pulse-crm-backend
     runtime: python
@@ -20,5 +21,23 @@ services:
         sync: false
       - key: ASSISTANT_API_KEY
         sync: false
+      # Internal Render networking: pulse-crm-ai is reachable by service name
+      - key: AI_SERVICE_URL
+        value: http://pulse-crm-ai.onrender.com
 
-
+  # ── AI Service ───────────────────────────────────────────────────────────
+  - type: web
+    name: pulse-crm-ai
+    runtime: python
+    repo: https://github.com/samhith153/PULSE-CRM
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    rootDir: ai-service
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LLM_API_KEY
+        sync: false

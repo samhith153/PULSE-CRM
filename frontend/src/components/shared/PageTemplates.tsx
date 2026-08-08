@@ -17,6 +17,7 @@ export function useModal() {
 }
 
 /* ─── Auth Modal ──────────────────────────────────── */
+type Role = 'representative' | 'manager' | 'admin';
 
 function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolean; onClose: () => void; defaultMode?: 'signin' | 'signup' }) {
   const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
@@ -24,6 +25,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [role, setRole] = useState<Role>('manager');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -54,8 +56,8 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
 
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('pulse-crm-auth', 'true');
-        localStorage.setItem('pulse-crm-role', mode === 'signup' ? 'admin' : 'manager');
-        localStorage.setItem('pulse-crm-user', name || '');
+        localStorage.setItem('pulse-crm-role', role);
+        localStorage.setItem('pulse-crm-user', name || role);
       }
 
       onClose();
@@ -66,6 +68,12 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
       setLoading(false);
     }
   };
+
+  const ROLES: { value: Role; label: string }[] = [
+    { value: 'admin', label: 'Admin' },
+    { value: 'manager', label: 'Manager' },
+    { value: 'representative', label: 'Sales Rep' },
+  ];
 
   const isSignin = mode === 'signin';
 
@@ -101,6 +109,15 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
           </div>
         )}
 
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>Select your role</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 22 }}>
+          {ROLES.map(r => (
+            <button key={r.value} onClick={() => setRole(r.value)}
+              style={{ padding: '9px 4px', borderRadius: 10, border: `2px solid ${role === r.value ? '#7c3aed' : '#e2e8f0'}`, background: role === r.value ? '#f5f3ff' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: role === r.value ? '#7c3aed' : '#64748b', transition: 'all .15s', fontFamily: 'inherit' }}>
+              {r.label}
+            </button>
+          ))}
+        </div>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {mode === 'signup' && (
             <>

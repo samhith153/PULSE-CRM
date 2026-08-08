@@ -12,19 +12,26 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '8000',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        port: '8000',
         pathname: '/**',
       },
     ],
   },
 
-  // Proxy /uploads to the backend so avatars and attachments work
-  async rewrites() {
+  async redirects() {
     return [
       {
-        source: '/uploads/:path*',
-        destination: `${backendUrl}/uploads/:path*`,
+        source: '/login',
+        destination: '/',
+        permanent: false,
       },
     ];
   },

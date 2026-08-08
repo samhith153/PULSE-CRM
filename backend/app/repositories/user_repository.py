@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import NotFoundException
-from app.models.role import Role, RolePermission
+from app.models.role import Role
 from app.models.user import User, UserRole
 from app.repositories.base import BaseRepository
 
@@ -21,20 +21,21 @@ class UserRepository(BaseRepository[User]):
         super().__init__(User, db)
 
     def _base_query(self):
-        """Always load roles and permissions eagerly to avoid async lazy-load errors."""
+        """Always load roles eagerly to avoid N+1 issues."""
         return (
             select(User)
-            .options(
-                selectinload(User.user_roles)
-                .selectinload(UserRole.role)
-                .selectinload(Role.role_permissions)
-                .selectinload(RolePermission.permission)
-            )
+            .options(selectinload(User.user_roles).selectinload(UserRole.role))
             .where(User.is_deleted == False)
         )
 
     async def get_by_email(self, email: str) -> Optional[User]:
         stmt = self._base_query().where(User.email == email.lower())
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_email_any(self, email: str) -> Optional[User]:
+        """Check for email across ALL users including soft-deleted, for uniqueness enforcement."""
+        stmt = select(User).where(User.email == email.lower())
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -70,6 +71,40 @@ class UserRepository(BaseRepository[User]):
                 )
             )
         return await self.get_paginated(stmt, page, page_size)
+
+    async def list_deleted_by_organization(
+        self,
+        organization_id: UUID,
+        search: Optional[str],
+        page: int,
+        page_size: int,
+    ) -> Tuple[List[User], int]:
+        """List soft-deleted users in the organization (admin archived users view)."""
+        stmt = (
+            select(User)
+            .options(selectinload(User.user_roles).selectinload(UserRole.role))
+            .where(User.organization_id == organization_id)
+            .where(User.is_deleted == True)
+        )
+        if search:
+            term = f"%{search.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    User.full_name.ilike(term),
+                    User.email.ilike(term),
+                )
+            )
+        return await self.get_paginated(stmt, page, page_size)
+
+    async def get_by_id_any(self, user_id: UUID) -> Optional[User]:
+        """Get user by ID including soft-deleted, for restore/permanent delete operations."""
+        stmt = (
+            select(User)
+            .options(selectinload(User.user_roles).selectinload(UserRole.role))
+            .where(User.id == user_id)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
 
     async def assign_role(
         self,

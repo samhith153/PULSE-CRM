@@ -22,6 +22,8 @@ from app.schemas.auth import (
     RegisterRequest,
     ResetPasswordRequest,
     TokenResponse,
+    GoogleLoginRequest,
+    AuthConfigResponse,
 )
 from app.schemas.common import StandardResponse
 from app.services.auth_service import AuthService
@@ -165,9 +167,38 @@ async def get_me(current_user: CurrentUser) -> dict:
         roles=[ur.role.name for ur in current_user.user_roles if ur.role],
         permissions=permissions,
         is_verified=current_user.is_verified,
-        is_superuser=current_user.is_superuser,
         avatar_url=current_user.avatar_url,
         phone=current_user.phone,
         job_title=current_user.job_title,
     )
     return {"success": True, "message": "OK", "data": response}
+
+
+@router.get(
+    "/config",
+    response_model=StandardResponse[AuthConfigResponse],
+    summary="Get public auth configurations",
+    description="Returns public configuration details needed for authentication, such as the Google Client ID.",
+)
+async def get_auth_config() -> dict:
+    from app.core.config import settings
+    response = AuthConfigResponse(google_client_id=settings.GOOGLE_CLIENT_ID)
+    return {"success": True, "message": "OK", "data": response}
+
+
+@router.post(
+    "/google",
+    response_model=StandardResponse[TokenResponse],
+    summary="Authenticate with Google",
+    description="Exchange a Google ID token credential for JWT access and refresh tokens.",
+)
+async def login_with_google(
+    payload: GoogleLoginRequest,
+    request: Request,
+    db: DBSession,
+) -> dict:
+    client_ip = request.client.host if request.client else ""
+    svc = AuthService(db)
+    tokens = await svc.login_with_google(payload.credential, client_ip)
+    return {"success": True, "message": "Login successful.", "data": tokens}
+

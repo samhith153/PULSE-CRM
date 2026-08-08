@@ -2,21 +2,22 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Contact, 
-  Building2, 
-  Layers, 
+import { motion } from 'framer-motion';
+import {
+  Home,
+  Users,
+  Contact,
+  Building2,
+  Layers,
   Package,
-  Activity, 
-  Mail, 
+  Activity,
+  Mail,
   GitBranch,
   Sparkles,
   BarChart3,
   FileText,
   Settings,
-  ChevronDown,
+  ChevronsUpDown,
   Calendar,
   Award,
   TrendingUp,
@@ -24,8 +25,13 @@ import {
   Bell,
   Link2,
   Cpu,
-  User
+  Zap,
+  LayoutDashboard,
+  ClipboardList,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
+import { resolveImageUrl } from '@/utils/api';
 
 interface SidebarProps {
   activeTab: string;
@@ -36,301 +42,306 @@ interface SidebarProps {
   currentUser?: { full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null;
 }
 
-export default function Sidebar({ activeTab, setActiveTab, collapsed, userRole, currentUser }: SidebarProps) {
-  // Dynamic sidebar sections based on user role
-  const getSections = () => {
-    switch (userRole) {
-      case 'manager':
-        return [
-          {
-            name: 'Sales Management',
-            items: [
-              { name: 'Team Pipeline', icon: Layers, tab: 'team pipeline' },
-              { name: 'Leads', icon: Users, tab: 'leads' },
-              { name: 'Companies', icon: Building2, tab: 'companies' },
-              { name: 'Contacts', icon: Contact, tab: 'contacts' },
-            ]
-          },
-          {
-            name: 'Manager Forecasting',
-            items: [
-              { name: 'Reports', icon: BarChart3, tab: 'reports' },
-              { name: 'Forecast', icon: TrendingUp, tab: 'forecast' },
-              { name: 'Team Performance', icon: Award, tab: 'team performance' },
-            ]
-          },
-          {
-            name: 'Productivity & AI',
-            items: [
-              { name: 'Leads', icon: Users, tab: 'leads' },
-              { name: 'Activities', icon: Activity, tab: 'activities' },
-              { name: 'Calendar', icon: Calendar, tab: 'calendar' },
-              { name: 'Emails', icon: Mail, tab: 'emails' },
-              { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
-              { name: 'Integrations', icon: Link2, tab: 'integrations' },
-            ]
-          },
-          {
-            name: 'Notifications & Settings',
-            items: [
-              { name: 'Notifications', icon: Bell, tab: 'notifications' },
-              { name: 'Settings', icon: Settings, tab: 'settings' },
-            ]
-          }
-        ];
-      case 'admin':
-        return [
-          {
-            name: 'User Directory',
-            items: [
-              { name: 'Users', icon: Users, tab: 'users' },
-              { name: 'Roles & Permissions', icon: Shield, tab: 'roles & permissions' },
-            ]
-          },
-          {
-            name: 'Core Entities',
-            items: [
-              { name: 'Companies', icon: Building2, tab: 'companies' },
-              { name: 'Contacts', icon: Contact, tab: 'contacts' },
-              { name: 'Products', icon: Package, tab: 'products' },
-            ]
-          },
-          {
-            name: 'Integrations & Automation',
-            items: [
-              { name: 'Integrations', icon: Link2, tab: 'integrations' },
-              { name: 'Automation', icon: GitBranch, tab: 'automation' },
-              { name: 'Emails', icon: Mail, tab: 'emails' },
-            ]
-          },
-          {
-            name: 'System Intelligence',
-            items: [
-              { name: 'Reports', icon: BarChart3, tab: 'reports' },
-              { name: 'AI Models', icon: Cpu, tab: 'ai models' },
-              { name: 'Audit Logs', icon: Activity, tab: 'audit logs' },
-            ]
-          },
-          {
-            name: 'Administration',
-            items: [
-              { name: 'Settings', icon: Settings, tab: 'settings' },
-            ]
-          }
-        ];
-      case 'sales_rep':
-      default:
-        return [
-          {
-            name: 'Productivity',
-            items: [
-              { name: 'Leads', icon: Users, tab: 'leads' },
-              { name: 'Contacts', icon: Contact, tab: 'contacts' },
-              { name: 'Companies', icon: Building2, tab: 'companies' },
-              { name: 'Deals', icon: Layers, tab: 'deals' },
-              { name: 'Activities', icon: Activity, tab: 'activities' },
-              { name: 'Emails', icon: Mail, tab: 'emails' },
-              { name: 'Integrations', icon: Link2, tab: 'integrations' },
-            ]
-          },
-          {
-            name: 'Automations & Intelligence',
-            items: [
-              { name: 'Workflows', icon: GitBranch, tab: 'workflows' },
-              { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
-            ]
-          },
-          {
-            name: 'Data & Analytics',
-            items: [
-              { name: 'Reports', icon: BarChart3, tab: 'reports' },
-              { name: 'Documents', icon: FileText, tab: 'documents' },
-            ]
-          },
-          {
-            name: 'Configuration',
-            items: [
-              { name: 'Settings', icon: Settings, tab: 'settings' },
-            ]
-          }
-        ];
-    }
-  };
+/* ── Nav data per role ───────────────────────────────────────────────── */
 
-  // Dynamic user profile footer details based on active role
-  const getUserProfile = () => {
-    if (currentUser) {
-      return {
-        name: currentUser.full_name,
-        role: currentUser.job_title || (userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative'),
-        avatar: currentUser.avatar_url || null,
-      };
-    }
-    return {
-      name: userRole === 'admin' ? 'Admin' : userRole === 'manager' ? 'Manager' : 'Sales Rep',
-      role: userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative',
-      avatar: null,
-    };
-  };
+type NavItem = { name: string; icon: React.ElementType; tab: string };
+type NavSection = { label: string; items: NavItem[] };
 
-  const profile = getUserProfile();
-  const sections = getSections();
+function getSections(userRole: SidebarProps['userRole']): NavSection[] {
+  switch (userRole) {
+    case 'manager':
+      return [
+        {
+          label: 'Sales',
+          items: [
+            { name: 'Team Pipeline', icon: Layers,     tab: 'team pipeline' },
+            { name: 'Leads',         icon: Users,      tab: 'leads' },
+            { name: 'Companies',     icon: Building2,  tab: 'companies' },
+            { name: 'Contacts',      icon: Contact,    tab: 'contacts' },
+          ],
+        },
+        {
+          label: 'Forecasting',
+          items: [
+            { name: 'Reports',          icon: BarChart3,  tab: 'reports' },
+            { name: 'Forecast',         icon: TrendingUp, tab: 'forecast' },
+            { name: 'Team Performance', icon: Award,      tab: 'team performance' },
+          ],
+        },
+        {
+          label: 'Productivity',
+          items: [
+            { name: 'Activities',   icon: Activity,  tab: 'activities' },
+            { name: 'Tasks',        icon: ClipboardList, tab: 'tasks' },
+            { name: 'Calendar',     icon: Calendar,  tab: 'calendar' },
+            { name: 'AI Insights',  icon: Sparkles,  tab: 'ai insights' },
+          ],
+        },
+        {
+          label: 'Settings',
+          items: [
+            { name: 'Notifications', icon: Bell,     tab: 'notifications' },
+            { name: 'Settings',      icon: Settings, tab: 'settings' },
+          ],
+        },
+      ];
 
-  const handleTabClick = (tabName: string) => {
-    setActiveTab(tabName.toLowerCase());
-  };
+    case 'admin':
+      return [
+        {
+          label: 'People',
+          items: [
+            { name: 'Users',             icon: Users,  tab: 'users' },
+            { name: 'Roles & Perms',     icon: Shield, tab: 'roles & permissions' },
+          ],
+        },
+        {
+          label: 'Records',
+          items: [
+            { name: 'Companies', icon: Building2, tab: 'companies' },
+            { name: 'Contacts',  icon: Contact,   tab: 'contacts' },
+            { name: 'Products',  icon: Package,   tab: 'products' },
+          ],
+        },
+        {
+          label: 'Intelligence',
+          items: [
+            { name: 'Reports',    icon: BarChart3, tab: 'reports' },
+            { name: 'AI Models',  icon: Cpu,       tab: 'ai models' },
+            { name: 'Audit Logs', icon: Activity,  tab: 'audit logs' },
+          ],
+        },
+        {
+          label: 'System',
+          items: [
+            { name: 'Settings', icon: Settings, tab: 'settings' },
+          ],
+        },
+      ];
 
-  const isTabActive = (tabName: string) => {
-    return activeTab.toLowerCase() === tabName.toLowerCase();
-  };
+    case 'representative':
+    default:
+      return [
+        {
+          label: 'Productivity',
+          items: [
+            { name: 'Leads',        icon: Users,      tab: 'leads' },
+            { name: 'Contacts',     icon: Contact,    tab: 'contacts' },
+            { name: 'Companies',    icon: Building2,  tab: 'companies' },
+            { name: 'Deals',        icon: Layers,     tab: 'deals' },
+            { name: 'Activities',   icon: Activity,   tab: 'activities' },
+            { name: 'Tasks',        icon: ClipboardList, tab: 'tasks' },
+            { name: 'Emails',       icon: Mail,       tab: 'emails' },
+          ],
+        },
+        {
+          label: 'Automations & Intelligence',
+          items: [
+            { name: 'Workflows',   icon: Zap,      tab: 'workflows' },
+            { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
+          ],
+        },
+        {
+          label: 'Data & Analytics',
+          items: [
+            { name: 'Reports',   icon: BarChart3, tab: 'reports' },
+            { name: 'Documents', icon: FileText,  tab: 'documents' },
+          ],
+        },
+        {
+          label: 'Configuration',
+          items: [
+            { name: 'Settings', icon: Settings, tab: 'settings' },
+          ],
+        },
+      ];
+  }
+}
+
+/* ── Component ───────────────────────────────────────────────────────── */
+
+export default function Sidebar({
+  activeTab,
+  setActiveTab,
+  collapsed,
+  setCollapsed,
+  userRole,
+}: SidebarProps) {
+  const sections = getSections(userRole);
+  const { user: currentUser } = useCurrentUser();
+  const profileName = currentUser?.full_name || 'User';
+  const profileRoleLabel = userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative';
+  const profileInitials = userInitials(currentUser?.full_name);
+
+  const isActive = (tab: string) =>
+    activeTab.toLowerCase() === tab.toLowerCase();
+
+  /* Shared active / inactive styles */
+  const itemBase = cn(
+    'group relative w-full flex items-center rounded-xl py-2 text-sm z-0 overflow-hidden',
+    'transition duration-200 cursor-pointer',
+  );
+  const itemActive = cn(
+    'text-brand-blue font-semibold',
+  );
+  const itemInactive = cn(
+    'text-sidebar-foreground/55 font-medium hover:text-sidebar-foreground',
+    'hover:bg-sidebar-accent/40',
+  );
 
   return (
-    <aside 
-      className={`bg-white text-brand-text h-full flex flex-col justify-between transition-all duration-200 z-45 shrink-0 border-r border-slate-100 shadow-[4px_0_20px_rgba(0,0,0,0.03)] overflow-hidden ${
-        collapsed ? 'w-16' : 'w-64'
-      }`}
+    <aside
+      className={cn(
+        'flex h-full flex-col shrink-0 overflow-hidden',
+        'bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
+        'transition-[width] duration-300 ease-in-out z-40',
+        collapsed ? 'w-16' : 'w-60',
+      )}
     >
-      <div className="flex flex-col h-full overflow-hidden">
-        {/* Brand Header */}
-        <div className="h-16 flex items-center px-4 border-b border-slate-100 shrink-0">
-          <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="h-8 w-8 rounded-lg bg-brand-accent flex items-center justify-center shrink-0 border border-brand-border-purple/30">
-              <svg className="h-4.5 w-4.5 text-white animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
-            {!collapsed && (
-              <span className="font-extrabold text-brand-text text-lg tracking-wide uppercase font-sans">
-                PULSE
-              </span>
-            )}
-          </div>
+      {/* ── Brand header ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 px-3 py-4 shrink-0 min-w-0">
+        <div className="grad-blue-purple grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground">
+          <Zap size={17} />
         </div>
-
-        {/* Scrollable Navigation Area */}
-        <div className="flex-1 overflow-y-auto py-4 px-2 space-y-4 scrollbar-thin scrollbar-thumb-brand-border-purple/20">
-          {/* Dashboard Home - Main button outside categories */}
-          <div className="space-y-1">
-            <button
-              onClick={() => handleTabClick('dashboard')}
-              className={`w-full flex items-center ${collapsed ? 'justify-center px-1.5 py-2.5 mx-auto max-w-[48px]' : 'space-x-3 px-3 py-2.5'} rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group relative ${
-                isTabActive('dashboard')
-                  ? collapsed 
-                    ? 'bg-brand-accent text-white shadow-md rounded-xl scale-95' 
-                    : 'bg-brand-secondary-accent/15 text-brand-accent border-l-4 border-brand-secondary-accent shadow-sm/5 font-extrabold' 
-                  : collapsed
-                    ? 'hover:bg-slate-150 text-brand-text/70 hover:text-brand-text'
-                    : 'hover:bg-slate-50 text-brand-text/80 hover:text-brand-text border-l-4 border-transparent'
-              }`}
-              title={collapsed ? 'Dashboard (Your analytical home base)' : undefined}
-            >
-              <LayoutDashboard 
-                className={`h-5 w-5 shrink-0 transition-colors ${
-                  isTabActive('dashboard') ? (collapsed ? 'text-white' : 'text-brand-heading') : 'text-brand-text/70 group-hover:text-brand-text'
-                }`}
-                strokeWidth={2}
-              />
-              {!collapsed && (
-                <div className="text-left">
-                  <span className="tracking-wide block">Dashboard</span>
-                  <span className="text-[9px] text-slate-400 font-semibold block mt-0.5 leading-none">Your analytical home base</span>
-                </div>
-              )}
-              {collapsed && (
-                <div className="absolute left-full ml-3 px-2 py-1 bg-slate-900 text-white text-[10px] rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 whitespace-nowrap">
-                  Dashboard
-                </div>
-              )}
-            </button>
-          </div>
-
-          {/* Sections Map */}
-          {sections.map((section) => (
-            <div key={section.name} className="space-y-1">
-              {/* Category Header */}
-              {!collapsed ? (
-                <h4 className="text-[9px] font-extrabold text-brand-heading/70 uppercase tracking-wider px-3 pt-2 pb-1.5 font-sans">
-                  {section.name}
-                </h4>
-              ) : (
-                <div className="h-px bg-slate-100 my-2 mx-2" />
-              )}
-
-              {/* Category Items */}
-              {section.items.map((item) => {
-                const Icon = item.icon;
-                const active = isTabActive(item.tab);
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => handleTabClick(item.tab)}
-                    className={`w-full flex items-center ${collapsed ? 'justify-center px-1.5 py-2 mx-auto max-w-[48px]' : 'space-x-3 px-3 py-2'} rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer group relative ${
-                      active 
-                        ? collapsed
-                          ? 'bg-brand-accent text-white shadow-md rounded-xl scale-95'
-                          : 'bg-brand-secondary-accent/15 text-brand-accent border-l-4 border-brand-secondary-accent shadow-sm/5 font-extrabold'
-                        : collapsed
-                          ? 'hover:bg-slate-150 text-brand-text/70 hover:text-brand-text'
-                          : 'hover:bg-slate-50 text-brand-text/80 hover:text-brand-text border-l-4 border-transparent'
-                    }`}
-                    title={collapsed ? item.name : undefined}
-                  >
-                    <Icon 
-                      className={`h-5 w-5 shrink-0 transition-colors ${
-                        active ? (collapsed ? 'text-white' : 'text-brand-heading') : 'text-brand-text/70 group-hover:text-brand-text'
-                      }`}
-                      strokeWidth={2}
-                    />
-                    {!collapsed && <span className="tracking-wide">{item.name}</span>}
-                    {collapsed && (
-                      <div className="absolute left-full ml-3 px-2 py-1 bg-slate-900 text-white text-[10px] rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 whitespace-nowrap">
-                        {item.name}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          ))}
-        </div>
+        {!collapsed && (
+          <span className="truncate text-base font-bold tracking-tight text-sidebar-foreground">
+            PULSE CRM
+          </span>
+        )}
       </div>
 
-      {/* User Footer Profile */}
-      <div className="p-4 border-t border-slate-100 shrink-0">
-        <button 
-          type="button"
-          onClick={() => handleTabClick('profile')}
-          className="flex items-center justify-between w-full text-left cursor-pointer hover:bg-slate-50 p-1 rounded-lg transition-colors"
+      {/* ── Scrollable nav ───────────────────────────────────────────── */}
+      <nav className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
+
+        {/* Home */}
+        <button
+          onClick={() => setActiveTab('home')}
+          className={cn(
+            itemBase,
+            collapsed ? 'justify-center px-2' : 'px-3 gap-2.5',
+            isActive('home') ? itemActive : itemInactive,
+          )}
         >
-          <div className="flex items-center space-x-3 overflow-hidden">
-            <div className="h-8 w-8 rounded-full bg-slate-100 overflow-hidden shrink-0 border border-slate-200 flex items-center justify-center">
-              {profile.avatar ? (
-                <Image 
-                  src={profile.avatar} 
-                  alt={`${profile.name} Profile`} 
-                  width={32} height={32}
-                  className="h-full w-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                <User className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
-              )}
-            </div>
-            {!collapsed && (
-              <div className="text-left overflow-hidden">
-                <p className="text-xs font-extrabold text-brand-text truncate leading-tight">{profile.name}</p>
-                <p className="text-[10px] text-brand-text/75 truncate mt-0.5 font-bold">{profile.role}</p>
-              </div>
+          <LayoutDashboard
+            size={16}
+            strokeWidth={2}
+            fill={isActive('home') ? "rgba(37, 99, 235, 0.15)" : "none"}
+            className={cn(
+              'shrink-0 transition-colors',
+              isActive('dashboard') ? 'text-brand-purple' : 'text-muted-foreground group-hover:text-sidebar-foreground',
+            )}
+          />
+          {!collapsed && <span className="truncate relative z-10">Home</span>}
+
+          {/* Collapsed tooltip */}
+          {collapsed && (
+            <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground shadow-nav opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+              Home
+            </span>
+          )}
+        </button>
+
+        {/* Sections */}
+        {sections.map((section) => (
+          <div key={section.label} className="pt-3">
+            {/* Group label */}
+            {!collapsed ? (
+              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 select-none">
+                {section.label}
+              </p>
+            ) : (
+              <div className="mx-2 mb-2 h-px bg-sidebar-border" />
+            )}
+
+            {section.items.map((item) => {
+              const Icon   = item.icon;
+              const active = isActive(item.tab);
+
+              return (
+                <button
+                  key={item.name}
+                  onClick={() => setActiveTab(item.tab)}
+                  className={cn(
+                    itemBase,
+                    collapsed ? 'justify-center px-2' : 'px-3 gap-2.5',
+                    active ? itemActive : itemInactive,
+                  )}
+                >
+                  {active && (
+                    <motion.div
+                      layoutId="activeNavIndicator"
+                      className="absolute inset-0 bg-brand-blue/[0.08] rounded-xl z-0"
+                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                    >
+                      <div className="absolute left-0 top-2 bottom-2 w-0.75 rounded-r bg-brand-blue" />
+                    </motion.div>
+                  )}
+                  <Icon
+                    size={15}
+                    strokeWidth={2}
+                    fill={active ? "rgba(37, 99, 235, 0.15)" : "none"}
+                    className={cn(
+                      'shrink-0 transition-colors relative z-10',
+                      active
+                        ? 'text-brand-blue'
+                        : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                    )}
+                  />
+                  {!collapsed && <span className="truncate relative z-10">{item.name}</span>}
+
+                  {collapsed && (
+                    <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground shadow-nav opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+                      {item.name}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
+
+      {/* ── User footer ──────────────────────────────────────────────── */}
+      <div className="shrink-0 border-t border-sidebar-border px-2 py-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab('profile')}
+          className={cn(
+            'w-full flex items-center gap-2.5 rounded-xl p-2',
+            'text-left transition-colors duration-150 cursor-pointer',
+            'hover:bg-sidebar-accent/60',
+            collapsed && 'justify-center',
+          )}
+        >
+          <div className="size-8 shrink-0 overflow-hidden rounded-full border border-sidebar-border flex items-center justify-center bg-secondary">
+            {currentUser?.avatar_url ? (
+              <Image
+                src={resolveImageUrl(currentUser.avatar_url)}
+                alt={profileName}
+                width={32}
+                height={32}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <span className="text-[10px] font-bold text-muted-foreground select-none">{profileInitials}</span>
             )}
           </div>
           {!collapsed && (
-            <span className="text-brand-text/70 hover:text-brand-text transition-colors">
-              <ChevronDown className="h-4.5 w-4.5" strokeWidth={2} />
-            </span>
+            <>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-sidebar-foreground">
+                  {profileName}
+                </p>
+                <p className="truncate text-[10px] text-muted-foreground">
+                  {profileRoleLabel}
+                </p>
+              </div>
+              <ChevronsUpDown size={13} className="shrink-0 text-muted-foreground" />
+            </>
           )}
         </button>
       </div>
     </aside>
   );
 }
-

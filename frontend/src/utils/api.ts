@@ -1,7 +1,6 @@
-import { toast } from '../lib/toast';
-export { toast };
+import { toast } from '@/lib/toast';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
 export function getToken(): string | null {
@@ -39,6 +38,7 @@ export interface Lead {
   score: number | null;
   fit_score: number | null;
   engagement_score: number | null;
+  fit_reasons: string[] | null;
   engagement_reasons: string[] | null;
   top_reasons: string[] | null;
   priority: string | null;
@@ -180,7 +180,62 @@ export async function login(email: string, password: string): Promise<{ access_t
   return json.data ?? json;
 }
 
+export async function getAuthConfig(): Promise<{ google_client_id: string | null }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/config`);
+  if (!res.ok) {
+    throw new Error(`Failed to load auth config (${res.status})`);
+  }
+  const json = await res.json();
+  return json.data ?? json;
+}
+
+export async function loginWithGoogle(credential: string): Promise<{ access_token: string; refresh_token: string }> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ credential })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as any).message || `Google Sign-In failed (${res.status})`);
+  }
+  const json = await res.json();
+  return json.data ?? json;
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password: newPassword })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.message || `Reset password failed (${res.status})`);
+  }
+}
+
+export function resolveImageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${cleanUrl}`;
+}
+
+
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  // Guard: skip the network call entirely if no auth token is available.
+  // This prevents a flood of 401s from components mounting before the auth
+  // guard in DashboardShell has finished running.
+  const token = getToken();
+  if (!token) {
+    // Return a safe empty value so callers don't crash while unauthenticated.
+    // Array endpoints get [], object endpoints get undefined — components
+    // that handle empty arrays or undefined data won't error.
+    return undefined as T;
+  }
+
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
@@ -226,11 +281,18 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export async function getLeads(): Promise<Lead[]> {
   const dbResult = await apiFetch<any>('/api/v1/leads');
   const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return items as Lead[];
+  return items.map((dl: any) => ({
+    ...dl,
+    ownerAvatar: resolveImageUrl(dl.owner_avatar || dl.ownerAvatar),
+  })) as unknown as Lead[];
 }
 
 export async function getLead(leadId: string): Promise<Lead> {
-  return apiFetch<Lead>(`/api/v1/leads/${leadId}`);
+  const dl = await apiFetch<any>(`/api/v1/leads/${leadId}`);
+  if (dl) {
+    dl.ownerAvatar = resolveImageUrl(dl.owner_avatar || dl.ownerAvatar);
+  }
+  return dl as Lead;
 }
 
 export async function createLead(leadData: Record<string, unknown>): Promise<Lead> {
@@ -267,6 +329,159 @@ export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecom
     body: JSON.stringify({ entity_type: 'lead', entity_id: leadId }),
   });
 }
+
+// =============================================================================
+// AI LEAD WORKFLOW
+// =============================================================================
+
+export interface WorkflowTask {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTask | null;
+  history: WorkflowTask[];
+}
+
+/**
+ * Fetch the AI-driven workflow for a lead.
+ *
+ * Backend:
+ * GET /api/v1/workflows/leads/{lead_id}
+ */
+
+
+// ============================================================
+// AI WORKFLOW TASKS
+// ============================================================
+// ============================================================
+// AI WORKFLOW API
+// Replace ONLY your existing workflow-related interfaces/functions
+// with this block. Do not replace the entire api.ts file.
+// ============================================================
+
+export interface WorkflowTaskItem {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTaskItem | null;
+  history: WorkflowTaskItem[];
+}
+
+/**
+ * Fetch the workflow for one lead.
+ *
+ * IMPORTANT:
+ * Backend route is /api/v1/workflow (singular), not /workflows.
+ */
+export async function getLeadWorkflow(
+  leadId: string
+): Promise<LeadWorkflowResponse> {
+  const result = await apiFetch(
+    `/api/v1/workflows/leads/${leadId}`
+  );
+
+  if (!result) {
+    return {
+      current_task: null,
+      history: [],
+    };
+  }
+
+  const data = result?.data ?? result;
+
+  return {
+    current_task: data?.current_task ?? null,
+    history: Array.isArray(data?.history)
+      ? data.history
+      : [],
+  };
+}
+
+/**
+ * Complete ONE workflow task.
+ *
+ * IMPORTANT:
+ * Pass the workflow task ID, NOT the lead ID.
+ */
+export async function completeWorkflowTask(
+  taskId: string
+): Promise<WorkflowTaskItem> {
+  const result = await apiFetch(
+    `/api/v1/workflows/tasks/${taskId}/complete`,
+    {
+      method: 'POST',
+    }
+  );
+
+  return (result?.data ?? result) as WorkflowTaskItem;
+}
+
+
+/**
+ * Optional task-list endpoint.
+ * The Workflow page above does not need this function,
+ * but keeping it here is useful for other components.
+ */
+export async function getWorkflowTasks(
+  status?: string
+): Promise<WorkflowTaskItem[]> {
+  const query = status
+    ? `?status=${encodeURIComponent(status)}`
+    : '';
+
+  const result = await apiFetch<any>(
+    `/api/v1/workflows/tasks${query}`
+  );
+
+  if (!result) return [];
+
+  const data = result?.data ?? result;
+
+  return Array.isArray(data) ? data : [];
+}
+/**
+ * Complete an AI workflow task.
+ */
+export interface WorkflowTaskResponse {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 
 export interface BatchRecommendationItem {
   lead_id: string;
@@ -333,6 +548,10 @@ export async function updateContact(contactId: string | number, contactData: any
   });
 }
 
+export async function deleteContact(contactId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/contacts/${contactId}`, { method: 'DELETE' });
+}
+
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
   const dbResult = await apiFetch<any>('/api/v1/companies');
@@ -347,7 +566,7 @@ export async function getCompanies(): Promise<Company[]> {
       contacts: [],
       openDeals: dc.open_deals ?? 0,
       owner: dc.owner_name || dc.owner || '',
-      ownerAvatar: dc.owner_avatar || '',
+      ownerAvatar: resolveImageUrl(dc.owner_avatar || dc.ownerAvatar || ''),
       notes: dc.notes || '',
       timeline: [],
       emails: [],
@@ -370,6 +589,10 @@ export async function updateCompany(companyId: string | number, companyData: any
   });
 }
 
+export async function deleteCompany(companyId: string | number): Promise<void> {
+  await apiFetch(`/api/v1/companies/${companyId}`, { method: 'DELETE' });
+}
+
 // --- Deals API ---
 export async function getDeals(): Promise<Deal[]> {
   const dbResult = await apiFetch<any>('/api/v1/deals');
@@ -384,6 +607,7 @@ export async function getDeals(): Promise<Deal[]> {
       priority: dd.priority || '',
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
+      createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
     };
   }) as unknown as Deal[];
 }
@@ -504,7 +728,6 @@ export interface EmailListParams {
   search?: string;
   direction?: 'inbound' | 'outbound' | '';
   thread_id?: string;
-  is_read?: boolean;
   sort_order?: 'asc' | 'desc';
 }
 
@@ -515,15 +738,6 @@ export interface ActivityListParams {
   entity_id?: string;
   activity_type?: string;
   search?: string;
-}
-
-export interface CreateActivityPayload {
-  entity_type: string;
-  entity_id: string;
-  action: string;
-  title: string;
-  description?: string | null;
-  payload?: Record<string, unknown>;
 }
 
 export async function startGmailOAuth(): Promise<GmailOAuthLogin> {
@@ -586,9 +800,8 @@ export async function getEmail(id: string): Promise<SyncedEmail> {
   return apiFetch<SyncedEmail>(`/api/v1/emails/${id}`);
 }
 
-export interface ThreadSummary {
+export interface EmailSummaryData {
   summary: string | null;
-  summary_word: string | null;
   sentiment: string | null;
   intent: string | null;
   confidence: number | null;
@@ -598,16 +811,11 @@ export interface ThreadSummary {
   draft_reply: string | null;
   follow_up_suggestion: string | null;
   follow_up_timing: string | null;
+  model_version: string | null;
 }
 
-export interface ThreadResult {
-  thread_id: string;
-  emails: SyncedEmail[];
-  summary: ThreadSummary | null;
-}
-
-export async function getThread(threadId: string): Promise<ThreadResult> {
-  return apiFetch<ThreadResult>(`/api/v1/gmail/threads/${encodeURIComponent(threadId)}`);
+export async function getEmailSummary(threadId: string): Promise<EmailSummaryData | null> {
+  return apiFetch<EmailSummaryData | null>(`/api/v1/emails/summary/${threadId}`);
 }
 
 export async function getActivities(params: ActivityListParams = {}): Promise<PaginatedResult<ActivityTimelineItem>> {
@@ -617,12 +825,6 @@ export async function getActivities(params: ActivityListParams = {}): Promise<Pa
   );
 }
 
-export async function createActivity(payload: CreateActivityPayload): Promise<ActivityTimelineItem> {
-  return apiFetch<ActivityTimelineItem>('/api/v1/activities', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
 // --- Dashboard KPI API (Admin / Manager / Sales Rep) ---
 
 // Decimal values arrive as strings from the JSON serializer.
@@ -637,7 +839,7 @@ export function asNumber(v: Decimal | undefined | null): number {
 export function formatINR(v: Decimal | undefined | null): string {
   const n = asNumber(v);
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(2)}L`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}L`;
   if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
   return `₹${n.toLocaleString('en-IN')}`;
 }
@@ -712,22 +914,16 @@ export interface ManagerDashboardData {
 }
 
 export interface SalesRepDashboardData {
-  summary: { total_revenue: number; won_deals: number; win_rate: number; average_deal_size: number; average_sales_cycle: number };
-  revenue_stat: { total: number; previous_period: number; growth_pct: number };
-  won_deals_stat: { count: number; previous_period: number; growth_pct: number };
-  win_rate_stat: { win_rate: number; previous_win_rate: number; growth_pct: number };
-  avg_deal_size_stat: { avg_deal_value: number; previous_avg: number; growth_pct: number };
-  avg_sales_cycle_stat: { avg_days: number; previous_avg_days: number; difference_days: number };
-  revenue_trend: { period: string; revenue: number }[];
-  deals_by_stage: { stage: string; count: number; percentage: number; conversion_rate: number }[];
-  deals_by_source: { source: string; count: number; percentage: number; revenue: number }[];
-  revenue_by_company_size: { size_bucket: string; revenue: number; percentage: number }[];
-  activity_heatmap: { date: string; activity_type: string; count: number; intensity: string }[];
-  team_performance: { user_id: string; full_name: string; revenue: number; won_deals: number; win_rate: number }[];
-  activity_overview: { emails_sent: number; calls_made: number; meetings_held: number; tasks_completed: number; notes_added: number; emails_growth_pct: number; calls_growth_pct: number; meetings_growth_pct: number; tasks_growth_pct: number };
-  key_metrics: { open_deals: number; pipeline_value: number; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: number; deals_created_growth_pct: number; activities_growth_pct: number };
-  recent_reports: { report_name: string; created_at: string; created_by: string | null; report_type: string }[];
-  report_templates: { name: string; description: string; primary_metrics: string[]; group_by_options: string[] }[];
+  summary: { total_revenue: Decimal; won_deals: number; win_rate: Decimal; average_deal_size: Decimal; average_sales_cycle: Decimal };
+  revenue_stat: { total: Decimal; previous_period: Decimal; growth_pct: Decimal };
+  won_deals_stat: { count: number; previous_period: number; growth_pct: Decimal };
+  win_rate_stat: { win_rate: Decimal; previous_win_rate: Decimal; growth_pct: Decimal };
+  avg_deal_size_stat: { avg_deal_value: Decimal; previous_avg: Decimal; growth_pct: Decimal };
+  avg_sales_cycle_stat: { avg_days: Decimal; previous_avg_days: Decimal; difference_days: Decimal };
+  revenue_trend: { period: string; revenue: Decimal }[];
+  deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
+  deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
+  key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
@@ -742,29 +938,12 @@ export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' 
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
 }
 
-export async function getSalesDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
-  return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales${toQuery({ period })}`);
-}
-// Fetch the dashboard KPIs for a given UI role. Each role hits its own
-// RBAC-scoped endpoint so a sales rep / manager never calls /dashboard/admin.
-export async function getRoleDashboard(
-  role: 'sales_rep' | 'manager' | 'admin',
-  period: 'week' | 'month' | 'quarter' | 'year' = 'month',
-): Promise<AdminDashboardData | ManagerDashboardData | SalesRepDashboardData> {
-  switch (role) {
-    case 'admin':
-      return getAdminDashboard();
-    case 'manager':
-      return getManagerDashboard();
-    case 'sales_rep':
-    default:
-      // Prefer the canonical /dashboard/sales; fall back to the /sales-rep alias.
-      return getSalesDashboard(period).catch(() => getSalesRepDashboard(period));
+export async function getCurrentUser(): Promise<any> {
+  const me = await apiFetch<any>('/api/v1/auth/me');
+  if (me && me.avatar_url) {
+    me.avatar_url = resolveImageUrl(me.avatar_url);
   }
-}
-
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean; is_superuser: boolean; avatar_url: string | null; phone: string | null; job_title: string | null }> {
-  return apiFetch('/api/v1/auth/me');
+  return me;
 }
 
 // --- Automation / Events API ---
@@ -821,19 +1000,6 @@ export async function getAutomationEvents(limit = 25): Promise<AutomationEventLi
   return apiFetch<AutomationEventList>(`/api/v1/events${toQuery({ limit })}`);
 }
 
-export async function createAutomationEvent(payload: {
-  event_type: string;
-  aggregate_type?: string | null;
-  aggregate_id?: string | null;
-  source?: string | null;
-  correlation_id?: string | null;
-  payload?: Record<string, unknown>;
-}): Promise<AutomationEvent> {
-  return apiFetch<AutomationEvent>('/api/v1/events', {
-    method: 'POST',
-    body: JSON.stringify(payload)
-  });
-}
 export async function getWebhookEndpoints(): Promise<WebhookEndpoint[]> {
   return apiFetch<WebhookEndpoint[]>('/api/v1/webhooks/endpoints');
 }
@@ -857,7 +1023,6 @@ export interface UserData {
   organization_id: string;
   is_active: boolean;
   is_verified: boolean;
-  is_superuser: boolean;
   roles: string[];
   last_login_at: string | null;
   created_at: string;
@@ -955,70 +1120,6 @@ export async function updateRolePermissions(roleId: string, permissionCodenames:
   });
 }
 
-export interface DocumentResponse {
-  id: string;
-  organization_id: string;
-  uploaded_by?: string;
-  file_name: string;
-  file_path: string;
-  file_type: string;
-  file_size_bytes: number;
-  created_at: string;
-}
-
-export async function uploadDocument(file: File): Promise<DocumentResponse | null> {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    // This now uses the API_BASE_URL that is already defined in your file
-    const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getToken()}`
-      },
-      body: formData
-    });
-
-    if (!res.ok) {
-        console.error('Upload failed with status:', res.status);
-        return null;
-    }
-    return (await res.json()) as DocumentResponse;
-  } catch (error) {
-    console.error('Error uploading document:', error);
-    return null;
-  }
-}
-
-export async function getDocuments(): Promise<DocumentResponse[]> {
-  const dbResult = await apiFetch<any>('/api/v1/documents');
-  const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return items as DocumentResponse[];
-}
-
-export async function downloadDocumentFile(id: string | number): Promise<Blob> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/documents/${id}/download`, {
-    headers: getAuthHeaders()
-  });
-
-  if (!res.ok) {
-    throw new Error('Failed to download document');
-  }
-  return res.blob();
-}
-
-export async function deleteDocumentAPI(id: string | number): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/documents/${id}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders()
-  });
-
-  if (!res.ok) {
-    throw new Error('Failed to delete document');
-  }
-}
-
 // --- Sales Manager Forecast API ---
 
 export interface ManagerForecastData {
@@ -1100,8 +1201,419 @@ export async function getManagerForecast(
   );
 }
 
-// --- Notifications API ---
-export interface Notification {
+// --- Dashboard Command Center (Sales Rep /me) ---
+
+export interface DashboardOverviewData {
+  kpis: { open_deals: number; untouched_deals: number; calls_today: number; leads_assigned: number; leads_today?: number };
+  open_tasks: { id: string; title: string; due_date: string; status: string; source?: string; lead_id?: string; deal_id?: string }[];
+  meetings_today: { id: string; title: string; start_time: string; end_time: string; zoom_link?: string; contact_name?: string; transcript_status?: string }[];
+  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string }[];
+  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string }[];
+  quota_pace: { closed_won_revenue: Decimal; target_revenue: Decimal; attained_percentage: Decimal; pace_status: string };
+  deals?: { id: string; name: string; value: number; stage: string; owner: string; closeDate: string }[];
+  leads?: { id: string; name: string; company: string; score: number; status: string; owner: string }[];
+  generated_at: string;
+}
+
+export interface DashboardDeal {
+  id: number | string;
+  title: string;
+  company: string;
+  value: number;
+  stage: string;
+  priority: 'High' | 'Medium' | 'Low';
+  owner: string;
+  closeDate: string;
+  createdAt?: string;
+}
+
+export async function getDashboardMe(): Promise<DashboardOverviewData> {
+  return apiFetch<DashboardOverviewData>('/api/v1/dashboard/me');
+}
+
+// --- SSE Stream URL ---
+
+export function getDashboardStreamUrl(): string | null {
+  const token = getToken();
+  if (!token) return null;
+  return `${API_BASE_URL}/api/v1/stream/dashboard?token=${encodeURIComponent(token)}`;
+}
+
+// --- Documents API ---
+
+export interface DocumentData {
+  id: string;
+  organization_id: string;
+  uploaded_by?: string;
+  contact_id?: string;
+  deal_id?: string;
+  company_id?: string;
+  file_name: string;
+  file_path: string;
+  file_type: string;
+  file_size_bytes: number;
+  created_at: string;
+}
+
+export async function getDocuments(params: { contact_id?: string; deal_id?: string; company_id?: string } = {}): Promise<DocumentData[]> {
+  return apiFetch<DocumentData[]>(`/api/v1/documents${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`);
+}
+
+export async function uploadDocument(file: File, params: { contact_id?: string; deal_id?: string; company_id?: string } = {}): Promise<DocumentData> {
+  const formData = new FormData();
+  formData.append('file', file);
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) formData.append(key, value);
+  });
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Upload failed');
+  }
+  const json = await res.json();
+  return (json.data ?? json) as DocumentData;
+}
+
+export async function deleteDocument(docId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/documents/${docId}`, { method: 'DELETE' });
+}
+
+export function getDocumentDownloadUrl(docId: string): string {
+  return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
+}
+
+export async function uploadAvatar(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Avatar upload failed');
+  }
+  return res.json();
+}
+
+// =============================================================================
+// CRM ACTIVITIES API  (/api/v1/crm-activities)
+// =============================================================================
+
+export interface CrmActivityDetails {
+  description?: string | null;
+  reminder_minutes?: number | null;
+  completed_at?: string | null;
+  contact_name?: string | null;
+  phone_number?: string | null;
+  call_type?: string | null;
+  duration_minutes?: number | null;
+  outcome?: string | null;
+  notes?: string | null;
+  end_datetime?: string | null;
+  location?: string | null;
+  meeting_link?: string | null;
+  direction?: string | null;
+  sender?: string | null;
+  receiver?: string | null;
+  body_preview?: string | null;
+  thread_id?: string | null;
+  is_read?: boolean | null;
+  body?: string | null;
+}
+
+export interface CrmActivity {
+  id: string;
+  activity_type: 'task' | 'call' | 'meeting' | 'email' | 'note';
+  subject: string;
+  status: string;
+  priority: string;
+  due_date: string | null;
+  owner_id: string | null;
+  owner_name: string | null;
+  related_entity_type: string | null;
+  related_record_id: string | null;
+  related_record_name: string | null;
+  organization_id: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  details: CrmActivityDetails;
+}
+
+export interface CrmActivityOwner {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+export interface CrmActivitiesListParams {
+  view?: 'timeline' | 'task' | 'call' | 'meeting' | 'email' | 'note';
+  search?: string;
+  status?: string;
+  priority?: string;
+  owner_id?: string;
+  from_date?: string;
+  to_date?: string;
+  quick_tab?: 'all' | 'today' | 'upcoming' | 'overdue';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  page_size?: number;
+}
+
+export interface PaginatedCrmActivities {
+  data: CrmActivity[];
+  meta: {
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
+export async function getCrmActivities(
+  params: CrmActivitiesListParams = {}
+): Promise<PaginatedCrmActivities> {
+  const result = await apiFetch<PaginatedCrmActivities>(
+    `/api/v1/crm-activities${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`
+  );
+  return result ?? { data: [], meta: { total: 0, page: 1, page_size: 20, total_pages: 1, has_next: false, has_prev: false } };
+}
+
+export async function getCrmActivityOwners(): Promise<CrmActivityOwner[]> {
+  const result = await apiFetch<CrmActivityOwner[]>('/api/v1/crm-activities/owners');
+  return Array.isArray(result) ? result : [];
+}
+
+export async function downloadCrmActivitiesExport(
+  params: Omit<CrmActivitiesListParams, 'page' | 'page_size'>
+): Promise<void> {
+  const qs = toQuery(params as Record<string, string | number | boolean | null | undefined>);
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+  const res = await fetch(`${API_BASE_URL}/api/v1/crm-activities/export${qs}`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'text/csv' },
+  });
+  if (!res.ok) {
+    let msg = `Export failed (${res.status})`;
+    try { const b = await res.json(); if (b?.message) msg = b.message; } catch {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `activities_export_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+}
+
+export interface CreateTaskPayload {
+  subject: string; description?: string; due_date?: string; priority?: string;
+  status?: string; owner_id?: string; reminder_minutes?: number;
+  related_entity_type?: string; related_lead_id?: string;
+  related_contact_id?: string; related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmTask(payload: CreateTaskPayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/tasks', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmTask(id: string, payload: Partial<CreateTaskPayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmTask(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/tasks/${id}`, { method: 'DELETE' });
+}
+
+export interface CreateCallPayload {
+  subject: string; contact_name?: string; phone_number?: string; call_type?: string;
+  duration_minutes?: number; outcome?: string; notes?: string; priority?: string;
+  status?: string; called_at?: string; owner_id?: string;
+  related_entity_type?: string; related_lead_id?: string;
+  related_contact_id?: string; related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmCall(payload: CreateCallPayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/calls', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmCall(id: string, payload: Partial<CreateCallPayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/calls/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmCall(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/calls/${id}`, { method: 'DELETE' });
+}
+
+export interface CreateMeetingPayload {
+  title: string; description?: string; start_datetime: string; end_datetime: string;
+  status?: string; owner_id?: string; meeting_link?: string; location?: string;
+  reminder_minutes?: number; related_lead_id?: string; related_contact_id?: string;
+  related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmMeeting(payload: CreateMeetingPayload): Promise<any> {
+  return apiFetch<any>('/api/v1/crm-activities/meetings', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export interface CreateNotePayload {
+  title: string; body?: string; owner_id?: string; related_entity_type?: string;
+  related_lead_id?: string; related_contact_id?: string;
+  related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmNote(payload: CreateNotePayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/notes', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmNote(id: string, payload: Partial<CreateNotePayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/notes/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmNote(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/notes/${id}`, { method: 'DELETE' });
+}
+
+export async function bulkDeleteCrmActivities(ids: string[]): Promise<{ affected: number; message: string }> {
+  return apiFetch<{ affected: number; message: string }>('/api/v1/crm-activities/bulk-delete', {
+    method: 'POST', body: JSON.stringify({ ids }),
+  });
+}
+export async function bulkUpdateCrmActivities(payload: { ids: string[]; status?: string; owner_id?: string; archive?: boolean }): Promise<{ affected: number; message: string }> {
+  return apiFetch<{ affected: number; message: string }>('/api/v1/crm-activities/bulk-update', {
+    method: 'POST', body: JSON.stringify(payload),
+  });
+}
+
+// =============================================================================
+// LEAD DETAIL PANEL  — real data for Timeline / Emails / Calls / Meetings / Chart
+// =============================================================================
+
+export interface LeadTimelineEntry {
+  timeline_id: string;
+  activity_type: string;
+  title: string;
+  description?: string | null;
+  performed_by: string;
+  performed_by_avatar?: string | null;
+  icon: string;
+  color: string;
+  created_at: string;
+  relative_time: string;
+}
+
+export interface LeadPanelCall {
+  id: string;
+  subject: string;
+  call_type: string;
+  outcome?: string | null;
+  duration_minutes?: number | null;
+  notes?: string | null;
+  called_at?: string | null;
+  owner_name?: string | null;
+  created_at: string;
+}
+
+export interface LeadPanelMeeting {
+  id: string;
+  title: string;
+  status: string;
+  start_datetime: string;
+  end_datetime: string;
+  location?: string | null;
+  meeting_link?: string | null;
+  owner_name?: string | null;
+}
+
+export interface LeadPanelNote {
+  id: string;
+  title: string;
+  body?: string | null;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Fetch real timeline events for a lead */
+export async function getLeadTimeline(
+  leadId: string,
+  params: { page?: number; page_size?: number } = {}
+): Promise<{ entries: LeadTimelineEntry[]; total_records: number }> {
+  const qs = toQuery({ page: params.page ?? 1, page_size: params.page_size ?? 20 } as any);
+  const result = await apiFetch<any>(
+    `/api/v1/crm-activities/lead/${leadId}/timeline${qs}`
+  );
+  return result ?? { entries: [], total_records: 0 };
+}
+
+/** Fetch emails linked to a lead (via Gmail sync) */
+export async function getLeadEmails(leadId: string): Promise<SyncedEmail[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/emails${toQuery({ external_entity_type: 'lead', external_entity_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  if (Array.isArray(result)) return result;
+  if (result.data && Array.isArray(result.data)) return result.data;
+  if (result.records && Array.isArray(result.records)) return result.records;
+  return [];
+}
+
+/** Fetch calls linked to a lead */
+export async function getLeadCalls(leadId: string): Promise<LeadPanelCall[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/crm-activities/calls${toQuery({ related_lead_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  const items = result.data ?? result;
+  return Array.isArray(items) ? items : [];
+}
+
+/** Fetch meetings linked to a lead */
+export async function getLeadMeetings(leadId: string): Promise<LeadPanelMeeting[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/meetings${toQuery({ related_lead_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  const items = result.data ?? result;
+  return Array.isArray(items) ? items : [];
+}
+
+/** Fetch lead score for the chart */
+export async function getLeadScore(leadId: string): Promise<{ score: number; fit_score: number; engagement_score: number } | null> {
+  try {
+    const result = await apiFetch<any>(`/api/v1/lead-scores/leads/${leadId}`);
+    return result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// =============================================================================
+// AVATAR API
+// =============================================================================
+
+export async function deleteAvatar(): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Failed to remove avatar');
+  }
+}
+
+// =============================================================================
+// NOTIFICATIONS API
+// =============================================================================
+
+export interface NotificationData {
   id: string;
   type: string;
   title: string;
@@ -1115,144 +1627,137 @@ export interface Notification {
   created_at: string;
 }
 
-export interface NotificationList {
-  items: Notification[];
+export interface NotificationListData {
+  items: NotificationData[];
   total: number;
   unread_count: number;
 }
 
-export async function getNotifications(params: { page?: number; pageSize?: number; unreadOnly?: boolean } = {}): Promise<NotificationList> {
-  const query = new URLSearchParams();
-  query.set('page', String(params.page ?? 1));
-  query.set('page_size', String(params.pageSize ?? 20));
-  if (params.unreadOnly) query.set('unread_only', 'true');
-  return apiFetch<NotificationList>(`/api/v1/notifications?${query.toString()}`);
+export async function getNotifications(page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationListData> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  if (unreadOnly) params.set('unread_only', 'true');
+  return apiFetch<NotificationListData>(`/api/v1/notifications?${params}`);
 }
 
 export async function getUnreadNotificationCount(): Promise<number> {
   const result = await apiFetch<{ unread_count: number }>('/api/v1/notifications/unread-count');
-  return result.unread_count;
+  return result?.unread_count ?? 0;
 }
 
-export async function markNotificationRead(notificationId: string): Promise<Notification> {
-  return apiFetch<Notification>(`/api/v1/notifications/${notificationId}/read`, { method: 'POST' });
+export async function markNotificationRead(id: string): Promise<NotificationData> {
+  return apiFetch<NotificationData>(`/api/v1/notifications/${id}/read`, { method: 'POST' });
 }
 
-export async function markAllNotificationsRead(): Promise<{ updated: number }> {
-  return apiFetch<{ updated: number }>('/api/v1/notifications/read-all', { method: 'POST' });
+export async function markAllNotificationsRead(): Promise<void> {
+  await apiFetch(`/api/v1/notifications/read-all`, { method: 'POST' });
 }
 
-export async function dismissNotification(notificationId: string): Promise<Notification> {
-  return apiFetch<Notification>(`/api/v1/notifications/${notificationId}`, { method: 'DELETE' });
-}
-// --- AI Insights API ---
-
-export interface ImmediateActionItem {
-  id: string;
-  lead_name?: string;
-  deal_name?: string;
-  score: number;
-  priority: string;
-  reason: string;
-  deal_value?: number;
-  probability?: number;
-  owner_name?: string;
-  last_activity_at?: string | null;
+export async function dismissNotification(id: string): Promise<void> {
+  await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
 }
 
-export interface FollowUpDueItem {
-  id: string;
-  title: string;
-  company_name?: string;
-  owner_name?: string;
-  due_date: string;
-  status: string;
-  days_overdue?: number;
+// =============================================================================
+// EMAIL DRAFT API
+// =============================================================================
+
+export interface EmailDraftRequestPayload {
+  recipient_name: string;
+  recipient_email: string;
+  company?: string;
+  designation?: string;
+  purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+  context?: string;
+  external_entity_type?: string | null;
+  external_entity_id?: string | null;
 }
 
-export interface GoingColdItem {
-  id: string;
-  name: string;
-  company_name?: string;
-  owner_name?: string;
-  cold_score: number;
-  risk_level: string;
-  days_inactive: number;
-  deal_value?: number;
+export interface EmailDraftResult {
+  subject: string;
+  body: string;
+  model_version?: string | null;
 }
 
-export interface PipelineHealthData {
-  score: number;
-  status: string;
-  velocity_change_pct: number;
-  breakdown: Record<string, any>;
-}
-
-export interface AIActionCenterData {
-  pipeline_health?: PipelineHealthData;
-  immediate_actions?: ImmediateActionItem[];
-  follow_ups?: FollowUpDueItem[];
-  going_cold?: { items: GoingColdItem[]; total: number };
-  high_value_deals?: any[];
-  risk_items?: any[];
-  opportunity_scores?: any[];
-  recommendations?: any[];
-  notifications?: any[];
-}
-
-// Fixed endpoint pointing to the full action-center route defined in backend
-export async function getAIActionCenter(dateFilter?: string, priority?: string): Promise<AIActionCenterData> {
-  const query = toQuery({ date_filter: dateFilter, priority });
-  return apiFetch<AIActionCenterData>(`/api/v1/ai-insights/action-center${query}`);
-}
-
-export async function getPipelineHealth(): Promise<PipelineHealthData> {
-  return apiFetch<PipelineHealthData>('/api/v1/ai-insights/pipeline-health');
-}
-
-export async function getImmediateActions(): Promise<ImmediateActionItem[]> {
-  return apiFetch<ImmediateActionItem[]>('/api/v1/ai-insights/immediate-actions');
-}
-
-export async function getFollowUps(): Promise<FollowUpDueItem[]> {
-  return apiFetch<FollowUpDueItem[]>('/api/v1/ai-insights/follow-ups');
-}
-
-export async function getGoingColdLeads(params: { limit?: number; minimum_risk?: string } = {}): Promise<any> {
-  return apiFetch<any>(`/api/v1/ai-insights/going-cold${toQuery(params)}`);
-}
-
-export async function getDailyPriorities(params: { limit?: number; priority?: string } = {}): Promise<any> {
-  return apiFetch<any>(`/api/v1/ai-insights/daily-priorities${toQuery(params)}`);
-}
-
-// ---------------------------------------------------------------------------
-// PULSE Assistant (Internal Help Chat)
-// ---------------------------------------------------------------------------
-
-export interface AssistantChatResponse {
-  response: string;
-  suggestions: string[];
-}
-
-export async function sendAssistantMessage(
-  message: string,
-  userRole: string = 'sales_rep',
-  context: Record<string, any> = {}
-): Promise<AssistantChatResponse> {
-  return apiFetch<AssistantChatResponse>('/api/v1/assistant/chat', {
+export async function draftOutreachEmail(payload: EmailDraftRequestPayload): Promise<EmailDraftResult> {
+  return apiFetch<EmailDraftResult>('/api/v1/emails/draft-outreach', {
     method: 'POST',
-    body: JSON.stringify({ message, user_role: userRole, context }),
+    body: JSON.stringify(payload)
   });
 }
-export async function uploadAvatar(file: File): Promise<{ url: string }> {
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+
+/** Shared shape passed from any "Send Email" trigger to the Emails page's compose panel. */
+export interface EmailComposeTarget {
+  to: string;
+  name?: string;
+  company?: string;
+  designation?: string;
+  purpose?: EmailDraftRequestPayload['purpose'];
+  context?: string;
+  externalEntityType?: string | null;
+  externalEntityId?: string | null;
+  /** Bumped on every open so EmailsView re-triggers even if the same contact is clicked twice. */
+  requestId: number;
+}
+
+// =============================================================================
+// CRM EMAIL ACTIVITY
+// =============================================================================
+
+export async function createCrmEmail(payload: CrmActivityPayload & {
+  body?: string;
+  direction?: string;
+  recipient_email?: string;
+  recipient_name?: string;
+}): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/emails', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
-    body: formData,
+    body: JSON.stringify(payload)
   });
-  if (!res.ok) throw new Error(`Avatar upload failed (${res.status})`);
-  return res.json();
+}
+
+// =============================================================================
+// USER MANAGEMENT (soft-delete / restore / permanent-delete)
+// =============================================================================
+
+export async function getDeletedUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
+  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users/deleted${toQuery({ page, page_size: pageSize, search })}`);
+}
+
+export async function restoreUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/restore`, { method: 'POST' });
+}
+
+export async function permanentDeleteUser(userId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
+}
+
+// =============================================================================
+// GLOBAL SEARCH
+// =============================================================================
+
+export async function searchGlobalCRM(query: string) {
+  const token = getToken();
+  if (!token) {
+    console.error('No auth token found for search');
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search failed with status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data || []; 
+  } catch (error) {
+    console.error('Error fetching global search:', error);
+    return [];
+  }
 }

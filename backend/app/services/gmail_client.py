@@ -83,10 +83,10 @@ class GmailClient:
         page_token: str | None = None,
         max_results: int = 100,
     ) -> dict[str, Any]:
-        params = {
+        params: dict[str, Any] = {
             "startHistoryId": start_history_id,
             "maxResults": max_results,
-            "historyTypes": ["messageAdded", "messageUpdated", "labelAdded", "labelRemoved"],
+            "historyTypes": "messageAdded",
         }
         if page_token:
             params["pageToken"] = page_token

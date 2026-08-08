@@ -97,8 +97,6 @@ class AIInsightsService:
         roles = {ur.role.name for ur in user.user_roles if ur.role}
         if "admin" in roles:
             return None, None
-        if "sales_rep" in roles and "manager" not in roles:
-            return user.id, None
         # manager (and any other role) → full org team
         stmt = select(User.id).where(
             User.organization_id == user.organization_id,
@@ -163,7 +161,7 @@ class AIInsightsService:
         # Fetch all components concurrently (sequential for clarity, still fast)
         raw_actions   = await self.repo.get_immediate_actions(org_id, user_id, team_ids)
         raw_followups = await self.repo.get_overdue_followups(org_id, user_id, team_ids)
-        health_comps  = await self.repo.get_pipeline_health_components(org_id, None, None)
+        health_comps  = await self.repo.get_pipeline_health_components(org_id, user_id, team_ids)
         daily_raw     = await self.repo.get_daily_summary(org_id, user_id, team_ids)
         high_value    = await self.repo.get_high_value_deals(org_id, user_id, team_ids)
         risky         = await self.repo.get_risky_deals(org_id, user_id, team_ids)

@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages } from '@/utils/api';
+import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { 
   Plus, 
   IndianRupee, 
@@ -11,6 +12,12 @@ import {
   Edit, 
   Trash2, 
   Building2,
+  LayoutGrid,
+  List,
+  CalendarDays,
+  Search,
+  SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 
 interface Deal {
@@ -22,6 +29,7 @@ interface Deal {
   priority: 'High' | 'Medium' | 'Low';
   owner: string;
   closeDate: string;
+  createdAt?: string;
 }
 
 interface PipelineStage {
@@ -40,15 +48,24 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     let loaded = 0;
     const checkDone = () => { loaded++; if (loaded >= 2) onLoaded?.(); };
     getPipelineStages().then(data => {
-      const sorted = (data as any[]).sort((a: any, b: any) => a.sort_order - b.sort_order);
+      const sorted = (Array.isArray(data) ? data : []).sort((a: any, b: any) => a.sort_order - b.sort_order);
       setStages(sorted);
     }).catch(() => {}).finally(checkDone);
     getDeals().then(data => {
-      setDeals(data as any);
+      setDeals(Array.isArray(data) ? data : []);
     }).catch(() => {}).finally(checkDone);
   }, []);
 
   const stageNames = stages.map(s => s.name);
+
+  useEffect(() => {
+    const handleOpen = () => {
+      setForm({ title: '', company: '', value: 0, stage: stageNames[0] || 'New', priority: 'Medium', owner: '', closeDate: '' });
+      setIsAddModalOpen(true);
+    };
+    window.addEventListener('pulse-open-create-deal-modal', handleOpen);
+    return () => window.removeEventListener('pulse-open-create-deal-modal', handleOpen);
+  }, [stageNames]);
 
   const stageProbabilities: Record<string, number> = {};
   stages.forEach(s => { stageProbabilities[s.name] = s.probability / 100; });
@@ -66,12 +83,110 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
   const [draggedId, setDraggedId] = useState<number | string | null>(null);
 
-  const totalValue = deals.reduce((acc, d) => {
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('pulse-crm-view-mode-deals') as any) || 'kanban';
+    }
+    return 'kanban';
+  });
+
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
+  const [sortField, setSortField] = useState<string>('title');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [ownerFilter, setOwnerFilter] = useState('All');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isOwnerDropdownOpen, setIsOwnerDropdownOpen] = useState(false);
+
+  const toggleViewMode = (mode: 'kanban' | 'list') => {
+    setViewMode(mode);
+    localStorage.setItem('pulse-crm-view-mode-deals', mode);
+  };
+
+  const handleToggleSelectAll = (items: any[]) => {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map(item => item.id)));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string | number) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) {
+      next.delete(id);
+    } else {
+      next.add(id);
+    }
+    setSelectedIds(next);
+  };
+
+  const handleHeaderClick = (field: string) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
+  const handleDeleteSelectedDeals = async () => {
+    if (!window.confirm(`Are you sure you want to delete the ${selectedIds.size} selected deal(s)?`)) return;
+    try {
+      for (const id of Array.from(selectedIds)) {
+        await deleteDeal(id);
+      }
+      setDeals(prev => prev.filter(deal => !selectedIds.has(deal.id)));
+      setSelectedIds(new Set());
+      toast.success("Selected deals deleted successfully.");
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || "Failed to delete selected deals.");
+    }
+  };
+
+  const uniqueOwners = React.useMemo(() => {
+    const owners = new Set<string>();
+    deals.forEach(d => { if (d.owner) owners.add(d.owner); });
+    return Array.from(owners).sort();
+  }, [deals]);
+
+  const filteredDeals = React.useMemo(() => {
+    return deals.filter(deal => {
+      const matchesSearch = 
+        deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        deal.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (deal.owner || '').toLowerCase().includes(searchQuery.toLowerCase());
+        
+      const matchesPriority = priorityFilter === 'All' || deal.priority === priorityFilter;
+      const matchesOwner = ownerFilter === 'All' || deal.owner === ownerFilter;
+      
+      return matchesSearch && matchesPriority && matchesOwner;
+    });
+  }, [deals, searchQuery, priorityFilter, ownerFilter]);
+
+  const sortedDeals = React.useMemo(() => {
+    return [...filteredDeals].sort((a: any, b: any) => {
+      let valA: any = (a[sortField] || '').toString().toLowerCase();
+      let valB: any = (b[sortField] || '').toString().toLowerCase();
+      if (sortField === 'value') {
+        valA = Number(a[sortField]) || 0;
+        valB = Number(b[sortField]) || 0;
+      }
+      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredDeals, sortField, sortOrder]);
+
+  const totalValue = filteredDeals.reduce((acc, d) => {
     const stage = stages.find(s => s.name === d.stage);
     if (stage && stage.slug !== 'lost') return acc + d.value;
     return acc;
   }, 0);
-  const weightedForecast = deals.reduce((acc, d) => acc + (d.value * (stageProbabilities[d.stage] || 0)), 0);
+  const weightedForecast = filteredDeals.reduce((acc, d) => acc + (d.value * (stageProbabilities[d.stage] || 0)), 0);
 
   const getAISuggestion = (deal: Deal) => {
     if (deal.stage === 'Proposal' && deal.priority === 'High') {
@@ -123,7 +238,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
         stage: form.stage,
         priority: form.priority,
         owner: form.owner,
-        closeDate: form.closeDate
+        closeDate: form.closeDate,
+        createdAt: created?.created_at || new Date().toISOString()
       };
       setDeals([...deals, newDeal]);
     } catch (err) {
@@ -177,73 +293,304 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+      <div className="bg-card border border-border rounded-2xl p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h2 className="font-sans text-2xl text-brand-heading font-bold">Deals Kanban Pipeline</h2>
-            <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Drag and drop cards to update pipeline stages, track forecasts, and monitor deal velocity.</p>
+            <h2 className="font-sans text-2xl text-foreground font-bold">Deals Kanban Pipeline</h2>
+            <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Drag and drop cards to update pipeline stages, track forecasts, and monitor deal velocity.</p>
           </div>
-          <button 
-            onClick={() => {
-              setForm({ title: '', company: '', value: 10000, stage: stageNames[0] || 'Qualified', priority: 'Medium', owner: '', closeDate: '' });
-              setIsAddModalOpen(true);
-            }}
-            className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Create Deal</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* View Toggle */}
+            <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
+              <button
+                type="button"
+                onClick={() => toggleViewMode('kanban')}
+                className={`p-1.5 rounded-md transition cursor-pointer ${
+                  viewMode === 'kanban'
+                    ? 'bg-card text-brand-purple shadow-sm font-bold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Kanban View"
+              >
+                <LayoutGrid size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleViewMode('list')}
+                className={`p-1.5 rounded-md transition cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-card text-brand-purple shadow-sm font-bold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="List Table View"
+              >
+                <List size={14} />
+              </button>
+            </div>
+            {selectedIds.size > 0 && (
+              <button 
+                onClick={handleDeleteSelectedDeals}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer mr-2"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Selected ({selectedIds.size})</span>
+              </button>
+            )}
+
+            <button 
+              onClick={() => {
+                setForm({ title: '', company: '', value: 10000, stage: stageNames[0] || 'Qualified', priority: 'Medium', owner: '', closeDate: '' });
+                setIsAddModalOpen(true);
+              }}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Create Deal</span>
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 pt-4 border-t border-brand-border-purple/15">
-          <div className="flex items-center space-x-3 bg-slate-50/50 p-3 rounded-lg border border-brand-border-purple/15">
-            <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/10 flex items-center justify-center text-brand-accent border border-brand-border-purple/20">
+        {/* Search, Sort, and Filters Toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
+          <div className="relative flex-1">
+            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
+              <Search className="h-3.5 w-3.5" />
+            </span>
+            <input 
+              type="text" 
+              placeholder="Search deals by title, company, owner..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-secondary/15"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Priority Filter */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setIsFilterDropdownOpen(!isFilterDropdownOpen); setIsOwnerDropdownOpen(false); }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  priorityFilter !== 'All' ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-card hover:bg-secondary text-foreground'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>{priorityFilter !== 'All' ? `Priority: ${priorityFilter}` : 'Filter Priority'}</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isFilterDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[150px]">
+                  {['All', 'High', 'Medium', 'Low'].map(prio => (
+                    <button
+                      key={prio}
+                      onClick={() => { setPriorityFilter(prio); setIsFilterDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        priorityFilter === prio ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {prio === 'All' ? 'All Priorities' : prio}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Owner Filter */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setIsOwnerDropdownOpen(!isOwnerDropdownOpen); setIsFilterDropdownOpen(false); }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  ownerFilter !== 'All' ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-card hover:bg-secondary text-foreground'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>{ownerFilter !== 'All' ? `Owner: ${ownerFilter}` : 'Filter Owner'}</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${isOwnerDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isOwnerDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[180px] max-h-60 overflow-y-auto">
+                  <button
+                    onClick={() => { setOwnerFilter('All'); setIsOwnerDropdownOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer mb-0.5 ${
+                      ownerFilter === 'All' ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    All Owners
+                  </button>
+                  {uniqueOwners.map(own => (
+                    <button
+                      key={own}
+                      onClick={() => { setOwnerFilter(own); setIsOwnerDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        ownerFilter === own ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {own}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 pt-4 border-t border-border">
+          <div className="flex items-center space-x-3 bg-secondary p-3 rounded-lg border border-border">
+            <div className="h-8.5 w-8.5 rounded-lg bg-secondary flex items-center justify-center text-brand-purple border border-border">
               <IndianRupee className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-[9px] font-extrabold text-brand-text/60 uppercase">Total Pipeline Value</p>
-              <p className="text-sm font-extrabold text-brand-heading tabular-nums">${totalValue.toLocaleString()}</p>
+              <p className="text-[9px] font-semibold text-muted-foreground uppercase">Total Pipeline Value</p>
+              <p className="text-sm font-semibold text-foreground tabular-nums">{formatINR(totalValue)}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 bg-slate-50/50 p-3 rounded-lg border border-brand-border-purple/15">
-            <div className="h-8.5 w-8.5 rounded-lg bg-brand-sidebar-hover/10 flex items-center justify-center text-brand-accent border border-brand-border-purple/20">
+          <div className="flex items-center space-x-3 bg-secondary p-3 rounded-lg border border-border">
+            <div className="h-8.5 w-8.5 rounded-lg bg-secondary flex items-center justify-center text-brand-purple border border-border">
               <TrendingUp className="h-4.5 w-4.5" />
             </div>
             <div>
-              <p className="text-[9px] font-extrabold text-brand-text/60 uppercase">Weighted Revenue Forecast</p>
-              <p className="text-sm font-extrabold text-brand-heading tabular-nums">${Math.round(weightedForecast).toLocaleString()}</p>
+              <p className="text-[9px] font-semibold text-muted-foreground uppercase">Weighted Revenue Forecast</p>
+              <p className="text-sm font-semibold text-foreground tabular-nums">{formatINR(Math.round(weightedForecast))}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-3 bg-brand-sidebar-hover/20 p-3 rounded-lg border border-brand-border-purple/30">
-            <Sparkles className="h-4.5 w-4.5 text-brand-accent" />
+          <div className="flex items-center space-x-3 bg-brand-purple/5 p-3 rounded-lg border border-border">
+            <Sparkles className="h-4.5 w-4.5 text-brand-purple" />
             <div>
-              <p className="text-[9px] font-extrabold text-brand-heading uppercase">AI Co-pilot Status</p>
-              <p className="text-[10px] text-brand-text/80 font-bold leading-tight">Click on deal details to read next-best-action alerts.</p>
+              <p className="text-[9px] font-semibold text-foreground uppercase">AI Co-pilot Status</p>
+              <p className="text-[10px] text-muted-foreground font-semibold leading-tight">Click on deal details to read next-best-action alerts.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-brand-border-purple/20 scrollbar-track-transparent">
-        {stages.map((stage) => {
-          const stageDeals = deals.filter(d => d.stage === stage.name);
-          const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
+      {viewMode === 'list' ? (
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="overflow-y-auto max-h-[600px] border border-border/60 rounded-xl bg-card custom-scrollbar">
+            <table className="w-full border-collapse text-left table-fixed">
+              <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
+                <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
+                  <th className="py-3 px-4 w-[4%] text-left">
+                    <input 
+                      type="checkbox" 
+                      checked={sortedDeals.length > 0 && selectedIds.size === sortedDeals.length}
+                      onChange={() => handleToggleSelectAll(sortedDeals)}
+                      className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
+                    />
+                  </th>
+                  <th className="py-3 px-2 w-[20%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('title')}>Deal Title</th>
+                  <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('company')}>Company</th>
+                  <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('value')}>Value (₹)</th>
+                  <th className="py-3 px-2 w-[12%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('stage')}>Stage</th>
+                  <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-foreground text-center">Probability %</th>
+                  <th className="py-3 px-2 w-[14%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('closeDate')}>Expected Close</th>
+                  <th className="py-3 px-2 w-[9%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('priority')}>Priority</th>
+                  <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('owner')}>Owner</th>
+                  <th className="py-3 px-2 w-[5%] text-right pr-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
+                {sortedDeals.length > 0 ? (
+                  sortedDeals.map((deal) => {
+                    const prob = Math.round((stageProbabilities[deal.stage] || 0) * 100);
+                    const isRowSelected = selectedIds.has(deal.id);
+                    return (
+                      <tr 
+                        key={deal.id}
+                        className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                      >
+                        <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            type="checkbox" 
+                            checked={isRowSelected}
+                            onChange={() => handleToggleSelectRow(deal.id)}
+                            className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
+                          />
+                        </td>
+                        <td className="py-3.5 px-2 font-bold truncate" title={deal.title}>{deal.title}</td>
+                        <td className="py-3.5 px-2 text-muted-foreground truncate" title={deal.company}>{deal.company}</td>
+                        <td className="py-3.5 px-2 tabular-nums font-semibold">₹{deal.value.toLocaleString('en-IN')}</td>
+                        <td className="py-3.5 px-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-brand-purple/10 text-brand-purple border-brand-purple/15 inline-block truncate max-w-full" title={deal.stage}>
+                            {deal.stage}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-2 text-center tabular-nums">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
+                            prob >= 70 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15' :
+                            prob >= 40 ? 'bg-amber-500/10 text-amber-500 border-amber-500/15' :
+                            'bg-secondary text-muted-foreground border-border'
+                          }`}>
+                            {prob}%
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-2 text-muted-foreground tabular-nums truncate">{deal.closeDate || '—'}</td>
+                        <td className="py-3.5 px-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
+                            deal.priority === 'High' ? 'bg-amber-500/10 text-amber-500 border-amber-500/15' :
+                            deal.priority === 'Low' ? 'bg-secondary text-muted-foreground border-border' :
+                            'bg-brand-purple/10 text-brand-purple border-brand-purple/15'
+                          }`}>
+                            {deal.priority}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-2 text-muted-foreground truncate" title={deal.owner}>{deal.owner}</td>
+                        <td className="py-3.5 px-2 text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1.5">
+                            <button 
+                              onClick={() => {
+                                setSelectedDeal(deal);
+                                setForm({ title: deal.title, company: deal.company, value: deal.value, stage: deal.stage, priority: deal.priority, owner: deal.owner, closeDate: deal.closeDate });
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(deal.id)}
+                              className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-muted-foreground">
+                      No deals found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="flex space-x-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
+          {stages.map((stage) => {
+            const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
+            const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
 
-          return (
-            <div 
-              key={stage.id}
-              onDragOver={handleDragOver}
-              onDrop={() => handleDrop(stage.name)}
-              className="bg-slate-50/50 border border-brand-border-purple/20 rounded-xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
-            >
-              <div className="flex justify-between items-center pb-2 border-b border-brand-border-purple/15 mb-3">
+            return (
+              <div 
+                key={stage.id}
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(stage.name)}
+                className="bg-secondary border border-border rounded-2xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
+              >
+              <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
                 <div>
-                  <h3 className="text-[11px] font-extrabold text-brand-heading uppercase tracking-wider">{stage.name}</h3>
-                  <p className="text-[10px] text-slate-400 font-bold mt-0.5 tabular-nums">${stageSum.toLocaleString()}</p>
+                  <h3 className="text-[11px] font-semibold text-foreground uppercase tracking-wider">{stage.name}</h3>
+                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 tabular-nums">₹{stageSum.toLocaleString()}</p>
                 </div>
-                <span className="text-[9px] font-extrabold bg-brand-secondary-accent/15 text-brand-accent px-1.5 py-0.5 rounded-full tabular-nums">
+                <span className="text-[9px] font-semibold bg-brand-purple/10 text-brand-purple px-1.5 py-0.5 rounded-full tabular-nums">
                   {stageDeals.length}
                 </span>
               </div>
@@ -254,27 +601,48 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                     key={deal.id}
                     draggable
                     onDragStart={() => handleDragStart(deal.id)}
-                    className="bg-white border border-brand-border-purple/20 rounded-lg p-3 shadow-sm/5 hover:border-brand-border-purple/40 hover:-translate-y-0.5 transition-all duration-200 cursor-grab active:cursor-grabbing"
+                    onClick={() => {
+                      setSelectedDeal(deal);
+                      setForm({
+                        title: deal.title,
+                        company: deal.company,
+                        value: deal.value,
+                        stage: deal.stage,
+                        priority: deal.priority,
+                        owner: deal.owner,
+                        closeDate: deal.closeDate
+                      });
+                      setIsEditModalOpen(true);
+                    }}
+                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
                   >
                     <div className="flex justify-between items-start gap-1">
-                      <h4 className="text-[11px] font-extrabold text-brand-heading leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
+                      <h4 className="text-[11px] font-semibold text-foreground leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
                       <span className={`text-[8px] font-bold px-1 py-0.25 rounded shrink-0 ${
-                        deal.priority === 'High' ? 'text-rose-700 bg-rose-50' :
-                        deal.priority === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-slate-500 bg-slate-50'
+                        deal.priority === 'High' ? 'text-destructive bg-destructive/10' :
+                        deal.priority === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-muted-foreground bg-secondary'
                       }`}>{deal.priority}</span>
                     </div>
 
-                    <div className="text-[10px] text-brand-text/60 mt-1 flex items-center">
-                      <Building2 className="h-3 w-3 mr-1 text-slate-400" />
+                    <div className="text-[10px] text-muted-foreground mt-1 flex items-center">
+                      <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
                       {deal.company}
                     </div>
 
-                    <div className="mt-3.5 pt-2.5 border-t border-brand-border-purple/10 flex justify-between items-center">
-                      <span className="text-[11px] font-extrabold text-brand-heading tabular-nums">${deal.value.toLocaleString()}</span>
+                    {deal.createdAt && (
+                      <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+                        <CalendarDays className="h-2.5 w-2.5 text-muted-foreground/70" />
+                        <span>Created: {new Date(deal.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    )}
+
+                    <div className="mt-3.5 pt-2.5 border-t border-border flex justify-between items-center">
+                      <span className="text-[11px] font-semibold text-foreground tabular-nums">₹{deal.value.toLocaleString()}</span>
                       
                       <div className="flex space-x-1">
                         <button 
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedDeal(deal);
                             setForm({
                               title: deal.title,
@@ -287,14 +655,17 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                             });
                             setIsEditModalOpen(true);
                           }}
-                          className="p-0.5 text-slate-400 hover:text-brand-heading rounded"
+                          className="p-0.5 text-muted-foreground hover:text-foreground rounded"
                           title="Edit Deal"
                         >
                           <Edit className="h-3 w-3" />
                         </button>
                         <button 
-                          onClick={() => handleDelete(deal.id)}
-                          className="p-0.5 text-slate-400 hover:text-rose-600 rounded"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(deal.id);
+                          }}
+                          className="p-0.5 text-muted-foreground hover:text-destructive rounded"
                            title="Delete Deal (cascades to contact and company if no other active deals)"
                         >
                           <Trash2 className="h-3 w-3" />
@@ -302,11 +673,13 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       </div>
                     </div>
 
-                    <div className="mt-2 flex justify-between items-center text-[9px] font-bold text-brand-accent/80 border-t border-brand-border-purple/10 pt-1.5">
+                    <div className="mt-2 flex justify-between items-center text-[9px] font-semibold text-muted-foreground border-t border-border pt-1.5">
                       <span>Shift Stage:</span>
                       <select 
                         value={deal.stage}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
+                          e.stopPropagation();
                           const newStage = e.target.value;
                           const stageId = stageIdByName[newStage];
                           setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));
@@ -314,7 +687,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                             updateDealStage(deal.id, stageId).catch(() => {});
                           }
                         }}
-                        className="bg-transparent text-brand-accent focus:outline-none cursor-pointer"
+                        className="bg-transparent text-brand-purple focus:outline-none cursor-pointer"
                       >
                         {stageNames.map(st => (
                           <option key={st} value={st}>{st}</option>
@@ -326,56 +699,57 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               </div>
             </div>
           );
-        })}
-      </div>
+          })}
+        </div>
+      )}
 
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Create New Deal</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Create New Deal</h3>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleAdd} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Deal Title</label>
-                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Deal Title</label>
+                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company</label>
+                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Value ($)</label>
-                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value (₹)</label>
+                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Stage</label>
-                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Stage</label>
+                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
-                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Priority</label>
+                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Close Date</label>
-                  <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none cursor-pointer" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Close Date</label>
+                  <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background cursor-pointer" />
                 </div>
               </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Save Deal</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold  cursor-pointer">Save Deal</button>
               </div>
             </form>
           </div>
@@ -383,61 +757,61 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       )}
 
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Edit Deal Details</h3>
-              <button onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+              <h3 className="font-semibold text-foreground text-sm">Edit Deal Details</h3>
+              <button onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
             <form onSubmit={handleEdit} className="p-5 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Deal Title</label>
-                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Deal Title</label>
+                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company</label>
+                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Value ($)</label>
-                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value (₹)</label>
+                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Stage</label>
-                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Stage</label>
+                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Priority</label>
-                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Priority</label>
+                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Close Date</label>
-                  <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none cursor-pointer" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Close Date</label>
+                  <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background cursor-pointer" />
                 </div>
               </div>
               {selectedDeal && (
-                <div className="mt-3.5 bg-brand-sidebar-hover/20 border border-brand-border-purple/30 rounded-xl p-3.5 flex items-start space-x-2">
-                  <Sparkles className="h-4.5 w-4.5 text-brand-accent shrink-0 mt-0.5" />
+                <div className="mt-3.5 bg-brand-purple/5 border border-border rounded-xl p-3.5 flex items-start space-x-2">
+                  <Sparkles className="h-4.5 w-4.5 text-brand-purple shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-[10px] font-extrabold text-brand-heading uppercase tracking-wider">AI Copilot Recommendation</h4>
-                    <p className="text-[10px] text-brand-text/80 mt-1 leading-relaxed font-bold">{getAISuggestion(selectedDeal)}</p>
+                    <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider">AI Copilot Recommendation</h4>
+                    <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{getAISuggestion(selectedDeal)}</p>
                   </div>
                 </div>
               )}
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer">Save Changes</button>
+              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <button type="button" onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold  cursor-pointer">Save Changes</button>
               </div>
             </form>
           </div>
@@ -446,3 +820,4 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     </div>
   );
 }
+

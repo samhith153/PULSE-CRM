@@ -2,13 +2,18 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Clock,
+  Calendar as CalendarIcon,
   Plus,
+  ChevronLeft,
+  ChevronRight,
   X,
   Users,
   Loader2,
 } from 'lucide-react';
-import { createActivity, getActivities, type ActivityTimelineItem } from '@/utils/api';
+import {
+  getCrmActivities,
+  type CrmActivity,
+} from '@/utils/api';
 
 interface EventItem {
   id: string;
@@ -18,321 +23,964 @@ interface EventItem {
   time: string;
   attendees: string;
   details: string;
+  status?: string;
+  priority?: string;
+  relatedRecordName?: string | null;
 }
 
-const CALENDAR_ACTIONS = ['meeting', 'meeting_scheduled', 'call', 'call_logged', 'task', 'follow_up'];
-
-const ACTION_TO_TYPE: Record<string, EventItem['type']> = {
+const ACTIVITY_TO_EVENT_TYPE: Record<string, EventItem['type']> = {
   meeting: 'meeting',
-  meeting_scheduled: 'meeting',
   call: 'call',
-  call_logged: 'call',
   task: 'task',
-  follow_up: 'followup',
+  email: 'followup',
+  note: 'followup',
 };
 
 const TYPE_BADGE: Record<EventItem['type'], string> = {
-  meeting: 'bg-purple-50 text-purple-750 border border-purple-100',
-  call: 'bg-emerald-50 text-emerald-750 border border-emerald-100',
-  task: 'bg-amber-50 text-amber-750 border border-amber-100',
+  meeting: 'bg-brand-purple/10 text-purple-750 border border-purple-100',
+  call: 'bg-brand-cyan/15 text-emerald-750 border border-brand-cyan/20',
+  task: 'bg-amber-100 text-amber-900 border border-amber-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
   followup: 'bg-blue-50 text-blue-750 border border-blue-100',
 };
 
-function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+/**
+ * IMPORTANT:
+ * Do not use toISOString().slice(0, 10) for calendar dates.
+ * toISOString() converts the date to UTC and can move a local
+ * activity from Aug 9 to Aug 10 (or vice versa).
+ */
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
 }
 
-function timeToDisplay(value?: unknown): string {
-  const raw = typeof value === 'string' ? value : '';
-  if (!raw) return '09:00 AM';
-  const [hourText, minuteText = '00'] = raw.split(':');
-  const hour = Number(hourText);
-  if (Number.isNaN(hour)) return raw;
-  const suffix = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${minuteText.padStart(2, '0')} ${suffix}`;
-}
+function toEvent(a: CrmActivity): EventItem {
+  const type = ACTIVITY_TO_EVENT_TYPE[a.activity_type] ?? 'followup';
 
-function toEvent(activity: ActivityTimelineItem): EventItem | null {
-  if (!CALENDAR_ACTIONS.includes(activity.action)) return null;
-  const payload = activity.payload ?? {};
-  const scheduledDate = typeof payload.scheduled_date === 'string' ? payload.scheduled_date : undefined;
-  const dt = new Date(activity.created_at);
-  const date = scheduledDate || dt.toISOString().slice(0, 10);
+  const dateValue = a.due_date || a.created_at;
+  const dt = new Date(dateValue);
 
   return {
-    id: activity.id,
-    title: activity.title || activity.action,
-    type: ACTION_TO_TYPE[activity.action] ?? 'task',
-    date,
-    time: timeToDisplay(payload.scheduled_time),
-    attendees: typeof payload.assignee === 'string' && payload.assignee ? payload.assignee : 'Self',
-    details: activity.description || '',
+    id: a.id,
+    title: a.subject || 'Untitled activity',
+    type,
+    date: localDateKey(dt),
+    time: a.due_date
+      ? dt.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : 'No time',
+    attendees: a.related_record_name || a.owner_name || 'Self',
+    details: a.description || '',
+    status: a.status,
+    priority: a.priority,
+    relatedRecordName: a.related_record_name,
   };
 }
 
 export default function CalendarView() {
   const [activeView, setActiveView] = useState<'month' | 'week' | 'day'>('week');
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [form, setForm] = useState({
     title: '',
-    type: 'task' as EventItem['type'],
-    date: todayIso(),
-    time: '09:00',
+    type: 'meeting' as EventItem['type'],
+    date: localDateKey(new Date()),
+    time: '10:00 AM',
     attendees: '',
     details: '',
   });
 
-  const loadEvents = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const results = await Promise.all(
-        CALENDAR_ACTIONS.map((action) => getActivities({ page_size: 100, activity_type: action }))
-      );
-      const liveEvents = results
-        .flatMap((res) => res.data ?? [])
-        .map(toEvent)
-        .filter((item): item is EventItem => Boolean(item))
-        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
-      setEvents(liveEvents);
-    } catch (e: any) {
-      setError(e?.message || 'Failed to load calendar events.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    let mounted = true;
-    setLoading(true);
-    Promise.all(CALENDAR_ACTIONS.map((action) => getActivities({ page_size: 100, activity_type: action })))
-      .then((results) => {
-        if (!mounted) return;
-        const liveEvents = results
-          .flatMap((res) => res.data ?? [])
-          .map(toEvent)
-          .filter((item): item is EventItem => Boolean(item))
-          .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
-        setEvents(liveEvents);
+    let cancelled = false;
+
+    const loadCalendarActivities = async () => {
+      setLoading(true);
+
+      try {
+        const result = await getCrmActivities({
+          view: 'timeline',
+          page: 1,
+          page_size: 100,
+          sort_order: 'asc',
+        });
+
+        if (cancelled) return;
+
+        const loadedEvents = (result.data ?? []).map(toEvent);
+
+        setEvents(loadedEvents);
+
+        setSelectedEventId(prev => {
+          if (prev && loadedEvents.some(event => event.id === prev)) {
+            return prev;
+          }
+
+          return loadedEvents[0]?.id ?? null;
+        });
+
         setError(null);
-      })
-      .catch((e) => mounted && setError(e?.message || 'Failed to load calendar events.'))
-      .finally(() => mounted && setLoading(false));
-    return () => { mounted = false; };
+      } catch (e: any) {
+        if (cancelled) return;
+
+        setError(e?.message || 'Failed to load activities');
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadCalendarActivities();
+
+    const handleActivityCreated = () => {
+      void loadCalendarActivities();
+    };
+
+    window.addEventListener(
+      'pulse-crm-activity-created',
+      handleActivityCreated
+    );
+
+    return () => {
+      cancelled = true;
+
+      window.removeEventListener(
+        'pulse-crm-activity-created',
+        handleActivityCreated
+      );
+    };
   }, []);
 
-  const openCreateForm = (date = todayIso()) => {
-    setSuccess(null);
-    setError(null);
-    setForm({ title: '', type: 'task', date, time: '09:00', attendees: '', details: '' });
-    setIsAddOpen(true);
-  };
+  useEffect(() => {
+    const handleOpen = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const data = customEvent.detail || {};
 
-  const handleDayClick = (date: string) => {
-    if (date >= todayIso()) openCreateForm(date);
-  };
-
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.title.trim()) {
-      setError('Task title is required.');
-      return;
-    }
-    if (form.date < todayIso()) {
-      setError('Choose today or a future date.');
-      return;
-    }
-
-    setSaving(true);
-    setError(null);
-    try {
-      await createActivity({
-        entity_type: 'system',
-        entity_id: crypto.randomUUID(),
-        action: form.type === 'followup' ? 'follow_up' : form.type,
-        title: form.title.trim(),
-        description: form.details.trim() || null,
-        payload: {
-          calendar_event: true,
-          scheduled_date: form.date,
-          scheduled_time: form.time,
-          assignee: form.attendees.trim() || 'Self',
-        },
+      setForm({
+        title: data.title || '',
+        type: data.type || 'meeting',
+        date: data.date || localDateKey(new Date()),
+        time: data.time || '10:00 AM',
+        attendees: data.attendees || '',
+        details: data.details || '',
       });
-      setIsAddOpen(false);
-      setSuccess('Task created successfully.');
-      await loadEvents();
-    } catch (e: any) {
-      setError(e?.message || 'Failed to create task.');
-    } finally {
-      setSaving(false);
-    }
+
+      setIsAddOpen(true);
+    };
+
+    window.addEventListener(
+      'pulse-open-create-calendar-event-modal',
+      handleOpen
+    );
+
+    return () => {
+      window.removeEventListener(
+        'pulse-open-create-calendar-event-modal',
+        handleOpen
+      );
+    };
+  }, []);
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const newEvent: EventItem = {
+      id: `local-${Date.now()}`,
+      title: form.title,
+      type: form.type,
+      date: form.date,
+      time: form.time,
+      attendees: form.attendees,
+      details: form.details,
+    };
+
+    setEvents(prev => [...prev, newEvent]);
+    setIsAddOpen(false);
   };
+
+  const getBadgeColor = (type: EventItem['type']) => TYPE_BADGE[type];
 
   const weekDays = useMemo(() => {
-    const now = new Date();
-    const monday = new Date(now);
-    const day = (now.getDay() + 6) % 7;
-    monday.setDate(now.getDate() - day);
+    const date = new Date(currentDate);
+    const day = (date.getDay() + 6) % 7;
+
+    const monday = new Date(date);
+    monday.setDate(date.getDate() - day);
+    monday.setHours(0, 0, 0, 0);
+
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      return { day: d.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3), num: d.getDate(), iso: d.toISOString().slice(0, 10), active: i === day };
+
+      return {
+        day: d.toLocaleDateString('en-US', {
+          weekday: 'short',
+        }),
+        num: d.getDate(),
+        iso: localDateKey(d),
+        active: d.toDateString() === new Date().toDateString(),
+      };
     });
-  }, []);
+  }, [currentDate]);
+
+  const monthDays = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const startOffset = (firstDay.getDay() + 6) % 7;
+    const totalDays = lastDay.getDate();
+
+    const days: Array<{
+      date: Date;
+      iso: string;
+      isCurrentMonth: boolean;
+      isToday: boolean;
+    }> = [];
+
+    for (let i = startOffset - 1; i >= 0; i--) {
+      const d = new Date(year, month, -i);
+
+      days.push({
+        date: d,
+        iso: localDateKey(d),
+        isCurrentMonth: false,
+        isToday: d.toDateString() === new Date().toDateString(),
+      });
+    }
+
+    for (let day = 1; day <= totalDays; day++) {
+      const d = new Date(year, month, day);
+
+      days.push({
+        date: d,
+        iso: localDateKey(d),
+        isCurrentMonth: true,
+        isToday: d.toDateString() === new Date().toDateString(),
+      });
+    }
+
+    let nextDay = 1;
+
+    while (days.length < 42) {
+      const d = new Date(year, month + 1, nextDay++);
+
+      days.push({
+        date: d,
+        iso: localDateKey(d),
+        isCurrentMonth: false,
+        isToday: d.toDateString() === new Date().toDateString(),
+      });
+    }
+
+    return days;
+  }, [currentDate]);
+
+  const selectedDayIso = localDateKey(currentDate);
+
+  const selectedDayEvents = useMemo(
+    () =>
+      events
+        .filter(event => event.date === selectedDayIso)
+        .sort((a, b) => a.time.localeCompare(b.time)),
+    [events, selectedDayIso]
+  );
+
+  const selectedEvent = useMemo(
+    () => events.find(event => event.id === selectedEventId) ?? null,
+    [events, selectedEventId]
+  );
+
+  const monthTitle = currentDate.toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const weekTitle = useMemo(() => {
+    if (weekDays.length !== 7) return '';
+
+    const start = new Date(`${weekDays[0].iso}T00:00:00`);
+    const end = new Date(`${weekDays[6].iso}T00:00:00`);
+
+    if (start.getFullYear() === end.getFullYear()) {
+      if (start.getMonth() === end.getMonth()) {
+        return `${start.toLocaleDateString('en-US', {
+          month: 'long',
+        })} ${start.getDate()}–${end.getDate()}, ${start.getFullYear()}`;
+      }
+
+      return `${start.toLocaleDateString('en-US', {
+        month: 'short',
+      })} ${start.getDate()} – ${end.toLocaleDateString('en-US', {
+        month: 'short',
+      })} ${end.getDate()}, ${end.getFullYear()}`;
+    }
+
+    return `${start.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })} – ${end.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })}`;
+  }, [weekDays]);
+
+  const goToPrevious = () => {
+    setCurrentDate(prev => {
+      const next = new Date(prev);
+
+      if (activeView === 'month') {
+        next.setMonth(next.getMonth() - 1);
+      } else if (activeView === 'week') {
+        next.setDate(next.getDate() - 7);
+      } else {
+        next.setDate(next.getDate() - 1);
+      }
+
+      return next;
+    });
+  };
+
+  const goToNext = () => {
+    setCurrentDate(prev => {
+      const next = new Date(prev);
+
+      if (activeView === 'month') {
+        next.setMonth(next.getMonth() + 1);
+      } else if (activeView === 'week') {
+        next.setDate(next.getDate() + 7);
+      } else {
+        next.setDate(next.getDate() + 1);
+      }
+
+      return next;
+    });
+  };
+
+  const goToToday = () => {
+    const today = new Date();
+    today.setHours(12, 0, 0, 0);
+    setCurrentDate(today);
+  };
+
+  const isShowingToday =
+    currentDate.toDateString() === new Date().toDateString();
 
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       <div className="col-span-12 lg:col-span-8 space-y-5">
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5">
+        <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div>
-              <h2 className="font-sans text-2xl text-brand-heading font-bold">Calendar Schedule</h2>
-              <p className="text-[11px] text-brand-text/60 mt-0.5 font-bold">Coordinate calls, demos, priority tasks, and follow-ups from live CRM activity data.</p>
+              <h2 className="font-sans text-2xl text-foreground font-bold">
+                Calendar Schedule
+              </h2>
+
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-bold">
+                Coordinate outbound calls, video demos, priority tasks, and team follow-ups.
+              </p>
+
+              <p className="text-[11px] text-brand-purple font-bold mt-2">
+                {activeView === 'month'
+                  ? monthTitle
+                  : activeView === 'week'
+                    ? weekTitle
+                    : currentDate.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+              </p>
             </div>
 
-            <div className="flex items-center space-x-3 self-end sm:self-center">
-              <div className="flex space-x-1 p-1 bg-brand-sidebar-hover/15 border border-brand-border-purple/20 rounded-xl">
-                {['day', 'week', 'month'].map((view) => (
-                  <button key={view} onClick={() => setActiveView(view as any)} className={`py-1 px-3 rounded-lg font-extrabold text-[10px] uppercase transition-all duration-200 cursor-pointer ${activeView === view ? 'bg-brand-accent text-white shadow-sm' : 'text-brand-text/75 hover:text-brand-heading hover:bg-brand-sidebar-hover/20'}`}>
+            <div className="flex items-center gap-3 self-end sm:self-center">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={goToPrevious}
+                  className="p-1.5 border border-border rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="Previous"
+                  type="button"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <button
+                  onClick={goToToday}
+                  className={`px-2.5 py-1.5 border border-border rounded-lg text-[10px] font-bold cursor-pointer ${
+                    isShowingToday
+                      ? 'bg-brand-purple text-primary-foreground border-brand-purple'
+                      : 'hover:bg-secondary text-foreground'
+                  }`}
+                  type="button"
+                >
+                  Today
+                </button>
+
+                <button
+                  onClick={goToNext}
+                  className="p-1.5 border border-border rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="Next"
+                  type="button"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="flex space-x-1 p-1 bg-secondary border border-border rounded-xl">
+                {['day', 'week', 'month'].map(view => (
+                  <button
+                    key={view}
+                    onClick={() =>
+                      setActiveView(view as 'month' | 'week' | 'day')
+                    }
+                    className={`py-1 px-3 rounded-lg font-semibold text-[10px] uppercase transition duration-200 cursor-pointer ${
+                      activeView === view
+                        ? 'bg-brand-purple text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                    }`}
+                    type="button"
+                  >
                     {view}
                   </button>
                 ))}
               </div>
 
-              <button onClick={() => openCreateForm()} className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold transition-colors cursor-pointer">
+              <button
+                onClick={() => setIsAddOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                type="button"
+              >
                 <Plus className="h-3.5 w-3.5" />
-                <span>Add Task</span>
+                <span>Add Event</span>
               </button>
             </div>
           </div>
 
-          {success && <div className="mb-4 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-[11px] font-bold text-emerald-700">{success}</div>}
-          {error && <div className="mb-4 rounded-lg border border-rose-100 bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-700">{error}</div>}
-
           {loading ? (
-            <div className="flex items-center justify-center py-24 text-slate-400 text-xs font-semibold border-t border-brand-border-purple/15">
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading calendar events...
+            <div className="flex items-center justify-center py-24 text-muted-foreground text-xs font-semibold border-t border-border">
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Loading activities…
+            </div>
+          ) : error ? (
+            <div className="py-24 text-center text-destructive text-xs font-semibold border-t border-border">
+              {error}
             </div>
           ) : activeView === 'week' ? (
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-brand-text border-t border-brand-border-purple/15 pt-4">
-              {weekDays.map((slot) => {
-                const dayEvents = events.filter((event) => event.date === slot.iso);
-                const canCreate = slot.iso >= todayIso();
-                return (
-                  <div key={slot.iso} className="space-y-3">
-                    <button type="button" onClick={() => handleDayClick(slot.iso)} disabled={!canCreate} className={`w-full p-2.5 rounded-lg border transition-colors ${slot.active ? 'bg-brand-secondary-accent/15 border-brand-secondary-accent text-brand-accent' : 'bg-slate-50/50 border-brand-border-purple/15'} ${canCreate ? 'cursor-pointer hover:border-brand-accent/50' : 'cursor-default opacity-70'}`}>
-                      <p className="text-[10px] uppercase font-extrabold">{slot.day}</p>
-                      <p className="text-sm font-extrabold mt-1.5 tabular-nums">{slot.num}</p>
-                    </button>
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-foreground border-t border-border pt-4">
+              {weekDays.map((slot, idx) => {
+                const dayEvents = events.filter(
+                  event => event.date === slot.iso
+                );
 
-                    <div className="space-y-2.5 min-h-[300px] bg-slate-50/20 rounded-lg p-1.5 border border-brand-border-purple/10">
-                      {dayEvents.map((evt) => (
-                        <div key={evt.id} className={`p-2 rounded text-[10px] text-left font-bold hover:shadow-sm ${TYPE_BADGE[evt.type]}`}>
-                          <p className="line-clamp-2 leading-tight">{evt.title}</p>
-                          <p className="text-[9px] text-slate-500 font-bold mt-1 tabular-nums">{evt.time}</p>
+                return (
+                  <div key={idx} className="space-y-3">
+                    <div
+                      className={`p-2.5 rounded-lg border ${
+                        slot.active
+                          ? 'bg-brand-purple/10 border-brand-purple text-brand-purple'
+                          : 'bg-secondary border-border'
+                      }`}
+                    >
+                      <p className="text-[10px] uppercase font-semibold">
+                        {slot.day}
+                      </p>
+
+                      <p className="text-sm font-semibold mt-1.5 tabular-nums">
+                        {slot.num}
+                      </p>
+                    </div>
+
+                    <div className="space-y-2.5 min-h-[300px] bg-secondary/20 rounded-lg p-1.5 border border-border">
+                      {dayEvents.length === 0 ? (
+                        <div className="text-[9px] text-muted-foreground/40 py-5">
+                          —
                         </div>
-                      ))}
+                      ) : (
+                        dayEvents.map(evt => (
+                          <button
+                            key={evt.id}
+                            type="button"
+                            onClick={() => setSelectedEventId(evt.id)}
+                            className={`w-full p-2 rounded-lg text-[10px] text-left font-bold cursor-pointer border transition-all hover:-translate-y-0.5 hover:shadow-sm ${
+                              selectedEventId === evt.id
+                                ? 'ring-2 ring-brand-purple/40 shadow-sm'
+                                : ''
+                            } ${getBadgeColor(evt.type)}`}
+                          >
+                            <p className="line-clamp-2 leading-tight">
+                              {evt.title}
+                            </p>
+
+                            <p className="text-[9px] text-muted-foreground font-bold mt-1 tabular-nums">
+                              {evt.time}
+                            </p>
+                          </button>
+                        ))
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
+          ) : activeView === 'month' ? (
+            <div className="border-t border-border pt-4">
+              <div className="grid grid-cols-7 border-l border-t border-border">
+                {[
+                  'MON',
+                  'TUE',
+                  'WED',
+                  'THU',
+                  'FRI',
+                  'SAT',
+                  'SUN',
+                ].map(day => (
+                  <div
+                    key={day}
+                    className="py-2 text-center text-[10px] font-bold text-muted-foreground border-r border-b border-border bg-secondary/40"
+                  >
+                    {day}
+                  </div>
+                ))}
+
+                {monthDays.map((day, index) => {
+                  const dayEvents = events.filter(
+                    event => event.date === day.iso
+                  );
+
+                  return (
+                    <div
+                      key={index}
+                      className={`min-h-[120px] p-2 border-r border-b border-border ${
+                        !day.isCurrentMonth
+                          ? 'bg-secondary/20'
+                          : 'bg-card'
+                      } ${
+                        day.isToday
+                          ? 'ring-2 ring-inset ring-brand-purple/40'
+                          : ''
+                      }`}
+                    >
+                      <div
+                        className={`text-[11px] font-bold mb-2 ${
+                          day.isCurrentMonth
+                            ? 'text-foreground'
+                            : 'text-muted-foreground/40'
+                        }`}
+                      >
+                        {day.date.getDate()}
+                      </div>
+
+                      <div className="space-y-1">
+                        {dayEvents.slice(0, 4).map(evt => (
+                          <button
+                            key={evt.id}
+                            type="button"
+                            onClick={() => setSelectedEventId(evt.id)}
+                            className={`w-full text-left px-1.5 py-1 rounded text-[9px] font-bold truncate cursor-pointer border transition-all hover:shadow-sm ${
+                              selectedEventId === evt.id
+                                ? 'ring-2 ring-brand-purple/40'
+                                : ''
+                            } ${getBadgeColor(evt.type)}`}
+                            title={`${evt.title} — ${evt.time}`}
+                          >
+                            {evt.title}
+                          </button>
+                        ))}
+
+                        {dayEvents.length > 4 && (
+                          <div className="text-[9px] text-brand-purple font-bold px-1">
+                            +{dayEvents.length - 4} more
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ) : (
-            <div className="text-center py-24 text-slate-400 text-xs font-semibold border-t border-brand-border-purple/15 pt-4">
-              {activeView === 'month' ? 'Month grid layout loaded. Re-select Week for live scheduler.' : 'Day timeline layout loaded. Re-select Week for live scheduler.'}
+            <div className="border-t border-border pt-4">
+              <div className="mb-4">
+                <p className="text-sm font-bold text-foreground">
+                  {currentDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </p>
+
+                <p className="text-[10px] text-muted-foreground font-semibold mt-1">
+                  {selectedDayEvents.length}{' '}
+                  {selectedDayEvents.length === 1
+                    ? 'activity'
+                    : 'activities'}
+                </p>
+              </div>
+
+              {selectedDayEvents.length === 0 ? (
+                <div className="py-20 text-center border border-border rounded-xl bg-secondary/20">
+                  <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground/40 mb-3" />
+
+                  <p className="text-xs font-bold text-foreground">
+                    No activities scheduled
+                  </p>
+
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    There are no tasks, calls, or meetings scheduled for this day.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {selectedDayEvents.map(evt => (
+                    <button
+                      key={evt.id}
+                      type="button"
+                      onClick={() => setSelectedEventId(evt.id)}
+                      className={`w-full text-left flex items-stretch border rounded-xl overflow-hidden bg-card hover:bg-secondary/20 transition-all cursor-pointer ${
+                        selectedEventId === evt.id
+                          ? 'border-brand-purple ring-2 ring-brand-purple/20'
+                          : 'border-border'
+                      }`}
+                    >
+                      <div className="w-24 shrink-0 bg-secondary/40 flex items-center justify-center border-r border-border">
+                        <span className="text-xs font-bold text-foreground">
+                          {evt.time}
+                        </span>
+                      </div>
+
+                      <div className="flex-1 p-4">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className={`text-[9px] uppercase font-bold px-2 py-0.5 rounded-full ${getBadgeColor(
+                              evt.type
+                            )}`}
+                          >
+                            {evt.type}
+                          </span>
+                        </div>
+
+                        <h4 className="text-sm font-bold text-foreground">
+                          {evt.title}
+                        </h4>
+
+                        {evt.details && (
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {evt.details}
+                          </p>
+                        )}
+
+                        <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {evt.attendees}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
-      </div>
 
-      <div className="col-span-12 lg:col-span-4 space-y-5">
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 sticky top-20">
-          <h3 className="font-extrabold text-brand-heading text-sm mb-4">Agenda Details</h3>
-          <div className="space-y-4">
-            {loading ? (
-              <div className="flex items-center justify-center py-10 text-slate-400 text-xs font-semibold"><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading...</div>
-            ) : events.length === 0 ? (
-              <p className="text-center text-slate-400 text-xs font-semibold py-10">No calendar events yet.</p>
-            ) : (
-              events.map((evt) => (
-                <div key={evt.id} className="p-3 border border-brand-border-purple/20 rounded-xl bg-slate-50/50 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase ${TYPE_BADGE[evt.type]}`}>{evt.type}</span>
-                    <span className="text-[9px] text-slate-450 font-bold flex items-center tabular-nums"><Clock className="h-3 w-3 mr-1" />{evt.time}</span>
-                  </div>
-                  <h4 className="text-xs font-extrabold text-brand-heading leading-snug">{evt.title}</h4>
-                  <p className="text-[10px] text-brand-text/80 leading-relaxed font-semibold">{evt.details || 'No description provided.'}</p>
-                  <div className="pt-2 border-t border-brand-border-purple/10 flex justify-between items-center text-[10px] font-bold text-brand-text/60">
-                    <span className="flex items-center"><Users className="h-3.5 w-3.5 mr-1 text-slate-400" />{evt.attendees}</span>
-                    <span className="text-brand-accent">{evt.date}</span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
+        {isAddOpen && (
+          <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div
+              className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+                <h3 className="font-bold text-foreground text-sm">
+                  Add Calendar Event
+                </h3>
 
-      {isAddOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-white border border-brand-border-purple/25 rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-brand-border-purple/15 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-brand-heading text-sm">Create Calendar Task</h3>
-              <button onClick={() => setIsAddOpen(false)} className="text-slate-400 hover:text-brand-text p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
-            </div>
-            <form onSubmit={handleAdd} className="p-5 space-y-4">
-              <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Title</label>
-                <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Type</label>
-                  <select value={form.type} onChange={e => setForm({...form, type: e.target.value as EventItem['type']})} className="w-full px-2 py-1.5 border border-brand-border-purple/35 bg-white text-brand-text rounded-lg text-xs cursor-pointer">
-                    <option value="task">task</option>
-                    <option value="meeting">meeting</option>
-                    <option value="call">call</option>
-                    <option value="followup">followup</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Assignee</label>
-                  <input type="text" placeholder="e.g. Alex Rivera" value={form.attendees} onChange={e => setForm({...form, attendees: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Date</label>
-                  <input type="date" required min={todayIso()} value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none cursor-pointer" />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Time</label>
-                  <input type="time" required value={form.time} onChange={e => setForm({...form, time: e.target.value})} className="w-full px-3 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-[9px] font-extrabold text-brand-heading uppercase tracking-wider mb-1">Description</label>
-                <textarea placeholder="Discuss scope..." value={form.details} onChange={e => setForm({...form, details: e.target.value})} className="w-full p-2 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text focus:outline-none min-h-[60px]" />
-              </div>
-              <div className="pt-3 border-t border-brand-border-purple/15 flex justify-end space-x-2.5">
-                <button type="button" disabled={saving} onClick={() => setIsAddOpen(false)} className="px-4 py-1.5 border border-brand-border-purple/30 rounded-lg text-xs font-bold text-brand-text/75 hover:bg-slate-50 cursor-pointer disabled:opacity-60">Cancel</button>
-                <button type="submit" disabled={saving} className="px-4 py-1.5 bg-brand-accent hover:bg-brand-accent-hover text-white rounded-lg text-xs font-bold shadow-sm/10 cursor-pointer disabled:opacity-60 inline-flex items-center gap-1.5">
-                  {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>{saving ? 'Saving...' : 'Save Task'}</span>
+                <button
+                  onClick={() => setIsAddOpen(false)}
+                  className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"
+                  type="button"
+                >
+                  <X className="h-4.5 w-4.5" />
                 </button>
               </div>
-            </form>
+
+              <form onSubmit={handleAdd} className="p-5 space-y-4">
+                <div>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                    Event Title
+                  </label>
+
+                  <input
+                    type="text"
+                    required
+                    value={form.title}
+                    onChange={e =>
+                      setForm({ ...form, title: e.target.value })
+                    }
+                    className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                      Event Type
+                    </label>
+
+                    <select
+                      value={form.type}
+                      onChange={e =>
+                        setForm({
+                          ...form,
+                          type: e.target.value as EventItem['type'],
+                        })
+                      }
+                      className="w-full px-2 py-1.5 border border-border bg-card text-foreground rounded-lg text-xs cursor-pointer"
+                    >
+                      <option value="meeting">meeting</option>
+                      <option value="call">call</option>
+                      <option value="task">task</option>
+                      <option value="followup">followup</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                      Attendees
+                    </label>
+
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Alex Rivera"
+                      value={form.attendees}
+                      onChange={e =>
+                        setForm({ ...form, attendees: e.target.value })
+                      }
+                      className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                      Date
+                    </label>
+
+                    <input
+                      type="date"
+                      required
+                      value={form.date}
+                      onChange={e =>
+                        setForm({ ...form, date: e.target.value })
+                      }
+                      className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none cursor-pointer"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                      Time
+                    </label>
+
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. 10:00 AM"
+                      value={form.time}
+                      onChange={e =>
+                        setForm({ ...form, time: e.target.value })
+                      }
+                      className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                    Agenda / Description
+                  </label>
+
+                  <textarea
+                    required
+                    placeholder="Discuss scope..."
+                    value={form.details}
+                    onChange={e =>
+                      setForm({ ...form, details: e.target.value })
+                    }
+                    className="w-full p-2 border border-border rounded-lg text-xs text-foreground focus:outline-none min-h-[60px]"
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddOpen(false)}
+                    className="px-4 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground hover:bg-secondary cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer"
+                  >
+                    Save Event
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
+        )}
+      </div>
+
+      <aside className="col-span-12 lg:col-span-4">
+        <div className="bg-card border border-border rounded-2xl p-5 lg:sticky lg:top-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">
+                Agenda Details
+              </h3>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Select an activity to view its details.
+              </p>
+            </div>
+
+            {selectedEvent && (
+              <button
+                type="button"
+                onClick={() => setSelectedEventId(null)}
+                className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                title="Clear selection"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {selectedEvent ? (
+            <div className="space-y-4">
+              <div
+                className={`rounded-xl border p-4 ${getBadgeColor(
+                  selectedEvent.type
+                )}`}
+              >
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <span className="text-[9px] uppercase font-bold tracking-wide px-2 py-1 rounded-full bg-white/70">
+                    {selectedEvent.type}
+                  </span>
+
+                  {selectedEvent.status && (
+                    <span className="text-[9px] font-bold uppercase text-foreground/70">
+                      {selectedEvent.status}
+                    </span>
+                  )}
+                </div>
+
+                <h4 className="text-sm font-bold text-foreground leading-snug">
+                  {selectedEvent.title}
+                </h4>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <CalendarIcon className="h-4 w-4 text-brand-purple mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-wide font-bold text-muted-foreground">
+                      Due date
+                    </p>
+                    <p className="text-xs font-semibold text-foreground mt-0.5">
+                      {new Date(`${selectedEvent.date}T12:00:00`).toLocaleDateString(
+                        'en-US',
+                        {
+                          weekday: 'long',
+                          month: 'long',
+                          day: 'numeric',
+                          year: 'numeric',
+                        }
+                      )}
+                    </p>
+                    {selectedEvent.time !== 'No time' && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {selectedEvent.time}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <Users className="h-4 w-4 text-brand-purple mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-[9px] uppercase tracking-wide font-bold text-muted-foreground">
+                      Related record / owner
+                    </p>
+                    <p className="text-xs font-semibold text-foreground mt-0.5">
+                      {selectedEvent.attendees || 'Not specified'}
+                    </p>
+                  </div>
+                </div>
+
+                {selectedEvent.priority && (
+                  <div className="flex items-start gap-3">
+                    <div className="h-4 w-4 rounded-full border-2 border-brand-purple mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[9px] uppercase tracking-wide font-bold text-muted-foreground">
+                        Priority
+                      </p>
+                      <p className="text-xs font-semibold text-foreground mt-0.5 capitalize">
+                        {selectedEvent.priority}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedEvent.details && (
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-[9px] uppercase tracking-wide font-bold text-muted-foreground mb-1.5">
+                      Description
+                    </p>
+                    <p className="text-xs leading-relaxed text-foreground">
+                      {selectedEvent.details}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="min-h-[280px] rounded-xl border border-dashed border-border bg-secondary/20 flex flex-col items-center justify-center text-center px-6">
+              <div className="h-10 w-10 rounded-full bg-brand-purple/10 flex items-center justify-center mb-3">
+                <CalendarIcon className="h-5 w-5 text-brand-purple" />
+              </div>
+
+              <p className="text-xs font-bold text-foreground">
+                No activity selected
+              </p>
+
+              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+                Click a task, call, meeting, or follow-up in the calendar to
+                view its full details.
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </aside>
     </div>
   );
 }

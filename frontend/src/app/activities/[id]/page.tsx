@@ -1,0 +1,31 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
+import DashboardShell from "@/components/dashboard/DashboardShell";
+import { Loader2 } from 'lucide-react';
+
+export default function ActivityDetailPage() {
+  const [role, setRole] = useState<'sales_rep' | 'manager' | 'admin' | null>(null);
+  const params = useParams();
+  const id = params?.id as string;
+
+  useEffect(() => {
+    const storedRole = localStorage.getItem('pulse-crm-role') as any;
+    if (storedRole) {
+      setRole(storedRole);
+    } else {
+      setRole('sales_rep');
+    }
+  }, []);
+
+  if (!role || !id) {
+    return (
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      </div>
+    );
+  }
+
+  return <DashboardShell requiredRole={role} defaultTab="activities" activityId={id} />;
+}

@@ -88,8 +88,6 @@ class Settings(BaseSettings):
     SMTP_FROM_NAME: str = "KALNET PULSE CRM"
     SMTP_TLS: bool = True
     FRONTEND_BASE_URL: str = "http://localhost:3000"
-    BREVO_API_KEY: str = ""
-    BREVO_WEBHOOK_SECRET: Optional[str] = None
 
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
@@ -106,8 +104,14 @@ class Settings(BaseSettings):
     AI_PROVIDER: str = "rule_based"
     MODEL_NAME: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     SCORING_PROVIDER: str = "rule_based"
     AI_TIMEOUT: int = 30
+
+    # PULSE AI microservice (separate deployment). The backend calls this
+    # service over HTTP for lead scoring, recommendations, and summarization.
+    AI_SERVICE_URL: str = "http://localhost:8001"
+    AI_SERVICE_TIMEOUT: float = 30.0
 
     # Assistant (Groq free tier)
     ASSISTANT_API_KEY: Optional[str] = None
