@@ -41,6 +41,7 @@ from app.repositories.lead_repository import LeadRepository
 from app.repositories.lead_score_repository import LeadScoreRepository
 from app.services.ai_client import AIClient
 from app.services.email_analytics import EmailStatsService
+from app.services.workflow_service import WorkflowService
 from app.utils.stage_maps import PIPELINE_STAGE_MAP
 from app.utils.assessment_events import AssessmentEvent, EVENT_COMPUTATION
 
@@ -247,16 +248,19 @@ async def run_lead_assessment(
     )
 
     # ── Persist ai_recommendation ───────────────────────────────────────
+        # ── Persist ai_recommendation + synchronize workflow ────────────────
     rec = result.get("recommendation", {})
+
     if rec and rec.get("action"):
         rec_repo = AIRecommendationRepository(db)
+
         priority = "medium"
         if (rec.get("score") or 0) > 80:
             priority = "high"
         elif (rec.get("score") or 0) < 40:
             priority = "low"
 
-        await rec_repo.upsert_for_lead(
+        recommendation = await rec_repo.upsert_for_lead(
             lead_id,
             organization_id,
             created_by,
@@ -272,6 +276,15 @@ async def run_lead_assessment(
             },
         )
 
+        # AI recommendation is the source of truth for the workflow.
+        workflow_service = WorkflowService(db)
+
+        await workflow_service.sync_from_recommendation(
+            recommendation=recommendation,
+            lead_id=lead_id,
+            organization_id=organization_id,
+            created_by=created_by,
+        )
     # ── Persist feature_vectors (audit only) ────────────────────────────
     fv_repo = FeatureVectorRepository(db)
     fv_features = {

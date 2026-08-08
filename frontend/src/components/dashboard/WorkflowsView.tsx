@@ -1,703 +1,1156 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
-
-import { getAutomationEvents, triggerAutomationDelivery, type AutomationEvent } from '@/utils/api';
-import { 
-  GitBranch, 
-  Play, 
-  Pause, 
-  Plus, 
-  Trash2, 
-  Check, 
-  X, 
-  Clock, 
-  Mail, 
-  UserCheck, 
-  AlertTriangle, 
-  ChevronRight, 
-  Settings, 
-  Zap, 
-  Sliders, 
-  Copy, 
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
   CheckCircle2,
-  FileText,
-  UserPlus,
-  HelpCircle,
-  FolderOpen
+  Clock3,
+  Loader2,
+  Mail,
+  RefreshCw,
+  Sparkles,
+  UserRound,
+  Zap,
+  ChevronRight,
 } from 'lucide-react';
 
-interface Workflow {
-  id: number | string;
-  name: string;
-  desc: string;
-  triggerType: 'form_submission' | 'stage_change' | 'time_delay' | 'creation';
-  triggerLabel: string;
-  totalRuns: number;
-  successRate: string;
-  activeContacts: number;
-  status: 'Active' | 'Draft' | 'Paused';
+import {
+  getLeads,
+  getLeadWorkflow,
+  completeWorkflowTask,
+  getCrmActivities,
+  createCrmTask,
+  type Lead,
+  type WorkflowTaskItem,
+} from '@/utils/api';
+
+import {
+  getActivitiesFromStorage,
+  saveActivitiesToStorage,
+  type Activity,
+} from '@/utils/activityDb';
+
+interface WorkflowsViewProps {
+  onLoaded?: () => void;
 }
 
-interface WorkflowNode {
-  id: string;
-  type: 'trigger' | 'condition' | 'action';
-  category: string; // e.g. "Record Created", "Property Filter", "Send Email"
-  label: string;
-  desc: string;
-  config: string;
+function formatDueDate(value?: string | null): string {
+  if (!value) return 'No deadline';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'No deadline';
+
+  return date.toLocaleString([], {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
-function titleCaseEvent(value?: string | null): string {
-  if (!value) return 'CRM Event';
-  return value
-    .toLowerCase()
-    .split(/[_\s-]+/)
-    .filter(Boolean)
-    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+function formatDate(value?: string | null): string {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  return date.toLocaleString([], {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
-function eventToWorkflow(event: AutomationEvent): Workflow {
-  const type = event.event_type || event.event_name || 'CRM_EVENT';
-  const payloadStatus = String(event.payload?.status ?? '').toLowerCase();
-  const triggerType: Workflow['triggerType'] = type.includes('EMAIL')
-    ? 'form_submission'
-    : type.includes('DEAL')
-      ? 'stage_change'
-      : type.includes('ACTIVITY')
-        ? 'time_delay'
-        : 'creation';
+function priorityClass(priority?: string | null): string {
+  switch ((priority || '').toLowerCase()) {
+    case 'critical':
+      return 'bg-red-500/10 text-red-600 border-red-500/20';
+    case 'high':
+      return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
+    case 'medium':
+      return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+    default:
+      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+  }
+}
+
+function statusClass(status?: string | null): string {
+  switch ((status || '').toLowerCase()) {
+    case 'completed':
+      return 'bg-green-500/10 text-green-600 border-green-500/20';
+    case 'superseded':
+      return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+    case 'in_progress':
+      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+    default:
+      return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+  }
+}
+
+function actionIcon(action?: string | null) {
+  const value = (action || '').toLowerCase();
+
+  if (value.includes('email') || value.includes('mail')) {
+    return <Mail className="h-4 w-4" />;
+  }
+
+  if (
+    value.includes('research') ||
+    value.includes('review') ||
+    value.includes('prospect')
+  ) {
+    return <UserRound className="h-4 w-4" />;
+  }
+
+  return <Zap className="h-4 w-4" />;
+}
+
+function displayLeadName(lead: Lead): string {
+  return (
+    lead.title ||
+    lead.contact_name ||
+    lead.company_name ||
+    lead.contact_email ||
+    'Unnamed Lead'
+  );
+}
+function toActivityStatus(status?: string | null): string {
+  switch ((status || '').toLowerCase()) {
+    case 'completed':
+      return 'Completed';
+    case 'in_progress':
+      return 'In Progress';
+    case 'overdue':
+      return 'Overdue';
+    default:
+      return 'Pending';
+  }
+}
+
+function toActivityPriority(priority?: string | null): string {
+  switch ((priority || '').toLowerCase()) {
+    case 'urgent':
+      return 'Urgent';
+    case 'high':
+      return 'High';
+    case 'low':
+      return 'Low';
+    default:
+      return 'Medium';
+  }
+}
+
+function crmTaskToLocalActivity(
+  task: any,
+  lead: Lead,
+): Activity {
+  const description =
+    task.description ||
+    task.details?.description ||
+    '';
 
   return {
-    id: event.id,
-    name: `${titleCaseEvent(type)} Workflow`,
-    desc: event.aggregate_type
-      ? `Live ${titleCaseEvent(event.aggregate_type)} automation event from the backend event stream.`
-      : 'Live automation event from the backend event stream.',
-    triggerType,
-    triggerLabel: titleCaseEvent(event.event_name || type),
-    totalRuns: Number(event.payload?.total_runs ?? event.payload?.runs ?? 1),
-    successRate: payloadStatus.includes('fail') || payloadStatus.includes('error') ? '0%' : '100%',
-    activeContacts: Number(event.payload?.active_contacts ?? event.payload?.contact_count ?? 0),
-    status: payloadStatus.includes('draft') ? 'Draft' : payloadStatus.includes('pause') ? 'Paused' : 'Active'
+    id: String(task.id),
+
+    type: 'task',
+
+    subject: task.subject || 'AI Recommended Task',
+
+    status: toActivityStatus(task.status),
+
+    priority: toActivityPriority(task.priority),
+
+    dueDate:
+      task.due_date ||
+      task.due_at ||
+      new Date().toISOString(),
+
+    owner:
+      task.owner_name ||
+      lead.owner_name ||
+      'System',
+
+    relatedRecord: {
+      id: lead.id,
+      name: displayLeadName(lead),
+      type: 'lead',
+    },
+
+    details: {
+      title: task.subject || 'AI Recommended Task',
+      description,
+      assignedTo:
+        task.owner_name ||
+        lead.owner_name ||
+        'System',
+      reminder: '15 mins before',
+      repeat: 'None',
+      attachments: [],
+    },
+
+    timeline: [
+      {
+        action: 'Created',
+        time:
+          task.created_at ||
+          new Date().toISOString(),
+        user:
+          task.owner_name ||
+          'System',
+        desc:
+          'Task created automatically from an AI workflow recommendation.',
+      },
+    ],
   };
 }
+export default function WorkflowsView({
+  onLoaded,
+}: WorkflowsViewProps = {}) {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
 
-const fallbackWorkflows: Workflow[] = [
-    { id: 1, name: "Lead Assignment Automation", desc: "Auto-assigns new enterprise leads to regional reps based on geolocation.", triggerType: "creation", triggerLabel: "New Lead Created", totalRuns: 1240, successRate: "99.8%", activeContacts: 24, status: "Active" },
-    { id: 2, name: "SaaS Free Trial Nurture", desc: "Sends a welcome email series and checks product usage milestones.", triggerType: "form_submission", triggerLabel: "Trial Sign-Up Form", totalRuns: 850, successRate: "97.5%", activeContacts: 112, status: "Active" },
-    { id: 3, name: "Stale Deal Slack Alerts", desc: "Notifies account executives when a deal remains in 'Proposal' for over 10 days.", triggerType: "time_delay", triggerLabel: "10 Days Inactivity", totalRuns: 310, successRate: "100%", activeContacts: 15, status: "Active" },
-    { id: 4, name: "Post-Purchase NDA Request", desc: "Sends NDAs and custom contract SLA drafts once a deal moves to Negotiation.", triggerType: "stage_change", triggerLabel: "Stage: Negotiation", totalRuns: 145, successRate: "98.2%", activeContacts: 4, status: "Paused" },
-    { id: 5, name: "Q4 Marketing Inbound Scoring", desc: "Increments lead scores by 15 points when they open high-intent links.", triggerType: "form_submission", triggerLabel: "Pricing Link Clicked", totalRuns: 0, successRate: "--", activeContacts: 0, status: "Draft" }
-  ];
+  const [workflow, setWorkflow] = useState<{
+    current_task: WorkflowTaskItem | null;
+    history: WorkflowTaskItem[];
+  }>({
+    current_task: null,
+    history: [],
+  });
 
-export default function WorkflowsView({ onLoaded }: { onLoaded?: () => void } = {}) {
-  const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [loadingWorkflows, setLoadingWorkflows] = useState(true);
-  const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [recommendation, setRecommendation] =
+    useState<LeadRecommendation | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'Active' | 'Draft' | 'Paused'>('Active');
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-  const [newWorkflowName, setNewWorkflowName] = useState('');
-  const [newWorkflowDesc, setNewWorkflowDesc] = useState('');
-  
-  // Visual Canvas States
-  const [canvasNodes, setCanvasNodes] = useState<WorkflowNode[]>([]);
-  const [activeConfigNode, setActiveConfigNode] = useState<string | null>(null);
+  const [loadingLeads, setLoadingLeads] = useState(true);
+  const [loadingWorkflow, setLoadingWorkflow] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Pre-Built Templates Recipes
-  const templates = [
-    {
-      name: "Welcome Email Series",
-      desc: "Delight new subscribers with automatic onboarding emails.",
-      trigger: "Form Submission (Web Sign-up)",
-      nodes: [
-        { id: "1", type: "trigger" as const, category: "User Actions", label: "Form Submitted", desc: "Website signup form filled out", config: "Signup Form V2" },
-        { id: "2", type: "action" as const, category: "External Actions", label: "Send Onboarding Email 1", desc: "Deliver welcome kit package", config: "Template: Welcome_Kit" },
-        { id: "3", type: "condition" as const, category: "If/Else Branches", label: "Opened Email?", desc: "Checks email open event in 48h", config: "Opened Welcome_Kit == True" },
-        { id: "4", type: "action" as const, category: "Internal Actions", label: "Add Lead Score +10", desc: "Increase score profile", config: "Score: +10" }
-      ]
-    },
-    {
-      name: "Stale Deal AE Reminder",
-      desc: "Prevent deals from rotting by alerting owners.",
-      trigger: "Time Delay & Activity Tracker",
-      nodes: [
-        { id: "1", type: "trigger" as const, category: "Time-Based Events", label: "10 Days Inactive", desc: "No touchpoints logged in 10 days", config: "Stage == Proposal" },
-        { id: "2", type: "condition" as const, category: "Property Filters", label: "Deal Size > ₹50K", desc: "Focuses on high-value pipeline", config: "Value >= 50000" },
-        { id: "3", type: "action" as const, category: "Internal Actions", label: "Ping Slack Owner", desc: "Send urgent warning channel message", config: "Slack AE Channel" }
-      ]
-    },
-    {
-      name: "Lead Scoring Pipeline",
-      desc: "Auto-qualify leads based on custom criteria.",
-      trigger: "Record Creation/Updates",
-      nodes: [
-        { id: "1", type: "trigger" as const, category: "Record Updates", label: "Lead Ingestion", desc: "New database record created", config: "Status: New" },
-        { id: "2", type: "condition" as const, category: "Property Filters", label: "Enterprise Filter", desc: "Check company headcount", config: "Employees >= 100" },
-        { id: "3", type: "action" as const, category: "Internal Actions", label: "Assign to Enterprise Rep", desc: "Change owner assignment", config: "Assignee: Sarah Johnson" }
-      ]
+  /*
+   * IMPORTANT:
+   * No polling / setInterval here.
+   *
+   * The old workflow page was refreshing automatically every few seconds,
+   * which caused the selected lead/page state to jump around.
+   */
+  const loadLeads = useCallback(async () => {
+    try {
+      setLoadingLeads(true);
+      setError(null);
+
+      const result = await getLeads();
+      const nextLeads = Array.isArray(result) ? result : [];
+
+      setLeads(nextLeads);
+
+      setSelectedLeadId((previous) => {
+        if (
+          previous &&
+          nextLeads.some((lead) => lead.id === previous)
+        ) {
+          return previous;
+        }
+
+        return nextLeads[0]?.id ?? null;
+      });
+
+      onLoaded?.();
+    } catch (err) {
+      console.error('Failed to load workflow leads:', err);
+      setError('Unable to load leads. Please log in again if your session expired.');
+    } finally {
+      setLoadingLeads(false);
     }
-  ];
+  }, [onLoaded]);
 
   useEffect(() => {
-    let cancelled = false;
+    void loadLeads();
+  }, [loadLeads]);
 
-    async function loadWorkflows() {
-      setLoadingWorkflows(true);
-      setWorkflowError(null);
-      try {
-        const result = await getAutomationEvents(50);
-        if (!cancelled) {
-          setWorkflows(result.items.length ? result.items.map(eventToWorkflow) : fallbackWorkflows);
-        }
-      } catch {
-        if (!cancelled) {
-          setWorkflows(fallbackWorkflows);
-          setWorkflowError('Live workflows could not be loaded. Showing fallback recipes.');
-        }
-      } finally {
-        if (!cancelled) setLoadingWorkflows(false);
-      }
+  const selectedLead = useMemo(
+    () =>
+      leads.find((lead) => lead.id === selectedLeadId) ?? null,
+    [leads, selectedLeadId]
+  );
+
+  const syncWorkflowTaskToActivity = useCallback(
+  async (
+    task: WorkflowTaskItem | null,
+    lead: Lead | null,
+  ) => {
+    if (!task || !lead) return;
+
+    /*
+     * Only pending/current workflow actions should
+     * become Activities.
+     */
+    if (
+      task.status === 'completed' ||
+      task.status === 'superseded'
+    ) {
+      return;
     }
 
-    loadWorkflows();
-    return () => { cancelled = true; };
-  }, []);
-
-  const visibleWorkflows = useMemo(() => workflows.filter(w => w.status === activeTab), [workflows, activeTab]);
-
-  const handleToggleStatus = (id: number | string) => {
-    setWorkflows(workflows.map(w => {
-      if (w.id === id) {
-        const nextStatus = w.status === 'Active' ? 'Paused' : 'Active';
-        return { ...w, status: nextStatus };
-      }
-      return w;
-    }));
-  };
-
-  const handleDeleteWorkflow = (id: number | string) => {
-    setWorkflows(workflows.filter(w => w.id !== id));
-  };
-
-  const handleUseTemplate = (template: typeof templates[0]) => {
-    setNewWorkflowName(template.name);
-    setNewWorkflowDesc(template.desc);
-    setCanvasNodes(template.nodes);
-    setIsBuilderOpen(true);
-  };
-
-  const handleCreateNewWorkflow = () => {
-    setNewWorkflowName("Custom Workflow Automation");
-    setNewWorkflowDesc("Trigger triggers, filters, and actions in sequence.");
-    setCanvasNodes([
-      { id: "1", type: "trigger", category: "Record Updates", label: "Choose Trigger", desc: "Click to define starting condition", config: "Pending Setup" }
-    ]);
-    setIsBuilderOpen(true);
-  };
-
-  const handleAddNode = (type: 'trigger' | 'condition' | 'action') => {
-    const newId = String(canvasNodes.length + 1);
-    let category = '';
-    let label = '';
-    let desc = '';
-
-    if (type === 'trigger') {
-      category = 'Record Updates';
-      label = 'New Trigger Rule';
-      desc = 'Define automation start trigger';
-    } else if (type === 'condition') {
-      category = 'Property Filters';
-      label = 'New Branch Condition';
-      desc = 'Narrow contacts filtering';
-    } else {
-      category = 'Internal Actions';
-      label = 'New CRM Action';
-      desc = 'Send automated response or update records';
-    }
-
-    setCanvasNodes([...canvasNodes, { id: newId, type, category, label, desc, config: "Draft Setup" }]);
-  };
-
-  const handleSaveWorkflow = async () => {
-    if (!newWorkflowName.trim()) return;
-
-    const firstTrigger = canvasNodes.find(n => n.type === 'trigger');
-    const newWf: Workflow = {
-      id: Date.now(),
-      name: newWorkflowName,
-      desc: newWorkflowDesc || "No description provided.",
-      triggerType: "creation",
-      triggerLabel: firstTrigger ? firstTrigger.label : "Record Created",
-      totalRuns: 0,
-      successRate: "--",
-      activeContacts: 0,
-      status: "Draft"
-    };
+    const marker = `[AI_WORKFLOW_TASK:${task.id}]`;
 
     try {
-      await triggerAutomationDelivery('WORKFLOW_DRAFT_CREATED', {
-        workflow_name: newWorkflowName,
-        description: newWorkflowDesc,
-        nodes: canvasNodes
+      /*
+       * 1. Check the local activity cache first.
+       * This prevents duplicate creation during the
+       * same browser session.
+       */
+      const localActivities =
+        getActivitiesFromStorage();
+
+      const localExists = localActivities.some(
+        (activity) =>
+          activity.type === 'task' &&
+          activity.details?.description?.includes(marker)
+      );
+
+      if (localExists) {
+        return;
+      }
+
+      /*
+       * 2. Check the real backend.
+       *
+       * This protects us even if the Workflow page
+       * is opened again or the browser is refreshed.
+       */
+      const existing =
+        await getCrmActivities({
+          view: 'task',
+          search: marker,
+          page: 1,
+          page_size: 100,
+        });
+
+      if (
+        existing?.data &&
+        existing.data.length > 0
+      ) {
+        /*
+         * Task already exists in the database.
+         * Sync it into local Activities so the
+         * existing Activities UI can display it.
+         */
+        const existingTask = existing.data[0];
+
+        const syncedActivity =
+          crmTaskToLocalActivity(
+            existingTask,
+            lead,
+          );
+
+        const current =
+          getActivitiesFromStorage();
+
+        if (
+          !current.some(
+            (activity) =>
+              activity.id === syncedActivity.id
+          )
+        ) {
+          saveActivitiesToStorage([
+            syncedActivity,
+            ...current,
+          ]);
+
+          window.dispatchEvent(
+            new CustomEvent(
+              'pulse-crm-activity-created'
+            )
+          );
+        }
+
+        return;
+      }
+
+      /*
+       * 3. Create the actual CRM task.
+       */
+      const createdTask =
+        await createCrmTask({
+          subject: task.action_type,
+
+          description: [
+            task.reasoning ||
+              'AI recommended this action for the lead.',
+            '',
+            marker,
+          ].join('\n'),
+
+          due_date: task.due_at,
+
+          priority:
+            (task.priority || 'medium').toLowerCase(),
+
+          status:
+            (task.status || 'pending').toLowerCase(),
+
+          related_entity_type: 'lead',
+
+          related_lead_id: lead.id,
+        });
+
+      /*
+       * 4. Convert the backend task into the
+       * existing Activities page format.
+       */
+      const activity =
+        crmTaskToLocalActivity(
+          createdTask,
+          lead,
+        );
+
+      const latestActivities =
+        getActivitiesFromStorage();
+
+      /*
+       * Final duplicate protection.
+       */
+      if (
+        latestActivities.some(
+          (item) => item.id === activity.id
+        )
+      ) {
+        return;
+      }
+
+      saveActivitiesToStorage([
+        activity,
+        ...latestActivities,
+      ]);
+
+      /*
+       * Tell ActivitiesView to refresh immediately
+       * if it is currently mounted.
+       */
+      window.dispatchEvent(
+        new CustomEvent(
+          'pulse-crm-activity-created'
+        )
+      );
+
+      console.log(
+        '[Workflow → Activity] Created task:',
+        activity.subject
+      );
+    } catch (error) {
+      /*
+       * Activity creation should NOT break the
+       * Workflow page itself.
+       */
+      console.error(
+        '[Workflow → Activity] Failed to create activity:',
+        error
+      );
+    }
+  },
+  []
+);
+
+  /*
+   * Load only the selected lead's workflow.
+   * Changing another CRM lead does not cause this component to poll/reload.
+   */
+const loadSelectedLead = useCallback(async (leadId: string) => {
+  try {
+    setLoadingWorkflow(true);
+    setError(null);
+
+    const workflowResult = await getLeadWorkflow(leadId);
+
+    setWorkflow({
+      current_task: workflowResult.current_task,
+      history: workflowResult.history,
+    });
+  } catch (err) {
+    console.error('Failed to load lead workflow:', err);
+
+    setWorkflow({
+      current_task: null,
+      history: [],
+    });
+
+    setError(
+      err instanceof Error
+        ? err.message
+        : 'Unable to load this lead workflow.'
+    );
+  } finally {
+    setLoadingWorkflow(false);
+  }
+}, []);
+
+  useEffect(() => {
+    if (!selectedLeadId) {
+      setWorkflow({
+        current_task: null,
+        history: [],
       });
-    } catch {
-      // Keep the existing local draft flow even if webhook delivery is unavailable.
+      setRecommendation(null);
+      return;
     }
 
-    setWorkflows([newWf, ...workflows]);
-    setIsBuilderOpen(false);
-    setActiveTab('Draft');
-  };
+    void loadSelectedLead(selectedLeadId);
+  }, [selectedLeadId, loadSelectedLead]);
 
-  const getTriggerIcon = (type: Workflow['triggerType']) => {
-    switch (type) {
-      case 'form_submission': return <FileText className="h-4 w-4 text-brand-purple" />;
-      case 'stage_change': return <Sliders className="h-4 w-4 text-indigo-500" />;
-      case 'time_delay': return <Clock className="h-4 w-4 text-amber-500" />;
-      case 'creation': return <UserPlus className="h-4 w-4 text-brand-cyan" />;
+  useEffect(() => {
+  if (!selectedLead || !workflow.current_task) {
+    return;
+  }
+
+  void syncWorkflowTaskToActivity(
+    workflow.current_task,
+    selectedLead,
+  );
+}, [
+  selectedLead,
+  workflow.current_task,
+  syncWorkflowTaskToActivity,
+]);
+
+  const handleRefresh = async () => {
+    if (!selectedLeadId) return;
+
+    try {
+      setRefreshing(true);
+
+      /*
+       * Refresh only this lead.
+       * Do not reload the whole lead list.
+       */
+      await loadSelectedLead(selectedLeadId);
+    } finally {
+      setRefreshing(false);
     }
   };
+
+const handleComplete = async () => {
+  const task = workflow.current_task;
+  const leadId = selectedLead?.id;
+
+  if (!task) return;
+
+  if (!leadId) {
+    toast.error('Unable to identify the selected lead.');
+    return;
+  }
+
+  try {
+    setCompleting(true);
+
+    // Complete the current workflow task
+    await completeWorkflowTask(task.id);
+
+    // Immediately update the UI so the completed task moves to history
+    setWorkflow((prev) => ({
+      current_task: null,
+      history: [
+        ...prev.history.filter((item) => item.id !== task.id),
+        {
+          ...task,
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        },
+      ],
+    }));
+
+    // Re-fetch using the stable lead UUID.
+    // Do NOT rely on a possibly changed selectedLead state.
+    const updatedWorkflow = await getLeadWorkflow(leadId);
+
+    setWorkflow({
+      current_task: updatedWorkflow.current_task,
+      history: updatedWorkflow.history,
+    });
+  } catch (error) {
+    console.error('Failed to complete workflow task:', error);
+    toast.error('Unable to complete the workflow task.');
+  } finally {
+    setCompleting(false);
+  }
+};
+  /*
+   * PERSONALIZED WORKFLOW STRUCTURE
+   *
+   * There are NO fixed CRM stages here.
+   *
+   * Each lead gets:
+   *   1. Lead created
+   *   2. AI assessment
+   *   3. Historical AI actions for that lead
+   *   4. Current AI action
+   *   5. Next AI decision
+   *
+   * The actual action names come from the backend recommendation.
+   */
+  const workflowSteps = useMemo(() => {
+    const steps: Array<{
+      id: string;
+      label: string;
+      description: string;
+      status: 'done' | 'active' | 'upcoming';
+      action?: string;
+    }> = [];
+
+    if (!selectedLead) return steps;
+
+    steps.push({
+      id: 'lead-created',
+      label: 'Lead created',
+      description: `Lead entered the CRM on ${formatDate(
+        selectedLead.created_at
+      ) || 'the recorded creation date'}.`,
+      status: 'done',
+    });
+
+    steps.push({
+      id: 'ai-assessment',
+      label: 'AI assessment',
+      description:
+        'AI evaluates fit, engagement, CRM stage, activity and previous signals.',
+      status:
+        selectedLead.score !== null &&
+        selectedLead.score !== undefined
+          ? 'done'
+          : 'active',
+    });
+
+    /*
+     * History is completely lead-specific.
+     * No hardcoded "Contacted / Qualified / Proposal / Negotiation" stages.
+     */
+    const history = [...workflow.history].reverse();
+
+    history.forEach((task, index) => {
+      steps.push({
+        id: `history-${task.id}`,
+        label: task.action_type,
+        description:
+          task.reasoning ||
+          `AI workflow action ${index + 1} for this lead.`,
+        status: 'done',
+        action: task.action_type,
+      });
+    });
+
+    if (workflow.current_task) {
+      steps.push({
+        id: `current-${workflow.current_task.id}`,
+        label: workflow.current_task.action_type,
+        description:
+          workflow.current_task.reasoning ||
+          'AI recommended this as the next best action.',
+        status: 'active',
+        action: workflow.current_task.action_type,
+      });
+    } else {
+      steps.push({
+        id: 'next-decision',
+        label: 'AI next-action decision',
+        description:
+          'The workflow is waiting for the next lead event or reassessment.',
+        status: 'upcoming',
+      });
+    }
+
+    return steps;
+  }, [selectedLead, workflow.history, workflow.current_task]);
+
+  if (loadingLeads) {
+    return (
+      <div className="flex items-center justify-center py-24 text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+        Loading AI workflows...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {!isBuilderOpen ? (
-        // ----------------- LANDING SCREEN -----------------
-        <div className="space-y-6">
-
-
-          <div className="bg-card border border-border rounded-2xl p-5">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-              <div>
-                <h2 className="font-sans text-2xl text-foreground font-bold">Automated Workflows</h2>
-                <p className="text-[11px] text-muted-foreground mt-0.5 font-bold">Deploy automated rules, drip email schedules, Slack alerts, and lead assignment scripts.</p>
-              </div>
-              <button 
-                onClick={handleCreateNewWorkflow}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold/10 transition-colors cursor-pointer"
-              >
-                <Plus className="h-3.5 w-3.5" strokeWidth={2.25} />
-                <span>Create Workflow</span>
-              </button>
-            </div>
-
-            {/* Categorized Tabs */}
-            <div className="flex space-x-1.5 p-1 bg-secondary border border-border rounded-xl w-fit mb-5">
-              {loadingWorkflows && (
-                <span className="px-3 py-1.5 text-xs font-semibold text-muted-foreground">Loading live data...</span>
-              )}
-              {(['Active', 'Draft', 'Paused'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`py-1.5 px-4 rounded-lg font-semibold text-xs transition duration-200 cursor-pointer ${
-                    activeTab === tab 
-                      ? 'bg-brand-purple text-primary-foreground' 
-                      : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
-                  }`}
-                >
-                  {tab} ({workflows.filter(w => w.status === tab).length})
-                </button>
-              ))}
-            </div>
-
-            {workflowError && (
-              <div className="mb-4 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-[11px] font-bold text-foreground">
-                {workflowError}
-              </div>
-            )}
-
-            {/* Workflow List Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
-                <thead>
-                  <tr className="border-b border-border text-[9px] uppercase font-semibold tracking-wider text-foreground pb-2">
-                    <th className="pb-2">Workflow Name & Scope</th>
-                    <th className="pb-2">Trigger Event</th>
-                    <th className="pb-2 text-center">Total Runs</th>
-                    <th className="pb-2 text-center">Success Rate</th>
-                    <th className="pb-2 text-center">Contacts In</th>
-                    <th className="pb-2 text-center">Active Toggle</th>
-                    <th className="pb-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border text-xs text-foreground font-semibold">
-                  {visibleWorkflows.length > 0 ? (
-                    visibleWorkflows.map((wf) => (
-                        <tr key={wf.id} className="hover:bg-secondary/30 transition-colors">
-                          <td className="py-3.5 pr-4 max-w-[280px]">
-                            <div className="font-semibold text-foreground flex items-center gap-1.5">
-                              <Zap className={`h-3.5 w-3.5 shrink-0 ${wf.status === 'Active' ? 'text-amber-500 animate-pulse' : 'text-muted-foreground'}`} />
-                              <span className="truncate">{wf.name}</span>
-                            </div>
-                            <div className="text-[10px] text-muted-foreground mt-0.5 font-medium truncate" title={wf.desc}>
-                              {wf.desc}
-                            </div>
-                          </td>
-                          <td className="py-3.5 pr-3">
-                            <div className="flex items-center space-x-1.5 bg-slate-55/60 border border-border px-2 py-1 rounded-lg w-fit text-[10px] font-bold text-foreground">
-                              {getTriggerIcon(wf.triggerType)}
-                              <span>{wf.triggerLabel}</span>
-                            </div>
-                          </td>
-                          <td className="py-3.5 text-center tabular-nums text-muted-foreground">{wf.totalRuns.toLocaleString()}</td>
-                          <td className="py-3.5 text-center tabular-nums text-muted-foreground">{wf.successRate}</td>
-                          <td className="py-3.5 text-center tabular-nums font-bold text-brand-purple">{wf.activeContacts}</td>
-                          <td className="py-3.5 text-center">
-                            <button
-                              onClick={() => handleToggleStatus(wf.id)}
-                              className={`inline-flex items-center justify-center p-1 rounded-lg transition-colors cursor-pointer border ${
-                                wf.status === 'Active'
-                                  ? 'bg-brand-cyan/15 hover:bg-brand-cyan/20 border-brand-cyan/25 text-brand-cyan'
-                                  : 'bg-secondary hover:bg-secondary border-border text-muted-foreground'
-                              }`}
-                              title={wf.status === 'Active' ? 'Pause Automation' : 'Activate Automation'}
-                            >
-                              {wf.status === 'Active' ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                            </button>
-                          </td>
-                          <td className="py-3.5 text-right">
-                            <button
-                              onClick={() => handleDeleteWorkflow(wf.id)}
-                              className="p-1 hover:text-destructive text-muted-foreground rounded transition-colors cursor-pointer"
-                              title="Delete Workflow"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="text-center py-10 text-muted-foreground font-medium">
-                        No {activeTab.toLowerCase()} workflows found. Create a new automation or load a template below.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+      {/* HEADER */}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-brand-purple" />
+            <h2 className="text-2xl font-bold text-foreground">
+              AI Workflow
+            </h2>
           </div>
 
-          {/* Pre-Built Templates Library */}
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <h3 className="font-sans text-lg text-foreground font-semibold mb-3 flex items-center gap-1.5">
-              <FolderOpen className="h-4.5 w-4.5 text-muted-foreground" />
-              <span>Pre-Built Automation Templates</span>
-            </h3>
-            <p className="text-[11px] text-muted-foreground mb-5 font-bold">Skip configuration by choosing an optimized recipe for database leads, alerts, or messaging.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            A personalized next-action plan generated independently for each
+            lead.
+          </p>
+        </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {templates.map((tpl, idx) => (
-                <div 
-                  key={idx}
-                  className="border border-border hover:border-border rounded-xl p-4.5 bg-secondary/20 hover:bg-secondary transition flex flex-col justify-between"
-                >
-                  <div>
-                    <span className="text-[9px] font-semibold uppercase bg-brand-secondary-accent/20 border border-border text-brand-purple px-1.5 py-0.5 rounded">
-                      {tpl.trigger}
-                    </span>
-                    <h4 className="font-bold text-foreground text-xs mt-2.5">{tpl.name}</h4>
-                    <p className="text-[10px] text-muted-foreground mt-1 font-semibold leading-relaxed">
-                      {tpl.desc}
-                    </p>
-                  </div>
-                  <div className="mt-4 pt-3 border-t border-border flex justify-between items-center">
-                    <span className="text-[9px] font-bold text-muted-foreground">{tpl.nodes.length} Blocks configured</span>
-                    <button 
-                      onClick={() => handleUseTemplate(tpl)}
-                      className="inline-flex items-center space-x-1 text-[10px] font-bold text-brand-purple hover:text-brand-purple-hover transition-colors cursor-pointer"
-                    >
-                      <span>Use Recipe</span>
-                      <ChevronRight className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={refreshing || !selectedLeadId}
+          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-muted disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${
+              refreshing ? 'animate-spin' : ''
+            }`}
+          />
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-600">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
+        {/* LEADS */}
+        <div className="rounded-2xl border border-border bg-card">
+          <div className="border-b border-border p-4">
+            <h3 className="text-sm font-bold text-foreground">
+              Leads
+            </h3>
+
+            <p className="mt-1 text-xs text-muted-foreground">
+              Select a lead to view its unique workflow.
+            </p>
+          </div>
+
+          <div className="max-h-[650px] overflow-y-auto p-2">
+            {leads.length === 0 ? (
+              <div className="p-6 text-center text-sm text-muted-foreground">
+                No leads found.
+              </div>
+            ) : (
+              leads.map((lead) => {
+                const active = lead.id === selectedLeadId;
+
+                return (
+                  <button
+                    type="button"
+                    key={lead.id}
+                    onClick={() => setSelectedLeadId(lead.id)}
+                    className={`mb-1 w-full rounded-xl p-3 text-left transition ${
+                      active
+                        ? 'bg-brand-purple/10 ring-1 ring-brand-purple/30'
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    <div className="truncate text-sm font-semibold text-foreground">
+                      {displayLeadName(lead)}
+                    </div>
+
+                    <div className="mt-1 truncate text-xs text-muted-foreground">
+                      {lead.company_name ||
+                        lead.contact_email ||
+                        'No company'}
+                    </div>
+
+                    {lead.score !== null &&
+                      lead.score !== undefined && (
+                        <div className="mt-2 text-[11px] text-muted-foreground">
+                          AI Score:{' '}
+                          <strong>{lead.score}</strong>
+                        </div>
+                      )}
+                  </button>
+                );
+              })
+            )}
           </div>
         </div>
-      ) : (
-        // ----------------- VISUAL CANVAS BUILDER -----------------
-        <div className="bg-secondary border border-border rounded-xl p-5 min-h-[580px] flex flex-col justify-between">
-          {/* Builder Top Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-border pb-4 bg-card -mx-5 -mt-5 p-5 rounded-t-xl">
-            <div className="flex items-center space-x-3">
-              <button 
-                onClick={() => setIsBuilderOpen(false)}
-                className="p-1 hover:bg-secondary rounded-lg text-muted-foreground cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <div>
-                <input 
-                  type="text" 
-                  value={newWorkflowName}
-                  onChange={e => setNewWorkflowName(e.target.value)}
-                  className="font-sans text-lg text-foreground focus:outline-none border-b border-transparent hover:border-border focus:border-brand-accent font-semibold bg-transparent"
-                  placeholder="Untitled Automation Workflow"
-                />
-                <input 
-                  type="text" 
-                  value={newWorkflowDesc}
-                  onChange={e => setNewWorkflowDesc(e.target.value)}
-                  className="block text-[11px] text-muted-foreground focus:outline-none border-b border-transparent hover:border-border focus:border-brand-accent bg-transparent w-full mt-0.5 font-semibold"
-                  placeholder="Describe your automation goals..."
-                />
-              </div>
+
+        {/* SELECTED LEAD WORKFLOW */}
+        <div className="min-w-0">
+          {loadingWorkflow ? (
+            <div className="flex items-center justify-center rounded-2xl border border-border bg-card py-24 text-muted-foreground">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Loading personalized workflow...
             </div>
-
-            <div className="flex items-center space-x-2.5">
-              <button 
-                onClick={() => setIsBuilderOpen(false)}
-                className="px-3.5 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground hover:bg-secondary cursor-pointer"
-              >
-                Exit Canvas
-              </button>
-              <button 
-                onClick={handleSaveWorkflow}
-                className="px-3.5 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold/10 flex items-center gap-1.5 cursor-pointer"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Save & Deploy</span>
-              </button>
+          ) : !selectedLead ? (
+            <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+              Select a lead.
             </div>
-          </div>
+          ) : (
+            <div className="space-y-5">
+              {/* LEAD HEADER */}
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Personalized workflow for
+                    </p>
 
-          {/* Builder Visual Area */}
-          <div className="flex-1 grid grid-cols-12 gap-5 py-6">
-            {/* Left Sidebar: Node Adders & Config */}
-            <div className="col-span-12 md:col-span-4 space-y-4">
-              <div className="bg-card border border-border rounded-xl p-4.5 space-y-3.5">
-                <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider border-b border-slate-50 pb-1.5">
-                  Flow Block Palette
-                </h4>
-                
-                {/* Trigger Adder */}
-                <button 
-                  onClick={() => handleAddNode('trigger')}
-                  className="w-full flex items-center justify-between p-2.5 border border-brand-cyan/20 hover:border-emerald-300 bg-brand-cyan/15/30 hover:bg-brand-cyan/15/60 rounded-xl transition cursor-pointer group text-left"
-                >
-                  <div className="flex items-center space-x-2">
-                    <span className="h-7 w-7 rounded-lg bg-brand-cyan/150/10 text-brand-cyan flex items-center justify-center shrink-0 border border-brand-cyan/25">
-                      <Zap className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <span className="text-xs font-semibold text-emerald-800 block">🟢 Trigger Node</span>
-                      <span className="text-[9px] text-muted-foreground font-semibold block leading-tight">Define entry criteria</span>
+                    <h3 className="mt-1 text-xl font-bold text-foreground">
+                      {displayLeadName(selectedLead)}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {selectedLead.company_name ||
+                        selectedLead.contact_email ||
+                        'CRM lead'}
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl bg-muted px-5 py-3 text-center">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      AI Score
+                    </div>
+
+                    <div className="mt-1 text-3xl font-bold text-foreground">
+                      {selectedLead.score ?? '—'}
                     </div>
                   </div>
-                  <Plus className="h-4 w-4 text-brand-cyan opacity-60 group-hover:opacity-100 shrink-0" />
-                </button>
-
-                {/* Condition Adder */}
-                <button 
-                  onClick={() => handleAddNode('condition')}
-                  className="w-full flex items-center justify-between p-2.5 border border-brand-purple/15 hover:border-indigo-300 bg-brand-purple/10/30 hover:bg-brand-purple/10/60 rounded-xl transition cursor-pointer group text-left"
-                >
-                  <div className="flex items-center space-x-2">
-                    <span className="h-7 w-7 rounded-lg bg-brand-purple/100/10 text-brand-purple flex items-center justify-center shrink-0 border border-brand-purple/20">
-                      <Sliders className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <span className="text-xs font-semibold text-indigo-800 block">🔀 Filter Condition</span>
-                      <span className="text-[9px] text-muted-foreground font-semibold block leading-tight">If/Else branch filter</span>
-                    </div>
-                  </div>
-                  <Plus className="h-4 w-4 text-brand-purple opacity-60 group-hover:opacity-100 shrink-0" />
-                </button>
-
-                {/* Action Adder */}
-                <button 
-                  onClick={() => handleAddNode('action')}
-                  className="w-full flex items-center justify-between p-2.5 border border-border hover:border-border bg-brand-secondary-accent/5 hover:bg-brand-purple/5 rounded-xl transition cursor-pointer group text-left"
-                >
-                  <div className="flex items-center space-x-2">
-                    <span className="h-7 w-7 rounded-lg bg-brand-purple/10 text-brand-purple flex items-center justify-center shrink-0 border border-border">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <div>
-                      <span className="text-xs font-semibold text-brand-purple block">🔵 CRM Action</span>
-                      <span className="text-[9px] text-muted-foreground font-semibold block leading-tight">Task, Slack, or Email outbound</span>
-                    </div>
-                  </div>
-                  <Plus className="h-4 w-4 text-brand-purple opacity-60 group-hover:opacity-100 shrink-0" />
-                </button>
+                </div>
               </div>
 
-              {/* Configure Panel */}
-              {activeConfigNode !== null ? (
-                <div className="bg-card border border-border rounded-2xl p-4.5 animate-in fade-in duration-200">
-                  <div className="flex justify-between items-center border-b border-slate-50 pb-2 mb-3">
-                    <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider">
-                      Edit Block Configuration
-                    </h4>
-                    <button onClick={() => setActiveConfigNode(null)} className="text-muted-foreground p-1"><X className="h-3.5 w-3.5" /></button>
+              {/* PERSONALIZED STRUCTURE */}
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="mb-5 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-brand-purple" />
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground">
+                      Personalized Workflow Structure
+                    </h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      This sequence is generated from this lead's actual AI
+                      actions and history. It is not a fixed sales pipeline.
+                    </p>
                   </div>
-                  
-                  {(() => {
-                    const node = canvasNodes.find(n => n.id === activeConfigNode);
-                    if (!node) return null;
-                    return (
-                      <div className="space-y-3.5">
-                        <div>
-                          <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Block Label</label>
-                          <input 
-                            type="text" 
-                            value={node.label}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCanvasNodes(canvasNodes.map(n => n.id === node.id ? { ...n, label: val } : n));
-                            }}
-                            className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20" 
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Trigger Subcategory</label>
-                          <select 
-                            value={node.category}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCanvasNodes(canvasNodes.map(n => n.id === node.id ? { ...n, category: val } : n));
-                            }}
-                            className="w-full px-2 py-1.5 border border-border bg-card text-foreground rounded-lg text-xs focus:outline-none cursor-pointer"
-                          >
-                            {node.type === 'trigger' && (
-                              <>
-                                <option>Record Updates</option>
-                                <option>User Actions</option>
-                                <option>Time-Based Events</option>
-                              </>
-                            )}
-                            {node.type === 'condition' && (
-                              <>
-                                <option>Property Filters</option>
-                                <option>If/Else Branches</option>
-                              </>
-                            )}
-                            {node.type === 'action' && (
-                              <>
-                                <option>Internal Actions</option>
-                                <option>External Actions</option>
-                                <option>Delays & Timers</option>
-                              </>
-                            )}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Rules / Configuration</label>
-                          <input 
-                            type="text" 
-                            value={node.config}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCanvasNodes(canvasNodes.map(n => n.id === node.id ? { ...n, config: val } : n));
-                            }}
-                            className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 font-mono text-[10px]" 
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Description</label>
-                          <textarea 
-                            rows={2}
-                            value={node.desc}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setCanvasNodes(canvasNodes.map(n => n.id === node.id ? { ...n, desc: val } : n));
-                            }}
-                            className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 resize-none font-semibold" 
-                          />
-                        </div>
-                      </div>
-                    );
-                  })()}
                 </div>
-              ) : (
-                <div className="bg-card border border-border rounded-xl p-4.5 text-center text-muted-foreground font-semibold text-xs py-10">
-                  <HelpCircle className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                  Select any block on the canvas to configure triggers, rules, filters, or delays.
-                </div>
-              )}
-            </div>
 
-            {/* Right Canvas: Drag-and-drop Nodes Flow */}
-            <div className="col-span-12 md:col-span-8 flex flex-col items-center py-4 bg-card border border-border rounded-xl overflow-y-auto max-h-[480px]">
-              {canvasNodes.length > 0 ? (
-                canvasNodes.map((node, idx) => (
-                  <React.Fragment key={node.id}>
-                    {/* Node Container Card */}
-                    <div 
-                      onClick={() => setActiveConfigNode(node.id)}
-                      className={`relative w-80 max-w-full p-4 border rounded-xl hover:shadow-nav cursor-pointer transition ${
-                        activeConfigNode === node.id 
-                          ? 'border-brand-accent ring-2 ring-brand-accent/15 bg-brand-secondary-accent/5' 
-                          : 'border-border bg-secondary/20'
-                      }`}
+                <div className="relative space-y-3">
+                  {workflowSteps.map((step, index) => (
+                    <div
+                      key={step.id}
+                      className="relative flex gap-3"
                     >
-                      {/* Delete node top corner */}
-                      {canvasNodes.length > 1 && (
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (activeConfigNode === node.id) setActiveConfigNode(null);
-                            setCanvasNodes(canvasNodes.filter(n => n.id !== node.id));
-                          }}
-                          className="absolute right-2 top-2 p-1 text-muted-foreground hover:text-destructive rounded cursor-pointer"
-                          title="Delete Block"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                      {index < workflowSteps.length - 1 && (
+                        <span className="absolute left-[13px] top-8 h-[calc(100%+12px)] w-px bg-border" />
                       )}
 
-                      <div className="flex items-start space-x-3">
-                        <span className={`h-8 w-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                          node.type === 'trigger' ? 'bg-brand-cyan/15 text-brand-cyan border-brand-cyan/20' :
-                          node.type === 'condition' ? 'bg-brand-purple/10 text-brand-purple border-brand-purple/15' :
-                          'bg-brand-purple/10 text-brand-purple border-border'
-                        }`}>
-                          {node.type === 'trigger' ? <Zap className="h-4.5 w-4.5" /> :
-                           node.type === 'condition' ? <Sliders className="h-4.5 w-4.5" /> :
-                           <Mail className="h-4.5 w-4.5" />}
-                        </span>
-                        
-                        <div className="space-y-1 pr-6">
-                          <span className={`text-[8px] font-semibold uppercase px-1.5 py-0.5 rounded leading-none ${
-                            node.type === 'trigger' ? 'text-brand-cyan bg-brand-cyan/15 border border-brand-cyan/20' :
-                            node.type === 'condition' ? 'text-brand-purple bg-brand-purple/10 border border-brand-purple/15' :
-                            'text-brand-purple bg-brand-purple/5 border border-border'
-                          }`}>
-                            {node.category}
-                          </span>
-                          <h5 className="font-semibold text-foreground text-xs leading-snug">{node.label}</h5>
-                          <p className="text-[10px] text-muted-foreground leading-tight font-medium">{node.desc}</p>
-                          {node.config && (
-                            <div className="font-mono text-[9px] text-brand-purple font-bold mt-1 max-w-full truncate bg-secondary p-1 rounded border border-border">
-                              {node.config}
-                            </div>
+                      <div
+                        className={`relative z-10 mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
+                          step.status === 'done'
+                            ? 'border-green-500/30 bg-green-500/10 text-green-600'
+                            : step.status === 'active'
+                            ? 'border-brand-purple/30 bg-brand-purple/10 text-brand-purple'
+                            : 'border-border bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        {step.status === 'done' ? (
+                          <CheckCircle2 className="h-4 w-4" />
+                        ) : step.status === 'active' ? (
+                          <Zap className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </div>
+
+                      <div
+                        className={`min-w-0 flex-1 rounded-xl border p-3 ${
+                          step.status === 'active'
+                            ? 'border-brand-purple/30 bg-brand-purple/5'
+                            : 'border-border bg-card'
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-foreground">
+                            {step.label}
+                          </p>
+
+                          {step.status === 'active' && (
+                            <span className="rounded-full bg-brand-purple/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-purple">
+                              Current
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                          {step.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* CURRENT AI ACTION */}
+              <div className="rounded-2xl border border-brand-purple/20 bg-gradient-to-br from-brand-purple/5 to-card p-5">
+                <div className="mb-4 flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-brand-purple" />
+                  <h3 className="text-sm font-bold text-foreground">
+                    AI Recommended Next Action
+                  </h3>
+                </div>
+
+                {workflow.current_task ? (
+                  <div>
+                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                      <div className="flex gap-3">
+                        <div className="mt-0.5 rounded-lg bg-brand-purple/10 p-2 text-brand-purple">
+                          {actionIcon(
+                            workflow.current_task.action_type
+                          )}
+                        </div>
+
+                        <div>
+                          <h4 className="text-lg font-bold text-foreground">
+                            {workflow.current_task.action_type}
+                          </h4>
+
+                          {workflow.current_task.reasoning && (
+                            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                              {workflow.current_task.reasoning}
+                            </p>
                           )}
                         </div>
                       </div>
+
+                      <span
+                        className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase ${priorityClass(
+                          workflow.current_task.priority
+                        )}`}
+                      >
+                        {workflow.current_task.priority || 'medium'}
+                      </span>
                     </div>
 
-                    {/* Visual Connector Line between nodes */}
-                    {idx < canvasNodes.length - 1 && (
-                      <div className="flex flex-col items-center py-2">
-                        <div className="w-0.5 h-6 bg-brand-border-purple/25" />
-                        <div className="w-2 h-2 rounded-full bg-brand-border-purple/35 -mt-1.5" />
+                    <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock3 className="h-3.5 w-3.5" />
+                        Due{' '}
+                        <strong className="text-foreground">
+                          {formatDueDate(
+                            workflow.current_task.due_at
+                          )}
+                        </strong>
                       </div>
-                    )}
-                  </React.Fragment>
-                ))
-              ) : (
-                <div className="text-muted-foreground font-semibold text-xs py-10">No nodes on the canvas. Add one using the palette on the left.</div>
+
+                      {workflow.current_task.current_stage && (
+                        <div className="text-xs text-muted-foreground">
+                          Current CRM stage:{' '}
+                          <strong className="text-foreground">
+                            {workflow.current_task.current_stage}
+                          </strong>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-5">
+                      <button
+                        type="button"
+                        onClick={handleComplete}
+                        disabled={completing}
+                        className="inline-flex items-center gap-2 rounded-lg bg-brand-purple px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-purple/90 disabled:opacity-50"
+                      >
+                        {completing ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4" />
+                        )}
+
+                        {completing
+                          ? 'Updating workflow...'
+                          : 'Mark action completed'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl bg-muted/50 p-6 text-center">
+                    <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
+
+                    <p className="mt-2 text-sm font-semibold text-foreground">
+                      No active AI action
+                    </p>
+
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      The AI currently does not have a pending action for
+                      this lead.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+{/* WHY THIS ACTION */}
+{recommendation && (
+  <div className="rounded-2xl border border-border bg-card p-5">
+    <div className="flex items-center gap-2">
+      <Zap className="h-4 w-4 text-brand-purple" />
+
+      <h3 className="text-sm font-bold text-foreground">
+        AI Recommended Next Action
+      </h3>
+    </div>
+
+    {workflow.current_task ? (
+      <div className="mt-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex gap-3">
+            <div className="mt-0.5 rounded-lg bg-brand-purple/10 p-2 text-brand-purple">
+              <Zap className="h-4 w-4" />
+            </div>
+
+            <div>
+              <h4 className="text-lg font-bold text-foreground">
+                {workflow.current_task.action_type}
+              </h4>
+
+              {workflow.current_task.reasoning && (
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                  {workflow.current_task.reasoning}
+                </p>
               )}
             </div>
           </div>
+
+          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase text-amber-600">
+            {workflow.current_task.priority || 'medium'}
+          </span>
         </div>
-      )}
+
+        <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock3 className="h-3.5 w-3.5" />
+
+            Due{' '}
+            <strong className="text-foreground">
+              {new Date(
+                workflow.current_task.due_at
+              ).toLocaleString([], {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </strong>
+          </div>
+
+          {workflow.current_task.current_stage && (
+            <div className="text-xs text-muted-foreground">
+              Current CRM stage:{' '}
+              <strong className="text-foreground">
+                {workflow.current_task.current_stage}
+              </strong>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5">
+          <button
+            type="button"
+            onClick={handleComplete}
+            disabled={completing}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-purple px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-purple/90 disabled:opacity-50"
+          >
+            {completing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4" />
+            )}
+
+            {completing
+              ? 'Updating workflow...'
+              : 'Mark action completed'}
+          </button>
+        </div>
+      </div>
+    ) : (
+      <div className="mt-4 rounded-xl bg-muted/50 p-6 text-center">
+        <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
+
+        <p className="mt-2 text-sm font-semibold text-foreground">
+          No active AI action
+        </p>
+
+        <p className="mt-1 text-xs text-muted-foreground">
+          The AI currently does not have a pending action for this lead.
+        </p>
+      </div>
+    )}
+  </div>
+)}
+
+{/* HISTORY */}
+<div className="mt-5 rounded-2xl border border-border bg-card p-5">
+  <div className="flex items-center justify-between">
+    <div>
+      <h3 className="text-sm font-bold text-foreground">
+        Workflow history
+      </h3>
+
+      <p className="mt-1 text-xs text-muted-foreground">
+        Previous AI actions for this lead.
+      </p>
+    </div>
+
+    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+      {workflow.history.length}
+    </span>
+  </div>
+
+  {workflow.history.length === 0 ? (
+    <div className="mt-5 rounded-xl bg-muted/40 p-6 text-center text-sm text-muted-foreground">
+      No previous workflow actions.
+    </div>
+  ) : (
+    <div className="mt-5 space-y-3">
+      {workflow.history.map((task) => (
+        <div
+          key={task.id}
+          className="flex gap-3 rounded-xl border border-border p-3"
+        >
+          <div className="mt-0.5 text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-foreground">
+                {task.action_type}
+              </span>
+
+              <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                {task.status}
+              </span>
+            </div>
+
+            {task.reasoning && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {task.reasoning}
+              </p>
+            )}
+
+            {task.current_stage && (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Stage: {task.current_stage}
+              </p>
+            )}
+
+            {task.completed_at && (
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Completed:{' '}
+                {new Date(task.completed_at).toLocaleString()}
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

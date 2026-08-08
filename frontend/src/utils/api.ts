@@ -330,6 +330,159 @@ export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecom
   });
 }
 
+// =============================================================================
+// AI LEAD WORKFLOW
+// =============================================================================
+
+export interface WorkflowTask {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTask | null;
+  history: WorkflowTask[];
+}
+
+/**
+ * Fetch the AI-driven workflow for a lead.
+ *
+ * Backend:
+ * GET /api/v1/workflows/leads/{lead_id}
+ */
+
+
+// ============================================================
+// AI WORKFLOW TASKS
+// ============================================================
+// ============================================================
+// AI WORKFLOW API
+// Replace ONLY your existing workflow-related interfaces/functions
+// with this block. Do not replace the entire api.ts file.
+// ============================================================
+
+export interface WorkflowTaskItem {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTaskItem | null;
+  history: WorkflowTaskItem[];
+}
+
+/**
+ * Fetch the workflow for one lead.
+ *
+ * IMPORTANT:
+ * Backend route is /api/v1/workflow (singular), not /workflows.
+ */
+export async function getLeadWorkflow(
+  leadId: string
+): Promise<LeadWorkflowResponse> {
+  const result = await apiFetch(
+    `/api/v1/workflows/leads/${leadId}`
+  );
+
+  if (!result) {
+    return {
+      current_task: null,
+      history: [],
+    };
+  }
+
+  const data = result?.data ?? result;
+
+  return {
+    current_task: data?.current_task ?? null,
+    history: Array.isArray(data?.history)
+      ? data.history
+      : [],
+  };
+}
+
+/**
+ * Complete ONE workflow task.
+ *
+ * IMPORTANT:
+ * Pass the workflow task ID, NOT the lead ID.
+ */
+export async function completeWorkflowTask(
+  taskId: string
+): Promise<WorkflowTaskItem> {
+  const result = await apiFetch(
+    `/api/v1/workflows/tasks/${taskId}/complete`,
+    {
+      method: 'POST',
+    }
+  );
+
+  return (result?.data ?? result) as WorkflowTaskItem;
+}
+
+
+/**
+ * Optional task-list endpoint.
+ * The Workflow page above does not need this function,
+ * but keeping it here is useful for other components.
+ */
+export async function getWorkflowTasks(
+  status?: string
+): Promise<WorkflowTaskItem[]> {
+  const query = status
+    ? `?status=${encodeURIComponent(status)}`
+    : '';
+
+  const result = await apiFetch<any>(
+    `/api/v1/workflows/tasks${query}`
+  );
+
+  if (!result) return [];
+
+  const data = result?.data ?? result;
+
+  return Array.isArray(data) ? data : [];
+}
+/**
+ * Complete an AI workflow task.
+ */
+export interface WorkflowTaskResponse {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+
 export interface BatchRecommendationItem {
   lead_id: string;
   recommended_action: string;

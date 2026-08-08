@@ -79,7 +79,7 @@ from app.api.v1.timeline         import router as timeline_router
 from app.api.v1.uploads          import router as uploads_router
 from app.api.v1.users            import router as users_router
 from app.api.v1.webhooks         import router as webhooks_router
-
+from app.api.v1.workflow import router as workflow_router
 from app.api.v1.search import router as search_router
 
 # ── Assemble ──────────────────────────────────────────────────────────────────
@@ -119,3 +119,8 @@ api_router.include_router(uploads_router,              prefix="/uploads",       
 api_router.include_router(brevo_router,                prefix="/brevo",                     tags=["Brevo"])
 api_router.include_router(stream_router,               prefix="/stream",                    tags=["Real-time Stream"])
 api_router.include_router(search_router,               prefix="/search",                    tags=["Search"])
+api_router.include_router(
+    workflow_router,
+    prefix="/workflows",
+    tags=["Workflows"],
+)
