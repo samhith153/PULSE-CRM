@@ -103,6 +103,24 @@ class CrmActivitiesService:
         row = await self.task_repo.get_enriched_by_id(task.id, user.organization_id)
         return TaskResponse(**row)
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # UNIFIED GET BY ID
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def get_unified_by_id(self, user: User, activity_id: UUID) -> UnifiedActivityItem:
+        org_id = user.organization_id
+        for repo, converter in [
+            (self.task_repo, self._task_to_unified),
+            (self.call_repo, self._call_to_unified),
+            (self.note_repo, self._note_to_unified),
+            (self.email_repo, self._email_to_unified),
+            (self.meeting_repo, self._meeting_to_unified),
+        ]:
+            row = await repo.get_enriched_by_id(activity_id, org_id)
+            if row:
+                return converter(row)
+        raise NotFoundException("Activity", activity_id)
+
     async def get_task(self, user: User, task_id: UUID) -> TaskResponse:
         row = await self.task_repo.get_enriched_by_id(task_id, user.organization_id)
         if not row:
@@ -490,13 +508,10 @@ class CrmActivitiesService:
         if view in (None, "timeline", "email"):
             from app.utils.enums import SortOrder as _SO
             _so = _SO.ASC if sort_order == "asc" else _SO.DESC
-            email_rows, _ = await self.email_repo.list_by_organization(
+            email_rows, _ = await self.email_repo.list(
                 organization_id=user.organization_id,
                 search=search,
                 direction=None,
-                thread_id=None,
-                external_entity_type=None,
-                external_entity_id=None,
                 page=1,
                 page_size=10000,
                 sort_order=_so,

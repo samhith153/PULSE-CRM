@@ -1237,6 +1237,10 @@ export async function getCrmActivities(
   return result ?? { data: [], meta: { total: 0, page: 1, page_size: 20, total_pages: 1, has_next: false, has_prev: false } };
 }
 
+export async function getCrmActivity(activityId: string): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/${activityId}`);
+}
+
 export async function getCrmActivityOwners(): Promise<CrmActivityOwner[]> {
   const result = await apiFetch<CrmActivityOwner[]>('/api/v1/crm-activities/owners');
   return Array.isArray(result) ? result : [];
