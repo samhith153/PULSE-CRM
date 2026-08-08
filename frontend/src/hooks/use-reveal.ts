@@ -30,7 +30,7 @@ export function useReveal<T extends HTMLElement>(threshold = 0.15) {
     return () => observer.disconnect();
   }, [threshold]);
 
-  return { ref, inView };
+  return { ref, visible: inView, inView };
 }
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);

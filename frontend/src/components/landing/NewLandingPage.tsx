@@ -34,9 +34,9 @@ export default function NewLandingPage({ onLogin }: NewLandingPageProps) {
 
   return (
     <div className="min-h-screen bg-background text-foreground antialiased">
-      <SiteHeader onOpenSignUp={openSignUp} onOpenSignIn={openSignIn} />
+      <SiteHeader />
       <main>
-        <Hero onOpenSignUp={openSignUp} />
+        <Hero />
         <LogoClusters />
         <DarkBand />
         <MediaRows />
@@ -44,7 +44,7 @@ export default function NewLandingPage({ onLogin }: NewLandingPageProps) {
         <FrameworkSection />
         <CaseCarousel />
         <TestimonialWall />
-        <BottomCta onOpenSignUp={openSignUp} />
+        <BottomCta />
       </main>
       <SiteFooter />
 
