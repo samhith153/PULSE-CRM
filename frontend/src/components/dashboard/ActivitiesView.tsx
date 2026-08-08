@@ -18,6 +18,7 @@ import {
   type CreateMeetingPayload, type CreateNotePayload,
 } from '@/utils/api';
 import ActivityDetailView from './ActivityDetailView';
+import CalendarView from './CalendarView';
 import { toast } from '@/lib/toast';
 
 
@@ -60,8 +61,8 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
   const [loading, setLoading] = useState(true);
   const [owners, setOwners] = useState<CrmActivityOwner[]>([]);
 
-  const [activeTabType, setActiveTabType] = useState<'timeline'|'task'|'meeting'|'call'|'email'|'note'>('timeline');
-  const [quickTab, setQuickTab] = useState<'all'|'today'|'upcoming'|'overdue'>('all');
+const [activeTabType, setActiveTabType] =
+  useState<'timeline'|'task'|'meeting'|'call'|'email'|'note'|'calendar'>('timeline');  const [quickTab, setQuickTab] = useState<'all'|'today'|'upcoming'|'overdue'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
@@ -201,12 +202,17 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     else if (tab === 'completed')         { setStatusFilter('completed'); }
     if (type) setActiveTabType(type as any);
   }, [searchParams]);
-
+  
   const fetchActivities = useCallback(async () => {
     setLoading(true);
     try {
       const params: CrmActivitiesListParams = { page: currentPage, page_size: pageSize, sort_order: 'desc' };
-      if (activeTabType !== 'timeline') params.view = activeTabType;
+      if (
+  activeTabType !== 'timeline' &&
+  activeTabType !== 'calendar'
+) {
+  params.view = activeTabType;
+}
       if (searchQuery)   params.search   = searchQuery;
       if (statusFilter   !== 'All') params.status   = statusFilter.toLowerCase();
       if (priorityFilter !== 'All') params.priority = priorityFilter.toLowerCase();
@@ -274,8 +280,12 @@ useEffect(() => {
   const handleExport = async () => {
     try {
       const params: any = {};
-      if (activeTabType !== 'timeline') params.view = activeTabType;
-      if (searchQuery)   params.search   = searchQuery;
+if (
+  activeTabType !== 'timeline' &&
+  activeTabType !== 'calendar'
+) {
+  params.view = activeTabType;
+}      if (searchQuery)   params.search   = searchQuery;
       if (statusFilter   !== 'All') params.status   = statusFilter.toLowerCase();
       if (priorityFilter !== 'All') params.priority = priorityFilter.toLowerCase();
       if (quickTab !== 'all') params.quick_tab = quickTab;
@@ -379,6 +389,7 @@ useEffect(() => {
               <option value="timeline">Timeline</option><option value="task">Tasks</option>
               <option value="meeting">Meetings</option><option value="call">Calls</option>
               <option value="email">Emails</option><option value="note">Notes</option>
+              <option value="calendar">Calendar</option>
             </select>
           </div>
         </div>
@@ -417,64 +428,45 @@ useEffect(() => {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
-        {loading ? (
-          <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold">
-            <RefreshCw className="size-4 animate-spin text-brand-blue mr-2" /><span>Loading activities...</span>
+      {activeTabType === 'calendar' ? (
+  <CalendarView />
+) : (
+  <>
+    {/* Table */}
+    <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold">
+          <RefreshCw className="size-4 animate-spin text-brand-blue mr-2" />
+          <span>Loading activities...</span>
+        </div>
+      ) : activities.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center p-6">
+          <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-3">
+            <Filter className="size-5 text-muted-foreground/60" />
           </div>
-        ) : activities.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center p-6">
-            <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-3">
-              <Filter className="size-5 text-muted-foreground/60" />
-            </div>
-            <p className="text-xs font-bold text-foreground">No Activities Found</p>
-            <p className="text-[10px] text-muted-foreground mt-1">Try adjusting your filters or add a new activity.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse table-fixed select-none">
-              <thead>
-                <tr className="border-b border-border bg-muted/40 text-[11px] font-black uppercase text-foreground tracking-wider">
-                  {isSelectMode && <th className="py-3 px-3 text-center w-12"><input type="checkbox" onChange={handleSelectAll} checked={selectedIds.size===activities.length&&activities.length>0} className="cursor-pointer size-3.5" /></th>}
-                  <th className="py-3 px-3 text-left w-[42%]">Subject</th>
-                  <th className="py-3 px-3 text-center w-24">Type</th>
-                  <th className="py-3 px-3 text-center w-28">Status</th>
-                  <th className="py-3 px-3 text-center w-28">Priority</th>
-                  <th className="py-3 px-3 text-right w-36">Due Date</th>
-                  <th className="py-3 px-3 text-left w-[20%]">Related Record</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40 text-xs font-semibold text-foreground">
-                {activities.map(a => (
-                  <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="hover:bg-secondary/15 transition-all cursor-pointer">
-                    {isSelectMode && <td className="py-3 px-3 text-center" onClick={e=>e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(a.id)} onChange={()=>handleSelectRow(a.id)} className="cursor-pointer size-3.5" /></td>}
-                    <td className="py-3 px-3 text-left whitespace-normal break-words">
-                      <span className="font-bold text-foreground hover:text-brand-blue transition-colors block">{a.subject}</span>
-                      {a.owner_name && <span className="text-[10px] text-muted-foreground">{a.owner_name}</span>}
-                    </td>
-                    <td className="py-3 px-3 text-center capitalize text-[10px] font-bold text-muted-foreground/90 font-mono">{a.activity_type}</td>
-                    <td className="py-3 px-3 text-center whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold ${getStatusColor(a.status)}`}>{fmt(a.status)}</span>
-                    </td>
-                    <td className="py-3 px-3 text-center whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded text-[9px] ${getPriorityColor(a.priority)}`}>{fmt(a.priority)}</span>
-                    </td>
-                    <td className="py-3 px-3 text-right text-muted-foreground/80 font-bold tabular-nums whitespace-nowrap font-mono">
-                      {a.due_date ? new Date(a.due_date).toLocaleDateString() : 'No deadline'}
-                    </td>
-                    <td className="py-3 px-3 text-left truncate text-[10px] font-bold">
-                      {a.related_record_name
-                        ? <span className="text-brand-blue hover:underline cursor-pointer">{a.related_record_name}</span>
-                        : <span className="text-muted-foreground/50">—</span>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
 
+          <p className="text-xs font-bold text-foreground">
+            No Activities Found
+          </p>
+
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Try adjusting your filters or add a new activity.
+          </p>
+        </div>
+      ) : (
+        // KEEP YOUR EXISTING TABLE CODE HERE
+        <div className="overflow-x-auto w-full">
+          {/* existing table */}
+        </div>
+      )}
+    </div>
+
+    {/* KEEP YOUR EXISTING PAGINATION HERE */}
+    <div className="bg-secondary/15 border border-border rounded-[10px] px-4 py-3 flex items-center justify-between text-xs select-none">
+      {/* existing pagination */}
+    </div>
+  </>
+)}
       {/* Pagination */}
       <div className="bg-secondary/15 border border-border rounded-[10px] px-4 py-3 flex items-center justify-between text-xs select-none">
         <div className="text-muted-foreground font-semibold">
