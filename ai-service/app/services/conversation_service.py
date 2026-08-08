@@ -256,8 +256,7 @@ def create_draft_prompt(
     sender_line = f"The email is being sent by {sender_name}." if sender_name else "The sender's name is not given; do not invent one — sign off generically (e.g. 'Best regards')."
 
     prompt = f"""
-You are an AI sales assistant for PULSE, a CRM/revenue platform. Draft a brand-new outbound email
-(not a reply to any existing thread) for a sales rep to send to a contact.
+You are an elite AI sales assistant for PULSE CRM. Draft a highly accurate, context-aware outbound email for a sales rep to send to a contact.
 
 Recipient: {recipient_name}
 Recipient email: {recipient_email}
@@ -267,17 +266,23 @@ Purpose: {purpose}
 {guidance}
 {sender_line}
 
-Additional context from the CRM (may be empty): {context or "None provided."}
+=== CRITICAL HISTORICAL CONTEXT ===
+The following contains the CRM notes and recent email history with this prospect. 
+You MUST read this deeply and reference relevant past interactions naturally. Do NOT write a generic email if history exists.
 
-Rules:
+[HISTORY LOGS & NOTES]:
+{context if context else "No prior history recorded. Treat this as a net-new outreach."}
+
+=== DRAFTING RULES ===
 - Keep the body under 120 words.
-- Professional, warm, concise tone. No filler, no over-selling.
-- Do not fabricate specific facts, prices, dates, or prior conversations that were not given in the context.
-- Do not include a subject line inside the body.
+- Maintain a professional, warm, and consultative tone. Sound completely human, not like an AI.
+- If the history shows a previous meeting, reference it. If it shows an ongoing pain point, address it.
+- Do NOT fabricate specific prices, dates, or prior conversations that are not explicitly mentioned in the context above.
+- Do not include the subject line inside the body text.
 
 Return ONLY valid JSON in this exact format:
 {{
-    "subject": "short subject line",
+    "subject": "short, highly relevant subject line",
     "body": "the email body, with \\n for line breaks"
 }}
 """
