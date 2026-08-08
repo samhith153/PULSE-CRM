@@ -4,7 +4,7 @@ Contact Repository
 from typing import List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -31,7 +31,7 @@ class ContactRepository(BaseRepository[Contact]):
         self, email: str, organization_id: UUID
     ) -> Optional[Contact]:
         stmt = self._base_query(organization_id).where(
-            Contact.email == email.lower()
+            func.lower(Contact.email) == email.lower()
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()

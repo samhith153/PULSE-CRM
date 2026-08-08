@@ -11,6 +11,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BusinessRuleException, ConflictException, NotFoundException
+from app.core.logging import get_logger
 from app.models.deal import Deal
 from app.models.pipeline import PipelineStage
 from app.repositories.deal_repository import DealRepository
@@ -28,6 +29,9 @@ from app.schemas.pipeline import (
 from app.services.event_service import EventService
 from app.services.timeline_engine_service import TimelineEngineService
 from app.utils.enums import ActivityType, DealStatus, PipelineStageSlug
+
+
+logger = get_logger(__name__)
 
 
 DEFAULT_STAGES = [
@@ -354,6 +358,20 @@ class PipelineService:
             payload={"deal_id": str(deal.id), "stage_id": str(stage.id), "stage_slug": stage.slug},
             topic="pipeline",
         )
+
+        # Trigger unified assessment if the deal has a linked lead
+        if deal.lead_id:
+            try:
+                from app.services.ai_pipeline import run_lead_assessment
+                await run_lead_assessment(
+                    self.db, deal.lead_id, organization_id, created_by,
+                    trigger="deal_stage_changed",
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to run assessment on kanban stage move",
+                    extra={"deal_id": str(deal_id), "error": str(exc)},
+                )
         return deal
 
     async def list_deals_by_stage(

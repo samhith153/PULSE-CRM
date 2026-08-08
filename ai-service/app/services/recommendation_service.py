@@ -78,13 +78,13 @@ def _get_factor_value(factor, lead_features):
     elif factor == "r":
         return 100 if lead_features["is_outbound"] else 0
     elif factor == "dv":
-        return 100 if lead_features.get("deal_value", 0) > 0 else 0
+        return 100 if (lead_features.get("deal_value") or 0) > 0 else 0
     elif factor == "eo":
         return lead_features["open_count"] * 10
     elif factor == "mt":
         return lead_features["meeting_attendance"] * 100
     elif factor == "rw":
-        return (1 - lead_features.get("rep_workload", 0.5)) * 100
+        return (1 - (lead_features.get("rep_workload") or 0.5)) * 100
     elif factor == "ct":
         return lead_features["contact_time"] * 100
     return 0
