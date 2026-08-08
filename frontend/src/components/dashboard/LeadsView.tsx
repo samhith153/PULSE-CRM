@@ -208,6 +208,35 @@ interface LeadsViewProps {
 
 export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: LeadsViewProps = {}) {
   const router = useRouter();
+  // NEW: Listen for the Command Palette search click to open a specific lead
+  useEffect(() => {
+    const handleOpenRecord = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { id, type } = customEvent.detail;
+      
+      // Ensure we only process events meant for the Leads view
+      if (type === 'leads' && id) {
+        
+        // Remove the 'lead_' prefix if it exists (from the backend response format)
+        let rawId = String(id);
+        if (rawId.startsWith('lead_')) {
+          rawId = rawId.replace('lead_', '');
+        }
+
+        // Check if we need to parse it as a number or leave as string
+        const finalId = /^\d+$/.test(rawId) ? Number(rawId) : rawId;
+        
+        // This opens the right-side details panel for the lead
+        setSelectedLeadId(finalId);
+        
+        // Ensure we are not in list mode so the details drawer actually shows
+        setViewMode('default');
+      }
+    };
+
+    window.addEventListener('pulse-open-record', handleOpenRecord);
+    return () => window.removeEventListener('pulse-open-record', handleOpenRecord);
+  }, []);
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
   const leadsRef = useRef<Lead[]>([]);

@@ -1576,3 +1576,35 @@ export async function restoreUser(userId: string): Promise<UserData> {
 export async function permanentDeleteUser(userId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
 }
+
+// =============================================================================
+// GLOBAL SEARCH
+// =============================================================================
+
+export async function searchGlobalCRM(query: string) {
+  const token = getToken();
+  if (!token) {
+    console.error('No auth token found for search');
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search failed with status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data || []; 
+  } catch (error) {
+    console.error('Error fetching global search:', error);
+    return [];
+  }
+}
