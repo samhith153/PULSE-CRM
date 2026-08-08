@@ -1582,6 +1582,110 @@ export async function permanentDeleteUser(userId: string): Promise<void> {
 }
 
 // =============================================================================
+// SALES REP AI INSIGHTS API  (/api/v1/ai-insights/sales-rep)
+// =============================================================================
+
+export interface SalesRepActionItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  score: number;
+  reason: string;
+  deal_id: string | null;
+  deal_name: string | null;
+  deal_value: number;
+}
+
+export interface SalesRepFollowUpItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  days_overdue: number;
+  reason: string;
+  deal_id: string | null;
+  deal_value: number;
+}
+
+export interface SalesRepColdItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  score: number;
+  reason: string;
+  days_inactive: number;
+  deal_id: string | null;
+}
+
+export interface SalesRepActionCenter {
+  immediate_action: SalesRepActionItem[];
+  follow_up_due: SalesRepFollowUpItem[];
+  rising_interest: SalesRepActionItem[];
+  going_cold: SalesRepColdItem[];
+}
+
+export interface SalesRepPipelineHealth {
+  score: number;
+  status: string;
+  trend_label: string;
+  explanation: string;
+}
+
+export interface SalesRepPriorityItem {
+  priority_id: string;
+  title: string;
+  description: string;
+  priority_level: string;
+  related_lead: string | null;
+  related_lead_id: string | null;
+  related_deal: string | null;
+  related_deal_id: string | null;
+  related_company: string | null;
+  deal_value: number;
+  due_date: string | null;
+}
+
+export interface SalesRepSentimentBreakdown {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+export interface SalesRepIntentItem {
+  label: string;
+  count: number;
+}
+
+export interface SalesRepRecentSummary {
+  id: string;
+  contact_name: string;
+  company: string | null;
+  summary: string;
+  sentiment: string;
+  category: string;
+  follow_up_suggestion: string | null;
+  date: string;
+}
+
+export interface SalesRepConversationIntelligence {
+  sentiment: SalesRepSentimentBreakdown;
+  intent_distribution: SalesRepIntentItem[];
+  recent_summaries: SalesRepRecentSummary[];
+  powered_by: string;
+}
+
+export interface SalesRepAIInsightsData {
+  action_center: SalesRepActionCenter;
+  pipeline_health: SalesRepPipelineHealth;
+  daily_priorities: SalesRepPriorityItem[];
+  conversation_intelligence: SalesRepConversationIntelligence;
+  generated_at: string;
+}
+
+export async function getSalesRepAIInsights(): Promise<SalesRepAIInsightsData> {
+  return apiFetch<SalesRepAIInsightsData>('/api/v1/ai-insights/sales-rep');
+}
+
+// =============================================================================
 // GLOBAL SEARCH
 // =============================================================================
 

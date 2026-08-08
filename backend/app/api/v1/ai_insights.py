@@ -71,8 +71,61 @@ from app.schemas.ai_insights import (
     SentimentSummaryResponse,
 )
 from app.schemas.common import StandardResponse
+from app.schemas.sales_rep_ai_insights import SalesRepAIInsightsResponse
 
+# ── Router for manager + admin only endpoints ─────────────────────────────────
 router = APIRouter(dependencies=[Depends(require_role("manager", "admin"))])
+
+# ── Separate router for endpoints also accessible by sales_rep ───────────────
+# FastAPI adds router-level dependencies on top of route-level ones, so to allow
+# sales_rep we must use a router that does NOT carry the manager/admin gate.
+_all_roles_router = APIRouter(
+    dependencies=[Depends(require_role("admin", "manager", "sales_rep"))]
+)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Sales Rep Unified AI Insights Endpoint
+# One request loads the entire AI Insights page for a Sales Representative.
+# RBAC: admin | manager | sales_rep (data scoped per role inside service)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@_all_roles_router.get(
+    "/sales-rep",
+    response_model=StandardResponse[SalesRepAIInsightsResponse],
+    summary="Sales Rep AI Insights — unified page payload",
+    description=(
+        "Returns all data required by the Sales Representative AI Insights page "
+        "in a single request:\n\n"
+        "- **AI Action Center**: Immediate Action, Follow Up Due, Rising Interest, Going Cold\n"
+        "- **Pipeline Health Index**: Deterministic score 0–100\n"
+        "- **Daily Priorities**: AI-ranked personalized action list\n"
+        "- **Conversation Intelligence**: Sentiment Breakdown, Intent Distribution, "
+        "Recent Summaries\n\n"
+        "All data is derived from real CRM records. No mock data. "
+        "Empty sections are returned as empty arrays when no data exists.\n\n"
+        "**RBAC:** Sales Rep=own leads, Manager=team, Admin=org-wide."
+    ),
+    tags=["AI Insights"],
+)
+async def get_sales_rep_insights(
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """
+    GET /api/v1/ai-insights/sales-rep
+
+    JWT required. Single request that populates the entire AI Insights page.
+    Each section degrades gracefully — if one fails, the others still return.
+    """
+    from app.services.sales_rep_ai_insights_service import SalesRepAIInsightsService
+    svc = SalesRepAIInsightsService(db)
+    data = await svc.get_sales_rep_insights(current_user)
+    return {
+        "success": True,
+        "message": "Sales Rep AI Insights data retrieved.",
+        "data": data,
+    }
 
 
 # ── Full action center ────────────────────────────────────────────────────────
@@ -1344,3 +1397,9 @@ async def get_recent_summary_detail(
     svc = RecentSummariesService(db)
     data = await svc.get_summary_detail(current_user, summary_id)
     return {"success": True, "message": "Summary detail retrieved.", "data": data}
+
+
+# ── Merge the all-roles sub-router into the main router ───────────────────────
+# This must appear AFTER all route definitions so FastAPI registers them
+# in the correct order (specific before dynamic paths).
+router.include_router(_all_roles_router)
