@@ -13,7 +13,7 @@ router = APIRouter(prefix="/conversations", tags=["Conversation AI"])
 
 
 @router.post("/summarise", response_model=ConversationResponse, status_code=200)
-async def summarise(payload: ConversationRequest) -> ConversationResponse:
+def summarise(payload: ConversationRequest) -> ConversationResponse:
     """Summarise an email thread and extract structured insights."""
     try:
         thread = {
@@ -54,7 +54,7 @@ async def summarise(payload: ConversationRequest) -> ConversationResponse:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 @router.post("/draft-email", response_model=DraftEmailResponse, status_code=200)
-async def draft_email(payload: DraftEmailRequest) -> DraftEmailResponse:
+def draft_email(payload: DraftEmailRequest) -> DraftEmailResponse:
     """Generate a brand-new outreach email draft (subject + body) for a contact."""
     try:
         result = generate_outreach_draft(

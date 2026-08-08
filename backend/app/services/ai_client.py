@@ -30,6 +30,7 @@ class AIClient:
     async def _post(self, path: str, payload: dict) -> Optional[dict]:
         """POST JSON to the AI service and return parsed JSON or None on failure."""
         try:
+            logger.info("[AI_CLIENT] POST %s payload=%s", path, payload)
             response = await self._client.post(f"{self.base_url}{path}", json=payload)
             if response.status_code >= 400:
                 try:
@@ -37,16 +38,16 @@ class AIClient:
                 except Exception:
                     body = response.text
                 logger.warning(
-                    "AI service returned %d (%s %s): %s",
-                    response.status_code, path, self.base_url, body,
+                    "[AI_CLIENT] %d from %s: %s",
+                    response.status_code, path, body,
                 )
                 return None
             return response.json()
         except httpx.HTTPError as exc:
-            logger.warning("AI service request failed (%s %s): %s", path, self.base_url, exc)
+            logger.exception("[AI_CLIENT] Request failed (%s %s): %s", path, self.base_url, exc)
             return None
         except ValueError as exc:
-            logger.warning("AI service returned invalid JSON (%s): %s", path, exc)
+            logger.warning("[AI_CLIENT] Invalid JSON from %s: %s", path, exc)
             return None
 
     # ── Lead scoring ──────────────────────────────────────────────────────
