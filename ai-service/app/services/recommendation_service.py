@@ -71,22 +71,25 @@ def _normalize_inputs(lead):
 
 
 def _get_factor_value(factor, lead_features):
-    if factor == "s":
-        return lead_features["engagement_score"]
-    elif factor == "u":
-        return lead_features["contact_time"] * 100
-    elif factor == "r":
-        return 100 if lead_features["is_outbound"] else 0
-    elif factor == "dv":
-        return 100 if (lead_features.get("deal_value") or 0) > 0 else 0
-    elif factor == "eo":
-        return lead_features["open_count"] * 10
-    elif factor == "mt":
-        return lead_features["meeting_attendance"] * 100
-    elif factor == "rw":
-        return (1 - (lead_features.get("rep_workload") or 0.5)) * 100
-    elif factor == "ct":
-        return lead_features["contact_time"] * 100
+    try:
+        if factor == "s":
+            return float(lead_features.get("engagement_score") or 0)
+        elif factor == "u":
+            return float(lead_features.get("contact_time") or 0) * 100
+        elif factor == "r":
+            return 100 if lead_features.get("is_outbound") else 0
+        elif factor == "dv":
+            return 100 if float(lead_features.get("deal_value") or 0) > 0 else 0
+        elif factor == "eo":
+            return float(lead_features.get("open_count") or 0) * 10
+        elif factor == "mt":
+            return float(lead_features.get("meeting_attendance") or 0) * 100
+        elif factor == "rw":
+            return (1 - float(lead_features.get("rep_workload") or 0.5)) * 100
+        elif factor == "ct":
+            return float(lead_features.get("contact_time") or 0) * 100
+    except (TypeError, ValueError):
+        return 0
     return 0
 
 
