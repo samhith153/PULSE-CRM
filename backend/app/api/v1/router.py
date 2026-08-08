@@ -50,6 +50,7 @@ from app.api.v1.activities       import router as activities_router
 from app.api.v1.activity         import router as activity_router
 from app.api.v1.ai               import router as ai_router
 from app.api.v1.ai_insights      import router as ai_insights_router
+from app.api.v1.ai_insights      import all_roles_router as ai_insights_all_roles_router
 from app.api.v1.assistant        import router as assistant_router
 from app.api.v1.auth             import router as auth_router
 from app.api.v1.brevo            import router as brevo_router
@@ -108,6 +109,7 @@ api_router.include_router(calendar_router,             prefix="/calendar",      
 api_router.include_router(dashboard_router,            prefix="/dashboard",                 tags=["Dashboard"])
 api_router.include_router(ai_router,                   prefix="/ai",                        tags=["AI"])
 api_router.include_router(ai_insights_router,          prefix="/ai-insights",               tags=["AI Insights"])
+api_router.include_router(ai_insights_all_roles_router,prefix="/ai-insights",               tags=["AI Insights"])
 api_router.include_router(assistant_router,            prefix="/assistant",                 tags=["Assistant"])
 api_router.include_router(lead_scores_router,          prefix="/lead-scores",               tags=["Lead Scores"])
 api_router.include_router(recommendation_features_router, prefix="/recommendation-features", tags=["Recommendation Features"])
