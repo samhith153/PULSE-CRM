@@ -270,7 +270,7 @@ export default function DashboardHome() {
               ) : activeTab === 'workflows' ? (
                 <WorkflowsView />
               ) : activeTab === 'ai insights' ? (
-                <AIInsightsView />
+                <AIInsightsView onTabChange={setActiveTab} />
               ) : activeTab === 'settings' ? (
                 <SettingsView userRole={userRole} />
               ) : activeTab === 'profile' ? (

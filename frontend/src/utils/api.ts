@@ -1439,3 +1439,280 @@ export async function getLeadScore(leadId: string): Promise<{ score: number; fit
     return null;
   }
 }
+
+// =============================================================================
+// AVATAR API
+// =============================================================================
+
+export async function deleteAvatar(): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Failed to remove avatar');
+  }
+}
+
+// =============================================================================
+// NOTIFICATIONS API
+// =============================================================================
+
+export interface NotificationData {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  payload: Record<string, unknown> | null;
+  is_read: boolean;
+  read_at: string | null;
+  is_dismissed: boolean;
+  created_at: string;
+}
+
+export interface NotificationListData {
+  items: NotificationData[];
+  total: number;
+  unread_count: number;
+}
+
+export async function getNotifications(page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationListData> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  if (unreadOnly) params.set('unread_only', 'true');
+  return apiFetch<NotificationListData>(`/api/v1/notifications?${params}`);
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const result = await apiFetch<{ unread_count: number }>('/api/v1/notifications/unread-count');
+  return result?.unread_count ?? 0;
+}
+
+export async function markNotificationRead(id: string): Promise<NotificationData> {
+  return apiFetch<NotificationData>(`/api/v1/notifications/${id}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await apiFetch(`/api/v1/notifications/read-all`, { method: 'POST' });
+}
+
+export async function dismissNotification(id: string): Promise<void> {
+  await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
+}
+
+// =============================================================================
+// EMAIL DRAFT API
+// =============================================================================
+
+export interface EmailDraftRequestPayload {
+  recipient_name: string;
+  recipient_email: string;
+  company?: string;
+  designation?: string;
+  purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+  context?: string;
+  external_entity_type?: string | null;
+  external_entity_id?: string | null;
+}
+
+export interface EmailDraftResult {
+  subject: string;
+  body: string;
+  model_version?: string | null;
+}
+
+export async function draftOutreachEmail(payload: EmailDraftRequestPayload): Promise<EmailDraftResult> {
+  return apiFetch<EmailDraftResult>('/api/v1/emails/draft-outreach', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/** Shared shape passed from any "Send Email" trigger to the Emails page's compose panel. */
+export interface EmailComposeTarget {
+  to: string;
+  name?: string;
+  company?: string;
+  designation?: string;
+  purpose?: EmailDraftRequestPayload['purpose'];
+  context?: string;
+  externalEntityType?: string | null;
+  externalEntityId?: string | null;
+  /** Bumped on every open so EmailsView re-triggers even if the same contact is clicked twice. */
+  requestId: number;
+}
+
+// =============================================================================
+// CRM EMAIL ACTIVITY
+// =============================================================================
+
+export async function createCrmEmail(payload: CrmActivityPayload & {
+  body?: string;
+  direction?: string;
+  recipient_email?: string;
+  recipient_name?: string;
+}): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/emails', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+// =============================================================================
+// USER MANAGEMENT (soft-delete / restore / permanent-delete)
+// =============================================================================
+
+export async function getDeletedUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
+  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users/deleted${toQuery({ page, page_size: pageSize, search })}`);
+}
+
+export async function restoreUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/restore`, { method: 'POST' });
+}
+
+export async function permanentDeleteUser(userId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
+}
+
+// =============================================================================
+// GLOBAL SEARCH
+// =============================================================================
+
+// =============================================================================
+// SALES REP AI INSIGHTS API  (/api/v1/ai-insights/sales-rep)
+// =============================================================================
+
+export interface SalesRepActionItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  score: number;
+  reason: string;
+  deal_id: string | null;
+  deal_name: string | null;
+  deal_value: number;
+}
+
+export interface SalesRepFollowUpItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  days_overdue: number;
+  reason: string;
+  deal_id: string | null;
+  deal_value: number;
+}
+
+export interface SalesRepColdItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  score: number;
+  reason: string;
+  days_inactive: number;
+  deal_id: string | null;
+}
+
+export interface SalesRepActionCenter {
+  immediate_action: SalesRepActionItem[];
+  follow_up_due: SalesRepFollowUpItem[];
+  rising_interest: SalesRepActionItem[];
+  going_cold: SalesRepColdItem[];
+}
+
+export interface SalesRepPipelineHealth {
+  score: number;
+  status: string;
+  trend_label: string;
+  explanation: string;
+}
+
+export interface SalesRepPriorityItem {
+  priority_id: string;
+  title: string;
+  description: string;
+  priority_level: string;
+  related_lead: string | null;
+  related_lead_id: string | null;
+  related_deal: string | null;
+  related_deal_id: string | null;
+  related_company: string | null;
+  deal_value: number;
+  due_date: string | null;
+}
+
+export interface SalesRepSentimentBreakdown {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+export interface SalesRepIntentItem {
+  label: string;
+  count: number;
+}
+
+export interface SalesRepRecentSummary {
+  id: string;
+  contact_name: string;
+  company: string | null;
+  summary: string;
+  sentiment: string;
+  category: string;
+  follow_up_suggestion: string | null;
+  date: string;
+}
+
+export interface SalesRepConversationIntelligence {
+  sentiment: SalesRepSentimentBreakdown;
+  intent_distribution: SalesRepIntentItem[];
+  recent_summaries: SalesRepRecentSummary[];
+  powered_by: string;
+}
+
+export interface SalesRepAIInsightsData {
+  action_center: SalesRepActionCenter;
+  pipeline_health: SalesRepPipelineHealth;
+  daily_priorities: SalesRepPriorityItem[];
+  conversation_intelligence: SalesRepConversationIntelligence;
+  generated_at: string;
+}
+
+export async function getSalesRepAIInsights(): Promise<SalesRepAIInsightsData> {
+  return apiFetch<SalesRepAIInsightsData>('/api/v1/ai-insights/sales-rep');
+}
+
+// =============================================================================
+// GLOBAL SEARCH
+// =============================================================================
+
+export async function searchGlobalCRM(query: string) {
+  const token = getToken();
+  if (!token) {
+    console.error('No auth token found for search');
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search failed with status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data || []; 
+  } catch (error) {
+    console.error('Error fetching global search:', error);
+    return [];
+  }
+}
