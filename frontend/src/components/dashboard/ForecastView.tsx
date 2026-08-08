@@ -41,12 +41,52 @@ function SkeletonBlock({ h = 'h-5', w = 'w-full' }: { h?: string; w?: string }) 
   return <div className={`${h} ${w} bg-slate-100 rounded animate-pulse`} />;
 }
 
+// ── Radial Progress Ring ────────────────────────────────────────────────────
+
+function RadialProgressRing({ progress }: { progress: number }) {
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.max(0, Math.min(100, progress));
+  const offset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center">
+      <svg width="140" height="140" viewBox="0 0 140 140" className="-rotate-90">
+        <circle cx="70" cy="70" r={radius} fill="none" strokeWidth="12" className="stroke-secondary" />
+        <circle
+          cx="70"
+          cy="70"
+          r={radius}
+          fill="none"
+          strokeWidth="12"
+          strokeLinecap="round"
+          stroke="url(#forecastRingGradient)"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          className="transition-all duration-700 ease-out"
+        />
+        <defs>
+          <linearGradient id="forecastRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--brand-purple)" />
+            <stop offset="100%" stopColor="var(--brand-blue)" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="text-3xl font-black text-foreground tabular-nums">{Math.round(clamped)}%</span>
+        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mt-0.5">Confidence</span>
+      </div>
+    </div>
+  );
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function ForecastView() {
   const [data, setData]       = useState<ManagerForecastData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('Q4');
 
   useEffect(() => {
     let cancelled = false;

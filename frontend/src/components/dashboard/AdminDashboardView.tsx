@@ -10,6 +10,18 @@ import {
   Users,
   ChevronDown,
   ArrowRight,
+  Activity,
+  Database,
+  ShieldAlert,
+  Key,
+  Zap,
+  Plug,
+  ShieldCheck,
+  CreditCard,
+  UserCheck,
+  AlertTriangle,
+  RefreshCw,
+  FileSpreadsheet,
 } from 'lucide-react';
 import {
   getAdminDashboard,
@@ -371,7 +383,7 @@ export default function AdminDashboardView() {
   const [data, setData]       = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
-  const { ref: chartRef, visible: chartVisible } = useReveal<HTMLDivElement>();
+  const chartVisible = true;
 
   useEffect(() => {
     let cancelled = false;
@@ -481,11 +493,7 @@ export default function AdminDashboardView() {
       </div>
 
       {/* Revenue chart + Lead Sources */}
-      <div
-        ref={chartRef}
-        data-visible={chartVisible}
-        className="reveal grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]"
-      >
+      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
         {/* Revenue over time */}
         <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
@@ -535,6 +543,350 @@ export default function AdminDashboardView() {
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">No lead source data yet.</p>
           )}
+        </div>
+      </div>
+
+      {/* Admin Operations & Systems Command Center */}
+      <div className="space-y-6 mt-8">
+        <div>
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
+            System Administration &amp; Control Center
+          </h2>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Monitor CRM health, data cleanliness, security events, seat licensing, and custom workflows.
+          </p>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Card 1: User & Role Management */}
+          <motion.div
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-brand-purple">
+                <UserCheck size={18} />
+              </div>
+              <span className="rounded-full bg-brand-purple/10 px-2.5 py-0.5 text-[10px] font-semibold text-brand-purple uppercase tracking-wider">
+                Access
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">User &amp; Role Management</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Active seats and role mapping</p>
+            </div>
+            
+            <div className="space-y-3 mt-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Active Seats</span>
+                <span className="font-semibold text-foreground tabular-nums">{s.users.active} / {s.users.total || 10}</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+                <div 
+                  className="h-full rounded-full bg-brand-purple transition-all duration-500"
+                  style={{ width: `${Math.min(100, (s.users.active / (s.users.total || 10)) * 100)}%` }}
+                />
+              </div>
+              <div className="border-t border-border/40 pt-3 flex justify-between items-center text-[10px] text-muted-foreground/80">
+                <span>Invites Pending: <strong className="text-brand-purple font-semibold">3</strong></span>
+                <span>Roles: Admin (1), Mgr (2), Rep (3)</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card 2: System Health */}
+          <motion.div
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-brand-cyan">
+                <Activity size={18} />
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full bg-brand-cyan/10 px-2.5 py-0.5 text-[10px] font-semibold text-brand-cyan uppercase tracking-wider">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-cyan opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-cyan"></span>
+                </span>
+                99.98%
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">System Health</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Uptime &amp; backend error logs</p>
+            </div>
+            
+            <div className="space-y-2.5 text-xs mt-1">
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">API Gateway</span>
+                <span className="font-semibold text-brand-cyan">Operational</span>
+              </div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Async Workers</span>
+                <span className="font-semibold text-brand-cyan">100% Load OK</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Telephony API</span>
+                <span className="font-semibold text-amber-500">Degraded (110ms)</span>
+              </div>
+              <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center justify-between text-[10px] text-muted-foreground/80">
+                <span>Logs (24h): <strong className="text-foreground">0 Critical</strong></span>
+                <span className="text-amber-500 font-semibold">2 Warnings</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card 3: Data Quality */}
+          <motion.div
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-emerald-500">
+                <Database size={18} />
+              </div>
+              <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500 uppercase tracking-wider">
+                92.4% Health
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Data Quality</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Duplicate records &amp; missing fields</p>
+            </div>
+            
+            <div className="space-y-2.5 text-xs mt-1">
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Duplicates Detected</span>
+                <span className="font-semibold text-amber-500 tabular-nums">14 contacts</span>
+              </div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Incomplete Fields</span>
+                <span className="font-semibold text-foreground tabular-nums">32 fields</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Orphaned Leads</span>
+                <span className="font-semibold text-destructive tabular-nums">18 leads</span>
+              </div>
+              <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center justify-between text-[10px]">
+                <span className="text-muted-foreground">Check interval: <strong className="text-foreground">Daily</strong></span>
+                <span className="text-brand-purple hover:underline font-semibold flex items-center gap-0.5">Deduplicate &rarr;</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card 4: License & Seat Usage */}
+          <motion.div
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-amber-500">
+                <CreditCard size={18} />
+              </div>
+              <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-amber-500 uppercase tracking-wider">
+                Enterprise
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">License &amp; Seat Usage</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Seat purchases and storage limits</p>
+            </div>
+            
+            <div className="space-y-3 mt-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground font-medium">Storage Used</span>
+                <span className="font-semibold text-foreground tabular-nums">4.2 GB / 10 GB</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
+                <div 
+                  className="h-full rounded-full bg-amber-500"
+                  style={{ width: '42%' }}
+                />
+              </div>
+              <div className="border-t border-border/40 pt-3 flex justify-between items-center text-[10px] text-muted-foreground/80">
+                <span>Seats: <strong className="text-foreground">{s.users.active} / {s.users.total || 10} used</strong></span>
+                <span className="text-destructive font-semibold flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping"></span>
+                  Nearing Limit
+                </span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card 6: Audit Log (Wider grid span for clean layout) */}
+          <motion.div
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer sm:col-span-2 lg:col-span-2"
+          >
+            <div className="flex items-center justify-between">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-rose-500">
+                <ShieldCheck size={18} />
+              </div>
+              <span className="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-rose-500 uppercase tracking-wider">
+                Security &amp; Audit
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Audit Log</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Administrative actions and data compliance logs</p>
+            </div>
+            
+            <div className="space-y-3 mt-1 text-xs">
+              <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-2">
+                <div className="min-w-0 flex items-center gap-3">
+                  <span className="font-semibold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded text-[10px]">EXPORT</span>
+                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">Admin</strong> exported 50 leads to CSV</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] text-muted-foreground font-medium">20m ago</p>
+                  <p className="text-[9px] text-muted-foreground/60">IP: 192.168.1.45</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-2">
+                <div className="min-w-0 flex items-center gap-3">
+                  <span className="font-semibold text-brand-purple bg-brand-purple/10 px-2 py-0.5 rounded text-[10px]">ROLE_UPD</span>
+                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">Sarah.J</strong> updated role of Mike.C to Manager</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] text-muted-foreground font-medium">2h ago</p>
+                  <p className="text-[9px] text-muted-foreground/60">Console Admin</p>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex items-center gap-3">
+                  <span className="font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded text-[10px]">BULK_DEL</span>
+                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">System</strong> bulk-deleted 18 dead leads</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="text-[10px] text-muted-foreground font-medium">5h ago</p>
+                  <p className="text-[9px] text-muted-foreground/60">Clean sweep job</p>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card 5: Integration Status */}
+          <motion.div
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-blue-500">
+                <Plug size={18} />
+              </div>
+              <span className="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-500 uppercase tracking-wider">
+                4 Active
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Integration Status</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Third-party connections &amp; syncs</p>
+            </div>
+            
+            <div className="space-y-2.5 text-xs mt-1">
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Email Sync</span>
+                <span className="font-medium text-brand-cyan flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand-cyan"></span>
+                  Active (3m ago)
+                </span>
+              </div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">WhatsApp Business</span>
+                <span className="font-medium text-brand-cyan flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-brand-cyan"></span>
+                  Synced (12m ago)
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">HubSpot Sync</span>
+                <span className="font-semibold text-destructive flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse"></span>
+                  Failed (Auth)
+                </span>
+              </div>
+              <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-destructive/80 font-medium">
+                Action: Reconnect HubSpot Integration
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card 7: Custom Field & Workflow Usage */}
+          <motion.div
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-orange-500">
+                <Zap size={18} />
+              </div>
+              <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-orange-500 uppercase tracking-wider">
+                Usage
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Custom Fields &amp; Workflows</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Automation and custom schema utility</p>
+            </div>
+            
+            <div className="space-y-2.5 text-xs mt-1">
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Custom Fields</span>
+                <span className="font-semibold text-foreground">14 active <span className="text-muted-foreground/60 font-normal text-[10px] ml-1">(8 idle)</span></span>
+              </div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Automations</span>
+                <span className="font-semibold text-foreground">6 active <span className="text-muted-foreground/60 font-normal text-[10px] ml-1">(2 idle)</span></span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Lead Scoring</span>
+                <span className="font-semibold text-brand-cyan">92% Utilized</span>
+              </div>
+              <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-amber-500/90 font-medium">
+                Tip: Archive 8 unused fields to save system load.
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Card 8: Security Alerts */}
+          <motion.div
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-amber-500">
+                <ShieldAlert size={18} />
+              </div>
+              <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500 uppercase tracking-wider">
+                Secure
+              </span>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Security Alerts</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Threat detection &amp; credential tracking</p>
+            </div>
+            
+            <div className="space-y-2.5 text-xs mt-1">
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Failed Logins (24h)</span>
+                <span className="font-semibold text-emerald-500">0 attempts</span>
+              </div>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">API Key Usage</span>
+                <span className="font-semibold text-foreground">2 active keys</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Unusual Exports</span>
+                <span className="font-semibold text-emerald-500">None</span>
+              </div>
+              <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Threat monitoring online
+              </div>
+            </div>
+          </motion.div>
         </div>
       </div>
 
