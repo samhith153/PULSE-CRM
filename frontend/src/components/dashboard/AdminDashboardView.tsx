@@ -550,7 +550,7 @@ export default function AdminDashboardView() {
       values: revSeries.length ? revSeries : [4, 6, 5, 8, 9, 11],
       icon: Wallet,
       targetValue: asNumber(s.revenue.this_month),
-      prefix: 'Γé╣',
+      prefix: '₹',
     },
     {
       title: 'Active Users',

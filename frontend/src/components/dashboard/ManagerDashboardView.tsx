@@ -42,18 +42,18 @@ const formatCurrency = (value: unknown): string => {
   const amount = toNumber(value);
 
   if (Math.abs(amount) >= 10000000) {
-    return `Γé╣${(amount / 10000000).toFixed(2)}Cr`;
+    return `₹${(amount / 10000000).toFixed(2)}Cr`;
   }
 
   if (Math.abs(amount) >= 100000) {
-    return `Γé╣${(amount / 100000).toFixed(2)}L`;
+    return `₹${(amount / 100000).toFixed(2)}L`;
   }
 
   if (Math.abs(amount) >= 1000) {
-    return `Γé╣${(amount / 1000).toFixed(1)}K`;
+    return `₹${(amount / 1000).toFixed(1)}K`;
   }
 
-  return `Γé╣${Math.round(amount).toLocaleString('en-IN')}`;
+  return `₹${Math.round(amount).toLocaleString('en-IN')}`;
 };
 
 const formatPercent = (value: unknown): string =>
