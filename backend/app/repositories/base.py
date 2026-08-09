@@ -39,6 +39,8 @@ class BaseRepository(Generic[ModelT]):
         await self.db.flush()
         logger.debug("Flushed %s, id=%s", self.model.__name__, instance.id)
 
+        # Expire the instance so relationships are not accessed lazily on refresh
+        self.db.expire(instance)
         await self.db.refresh(instance)
         logger.debug("Refreshed %s", self.model.__name__)
 

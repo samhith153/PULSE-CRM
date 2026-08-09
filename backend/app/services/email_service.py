@@ -686,7 +686,16 @@ class EmailService:
             raise NotFoundException("GmailConnection", connection_id)
         access_token = await self._access_token_for_connection(organization_id, created_by, connection)
         try:
-            listed = await self.gmail_client.list_messages(access_token, page_token=connection.sync_cursor, max_results=25)
+            # On first-ever sync (no cursor), only fetch emails from the last 7 days
+            # to avoid downloading hundreds of historical messages on startup.
+            import time as _time
+            after_epoch = int(_time.time()) - (7 * 24 * 3600)
+            listed = await self.gmail_client.list_messages(
+                access_token,
+                page_token=None,
+                max_results=50,
+                q=f"after:{after_epoch}",
+            )
         except Exception as exc:
             # Stale pageToken causes 400 — reset cursor and retry once
             logger.warning("Gmail list_messages failed, resetting cursor: %s", exc)
