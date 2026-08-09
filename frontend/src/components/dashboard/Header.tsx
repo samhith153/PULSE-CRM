@@ -80,16 +80,7 @@ export default function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        onOpenCommandPalette?.();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onOpenCommandPalette]);
+  // Ctrl+K listener is handled in DashboardShell (parent) to avoid duplicates.
 
   const toggleTheme = () => {
     const next = theme === 'light' ? 'dark' : 'light';

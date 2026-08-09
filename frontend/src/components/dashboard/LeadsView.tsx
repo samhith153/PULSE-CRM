@@ -239,6 +239,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
     window.addEventListener('pulse-open-record', handleOpenRecord);
     return () => window.removeEventListener('pulse-open-record', handleOpenRecord);
   }, []);
+
+  // Listen for command palette "Create Lead" event
+  useEffect(() => {
+    const handleOpenCreate = () => {
+      setIsCreatingFullPage(true);
+    };
+    window.addEventListener('pulse-open-create-lead-modal', handleOpenCreate);
+    return () => window.removeEventListener('pulse-open-create-lead-modal', handleOpenCreate);
+  }, []);
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
   const leadsRef = useRef<Lead[]>([]);

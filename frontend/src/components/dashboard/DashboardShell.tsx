@@ -157,10 +157,14 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     toggleSetting(key);
   };
 
-  // Global listener for Ctrl+K
+  // Global listener for Ctrl+K (with input/textarea focus guard)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        const isEditable = (e.target as HTMLElement)?.isContentEditable;
+        // Don't open palette when user is typing in a form field
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || isEditable) return;
         e.preventDefault();
         setIsCommandPaletteOpen(prev => !prev);
       }

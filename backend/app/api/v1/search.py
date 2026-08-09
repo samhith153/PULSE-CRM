@@ -12,6 +12,7 @@ from app.schemas.common import StandardResponse
 from app.models.lead import Lead
 from app.models.contact import Contact
 from app.models.company import Company
+from app.models.deal import Deal
 
 # Initialize the router, requiring basic read permissions[cite: 11]
 router = APIRouter(dependencies=[Depends(require_permission("activity:read"))])
@@ -90,6 +91,26 @@ async def global_search(
             "category": "Search Results",
             "type": "companies",
             "db_id": str(company.id)
+        })
+
+    # 4. Search Deals
+    stmt_deals = select(Deal).where(
+        Deal.organization_id == current_user.organization_id,
+        or_(
+            Deal.name.ilike(f"%{q}%"),
+            Deal.description.ilike(f"%{q}%")
+        )
+    ).limit(3)
+    deals = (await db.execute(stmt_deals)).scalars().all()
+
+    for deal in deals:
+        results.append({
+            "id": f"deal_{deal.id}",
+            "title": deal.name,
+            "description": f"Deal • {deal.status or 'open'}",
+            "category": "Search Results",
+            "type": "deals",
+            "db_id": str(deal.id)
         })
 
     return {"success": True, "message": "Search complete", "data": results}

@@ -188,6 +188,15 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Listen for command palette "Create Meeting" event
+  useEffect(() => {
+    const handleOpenCreateMeeting = () => {
+      setActiveFormType('meeting');
+    };
+    window.addEventListener('pulse-open-create-meeting-modal', handleOpenCreateMeeting);
+    return () => window.removeEventListener('pulse-open-create-meeting-modal', handleOpenCreateMeeting);
+  }, []);
+
   const relatedIds = () => ({
     related_entity_type: relatedName ? relatedType : undefined,
     related_lead_id:    relatedType === 'lead'    && relatedLeadId    ? relatedLeadId    : undefined,
