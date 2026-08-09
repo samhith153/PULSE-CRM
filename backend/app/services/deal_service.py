@@ -90,7 +90,10 @@ class DealService:
             topic="deal",
         )
         logger.info("Deal created", extra={"deal_id": str(deal.id)})
-        return deal
+        # Re-fetch with eager-loaded relationships so DealResponse.from_deal()
+        # can access .pipeline_stage, .owner, .company, .contact without
+        # triggering lazy-load outside a greenlet (MissingGreenlet error).
+        return await self.get(deal.id, organization_id)
 
     async def list(
         self,

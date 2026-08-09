@@ -1,0 +1,288 @@
+[1mdiff --cc frontend/src/utils/api.ts[m
+[1mindex 25bf8ed,1799a27..0000000[m
+[1m--- a/frontend/src/utils/api.ts[m
+[1m+++ b/frontend/src/utils/api.ts[m
+[36m@@@ -1439,3 -1439,280 +1439,283 @@@[m [mexport async function getLeadScore(lead[m
+      return null;[m
+    }[m
+  }[m
+[32m++<<<<<<< Updated upstream[m
+[32m++=======[m
+[32m+ [m
+[32m+ // =============================================================================[m
+[32m+ // AVATAR API[m
+[32m+ // =============================================================================[m
+[32m+ [m
+[32m+ export async function deleteAvatar(): Promise<void> {[m
+[32m+   const token = getToken();[m
+[32m+   const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {[m
+[32m+     method: 'DELETE',[m
+[32m+     headers: token ? { Authorization: `Bearer ${token}` } : {},[m
+[32m+   });[m
+[32m+   if (!res.ok) {[m
+[32m+     const detail = await res.json().catch(() => ({ detail: res.statusText }));[m
+[32m+     throw new Error(detail.detail || 'Failed to remove avatar');[m
+[32m+   }[m
+[32m+ }[m
+[32m+ [m
+[32m+ // =============================================================================[m
+[32m+ // NOTIFICATIONS API[m
+[32m+ // =============================================================================[m
+[32m+ [m
+[32m+ export interface NotificationData {[m
+[32m+   id: string;[m
+[32m+   type: string;[m
+[32m+   title: string;[m
+[32m+   message: string | null;[m
+[32m+   entity_type: string | null;[m
+[32m+   entity_id: string | null;[m
+[32m+   payload: Record<string, unknown> | null;[m
+[32m+   is_read: boolean;[m
+[32m+   read_at: string | null;[m
+[32m+   is_dismissed: boolean;[m
+[32m+   created_at: string;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface NotificationListData {[m
+[32m+   items: NotificationData[];[m
+[32m+   total: number;[m
+[32m+   unread_count: number;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function getNotifications(page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationListData> {[m
+[32m+   const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });[m
+[32m+   if (unreadOnly) params.set('unread_only', 'true');[m
+[32m+   return apiFetch<NotificationListData>(`/api/v1/notifications?${params}`);[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function getUnreadNotificationCount(): Promise<number> {[m
+[32m+   const result = await apiFetch<{ unread_count: number }>('/api/v1/notifications/unread-count');[m
+[32m+   return result?.unread_count ?? 0;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function markNotificationRead(id: string): Promise<NotificationData> {[m
+[32m+   return apiFetch<NotificationData>(`/api/v1/notifications/${id}/read`, { method: 'POST' });[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function markAllNotificationsRead(): Promise<void> {[m
+[32m+   await apiFetch(`/api/v1/notifications/read-all`, { method: 'POST' });[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function dismissNotification(id: string): Promise<void> {[m
+[32m+   await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });[m
+[32m+ }[m
+[32m+ [m
+[32m+ // =============================================================================[m
+[32m+ // EMAIL DRAFT API[m
+[32m+ // =============================================================================[m
+[32m+ [m
+[32m+ export interface EmailDraftRequestPayload {[m
+[32m+   recipient_name: string;[m
+[32m+   recipient_email: string;[m
+[32m+   company?: string;[m
+[32m+   designation?: string;[m
+[32m+   purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';[m
+[32m+   context?: string;[m
+[32m+   external_entity_type?: string | null;[m
+[32m+   external_entity_id?: string | null;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface EmailDraftResult {[m
+[32m+   subject: string;[m
+[32m+   body: string;[m
+[32m+   model_version?: string | null;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function draftOutreachEmail(payload: EmailDraftRequestPayload): Promise<EmailDraftResult> {[m
+[32m+   return apiFetch<EmailDraftResult>('/api/v1/emails/draft-outreach', {[m
+[32m+     method: 'POST',[m
+[32m+     body: JSON.stringify(payload)[m
+[32m+   });[m
+[32m+ }[m
+[32m+ [m
+[32m+ /** Shared shape passed from any "Send Email" trigger to the Emails page's compose panel. */[m
+[32m+ export interface EmailComposeTarget {[m
+[32m+   to: string;[m
+[32m+   name?: string;[m
+[32m+   company?: string;[m
+[32m+   designation?: string;[m
+[32m+   purpose?: EmailDraftRequestPayload['purpose'];[m
+[32m+   context?: string;[m
+[32m+   externalEntityType?: string | null;[m
+[32m+   externalEntityId?: string | null;[m
+[32m+   /** Bumped on every open so EmailsView re-triggers even if the same contact is clicked twice. */[m
+[32m+   requestId: number;[m
+[32m+ }[m
+[32m+ [m
+[32m+ // =============================================================================[m
+[32m+ // CRM EMAIL ACTIVITY[m
+[32m+ // =============================================================================[m
+[32m+ [m
+[32m+ export async function createCrmEmail(payload: CrmActivityPayload & {[m
+[32m+   body?: string;[m
+[32m+   direction?: string;[m
+[32m+   recipient_email?: string;[m
+[32m+   recipient_name?: string;[m
+[32m+ }): Promise<any> {[m
+[32m+   return apiFetch('/api/v1/crm-activities/emails', {[m
+[32m+     method: 'POST',[m
+[32m+     body: JSON.stringify(payload)[m
+[32m+   });[m
+[32m+ }[m
+[32m+ [m
+[32m+ // =============================================================================[m
+[32m+ // USER MANAGEMENT (soft-delete / restore / permanent-delete)[m
+[32m+ // =============================================================================[m
+[32m+ [m
+[32m+ export async function getDeletedUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {[m
+[32m+   return apiFetch<PaginatedResult<UserData>>(`/api/v1/users/deleted${toQuery({ page, page_size: pageSize, search })}`);[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function restoreUser(userId: string): Promise<UserData> {[m
+[32m+   return apiFetch<UserData>(`/api/v1/users/${userId}/restore`, { method: 'POST' });[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function permanentDeleteUser(userId: string): Promise<void> {[m
+[32m+   await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });[m
+[32m+ }[m
+[32m+ [m
+[32m+ // =============================================================================[m
+[32m+ // GLOBAL SEARCH[m
+[32m+ // =============================================================================[m
+[32m+ [m
+[32m+ // =============================================================================[m
+[32m+ // SALES REP AI INSIGHTS API  (/api/v1/ai-insights/sales-rep)[m
+[32m+ // =============================================================================[m
+[32m+ [m
+[32m+ export interface SalesRepActionItem {[m
+[32m+   lead_id: string;[m
+[32m+   lead_name: string;[m
+[32m+   company: string | null;[m
+[32m+   score: number;[m
+[32m+   reason: string;[m
+[32m+   deal_id: string | null;[m
+[32m+   deal_name: string | null;[m
+[32m+   deal_value: number;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepFollowUpItem {[m
+[32m+   lead_id: string;[m
+[32m+   lead_name: string;[m
+[32m+   company: string | null;[m
+[32m+   days_overdue: number;[m
+[32m+   reason: string;[m
+[32m+   deal_id: string | null;[m
+[32m+   deal_value: number;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepColdItem {[m
+[32m+   lead_id: string;[m
+[32m+   lead_name: string;[m
+[32m+   company: string | null;[m
+[32m+   score: number;[m
+[32m+   reason: string;[m
+[32m+   days_inactive: number;[m
+[32m+   deal_id: string | null;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepActionCenter {[m
+[32m+   immediate_action: SalesRepActionItem[];[m
+[32m+   follow_up_due: SalesRepFollowUpItem[];[m
+[32m+   rising_interest: SalesRepActionItem[];[m
+[32m+   going_cold: SalesRepColdItem[];[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepPipelineHealth {[m
+[32m+   score: number;[m
+[32m+   status: string;[m
+[32m+   trend_label: string;[m
+[32m+   explanation: string;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepPriorityItem {[m
+[32m+   priority_id: string;[m
+[32m+   title: string;[m
+[32m+   description: string;[m
+[32m+   priority_level: string;[m
+[32m+   related_lead: string | null;[m
+[32m+   related_lead_id: string | null;[m
+[32m+   related_deal: string | null;[m
+[32m+   related_deal_id: string | null;[m
+[32m+   related_company: string | null;[m
+[32m+   deal_value: number;[m
+[32m+   due_date: string | null;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepSentimentBreakdown {[m
+[32m+   positive: number;[m
+[32m+   neutral: number;[m
+[32m+   negative: number;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepIntentItem {[m
+[32m+   label: string;[m
+[32m+   count: number;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepRecentSummary {[m
+[32m+   id: string;[m
+[32m+   contact_name: string;[m
+[32m+   company: string | null;[m
+[32m+   summary: string;[m
+[32m+   sentiment: string;[m
+[32m+   category: string;[m
+[32m+   follow_up_suggestion: string | null;[m
+[32m+   date: string;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepConversationIntelligence {[m
+[32m+   sentiment: SalesRepSentimentBreakdown;[m
+[32m+   intent_distribution: SalesRepIntentItem[];[m
+[32m+   recent_summaries: SalesRepRecentSummary[];[m
+[32m+   powered_by: string;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export interface SalesRepAIInsightsData {[m
+[32m+   action_center: SalesRepActionCenter;[m
+[32m+   pipeline_health: SalesRepPipelineHealth;[m
+[32m+   daily_priorities: SalesRepPriorityItem[];[m
+[32m+   conversation_intelligence: SalesRepConversationIntelligence;[m
+[32m+   generated_at: string;[m
+[32m+ }[m
+[32m+ [m
+[32m+ export async function getSalesRepAIInsights(): Promise<SalesRepAIInsightsData> {[m
+[32m+   return apiFetch<SalesRepAIInsightsData>('/api/v1/ai-insights/sales-rep');[m
+[32m+ }[m
+[32m+ [m
+[32m+ // =============================================================================[m
+[32m+ // GLOBAL SEARCH[m
+[32m+ // =============================================================================[m
+[32m+ [m
+[32m+ export async function searchGlobalCRM(query: string) {[m
+[32m+   const token = getToken();[m
+[32m+   if (!token) {[m
+[32m+     console.error('No auth token found for search');[m
+[32m+     return [];[m
+[32m+   }[m
+[32m+ [m
+[32m+   try {[m
+[32m+     const response = await fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}`, {[m
+[32m+       method: 'GET',[m
+[32m+       headers: {[m
+[32m+         'Authorization': `Bearer ${token}`,[m
+[32m+         'Content-Type': 'application/json',[m
+[32m+       },[m
+[32m+     });[m
+[32m+ [m
+[32m+     if (!response.ok) {[m
+[32m+       throw new Error(`Search failed with status: ${response.status}`);[m
+[32m+     }[m
+[32m+ [m
+[32m+     const result = await response.json();[m
+[32m+     return result.data || []; [m
+[32m+   } catch (error) {[m
+[32m+     console.error('Error fetching global search:', error);[m
+[32m+     return [];[m
+[32m+   }[m
+[32m+ }[m
+[32m++>>>>>>> Stashed changes[m

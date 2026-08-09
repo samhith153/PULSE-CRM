@@ -76,6 +76,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [form, setForm] = useState({
     title: '', company: '', value: 0, stage: '', priority: 'Medium' as Deal['priority'], owner: '', closeDate: ''
@@ -221,31 +223,56 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ── Client-side validation ──────────────────────────────────────────────
+    const errors: Record<string, string> = {};
+    if (!form.title.trim()) errors.title = 'Deal title is required.';
+    if (!form.company.trim()) errors.company = 'Company is required.';
+    if (form.value < 0 || isNaN(Number(form.value))) errors.value = 'Enter a valid non-negative value.';
+    if (!form.stage) errors.stage = 'Stage is required.';
+    if (!form.priority) errors.priority = 'Priority is required.';
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    setFormErrors({});
+    setIsSaving(true);
+
     try {
       const stageId = stageIdByName[form.stage];
+      // Send ISO date string (YYYY-MM-DD) as expected by the backend date field
+      const closeDateISO = form.closeDate ? form.closeDate : undefined;
       const created = await createDeal({
-        name: form.title,
-        amount: form.value,
+        name: form.title.trim(),
+        amount: Number(form.value),
         pipeline_stage_id: stageId || undefined,
         priority: form.priority,
-        expected_close_date: form.closeDate || undefined,
+        expected_close_date: closeDateISO,
       });
+
       const newDeal: Deal = {
         id: created?.id || Date.now(),
-        title: form.title,
-        company: form.company,
+        title: form.title.trim(),
+        company: form.company.trim(),
         value: Number(form.value),
         stage: form.stage,
-        priority: form.priority,
+        priority: form.priority as Deal['priority'],
         owner: form.owner,
         closeDate: form.closeDate,
-        createdAt: created?.created_at || new Date().toISOString()
+        createdAt: created?.created_at || new Date().toISOString(),
       };
-      setDeals([...deals, newDeal]);
-    } catch (err) {
-      console.error("Failed to create deal:", err);
+
+      setDeals(prev => [...prev, newDeal]);
+      setIsAddModalOpen(false);
+      setForm({ title: '', company: '', value: 0, stage: stageNames[0] || 'New', priority: 'Medium', owner: '', closeDate: '' });
+      toast.success(`Deal "${newDeal.title}" created successfully.`);
+    } catch (err: any) {
+      console.error('Failed to create deal:', err);
+      toast.error(err?.message || 'Failed to create deal. Please try again.');
+      // Keep modal open so the user can correct and retry
+    } finally {
+      setIsSaving(false);
     }
-    setIsAddModalOpen(false);
   };
 
   const handleEdit = async (e: React.FormEvent) => {
@@ -351,8 +378,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
         </div>
 
         {/* Search, Sort, and Filters Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border">
+          <div className="relative flex-1 min-w-[180px]">
             <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
               <Search className="h-3.5 w-3.5" />
             </span>
@@ -365,7 +392,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
             />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Priority Filter */}
             <div className="relative">
               <button
@@ -708,26 +735,45 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
               <h3 className="font-semibold text-foreground text-sm">Create New Deal</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+              <button onClick={() => { setIsAddModalOpen(false); setFormErrors({}); }} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
-            <form onSubmit={handleAdd} className="p-5 space-y-4">
+            <form onSubmit={handleAdd} className="p-5 space-y-4" noValidate>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Deal Title</label>
-                  <input type="text" required value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Deal Title *</label>
+                  <input
+                    type="text"
+                    value={form.title}
+                    onChange={e => { setForm({...form, title: e.target.value}); setFormErrors(p => ({...p, title: ''})); }}
+                    className={`w-full px-3 py-1.5 border rounded-lg text-xs text-foreground focus:outline-none bg-background ${formErrors.title ? 'border-destructive' : 'border-border'}`}
+                  />
+                  {formErrors.title && <p className="text-[9px] text-destructive mt-0.5">{formErrors.title}</p>}
                 </div>
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required value={form.company} onChange={e => setForm({...form, company: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company *</label>
+                  <input
+                    type="text"
+                    value={form.company}
+                    onChange={e => { setForm({...form, company: e.target.value}); setFormErrors(p => ({...p, company: ''})); }}
+                    className={`w-full px-3 py-1.5 border rounded-lg text-xs text-foreground focus:outline-none bg-background ${formErrors.company ? 'border-destructive' : 'border-border'}`}
+                  />
+                  {formErrors.company && <p className="text-[9px] text-destructive mt-0.5">{formErrors.company}</p>}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value (₹)</label>
-                  <input type="number" required value={form.value} onChange={e => setForm({...form, value: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Value (₹) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={form.value}
+                    onChange={e => { setForm({...form, value: Number(e.target.value)}); setFormErrors(p => ({...p, value: ''})); }}
+                    className={`w-full px-3 py-1.5 border rounded-lg text-xs text-foreground focus:outline-none bg-background ${formErrors.value ? 'border-destructive' : 'border-border'}`}
+                  />
+                  {formErrors.value && <p className="text-[9px] text-destructive mt-0.5">{formErrors.value}</p>}
                 </div>
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Stage</label>
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Stage *</label>
                   <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
                   </select>
@@ -735,8 +781,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Priority</label>
-                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
+                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Priority *</label>
+                  <select value={form.priority} onChange={e => setForm({...form, priority: e.target.value as Deal['priority']})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
                     <option>High</option>
                     <option>Medium</option>
                     <option>Low</option>
@@ -748,8 +794,15 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 </div>
               </div>
               <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold  cursor-pointer">Save Deal</button>
+                <button type="button" onClick={() => { setIsAddModalOpen(false); setFormErrors({}); }} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer" disabled={isSaving}>Cancel</button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {isSaving && <span className="h-3 w-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+                  {isSaving ? 'Saving...' : 'Save Deal'}
+                </button>
               </div>
             </form>
           </div>

@@ -451,7 +451,10 @@ export async function getDeals(): Promise<Deal[]> {
       company: dd.company_name || dd.company?.name || '',
       value: Number(dd.amount || 0),
       stage: dd.stage_name || dd.stage_slug || 'New',
-      priority: dd.priority || '',
+      // Normalise to title-case so filter comparisons ("High"/"Medium"/"Low") always work
+      priority: dd.priority
+        ? (dd.priority.charAt(0).toUpperCase() + dd.priority.slice(1).toLowerCase()) as 'High' | 'Medium' | 'Low'
+        : 'Medium',
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
       createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
