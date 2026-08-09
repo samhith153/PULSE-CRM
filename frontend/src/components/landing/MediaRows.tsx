@@ -1,14 +1,14 @@
 import { ArrowRight } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
-const leadsImage = "/images/landing/product-leads.jpg";
-const pipelineImage = "/images/landing/product-pipeline.jpg";
+const leadsImage = "/landing/product-leads.jpg";
+const pipelineImage = "/landing/product-pipeline.jpg";
 import { cn } from "@/lib/utils";
 
 type Row = {
   eyebrow: string;
   title: string;
   desc: string;
-  image: any;
+  image: string;
   alt: string;
   reversed?: boolean;
 };

@@ -8,7 +8,6 @@ import {
   Webhook,
   BadgeCheck,
   Fingerprint,
-  Check,
 } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
 
@@ -31,13 +30,13 @@ function Card({
 }) {
   return (
     <div
-      className={`reveal group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-card p-6 backdrop-blur-sm transition duration-300 hover:shadow-card hover:-translate-y-0.5 ${className}`}
+      className={`reveal group relative flex flex-col overflow-hidden rounded-2xl border border-primary-foreground/10 bg-primary-foreground/[0.04] p-6 backdrop-blur-sm transition-colors duration-300 hover:border-primary-foreground/20 ${className}`}
       data-visible={visible}
       style={{ transitionDelay: `${delay}ms` }}
     >
       <div className="mb-5 flex-1">{children}</div>
-      <h3 className="text-base font-bold text-white tracking-tight">{title}</h3>
-      <p className="mt-1.5 text-xs md:text-sm text-muted-foreground font-semibold line-clamp-1">{desc}</p>
+      <h3 className="text-base font-semibold tracking-tight text-primary-foreground">{title}</h3>
+      <p className="mt-1.5 text-sm leading-relaxed text-primary-foreground/55">{desc}</p>
     </div>
   );
 }
@@ -61,20 +60,20 @@ function LeadScoring() {
   const band = score > 74 ? "Hot" : score > 42 ? "Warm" : "Cold";
   const bandClass =
     score > 74
-      ? "grad-orange-pink text-white"
+      ? "grad-orange-pink text-primary-foreground"
       : score > 42
-        ? "grad-pink-purple text-white"
-        : "bg-primary-foreground/10 text-white/70";
+        ? "grad-pink-purple text-primary-foreground"
+        : "bg-primary-foreground/10 text-primary-foreground/70";
 
   return (
-    <div className="rounded-xl border border-border bg-[#131722] p-4">
+    <div className="rounded-xl border border-primary-foreground/10 bg-ink/60 p-4">
       <div className="flex items-center gap-3">
-        <span className="grad-blue-purple grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold text-white">
+        <span className="grad-blue-purple grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold text-primary-foreground">
           MR
         </span>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-white">Maya Reyes</p>
-          <p className="truncate text-xs text-[#8A93A6]">VP Ops · Northwind</p>
+          <p className="truncate text-sm font-medium text-primary-foreground">Maya Reyes</p>
+          <p className="truncate text-xs text-primary-foreground/45">VP Ops · Northwind</p>
         </div>
         <span
           className={`ml-auto shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${bandClass}`}
@@ -83,18 +82,16 @@ function LeadScoring() {
         </span>
       </div>
       <div className="mt-4 flex items-end justify-between">
-        <span className="font-mono text-4xl leading-none font-bold text-white tabular-nums">
+        <span className="font-mono text-3xl leading-none font-bold text-primary-foreground tabular-nums">
           {score}
         </span>
+        <span className="text-xs text-primary-foreground/45">fit + intent</span>
       </div>
-      <div className="mt-4 flex items-center gap-3">
-        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#161B26]">
-          <div
-            className="grad-blue-purple h-full rounded-full transition-[width] duration-100 ease-linear"
-            style={{ width: `${score}%` }}
-          />
-        </div>
-        <span className="shrink-0 text-xs text-[#8A93A6] font-semibold">fit + intent</span>
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-primary-foreground/10">
+        <div
+          className="grad-teal-purple h-full rounded-full transition-[width] duration-100 ease-linear"
+          style={{ width: `${score}%` }}
+        />
       </div>
     </div>
   );
@@ -132,13 +129,13 @@ function SpamFeed() {
   }, 1600);
 
   return (
-    <div className="h-[132px] overflow-hidden rounded-xl border border-border bg-[#131722] p-3 font-mono text-[11.5px]">
-      <div className="flex flex-col gap-3">
+    <div className="h-[132px] overflow-hidden rounded-xl border border-primary-foreground/10 bg-ink/60 p-3 font-mono text-[11px]">
+      <div className="flex flex-col gap-2">
         {rows.map((r) => (
           <div key={r.id} className="rise-in flex items-center gap-2">
-            <span className="shrink-0 text-[#8A93A6]">{r.t}</span>
-            <span className="truncate text-white">{r.email}</span>
-            <span className={`ml-auto shrink-0 font-semibold ${r.action === "Merged" || r.action === "Verified" ? "text-[#3DD68C]" : "text-[#6B7280]"}`}>{r.action}</span>
+            <span className="shrink-0 text-primary-foreground/30">{r.t}</span>
+            <span className="truncate text-primary-foreground/75">{r.email}</span>
+            <span className={`ml-auto shrink-0 font-semibold ${r.tone}`}>{r.action}</span>
           </div>
         ))}
       </div>
@@ -151,16 +148,14 @@ function SpamFeed() {
 function Compliance() {
   const badges = ["SOC 2 Type II", "GDPR", "CCPA", "ISO 27001"];
   return (
-    <div className="shimmer relative grid grid-cols-2 gap-2 overflow-hidden rounded-xl border border-border bg-[#131722] p-4">
+    <div className="shimmer relative grid grid-cols-2 gap-2 overflow-hidden rounded-xl border border-primary-foreground/10 bg-ink/60 p-4">
       {badges.map((b) => (
         <div
           key={b}
-          className="flex items-center gap-2 rounded-full border border-border px-3 py-2 bg-[#131722]"
+          className="flex items-center gap-2 rounded-lg border border-primary-foreground/10 px-2.5 py-2"
         >
-          <div className="flex size-4 shrink-0 items-center justify-center rounded-full border border-[#3DD68C] text-[#3DD68C]">
-            <Check size={10} strokeWidth={3} />
-          </div>
-          <span className="truncate text-xs font-semibold text-white">{b}</span>
+          <BadgeCheck size={14} className="shrink-0 text-brand-cyan" />
+          <span className="truncate text-[11px] font-medium text-primary-foreground/80">{b}</span>
         </div>
       ))}
     </div>
@@ -173,20 +168,16 @@ function SessionCard() {
   const [pulse, setPulse] = useState(0);
   useLoop(() => setPulse((p) => p + 1), 2600);
   return (
-    <div className="rounded-xl border border-border bg-[#131722] p-4">
+    <div className="rounded-xl border border-primary-foreground/10 bg-ink/60 p-4">
       <div className="flex items-center gap-3">
-        <div className="grid size-9 place-items-center rounded-lg border border-border bg-[#161B26] text-white shrink-0">
-          <Monitor size={16} />
+        <Monitor size={16} className="shrink-0 text-primary-foreground/70" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-primary-foreground">MacBook Pro · Chrome</p>
+          <p className="truncate text-xs text-primary-foreground/45">Austin, TX · active now</p>
         </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-white">MacBook Pro · Chrome</p>
-          <p className="truncate text-xs text-[#8A93A6] flex items-center gap-1.5">
-            Austin, TX · active now
-            <span className="inline-block size-2 rounded-full bg-[#3DD68C]" />
-          </p>
-        </div>
+        <span key={pulse} className="ml-auto size-2 shrink-0 animate-ping rounded-full bg-brand-cyan" />
       </div>
-      <button className="arrow-nudge mt-4 w-full justify-center inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-xs font-bold text-white bg-transparent transition duration-200 hover:bg-[#161B26]">
+      <button className="arrow-nudge mt-4 inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/15 px-3 py-1.5 text-xs font-medium text-primary-foreground/80 transition-colors hover:bg-primary-foreground/10">
         View activity <ArrowRight size={13} />
       </button>
     </div>
@@ -200,19 +191,19 @@ function OneClickLogin() {
   useLoop(() => setActive((a) => (a + 1) % 2), 1800);
   const items = ["Continue with Google", "Continue with Microsoft"];
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-border bg-[#131722] p-4">
+    <div className="flex flex-col gap-2 rounded-xl border border-primary-foreground/10 bg-ink/60 p-4">
       {items.map((label, i) => (
-        <button
+        <div
           key={label}
-          className={`w-full flex items-center justify-center gap-2 rounded-full border px-3 py-2.5 text-xs font-semibold transition duration-300 ${
+          className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-medium transition-all duration-300 ${
             active === i
-              ? "-translate-y-0.5 border-border bg-[#161B26] text-white shadow-nav"
-              : "border-border/60 bg-[#161B26]/60 text-[#8A93A6]"
+              ? "-translate-y-0.5 border-primary-foreground/35 bg-primary-foreground/10 text-primary-foreground shadow-nav"
+              : "border-primary-foreground/10 text-primary-foreground/55"
           }`}
         >
-          <Fingerprint size={14} className="shrink-0 text-[#8A93A6]" />
+          <Fingerprint size={14} className="shrink-0" />
           {label}
-        </button>
+        </div>
       ))}
     </div>
   );
@@ -224,15 +215,15 @@ function BotFilter() {
   const [n, setN] = useState(1204);
   useLoop(() => setN((v) => v + 1), 1200);
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-border bg-[#131722] p-4">
-      <span className="grad-blue-purple grid size-11 shrink-0 place-items-center rounded-full text-white">
-        <ShieldCheck size={19} />
+    <div className="flex items-center gap-4 rounded-xl border border-primary-foreground/10 bg-ink/60 p-4">
+      <span className="grad-teal-purple grid size-11 shrink-0 place-items-center rounded-xl">
+        <ShieldCheck size={19} className="text-primary-foreground" />
       </span>
       <div className="min-w-0">
-        <p className="font-mono text-2xl font-bold text-white tabular-nums">
+        <p className="font-mono text-xl font-bold text-primary-foreground tabular-nums">
           {n.toLocaleString()}
         </p>
-        <p className="truncate text-xs text-[#8A93A6] font-semibold">fake leads filtered this month</p>
+        <p className="truncate text-xs text-primary-foreground/45">fake leads filtered this month</p>
       </div>
     </div>
   );
@@ -246,16 +237,16 @@ function OtpCard() {
   const filled = tick % 7;
   const digits = [4, 8, 1, 9, 2, 6];
   return (
-    <div className="rounded-xl border border-border bg-[#131722] p-4">
-      <p className="text-xs text-[#8A93A6] font-semibold mb-3">Verifying lead contact</p>
-      <div className="flex justify-between gap-2">
+    <div className="rounded-xl border border-primary-foreground/10 bg-ink/60 p-4">
+      <p className="text-xs text-primary-foreground/45">Verifying lead contact</p>
+      <div className="mt-3 flex gap-2">
         {digits.map((d, i) => (
           <span
             key={i}
-            className={`grid size-10 place-items-center rounded-full border font-mono text-sm font-semibold transition duration-200 ${
+            className={`grid h-10 flex-1 place-items-center rounded-lg border font-mono text-sm font-semibold transition-all duration-200 ${
               i < filled
-                ? "border-border bg-[#161B26] text-white"
-                : "border-border/30 bg-[#161B26]/30 text-white/20"
+                ? "border-primary-foreground/30 bg-primary-foreground/10 text-primary-foreground"
+                : "border-primary-foreground/10 text-primary-foreground/20"
             }`}
           >
             {i < filled ? d : "•"}
@@ -272,32 +263,25 @@ function MagicLink() {
   const [step, setStep] = useState(0);
   useLoop(() => setStep((s) => (s + 1) % 3), 1600);
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-[#131722] p-4">
-      {/* Incoming message */}
-      <div className="max-w-[85%] rounded-2xl bg-[#161B26] px-4 py-2.5 text-xs text-white">
+    <div className="flex flex-col gap-2 rounded-xl border border-primary-foreground/10 bg-ink/60 p-4">
+      <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-primary-foreground/10 px-3 py-2 text-xs text-primary-foreground/75">
         Can you resend the proposal?
       </div>
-      {/* Outgoing message */}
       <div
-        className={`ml-auto flex max-w-[85%] flex-col items-end gap-1.5 transition duration-500 ${
+        className={`grad-blue-purple ml-auto flex max-w-[85%] items-center gap-2 rounded-2xl rounded-br-sm px-3 py-2 text-xs text-primary-foreground transition-all duration-500 ${
           step >= 1 ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
         }`}
       >
-        <div className="rounded-2xl bg-[#4F7CFF] px-4 py-2.5 text-xs text-white flex items-center gap-2">
-          <span>Sure, here is the magic link:</span>
-          <span className="inline-flex items-center gap-1 rounded bg-black/25 px-1.5 py-0.5 text-[10px] font-medium text-white hover:underline">
-            <Link2 size={10} className="shrink-0" />
-            pulse.crm/l/8fa2
-          </span>
-        </div>
-        <p
-          className={`text-[10px] text-muted-foreground transition-opacity duration-500 ${
-            step >= 2 ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          Opened · 12s ago
-        </p>
+        <Link2 size={13} className="shrink-0" />
+        <span className="truncate">pulse.crm/l/8fa2 — one-click open</span>
       </div>
+      <p
+        className={`ml-auto text-[11px] text-primary-foreground/40 transition-opacity duration-500 ${
+          step >= 2 ? "opacity-100" : "opacity-0"
+        }`}
+      >
+        Opened · 12s ago
+      </p>
     </div>
   );
 }
@@ -333,7 +317,24 @@ export function BentoGrid() {
 
   return (
     <section className="relative overflow-hidden bg-ink py-24 md:py-32">
-      <div aria-hidden className="circuit-bg pointer-events-none absolute inset-0 opacity-[0.13]" />
+      <div aria-hidden className="footer-grid pointer-events-none absolute inset-0" />
+      <div aria-hidden className="footer-grid-fine pointer-events-none absolute inset-0" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full opacity-60 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, oklch(0.62 0.19 274.64 / 0.28), oklch(0.5 0.16 301.7 / 0.12) 55%, transparent)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-48 right-[-10%] h-[480px] w-[720px] rounded-full opacity-50 blur-3xl"
+        style={{
+          background:
+            "radial-gradient(closest-side, oklch(0.7 0.15 200 / 0.18), transparent)",
+        }}
+      />
       <div ref={ref} className="relative mx-auto max-w-7xl px-6">
         <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-6 sm:flex sm:justify-between">
           <div className="min-w-0 max-w-2xl">
@@ -458,12 +459,12 @@ export function BentoGrid() {
             visible={visible}
             delay={720}
           >
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-[#131722] p-4">
-              <Mail size={16} className="shrink-0 text-[#8A93A6]" />
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#161B26]">
+            <div className="flex items-center gap-3 rounded-xl border border-primary-foreground/10 bg-ink/60 p-4">
+              <Mail size={16} className="shrink-0 text-primary-foreground/70" />
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-primary-foreground/10">
                 <span className="scan-bar grad-blue-purple block h-full w-1/3 rounded-full" />
               </div>
-              <span className="shrink-0 font-mono text-xs text-white">98.4%</span>
+              <span className="shrink-0 font-mono text-xs text-primary-foreground/60">98.4%</span>
             </div>
           </Card>
         </div>
