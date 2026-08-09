@@ -263,7 +263,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           ) : activeTab === 'tasks' ? (
             <TasksView />
           ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
-            <PipelineView />
+            <PipelineView userRole={requiredRole} />
           ) : activeTab === 'products' ? (
             <ProductsView />
           ) : activeTab === 'activities' ? (

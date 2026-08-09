@@ -595,9 +595,18 @@ export async function deleteCompany(companyId: string | number): Promise<void> {
 
 // --- Deals API ---
 export async function getDeals(): Promise<Deal[]> {
-  const dbResult = await apiFetch<any>('/api/v1/deals');
+  const dbResult = await apiFetch<any>('/api/v1/deals?page=1&page_size=100&sort_by=created_at&sort_order=desc');
   const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return dbDeals.map((dd, idx) => {
+
+  // Generic role placeholders that get seeded as full_name — prefer email prefix instead
+  const GENERIC_NAMES = new Set(['sales representative', 'sales rep user', 'manager user', 'admin user']);
+
+  return dbDeals.map((dd) => {
+    const rawName: string = dd.owner_name || '';
+    const ownerDisplay = GENERIC_NAMES.has(rawName.toLowerCase()) && dd.owner_email
+      ? dd.owner_email.split('@')[0]   // e.g. "sales@gmail.com" → "sales"
+      : rawName;
+
     return {
       id: dd.id,
       title: dd.name || `Deal ${dd.id}`,
@@ -605,7 +614,7 @@ export async function getDeals(): Promise<Deal[]> {
       value: Number(dd.amount || 0),
       stage: dd.stage_name || dd.stage_slug || 'New',
       priority: dd.priority || '',
-      owner: dd.owner_name || dd.owner || '',
+      owner: ownerDisplay,
       closeDate: dd.expected_close_date || '',
       createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
     };

@@ -316,6 +316,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   // Modal Open/Close States
   const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<number | string | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
@@ -534,7 +535,11 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   // Action: Edit Lead Submit
   const handleEditLead = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeLead) return;
+    const targetId = editingLeadId;
+    if (!targetId) {
+      toast.error('No lead selected for editing.');
+      return;
+    }
     const payload: Record<string, unknown> = {
       title: leadForm.name,
       company_name: leadForm.company,
@@ -542,6 +547,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       email: leadForm.email || undefined,
       phone: leadForm.phone || undefined,
       status: STATUS_MAP[leadForm.status as string] || leadForm.status,
+      priority: leadForm.priority || undefined,
       source: SOURCE_MAP[leadForm.source as string] || leadForm.source || undefined,
       industry: leadForm.industry || undefined,
       location: leadForm.location || undefined,
@@ -549,15 +555,17 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       notes: leadForm.notes || undefined,
     };
     try {
-      const updated = await updateLead(activeLead.id, payload);
-      setLeads(leads.map(l => l.id === activeLead.id ? backendToLocal(updated) : l));
-      fetchLeadRecommendation(String(activeLead.id)).then(res => {
-        setLeadRecommendations(prev => ({ ...prev, [activeLead.id]: res.recommendations?.[0] || 'No recommendation available.' }));
+      const updated = await updateLead(targetId, payload);
+      setLeads(prev => prev.map(l => l.id === targetId ? backendToLocal(updated) : l));
+      toast.success('Lead updated successfully.');
+      fetchLeadRecommendation(String(targetId)).then(res => {
+        setLeadRecommendations(prev => ({ ...prev, [targetId]: res.recommendations?.[0] || 'No recommendation available.' }));
       }).catch(() => {});
-    } catch (err) {
-      console.error("Failed to update lead:", err);
+      setIsEditModalOpen(false);
+      setEditingLeadId(null);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update lead. Please try again.');
     }
-    setIsEditModalOpen(false);
   };
 
   // Action: Delete Lead
@@ -1355,6 +1363,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                     notes: lead.notes
                                   });
                                   setSelectedLeadId(lead.id);
+                                  setEditingLeadId(lead.id);
                                   setIsEditModalOpen(true);
                                 }}
                                 className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
@@ -1518,7 +1527,11 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             {/* Owner */}
                             <td className="py-3.5">
                               <div className="flex items-center space-x-1.5">
-                                <img src={lead.ownerAvatar || ''} alt={lead.owner} className="h-5 w-5 rounded-full border border-border" />
+                                {lead.ownerAvatar ? (
+                                  <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-border" />
+                                ) : (
+                                  <span className="h-5 w-5 rounded-full border border-border bg-brand-purple/10 text-brand-purple flex items-center justify-center text-[9px] font-bold shrink-0">{(lead.owner || '?')[0].toUpperCase()}</span>
+                                )}
                                 <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
                               </div>
                             </td>
@@ -1556,6 +1569,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                   owner: lead.owner,
                                   notes: lead.notes
                                 });
+                                setEditingLeadId(lead.id);
                                 setIsEditModalOpen(true);
                               }}
                               className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
@@ -1595,43 +1609,452 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setIsMaximized(false)} />
           )}
 
-          <div className={isMaximized
-            ? "fixed inset-4 md:inset-8 z-50 flex flex-col rounded-2xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.35)] animate-in zoom-in-95 duration-200"
-            : "bg-card border border-border rounded-2xl p-5 sticky top-20"
-          }
-          style={isMaximized ? { background: '#ffffff', color: '#111827' } : undefined}
-          >
-            {isMaximized ? (
-              /* ===== MAXIMIZED LIGHT-THEME LAYOUT ===== */
-              <>
-                {/* Top bar */}
-                <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ background: '#f3f4f6', borderColor: '#e5e7eb' }}>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                      <span className="text-purple-700 font-bold text-sm">{activeLead.name?.[0] || '?'}</span>
+          {/* Quick Details Fields list */}
+          {/* Quick Details Fields list */}
+          <div className="py-3.5 space-y-2.5 text-[11px] font-semibold border-b border-border">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Status</span>
+              <span className={`font-semibold px-1.5 py-0.25 rounded ${
+                activeLead.status === 'Converted' ? 'text-brand-cyan bg-brand-cyan/15' : 'text-foreground'
+              }`}>{activeLead.status}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Priority</span>
+              <span className={`font-semibold ${
+                activeLead.priorityTier === 'Critical' ? 'text-brand-cyan bg-brand-cyan/15 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'High' ? 'text-amber-700 bg-amber-50 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'Medium' ? 'text-blue-700 bg-blue-50 px-1.5 py-0.25 rounded' :
+                activeLead.priorityTier === 'Low' ? 'text-muted-foreground bg-secondary px-1.5 py-0.25 rounded' : ''
+              }`}>{activeLead.priorityTier || activeLead.priority}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Email</span>
+              <a href={`mailto:${activeLead.email}`} className="text-brand-purple hover:underline truncate max-w-[150px]">{activeLead.email}</a>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Phone</span>
+              <span className="text-foreground tabular-nums">{activeLead.phone}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Owner</span>
+              <div className="flex items-center space-x-1">
+                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-border" />
+                <span className="text-foreground">{activeLead.owner}</span>
+              </div>
+            </div>
+          </div>
+
+
+
+                      {/* Contact Info */}
+                      <div className="rounded-xl border overflow-hidden border-gray-200">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Contact Information</span>
+                        </div>
+                        <div className="p-4 space-y-3">
+                          {[
+                            { label: 'Email', value: activeLead.email, link: `mailto:${activeLead.email}` },
+                            { label: 'Phone', value: activeLead.phone },
+                            { label: 'Job Title', value: activeLead.jobTitle },
+                            { label: 'Location', value: activeLead.location },
+                            { label: 'Source', value: activeLead.source },
+                          ].map(row => (
+                            <div key={row.label} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                              <span className="text-xs font-semibold text-gray-500">{row.label}</span>
+                              {row.link ? (
+                                <a href={row.link} className="text-xs font-bold truncate max-w-[240px] text-purple-600 hover:underline">{row.value || '—'}</a>
+                              ) : (
+                                <span className="text-xs font-bold text-gray-800">{row.value || '—'}</span>
+                              )}
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-xs font-semibold text-gray-500">Owner</span>
+                            <div className="flex items-center gap-1.5">
+                              {activeLead.ownerAvatar ? (
+                                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-5 w-5 rounded-full border border-gray-200" />
+                              ) : (
+                                <span className="h-5 w-5 rounded-full border border-gray-200 bg-brand-purple/10 text-brand-purple flex items-center justify-center text-[9px] font-bold shrink-0">{(activeLead.owner || '?')[0].toUpperCase()}</span>
+                              )}
+                              <span className="text-xs font-bold text-gray-800">{activeLead.owner}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Lead Scoring */}
+                      <div className="rounded-xl border overflow-hidden border-gray-200">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Lead Scoring</span>
+                        </div>
+                        <div className="p-4 space-y-3">
+                          {[
+                            { label: 'Overall Score', value: activeLead.score, color: activeLead.score >= 80 ? '#10b981' : activeLead.score >= 60 ? '#f59e0b' : '#ef4444' },
+                            { label: 'Fit Score', value: activeLead.fit_score ?? 0, color: '#6366f1' },
+                            { label: 'Engagement Score', value: activeLead.engagement_score ?? 0, color: '#8b5cf6' },
+                          ].map(s => (
+                            <div key={s.label}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-semibold text-gray-500">{s.label}</span>
+                                <span className="text-xs font-bold tabular-nums" style={{ color: s.color }}>{s.value}%</span>
+                              </div>
+                              <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.value}%`, background: s.color }} />
+                              </div>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-xs font-semibold text-gray-500">Priority Tier</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              activeLead.priorityTier === 'Critical' ? 'bg-cyan-50 text-cyan-700 border-cyan-200' :
+                              activeLead.priorityTier === 'High' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              activeLead.priorityTier === 'Medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              'bg-gray-50 text-gray-600 border-gray-200'
+                            }`}>{activeLead.priorityTier || activeLead.priority || '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Quick Action Buttons */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <button onClick={() => { router.push(`?compose=${encodeURIComponent(activeLead.email)}`); onTabChange?.('emails'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } })); }, 150); }}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 text-gray-700 cursor-pointer transition">
+                          <Mail className="h-4 w-4" /><span>Email</span>
+                        </button>
+                        <button onClick={() => setIsCallModalOpen(true)}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 text-gray-700 cursor-pointer transition">
+                          <PhoneCall className="h-4 w-4" /><span>Call</span>
+                        </button>
+                        <button onClick={() => { onTabChange?.('calendar'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-open-create-calendar-event-modal', { detail: { title: `Meet with ${activeLead.name}`, attendees: activeLead.email || activeLead.name, date: new Date().toISOString().slice(0, 10), time: '11:00 AM', type: 'meeting' } })); }, 150); }}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-gray-700 cursor-pointer transition">
+                          <Calendar className="h-4 w-4" /><span>Meet</span>
+                        </button>
+                      </div>
+
+                      {/* Notes */}
+                      <div className="rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Internal Notes</span>
+                        </div>
+                        <div className="p-4">
+                          <textarea
+                            className="w-full p-3 rounded-lg text-xs leading-relaxed resize-y min-h-[90px] focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300 text-gray-800 bg-gray-50 border border-gray-200"
+                            value={activeLead.notes}
+                            onChange={(e) => handleSaveNotes(e.target.value)}
+                            placeholder="Record lead feedback, key challenges, sizing metrics..."
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="font-bold text-gray-900 text-base leading-tight">{activeLead.name}</h2>
-                      <p className="text-xs text-gray-500 font-medium">{activeLead.company}</p>
+
+                    {/* RIGHT COLUMN — Activity History */}
+                    <div className="rounded-xl border flex flex-col border-gray-200" style={{ maxHeight: '78vh' }}>
+                      <div className="px-4 py-2.5 border-b shrink-0 bg-gray-50 border-gray-200">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Activity History</span>
+                      </div>
+                      <div className="flex gap-1 px-4 pt-3 pb-2 flex-wrap shrink-0 border-b border-gray-100">
+                        {[
+                          { id: 'timeline', label: 'Timeline', icon: Clock },
+                          { id: 'emails', label: 'Emails', icon: Mail },
+                          { id: 'calls', label: 'Calls', icon: PhoneCall },
+                          { id: 'meetings', label: 'Meetings', icon: Calendar },
+                          { id: 'activity chart', label: 'Chart', icon: TrendingUp },
+                        ].map(tab => {
+                          const Icon = tab.icon;
+                          const active = activeHistoryTab === tab.id;
+                          return (
+                            <button key={tab.id} onClick={() => setActiveHistoryTab(tab.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer"
+                              style={active ? { background: '#7c3aed', color: '#fff', border: '1px solid #7c3aed' } : { background: '#fff', color: '#6b7280', border: '1px solid #e5e7eb' }}>
+                              <Icon className="h-3 w-3 shrink-0" />
+                              <span>{tab.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-white">
+                        {activeHistoryTab === 'timeline' && (
+                          activeLead.timeline.length > 0 ? activeLead.timeline.map(act => (
+                            <div key={act.id} className="flex gap-3 p-3 rounded-lg border bg-gray-50 border-gray-100 hover:bg-purple-50 hover:border-purple-100 transition">
+                              <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-purple-50 border border-purple-100">
+                                <Clock className="h-3.5 w-3.5 text-purple-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-xs font-bold leading-snug text-gray-800">{act.title}</p>
+                                  <span className="text-[9px] font-mono shrink-0 text-gray-400">{act.time}</span>
+                                </div>
+                                <p className="text-[10px] mt-0.5 text-gray-500">{act.desc}</p>
+                              </div>
+                            </div>
+                          )) : <p className="text-center py-8 text-xs text-gray-400">No timeline activity yet.</p>
+                        )}
+                        {activeHistoryTab === 'emails' && (
+                          activeLead.emails.length > 0 ? activeLead.emails.map(e => (
+                            <div key={e.id} className="p-3 rounded-lg border bg-purple-50/30 border-purple-100 hover:bg-purple-50 transition">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-[9px] text-gray-400 mb-0.5">To: {activeLead.email}</p>
+                                  <p className="text-xs font-bold text-purple-700">{e.subject}</p>
+                                </div>
+                                <span className="text-[9px] font-mono shrink-0 text-gray-400">{e.time}</span>
+                              </div>
+                            </div>
+                          )) : <p className="text-center py-8 text-xs text-gray-400">No emails logged.</p>
+                        )}
+                        {activeHistoryTab === 'calls' && (
+                          activeLead.calls.length > 0 ? activeLead.calls.map(c => {
+                            const connected = c.outcome?.toLowerCase().includes('connect');
+                            return (
+                              <div key={c.id} className="p-3 rounded-lg border" style={{ background: connected ? '#f0fdf4' : '#fff1f2', borderColor: connected ? '#bbf7d0' : '#fecdd3' }}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="px-2 py-0.5 rounded text-[9px] font-bold" style={connected ? { background: '#d1fae5', color: '#065f46' } : { background: '#fee2e2', color: '#991b1b' }}>{c.outcome}</span>
+                                  <span className="text-[9px] font-mono text-gray-400">{c.time}</span>
+                                </div>
+                                <p className="text-[10px] text-gray-600">{c.notes}</p>
+                              </div>
+                            );
+                          }) : <p className="text-center py-8 text-xs text-gray-400">No calls logged.</p>
+                        )}
+                        {activeHistoryTab === 'meetings' && (
+                          activeLead.meetings.length > 0 ? activeLead.meetings.map(m => (
+                            <div key={m.id} className="p-3 rounded-lg border border-blue-100 bg-blue-50/50 hover:bg-blue-50 transition">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <p className="text-xs font-bold text-blue-800">{m.title}</p>
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 bg-purple-100 text-purple-700">{m.date}</span>
+                              </div>
+                              <p className="text-[10px] flex items-center gap-1 mb-1 text-blue-600"><Clock className="h-2.5 w-2.5" />{m.time}</p>
+                              <p className="text-[10px] text-gray-500">{m.desc}</p>
+                            </div>
+                          )) : <p className="text-center py-8 text-xs text-gray-400">No meetings scheduled.</p>
+                        )}
+                        {activeHistoryTab === 'activity chart' && (
+                          <div className="p-3 rounded-lg border bg-gray-50 border-gray-100">
+                            <h5 className="text-[9px] font-bold uppercase tracking-wider mb-3 flex items-center gap-1 text-gray-500">
+                              <TrendingUp className="h-3.5 w-3.5 text-purple-500" />Lead Score Progression
+                            </h5>
+                            <div className="w-full h-40 relative">
+                              <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
+                                <line x1="0" y1="90" x2="300" y2="90" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
+                                <line x1="0" y1="50" x2="300" y2="50" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
+                                <line x1="0" y1="10" x2="300" y2="10" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
+                                <path d={getProgressPoints(activeLead.score).areaPath} fill="url(#purpleGradMax)" opacity="0.2" />
+                                <path d={getProgressPoints(activeLead.score).path} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" />
+                                {getProgressPoints(activeLead.score).points.map((p, idx) => (
+                                  <circle key={idx} cx={p.x} cy={p.y} r="4" fill="#7c3aed" stroke="white" strokeWidth="1.5" />
+                                ))}
+                                <defs>
+                                  <linearGradient id="purpleGradMax" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#7c3aed" />
+                                    <stop offset="100%" stopColor="#7c3aed" stopOpacity="0" />
+                                  </linearGradient>
+                                </defs>
+                              </svg>
+                              <div className="flex justify-between text-[8px] font-medium mt-1 text-gray-400">
+                                <span>Start</span><span>Midpoint</span><span>Today ({activeLead.score})</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span className={`ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                      activeLead.status === 'Converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      activeLead.status === 'Lost' ? 'bg-red-50 text-red-700 border-red-200' :
-                      activeLead.status === 'Qualified' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                      activeLead.status === 'Contacted' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                      'bg-blue-50 text-blue-700 border-blue-200'
-                    }`}>{activeLead.status}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => setIsMaximized(false)}
-                      className="p-2 rounded-lg border cursor-pointer transition bg-white border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-800" title="Minimize">
-                      <Minimize2 className="h-4 w-4" />
+                </div>
+              </>
+            ) : (
+              /* ===== COMPACT SIDEBAR LAYOUT ===== */
+              <>
+                {/* Card Title Header */}
+                <div className="flex items-start justify-between border-b border-border pb-3">
+                  <div>
+                    <h3 className="font-semibold text-foreground text-sm">{activeLead.name}</h3>
+                    <p className="text-[10px] text-muted-foreground font-semibold">{activeLead.company}</p>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      type="button"
+                      onClick={() => setIsMaximized(true)}
+                      className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
+                      title="Maximize Summary"
+                    >
+                      <Maximize2 className="h-4 w-4" />
                     </button>
-                    <button onClick={() => { setSelectedLeadId(null); setIsMaximized(false); }}
-                      className="p-2 rounded-lg border cursor-pointer transition bg-white border-gray-200 hover:bg-red-50 hover:text-red-600 text-gray-500" title="Close">
+                    {/* Close Button */}
+                    <button 
+                      onClick={() => setSelectedLeadId(null)}
+                      className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
+                      title="Close Summary"
+                      aria-label="Close Summary"
+                    >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
+                </div>
+
+                {/* Quick Details Fields list */}
+                <div className="py-3.5 space-y-2.5 text-[11px] font-semibold border-b border-border">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <span className={`font-semibold px-1.5 py-0.25 rounded ${
+                      activeLead.status === 'Converted' ? 'text-brand-cyan bg-brand-cyan/15' : 'text-foreground'
+                    }`}>{activeLead.status}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Priority</span>
+                    <span className={`font-semibold ${
+                      activeLead.priorityTier === 'Critical' ? 'text-brand-cyan bg-brand-cyan/15 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'High' ? 'text-amber-700 bg-amber-50 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'Medium' ? 'text-blue-700 bg-blue-50 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'Low' ? 'text-muted-foreground bg-secondary px-1.5 py-0.25 rounded' : ''
+                    }`}>{activeLead.priorityTier || activeLead.priority}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Email</span>
+                    <a href={`mailto:${activeLead.email}`} className="text-brand-purple hover:underline truncate max-w-[150px]">{activeLead.email}</a>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Phone</span>
+                    <span className="text-foreground tabular-nums">{activeLead.phone}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Owner</span>
+                    <div className="flex items-center space-x-1">
+                      {activeLead.ownerAvatar ? (
+                        <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-border" />
+                      ) : (
+                        <span className="h-4.5 w-4.5 rounded-full border border-border bg-brand-purple/10 text-brand-purple flex items-center justify-center text-[9px] font-bold shrink-0">{(activeLead.owner || '?')[0].toUpperCase()}</span>
+                      )}
+                      <span className="text-foreground">{activeLead.owner}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Priority View - Advanced Scoring Details (toggled on/off) */}
+                {isPriorityView && (
+                  <div className="mt-4 border border-border rounded-xl p-3.5">
+                    <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider flex items-center space-x-1 mb-3">
+                      <Award className="h-4 w-4 text-brand-purple" />
+                      <span>Priority Scoring Details</span>
+                    </h4>
+                    <div className="space-y-2.5 text-[10px] font-semibold">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Fit Score</span>
+                        <span className="font-semibold text-foreground">{activeLead.fit_score ?? 0}%</span>
+                      </div>
+                      {activeLead.fitReasons.length > 0 && (
+                        <div className="reason-subtext">
+                          {activeLead.fitReasons.slice(0, 2).map((r, i) => (
+                            <div key={i} className="mb-0.5">• {r}</div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="border-t border-border" />
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Engagement Score</span>
+                        <span className="font-semibold text-foreground">{activeLead.engagement_score ?? 0}%</span>
+                      </div>
+                      {activeLead.engagementReasons.length > 0 && (
+                        <div className="reason-subtext">
+                          {activeLead.engagementReasons.slice(0, 2).map((r, i) => (
+                            <div key={i} className="mb-0.5">• {r}</div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="border-t border-border" />
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Overall Score</span>
+                        <span className={`font-semibold tabular-nums ${
+                          activeLead.score >= 80 ? 'text-brand-cyan' : activeLead.score >= 60 ? 'text-amber-600' : 'text-destructive'
+                        }`}>{activeLead.score}%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Tier</span>
+                        <span className={`font-semibold ${
+                          activeLead.priorityTier === 'Critical' ? 'text-brand-cyan' :
+                          activeLead.priorityTier === 'High' ? 'text-amber-600' :
+                          activeLead.priorityTier === 'Medium' ? 'text-blue-600' :
+                          activeLead.priorityTier === 'Low' ? 'text-muted-foreground' : 'text-muted-foreground'
+                        }`}>{activeLead.priorityTier || activeLead.priority}</span>
+                      </div>
+                      {activeLead.topReasons.length > 0 && (
+                        <div className="border-t border-border pt-2">
+                          <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Top Reasons</span>
+                          <div className="mt-1 text-[9px] text-muted-foreground leading-relaxed">
+                            {activeLead.topReasons.slice(0, 3).map((r, i) => (
+                              <div key={i} className="mb-0.5">• {r}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Notes block */}
+                <div className="mt-4">
+                  <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Internal Notes</h4>
+                  <textarea
+                    className="w-full p-2 border border-border rounded-lg text-[11px] font-semibold text-foreground bg-secondary placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 min-h-[70px] resize-y leading-relaxed"
+                    value={activeLead.notes}
+                    onChange={(e) => handleSaveNotes(e.target.value)}
+                    placeholder="Record lead feedback, key challenges, sizing metrics..."
+                  />
+                </div>
+
+                {/* Action Triggers panel */}
+                <div className="grid grid-cols-3 gap-2 mt-4">
+                  <button 
+                    onClick={() => {
+                      router.push(`?compose=${encodeURIComponent(activeLead.email)}`);
+                      onTabChange?.('emails');
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } }));
+                      }, 150);
+                    }}
+                    className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
+                  >
+                    <IconComp className="h-3 w-3 shrink-0" />
+                    <span>{tabItem.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+ 
+            {/* Tab content loops */}
+            <div className="mt-3.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin space-y-3">
+              {activeHistoryTab === 'timeline' && (
+                <div className="relative pl-5 border-l border-border/60 dark:border-border/40 space-y-4 py-1 ml-2.5">
+                  {activeLead.timeline.length > 0 ? (
+                    activeLead.timeline.map((act) => {
+                      const isEmail = act.title.toLowerCase().includes('email');
+                      const isCall = act.title.toLowerCase().includes('call');
+                      const isMeeting = act.title.toLowerCase().includes('meeting');
+                      const isConvert = act.title.toLowerCase().includes('convert');
+                      return (
+                        <div key={act.id} className="relative text-[10px] leading-relaxed group/item">
+                          {/* Dot/Icon indicator */}
+                          <div className="absolute -left-[29.5px] top-0.5 h-5 w-5 rounded-full bg-card border border-border/80 flex items-center justify-center shadow-sm group-hover/item:border-brand-purple transition-all duration-200">
+                            {isEmail ? <Mail className="h-2.5 w-2.5 text-brand-purple" /> :
+                             isCall ? <PhoneCall className="h-2.5 w-2.5 text-emerald-500" /> :
+                             isMeeting ? <Calendar className="h-2.5 w-2.5 text-brand-blue" /> :
+                             isConvert ? <Award className="h-2.5 w-2.5 text-amber-500" /> :
+                             <Clock className="h-2.5 w-2.5 text-muted-foreground" />}
+                          </div>
+                          <div className="font-bold text-foreground flex justify-between">
+                            <span className="group-hover/item:text-brand-purple transition-colors">{act.title}</span>
+                            <span className="text-muted-foreground font-semibold flex items-center gap-1 font-mono text-[9px]">
+                              <Clock className="h-2.5 w-2.5 text-muted-foreground/60" />
+                              {act.time}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground mt-0.5 font-medium">{act.desc}</p>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <p className="text-center text-muted-foreground py-3 text-[10px]">No timeline logs recorded.</p>
+                  )}
                 </div>
 
                 {/* Body: Two-column layout */}
@@ -2223,68 +2646,259 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
 
       {/* Create Lead modal removed — replaced by full page create view */}
 
-      {/* EDIT LEAD DIALOG MODAL */}
+      {/* EDIT LEAD FULL-PAGE VIEW — same layout as Create Lead */}
       {isEditModalOpen && (
-        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
-              <h3 className="font-semibold text-foreground text-sm">Edit Lead Details</h3>
-              <button onClick={() => setIsEditModalOpen(false)} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 overflow-y-auto">
+          <div className="space-y-6 max-w-5xl mx-auto px-4 py-8 animate-in fade-in duration-200">
+
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-border">
+              <div className="flex items-center space-x-4">
+                <button
+                  type="button"
+                  onClick={() => { setIsEditModalOpen(false); setEditingLeadId(null); }}
+                  className="p-2 border border-border hover:bg-secondary rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition hover:scale-105"
+                  title="Back to Leads"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="bg-brand-purple/10 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Edit Prospect</span>
+                  </div>
+                  <h2 className="font-sans text-2xl text-foreground font-bold tracking-tight mt-1">Edit Lead Details</h2>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Update contact, company, classification and technical context.</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3 self-end sm:self-auto">
+              </div>
             </div>
-            <form onSubmit={handleEditLead} className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Lead Name</label>
-                  <input type="text" required placeholder="e.g. John Doe" value={leadForm.name} onChange={(e) => setLeadForm({...leadForm, name: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none bg-background" />
+
+            <form id="edit-lead-form" onSubmit={handleEditLead} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+              {/* Card 1: Contact Information */}
+              <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center space-x-2 pb-3 border-b border-border">
+                  <div className="p-1.5 bg-brand-purple/10 text-brand-purple rounded-lg">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Contact Information</h4>
+                    <p className="text-[10px] text-muted-foreground font-medium">Basic contact details of the prospect</p>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company</label>
-                  <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company} onChange={(e) => setLeadForm({...leadForm, company: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none bg-background" />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Email</label>
-                  <input type="email" placeholder="name@company.com" value={leadForm.email} onChange={(e) => setLeadForm({...leadForm, email: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
-                </div>
-                <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Phone</label>
-                  <input type="text" placeholder="+1 (555) 000-0000" value={leadForm.phone} onChange={(e) => setLeadForm({...leadForm, phone: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
-                </div>
-              </div>
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Status</label>
-                  <select value={leadForm.status} onChange={(e) => setLeadForm({...leadForm, status: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
-                    <option>New</option>
-                    <option>Contacted</option>
-                    <option>Qualified</option>
-                    <option>Converted</option>
-                    <option>Lost</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Priority</label>
-                  <select value={leadForm.priority} onChange={(e) => setLeadForm({...leadForm, priority: e.target.value as any})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
-                    <option>Critical</option>
-                    <option>High</option>
-                    <option>Medium</option>
-                    <option>Low</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Owner</label>
-                  <select value={leadForm.owner} onChange={(e) => setLeadForm({...leadForm, owner: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
-                    <option>Sarah Johnson</option>
-                    <option>Alex Johnson</option>
-                    <option>Lisa Martinez</option>
-                  </select>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Full Name <span className="text-destructive">*</span></label>
+                      <input type="text" required placeholder="e.g. John Doe" value={leadForm.name}
+                        onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Job Title</label>
+                      <input type="text" placeholder="e.g. VP of Engineering" value={leadForm.jobTitle}
+                        onChange={(e) => setLeadForm({ ...leadForm, jobTitle: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Email Address <span className="text-destructive">*</span></label>
+                      <input type="email" required placeholder="name@company.com" value={leadForm.email}
+                        onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Phone Number</label>
+                      <input type="text" placeholder="+1 (555) 000-0000" value={leadForm.phone}
+                        onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
-                <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer">Save Changes</button>
+
+              {/* Card 2: Company Information */}
+              <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center space-x-2 pb-3 border-b border-border">
+                  <div className="p-1.5 bg-brand-purple/10 text-brand-purple rounded-lg">
+                    <Building2 className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Company Information</h4>
+                    <p className="text-[10px] text-muted-foreground font-medium">Details of the target organization</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Company Name <span className="text-destructive">*</span></label>
+                      <input type="text" required placeholder="e.g. Acme Corp" value={leadForm.company}
+                        onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Industry</label>
+                      <select value={leadForm.industry} onChange={(e) => setLeadForm({ ...leadForm, industry: e.target.value })}
+                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition">
+                        <option value="">Select Industry</option>
+                        <option value="Manufacturing">Manufacturing</option>
+                        <option value="Healthcare">Healthcare</option>
+                        <option value="Pharma">Pharma</option>
+                        <option value="Logistics">Logistics</option>
+                        <option value="Construction">Construction</option>
+                        <option value="Education">Education</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Insurance">Insurance</option>
+                        <option value="Hospitality">Hospitality</option>
+                        <option value="Real Estate">Real Estate</option>
+                        <option value="Agriculture">Agriculture</option>
+                        <option value="Legal">Legal</option>
+                        <option value="Retail">Retail</option>
+                        <option value="Media">Media</option>
+                        <option value="Consulting">Consulting</option>
+                        <option value="IT">IT</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Location</label>
+                      <input type="text" placeholder="e.g. San Francisco, CA" value={leadForm.location}
+                        onChange={(e) => setLeadForm({ ...leadForm, location: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Number of Employees</label>
+                      <select value={leadForm.numberOfEmployees} onChange={(e) => setLeadForm({ ...leadForm, numberOfEmployees: e.target.value })}
+                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition">
+                        <option value="">Select Range</option>
+                        <option value="1">1</option>
+                        <option value="10">10</option>
+                        <option value="50">50</option>
+                        <option value="200">200</option>
+                        <option value="500">500</option>
+                        <option value="1001">1001+</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Card 3: Lead Classification */}
+              <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center space-x-2 pb-3 border-b border-border">
+                  <div className="p-1.5 bg-brand-purple/10 text-brand-purple rounded-lg">
+                    <Globe className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Lead Classification</h4>
+                    <p className="text-[10px] text-muted-foreground font-medium">Source, priority, and current assignments</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Lead Source</label>
+                      <select value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}
+                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition">
+                        <option value="">Select Source</option>
+                        <option value="Website">Website</option>
+                        <option value="Referral">Referral</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Cold Email">Cold Email</option>
+                        <option value="Event">Event</option>
+                        <option value="Webinar">Webinar</option>
+                        <option value="Partner">Partner</option>
+                        <option value="Paid Ads">Paid Ads</option>
+                        <option value="Organic Search">Organic Search</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Priority</label>
+                      <select value={leadForm.priority} onChange={(e) => setLeadForm({ ...leadForm, priority: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition">
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Status</label>
+                      <select value={leadForm.status} onChange={(e) => setLeadForm({ ...leadForm, status: e.target.value as any })}
+                        className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition">
+                        <option value="New">New</option>
+                        <option value="Contacted">Contacted</option>
+                        <option value="Qualified">Qualified</option>
+                        <option value="Converted">Converted</option>
+                        <option value="Lost">Lost</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Lead Owner</label>
+                    <input type="text" placeholder="e.g. Sarah Johnson" value={leadForm.owner}
+                      onChange={(e) => setLeadForm({ ...leadForm, owner: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 4: Technical Context & Notes */}
+              <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
+                <div className="flex items-center space-x-2 pb-3 border-b border-border">
+                  <div className="p-1.5 bg-brand-purple/10 text-brand-purple rounded-lg">
+                    <Monitor className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-foreground text-xs uppercase tracking-wider">Technical Context & Notes</h4>
+                    <p className="text-[10px] text-muted-foreground font-medium">Tools used and additional qualitative notes</p>
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Current CRM</label>
+                      <input type="text" placeholder="e.g. Salesforce, HubSpot" value={leadForm.currentCRM}
+                        onChange={(e) => setLeadForm({ ...leadForm, currentCRM: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Operational System</label>
+                      <input type="text" placeholder="e.g. SAP, Oracle ERP" value={leadForm.operationalSystem}
+                        onChange={(e) => setLeadForm({ ...leadForm, operationalSystem: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Background Notes / Context</label>
+                    <textarea placeholder="Enter notes, requirements or key context..." value={leadForm.notes}
+                      onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}
+                      className="w-full h-19 px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition resize-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer actions */}
+              <div className="col-span-1 md:col-span-2 flex items-center justify-between p-4 bg-secondary/50 border border-border rounded-xl mt-4">
+                <p className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1">
+                  <span className="text-destructive font-bold text-xs">*</span> Required fields must be completed.
+                </p>
+                <div className="flex space-x-3">
+                  <button type="button" onClick={() => { setIsEditModalOpen(false); setEditingLeadId(null); }}
+                    className="px-4.5 py-2 border border-border rounded-xl text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit"
+                    className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition hover:-translate-y-0.5">
+                    Save Changes
+                  </button>
+                </div>
+              </div>
+
             </form>
           </div>
         </div>

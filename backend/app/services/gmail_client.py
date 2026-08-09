@@ -70,10 +70,12 @@ class GmailClient:
     async def get_profile(self, access_token: str) -> dict[str, Any]:
         return await self._get("profile", access_token)
 
-    async def list_messages(self, access_token: str, page_token: str | None = None, max_results: int = 25) -> dict[str, Any]:
-        params = {"maxResults": max_results}
+    async def list_messages(self, access_token: str, page_token: str | None = None, max_results: int = 25, q: str | None = None) -> dict[str, Any]:
+        params: dict[str, Any] = {"maxResults": max_results}
         if page_token:
             params["pageToken"] = page_token
+        if q:
+            params["q"] = q
         return await self._get("messages", access_token, params=params)
 
     async def list_history(

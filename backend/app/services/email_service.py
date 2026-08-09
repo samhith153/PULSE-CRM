@@ -756,7 +756,16 @@ class EmailService:
                 await self.connection_repo.update(connection, sync_cursor=None)
 
         try:
-            listed = await self.gmail_client.list_messages(access_token, page_token=None, max_results=500)
+            # On first-ever sync (no cursor), only fetch emails from the last 7 days
+            # to avoid downloading hundreds of historical messages on startup.
+            import time as _time
+            after_epoch = int(_time.time()) - (7 * 24 * 3600)
+            listed = await self.gmail_client.list_messages(
+                access_token,
+                page_token=None,
+                max_results=50,
+                q=f"after:{after_epoch}",
+            )
         except Exception as exc:
             logger.warning("Gmail list_messages failed: %s", exc)
             raise
