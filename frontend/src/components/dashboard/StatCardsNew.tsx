@@ -81,17 +81,48 @@ function CountUp({
 }
 
 const currency = (n: number, decimals = 0) =>
-  n.toLocaleString('en-US', {
+  n.toLocaleString('en-IN', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'INR',
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   });
 
-export default function StatCardsNew() {
+function formatDelta(current: number, previous: number): string {
+  if (previous === 0) return current > 0 ? '+100%' : '0%';
+  const pct = ((current - previous) / previous) * 100;
+  const sign = pct > 0 ? '+' : '';
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
+interface StatCardsNewProps {
+  revenue: number;
+  revenueGrowth: number;
+  wonDeals: number;
+  dealsGrowth: number;
+  winRate: number;
+  winRateGrowth: number;
+  avgDealSize: number;
+  avgDealGrowth: number;
+}
+
+export default function StatCardsNew({
+  revenue,
+  revenueGrowth,
+  wonDeals,
+  dealsGrowth,
+  winRate,
+  winRateGrowth,
+  avgDealSize,
+  avgDealGrowth,
+}: StatCardsNewProps) {
+  const winRateDelta = formatDelta(winRate, winRate - winRateGrowth);
+  const avgDealDelta = formatDelta(avgDealSize, avgDealSize - avgDealGrowth);
+  const wonDealsDelta = formatDelta(wonDeals, wonDeals - dealsGrowth);
+
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-      {/* Total Profit — highlighted */}
+      {/* Total Revenue — highlighted */}
       <StatCard
         index={0}
         filledBadge
@@ -103,78 +134,86 @@ export default function StatCardsNew() {
             <span className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10" />
             <span className="pointer-events-none absolute -bottom-24 -left-8 size-56 rounded-full bg-white/5" />
             <p className="relative text-[15px] font-semibold text-primary-foreground/90">
-              Total Profit
+              Total Revenue
             </p>
             <div className="relative mt-8 flex items-center gap-2">
               <CountUp
-                value={14813.1}
+                value={revenue}
                 active={inView}
                 format={(n) => currency(n, 2)}
                 className="text-[26px] font-extrabold tracking-tight tabular-nums"
               />
               <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[11px] font-semibold">
-                <MoveUpRight className="size-3" />
-                +3.9%
+                {revenueGrowth >= 0 ? (
+                  <MoveUpRight className="size-3" />
+                ) : (
+                  <MoveDownRight className="size-3" />
+                )}
+                {formatDelta(revenue, revenue - revenueGrowth)}
               </span>
             </div>
             <p className="relative mt-3 text-xs text-primary-foreground/75">
-              vs last month $12.534.00
+              vs last month {currency(revenue - revenueGrowth, 2)}
             </p>
           </>
         )}
       </StatCard>
 
-      {/* Total Insight */}
+      {/* Won Deals */}
       <StatCard index={1} className="card-surface">
         {(inView) => (
           <>
-            <p className="text-[15px] font-semibold">Total Insight</p>
+            <p className="text-[15px] font-semibold">Won Deals</p>
             <div className="mt-8 flex items-center gap-2">
               <CountUp
-                value={122380}
+                value={wonDeals}
                 active={inView}
-                format={(n) => currency(n)}
+                format={(n) => `${Math.round(n)}`}
                 className="text-[26px] font-extrabold tracking-tight tabular-nums"
               />
-              <Delta value="+4.2%" />
+              <Delta value={wonDealsDelta} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">vs last month $119.53</p>
+            <p className="mt-3 text-xs text-muted-foreground">
+              vs last month {Math.max(0, wonDeals - Math.round(dealsGrowth))} deals
+            </p>
           </>
         )}
       </StatCard>
 
-      {/* Organic Sales */}
+      {/* Win Rate */}
       <StatCard index={2} className="card-surface">
         {(inView) => (
           <>
-            <p className="text-[15px] font-semibold">Organic Sales</p>
+            <p className="text-[15px] font-semibold">Win Rate</p>
             <div className="mt-8 flex items-center gap-2">
               <CountUp
-                value={98.1}
+                value={winRate}
                 active={inView}
-                format={(n) => `$${n.toFixed(1).replace('.', ',')}M`}
+                format={(n) => `${n.toFixed(1)}%`}
                 className="text-[26px] font-extrabold tracking-tight tabular-nums"
               />
-              <Delta value="-2.8%" negative />
+              <Delta value={winRateDelta} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">vs last month $2.8M</p>
+            <p className="mt-3 text-xs text-muted-foreground">
+              vs last month {(winRate - winRateGrowth).toFixed(1)}%
+            </p>
           </>
         )}
       </StatCard>
 
-      {/* Gross Margin */}
+      {/* Average Deal Size */}
       <StatCard index={3} className="card-surface overflow-hidden">
         {(inView) => (
           <>
-            <p className="text-[15px] font-semibold">Gross Margin</p>
+            <p className="text-[15px] font-semibold">Avg Deal Size</p>
             <div className="mt-8 flex items-center gap-2">
               <CountUp
-                value={72}
+                value={avgDealSize}
                 active={inView}
-                format={(n) => `${Math.round(n)}%`}
+                format={(n) => currency(n, 0)}
                 className="text-[26px] font-extrabold tracking-tight tabular-nums text-brand"
               />
-              <Delta value="+4.2%" />
+              <Delta value={avgDealDelta} />
             </div>
 
             <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[62px]">

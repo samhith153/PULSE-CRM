@@ -1,16 +1,36 @@
 import { MoreVertical, MoveUpRight } from 'lucide-react';
+import { asNumber, type Decimal } from '@/utils/api';
 
-const sellers = [
-  { name: 'Pisang Kepok', price: '$24', delta: '+4.2%', total: '$2,423.00', initials: 'PK' },
-  { name: 'Anggur Merah', price: '$18', delta: '+2.8%', total: '$1,982.00', initials: 'AM' },
-  { name: 'Mangga Harum', price: '$32', delta: '+6.4%', total: '$1,540.00', initials: 'MH' },
-];
+interface DealsByStageItem {
+  stage: string;
+  count: number;
+  percentage: Decimal;
+  conversion_rate: Decimal;
+}
 
-export function BestSellersNew() {
+const STAGE_COLORS: Record<string, string> = {
+  'Lead': 'bg-sky-100 text-sky-700',
+  'Qualified': 'bg-violet-100 text-violet-700',
+  'Proposal': 'bg-amber-100 text-amber-700',
+  'Negotiation': 'bg-orange-100 text-orange-700',
+  'Closed Won': 'bg-emerald-100 text-emerald-700',
+  'Closed Lost': 'bg-rose-100 text-rose-700',
+  'Discovery': 'bg-cyan-100 text-cyan-700',
+};
+
+function getStageColor(stage: string): string {
+  return STAGE_COLORS[stage] || 'bg-gray-100 text-gray-700';
+}
+
+function getInitials(stage: string): string {
+  return stage.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+}
+
+export function BestSellersNew({ dealsByStage }: { dealsByStage: DealsByStageItem[] }) {
   return (
     <section className="card-surface p-6">
       <div className="flex items-center gap-3">
-        <h2 className="text-[19px] font-bold tracking-tight">Best Sellers</h2>
+        <h2 className="text-[19px] font-bold tracking-tight">Deals by Stage</h2>
         <button
           aria-label="More options"
           className="ml-auto grid size-9 place-items-center rounded-full"
@@ -22,34 +42,44 @@ export function BestSellersNew() {
       <table className="mt-5 w-full border-collapse text-left">
         <thead>
           <tr className="bg-muted text-xs text-muted-foreground">
-            <th className="rounded-l-xl px-4 py-3 font-medium">Seller</th>
-            <th className="px-4 py-3 text-center font-medium">Stats</th>
-            <th className="rounded-r-xl px-4 py-3 text-right font-medium">Total</th>
+            <th className="rounded-l-xl px-4 py-3 font-medium">Stage</th>
+            <th className="px-4 py-3 text-center font-medium">Deals</th>
+            <th className="rounded-r-xl px-4 py-3 text-right font-medium">Conversion</th>
           </tr>
         </thead>
         <tbody>
-          {sellers.map((s) => (
-            <tr key={s.name} className="border-b border-border last:border-0">
-              <td className="px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <span className="grid size-10 place-items-center rounded-full bg-brand-pale text-xs font-bold text-brand-deep">
-                    {s.initials}
-                  </span>
-                  <div className="leading-tight">
-                    <p className="text-[15px] font-bold">{s.name}</p>
-                    <p className="text-xs text-muted-foreground">{s.price}</p>
-                  </div>
-                </div>
+          {dealsByStage.length === 0 ? (
+            <tr>
+              <td colSpan={3} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                No stage data available
               </td>
-              <td className="px-4 py-4 text-center">
-                <span className="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-1 text-[11px] font-semibold text-mint-foreground">
-                  <MoveUpRight className="size-3" />
-                  {s.delta}
-                </span>
-              </td>
-              <td className="px-4 py-4 text-right text-[15px] font-semibold">{s.total}</td>
             </tr>
-          ))}
+          ) : (
+            dealsByStage.map((s) => (
+              <tr key={s.stage} className="border-b border-border last:border-0">
+                <td className="px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <span className={`grid size-10 place-items-center rounded-full text-xs font-bold ${getStageColor(s.stage)}`}>
+                      {getInitials(s.stage)}
+                    </span>
+                    <div className="leading-tight">
+                      <p className="text-[15px] font-bold">{s.stage}</p>
+                      <p className="text-xs text-muted-foreground">{s.count} deals</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-center">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-1 text-[11px] font-semibold text-mint-foreground">
+                    <MoveUpRight className="size-3" />
+                    {s.count}
+                  </span>
+                </td>
+                <td className="px-4 py-4 text-right text-[15px] font-semibold">
+                  {asNumber(s.percentage)?.toFixed(1) || '0.0'}%
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
     </section>
