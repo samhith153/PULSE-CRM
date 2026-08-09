@@ -222,20 +222,44 @@ async def backfill_lead_email_summaries(
     "/draft-outreach",
     response_model=StandardResponse[EmailDraftResponse],
     summary="Generate an AI outreach email draft",
-    description="Generates a brand-new (not-a-reply) subject + body draft for a contact/lead, ready to review and send.",
+    description="Generates a brand-new (not-a-reply) subject + body draft for a contact/lead, enriched with past email history.",
     dependencies=[Depends(require_permission("email:read"))],
 )
 async def draft_outreach_email(payload: EmailDraftRequest, current_user: CurrentUser, db: DBSession) -> dict:
     client = AIClient()
     try:
         sender_name = getattr(current_user, "full_name", None) or getattr(current_user, "name", None) or None
+        
+        # 1. Start with any CRM notes passed directly from the frontend UI
+        enriched_context = payload.context or ""
+        
+        # 2. Fetch past email thread history from the database to inject into the LLM
+        if payload.external_entity_id:
+            stmt = select(Email).where(
+                Email.external_entity_id == payload.external_entity_id,
+                Email.organization_id == current_user.organization_id
+            ).order_by(Email.sent_at.desc()).limit(3)
+            
+            result = await db.execute(stmt)
+            past_emails = result.scalars().all()
+            
+            if past_emails:
+                enriched_context += "\n\n--- RECENT EMAIL HISTORY ---\n"
+                # Reverse to chronological order (oldest first) so the AI reads it like a timeline
+                for msg in reversed(past_emails):
+                    direction_label = "Sent to Lead" if msg.direction == "outbound" else "Received from Lead"
+                    date_str = msg.sent_at.strftime('%Y-%m-%d') if msg.sent_at else "Unknown Date"
+                    body_snippet = msg.body_preview or "No body text available."
+                    enriched_context += f"[{date_str}] {direction_label} | Subject: {msg.subject}\nBody: {body_snippet}\n\n"
+
+        # 3. Send the deeply enriched context to the stateless AI service
         raw = await client.draft_email(
             recipient_name=payload.recipient_name,
             recipient_email=payload.recipient_email,
             company=payload.company,
             designation=payload.designation,
             purpose=payload.purpose,
-            context=payload.context,
+            context=enriched_context,
             sender_name=sender_name,
         )
     finally:

@@ -589,7 +589,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-[2.25rem] capitalize flex items-center gap-2">
             <span>Welcome,</span>
-            <span className="text-brand-purple">{userName}</span>
+            <span className="text-brand">{userName}</span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground font-medium">
             Here's a snapshot of your agenda and performance metrics.
@@ -598,9 +598,9 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
         <div className="flex items-center gap-[var(--space-2)]">
           <button
             onClick={() => setIsEditMode(!isEditMode)}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition border cursor-pointer select-none ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer select-none ${
               isEditMode
-                ? 'bg-brand-purple text-primary-foreground border-transparent shadow-sm'
+                ? 'bg-brand text-primary-foreground border-transparent shadow-sm'
                 : 'bg-secondary/35 hover:bg-secondary border-border text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -608,7 +608,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
             <span>{isEditMode ? 'Save Layout' : 'Customize Layout'}</span>
           </button>
           <div className="flex items-center gap-2 bg-secondary/35 border border-border px-3 py-1.5 rounded-full text-xs font-semibold text-muted-foreground select-none">
-            <Calendar size={13} className="text-brand-purple" />
+            <Calendar size={13} className="text-brand" />
             <span className="capitalize">{userName}'s Home</span>
           </div>
         </div>
@@ -643,7 +643,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     <button
                       key={id}
                       onClick={() => handleShowCard(id)}
-                      className="px-2.5 py-1 bg-brand-purple/10 text-brand-purple hover:bg-brand-purple hover:text-primary-foreground border border-brand-purple/20 hover:border-transparent rounded-lg text-[10px] font-bold transition cursor-pointer"
+                      className="px-2.5 py-1 bg-brand-purple/10 text-brand-purple hover:bg-brand-purple hover:text-primary-foreground border border-brand-purple/20 hover:border-transparent rounded-lg text-[10px] font-bold transition-all cursor-pointer"
                     >
                       + {labelMap[id] || id}
                     </button>
@@ -653,7 +653,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
             )}
             <button
               onClick={handleResetLayout}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
             >
               <RotateCcw size={12} />
               <span>Reset Layout</span>
@@ -677,86 +677,102 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
               if (itemId === 'stats') {
                 // Render KPI cards row
                 cardContent = (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-4)]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { 
-                        title: 'My Open Deals', 
-                        value: openDealsCount, 
-                        icon: Layers, 
-                        color: 'text-brand-blue bg-brand-blue/10 border-brand-blue/20',
-                        emptyLabel: 'No active deals'
+                      {
+                        title: 'My Open Deals',
+                        value: openDealsCount,
+                        sub: 'in pipeline',
+                        icon: Layers,
+                        highlight: true,
+                        emptyLabel: 'No active deals',
+                        iconColor: 'text-white',
+                        iconBg: 'bg-white/20',
                       },
-                      { 
-                        title: 'My Untouched Deals', 
-                        value: untouchedDealsCount, 
-                        icon: AlertCircle, 
-                        color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-                        emptyLabel: 'All deals touched'
+                      {
+                        title: 'My Untouched Deals',
+                        value: untouchedDealsCount,
+                        sub: 'Needs follow-up today',
+                        icon: AlertCircle,
+                        highlight: false,
+                        emptyLabel: 'All deals touched',
+                        iconColor: 'text-amber-500',
+                        iconBg: 'bg-amber-50 dark:bg-amber-500/10',
                       },
-                      { 
-                        title: 'My Calls Today', 
-                        value: callsTodayCount, 
-                        icon: PhoneCall, 
-                        color: 'text-brand-cyan bg-brand-cyan/10 border-brand-cyan/20',
-                        emptyLabel: 'No calls logged'
+                      {
+                        title: 'My Calls Today',
+                        value: callsTodayCount,
+                        sub: 'scheduled & logged',
+                        icon: PhoneCall,
+                        highlight: false,
+                        emptyLabel: 'No calls logged',
+                        iconColor: 'text-emerald-500',
+                        iconBg: 'bg-emerald-50 dark:bg-emerald-500/10',
                       },
-                      { 
-                        title: 'My Leads', 
-                        value: leadsCount, 
-                        icon: Users, 
-                        color: 'text-brand-purple bg-brand-purple/10 border-brand-purple/20',
-                        emptyLabel: 'No leads assigned'
+                      {
+                        title: 'My Leads',
+                        value: leadsCount,
+                        sub: 'new this week',
+                        icon: Users,
+                        highlight: false,
+                        emptyLabel: 'No leads assigned',
+                        iconColor: 'text-brand',
+                        iconBg: 'bg-brand-pale',
                       },
                     ].map((card, i) => {
                       const Icon = card.icon;
-                      
-                      // Shape definition mapping for Part 2 requirements
-                      let shapeClass = 'rounded-xl';
-                      let clipPath = undefined;
-                      let rotateWrapper = false;
-
-                      if (card.title === 'My Leads') {
-                        shapeClass = 'rounded-full'; // perfect circle
-                      } else if (card.title === 'My Open Deals') {
-                        shapeClass = 'rounded-[10px]'; // squircle (~30% radius)
-                      } else if (card.title === 'My Untouched Deals') {
-                        shapeClass = ''; // custom hexagon clip-path
-                        clipPath = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
-                      } else if (card.title === 'My Calls Today') {
-                        shapeClass = 'rounded-md'; // diamond (rotate 45deg)
-                        rotateWrapper = true;
-                      }
-
                       return (
-                        <div 
-                          key={i} 
-                          className="bg-card border border-border rounded-[8px] p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-300 flex items-center justify-between h-20 select-none"
+                        <div
+                          key={i}
+                          className={`relative rounded-2xl p-5 flex flex-col gap-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${
+                            card.highlight
+                              ? 'bg-brand text-white shadow-[0_8px_24px_-8px_var(--brand)]'
+                              : 'bg-card border border-border text-foreground shadow-sm hover:shadow-md'
+                          }`}
                         >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
+                          {/* decorative circle on highlight card */}
+                          {card.highlight && (
+                            <span className="pointer-events-none absolute -right-8 -top-8 size-36 rounded-full bg-white/10" />
+                          )}
+
+                          {/* top row: label + icon */}
+                          <div className="flex items-start justify-between gap-3">
+                            <p className={`text-[10px] font-bold uppercase tracking-widest leading-none ${
+                              card.highlight ? 'text-white/75' : 'text-muted-foreground'
+                            }`}>
                               {card.title}
                             </p>
-                            <div className="mt-2.5 flex items-baseline">
-                              {statsLoading ? (
-                                <span className="text-xl font-extrabold text-muted-foreground/45 animate-pulse">...</span>
-                              ) : card.value === null || card.value === 0 ? (
-                                <span className="text-[10px] font-semibold text-muted-foreground/75 bg-secondary/40 px-2 py-0.5 rounded border border-border/80 inline-block select-none">
-                                  {card.emptyLabel}
-                                </span>
-                              ) : (
-                                <h3 className="text-2xl font-black text-foreground tracking-tight tabular-nums leading-none">
-                                  {card.value}
-                                </h3>
-                              )}
-                            </div>
+                            <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${card.iconBg}`}>
+                              <Icon size={16} strokeWidth={2} className={card.iconColor} />
+                            </span>
                           </div>
 
-                          {/* Nested badge design securely inside the card container */}
-                          <div 
-                            style={{ clipPath }}
-                            className={`h-9 w-9 flex items-center justify-center border shrink-0 shadow-sm transition-transform duration-300 ${card.color} ${shapeClass} ${rotateWrapper ? 'rotate-45' : ''}`}
-                          >
-                            <Icon size={15} strokeWidth={2.25} className={rotateWrapper ? '-rotate-45' : ''} />
+                          {/* value */}
+                          <div>
+                            {statsLoading ? (
+                              <div className={`h-8 w-16 rounded-lg animate-pulse ${card.highlight ? 'bg-white/20' : 'bg-secondary'}`} />
+                            ) : card.value === null || card.value === 0 ? (
+                              <span className={`inline-block text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${
+                                card.highlight
+                                  ? 'bg-white/15 border-white/25 text-white/80'
+                                  : 'bg-secondary border-border text-muted-foreground'
+                              }`}>
+                                {card.emptyLabel}
+                              </span>
+                            ) : (
+                              <div>
+                                <h3 className={`text-3xl font-extrabold tracking-tight tabular-nums leading-none ${
+                                  card.highlight ? 'text-white' : 'text-foreground'
+                                }`}>
+                                  {card.value}
+                                </h3>
+                                <p className={`mt-1.5 text-xs leading-snug ${
+                                  card.highlight ? 'text-white/65' : 'text-muted-foreground'
+                                }`}>
+                                  {card.sub}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -774,9 +790,9 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                 cardContent = (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--space-4)] items-stretch">
                     {/* Left Column — My Open Tasks */}
-                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
+                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
                       {/* Ambient light aura */}
-                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
+                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
 
                       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
                         {/* Header / Title / Refresh */}
@@ -812,7 +828,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                             </select>
                             <button 
                               onClick={() => setTaskSortOrder(taskSortOrder === 'asc' ? 'desc' : 'asc')}
-                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition"
+                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all"
                               title={taskSortOrder === 'asc' ? "Sort Descending" : "Sort Ascending"}
                             >
                               <ArrowUpDown size={11} />
@@ -855,7 +871,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                                       <div className="flex items-center gap-2 min-w-0">
                                         <button 
                                           onClick={() => handleToggleTask(task.id)}
-                                          className="text-muted-foreground hover:text-brand-purple transition shrink-0 cursor-pointer"
+                                          className="text-muted-foreground hover:text-brand-purple transition-all shrink-0 cursor-pointer"
                                           title="Mark Complete"
                                         >
                                           <Circle className="size-4 text-muted-foreground/60 hover:text-brand-purple" />
@@ -919,9 +935,9 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     </div>
 
                     {/* Right Column — My Meetings */}
-                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
+                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
                       {/* Ambient light aura */}
-                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
+                      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
 
                       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
                         {/* Header / Title / Sort */}
@@ -948,7 +964,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                             </select>
                             <button 
                               onClick={() => setMeetingSortOrder(meetingSortOrder === 'asc' ? 'desc' : 'asc')}
-                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition"
+                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all"
                               title={meetingSortOrder === 'asc' ? "Sort Descending" : "Sort Ascending"}
                             >
                               <ArrowUpDown size={11} />

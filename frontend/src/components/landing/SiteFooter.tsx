@@ -11,8 +11,10 @@ const socials = [Twitter, Linkedin, Github, Youtube];
 
 export function SiteFooter() {
   return (
-    <footer className="bg-ink text-primary-foreground">
-      <div className="mx-auto max-w-7xl px-6 py-20">
+    <footer className="relative overflow-hidden bg-ink text-primary-foreground">
+      <div aria-hidden className="pointer-events-none absolute inset-0 footer-grid" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 footer-grid-fine" />
+      <div className="relative mx-auto max-w-7xl px-6 py-20">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {groups.map((g) => (
             <div key={g.title}>
@@ -33,7 +35,13 @@ export function SiteFooter() {
           ))}
         </div>
 
-        <div className="mt-16 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-6 border-t border-primary-foreground/10 pt-8 sm:flex sm:justify-between">
+        <div aria-hidden className="pointer-events-none mt-16 select-none">
+          <span className="footer-wordmark block text-center text-[22vw] font-extrabold leading-[0.78] tracking-tight">
+            Pulse
+          </span>
+        </div>
+
+        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-6 border-t border-primary-foreground/10 pt-8 sm:flex sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
             <span className="flex items-center gap-1 text-lg font-bold">
               Pulse
@@ -49,7 +57,7 @@ export function SiteFooter() {
                 key={i}
                 href="#"
                 aria-label="Social link"
-                className="grid size-9 place-items-center rounded-full border border-primary-foreground/15 text-primary-foreground/70 transition duration-200 hover:-translate-y-0.5 hover:text-primary-foreground"
+                className="grid size-9 place-items-center rounded-full border border-primary-foreground/15 text-primary-foreground/70 transition-all duration-200 hover:-translate-y-0.5 hover:text-primary-foreground"
               >
                 <Icon size={15} />
               </a>

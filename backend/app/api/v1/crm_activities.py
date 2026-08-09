@@ -720,3 +720,20 @@ async def get_entity_summary(
         entity_id=entity_id,
     )
     return {"success": True, "message": "Summary retrieved.", "data": result}
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# UNIFIED GET BY ID  GET /crm-activities/{activity_id}
+# Must be LAST — single-segment catch-all route
+# ─────────────────────────────────────────────────────────────────────────────
+
+@router.get(
+    "/{activity_id}",
+    response_model=StandardResponse[UnifiedActivityItem],
+    summary="Get a single activity by ID (any type)",
+    dependencies=[Depends(require_permission("activity:read"))],
+)
+async def get_activity(activity_id: UUID, current_user: CurrentUser, db: DBSession) -> dict:
+    svc = CrmActivitiesService(db)
+    item = await svc.get_unified_by_id(current_user, activity_id)
+    return {"success": True, "message": "OK", "data": item}

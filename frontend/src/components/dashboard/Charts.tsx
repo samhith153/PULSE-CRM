@@ -129,7 +129,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
       {/* 1. Hero Revenue Line Chart (Spans full horizontal container width) */}
       <div 
         data-visible={chartVisible}
-        className="reveal bg-card border border-border rounded-2xl p-6 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-nav transition duration-300 w-full relative"
+        className="reveal bg-card border border-border rounded-2xl p-6 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 w-full relative"
       >
         <div>
           <div className="flex items-center justify-between gap-3">
@@ -197,11 +197,11 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                       height={90 - c.y}
                       rx="1.5"
                       fill={isHovered ? "url(#revenueBarHoverGrad)" : "url(#revenueBarGrad)"}
-                      className="cursor-pointer transition duration-200"
+                      className="cursor-pointer transition-all duration-200"
                       whileHover={{ scaleY: 1.03, originY: 1 }}
                       initial={{ scaleY: 0, originY: 1 }}
                       animate={chartVisible ? { scaleY: 1 } : { scaleY: 0 }}
-                      transition={{ duration: 0.6, ease: "easeOut", delay: idx * 0.05 }}
+                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
                       onMouseEnter={() => setRevenueHoveredPoint({ x: c.x, y: c.y, label: c.label, value: c.val })}
                     />
                   );
@@ -244,7 +244,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
         
         {/* Deals by Pipeline Stage Funnel Chart */}
         <div 
-          className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-nav transition duration-300"
+          className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300"
         >
           <div>
             <div className="flex items-center justify-between gap-3">
@@ -290,7 +290,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
         </div>
 
         {/* Deals by Source Donut Chart */}
-        <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-1.5">
@@ -325,7 +325,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                       initial={{ strokeDashoffset: CIRC }}
                       animate={chartVisible ? { strokeDashoffset: sourceSegments[idx].offset } : { strokeDashoffset: CIRC }}
                       transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
-                      className="cursor-pointer transition duration-200"
+                      className="cursor-pointer transition-all duration-200"
                       onMouseEnter={() => setHoveredSourceIdx(idx)}
                       onMouseLeave={() => setHoveredSourceIdx(null)}
                     />
@@ -365,7 +365,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
         </div>
 
         {/* Revenue by Company Size Donut Chart */}
-        <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 flex flex-col justify-between">
+        <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center">
               <h3 className="font-bold text-foreground text-sm">Company size</h3>
@@ -395,7 +395,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                       initial={{ strokeDashoffset: CIRC }}
                       animate={chartVisible ? { strokeDashoffset: sizeSegments[idx].offset } : { strokeDashoffset: CIRC }}
                       transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
-                      className="cursor-pointer transition duration-200"
+                      className="cursor-pointer transition-all duration-200"
                       onMouseEnter={() => setHoveredSizeIdx(idx)}
                       onMouseLeave={() => setHoveredSizeIdx(null)}
                     />

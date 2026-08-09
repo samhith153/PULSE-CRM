@@ -21,6 +21,7 @@ import {
   CornerDownLeft,
   Calendar
 } from 'lucide-react';
+import { searchGlobalCRM } from '@/utils/api'; // <-- Added API import
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -32,6 +33,11 @@ interface CommandPaletteProps {
 export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewReportClick }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  
+  // NEW: State for live database results
+  const [dynamicResults, setDynamicResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -57,6 +63,57 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
+
+  // NEW: Effect to trigger backend search
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setDynamicResults([]);
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchSearchResults = async () => {
+      setIsSearching(true);
+      try {
+        const results = await searchGlobalCRM(query.trim());
+        
+        if (isMounted) {
+          // Format backend data to match Command Palette UI structure
+          const formattedDynamic = (results || []).map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            category: item.category as any, 
+            icon: Search, 
+            action: () => {
+              setActiveTab(item.type);
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('pulse-open-record', { 
+                  detail: { id: item.db_id, type: item.type } 
+                }));
+              }, 120);
+              onClose();
+            }
+          }));
+          
+          setDynamicResults(formattedDynamic);
+          setActiveIndex(0);
+        }
+      } catch (error) {
+        console.error("Failed to fetch search results:", error);
+      } finally {
+        if (isMounted) setIsSearching(false);
+      }
+    };
+
+    // Debounce the search by 300ms
+    const debounceTimer = setTimeout(fetchSearchResults, 300);
+    return () => {
+      isMounted = false;
+      clearTimeout(debounceTimer);
+    };
+  }, [query, setActiveTab, onClose]);
 
   if (!isOpen) return null;
 
@@ -140,11 +197,16 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
     { id: 'prod-history', title: 'Open command history', description: 'View executed actions log', category: 'Productivity' as const, icon: Activity, action: () => { alert('Command history loaded.'); onClose(); } },
   ];
 
-  // Filter items based on search query
-  const filtered = searchItems.filter(item => {
+  // UPDATED: Filter items based on search query
+  const staticFiltered = searchItems.filter(item => {
     const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
     return searchString.includes(query.toLowerCase());
   });
+
+  // NEW: Combine live database results with static navigation links
+  const filtered = query.trim().length >= 2 
+    ? [...dynamicResults, ...staticFiltered] 
+    : staticFiltered;
 
   // Handle arrow keys and enter
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -216,6 +278,14 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
             onKeyDown={handleKeyDown}
             className="w-full pl-11 pr-20 py-3.5 text-xs text-foreground bg-card placeholder-slate-400 focus:outline-none font-medium"
           />
+          
+          {/* NEW: Loading Spinner */}
+          {isSearching && (
+            <div className="absolute right-12 flex items-center pointer-events-none">
+              <div className="h-4 w-4 border-2 border-brand-purple border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
           <div className="absolute right-4 flex items-center space-x-1.5 pointer-events-none">
             <span className="text-[9px] font-bold text-muted-foreground bg-secondary border border-border px-1 py-0.5 rounded ">ESC</span>
           </div>

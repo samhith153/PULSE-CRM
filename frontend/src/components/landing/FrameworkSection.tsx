@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
-import { PillButton } from "./PillButton";
+import { PillButton } from "@/components/landing/PillButton";
 
 type Step = {
   letter: string;
@@ -196,7 +196,7 @@ export function FrameworkSection() {
                       type="button"
                       onClick={() => pick(i)}
                       aria-current={isActive}
-                      className={`relative flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left transition duration-400 ease-out ${
+                      className={`relative flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left transition-all duration-400 ease-out ${
                         isActive ? "bg-background shadow-float" : "hover:bg-background/60"
                       }`}
                     >
@@ -204,7 +204,7 @@ export function FrameworkSection() {
                         {String(i + 1).padStart(2, "0")}
                       </span>
                       <span
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold transition duration-400 ease-out ${
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold transition-all duration-400 ease-out ${
                           isActive
                             ? "bg-brand-blue text-background shadow-nav"
                             : "border border-border bg-background text-ink/70"

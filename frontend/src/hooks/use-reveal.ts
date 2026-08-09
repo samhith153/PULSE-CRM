@@ -1,56 +1,66 @@
 import { useEffect, useRef, useState } from "react";
 
-/** Reveals an element once it scrolls into view. */
-export function useReveal<T extends HTMLElement = HTMLDivElement>(threshold = 0.15) {
+export function prefersReducedMotion() {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/** Reveals once when the element scrolls into view. */
+export function useReveal<T extends HTMLElement>(threshold = 0.15) {
   const ref = useRef<T | null>(null);
-  const [visible, setVisible] = useState(false);
+  const [inView, setInView] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver(
+    if (prefersReducedMotion()) {
+      setInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisible(true);
-            io.disconnect();
-          }
-        });
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true);
+          observer.disconnect();
+        }
       },
-      { threshold, rootMargin: "0px 0px -60px 0px" },
+      { threshold },
     );
-    io.observe(el);
-    return () => io.disconnect();
+    observer.observe(el);
+    return () => observer.disconnect();
   }, [threshold]);
 
-  return { ref, visible };
+  return { ref, visible: inView, inView };
 }
 
-export function useCountUp(target: number, duration = 1000) {
-  const { ref, visible } = useReveal<HTMLDivElement>(0.15);
-  const [value, setValue] = useState(0);
-  const prevTargetRef = useRef(0);
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+/** Counts from 0 to `value` once `active` turns true. */
+export function useCountUp(value: number, active: boolean, duration = 1300, delay = 200) {
+  const [current, setCurrent] = useState(0);
 
   useEffect(() => {
-    if (!visible) return;
-    const startVal = prevTargetRef.current;
-    const diff = target - startVal;
-    
-    let frame = 0;
-    const start = performance.now();
-    const tick = (now: number) => {
-      const p = Math.min((now - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - p, 4); // easeOutQuart
-      setValue(Math.round(startVal + diff * eased));
-      if (p < 1) {
-        frame = requestAnimationFrame(tick);
-      } else {
-        prevTargetRef.current = target;
-      }
+    if (!active) return;
+    if (prefersReducedMotion()) {
+      setCurrent(value);
+      return;
+    }
+    let raf = 0;
+    let start = 0;
+    const timer = window.setTimeout(() => {
+      const step = (now: number) => {
+        if (!start) start = now;
+        const t = Math.min((now - start) / duration, 1);
+        setCurrent(value * easeOutCubic(t));
+        if (t < 1) raf = requestAnimationFrame(step);
+      };
+      raf = requestAnimationFrame(step);
+    }, delay);
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(raf);
     };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [visible, target, duration]);
+  }, [active, value, duration, delay]);
 
-  return { ref, value, visible };
+  return current;
 }

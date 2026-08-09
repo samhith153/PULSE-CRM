@@ -119,6 +119,114 @@ class CrmEmailRepository(BaseRepository[CrmEmail]):
         rows = (await self.db.execute(stmt)).all()
         return [self._row_to_dict(row) for row in rows], total
 
+
+    async def list_by_organization(
+        self,
+        organization_id: UUID,
+        search: Optional[str] = None,
+        direction: Optional[str] = None,
+        thread_id: Optional[str] = None,
+        external_entity_type: Optional[str] = None,
+        external_entity_id: Optional[UUID] = None,
+        page: int = 1,
+        page_size: int = 20,
+        sort_order: str = "desc",
+        from_date: Optional[datetime] = None,
+        to_date: Optional[datetime] = None,
+    ) -> Tuple[List[dict[str, Any]], int]:
+        """
+        List CRM emails for an organization using the interface
+        expected by CrmActivitiesService.
+        """
+
+        stmt = self._enriched_select().where(
+            CrmEmail.organization_id == organization_id,
+            CrmEmail.is_deleted.is_(False),
+        )
+
+        if direction:
+            stmt = stmt.where(
+                CrmEmail.direction == direction.lower()
+            )
+
+        if thread_id:
+            stmt = stmt.where(
+                CrmEmail.thread_id == thread_id
+            )
+
+        if external_entity_type:
+            stmt = stmt.where(
+                CrmEmail.related_entity_type == external_entity_type
+            )
+
+        if external_entity_id:
+            stmt = stmt.where(
+                or_(
+                    CrmEmail.related_lead_id == external_entity_id,
+                    CrmEmail.related_contact_id == external_entity_id,
+                    CrmEmail.related_company_id == external_entity_id,
+                    CrmEmail.related_deal_id == external_entity_id,
+                )
+            )
+
+        if from_date:
+            stmt = stmt.where(
+                CrmEmail.sent_at >= from_date
+            )
+
+        if to_date:
+            stmt = stmt.where(
+                CrmEmail.sent_at <= to_date
+            )
+
+        if search:
+            term = f"%{search.lower()}%"
+
+            stmt = stmt.where(
+                or_(
+                    CrmEmail.subject.ilike(term),
+                    CrmEmail.body.ilike(term),
+                    CrmEmail.recipient_email.ilike(term),
+                    CrmEmail.recipient_name.ilike(term),
+                )
+            )
+
+        count_stmt = select(
+            func.count()
+        ).select_from(
+            stmt.subquery()
+        )
+
+        total = int(
+            (
+                await self.db.execute(count_stmt)
+            ).scalar_one()
+            or 0
+        )
+
+        if sort_order == "asc":
+            order_col = CrmEmail.sent_at.asc()
+        else:
+            order_col = CrmEmail.sent_at.desc()
+
+        stmt = stmt.order_by(
+            order_col,
+            CrmEmail.created_at.desc(),
+        )
+
+        stmt = stmt.offset(
+            (page - 1) * page_size
+        ).limit(page_size)
+
+        rows = (
+            await self.db.execute(stmt)
+        ).all()
+
+        return [
+            self._row_to_dict(row)
+            for row in rows
+        ], total
+
     # ── Soft delete ───────────────────────────────────────────────────────────
 
     async def soft_delete(self, email: CrmEmail) -> CrmEmail:

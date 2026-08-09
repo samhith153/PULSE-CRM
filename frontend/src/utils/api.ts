@@ -330,6 +330,159 @@ export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecom
   });
 }
 
+// =============================================================================
+// AI LEAD WORKFLOW
+// =============================================================================
+
+export interface WorkflowTask {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTask | null;
+  history: WorkflowTask[];
+}
+
+/**
+ * Fetch the AI-driven workflow for a lead.
+ *
+ * Backend:
+ * GET /api/v1/workflows/leads/{lead_id}
+ */
+
+
+// ============================================================
+// AI WORKFLOW TASKS
+// ============================================================
+// ============================================================
+// AI WORKFLOW API
+// Replace ONLY your existing workflow-related interfaces/functions
+// with this block. Do not replace the entire api.ts file.
+// ============================================================
+
+export interface WorkflowTaskItem {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTaskItem | null;
+  history: WorkflowTaskItem[];
+}
+
+/**
+ * Fetch the workflow for one lead.
+ *
+ * IMPORTANT:
+ * Backend route is /api/v1/workflow (singular), not /workflows.
+ */
+export async function getLeadWorkflow(
+  leadId: string
+): Promise<LeadWorkflowResponse> {
+  const result = await apiFetch(
+    `/api/v1/workflows/leads/${leadId}`
+  );
+
+  if (!result) {
+    return {
+      current_task: null,
+      history: [],
+    };
+  }
+
+  const data = result?.data ?? result;
+
+  return {
+    current_task: data?.current_task ?? null,
+    history: Array.isArray(data?.history)
+      ? data.history
+      : [],
+  };
+}
+
+/**
+ * Complete ONE workflow task.
+ *
+ * IMPORTANT:
+ * Pass the workflow task ID, NOT the lead ID.
+ */
+export async function completeWorkflowTask(
+  taskId: string
+): Promise<WorkflowTaskItem> {
+  const result = await apiFetch(
+    `/api/v1/workflows/tasks/${taskId}/complete`,
+    {
+      method: 'POST',
+    }
+  );
+
+  return (result?.data ?? result) as WorkflowTaskItem;
+}
+
+
+/**
+ * Optional task-list endpoint.
+ * The Workflow page above does not need this function,
+ * but keeping it here is useful for other components.
+ */
+export async function getWorkflowTasks(
+  status?: string
+): Promise<WorkflowTaskItem[]> {
+  const query = status
+    ? `?status=${encodeURIComponent(status)}`
+    : '';
+
+  const result = await apiFetch<any>(
+    `/api/v1/workflows/tasks${query}`
+  );
+
+  if (!result) return [];
+
+  const data = result?.data ?? result;
+
+  return Array.isArray(data) ? data : [];
+}
+/**
+ * Complete an AI workflow task.
+ */
+export interface WorkflowTaskResponse {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+
 export interface BatchRecommendationItem {
   lead_id: string;
   recommended_action: string;
@@ -1237,6 +1390,10 @@ export async function getCrmActivities(
   return result ?? { data: [], meta: { total: 0, page: 1, page_size: 20, total_pages: 1, has_next: false, has_prev: false } };
 }
 
+export async function getCrmActivity(activityId: string): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/${activityId}`);
+}
+
 export async function getCrmActivityOwners(): Promise<CrmActivityOwner[]> {
   const result = await apiFetch<CrmActivityOwner[]>('/api/v1/crm-activities/owners');
   return Array.isArray(result) ? result : [];
@@ -1575,4 +1732,140 @@ export async function restoreUser(userId: string): Promise<UserData> {
 
 export async function permanentDeleteUser(userId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
+}
+
+// =============================================================================
+// SALES REP AI INSIGHTS API  (/api/v1/ai-insights/sales-rep)
+// =============================================================================
+
+export interface SalesRepActionItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  score: number;
+  reason: string;
+  deal_id: string | null;
+  deal_name: string | null;
+  deal_value: number;
+}
+
+export interface SalesRepFollowUpItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  days_overdue: number;
+  reason: string;
+  deal_id: string | null;
+  deal_value: number;
+}
+
+export interface SalesRepColdItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  score: number;
+  reason: string;
+  days_inactive: number;
+  deal_id: string | null;
+}
+
+export interface SalesRepActionCenter {
+  immediate_action: SalesRepActionItem[];
+  follow_up_due: SalesRepFollowUpItem[];
+  rising_interest: SalesRepActionItem[];
+  going_cold: SalesRepColdItem[];
+}
+
+export interface SalesRepPipelineHealth {
+  score: number;
+  status: string;
+  trend_label: string;
+  explanation: string;
+}
+
+export interface SalesRepPriorityItem {
+  priority_id: string;
+  title: string;
+  description: string;
+  priority_level: string;
+  related_lead: string | null;
+  related_lead_id: string | null;
+  related_deal: string | null;
+  related_deal_id: string | null;
+  related_company: string | null;
+  deal_value: number;
+  due_date: string | null;
+}
+
+export interface SalesRepSentimentBreakdown {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+export interface SalesRepIntentItem {
+  label: string;
+  count: number;
+}
+
+export interface SalesRepRecentSummary {
+  id: string;
+  contact_name: string;
+  company: string | null;
+  summary: string;
+  sentiment: string;
+  category: string;
+  follow_up_suggestion: string | null;
+  date: string;
+}
+
+export interface SalesRepConversationIntelligence {
+  sentiment: SalesRepSentimentBreakdown;
+  intent_distribution: SalesRepIntentItem[];
+  recent_summaries: SalesRepRecentSummary[];
+  powered_by: string;
+}
+
+export interface SalesRepAIInsightsData {
+  action_center: SalesRepActionCenter;
+  pipeline_health: SalesRepPipelineHealth;
+  daily_priorities: SalesRepPriorityItem[];
+  conversation_intelligence: SalesRepConversationIntelligence;
+  generated_at: string;
+}
+
+export async function getSalesRepAIInsights(): Promise<SalesRepAIInsightsData> {
+  return apiFetch<SalesRepAIInsightsData>('/api/v1/ai-insights/sales-rep');
+}
+
+// =============================================================================
+// GLOBAL SEARCH
+// =============================================================================
+
+export async function searchGlobalCRM(query: string) {
+  const token = getToken();
+  if (!token) {
+    console.error('No auth token found for search');
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search failed with status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data || []; 
+  } catch (error) {
+    console.error('Error fetching global search:', error);
+    return [];
+  }
 }

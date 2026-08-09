@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
 
-const browserbase = "/images/landing/logos/browserbase.svg";
-const inngest = "/images/landing/logos/inngest.svg";
-const davidAi = "/images/landing/logos/david-ai.svg";
-const braintrust = "/images/landing/logos/braintrust.svg";
-const durable = "/images/landing/logos/durable.svg";
-const openRouter = "/images/landing/logos/open-router.svg";
-const higgsfield = "/images/landing/logos/higgsfield.svg";
-const upstash = "/images/landing/logos/upstash.svg";
-const samaya = "/images/landing/logos/samaya.svg";
-const consensus = "/images/landing/logos/consensus.svg";
-const cartesia = "/images/landing/logos/cartesia.svg";
+const browserbase = "/landing/logos/browserbase.svg";
+const inngest = "/landing/logos/inngest.svg";
+const davidAi = "/landing/logos/david-ai.svg";
+const braintrust = "/landing/logos/braintrust.svg";
+const durable = "/landing/logos/durable.svg";
+const openRouter = "/landing/logos/open-router.svg";
+const higgsfield = "/landing/logos/higgsfield.svg";
+const upstash = "/landing/logos/upstash.svg";
+const samaya = "/landing/logos/samaya.svg";
+const consensus = "/landing/logos/consensus.svg";
+const cartesia = "/landing/logos/cartesia.svg";
 
-type Logo = { src: any; alt: string };
+type Logo = { src: string; alt: string };
 
 type Segment = Logo[];
 

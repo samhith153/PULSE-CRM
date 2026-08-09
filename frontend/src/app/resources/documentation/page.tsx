@@ -95,7 +95,7 @@ function DocIllustration() {
       {/* Floating purple book badge */}
       <motion.div
         animate={{ y: [-5, 5, -5] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+        transition={{ duration: 3, repeat: Infinity, ease: [0.43, 0.13, 0.23, 0.96] }}
         style={{
           position: 'absolute', top: -16, right: -8, zIndex: 10,
           width: 60, height: 60, borderRadius: 16,

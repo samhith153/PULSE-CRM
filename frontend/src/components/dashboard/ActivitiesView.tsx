@@ -11,7 +11,7 @@ import {
 import {
   getCrmActivities, getCrmActivityOwners, downloadCrmActivitiesExport,
   createCrmTask, createCrmCall, createCrmMeeting, createCrmNote, createCrmEmail,
-  bulkDeleteCrmActivities,
+  bulkDeleteCrmActivities, deleteCrmTask, deleteCrmCall, deleteCrmNote,
   getLeads, getContacts, getCompanies, getDeals,
   type CrmActivity, type CrmActivityOwner, type CrmActivitiesListParams,
   type CreateTaskPayload, type CreateCallPayload,
@@ -19,6 +19,7 @@ import {
 } from '@/utils/api';
 import ActivityDetailView from './ActivityDetailView';
 import { toast } from '@/lib/toast';
+
 
 interface ActivitiesViewProps {
   activityId?: string;
@@ -219,8 +220,42 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     finally { setLoading(false); }
   }, [currentPage, activeTabType, searchQuery, statusFilter, priorityFilter, ownerFilter, quickTab, owners]);
 
-  useEffect(() => { fetchActivities(); }, [fetchActivities]);
-  useEffect(() => { setCurrentPage(1); }, [activeTabType, searchQuery, statusFilter, priorityFilter, ownerFilter, quickTab]);
+  useEffect(() => {
+  fetchActivities();
+}, [fetchActivities]);
+
+/*
+ * When the Workflow page automatically creates an
+ * AI-recommended CRM task, refresh Activities immediately.
+ */
+useEffect(() => {
+  const handleWorkflowActivityCreated = () => {
+    void fetchActivities();
+  };
+
+  window.addEventListener(
+    'pulse-crm-activity-created',
+    handleWorkflowActivityCreated
+  );
+
+  return () => {
+    window.removeEventListener(
+      'pulse-crm-activity-created',
+      handleWorkflowActivityCreated
+    );
+  };
+}, [fetchActivities]);
+
+useEffect(() => {
+  setCurrentPage(1);
+}, [
+  activeTabType,
+  searchQuery,
+  statusFilter,
+  priorityFilter,
+  ownerFilter,
+  quickTab,
+]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSelectedIds(e.target.checked ? new Set(activities.map(a => a.id)) : new Set());
@@ -234,6 +269,19 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
       const r = await bulkDeleteCrmActivities(Array.from(selectedIds));
       toast.success(r.message); setSelectedIds(new Set()); setIsSelectMode(false); fetchActivities();
     } catch { toast.error('Bulk delete failed.'); }
+  };
+
+  const handleRowDelete = async (e: React.MouseEvent, a: CrmActivity) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${a.subject}"?`)) return;
+    try {
+      if (a.activity_type === 'task') await deleteCrmTask(a.id);
+      else if (a.activity_type === 'call') await deleteCrmCall(a.id);
+      else if (a.activity_type === 'note') await deleteCrmNote(a.id);
+      else { toast.error('Deletion not supported for this type.'); return; }
+      toast.success('Activity deleted.');
+      fetchActivities();
+    } catch { toast.error('Delete failed.'); }
   };
 
   const handleExport = async () => {
@@ -407,11 +455,12 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
                   <th className="py-3 px-3 text-center w-28">Priority</th>
                   <th className="py-3 px-3 text-right w-36">Due Date</th>
                   <th className="py-3 px-3 text-left w-[20%]">Related Record</th>
+                  <th className="py-3 px-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 text-xs font-semibold text-foreground">
                 {activities.map(a => (
-                  <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="hover:bg-secondary/15 transition-all cursor-pointer">
+                  <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="group hover:bg-secondary/15 transition-all cursor-pointer">
                     {isSelectMode && <td className="py-3 px-3 text-center" onClick={e=>e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(a.id)} onChange={()=>handleSelectRow(a.id)} className="cursor-pointer size-3.5" /></td>}
                     <td className="py-3 px-3 text-left whitespace-normal break-words">
                       <span className="font-bold text-foreground hover:text-brand-blue transition-colors block">{a.subject}</span>
@@ -431,6 +480,13 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
                       {a.related_record_name
                         ? <span className="text-brand-blue hover:underline cursor-pointer">{a.related_record_name}</span>
                         : <span className="text-muted-foreground/50">—</span>}
+                    </td>
+                    <td className="py-3 px-3 text-center" onClick={e => e.stopPropagation()}>
+                      <button onClick={e => handleRowDelete(e, a)}
+                        className="p-1.5 rounded-md text-muted-foreground/40 hover:text-[#E2604F] hover:bg-[#E2604F]/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                        title="Delete activity">
+                        <Trash2 size={12} />
+                      </button>
                     </td>
                   </tr>
                 ))}
