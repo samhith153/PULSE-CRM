@@ -231,6 +231,12 @@ export function SiteHeader() {
               <Search size={17} />
             </button>
             <Link
+              href="/login"
+              className="hidden items-center rounded-full px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-link sm:inline-flex"
+            >
+              Sign in
+            </Link>
+            <Link
               href="/signup"
               className={pillVariants({
                 size: "sm",
@@ -402,9 +408,14 @@ export function SiteHeader() {
               </li>
             ))}
           </ul>
-          <Link href="/signup" className={pillVariants({ className: "arrow-nudge mt-4 w-full" })}>
-            Get started <ArrowUpRight size={15} />
-          </Link>
+          <div className="mt-4 flex flex-col gap-2">
+            <Link href="/login" className="text-center text-sm font-medium text-ink py-2 rounded-full border border-border hover:bg-secondary transition-colors">
+              Sign in
+            </Link>
+            <Link href="/signup" className={pillVariants({ className: "arrow-nudge w-full" })}>
+              Get started <ArrowUpRight size={15} />
+            </Link>
+          </div>
         </div>
       )}
     </header>

@@ -77,7 +77,7 @@ export function Hero() {
                   </span>
                 </Link>
                 <Link
-                  href="/dashboard"
+                  href="/login"
                   className="flex items-center gap-2 rounded-full border border-border bg-card/85 px-7 py-3.5 text-sm font-semibold text-ink shadow-nav backdrop-blur transition-transform hover:-translate-y-0.5"
                 >
                   <Play size={12} className="fill-current" /> Watch demo
