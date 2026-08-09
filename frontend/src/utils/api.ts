@@ -930,8 +930,15 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
   return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
 }
 
-export async function getManagerDashboard(): Promise<ManagerDashboardData> {
-  return apiFetch<ManagerDashboardData>('/api/v1/dashboard/manager');
+export async function getManagerDashboard(
+  filters: { period?: 'week' | 'month' | 'quarter' | 'year'; repId?: string } = {}
+): Promise<ManagerDashboardData> {
+  return apiFetch<ManagerDashboardData>(
+    `/api/v1/dashboard/manager${toQuery({
+      period: filters.period ?? 'quarter',
+      rep_id: filters.repId,
+    })}`
+  );
 }
 
 export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {

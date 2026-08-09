@@ -940,7 +940,12 @@ class DashboardService:
     # Manager Dashboard KPI  (manager-scoped, org-tenanted)
     # -------------------------------------------------------------------------
 
-    async def manager_kpi(self, manager_id: UUID, organization_id: UUID):  # noqa: C901
+    async def manager_kpi(
+        self,
+        manager_id: UUID,
+        organization_id: UUID,
+        period: str = "quarter",
+    ):  # noqa: C901
         """
         Compute all Manager Dashboard KPIs scoped to the manager's team.
         A "team" = all Users whose deals are owned inside the same org,

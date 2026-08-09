@@ -20,6 +20,7 @@ import {
 } from '@/utils/api';
 import ActivityDetailView from './ActivityDetailView';
 import CalendarView from './CalendarView';
+import TasksView from './TasksView';
 import { toast } from '@/lib/toast';
 
 
@@ -379,6 +380,22 @@ useEffect(() => {
         </div>
       </div>
 
+      {/* ─── Task Kanban Board (Separated and on Top) ─── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <ClipboardList className="h-4 w-4 text-brand-purple" />
+            <span>Workspace Tasks Board</span>
+          </h3>
+        </div>
+        <TasksView isEmbedded={true} />
+      </div>
+
+      <div className="border-t border-border/60 my-2" />
+
+      {/* ─── CRM Activity Logs ─── */}
+      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Activity History Logs</h3>
+
       {/* Filters */}
       <div className="bg-card border border-border rounded-xl p-4 sm:px-5 py-4 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -392,7 +409,7 @@ useEffect(() => {
             <span className="text-[10px] text-muted-foreground/75 font-bold uppercase">View:</span>
             <select value={activeTabType} onChange={e => { setActiveTabType(e.target.value as any); setCurrentPage(1); }}
               className="bg-secondary/30 border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none cursor-pointer text-xs font-bold">
-              <option value="timeline">Timeline</option><option value="task">Tasks</option>
+              <option value="timeline">Timeline Logs</option>
               <option value="meeting">Meetings</option><option value="call">Calls</option>
               <option value="email">Emails</option><option value="note">Notes</option><option value="calendar">Calendar</option>
             </select>
