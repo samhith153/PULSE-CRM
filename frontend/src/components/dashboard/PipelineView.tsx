@@ -82,6 +82,14 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   });
 
   const [draggedId, setDraggedId] = useState<number | string | null>(null);
+  const [pendingStageChange, setPendingStageChange] = useState<{
+    dealId: number | string;
+    stageId: string;
+    stageName: string;
+  } | null>(null);
+
+  const [closeReason, setCloseReason] = useState('');
+  const [isSavingStage, setIsSavingStage] = useState(false);
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>(() => {
     if (typeof window !== 'undefined') {
@@ -209,14 +217,99 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     e.preventDefault();
   };
 
-  const handleDrop = (stageName: string) => {
+  const isClosingStage = (stageName: string) => {
+    const stage = stages.find(s => s.name === stageName);
+    const slug = String(stage?.slug || '').toLowerCase();
+
+    return (
+      slug === 'won' ||
+      slug === 'lost' ||
+      stageName.toLowerCase() === 'won' ||
+      stageName.toLowerCase() === 'lost'
+    );
+  };
+
+  const handleDrop = async (stageName: string) => {
     if (draggedId === null) return;
+
     const stageId = stageIdByName[stageName];
-    setDeals(deals.map(d => d.id === draggedId ? { ...d, stage: stageName } : d));
-    if (stageId) {
-      updateDealStage(draggedId, stageId).catch(err => console.warn("Failed to update deal stage", err));
+    if (!stageId) {
+      setDraggedId(null);
+      return;
     }
+
+    // Won/Lost requires a close reason from the backend.
+    if (isClosingStage(stageName)) {
+      setPendingStageChange({
+        dealId: draggedId,
+        stageId,
+        stageName,
+      });
+      setCloseReason('');
+      setDraggedId(null);
+      return;
+    }
+
+    // For normal stages, update backend first.
+    try {
+      await updateDealStage(draggedId, stageId);
+
+      setDeals(prev =>
+        prev.map(d =>
+          d.id === draggedId
+            ? { ...d, stage: stageName }
+            : d
+        )
+      );
+    } catch (err: any) {
+      console.error('Failed to update deal stage:', err);
+      toast.error(err?.message || 'Failed to update deal stage.');
+    }
+
     setDraggedId(null);
+  };
+
+  const confirmStageChange = async () => {
+    if (!pendingStageChange) return;
+
+    const reason = closeReason.trim();
+
+    if (!reason) {
+      toast.error('Please enter a close reason.');
+      return;
+    }
+
+    setIsSavingStage(true);
+
+    try {
+      await updateDealStage(
+        pendingStageChange.dealId,
+        pendingStageChange.stageId,
+        reason
+      );
+
+      setDeals(prev =>
+        prev.map(d =>
+          d.id === pendingStageChange.dealId
+            ? { ...d, stage: pendingStageChange.stageName }
+            : d
+        )
+      );
+
+      toast.success(
+        `Deal moved to ${pendingStageChange.stageName}.`
+      );
+
+      setPendingStageChange(null);
+      setCloseReason('');
+    } catch (err: any) {
+      console.error('Failed to update deal stage:', err);
+      toast.error(
+        err?.message || 'Failed to update deal stage.'
+      );
+    } finally {
+      setIsSavingStage(false);
+    }
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -680,12 +773,38 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                         onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
                           e.stopPropagation();
+
                           const newStage = e.target.value;
                           const stageId = stageIdByName[newStage];
-                          setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));
-                          if (stageId) {
-                            updateDealStage(deal.id, stageId).catch(() => {});
+
+                          if (!stageId) return;
+
+                          if (isClosingStage(newStage)) {
+                            setPendingStageChange({
+                              dealId: deal.id,
+                              stageId,
+                              stageName: newStage,
+                            });
+                            setCloseReason('');
+                            return;
                           }
+
+                          updateDealStage(deal.id, stageId)
+                            .then(() => {
+                              setDeals(prev =>
+                                prev.map(d =>
+                                  d.id === deal.id
+                                    ? { ...d, stage: newStage }
+                                    : d
+                                )
+                              );
+                            })
+                            .catch((err: any) => {
+                              console.error('Failed to update deal stage:', err);
+                              toast.error(
+                                err?.message || 'Failed to update deal stage.'
+                              );
+                            });
                         }}
                         className="bg-transparent text-brand-purple focus:outline-none cursor-pointer"
                       >
@@ -817,6 +936,91 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
         </div>
       )}
+      {pendingStageChange && (
+  <div
+    className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200"
+    onClick={() => {
+      if (!isSavingStage) {
+        setPendingStageChange(null);
+        setCloseReason('');
+      }
+    }}
+  >
+    <div
+      className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+        <div>
+          <h3 className="font-semibold text-foreground text-sm">
+            Close Deal
+          </h3>
+
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Moving this deal to {pendingStageChange.stageName}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={isSavingStage}
+          onClick={() => {
+            setPendingStageChange(null);
+            setCloseReason('');
+          }}
+          className="text-muted-foreground hover:text-foreground p-1 cursor-pointer disabled:opacity-50"
+        >
+          <X className="h-4.5 w-4.5" />
+        </button>
+      </div>
+
+      <div className="p-5 space-y-4">
+        <div>
+          <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+            Close Reason *
+          </label>
+
+          <textarea
+            autoFocus
+            required
+            value={closeReason}
+            onChange={e => setCloseReason(e.target.value)}
+            placeholder={
+              pendingStageChange.stageName.toLowerCase() === 'won'
+                ? 'e.g. Customer signed the agreement'
+                : 'e.g. Customer selected another vendor'
+            }
+            className="w-full min-h-[90px] px-3 py-2 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/20 bg-background resize-none"
+            disabled={isSavingStage}
+          />
+        </div>
+
+        <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+          <button
+            type="button"
+            disabled={isSavingStage}
+            onClick={() => {
+              setPendingStageChange(null);
+              setCloseReason('');
+            }}
+            className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={isSavingStage || !closeReason.trim()}
+            onClick={confirmStageChange}
+            className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50"
+          >
+            {isSavingStage ? 'Saving...' : `Move to ${pendingStageChange.stageName}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

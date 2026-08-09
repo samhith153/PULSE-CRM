@@ -324,6 +324,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
 
   // Modal Open/Close States
   const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
+  const [isEditingFullPage, setIsEditingFullPage] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
@@ -566,6 +568,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
     } catch (err) {
       console.error("Failed to update lead:", err);
     }
+    setIsEditingFullPage(false);
+    setEditingLeadId(null);
     setIsEditModalOpen(false);
   };
 
@@ -787,7 +791,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
     }));
   };
 
-  if (isCreatingFullPage) {
+  if (isCreatingFullPage || isEditingFullPage) {
+    const isEdit = isEditingFullPage;
     return (
       <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-200">
         {/* Full page header */}
@@ -796,6 +801,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             <button
               onClick={() => {
                 setIsCreatingFullPage(false);
+                setIsEditingFullPage(false);
+                setEditingLeadId(null);
                 setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
               }}
               className="p-2 border border-border hover:bg-secondary rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition hover:scale-105"
@@ -805,10 +812,10 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <span className="bg-brand-purple/10 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">New Prospect</span>
+                <span className="bg-brand-purple/10 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{isEdit ? 'Editing' : 'New Prospect'}</span>
               </div>
-              <h2 className="font-sans text-2xl text-foreground font-bold tracking-tight mt-1">Create New Lead</h2>
-              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Enter all details across prospect, company, and technology dimensions.</p>
+              <h2 className="font-sans text-2xl text-foreground font-bold tracking-tight mt-1">{isEdit ? 'Edit Lead' : 'Create New Lead'}</h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">{isEdit ? 'Update lead details across all dimensions.' : 'Enter all details across prospect, company, and technology dimensions.'}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3 self-end sm:self-auto">
@@ -816,6 +823,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               type="button"
               onClick={() => {
                 setIsCreatingFullPage(false);
+                setIsEditingFullPage(false);
+                setEditingLeadId(null);
                 setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
               }}
               className="px-4.5 py-2 border border-border rounded-xl text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer transition-colors"
@@ -827,12 +836,12 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               form="full-page-lead-form"
               className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition hover:-translate-y-0.5"
             >
-              Create Lead
+              {isEdit ? 'Save Changes' : 'Create Lead'}
             </button>
           </div>
         </div>
 
-        <form id="full-page-lead-form" onSubmit={handleCreateLead} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form id="full-page-lead-form" onSubmit={isEdit ? handleEditLead : handleCreateLead} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           {/* Card 1: Contact Information */}
           <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
@@ -1084,23 +1093,43 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Current CRM</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Salesforce, HubSpot"
+                  <select
                     value={leadForm.currentCRM}
                     onChange={(e) => setLeadForm({ ...leadForm, currentCRM: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
-                  />
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
+                  >
+                    <option value="">Select CRM...</option>
+                    <option value="No CRM">No CRM</option>
+                    <option value="Excel">Excel</option>
+                    <option value="Google Sheets">Google Sheets</option>
+                    <option value="Manual">Manual</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Basic CRM">Basic CRM</option>
+                    <option value="HubSpot">HubSpot</option>
+                    <option value="Zoho">Zoho</option>
+                    <option value="Salesforce">Salesforce</option>
+                    <option value="Custom Software">Custom Software</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Operational System</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. SAP, Oracle ERP"
+                  <select
                     value={leadForm.operationalSystem}
                     onChange={(e) => setLeadForm({ ...leadForm, operationalSystem: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
-                  />
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
+                  >
+                    <option value="">Select system...</option>
+                    <option value="No Structured System">No Structured System</option>
+                    <option value="Excel">Excel</option>
+                    <option value="Google Sheets">Google Sheets</option>
+                    <option value="Manual">Manual</option>
+                    <option value="Spreadsheets">Spreadsheets</option>
+                    <option value="CRM">CRM</option>
+                    <option value="ERP">ERP</option>
+                    <option value="Structured Business Software">Structured Business Software</option>
+                    <option value="Custom Software">Custom Software</option>
+                    <option value="Custom Internal Software">Custom Internal Software</option>
+                  </select>
                 </div>
               </div>
 
@@ -1363,8 +1392,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                     owner: lead.owner,
                                     notes: lead.notes
                                   });
+                                  setEditingLeadId(String(lead.id));
                                   setSelectedLeadId(lead.id);
-                                  setIsEditModalOpen(true);
+                                  setIsEditingFullPage(true);
                                 }}
                                 className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
                               >
@@ -1565,7 +1595,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                   owner: lead.owner,
                                   notes: lead.notes
                                 });
-                                setIsEditModalOpen(true);
+                                setEditingLeadId(String(lead.id));
+                                setSelectedLeadId(lead.id);
+                                setIsEditingFullPage(true);
                               }}
                               className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
                             >

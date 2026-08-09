@@ -1,105 +1,570 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Filter, Upload, Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  Filter,
+  Upload,
+  Loader2,
+} from 'lucide-react';
+
 import StatCardsNew from './StatCardsNew';
 import { SalesReportNew } from './SalesReportNew';
 import { SalesActivityNew } from './SalesActivityNew';
 import { BestSellersNew } from './BestSellersNew';
 import { OrdersByCountryNew } from './OrdersByCountryNew';
-import { getSalesRepDashboard, type SalesRepDashboardData, asNumber } from '@/utils/api';
+
+import {
+  getSalesRepDashboard,
+  type SalesRepDashboardData,
+  asNumber,
+} from '@/utils/api';
+
+export type ReportPeriod =
+  | 'week'
+  | 'month'
+  | 'quarter'
+  | 'year';
+
+const PERIOD_LABELS: Record<
+  ReportPeriod,
+  string
+> = {
+  week: 'Weekly',
+  month: 'Monthly',
+  quarter: 'Quarterly',
+  year: 'Yearly',
+};
 
 export default function ReportsView() {
-  const [data, setData] = useState<SalesRepDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [data, setData] =
+    useState<SalesRepDashboardData | null>(
+      null
+    );
 
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState<string | null>(null);
+
+  // Single source of truth for the report period.
+  const [period, setPeriod] =
+    useState<ReportPeriod>('month');
+
+  const [showFilter, setShowFilter] =
+    useState(false);
+
+  /*
+   * ---------------------------------------------------------
+   * LOAD REPORT
+   * ---------------------------------------------------------
+   *
+   * This is the only place that fetches the report.
+   *
+   * Changing period automatically causes this effect
+   * to run again and fetch fresh backend data.
+   */
   useEffect(() => {
     let cancelled = false;
+
+    setLoading(true);
+    setError(null);
+
     (async () => {
       try {
-        const result = await getSalesRepDashboard('month');
-        if (!cancelled) setData(result);
+        const result =
+          await getSalesRepDashboard(
+            period
+          );
+
+        console.log(
+          '🔥 SALES REP REPORT PERIOD:',
+          period
+        );
+
+        console.log(
+          '🔥 SALES REP REPORT RESPONSE:',
+          JSON.stringify(
+            result,
+            null,
+            2
+          )
+        );
+
+        if (!cancelled) {
+          setData(result);
+        }
       } catch (err: any) {
-        if (!cancelled) setError(err?.message || 'Failed to load reports');
+        console.error(
+          '❌ SALES REP REPORT ERROR:',
+          err
+        );
+
+        if (!cancelled) {
+          setError(
+            err?.message ||
+              'Failed to load reports'
+          );
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     })();
-    return () => { cancelled = true; };
-  }, []);
 
+    return () => {
+      cancelled = true;
+    };
+  }, [period]);
+
+  /*
+   * ---------------------------------------------------------
+   * EXPORT CURRENT REPORT
+   * ---------------------------------------------------------
+   *
+   * Uses the data already returned by the backend.
+   * No additional API request.
+   */
+  const handleExport = () => {
+    if (!data) {
+      return;
+    }
+
+    const rows: string[][] = [
+      [
+        'Metric',
+        'Value',
+      ],
+
+      [
+        'Period',
+        PERIOD_LABELS[period],
+      ],
+
+      [
+        'Revenue',
+        String(
+          data.revenue_stat?.total ??
+            0
+        ),
+      ],
+
+      [
+        'Revenue Growth %',
+        String(
+          data.revenue_stat
+            ?.growth_pct ?? 0
+        ),
+      ],
+
+      [
+        'Won Deals',
+        String(
+          data.won_deals_stat
+            ?.count ?? 0
+        ),
+      ],
+
+      [
+        'Won Deals Growth %',
+        String(
+          data.won_deals_stat
+            ?.growth_pct ?? 0
+        ),
+      ],
+
+      [
+        'Win Rate %',
+        String(
+          data.win_rate_stat
+            ?.win_rate ?? 0
+        ),
+      ],
+
+      [
+        'Win Rate Growth %',
+        String(
+          data.win_rate_stat
+            ?.growth_pct ?? 0
+        ),
+      ],
+
+      [
+        'Average Deal Size',
+        String(
+          data.avg_deal_size_stat
+            ?.avg_deal_value ?? 0
+        ),
+      ],
+
+      [
+        'Average Deal Growth %',
+        String(
+          data.avg_deal_size_stat
+            ?.growth_pct ?? 0
+        ),
+      ],
+
+      [
+        'Open Deals',
+        String(
+          data.key_metrics
+            ?.open_deals ?? 0
+        ),
+      ],
+
+      [
+        'Pipeline Value',
+        String(
+          data.key_metrics
+            ?.pipeline_value ?? 0
+        ),
+      ],
+
+      [
+        'Deals Created',
+        String(
+          data.key_metrics
+            ?.deals_created ?? 0
+        ),
+      ],
+
+      [
+        'Deals Lost',
+        String(
+          data.key_metrics
+            ?.deals_lost ?? 0
+        ),
+      ],
+
+      [
+        'Activities Logged',
+        String(
+          data.key_metrics
+            ?.activities_logged ?? 0
+        ),
+      ],
+
+      [
+        'Emails Sent',
+        String(
+          data.activity_overview
+            ?.emails_sent ?? 0
+        ),
+      ],
+
+      [
+        'Calls Made',
+        String(
+          data.activity_overview
+            ?.calls_made ?? 0
+        ),
+      ],
+
+      [
+        'Meetings Held',
+        String(
+          data.activity_overview
+            ?.meetings_held ?? 0
+        ),
+      ],
+
+      [
+        'Tasks Completed',
+        String(
+          data.activity_overview
+            ?.tasks_completed ?? 0
+        ),
+      ],
+
+      [
+        'Notes Added',
+        String(
+          data.activity_overview
+            ?.notes_added ?? 0
+        ),
+      ],
+    ];
+
+    const csv = rows
+      .map((row) =>
+        row
+          .map((value) => {
+            const text =
+              String(value);
+
+            return `"${text.replace(
+              /"/g,
+              '""'
+            )}"`;
+          })
+          .join(',')
+      )
+      .join('\n');
+
+    const blob = new Blob(
+      [csv],
+      {
+        type: 'text/csv;charset=utf-8;',
+      }
+    );
+
+    const url =
+      URL.createObjectURL(blob);
+
+    const link =
+      document.createElement('a');
+
+    link.href = url;
+
+    link.download =
+      `sales-report-${period}.csv`;
+
+    document.body.appendChild(link);
+
+    link.click();
+
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
+
+  /*
+   * ---------------------------------------------------------
+   * LOADING
+   * ---------------------------------------------------------
+   */
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Loading reports...
+        </div>
       </div>
     );
   }
 
+  /*
+   * ---------------------------------------------------------
+   * ERROR
+   * ---------------------------------------------------------
+   */
   if (error || !data) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 text-center">
-        <p className="text-sm text-muted-foreground">{error || 'No data available'}</p>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <div className="rounded-xl border border-border bg-card px-5 py-4 text-sm text-muted-foreground">
+          {error || 'No data available'}
+        </div>
       </div>
     );
   }
 
-  const revenue = asNumber(data.revenue_stat?.total) || 0;
-  const prevRevenue = asNumber(data.revenue_stat?.previous_period) || 0;
-  const revenueGrowth = asNumber(data.revenue_stat?.growth_pct) || 0;
+  /*
+   * ---------------------------------------------------------
+   * KPI VALUES
+   * ---------------------------------------------------------
+   */
 
-  const wonDeals = data.won_deals_stat?.count || 0;
-  const prevWonDeals = data.won_deals_stat?.previous_period || 0;
-  const dealsGrowth = asNumber(data.won_deals_stat?.growth_pct) || 0;
+  const revenue =
+    asNumber(
+      data.revenue_stat?.total
+    ) || 0;
 
-  const winRate = asNumber(data.win_rate_stat?.win_rate) || 0;
-  const prevWinRate = asNumber(data.win_rate_stat?.previous_win_rate) || 0;
-  const winRateGrowth = asNumber(data.win_rate_stat?.growth_pct) || 0;
+  const revenueGrowth =
+    asNumber(
+      data.revenue_stat
+        ?.growth_pct
+    ) || 0;
 
-  const avgDealSize = asNumber(data.avg_deal_size_stat?.avg_deal_value) || 0;
-  const prevAvgDeal = asNumber(data.avg_deal_size_stat?.previous_avg) || 0;
-  const avgDealGrowth = asNumber(data.avg_deal_size_stat?.growth_pct) || 0;
+  const wonDeals =
+    data.won_deals_stat
+      ?.count || 0;
+
+  const dealsGrowth =
+    asNumber(
+      data.won_deals_stat
+        ?.growth_pct
+    ) || 0;
+
+  const winRate =
+    asNumber(
+      data.win_rate_stat
+        ?.win_rate
+    ) || 0;
+
+  const winRateGrowth =
+    asNumber(
+      data.win_rate_stat
+        ?.growth_pct
+    ) || 0;
+
+  const avgDealSize =
+    asNumber(
+      data.avg_deal_size_stat
+        ?.avg_deal_value
+    ) || 0;
+
+  const avgDealGrowth =
+    asNumber(
+      data.avg_deal_size_stat
+        ?.growth_pct
+    ) || 0;
+
+  /*
+   * ---------------------------------------------------------
+   * PAGE
+   * ---------------------------------------------------------
+   */
 
   return (
-    <div className="w-full">
-      <div className="flex flex-wrap items-end gap-3 mb-6">
+    <div className="space-y-5">
+
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+
         <div>
-          <h1 className="text-[30px] font-extrabold tracking-tight">Reports</h1>
+          <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+            Reports
+          </h2>
+
           <p className="mt-1 text-sm text-muted-foreground">
             Performance overview backed by live data.
           </p>
         </div>
-        <div className="ml-auto flex items-center gap-3">
-          <button className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2.5 text-[13px] font-semibold shadow-[0_1px_3px_rgba(20,20,40,0.08)]">
-            Export <Upload className="size-3.5 text-muted-foreground" />
+
+        <div className="relative flex items-center gap-2">
+
+          {/* Export */}
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={loading || !data}
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Upload className="size-4" />
+            Export
           </button>
-          <button className="inline-flex items-center gap-2 rounded-full bg-card px-4 py-2.5 text-[13px] font-semibold shadow-[0_1px_3px_rgba(20,20,40,0.08)]">
-            Filter <Filter className="size-3.5 text-muted-foreground" />
+
+          {/* Filter */}
+          <button
+            type="button"
+            onClick={() =>
+              setShowFilter(
+                (current) =>
+                  !current
+              )
+            }
+            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary"
+          >
+            <Filter className="size-4" />
+            Filter
           </button>
+
+          {/* Filter menu */}
+          {showFilter && (
+            <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-border bg-card p-2 shadow-lg">
+
+              <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Report Period
+              </p>
+
+              {(
+                Object.keys(
+                  PERIOD_LABELS
+                ) as ReportPeriod[]
+              ).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => {
+                    setPeriod(value);
+                    setShowFilter(false);
+                  }}
+                  className={`w-full rounded-lg px-2 py-2 text-left text-sm font-medium hover:bg-secondary ${
+                    period === value
+                      ? 'bg-secondary text-brand'
+                      : 'text-foreground'
+                  }`}
+                >
+                  {PERIOD_LABELS[value]}
+                </button>
+              ))}
+
+            </div>
+          )}
+
         </div>
       </div>
 
-      <div className="space-y-5">
-        <StatCardsNew
-          revenue={revenue}
-          revenueGrowth={revenueGrowth}
-          wonDeals={wonDeals}
-          dealsGrowth={dealsGrowth}
-          winRate={winRate}
-          winRateGrowth={winRateGrowth}
-          avgDealSize={avgDealSize}
-          avgDealGrowth={avgDealGrowth}
+      {/* KPI cards */}
+      <StatCardsNew
+        revenue={revenue}
+        revenueGrowth={
+          revenueGrowth
+        }
+        wonDeals={wonDeals}
+        dealsGrowth={
+          dealsGrowth
+        }
+        winRate={winRate}
+        winRateGrowth={
+          winRateGrowth
+        }
+        avgDealSize={
+          avgDealSize
+        }
+        avgDealGrowth={
+          avgDealGrowth
+        }
+      />
+
+      {/* Revenue + Source */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+
+        <SalesReportNew
+          revenueTrend={
+            data.revenue_trend ||
+            []
+          }
+          period={period}
+          onPeriodChange={
+            setPeriod
+          }
         />
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <SalesReportNew revenueTrend={data.revenue_trend || []} />
-          <SalesActivityNew dealsBySource={data.deals_by_source || []} />
-        </div>
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <BestSellersNew dealsByStage={data.deals_by_stage || []} />
-          <OrdersByCountryNew keyMetrics={data.key_metrics} />
-        </div>
+
+        <SalesActivityNew
+          dealsBySource={
+            data.deals_by_source ||
+            []
+          }
+          period={period}
+          onPeriodChange={
+            setPeriod
+          }
+        />
+
       </div>
+
+      {/* Stage + Key Metrics */}
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+
+        <BestSellersNew
+          dealsByStage={
+            data.deals_by_stage ||
+            []
+          }
+        />
+
+        <OrdersByCountryNew
+          keyMetrics={
+            data.key_metrics
+          }
+        />
+
+      </div>
+
     </div>
   );
 }

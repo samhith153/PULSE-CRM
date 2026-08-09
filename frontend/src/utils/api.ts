@@ -612,10 +612,18 @@ export async function getDeals(): Promise<Deal[]> {
   }) as unknown as Deal[];
 }
 
-export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
+export async function updateDealStage(
+  dealId: string | number,
+  stageId: string,
+  closeReason?: string
+): Promise<any> {
   return apiFetch(`/api/v1/pipeline/move`, {
     method: 'PATCH',
-    body: JSON.stringify({ deal_id: dealId, stage_id: stageId })
+    body: JSON.stringify({
+      deal_id: dealId,
+      stage_id: stageId,
+      ...(closeReason ? { close_reason: closeReason } : {}),
+    }),
   });
 }
 
@@ -930,8 +938,19 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
   return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
 }
 
+export type ManagerDashboardPeriod =
+  | 'week'
+  | 'month'
+  | 'quarter'
+  | 'year';
+
+export interface ManagerDashboardFilters {
+  period?: ManagerDashboardPeriod;
+  repId?: string;
+}
+
 export async function getManagerDashboard(
-  filters: { period?: 'week' | 'month' | 'quarter' | 'year'; repId?: string } = {}
+  filters: ManagerDashboardFilters = {}
 ): Promise<ManagerDashboardData> {
   return apiFetch<ManagerDashboardData>(
     `/api/v1/dashboard/manager${toQuery({
