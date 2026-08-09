@@ -16,14 +16,17 @@ import {
   type CrmActivity, type CrmActivityOwner, type CrmActivitiesListParams,
   type CreateTaskPayload, type CreateCallPayload,
   type CreateMeetingPayload, type CreateNotePayload,
+  type EmailComposeTarget,
 } from '@/utils/api';
 import ActivityDetailView from './ActivityDetailView';
+import CalendarView from './CalendarView';
 import { toast } from '@/lib/toast';
 
 
 interface ActivitiesViewProps {
   activityId?: string;
   onTabChange?: (tab: string) => void;
+  onComposeEmail?: (target: Omit<EmailComposeTarget, 'requestId'>) => void;
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -60,7 +63,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
   const [loading, setLoading] = useState(true);
   const [owners, setOwners] = useState<CrmActivityOwner[]>([]);
 
-  const [activeTabType, setActiveTabType] = useState<'timeline'|'task'|'meeting'|'call'|'email'|'note'>('timeline');
+  const [activeTabType, setActiveTabType] = useState<'timeline'|'task'|'meeting'|'call'|'email'|'note'|'calendar'>('timeline');
   const [quickTab, setQuickTab] = useState<'all'|'today'|'upcoming'|'overdue'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -206,7 +209,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     setLoading(true);
     try {
       const params: CrmActivitiesListParams = { page: currentPage, page_size: pageSize, sort_order: 'desc' };
-      if (activeTabType !== 'timeline') params.view = activeTabType;
+      if (activeTabType !== 'timeline' && activeTabType !== 'calendar') params.view = activeTabType;
       if (searchQuery)   params.search   = searchQuery;
       if (statusFilter   !== 'All') params.status   = statusFilter.toLowerCase();
       if (priorityFilter !== 'All') params.priority = priorityFilter.toLowerCase();
@@ -287,7 +290,7 @@ useEffect(() => {
   const handleExport = async () => {
     try {
       const params: any = {};
-      if (activeTabType !== 'timeline') params.view = activeTabType;
+      if (activeTabType !== 'timeline' && activeTabType !== 'calendar') params.view = activeTabType;
       if (searchQuery)   params.search   = searchQuery;
       if (statusFilter   !== 'All') params.status   = statusFilter.toLowerCase();
       if (priorityFilter !== 'All') params.priority = priorityFilter.toLowerCase();
@@ -391,7 +394,7 @@ useEffect(() => {
               className="bg-secondary/30 border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none cursor-pointer text-xs font-bold">
               <option value="timeline">Timeline</option><option value="task">Tasks</option>
               <option value="meeting">Meetings</option><option value="call">Calls</option>
-              <option value="email">Emails</option><option value="note">Notes</option>
+              <option value="email">Emails</option><option value="note">Notes</option><option value="calendar">Calendar</option>
             </select>
           </div>
         </div>
@@ -430,6 +433,9 @@ useEffect(() => {
       </div>
 
       {/* Table */}
+      {activeTabType === 'calendar' ? (
+        <CalendarView />
+      ) : (
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold">
@@ -495,6 +501,7 @@ useEffect(() => {
           </div>
         )}
       </div>
+      )}
 
       {/* Pagination */}
       <div className="bg-secondary/15 border border-border rounded-[10px] px-4 py-3 flex items-center justify-between text-xs select-none">
