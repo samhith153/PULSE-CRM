@@ -6,43 +6,59 @@ from uuid import UUID
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from app.api.deps import CurrentUser
+from app.core.logging import get_logger
+from app.core.security import decode_access_token
 from app.services.event_bus import event_bus
 
 logger = get_logger(__name__)
 router = APIRouter()
 
-HEARTBEAT_INTERVAL = 25  # seconds — keeps the connection alive through proxies/browsers
-
-
 @router.get(
     "/dashboard",
     summary="SSE Stream for Dashboard",
-    description="Maintains an open connection to stream AI and system events to the frontend.",
+    description="Maintains an open connection to stream AI and system events to the frontend."
 )
 async def stream_dashboard_events(request: Request):
     """
     Server-Sent Events (SSE) endpoint.
-    Pushes real-time LEAD_SCORE_UPDATED / DEAL_AT_RISK events to the dashboard.
-    Token auth is handled via ?token= query param (native EventSource can't set headers).
+    Pushes real-time updates to the sales rep's dashboard.
+
+    NOTE: This endpoint intentionally does NOT use the CurrentUser
+    dependency which would hold a DB session open for the entire
+    stream duration.  Instead it decodes the JWT directly — only the
+    user ID is needed to route events.
     """
-    channel_name = f"user_events_{current_user.id}"
+    token = request.query_params.get("token")
+    if not token:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": "Missing token"}, status_code=401)
+
+    try:
+        payload = decode_access_token(token)
+        user_id = UUID(payload["sub"])
+        org_id = UUID(payload["org"])
+    except Exception:
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": "Invalid token"}, status_code=401)
 
     async def event_generator():
+        channel_name = f"org_events_{org_id}"
         subscriber = await event_bus.subscribe(channel_name)
+
         try:
             while True:
                 if await request.is_disconnected():
                     break
 
                 try:
-                    # Wait up to HEARTBEAT_INTERVAL seconds for an event
-                    event = await asyncio.wait_for(subscriber.get(), timeout=HEARTBEAT_INTERVAL)
-                    payload = json.dumps(event)
-                    yield f"data: {payload}\n\n"
+                    event = await asyncio.wait_for(subscriber.get(), timeout=15.0)
                 except asyncio.TimeoutError:
-                    # Send a comment-line keepalive so the connection stays open
-                    yield ": ping\n\n"
+                    yield ": keepalive\n\n"
+                    continue
+
+                if event is not None:
+                    data = asdict(event) if hasattr(event, "__dataclass_fields__") else event
+                    yield f"data: {json.dumps(data, default=str)}\n\n"
 
         except asyncio.CancelledError:
             pass
@@ -57,6 +73,6 @@ async def stream_dashboard_events(request: Request):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",  # prevent nginx buffering
-        },
+            "X-Accel-Buffering": "no"
+        }
     )

@@ -95,10 +95,6 @@ class DealService:
             organization_id=organization_id,
             created_by=created_by,
         )
-        # Reload with all relationships eagerly loaded so DealResponse.from_deal()
-        # can access deal.owner, deal.company, deal.pipeline_stage without
-        # triggering a synchronous lazy load (which fails in async SQLAlchemy).
-        deal = await self.repo.get_active_by_id(deal.id, organization_id)
         await self.timeline.record_activity(
             organization_id=organization_id,
             created_by=created_by,

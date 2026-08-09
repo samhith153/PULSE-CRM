@@ -71,7 +71,6 @@ class DealResponse(BaseModel):
     company_name: Optional[str] = None
     contact_name: Optional[str] = None
     owner_name: Optional[str] = None
-    owner_email: Optional[str] = None
     stage_slug: Optional[str] = None
     stage_name: Optional[str] = None
 
@@ -107,7 +106,6 @@ class DealResponse(BaseModel):
                 if deal.contact else None
             ),
             owner_name=deal.owner.full_name if deal.owner else None,
-            owner_email=deal.owner.email if deal.owner else None,
             stage_slug=deal.pipeline_stage.slug if deal.pipeline_stage else None,
             stage_name=deal.pipeline_stage.name if deal.pipeline_stage else None,
         )

@@ -1,158 +1,104 @@
-﻿"""
-In-memory event bus for Server-Sent Events (SSE) and outbox event dispatch.
+﻿"""In-process event bus used for local dispatch and tests.
 
-Responsibilities:
-  - EventEnvelope: typed payload carried from the outbox worker to consumers
-  - EventConsumer: base class for consumers (timeline, email, logging, etc.)
-  - EventBus: fan-out broker used by the SSE stream endpoint and the outbox worker
-  - event_bus: module-level singleton
-  - register_default_consumers: startup hook (no-op, extend as needed)
+Durable event processing is handled by EventWorker over the EventOutbox table.
 """
 from __future__ import annotations
 
 import asyncio
-import logging
-from abc import ABC, abstractmethod
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Optional
 from uuid import UUID
 
-logger = logging.getLogger(__name__)
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
-# ---------------------------------------------------------------------------
-# EventEnvelope
-# ---------------------------------------------------------------------------
-
-@dataclass
+@dataclass(slots=True)
 class EventEnvelope:
-    """Typed wrapper around a raw outbox event row."""
     event_id: UUID
-    organization_id: UUID | None
+    organization_id: UUID
     aggregate_type: str
-    aggregate_id: UUID | None
+    aggregate_id: Optional[UUID]
     event_type: str
     topic: str
     title: str
-    description: str | None = None
-    payload: dict[str, Any] = field(default_factory=dict)
-    source: str | None = None
-    status: str | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    description: Optional[str]
+    payload: Optional[dict]
+    source: Optional[str]
+    status: str
+    created_at: datetime
 
 
-# ---------------------------------------------------------------------------
-# EventConsumer
-# ---------------------------------------------------------------------------
+class EventConsumer:
+    async def handle(self, event: EventEnvelope) -> None:  # pragma: no cover - interface
+        raise NotImplementedError
 
-class EventConsumer(ABC):
-    """Base class for event consumers. Implement `handle` to process events."""
-
-    @abstractmethod
-    async def handle(self, event: EventEnvelope) -> None:
-        ...
-
-
-# ---------------------------------------------------------------------------
-# EventBus
-# ---------------------------------------------------------------------------
 
 class EventBus:
-    """
-    Dual-purpose in-memory broker:
-
-    1. SSE subscriptions — frontend clients subscribe to a named channel and
-       receive JSON payloads pushed by background workers.
-    2. dispatch_once() — drains a pending queue of EventEnvelopes, fanning them
-       out to any registered persistent consumers.
-    """
-
     def __init__(self) -> None:
-        # SSE subscribers: channel_name -> set of asyncio.Queue
-        self._subscribers: dict[str, set[asyncio.Queue]] = defaultdict(set)
+        self._consumers: dict[str, list[EventConsumer]] = defaultdict(list)
+        self._queue: asyncio.Queue[EventEnvelope] = asyncio.Queue()
+        self._subscribers: dict[str, list[asyncio.Queue]] = defaultdict(list)
 
-        # Pending envelopes waiting to be dispatched to persistent consumers
-        self._pending: list[EventEnvelope] = []
+    def register(self, topic: str, consumer: EventConsumer) -> None:
+        if consumer not in self._consumers[topic]:
+            self._consumers[topic].append(consumer)
 
-        # Persistent consumers registered at startup
-        self._consumers: list[EventConsumer] = []
-
-    # ------------------------------------------------------------------
-    # SSE subscription API (used by stream.py)
-    # ------------------------------------------------------------------
-
-    async def subscribe(self, channel: str) -> asyncio.Queue:
-        """Create and register a new queue for the given channel."""
-        q: asyncio.Queue = asyncio.Queue(maxsize=100)
-        self._subscribers[channel].add(q)
-        logger.debug(
-            "EventBus: subscribed to channel '%s' (total=%d)",
-            channel, len(self._subscribers[channel]),
-        )
-        return q
-
-    async def unsubscribe(self, channel: str, queue: asyncio.Queue) -> None:
-        """Remove a subscriber queue from the channel."""
-        self._subscribers[channel].discard(queue)
-        if not self._subscribers[channel]:
-            self._subscribers.pop(channel, None)
-        logger.debug("EventBus: unsubscribed from channel '%s'", channel)
-
-    async def publish(self, channel: str, event: Any) -> None:
-        """Broadcast an event dict to all SSE subscribers on the given channel."""
-        queues = self._subscribers.get(channel, set())
-        for q in list(queues):
+    async def publish(self, event: EventEnvelope) -> None:
+        await self._queue.put(event)
+        org_channel = f"org_events_{event.organization_id}"
+        for q in self._subscribers.get(org_channel, []):
             try:
                 q.put_nowait(event)
             except asyncio.QueueFull:
-                logger.warning(
-                    "EventBus: queue full for channel '%s', dropping event", channel
-                )
+                pass
+        for q in self._subscribers.get(event.topic, []):
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+        for q in self._subscribers.get("*", []):
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
 
-    def subscriber_count(self, channel: str) -> int:
-        return len(self._subscribers.get(channel, set()))
+    async def subscribe(self, channel: str) -> asyncio.Queue:
+        q: asyncio.Queue = asyncio.Queue(maxsize=100)
+        self._subscribers[channel].append(q)
+        return q
 
-    # ------------------------------------------------------------------
-    # Consumer dispatch API (used by EventWorker)
-    # ------------------------------------------------------------------
-
-    def register_consumer(self, consumer: EventConsumer) -> None:
-        self._consumers.append(consumer)
-
-    def enqueue(self, envelope: EventEnvelope) -> None:
-        """Enqueue an envelope to be dispatched on the next dispatch_once() call."""
-        self._pending.append(envelope)
+    async def unsubscribe(self, channel: str, queue: asyncio.Queue) -> None:
+        subs = self._subscribers.get(channel, [])
+        if queue in subs:
+            subs.remove(queue)
 
     async def dispatch_once(self) -> None:
-        """Fan-out all pending envelopes to registered consumers and clear the queue."""
-        if not self._pending:
+        if self._queue.empty():
             return
-        batch, self._pending = self._pending, []
-        for envelope in batch:
-            for consumer in self._consumers:
-                try:
-                    await consumer.handle(envelope)
-                except Exception as exc:
-                    logger.warning(
-                        "EventBus: consumer %s raised for event %s: %s",
-                        type(consumer).__name__, envelope.event_id, exc,
-                    )
+        event = await self._queue.get()
+        consumers = list(self._consumers.get(event.topic, [])) + list(self._consumers.get("*", []))
+        for consumer in consumers:
+            await consumer.handle(event)
+        self._queue.task_done()
+
+    async def replay(self, events: list[EventEnvelope], topic: Optional[str] = None) -> None:
+        for event in events:
+            if topic and event.topic != topic:
+                continue
+            await self.publish(event)
 
 
-# ---------------------------------------------------------------------------
-# Module-level singleton
-# ---------------------------------------------------------------------------
+class LoggingEventConsumer(EventConsumer):
+    async def handle(self, event: EventEnvelope) -> None:
+        logger.info("In-process event dispatched", extra={"event_id": str(event.event_id), "event_type": event.event_type})
+
 
 event_bus = EventBus()
 
 
 def register_default_consumers() -> None:
-    """
-    Called once at application startup to wire up persistent consumers.
-    Extend this function to register LoggingConsumer, MetricsConsumer, etc.
-    Currently a no-op — consumers are instantiated per-event in EventWorker
-    for database session scoping reasons.
-    """
-    pass
+    event_bus.register("*", LoggingEventConsumer())
