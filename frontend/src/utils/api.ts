@@ -1876,3 +1876,338 @@ export async function searchGlobalCRM(query: string) {
     return [];
   }
 }
+
+
+// ── Report Types & API Functions ─────────────────────────────────────────────
+
+export interface ReportParams {
+  period?: 'week' | 'month' | 'quarter' | 'year';
+  rep_id?: string;
+}
+
+export interface RevenueByRep {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  deal_count: number;
+  avg_deal_value: number;
+}
+
+export interface WinRateByRep {
+  rep_id: string;
+  rep_name: string;
+  won: number;
+  lost: number;
+  total_closed: number;
+  win_rate: number;
+}
+
+export interface QuotaAttainment {
+  rep_id: string;
+  rep_name: string;
+  target: number;
+  actual: number;
+  achievement_pct: number;
+  remaining: number;
+}
+
+export interface TopPerformer {
+  rank: number;
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  win_rate: number;
+  quota_pct: number;
+}
+
+export interface BottomPerformer {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  quota_pct: number;
+  gap: number;
+}
+
+export interface SalesPerformanceReport {
+  revenue_by_rep: RevenueByRep[];
+  win_rate_by_rep: WinRateByRep[];
+  quota_attainment: QuotaAttainment[];
+  top_performers: TopPerformer[];
+  bottom_performers: BottomPerformer[];
+  total_revenue: number;
+  team_win_rate: number;
+}
+
+export interface PipelineByStage {
+  stage: string;
+  stage_slug: string;
+  deal_count: number;
+  total_value: number;
+  percentage: number;
+}
+
+export interface StageConversion {
+  from_stage: string;
+  to_stage: string;
+  count: number;
+  conversion_pct: number;
+}
+
+export interface PipelineAging {
+  bucket: string;
+  count: number;
+  value: number;
+}
+
+export interface StalledDeal {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  stage: string;
+  value: number;
+  days_inactive: number;
+}
+
+export interface AvgTimeInStage {
+  stage: string;
+  avg_days: number;
+}
+
+export interface PipelineAnalyticsReport {
+  pipeline_by_stage: PipelineByStage[];
+  stage_conversion: StageConversion[];
+  pipeline_aging: PipelineAging[];
+  stalled_deals: StalledDeal[];
+  avg_time_in_stage: AvgTimeInStage[];
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  deals_won: number;
+  win_rate: number;
+  quota_pct: number;
+  avg_deal_size: number;
+  sales_cycle_days: number;
+}
+
+export interface RepComparison {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  win_rate: number;
+  deals_won: number;
+  quota_pct: number;
+  sales_cycle_days: number;
+  avg_deal_size: number;
+}
+
+export interface PerformanceVsPrior {
+  metric: string;
+  current: number;
+  previous: number;
+  change_pct: number;
+}
+
+export interface TeamPerformanceReport {
+  leaderboard: LeaderboardEntry[];
+  rep_comparison: RepComparison[];
+  sales_cycle_by_rep: SalesCycleByRep[];
+  performance_vs_prior: PerformanceVsPrior[];
+}
+
+export interface SalesCycleByRep {
+  rep_id: string;
+  rep_name: string;
+  avg_cycle_days: number;
+  deal_count: number;
+}
+
+export interface ActivitySummary {
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  notes: number;
+  total: number;
+}
+
+export interface ActivityByRep {
+  rep_id: string;
+  rep_name: string;
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  total: number;
+}
+
+export interface CompletedVsOverdue {
+  completed: number;
+  overdue: number;
+  pending: number;
+  completion_rate: number;
+}
+
+export interface ActivityAnalyticsReport {
+  activity_summary: ActivitySummary;
+  activity_by_rep: ActivityByRep[];
+  activity_trend: ActivityTrendPoint[];
+  completed_vs_overdue: CompletedVsOverdue;
+  activity_to_deal: ActivityToDeal;
+}
+
+export interface ActivityTrendPoint {
+  period: string;
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  total: number;
+}
+
+export interface ActivityToDeal {
+  total_deals: number;
+  deals_with_high_activity: number;
+  deals_with_low_activity: number;
+  high_activity_win_rate: number;
+  low_activity_win_rate: number;
+  insight: string;
+}
+
+export interface SourcePerformance {
+  source: string;
+  total: number;
+  qualified: number;
+  converted: number;
+  conversion_pct: number;
+}
+
+export interface ConversionFunnelStage {
+  stage: string;
+  count: number;
+  percentage: number;
+}
+
+export interface LeadAging {
+  bucket: string;
+  count: number;
+}
+
+export interface LeadAnalyticsReport {
+  source_performance: SourcePerformance[];
+  conversion_funnel: ConversionFunnelStage[];
+  conversion_by_rep: ConversionByRep[];
+  lead_aging: LeadAging[];
+  total_leads: number;
+  overall_conversion_rate: number;
+}
+
+export interface ConversionByRep {
+  rep_id: string;
+  rep_name: string;
+  total_leads: number;
+  converted: number;
+  conversion_pct: number;
+}
+
+export interface WonDealItem {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  close_date: string;
+  sales_cycle_days: number;
+}
+
+export interface LostDealItem {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  close_date: string;
+  lost_reason: string;
+}
+
+export interface LostReasonAnalysis {
+  reason: string;
+  count: number;
+  percentage: number;
+}
+
+export interface DealSizeStats {
+  current: number;
+  previous: number;
+  change_pct: number;
+}
+
+export interface DealClosingSoon {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  expected_close_date: string;
+  days_until: number;
+  stage: string;
+}
+
+export interface AtRiskDeal {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  stage: string;
+  value: number;
+  risk_reason: string;
+  days_inactive: number;
+}
+
+export interface DealAnalyticsReport {
+  won_deals: WonDealItem[];
+  lost_deals: LostDealItem[];
+  lost_reason_analysis: LostReasonAnalysis[];
+  avg_deal_size: DealSizeStats;
+  deals_closing_soon: DealClosingSoon[];
+  at_risk_deals: AtRiskDeal[];
+  total_won: number;
+  total_lost: number;
+  total_won_value: number;
+  total_lost_value: number;
+}
+
+export async function getSalesPerformanceReport(params?: ReportParams): Promise<SalesPerformanceReport> {
+  return apiFetch<SalesPerformanceReport>(
+    `/api/v1/reports/sales-performance${toQuery({ period: params?.period, rep_id: params?.rep_id })}`
+  );
+}
+
+export async function getPipelineAnalyticsReport(params?: ReportParams): Promise<PipelineAnalyticsReport> {
+  return apiFetch<PipelineAnalyticsReport>(
+    `/api/v1/reports/pipeline-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getTeamPerformanceReport(params?: ReportParams): Promise<TeamPerformanceReport> {
+  return apiFetch<TeamPerformanceReport>(
+    `/api/v1/reports/team-performance${toQuery({ period: params?.period, rep_id: params?.rep_id })}`
+  );
+}
+
+export async function getActivityAnalyticsReport(params?: ReportParams): Promise<ActivityAnalyticsReport> {
+  return apiFetch<ActivityAnalyticsReport>(
+    `/api/v1/reports/activity-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getLeadAnalyticsReport(params?: ReportParams): Promise<LeadAnalyticsReport> {
+  return apiFetch<LeadAnalyticsReport>(
+    `/api/v1/reports/lead-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getDealAnalyticsReport(params?: ReportParams): Promise<DealAnalyticsReport> {
+  return apiFetch<DealAnalyticsReport>(
+    `/api/v1/reports/deal-analytics${toQuery({ period: params?.period })}`
+  );
+}

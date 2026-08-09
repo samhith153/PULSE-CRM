@@ -24,6 +24,8 @@ import SettingsView from '@/components/dashboard/SettingsView';
 import ProductsView from '@/components/dashboard/ProductsView';
 import DocumentsView from '@/components/dashboard/DocumentsView';
 import ReportsView from '@/components/dashboard/ReportsView';
+import ManagerReportsView from '@/components/dashboard/ManagerReportsView';
+import AdminReportsView from '@/components/dashboard/AdminReportsView';
 import WorkflowsView from '@/components/dashboard/WorkflowsView';
 import CommandPalette from '@/components/dashboard/CommandPalette';
 import AICopilotChat from '@/components/dashboard/AICopilotChat';
@@ -271,6 +273,8 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           ) : activeTab === 'documents' ? (
             <DocumentsView />
           ) : activeTab === 'reports' ? (
+            requiredRole === 'manager' ? <ManagerReportsView /> :
+            requiredRole === 'admin' ? <AdminReportsView /> :
             <ReportsView />
           ) : activeTab === 'workflows' ? (
             <WorkflowsView />

@@ -37,14 +37,19 @@ scheduler = AsyncIOScheduler()
 event_worker = EventWorker()
 
 
+_outbox_backoff: int = 0
+
 async def process_event_outbox():
+    global _outbox_backoff
     try:
         processed = await event_worker.run_once(batch_size=50)
         if processed:
             logger.info("Event outbox: processed %d event(s).", processed)
+        _outbox_backoff = 0
     except Exception as exc:
-        logger.warning("Event outbox processing failed: %s", exc)
-        await asyncio.sleep(5)
+        _outbox_backoff = min(_outbox_backoff + 5, 60)
+        logger.warning("Event outbox processing failed: %s (backoff %ds)", exc, _outbox_backoff)
+        await asyncio.sleep(_outbox_backoff)
 
 
 async def daily_lead_assessment():
@@ -163,33 +168,52 @@ async def daily_lead_assessment():
             logger.warning("Daily assessment failed for org %s: %s", org_id, exc)
 
 
+_gmail_backoff: int = 0
+
 async def poll_gmail_replies():
-    """Poll connected Gmail accounts for new inbound messages / replies."""
+    """Poll connected Gmail accounts for new inbound messages / replies.
+
+    Each organization is processed in its own short-lived session so that
+    the DB connection is returned to the pool between orgs (the Gmail API
+    calls inside sync_all_connections are slow and would otherwise hold the
+    connection open for the entire duration).
+    """
+    global _gmail_backoff
     from sqlalchemy import select
 
     from app.database.connection import AsyncSessionFactory
     from app.models.email import GmailConnection
     from app.services.email_service import EmailService
 
+    org_ids: list = []
     try:
         async with AsyncSessionFactory() as db:
             result = await db.execute(
-                select(GmailConnection).where(GmailConnection.is_active.is_(True))
+                select(GmailConnection.organization_id)
+                .where(GmailConnection.is_active.is_(True))
+                .distinct()
             )
-            connections = list(result.scalars().all())
-            if not connections:
-                return
-            svc = EmailService(db)
-            for organization_id in {c.organization_id for c in connections}:
-                try:
-                    await svc.sync_all_connections(organization_id, None)
-                    await db.commit()
-                except Exception as exc:
-                    await db.rollback()
-                    logger.warning("Gmail polling failed for org %s: %s", organization_id, exc)
+            org_ids = [row[0] for row in result]
     except Exception as exc:
-        logger.warning("Gmail polling failed: %s", exc)
-        await asyncio.sleep(5)
+        _gmail_backoff = min(_gmail_backoff + 5, 60)
+        logger.warning("Gmail polling failed to list orgs: %s (backoff %ds)", exc, _gmail_backoff)
+        await asyncio.sleep(_gmail_backoff)
+        return
+
+    if not org_ids:
+        _gmail_backoff = 0
+        return
+
+    for organization_id in org_ids:
+        try:
+            async with AsyncSessionFactory() as db:
+                svc = EmailService(db)
+                await svc.sync_all_connections(organization_id, None)
+                await db.commit()
+        except Exception as exc:
+            logger.warning("Gmail polling failed for org %s: %s", organization_id, exc)
+
+    _gmail_backoff = 0
 
 
 @asynccontextmanager
@@ -205,7 +229,7 @@ async def lifespan(app: FastAPI):
 
     scheduler.add_job(daily_lead_assessment, "cron", hour=0, minute=0)
     scheduler.add_job(process_event_outbox, "interval", seconds=30, max_instances=1, misfire_grace_time=60)
-    scheduler.add_job(poll_gmail_replies, "interval", seconds=60, max_instances=1, misfire_grace_time=60)
+    scheduler.add_job(poll_gmail_replies, "interval", seconds=120, max_instances=1, misfire_grace_time=60)
     scheduler.start()
 
     yield
