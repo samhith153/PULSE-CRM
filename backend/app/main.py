@@ -39,11 +39,12 @@ event_worker = EventWorker()
 
 async def process_event_outbox():
     try:
-        processed = await event_worker.run_once(batch_size=100)
+        processed = await event_worker.run_once(batch_size=50)
         if processed:
             logger.info("Event outbox: processed %d event(s).", processed)
     except Exception as exc:
         logger.warning("Event outbox processing failed: %s", exc)
+        await asyncio.sleep(5)
 
 
 async def daily_lead_assessment():
@@ -188,6 +189,7 @@ async def poll_gmail_replies():
                     logger.warning("Gmail polling failed for org %s: %s", organization_id, exc)
     except Exception as exc:
         logger.warning("Gmail polling failed: %s", exc)
+        await asyncio.sleep(5)
 
 
 @asynccontextmanager
@@ -202,8 +204,8 @@ async def lifespan(app: FastAPI):
     logger.info("Application starting")
 
     scheduler.add_job(daily_lead_assessment, "cron", hour=0, minute=0)
-    scheduler.add_job(process_event_outbox, "interval", seconds=15)
-    scheduler.add_job(poll_gmail_replies, "interval", seconds=30, max_instances=1, misfire_grace_time=60)
+    scheduler.add_job(process_event_outbox, "interval", seconds=30, max_instances=1, misfire_grace_time=60)
+    scheduler.add_job(poll_gmail_replies, "interval", seconds=60, max_instances=1, misfire_grace_time=60)
     scheduler.start()
 
     yield
