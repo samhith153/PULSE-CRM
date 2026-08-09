@@ -651,7 +651,8 @@ header {
   transition:
     opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  &[data-visible="true"] {
+  &[data-visible="true"],
+  &.is-in {
     opacity: 1;
     transform: none;
   }
@@ -1422,19 +1423,6 @@ a:hover { color: var(--accent-hover); }
   );
 }
 
-/* Entrance reveal */
-.reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition:
-    opacity 560ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.reveal.is-in {
-  opacity: 1;
-  transform: translateY(0);
-}
-
 .reveal-badge {
   opacity: 0;
   transform: scale(0.8);
@@ -1480,31 +1468,6 @@ a:hover { color: var(--accent-hover); }
   50% { transform: translate3d(1.5px, -1.5px, 0); }
 }
 
-/* Shimmer effect */
-.shimmer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 35%,
-    oklch(1 0 0 / 0.16) 50%,
-    transparent 65%
-  );
-  background-size: 260% 100%;
-  background-position: 130% 0;
-  transition: opacity 300ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-.stat-shell:hover .shimmer {
-  opacity: 1;
-  animation: shimmer-sweep 2.4s ease-in-out infinite;
-}
-@keyframes shimmer-sweep {
-  0% { background-position: 130% 0; }
-  100% { background-position: -30% 0; }
-}
-
 /* Sparkline draw-on */
 .spark-line {
   stroke-dasharray: var(--spark-len, 400);
@@ -1533,8 +1496,7 @@ a:hover { color: var(--accent-hover); }
   .stat-shell:hover .reveal-badge.is-in {
     transform: none;
   }
-  .badge-arrow,
-  .stat-shell:hover .shimmer {
+  .badge-arrow {
     animation: none;
   }
   .shimmer {
@@ -1635,7 +1597,8 @@ a:hover { color: var(--accent-hover); }
   transition:
     opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
     transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  &[data-visible="true"] {
+  &[data-visible="true"],
+  &.is-in {
     opacity: 1;
     transform: none;
   }
