@@ -42,6 +42,7 @@ import {
 import { getLeads, getDeals, getActivities, formatINR } from '@/utils/api';
 import QuotaPaceCard from './QuotaPaceCard';
 import DealsAtRiskCard from './DealsAtRiskCard';
+import PriorityQueueCard from './PriorityQueueCard';
 import FunnelChartCard from './FunnelChartCard';
 import QuickCaptureCard from './QuickCaptureCard';
 import ActivitySummaryCard from './ActivitySummaryCard';
@@ -480,6 +481,31 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     return items.slice(0, 5);
   }, [tasks, leadsListState]);
 
+  const todayPriorityItems = useMemo(() => {
+    const backendQueue = dashboardData?.priority_queue;
+    if (backendQueue && backendQueue.length > 0) {
+      return backendQueue.map((item) => ({
+        id: `lead-${item.lead_id}`,
+        leadId: item.lead_id,
+        name: `${item.first_name} ${item.last_name}`.trim() || 'Lead',
+        type: 'lead' as const,
+        company: item.company_name ?? undefined,
+        score: item.score,
+        tier: item.tier,
+        reason: item.top_reasons?.[0] ?? item.top_reason ?? undefined,
+      }));
+    }
+    return priorityItems.map((item) => ({
+      id: item.id,
+      leadId: item.type === 'lead' ? item.id.replace(/^lead-/, '') : undefined,
+      name: item.name,
+      type: item.type,
+      company: item.type === 'lead' ? (item.detail.split(' • ')[0] ?? undefined) : undefined,
+      score: item.score,
+      reason: item.detail,
+    }));
+  }, [dashboardData, priorityItems]);
+
   const riskDealsCalculated = useMemo(() => {
     const openDeals = deals.filter(d => d.status !== 'Won' && d.status !== 'Lost' && d.status !== 'Closed');
     const items = openDeals.map(d => {
@@ -494,15 +520,33 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
       }
       return {
         id: d.id,
-        name: d.name,
-        company: d.company_name || '—',
-        value: d.amount || 0,
-        owner: d.owner_name || 'Unassigned',
+        name: d.title || d.name,
+        company: d.company_name || d.company || '—',
+        value: Number(d.amount || d.value || 0),
+        owner: d.owner_name || d.owner || 'Unassigned',
         reason: reason
       };
     });
     return items.slice(0, 4);
   }, [deals]);
+
+  const riskDeals = useMemo(() => {
+    const backendRisk = dashboardData?.deals_at_risk;
+    if (backendRisk && backendRisk.length > 0) {
+      return backendRisk.map((deal) => ({
+        deal_id: deal.deal_id,
+        deal_name: deal.deal_title,
+        deal_value: Number(deal.value ?? 0),
+        risk_reason: deal.risk_reason,
+        days_since_last_activity: deal.stalled_days,
+        sentiment: deal.sentiment,
+        probability: deal.probability,
+        company: deal.company_name ?? null,
+        owner: deal.owner_name ?? null,
+      }));
+    }
+    return riskDealsCalculated;
+  }, [dashboardData, riskDealsCalculated]);
 
   const handleToggleTask = (id: number) => {
     const updated = tasks.map(t => {
@@ -996,46 +1040,26 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                   </div>
                 );
               } else if (itemId === 'priorityQueue') {
-                // Priority Queue widget
+                // Today's Priority widget
                 cardContent = (
-                  <div className="bg-card border border-border rounded-xl p-[var(--space-4)] flex flex-col justify-between h-[360px]">
-                    <div>
-                      <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] select-none">
-                        <Layers className="h-4.5 w-4.5 text-brand-purple" />
-                        <span>Priority Queue</span>
-                      </h3>
-                      <div className="space-y-[var(--space-2)] overflow-y-auto max-h-[260px] custom-scrollbar pr-1">
-                        {priorityItems.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-10 font-semibold">No high priority items.</p>
-                        ) : (
-                          priorityItems.map(item => (
-                            <div key={item.id} className="p-[var(--space-2)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-secondary/20 transition flex items-start justify-between gap-[var(--space-2)]">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
-                                    item.type === 'task' ? 'bg-brand-purple/10 text-brand-purple' : 'bg-brand-cyan/10 text-brand-cyan'
-                                  }`}>
-                                    {item.type}
-                                  </span>
-                                  <span className="text-[10px] font-bold text-foreground truncate block max-w-[140px]">{item.name}</span>
-                                </div>
-                                <p className="text-[9px] text-muted-foreground mt-1 font-semibold">{item.detail}</p>
-                              </div>
-                              {item.score !== undefined && (
-                                <span className="text-[9px] font-extrabold bg-brand-cyan/10 text-brand-cyan px-1.5 py-0.5 rounded-full select-none shrink-0">
-                                  {item.score} Score
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <PriorityQueueCard
+                    items={todayPriorityItems}
+                    onOpenLead={(leadId) => {
+                      if (leadId) {
+                        try {
+                          localStorage.setItem('pulse-selected-lead-id', String(leadId));
+                        } catch (e) {
+                          console.error('Failed to persist selected lead', e);
+                        }
+                      }
+                      onTabChange('leads');
+                    }}
+                    onViewAll={() => onTabChange('leads')}
+                  />
                 );
               } else if (itemId === 'atRisk') {
                 // Deals at risk widget
-                cardContent = <DealsAtRiskCard deals={riskDealsCalculated} />;
+                cardContent = <DealsAtRiskCard deals={riskDeals} />;
               } else if (itemId === 'activitySummary') {
                 // Render Today's Work summary card
                 cardContent = <ActivitySummaryCard onTabChange={onTabChange} />;

@@ -122,7 +122,7 @@ async def batch_recommendations(
                 lead_id=lid,
                 recommended_action=rec.recommendation,
                 reason=rec.reasoning or "",
-                current_score=rec.metadata_json.get("score", 0) if rec.metadata_json else 0,
+                current_score=int(round(rec.metadata_json.get("score", 0))) if rec.metadata_json else 0,
                 current_stage=rec.metadata_json.get("stage", "") if rec.metadata_json else "",
                 all_candidates=rec.metadata_json.get("recommendations", []) if rec.metadata_json else [],
             )

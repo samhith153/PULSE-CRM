@@ -1054,8 +1054,8 @@ export interface DashboardOverviewData {
   kpis: { open_deals: number; untouched_deals: number; calls_today: number; leads_assigned: number; leads_today?: number };
   open_tasks: { id: string; title: string; due_date: string; status: string; source?: string; lead_id?: string; deal_id?: string }[];
   meetings_today: { id: string; title: string; start_time: string; end_time: string; zoom_link?: string; contact_name?: string; transcript_status?: string }[];
-  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string }[];
-  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string }[];
+  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string; top_reasons?: string[] }[];
+  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string; probability?: number; company_name?: string | null; owner_name?: string | null }[];
   quota_pace: { closed_won_revenue: Decimal; target_revenue: Decimal; attained_percentage: Decimal; pace_status: string };
   deals?: { id: string; name: string; value: number; stage: string; owner: string; closeDate: string }[];
   leads?: { id: string; name: string; company: string; score: number; status: string; owner: string }[];

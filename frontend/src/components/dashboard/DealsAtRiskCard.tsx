@@ -31,6 +31,7 @@ export interface AtRiskDealItem {
   risk_reason?: string;
   days_since_last_activity?: number;
   daysInactive?: number;
+  probability?: number;
 }
 
 interface DealsAtRiskCardProps {
@@ -64,6 +65,7 @@ export default function DealsAtRiskCard({
       const value = asNumber(d.value ?? d.deal_value ?? 0);
       const reason = d.reason || d.risk_reason || 'No activity > 7 days';
       const days = d.days_since_last_activity ?? d.daysInactive ?? (Math.floor(Math.random() * 8) + 5);
+      const probability = typeof d.probability === 'number' ? d.probability : null;
 
       // Severity rating based on value & days
       const isCritical = value > 500000 || days > 10 || reason.toLowerCase().includes('inactive') || reason.toLowerCase().includes('decision');
@@ -76,6 +78,7 @@ export default function DealsAtRiskCard({
         value,
         reason,
         days,
+        probability,
         isCritical,
         raw: d,
       };
@@ -246,6 +249,11 @@ export default function DealsAtRiskCard({
                         <p className="text-[10px] text-muted-foreground font-semibold truncate mt-0.5">
                           {deal.company}
                         </p>
+                        {deal.probability !== null && (
+                          <p className="text-[9px] text-muted-foreground/70 font-medium tabular-nums truncate mt-0.5">
+                            {deal.days}d stalled · {deal.probability}% probability · {formatINR(deal.value)}
+                          </p>
+                        )}
                       </div>
 
                       <div className="text-right shrink-0">
