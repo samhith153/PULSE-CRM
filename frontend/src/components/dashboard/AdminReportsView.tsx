@@ -23,7 +23,7 @@ import {
   type AdminDashboardData,
 } from '@/utils/api';
 
-const COLORS = ['var(--lime)', 'var(--brand-soft)', 'var(--brand)', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981'];
+const COLORS = ['var(--lime)', 'var(--brand-soft)', 'var(--brand)', 'var(--status-warning-text)', 'var(--accent-color)', 'var(--chart-5)', 'var(--chart-5)', 'var(--status-success-text)'];
 
 function fmt(n: number) {
   if (n >= 1e7) return `${(n / 1e7).toFixed(1)}Cr`;
@@ -58,7 +58,7 @@ function KPICard({ label, value, sub, positive }: { label: string; value: string
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-[22px] font-extrabold tracking-tight">{value}</p>
       {sub && (
-        <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${positive ? 'text-emerald-600' : 'text-rose-500'}`}>
+        <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${positive ? 'text-status-success-text' : 'text-status-danger-text'}`}>
           {positive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
           {sub}
         </span>
@@ -212,7 +212,7 @@ export default function AdminReportsView() {
                     className="h-full rounded-full transition-all"
                     style={{
                       width: `${Math.min(Number(q.achievement_pct) || 0, 100)}%`,
-                      background: Number(q.achievement_pct) >= 100 ? '#10b981' : Number(q.achievement_pct) >= 70 ? '#f59e0b' : '#ef4444',
+                      background: Number(q.achievement_pct) >= 100 ? 'var(--status-success-text)' : Number(q.achievement_pct) >= 70 ? 'var(--status-warning-text)' : 'var(--status-danger-text)',
                     }}
                   />
                   <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold">
@@ -330,7 +330,7 @@ export default function AdminReportsView() {
                   <td className="px-4 py-3 text-center">{entry.deals_won}</td>
                   <td className="px-4 py-3 text-center">{fmtPct(Number(entry.win_rate))}</td>
                   <td className="px-4 py-3 text-right">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${Number(entry.quota_pct) >= 100 ? 'bg-emerald-100 text-emerald-700' : Number(entry.quota_pct) >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${Number(entry.quota_pct) >= 100 ? 'bg-status-success-bg text-status-success-text' : Number(entry.quota_pct) >= 70 ? 'bg-status-warning-bg text-status-warning-text' : 'bg-status-danger-bg text-status-danger-text'}`}>
                       {fmtPct(Number(entry.quota_pct))}
                     </span>
                   </td>
@@ -350,7 +350,7 @@ export default function AdminReportsView() {
               <div key={p.metric} className="rounded-xl bg-muted/50 p-4">
                 <p className="text-xs text-muted-foreground">{p.metric}</p>
                 <p className="mt-1 text-[22px] font-extrabold">{fmt(Number(p.current))}</p>
-                <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${Number(p.change_pct) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${Number(p.change_pct) >= 0 ? 'text-status-success-text' : 'text-status-danger-text'}`}>
                   {Number(p.change_pct) >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
                   {fmtPct(Number(p.change_pct))} vs prior
                 </span>
@@ -388,10 +388,10 @@ export default function AdminReportsView() {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend />
-              <Bar dataKey="calls" fill="#10b981" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="emails" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="meetings" fill="#f59e0b" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="tasks" fill="#06b6d4" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="calls" fill="var(--status-success-text)" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="emails" fill="var(--accent-color)" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="meetings" fill="var(--status-warning-text)" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="tasks" fill="var(--chart-5)" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -399,17 +399,17 @@ export default function AdminReportsView() {
         {/* Completed vs Overdue */}
         {activity?.completed_vs_overdue && (
           <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-xl bg-emerald-50 dark:bg-emerald-950/30 p-4 text-center">
-              <p className="text-[22px] font-extrabold text-emerald-700">{activity.completed_vs_overdue.completed}</p>
-              <p className="text-xs text-emerald-600">Completed</p>
+            <div className="rounded-xl bg-status-success-bg p-4 text-center">
+              <p className="text-[22px] font-extrabold text-status-success-text">{activity.completed_vs_overdue.completed}</p>
+              <p className="text-xs text-status-success-text">Completed</p>
             </div>
-            <div className="rounded-xl bg-rose-50 dark:bg-rose-950/30 p-4 text-center">
-              <p className="text-[22px] font-extrabold text-rose-700">{activity.completed_vs_overdue.overdue}</p>
-              <p className="text-xs text-rose-600">Overdue</p>
+            <div className="rounded-xl bg-status-danger-bg p-4 text-center">
+              <p className="text-[22px] font-extrabold text-status-danger-text">{activity.completed_vs_overdue.overdue}</p>
+              <p className="text-xs text-status-danger-text">Overdue</p>
             </div>
-            <div className="rounded-xl bg-amber-50 dark:bg-amber-950/30 p-4 text-center">
-              <p className="text-[22px] font-extrabold text-amber-700">{activity.completed_vs_overdue.pending}</p>
-              <p className="text-xs text-amber-600">Pending</p>
+            <div className="rounded-xl bg-status-warning-bg p-4 text-center">
+              <p className="text-[22px] font-extrabold text-status-warning-text">{activity.completed_vs_overdue.pending}</p>
+              <p className="text-xs text-status-warning-text">Pending</p>
             </div>
           </div>
         )}
@@ -543,7 +543,7 @@ export default function AdminReportsView() {
                       <td className="px-4 py-2.5">{d.owner_name}</td>
                       <td className="px-4 py-2.5">{d.stage}</td>
                       <td className="px-4 py-2.5 text-right font-semibold">{fmtCurrency(Number(d.value))}</td>
-                      <td className="px-4 py-2.5 text-rose-600 text-xs font-semibold">{d.risk_reason}</td>
+                      <td className="px-4 py-2.5 text-status-danger-text text-xs font-semibold">{d.risk_reason}</td>
                     </tr>
                   ))}
                 </tbody>

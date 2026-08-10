@@ -29,19 +29,19 @@ function timeAgo(dateStr: string): string {
 }
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
-  lead_assigned: <UserPlus className="h-4.5 w-4.5 text-blue-600" />,
-  lead_created: <UserPlus className="h-4.5 w-4.5 text-blue-600" />,
+  lead_assigned: <UserPlus className="h-4.5 w-4.5 text-status-info-text" />,
+  lead_created: <UserPlus className="h-4.5 w-4.5 text-status-info-text" />,
   lead_won: <TrendingUp className="h-4.5 w-4.5 text-brand-cyan" />,
   lead_lost: <ShieldAlert className="h-4.5 w-4.5 text-destructive" />,
-  lead_converted: <Sparkles className="h-4.5 w-4.5 text-amber-600" />,
+  lead_converted: <Sparkles className="h-4.5 w-4.5 text-status-warning-text" />,
   deal_created: <TrendingUp className="h-4.5 w-4.5 text-brand-cyan" />,
   deal_won: <TrendingUp className="h-4.5 w-4.5 text-brand-cyan" />,
   deal_lost: <ShieldAlert className="h-4.5 w-4.5 text-destructive" />,
   email_received: <Mail className="h-4.5 w-4.5 text-brand-purple" />,
   email_reply: <Mail className="h-4.5 w-4.5 text-brand-purple" />,
-  meeting_reminder: <Calendar className="h-4.5 w-4.5 text-purple-600" />,
+  meeting_reminder: <Calendar className="h-4.5 w-4.5 text-chart-1" />,
   task_due: <CheckSquare className="h-4.5 w-4.5 text-destructive" />,
-  ai_alert: <Sparkles className="h-4.5 w-4.5 text-amber-600" />,
+  ai_alert: <Sparkles className="h-4.5 w-4.5 text-status-warning-text" />,
 };
 
 function getIcon(type: string) {

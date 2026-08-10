@@ -33,7 +33,7 @@ const getReportStyles = (title: string, index: number) => {
     bgClass = 'bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/15';
   } else if (t.includes('projection') || t.includes('forecast') || t.includes('revenue')) {
     Icon = TrendingUp;
-    bgClass = 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/15';
+    bgClass = 'bg-status-success-text/10 text-status-success-text border border-status-success-text/15';
   } else if (t.includes('segment') || t.includes('share') || t.includes('source') || t.includes('size')) {
     Icon = PieChart;
     bgClass = 'bg-brand-blue/10 text-brand-blue border border-brand-blue/15';
@@ -160,8 +160,8 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
             <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-brand-blue/10 flex items-center justify-center">
               <span className="text-[8px] font-bold text-brand-blue">A</span>
             </div>
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-[#4FB477]/10 flex items-center justify-center">
-              <span className="text-[8px] font-bold text-[#4FB477]">K</span>
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-status-success-text/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-status-success-text">K</span>
             </div>
           </div>
         </div>

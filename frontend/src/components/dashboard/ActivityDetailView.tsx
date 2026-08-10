@@ -161,8 +161,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   if (!activity) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center select-none bg-card border border-border rounded-xl p-6 m-6">
-        <div className="h-14 w-14 rounded-full bg-rose-500/10 flex items-center justify-center mb-4">
-          <Trash2 className="size-6 text-rose-500" />
+        <div className="h-14 w-14 rounded-full bg-status-danger-bg flex items-center justify-center mb-4">
+          <Trash2 className="size-6 text-status-danger-text" />
         </div>
         <h3 className="text-sm font-bold text-foreground font-['Space_Grotesk']">Activity Not Found</h3>
         <p className="text-[11px] text-muted-foreground max-w-sm mt-1 leading-relaxed">
@@ -255,18 +255,18 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   // Color mappings
   const getPriorityBadgeClass = (p: string) => {
     switch (p) {
-      case 'Urgent': return 'bg-[#E2604F]/15 text-[#E2604F] border border-[#E2604F]/25';
-      case 'High': return 'bg-[#E8A33D]/15 text-[#E8A33D] border border-[#E8A33D]/25';
-      case 'Medium': return 'bg-[#5B9BD5]/15 text-[#5B9BD5] border border-[#5B9BD5]/25';
+      case 'Urgent': return 'bg-status-danger-bg text-status-danger-text border border-status-danger-text/25';
+      case 'High': return 'bg-priority-high-bg text-priority-high border border-priority-high/25';
+      case 'Medium': return 'bg-status-info-bg text-status-info-text border border-status-info-text/25';
       default: return 'bg-secondary text-muted-foreground border border-border/80';
     }
   };
 
   const getStatusBadgeClass = (s: string) => {
     switch (s) {
-      case 'Completed': return 'bg-[#4FB477]/15 text-[#4FB477] border border-[#4FB477]/25';
-      case 'Overdue': return 'bg-[#E2604F]/15 text-[#E2604F] border border-[#E2604F]/25';
-      case 'In Progress': return 'bg-[#5B9BD5]/15 text-[#5B9BD5] border border-[#5B9BD5]/25';
+      case 'Completed': return 'bg-status-success-bg text-status-success-text border border-status-success-text/25';
+      case 'Overdue': return 'bg-status-danger-bg text-status-danger-text border border-status-danger-text/25';
+      case 'In Progress': return 'bg-status-info-bg text-status-info-text border border-status-info-text/25';
       case 'Scheduled': return 'bg-brand-purple/15 text-brand-purple border border-brand-purple/25';
       default: return 'bg-secondary text-muted-foreground border border-border/80';
     }
@@ -275,10 +275,10 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'task': return { bg: 'bg-brand-purple/15', text: 'text-brand-purple', border: 'border-brand-purple/25', icon: ClipboardList };
-      case 'meeting': return { bg: 'bg-[#5B9BD5]/15', text: 'text-[#5B9BD5]', border: 'border-[#5B9BD5]/25', icon: Calendar };
-      case 'call': return { bg: 'bg-[#4FB477]/15', text: 'text-[#4FB477]', border: 'border-[#4FB477]/25', icon: PhoneCall };
-      case 'email': return { bg: 'bg-[#E8A33D]/15', text: 'text-[#E8A33D]', border: 'border-[#E8A33D]/25', icon: Mail };
-      default: return { bg: 'bg-emerald-500/15', text: 'text-emerald-500', border: 'border-emerald-500/25', icon: FileText };
+      case 'meeting': return { bg: 'bg-status-info-bg', text: 'text-status-info-text', border: 'border-status-info-text/25', icon: Calendar };
+      case 'call': return { bg: 'bg-status-success-bg', text: 'text-status-success-text', border: 'border-status-success-text/25', icon: PhoneCall };
+      case 'email': return { bg: 'bg-priority-high-bg', text: 'text-priority-high', border: 'border-priority-high/25', icon: Mail };
+      default: return { bg: 'bg-status-success-bg', text: 'text-status-success-text', border: 'border-status-success-text/25', icon: FileText };
     }
   };
 
@@ -326,7 +326,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             <>
               <button 
                 onClick={handleSave}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#4FB477] hover:bg-[#4FB477]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-status-success-text hover:bg-status-success-text/90 text-text-on-primary rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Save size={13} />
                 <span>Save</span>
@@ -372,7 +372,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
               </button>
               <button 
                 onClick={handleDelete}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#E2604F] hover:bg-[#E2604F]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-status-danger-text hover:bg-status-danger-text/90 text-text-on-primary rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Trash2 size={13} />
                 <span>Delete</span>
@@ -589,7 +589,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                           <div>
                             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider font-['Space_Grotesk']">Customer Sentiment</span>
                             <div className="mt-1">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/15">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-status-success-bg text-status-success-text border border-status-success-text/15">
                                 {aiInsights.sentiment}
                               </span>
                             </div>
@@ -670,15 +670,15 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                     .map((log, index) => {
                       const typeColors: Record<string, string> = {
                         email: 'bg-brand-purple',
-                        call: 'bg-emerald-500',
-                        meeting: 'bg-blue-500',
-                        timeline: 'bg-amber-500',
+                        call: 'bg-status-success-text',
+                        meeting: 'bg-status-info-text',
+                        timeline: 'bg-status-warning-text',
                       };
                       const typeBadge: Record<string, string> = {
                         email: 'bg-brand-purple/10 text-brand-purple',
-                        call: 'bg-emerald-500/10 text-emerald-600',
-                        meeting: 'bg-blue-500/10 text-blue-600',
-                        timeline: 'bg-amber-500/10 text-amber-600',
+                        call: 'bg-status-success-bg text-status-success-text',
+                        meeting: 'bg-status-info-bg text-status-info-text',
+                        timeline: 'bg-status-warning-bg text-status-warning-text',
                       };
                       const dotColor = typeColors[log.type] ?? 'bg-brand-purple';
                       const badgeColor = typeBadge[log.type] ?? 'bg-secondary text-muted-foreground';

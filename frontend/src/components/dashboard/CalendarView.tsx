@@ -38,9 +38,9 @@ const ACTIVITY_TO_EVENT_TYPE: Record<string, EventItem['type']> = {
 
 const TYPE_BADGE: Record<EventItem['type'], string> = {
   meeting: 'bg-brand-purple/10 text-purple-750 border border-purple-100',
-  call: 'bg-brand-cyan/15 text-emerald-750 border border-brand-cyan/20',
-  task: 'bg-amber-100 text-amber-900 border border-amber-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
-  followup: 'bg-blue-50 text-blue-750 border border-blue-100',
+  call: 'bg-brand-cyan/15 text-status-success-text border border-brand-cyan/20',
+  task: 'bg-status-warning-bg text-status-warning-text border border-status-warning-text/30 shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
+  followup: 'bg-status-info-text/10 text-status-info-text border border-status-info-text/20',
 };
 
 /**

@@ -104,30 +104,30 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
 
   if (loading) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-5 flex items-center justify-center py-12">
-        <Loader2 className="h-5 w-5 mr-2 animate-spin text-muted-foreground" />
-        <span className="text-xs text-muted-foreground font-medium">Loading settings...</span>
+      <div className="bg-surface-1 border border-border-default rounded-[20px] p-6 shadow-card flex items-center justify-center py-12">
+        <Loader2 className="h-5 w-5 mr-2 animate-spin text-text-muted" />
+        <span className="text-xs text-text-muted font-medium">Loading settings...</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-card border border-border rounded-xl p-5 ">
+    <div className="bg-surface-1 border border-border-default rounded-[20px] p-6 shadow-card">
       
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5 border-b border-border pb-4">
         <div>
-          <h2 className="font-sans text-2xl text-foreground font-bold">System Settings</h2>
-          <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Configure personal parameters, account passwords, alerts rules, and third-party integrations.</p>
+          <h2 className="font-sans text-2xl text-text-primary font-bold">System Settings</h2>
+          <p className="text-[11px] text-text-muted mt-0.5 font-semibold">Configure personal parameters, account passwords, alerts rules, and third-party integrations.</p>
         </div>
         
         {saveSuccess && (
-          <div className="bg-brand-cyan/15 text-brand-cyan text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-brand-cyan/20 flex items-center space-x-1.5 animate-in fade-in duration-200">
+          <div className="bg-status-success-bg text-status-success-text text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-status-success-text/20 flex items-center space-x-1.5 animate-in fade-in duration-200">
             <Check className="h-4 w-4" />
             <span>Settings saved successfully</span>
           </div>
         )}
         {saveError && (
-          <div className="bg-destructive/10 text-destructive text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-destructive/20 flex items-center space-x-1.5 animate-in fade-in duration-200">
+          <div className="bg-status-danger-bg text-status-danger-text text-xs font-semibold px-3.5 py-1.5 rounded-lg border border-status-danger-text/20 flex items-center space-x-1.5 animate-in fade-in duration-200">
             <XCircle className="h-4 w-4" />
             <span>{saveError}</span>
           </div>

@@ -419,7 +419,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            className="w-full pl-11 pr-20 py-3.5 text-xs text-foreground bg-card placeholder-slate-400 focus:outline-none font-medium"
+            className="w-full pl-11 pr-20 py-3.5 text-xs text-foreground bg-card placeholder-text-muted focus:outline-none font-medium"
             role="combobox"
             aria-expanded={true}
             aria-controls="command-list"
@@ -481,7 +481,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
                     <div className="flex items-center space-x-3 min-w-0">
                       <div
                         className={`p-1.5 rounded-md ${
-                          isActive ? 'bg-brand-blue/15 text-brand-blue' : 'bg-secondary/80 text-slate-550'
+                          isActive ? 'bg-brand-blue/15 text-brand-blue' : 'bg-secondary/80 text-text-muted'
                         }`}
                       >
                         <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} />

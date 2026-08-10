@@ -190,7 +190,7 @@ Sales Manager, Pulse CRM`;
       {/* Floating Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-brand-purple/15 hover:bg-brand-purple/25 dark:bg-brand-purple/25 dark:hover:bg-brand-purple/35 backdrop-blur-md border border-brand-purple/30 flex items-center justify-center text-brand-purple dark:text-sky-400 shadow-[0_8px_32px_rgba(29,78,216,0.25)] hover:scale-105 active:scale-95 transition duration-200 z-50 cursor-pointer group"
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-brand-purple/15 hover:bg-brand-purple/25 dark:bg-brand-purple/25 dark:hover:bg-brand-purple/35 backdrop-blur-md border border-brand-purple/30 flex items-center justify-center text-brand-purple dark:text-chart-5 shadow-[0_8px_32px_rgba(29,78,216,0.25)] hover:scale-105 active:scale-95 transition duration-200 z-50 cursor-pointer group"
         aria-label="Ask PulseAI"
       >
         {isOpen ? (
@@ -199,8 +199,8 @@ Sales Manager, Pulse CRM`;
           <div className="relative">
             <Sparkles className="h-6 w-6 animate-pulse group-hover:rotate-12 transition-transform duration-200" />
             <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-sky-500 border border-white"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-5 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-chart-5 border border-white"></span>
             </span>
           </div>
         )}
@@ -210,7 +210,7 @@ Sales Manager, Pulse CRM`;
       {isOpen && (
         <div className="fixed bottom-22 right-6 w-[380px] max-h-[580px] h-[500px] rounded-2xl border border-border bg-card/95 backdrop-blur-md  flex flex-col overflow-hidden z-50 animate-in slide-in-from-bottom-8 fade-in duration-300 text-muted-foreground">
           {/* Header */}
-          <div className="bg-gradient-to-r from-indigo-900 to-indigo-950 p-4 flex items-center justify-between text-white border-b border-border shrink-0">
+          <div className="bg-gradient-to-r from-accent-color to-accent-color/90 p-4 flex items-center justify-between text-white border-b border-border shrink-0">
             <div className="flex items-center space-x-2.5">
               <div className="h-9.5 w-9.5 rounded-xl bg-white/10 flex items-center justify-center">
                 <Sparkles className="h-5.5 w-5.5 text-white" />
@@ -218,7 +218,7 @@ Sales Manager, Pulse CRM`;
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-white">PulseAI Copilot</h3>
                 <div className="flex items-center space-x-1 mt-0.5">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span className="h-2 w-2 rounded-full bg-status-success-text animate-pulse"></span>
                   <span className="text-[10px] text-white/90 font-bold uppercase tracking-wider">Online Sync</span>
                 </div>
               </div>
@@ -339,9 +339,9 @@ Sales Manager, Pulse CRM`;
                   <Bot className="h-4 w-4 text-brand-purple animate-bounce" />
                 </div>
                 <div className="max-w-[78%] p-3 rounded-xl text-xs bg-secondary border border-border flex items-center space-x-1">
-                  <span className="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-100"></span>
-                  <span className="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-200"></span>
-                  <span className="h-1.5 w-1.5 bg-slate-400 rounded-full animate-bounce delay-300"></span>
+                  <span className="h-1.5 w-1.5 bg-muted rounded-full animate-bounce delay-100"></span>
+                  <span className="h-1.5 w-1.5 bg-muted rounded-full animate-bounce delay-200"></span>
+                  <span className="h-1.5 w-1.5 bg-muted rounded-full animate-bounce delay-300"></span>
                 </div>
               </div>
             )}

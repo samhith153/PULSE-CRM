@@ -36,19 +36,19 @@ interface ActivitiesViewProps {
 
 function getPriorityColor(p: string) {
   switch (p?.toLowerCase()) {
-    case 'urgent': return 'bg-[#E2604F] text-white font-medium shadow-sm border border-transparent';
-    case 'high':   return 'bg-[#E8A33D]/10 text-[#E8A33D] border border-[#E8A33D]/15 font-bold';
-    case 'medium': return 'bg-[#5B9BD5]/10 text-[#5B9BD5] border border-[#5B9BD5]/15 font-bold';
+    case 'urgent': return 'bg-status-danger-text text-text-on-primary font-medium shadow-sm border border-transparent';
+    case 'high':   return 'bg-priority-high-bg text-priority-high border border-priority-high/15 font-bold';
+    case 'medium': return 'bg-status-info-bg text-status-info-text border border-status-info-text/15 font-bold';
     default:       return 'bg-secondary text-muted-foreground border border-border/80 font-bold';
   }
 }
 
 function getStatusColor(s: string) {
   switch (s?.toLowerCase()) {
-    case 'completed':   return 'bg-[#4FB477]/10 text-[#4FB477] border border-[#4FB477]/15';
-    case 'overdue':     return 'bg-[#E2604F]/10 text-[#E2604F] border border-[#E2604F]/15';
+    case 'completed':   return 'bg-status-success-bg text-status-success-text border border-status-success-text/15';
+    case 'overdue':     return 'bg-status-danger-bg text-status-danger-text border border-status-danger-text/15';
     case 'in_progress':
-    case 'scheduled':   return 'bg-[#5B9BD5]/10 text-[#5B9BD5] border border-[#5B9BD5]/15';
+    case 'scheduled':   return 'bg-status-info-bg text-status-info-text border border-status-info-text/15';
     default:            return 'bg-secondary text-muted-foreground border border-border';
   }
 }
@@ -391,10 +391,10 @@ useEffect(() => {
             {isAddDropdownOpen && (
               <div className="absolute right-0 mt-1.5 bg-card border border-border rounded-xl shadow-lg py-1.5 w-44 z-50">
                 {([{ type:'task', label:'Create Task', icon:ClipboardList, color:'text-brand-purple' },
-                   { type:'call', label:'Log Call', icon:PhoneCall, color:'text-[#4FB477]' },
+                   { type:'call', label:'Log Call', icon:PhoneCall, color:'text-status-success-text' },
                    { type:'meeting', label:'Schedule Meeting', icon:Calendar, color:'text-brand-blue' },
-                   { type:'email', label:'Sync Email', icon:Mail, color:'text-[#E8A33D]' },
-                   { type:'note', label:'Add Note', icon:FileText, color:'text-emerald-500' }] as const).map(item => {
+                   { type:'email', label:'Sync Email', icon:Mail, color:'text-priority-high' },
+                   { type:'note', label:'Add Note', icon:FileText, color:'text-status-success-text' }] as const).map(item => {
                   const Icon = item.icon;
                   return (
                     <button key={item.type} onClick={() => { setActiveFormType(item.type); setIsAddDropdownOpen(false); }}
@@ -412,7 +412,7 @@ useEffect(() => {
           </button>
           {selectedIds.size > 0 && (
             <button onClick={handleBulkDelete}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#E2604F] hover:bg-[#E2604F]/90 text-white rounded-lg text-xs font-bold cursor-pointer shadow-sm animate-in fade-in">
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-status-danger-text hover:bg-status-danger-text/90 text-text-on-primary rounded-lg text-xs font-bold cursor-pointer shadow-sm animate-in fade-in">
               <Trash2 size={13} /><span>Delete ({selectedIds.size})</span>
             </button>
           )}
@@ -546,7 +546,7 @@ useEffect(() => {
                     </td>
                     <td className="py-3 px-3 text-center" onClick={e => e.stopPropagation()}>
                       <button onClick={e => handleRowDelete(e, a)}
-                        className="p-1.5 rounded-md text-muted-foreground/40 hover:text-[#E2604F] hover:bg-[#E2604F]/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                        className="p-1.5 rounded-md text-muted-foreground/40 hover:text-status-danger-text hover:bg-status-danger-bg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
                         title="Delete activity">
                         <Trash2 size={12} />
                       </button>
@@ -590,7 +590,7 @@ useEffect(() => {
           <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl p-5 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between border-b border-border pb-2 mb-4 shrink-0">
               <div className="flex items-center gap-2">
-                <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${activeFormType==='task'?'bg-brand-purple/10 text-brand-purple border-brand-purple/15':activeFormType==='meeting'?'bg-brand-blue/10 text-brand-blue border-brand-blue/15':activeFormType==='call'?'bg-[#4FB477]/10 text-[#4FB477] border-[#4FB477]/15':activeFormType==='email'?'bg-[#E8A33D]/10 text-[#E8A33D] border-[#E8A33D]/15':'bg-emerald-500/10 text-emerald-500 border-emerald-500/15'}`}>{activeFormType}</span>
+                <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${activeFormType==='task'?'bg-brand-purple/10 text-brand-purple border-brand-purple/15':activeFormType==='meeting'?'bg-brand-blue/10 text-brand-blue border-brand-blue/15':activeFormType==='call'?'bg-status-success-bg text-status-success-text border-status-success-text/15':activeFormType==='email'?'bg-priority-high-bg text-priority-high border-priority-high/15':'bg-status-success-bg text-status-success-text border-status-success-text/15'}`}>{activeFormType}</span>
                 <h3 className="font-bold text-foreground text-sm">
                   {activeFormType==='task'?'Log New Task':activeFormType==='call'?'Log Call Outcome':activeFormType==='meeting'?'Schedule Meeting':activeFormType==='email'?'Sync Email':'Add Note'}
                 </h3>
@@ -625,7 +625,7 @@ useEffect(() => {
 
                 <div className="relative" ref={dropdownRef}>
                   <label className="block text-[8px] font-extrabold text-muted-foreground/80 uppercase">
-                    Search {relatedType.charAt(0).toUpperCase() + relatedType.slice(1)} {activeFormType !== 'email' && activeFormType !== 'note' && <span className="text-rose-500">*</span>}
+                    Search {relatedType.charAt(0).toUpperCase() + relatedType.slice(1)} {activeFormType !== 'email' && activeFormType !== 'note' && <span className="text-status-danger-text">*</span>}
                   </label>
                   <div className="relative mt-1">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />

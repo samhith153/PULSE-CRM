@@ -212,14 +212,14 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
   if (!authorized) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      <div className="min-h-screen w-full flex items-center justify-center bg-surface-0">
+        <Loader2 className="h-8 w-8 text-accent-color animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex bg-background h-screen overflow-hidden font-sans antialiased">
+    <div className="flex bg-surface-0 h-screen overflow-hidden font-sans antialiased">
       {/* Sidebar navigation */}
       <Sidebar 
         activeTab={activeTab} 
@@ -243,8 +243,8 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           userRole={legacyRole}
         />
 
-        {/* Dashboard inner scroll view */}
-        <main className="flex-1 overflow-y-auto px-4 py-8 md:px-6 space-y-6">
+        {/* ui.md §6: Content padding 2xl (32px) on all sides */}
+        <main className="flex-1 overflow-y-auto px-8 py-8 md:px-8 space-y-6">
           {activeTab === 'home' ? (
             requiredRole === 'manager' ? (
               <ManagerDashboardView onTabChange={setActiveTab} />

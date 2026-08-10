@@ -68,26 +68,26 @@ function formatDate(value?: string | null): string {
 function priorityClass(priority?: string | null): string {
   switch ((priority || '').toLowerCase()) {
     case 'critical':
-      return 'bg-red-500/10 text-red-600 border-red-500/20';
+      return 'bg-status-danger-bg/10 text-status-danger-text border-status-danger-bg/20';
     case 'high':
-      return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
+      return 'bg-priority-high/10 text-priority-high border-priority-high/20';
     case 'medium':
-      return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+      return 'bg-status-warning-bg/10 text-status-warning-text border-status-warning-bg/20';
     default:
-      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+      return 'bg-status-info-text/10 text-status-info-text border-status-info-text/20';
   }
 }
 
 function statusClass(status?: string | null): string {
   switch ((status || '').toLowerCase()) {
     case 'completed':
-      return 'bg-green-500/10 text-green-600 border-green-500/20';
+      return 'bg-status-success-bg/10 text-status-success-text border-status-success-bg/20';
     case 'superseded':
-      return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
+      return 'bg-muted/10 text-muted border-muted/20';
     case 'in_progress':
-      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+      return 'bg-status-info-text/10 text-status-info-text border-status-info-text/20';
     default:
-      return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
+      return 'bg-status-warning-bg/10 text-status-warning-text border-status-warning-bg/20';
   }
 }
 
@@ -707,7 +707,7 @@ const handleComplete = async () => {
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-600">
+        <div className="flex items-center gap-2 rounded-xl border border-status-danger-bg/20 bg-status-danger-bg/5 p-3 text-sm text-status-danger-text">
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error}
         </div>
@@ -842,7 +842,7 @@ const handleComplete = async () => {
                       <div
                         className={`relative z-10 mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
                           step.status === 'done'
-                            ? 'border-green-500/30 bg-green-500/10 text-green-600'
+                            ? 'border-status-success-bg/30 bg-status-success-bg/10 text-status-success-text'
                             : step.status === 'active'
                             ? 'border-brand-purple/30 bg-brand-purple/10 text-brand-purple'
                             : 'border-border bg-muted text-muted-foreground'
@@ -968,7 +968,7 @@ const handleComplete = async () => {
                   </div>
                 ) : (
                   <div className="rounded-xl bg-muted/50 p-6 text-center">
-                    <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
+                    <CheckCircle2 className="mx-auto h-8 w-8 text-status-success-text" />
 
                     <p className="mt-2 text-sm font-semibold text-foreground">
                       No active AI action
@@ -1014,7 +1014,7 @@ const handleComplete = async () => {
             </div>
           </div>
 
-          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase text-amber-600">
+          <span className="rounded-full border border-status-warning-bg/20 bg-status-warning-bg/10 px-3 py-1 text-[11px] font-bold uppercase text-status-warning-text">
             {workflow.current_task.priority || 'medium'}
           </span>
         </div>
@@ -1067,7 +1067,7 @@ const handleComplete = async () => {
       </div>
     ) : (
       <div className="mt-4 rounded-xl bg-muted/50 p-6 text-center">
-        <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
+        <CheckCircle2 className="mx-auto h-8 w-8 text-status-success-text" />
 
         <p className="mt-2 text-sm font-semibold text-foreground">
           No active AI action

@@ -1233,7 +1233,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               {selectedIds.size > 0 && (
                 <button 
                   onClick={handleDeleteSelectedLeads}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer mr-2"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-status-danger-text hover:bg-status-danger-text/90 text-text-on-primary rounded-lg text-xs font-semibold transition-colors cursor-pointer mr-2"
                 >
                   <Trash2 className="h-3.5 w-3.5" strokeWidth={2.25} />
                   <span>Delete Selected ({selectedIds.size})</span>
@@ -1346,17 +1346,17 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           <td className="py-3.5 px-2 text-muted-foreground truncate" title={lead.phone}>{lead.phone}</td>
                           <td className="py-3.5 px-2 text-center font-bold tabular-nums">
                             <span className={`px-2 py-0.5 rounded text-[10px] ${
-                              lead.score >= 80 ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/15' :
-                              lead.score >= 50 ? 'bg-amber-500/10 text-amber-500 border border-amber-500/15' :
-                              'bg-rose-500/10 text-rose-500 border border-rose-500/15'
+                              lead.score >= 80 ? 'bg-status-success-text/10 text-status-success-text border border-status-success-text/15' :
+                              lead.score >= 50 ? 'bg-status-warning-text/10 text-status-warning-text border border-status-warning-text/15' :
+                              'bg-status-danger-text/10 text-status-danger-text border border-status-danger-text/15'
                             }`}>
                               {lead.score}
                             </span>
                           </td>
                           <td className="py-3.5 px-2">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
-                              lead.status === 'Converted' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15' :
-                              lead.status === 'Lost' ? 'bg-rose-500/10 text-rose-500 border-rose-500/15' :
+                              lead.status === 'Converted' ? 'bg-status-success-text/10 text-status-success-text border-status-success-text/15' :
+                              lead.status === 'Lost' ? 'bg-status-danger-text/10 text-status-danger-text border-status-danger-text/15' :
                               'bg-brand-purple/10 text-brand-purple border-brand-purple/15'
                             }`}>
                               {lead.status}
@@ -1364,8 +1364,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           </td>
                           <td className="py-3.5 px-2">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
-                              lead.priority === 'Critical' ? 'bg-rose-500/10 text-rose-500 border-rose-500/15' :
-                              lead.priority === 'High' ? 'bg-amber-500/10 text-amber-500 border-amber-500/15' :
+                              lead.priority === 'Critical' ? 'bg-status-danger-text/10 text-status-danger-text border-status-danger-text/15' :
+                              lead.priority === 'High' ? 'bg-status-warning-text/10 text-status-warning-text border-status-warning-text/15' :
                               'bg-secondary text-muted-foreground border-border'
                             }`}>
                               {lead.priority}
@@ -1429,8 +1429,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
                     <th className="py-3 px-4 w-[22%]">Company Name</th>
                     <th className="py-3 text-center w-[12%] text-brand-blue">Fit Score</th>
-                    <th className="py-3 text-center w-[14%] text-amber-600 dark:text-amber-400">Engagement Score</th>
-                    <th className="py-3 text-center w-[12%] text-emerald-600 dark:text-emerald-400">Overall Score</th>
+                    <th className="py-3 text-center w-[14%] text-status-warning-text">Engagement Score</th>
+                    <th className="py-3 text-center w-[12%] text-status-success-text">Overall Score</th>
                     <th className="py-3 w-[22%]">Recommendation</th>
                     <th className="py-3 text-right pr-4 w-[18%]">Actions</th>
                   </tr>
@@ -1476,7 +1476,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             </td>
                             {/* Fit Score */}
                             <td className="py-3.5 text-center">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/10">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-status-info-text/10 text-status-info-text border border-status-info-text/10">
                                 {lead.fit_score ?? 0}%
                               </span>
                             </td>
@@ -1489,8 +1489,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             {/* Overall Score */}
                             <td className="py-3.5 text-center">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums border ${
-                                lead.score >= 80 ? 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400 border-emerald-500/10' :
-                                lead.score >= 60 ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400 border-amber-500/10' : 'text-destructive bg-destructive/10 border-destructive/10'
+                                lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
+                                lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' : 'text-destructive bg-destructive/10 border-destructive/10'
                               }`}>
                                 {lead.score}%
                               </span>
@@ -1516,8 +1516,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             {/* Lead Score */}
                             <td className="py-3.5 text-center">
                               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums border ${
-                                lead.score >= 80 ? 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400 border-emerald-500/10' :
-                                lead.score >= 60 ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400 border-amber-500/10' : 'text-destructive bg-destructive/10 border-destructive/10'
+                                lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
+                                lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' : 'text-destructive bg-destructive/10 border-destructive/10'
                               }`}>
                                 {lead.score}
                               </span>
@@ -1526,10 +1526,10 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             {/* Status Badge */}
                             <td className="py-3.5">
                               <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
-                                lead.status === 'New' ? 'text-blue-600 bg-blue-500/10 dark:text-blue-400 border-blue-500/10' :
-                                lead.status === 'Contacted' ? 'text-amber-600 bg-amber-500/10 dark:text-amber-400 border-amber-500/10' :
-                                lead.status === 'Qualified' ? 'text-indigo-600 bg-indigo-500/10 dark:text-indigo-400 border-indigo-500/10' :
-                                lead.status === 'Converted' ? 'text-emerald-600 bg-emerald-500/10 dark:text-emerald-400 border-emerald-500/10' :
+                                lead.status === 'New' ? 'text-status-info-text bg-status-info-text/10 border-status-info-text/10' :
+                                lead.status === 'Contacted' ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' :
+                                lead.status === 'Qualified' ? 'text-accent-color bg-accent-color/10 border-accent-color/10' :
+                                lead.status === 'Converted' ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
                                 'text-muted-foreground bg-secondary/80 border border-border/80'
                               }`}>
                                 {lead.status}
@@ -1539,15 +1539,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             {/* Priority Badge */}
                             <td className="py-3.5">
                               <span className={`text-[10px] font-semibold flex items-center gap-1.5 ${
-                                lead.priorityTier === 'Critical' ? 'text-emerald-600' :
+                                lead.priorityTier === 'Critical' ? 'text-status-success-text' :
                                 lead.priorityTier === 'High' ? 'text-destructive' :
-                                lead.priorityTier === 'Medium' ? 'text-amber-600' :
+                                lead.priorityTier === 'Medium' ? 'text-status-warning-text' :
                                 'text-muted-foreground'
                               }`}>
                                 <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                  lead.priorityTier === 'Critical' ? 'bg-emerald-500' :
+                                  lead.priorityTier === 'Critical' ? 'bg-status-success-text' :
                                   lead.priorityTier === 'High' ? 'bg-destructive' :
-                                  lead.priorityTier === 'Medium' ? 'bg-amber-500' :
+                                  lead.priorityTier === 'Medium' ? 'bg-status-warning-text' :
                                   'bg-muted-foreground/60'
                                 }`} />
                                 <span>{lead.priorityTier || lead.priority}</span>
@@ -1570,7 +1570,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             {lead.status !== 'Converted' && (
                               <button 
                                 onClick={() => handleConvertLead(lead.id)}
-                                className="px-2 py-0.5 border border-emerald-250 text-emerald-750 hover:bg-brand-cyan hover:text-primary-foreground rounded text-[10px] font-semibold transition-colors cursor-pointer"
+                                className="px-2 py-0.5 border border-status-success-text/25 text-status-success-text hover:bg-brand-cyan hover:text-primary-foreground rounded text-[10px] font-semibold transition-colors cursor-pointer"
                                 title="Convert Lead"
                               >
                                 Convert
@@ -1640,52 +1640,52 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             ? "fixed inset-4 md:inset-8 z-50 flex flex-col rounded-2xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.35)] animate-in zoom-in-95 duration-200"
             : "bg-card border border-border rounded-2xl p-5 sticky top-20"
           }
-          style={isMaximized ? { background: '#ffffff', color: '#111827' } : undefined}
+          style={isMaximized ? { background: 'var(--text-on-primary)', color: 'var(--foreground)' } : undefined}
           >
             {isMaximized ? (
               /* ===== MAXIMIZED LIGHT-THEME LAYOUT ===== */
               <>
                 {/* Top bar */}
-                <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ background: '#f3f4f6', borderColor: '#e5e7eb' }}>
+                <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ background: 'var(--surface-2)', borderColor: 'var(--border-default)' }}>
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                      <span className="text-purple-700 font-bold text-sm">{activeLead.name?.[0] || '?'}</span>
+                    <div className="h-10 w-10 rounded-full bg-accent-muted flex items-center justify-center shrink-0">
+                      <span className="text-accent-color font-bold text-sm">{activeLead.name?.[0] || '?'}</span>
                     </div>
                     <div>
-                      <h2 className="font-bold text-gray-900 text-base leading-tight">{activeLead.name}</h2>
-                      <p className="text-xs text-gray-500 font-medium">{activeLead.company}</p>
+                      <h2 className="font-bold text-foreground text-base leading-tight">{activeLead.name}</h2>
+                      <p className="text-xs text-muted-foreground font-medium">{activeLead.company}</p>
                     </div>
                     <span className={`ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                      activeLead.status === 'Converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      activeLead.status === 'Lost' ? 'bg-red-50 text-red-700 border-red-200' :
-                      activeLead.status === 'Qualified' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
-                      activeLead.status === 'Contacted' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                      'bg-blue-50 text-blue-700 border-blue-200'
+                      activeLead.status === 'Converted' ? 'bg-status-success-text/10 text-status-success-text border-status-success-text/20' :
+                      activeLead.status === 'Lost' ? 'bg-status-danger-text/10 text-status-danger-text border-status-danger-text/20' :
+                      activeLead.status === 'Qualified' ? 'bg-accent-color/10 text-accent-color border-accent-color/20' :
+                      activeLead.status === 'Contacted' ? 'bg-status-warning-text/10 text-status-warning-text border-status-warning-text/20' :
+                      'bg-status-info-text/10 text-status-info-text border-status-info-text/20'
                     }`}>{activeLead.status}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={() => setIsMaximized(false)}
-                      className="p-2 rounded-lg border cursor-pointer transition bg-white border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-800" title="Minimize">
+                      className="p-2 rounded-lg border cursor-pointer transition bg-text-on-primary border-border hover:bg-surface-2 text-muted-foreground hover:text-foreground" title="Minimize">
                       <Minimize2 className="h-4 w-4" />
                     </button>
                     <button onClick={() => { setSelectedLeadId(null); setIsMaximized(false); }}
-                      className="p-2 rounded-lg border cursor-pointer transition bg-white border-gray-200 hover:bg-red-50 hover:text-red-600 text-gray-500" title="Close">
+                      className="p-2 rounded-lg border cursor-pointer transition bg-text-on-primary border-border hover:bg-status-danger-text/10 hover:text-status-danger-text text-muted-foreground" title="Close">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
                 {/* Body: Two-column layout */}
-                <div className="flex-1 overflow-y-auto p-6" style={{ background: '#ffffff' }}>
+                <div className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--text-on-primary)' }}>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                     {/* LEFT COLUMN */}
-                    <div className="space-y-5 text-gray-800">
+                    <div className="space-y-5 text-foreground">
 
                       {/* Contact Info */}
-                      <div className="rounded-xl border overflow-hidden border-gray-200">
-                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Contact Information</span>
+                      <div className="rounded-xl border overflow-hidden border-border">
+                        <div className="px-4 py-2.5 border-b bg-surface-2 border-border">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Contact Information</span>
                         </div>
                         <div className="p-4 space-y-3">
                           {[
@@ -1695,62 +1695,62 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             { label: 'Location', value: activeLead.location },
                             { label: 'Source', value: activeLead.source },
                           ].map(row => (
-                            <div key={row.label} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0">
-                              <span className="text-xs font-semibold text-gray-500">{row.label}</span>
+                            <div key={row.label} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
+                              <span className="text-xs font-semibold text-muted-foreground">{row.label}</span>
                               {row.link ? (
-                                <a href={row.link} className="text-xs font-bold truncate max-w-[240px] text-purple-600 hover:underline">{row.value || '—'}</a>
+                                <a href={row.link} className="text-xs font-bold truncate max-w-[240px] text-accent-color hover:underline">{row.value || '—'}</a>
                               ) : (
-                                <span className="text-xs font-bold text-gray-800">{row.value || '—'}</span>
+                                <span className="text-xs font-bold text-foreground">{row.value || '—'}</span>
                               )}
                             </div>
                           ))}
                           <div className="flex items-center justify-between pt-1">
-                            <span className="text-xs font-semibold text-gray-500">Owner</span>
+                            <span className="text-xs font-semibold text-muted-foreground">Owner</span>
                             <div className="flex items-center gap-1.5">
-                              <img src={activeLead.ownerAvatar || ''} alt={activeLead.owner} className="h-5 w-5 rounded-full border border-gray-200" />
-                              <span className="text-xs font-bold text-gray-800">{activeLead.owner}</span>
+                              <img src={activeLead.ownerAvatar || ''} alt={activeLead.owner} className="h-5 w-5 rounded-full border border-border" />
+                              <span className="text-xs font-bold text-foreground">{activeLead.owner}</span>
                             </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Lead Scoring */}
-                      <div className="rounded-xl border overflow-hidden border-gray-200">
-                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Lead Scoring</span>
+                      <div className="rounded-xl border overflow-hidden border-border">
+                        <div className="px-4 py-2.5 border-b bg-surface-2 border-border">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Lead Scoring</span>
                         </div>
                         <div className="p-4 space-y-3">
                           {[
-                            { label: 'Overall Score', value: activeLead.score, color: activeLead.score >= 80 ? '#10b981' : activeLead.score >= 60 ? '#f59e0b' : '#ef4444' },
-                            { label: 'Fit Score', value: activeLead.fit_score ?? 0, color: '#6366f1' },
-                            { label: 'Engagement Score', value: activeLead.engagement_score ?? 0, color: '#8b5cf6' },
+                            { label: 'Overall Score', value: activeLead.score, color: activeLead.score >= 80 ? 'var(--status-success-text)' : activeLead.score >= 60 ? 'var(--status-warning-text)' : 'var(--status-danger-text)' },
+                            { label: 'Fit Score', value: activeLead.fit_score ?? 0, color: 'var(--accent-color)' },
+                            { label: 'Engagement Score', value: activeLead.engagement_score ?? 0, color: 'var(--chart-1)' },
                           ].map(s => (
                             <div key={s.label}>
                               <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-semibold text-gray-500">{s.label}</span>
+                                <span className="text-xs font-semibold text-muted-foreground">{s.label}</span>
                                 <span className="text-xs font-bold tabular-nums" style={{ color: s.color }}>{s.value}%</span>
                               </div>
-                              <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
+                              <div className="h-1.5 rounded-full overflow-hidden bg-surface-2">
                                 <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.value}%`, background: s.color }} />
                               </div>
                             </div>
                           ))}
                           <div className="flex items-center justify-between pt-1">
-                            <span className="text-xs font-semibold text-gray-500">Priority Tier</span>
+                            <span className="text-xs font-semibold text-muted-foreground">Priority Tier</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                              activeLead.priorityTier === 'Critical' ? 'bg-cyan-50 text-cyan-700 border-cyan-200' :
-                              activeLead.priorityTier === 'High' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                              activeLead.priorityTier === 'Medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                              'bg-gray-50 text-gray-600 border-gray-200'
+                              activeLead.priorityTier === 'Critical' ? 'bg-status-success-text/10 text-status-success-text border-status-success-text/20' :
+                              activeLead.priorityTier === 'High' ? 'bg-status-warning-text/10 text-status-warning-text border-status-warning-text/20' :
+                              activeLead.priorityTier === 'Medium' ? 'bg-status-info-text/10 text-status-info-text border-status-info-text/20' :
+                              'bg-surface-2 text-muted-foreground border-border'
                             }`}>{activeLead.priorityTier || activeLead.priority || '—'}</span>
                           </div>
                         </div>
                       </div>
 
                       {/* Company & Technology Details */}
-                      <div className="rounded-xl border overflow-hidden border-gray-200">
-                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Company & Technology Details</span>
+                      <div className="rounded-xl border overflow-hidden border-border">
+                        <div className="px-4 py-2.5 border-b bg-surface-2 border-border">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Company & Technology Details</span>
                         </div>
                         <div className="p-4 space-y-3">
                           {[
@@ -1760,26 +1760,26 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             { label: 'Current CRM', value: activeLead.currentCRM },
                             { label: 'Operational System', value: activeLead.operationalSystem },
                           ].map(row => (
-                            <div key={row.label} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0">
-                              <span className="text-xs font-semibold text-gray-500">{row.label}</span>
-                              <span className="text-xs font-bold text-gray-800">{row.value || '—'}</span>
+                            <div key={row.label} className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0">
+                              <span className="text-xs font-semibold text-muted-foreground">{row.label}</span>
+                              <span className="text-xs font-bold text-foreground">{row.value || '—'}</span>
                             </div>
                           ))}
                         </div>
                       </div>
 
                       {/* AI Scoring Insights & Recommendations */}
-                      <div className="rounded-xl border overflow-hidden border-gray-200">
-                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">AI Scoring Insights</span>
+                      <div className="rounded-xl border overflow-hidden border-border">
+                        <div className="px-4 py-2.5 border-b bg-surface-2 border-border">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">AI Scoring Insights</span>
                         </div>
                         <div className="p-4 space-y-4">
                           {activeLead.topReasons && activeLead.topReasons.length > 0 && (
                             <div>
-                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Key AI Insights</span>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Key AI Insights</span>
                               <div className="mt-1.5 flex flex-wrap gap-1.5">
                                 {activeLead.topReasons.map((r, i) => (
-                                  <span key={i} className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-semibold border border-purple-100">{r}</span>
+                                  <span key={i} className="px-2 py-0.5 rounded bg-accent-color/10 text-accent-color text-[10px] font-semibold border border-accent-color/15">{r}</span>
                                 ))}
                               </div>
                             </div>
@@ -1787,8 +1787,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           
                           {activeLead.fitReasons && activeLead.fitReasons.length > 0 && (
                             <div>
-                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Fit Reasons</span>
-                              <ul className="mt-1 list-disc list-inside text-xs text-gray-700 space-y-1">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Fit Reasons</span>
+                              <ul className="mt-1 list-disc list-inside text-xs text-foreground space-y-1">
                                 {activeLead.fitReasons.map((r, i) => <li key={i} className="font-medium">{r}</li>)}
                               </ul>
                             </div>
@@ -1796,17 +1796,17 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
 
                           {activeLead.engagementReasons && activeLead.engagementReasons.length > 0 && (
                             <div>
-                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Engagement Signals</span>
-                              <ul className="mt-1 list-disc list-inside text-xs text-gray-700 space-y-1">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Engagement Signals</span>
+                              <ul className="mt-1 list-disc list-inside text-xs text-foreground space-y-1">
                                 {activeLead.engagementReasons.map((r, i) => <li key={i} className="font-medium">{r}</li>)}
                               </ul>
                             </div>
                           )}
 
                           {leadRecommendations[activeLead.id] && (
-                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                              <span className="text-[9px] font-bold uppercase tracking-wider text-blue-600">Recommended Next Action</span>
-                              <p className="mt-1 text-xs font-bold text-gray-800 leading-relaxed">{leadRecommendations[activeLead.id]}</p>
+                            <div className="p-3 bg-status-info-text/10 border border-status-info-text/20 rounded-lg">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-status-info-text">Recommended Next Action</span>
+                              <p className="mt-1 text-xs font-bold text-foreground leading-relaxed">{leadRecommendations[activeLead.id]}</p>
                             </div>
                           )}
                         </div>
@@ -1815,27 +1815,27 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                       {/* Quick Action Buttons */}
                       <div className="grid grid-cols-3 gap-2">
                         <button onClick={() => { router.push(`?compose=${encodeURIComponent(activeLead.email)}`); onTabChange?.('emails'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } })); }, 150); }}
-                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 text-gray-700 cursor-pointer transition">
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border bg-text-on-primary hover:bg-accent-color/10 hover:border-accent-color hover:text-accent-color text-foreground cursor-pointer transition">
                           <Mail className="h-4 w-4" /><span>Email</span>
                         </button>
                         <button onClick={() => setIsCallModalOpen(true)}
-                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 text-gray-700 cursor-pointer transition">
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border bg-text-on-primary hover:bg-status-success-text/10 hover:border-status-success-text hover:text-status-success-text text-foreground cursor-pointer transition">
                           <PhoneCall className="h-4 w-4" /><span>Call</span>
                         </button>
                         <button onClick={() => { onTabChange?.('calendar'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-open-create-calendar-event-modal', { detail: { title: `Meet with ${activeLead.name}`, attendees: activeLead.email || activeLead.name, date: new Date().toISOString().slice(0, 10), time: '11:00 AM', type: 'meeting' } })); }, 150); }}
-                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-gray-700 cursor-pointer transition">
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border bg-text-on-primary hover:bg-status-info-text/10 hover:border-status-info-text hover:text-status-info-text text-foreground cursor-pointer transition">
                           <Calendar className="h-4 w-4" /><span>Meet</span>
                         </button>
                       </div>
 
                       {/* Notes */}
-                      <div className="rounded-xl border border-gray-200 overflow-hidden">
-                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Internal Notes</span>
+                      <div className="rounded-xl border border-border overflow-hidden">
+                        <div className="px-4 py-2.5 border-b bg-surface-2 border-border">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Internal Notes</span>
                         </div>
                         <div className="p-4">
                           <textarea
-                            className="w-full p-3 rounded-lg text-xs leading-relaxed resize-y min-h-[90px] focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300 text-gray-800 bg-gray-50 border border-gray-200"
+                            className="w-full p-3 rounded-lg text-xs leading-relaxed resize-y min-h-[90px] focus:outline-none focus:ring-2 focus:ring-accent-color/20 focus:border-accent-color text-foreground bg-surface-2 border border-border"
                             value={activeLead.notes}
                             onChange={(e) => handleSaveNotes(e.target.value)}
                             placeholder="Record lead feedback, key challenges, sizing metrics..."
@@ -1845,11 +1845,11 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     </div>
 
                     {/* RIGHT COLUMN — Activity History */}
-                    <div className="rounded-xl border flex flex-col border-gray-200" style={{ maxHeight: '78vh' }}>
-                      <div className="px-4 py-2.5 border-b shrink-0 bg-gray-50 border-gray-200">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Activity History</span>
+                    <div className="rounded-xl border flex flex-col border-border" style={{ maxHeight: '78vh' }}>
+                      <div className="px-4 py-2.5 border-b shrink-0 bg-surface-2 border-border">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Activity History</span>
                       </div>
-                      <div className="flex gap-1 px-4 pt-3 pb-2 flex-wrap shrink-0 border-b border-gray-100">
+                      <div className="flex gap-1 px-4 pt-3 pb-2 flex-wrap shrink-0 border-b border-border">
                         {[
                           { id: 'timeline', label: 'Timeline', icon: Clock },
                           { id: 'emails', label: 'Emails', icon: Mail },
@@ -1862,92 +1862,92 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           return (
                             <button key={tab.id} onClick={() => setActiveHistoryTab(tab.id)}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer"
-                              style={active ? { background: '#7c3aed', color: '#fff', border: '1px solid #7c3aed' } : { background: '#fff', color: '#6b7280', border: '1px solid #e5e7eb' }}>
+                              style={active ? { background: 'var(--accent-color)', color: 'var(--text-on-primary)', border: '1px solid var(--accent-color)' } : { background: 'var(--text-on-primary)', color: 'var(--text-muted)', border: '1px solid var(--border-default)' }}>
                               <Icon className="h-3 w-3 shrink-0" />
                               <span>{tab.label}</span>
                             </button>
                           );
                         })}
                       </div>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-white">
+                      <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-text-on-primary">
                         {activeHistoryTab === 'timeline' && (
                           activeLead.timeline.length > 0 ? activeLead.timeline.map(act => (
-                            <div key={act.id} className="flex gap-3 p-3 rounded-lg border bg-gray-50 border-gray-100 hover:bg-purple-50 hover:border-purple-100 transition">
-                              <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-purple-50 border border-purple-100">
-                                <Clock className="h-3.5 w-3.5 text-purple-600" />
+                            <div key={act.id} className="flex gap-3 p-3 rounded-lg border bg-surface-2 border-border hover:bg-accent-color/10 hover:border-accent-color/15 transition">
+                              <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-accent-color/10 border border-accent-color/15">
+                                <Clock className="h-3.5 w-3.5 text-accent-color" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2">
-                                  <p className="text-xs font-bold leading-snug text-gray-800">{act.title}</p>
-                                  <span className="text-[9px] font-mono shrink-0 text-gray-400">{act.time}</span>
+                                  <p className="text-xs font-bold leading-snug text-foreground">{act.title}</p>
+                                  <span className="text-[9px] font-mono shrink-0 text-muted-foreground">{act.time}</span>
                                 </div>
-                                <p className="text-[10px] mt-0.5 text-gray-500">{act.desc}</p>
+                                <p className="text-[10px] mt-0.5 text-muted-foreground">{act.desc}</p>
                               </div>
                             </div>
-                          )) : <p className="text-center py-8 text-xs text-gray-400">No timeline activity yet.</p>
+                          )) : <p className="text-center py-8 text-xs text-muted-foreground">No timeline activity yet.</p>
                         )}
                         {activeHistoryTab === 'emails' && (
                           activeLead.emails.length > 0 ? activeLead.emails.map(e => (
-                            <div key={e.id} className="p-3 rounded-lg border bg-purple-50/30 border-purple-100 hover:bg-purple-50 transition">
+                            <div key={e.id} className="p-3 rounded-lg border bg-accent-color/5 border-accent-color/15 hover:bg-accent-color/10 transition">
                               <div className="flex items-start justify-between gap-2">
                                 <div>
-                                  <p className="text-[9px] text-gray-400 mb-0.5">To: {activeLead.email}</p>
-                                  <p className="text-xs font-bold text-purple-700">{e.subject}</p>
+                                  <p className="text-[9px] text-muted-foreground mb-0.5">To: {activeLead.email}</p>
+                                  <p className="text-xs font-bold text-accent-color">{e.subject}</p>
                                 </div>
-                                <span className="text-[9px] font-mono shrink-0 text-gray-400">{e.time}</span>
+                                <span className="text-[9px] font-mono shrink-0 text-muted-foreground">{e.time}</span>
                               </div>
                             </div>
-                          )) : <p className="text-center py-8 text-xs text-gray-400">No emails logged.</p>
+                          )) : <p className="text-center py-8 text-xs text-muted-foreground">No emails logged.</p>
                         )}
                         {activeHistoryTab === 'calls' && (
                           activeLead.calls.length > 0 ? activeLead.calls.map(c => {
                             const connected = c.outcome?.toLowerCase().includes('connect');
                             return (
-                              <div key={c.id} className="p-3 rounded-lg border" style={{ background: connected ? '#f0fdf4' : '#fff1f2', borderColor: connected ? '#bbf7d0' : '#fecdd3' }}>
+                              <div key={c.id} className="p-3 rounded-lg border" style={{ background: connected ? 'rgba(16,185,129,0.05)' : 'rgba(244,63,94,0.05)' }}>
                                 <div className="flex items-center justify-between mb-1.5">
-                                  <span className="px-2 py-0.5 rounded text-[9px] font-bold" style={connected ? { background: '#d1fae5', color: '#065f46' } : { background: '#fee2e2', color: '#991b1b' }}>{c.outcome}</span>
-                                  <span className="text-[9px] font-mono text-gray-400">{c.time}</span>
+                                  <span className="px-2 py-0.5 rounded text-[9px] font-bold" style={connected ? { background: 'var(--status-success-text)', color: 'var(--text-on-primary)' } : { background: 'var(--status-danger-text)', color: 'var(--text-on-primary)' }}>{c.outcome}</span>
+                                  <span className="text-[9px] font-mono text-muted-foreground">{c.time}</span>
                                 </div>
-                                <p className="text-[10px] text-gray-600">{c.notes}</p>
+                                <p className="text-[10px] text-muted-foreground">{c.notes}</p>
                               </div>
                             );
-                          }) : <p className="text-center py-8 text-xs text-gray-400">No calls logged.</p>
+                          }) : <p className="text-center py-8 text-xs text-muted-foreground">No calls logged.</p>
                         )}
                         {activeHistoryTab === 'meetings' && (
                           activeLead.meetings.length > 0 ? activeLead.meetings.map(m => (
-                            <div key={m.id} className="p-3 rounded-lg border border-blue-100 bg-blue-50/50 hover:bg-blue-50 transition">
+                            <div key={m.id} className="p-3 rounded-lg border border-status-info-text/15 bg-status-info-text/5 hover:bg-status-info-text/10 transition">
                               <div className="flex items-start justify-between gap-2 mb-1">
-                                <p className="text-xs font-bold text-blue-800">{m.title}</p>
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 bg-purple-100 text-purple-700">{m.date}</span>
+                                <p className="text-xs font-bold text-status-info-text">{m.title}</p>
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 bg-accent-muted text-accent-color">{m.date}</span>
                               </div>
-                              <p className="text-[10px] flex items-center gap-1 mb-1 text-blue-600"><Clock className="h-2.5 w-2.5" />{m.time}</p>
-                              <p className="text-[10px] text-gray-500">{m.desc}</p>
+                              <p className="text-[10px] flex items-center gap-1 mb-1 text-status-info-text"><Clock className="h-2.5 w-2.5" />{m.time}</p>
+                              <p className="text-[10px] text-muted-foreground">{m.desc}</p>
                             </div>
-                          )) : <p className="text-center py-8 text-xs text-gray-400">No meetings scheduled.</p>
+                          )) : <p className="text-center py-8 text-xs text-muted-foreground">No meetings scheduled.</p>
                         )}
                         {activeHistoryTab === 'activity chart' && (
-                          <div className="p-3 rounded-lg border bg-gray-50 border-gray-100">
-                            <h5 className="text-[9px] font-bold uppercase tracking-wider mb-3 flex items-center gap-1 text-gray-500">
-                              <TrendingUp className="h-3.5 w-3.5 text-purple-500" />Lead Score Progression
+                          <div className="p-3 rounded-lg border bg-surface-2 border-border">
+                            <h5 className="text-[9px] font-bold uppercase tracking-wider mb-3 flex items-center gap-1 text-muted-foreground">
+                              <TrendingUp className="h-3.5 w-3.5 text-accent-color" />Lead Score Progression
                             </h5>
                             <div className="w-full h-40 relative">
                               <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
-                                <line x1="0" y1="90" x2="300" y2="90" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
-                                <line x1="0" y1="50" x2="300" y2="50" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
-                                <line x1="0" y1="10" x2="300" y2="10" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
+                                <line x1="0" y1="90" x2="300" y2="90" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3,3" />
+                                <line x1="0" y1="50" x2="300" y2="50" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3,3" />
+                                <line x1="0" y1="10" x2="300" y2="10" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3,3" />
                                 <path d={getProgressPoints(activeLead.score).areaPath} fill="url(#purpleGradMax)" opacity="0.2" />
-                                <path d={getProgressPoints(activeLead.score).path} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" />
+                                <path d={getProgressPoints(activeLead.score).path} fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" />
                                 {getProgressPoints(activeLead.score).points.map((p, idx) => (
-                                  <circle key={idx} cx={p.x} cy={p.y} r="4" fill="#7c3aed" stroke="white" strokeWidth="1.5" />
+                                  <circle key={idx} cx={p.x} cy={p.y} r="4" fill="var(--accent-color)" stroke="var(--text-on-primary)" strokeWidth="1.5" />
                                 ))}
                                 <defs>
                                   <linearGradient id="purpleGradMax" x1="0%" y1="0%" x2="0%" y2="100%">
-                                    <stop offset="0%" stopColor="#7c3aed" />
-                                    <stop offset="100%" stopColor="#7c3aed" stopOpacity="0" />
+                                    <stop offset="0%" stopColor="var(--accent-color)" />
+                                    <stop offset="100%" stopColor="var(--accent-color)" stopOpacity="0" />
                                   </linearGradient>
                                 </defs>
                               </svg>
-                              <div className="flex justify-between text-[8px] font-medium mt-1 text-gray-400">
+                              <div className="flex justify-between text-[8px] font-medium mt-1 text-muted-foreground">
                                 <span>Start</span><span>Midpoint</span><span>Today ({activeLead.score})</span>
                               </div>
                             </div>
@@ -2000,9 +2000,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Priority</span>
                     <span className={`font-semibold ${
-                      activeLead.priorityTier === 'Critical' ? 'text-brand-cyan bg-brand-cyan/15 px-1.5 py-0.25 rounded' :
-                      activeLead.priorityTier === 'High' ? 'text-amber-700 bg-amber-50 px-1.5 py-0.25 rounded' :
-                      activeLead.priorityTier === 'Medium' ? 'text-blue-700 bg-blue-50 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'Critical' ? 'text-status-success-text bg-status-success-text/15 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'High' ? 'text-status-warning-text bg-status-warning-text/10 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'Medium' ? 'text-status-info-text bg-status-info-text/10 px-1.5 py-0.25 rounded' :
                       activeLead.priorityTier === 'Low' ? 'text-muted-foreground bg-secondary px-1.5 py-0.25 rounded' : ''
                     }`}>{activeLead.priorityTier || activeLead.priority}</span>
                   </div>
@@ -2058,15 +2058,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Overall Score</span>
                         <span className={`font-semibold tabular-nums ${
-                          activeLead.score >= 80 ? 'text-brand-cyan' : activeLead.score >= 60 ? 'text-amber-600' : 'text-destructive'
+                          activeLead.score >= 80 ? 'text-status-success-text' : activeLead.score >= 60 ? 'text-status-warning-text' : 'text-destructive'
                         }`}>{activeLead.score}%</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-muted-foreground">Tier</span>
                         <span className={`font-semibold ${
-                          activeLead.priorityTier === 'Critical' ? 'text-brand-cyan' :
-                          activeLead.priorityTier === 'High' ? 'text-amber-600' :
-                          activeLead.priorityTier === 'Medium' ? 'text-blue-600' :
+                          activeLead.priorityTier === 'Critical' ? 'text-status-success-text' :
+                          activeLead.priorityTier === 'High' ? 'text-status-warning-text' :
+                          activeLead.priorityTier === 'Medium' ? 'text-status-info-text' :
                           activeLead.priorityTier === 'Low' ? 'text-muted-foreground' : 'text-muted-foreground'
                         }`}>{activeLead.priorityTier || activeLead.priority}</span>
                       </div>
@@ -2225,11 +2225,11 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           activeLead.calls.map((c) => {
                             const isConnected = c.outcome?.toLowerCase().includes('connect');
                             return (
-                              <div key={c.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-emerald-500/20 transition duration-200 shadow-sm relative overflow-hidden group/item">
-                                <div className={`absolute top-0 left-0 w-1 h-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                              <div key={c.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-status-success-text/20 transition duration-200 shadow-sm relative overflow-hidden group/item">
+                                <div className={`absolute top-0 left-0 w-1 h-full ${isConnected ? 'bg-status-success-text' : 'bg-status-danger-text'}`} />
                                 <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1.5">
                                   <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider ${
-                                    isConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                                    isConnected ? 'bg-status-success-text/10 text-status-success-text border border-status-success-text/20' : 'bg-status-danger-text/10 text-status-danger-text border border-status-danger-text/20'
                                   }`}>
                                     {c.outcome}
                                   </span>
@@ -2280,9 +2280,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           </h5>
                           <div className="w-full h-32 relative">
                             <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
-                              <line x1="0" y1="90" x2="300" y2="90" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" />
-                              <line x1="0" y1="50" x2="300" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
-                              <line x1="0" y1="10" x2="300" y2="10" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
+                              <line x1="0" y1="90" x2="300" y2="90" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3,3" />
+                              <line x1="0" y1="50" x2="300" y2="50" stroke="var(--border-strong)" strokeWidth="1" strokeDasharray="3,3" />
+                              <line x1="0" y1="10" x2="300" y2="10" stroke="var(--border-strong)" strokeWidth="1" strokeDasharray="3,3" />
                               
                               <path
                                 d={getProgressPoints(activeLead.score).areaPath}
@@ -2299,7 +2299,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                               />
                               
                               {getProgressPoints(activeLead.score).points.map((p, idx) => (
-                                <circle key={idx} cx={p.x} cy={p.y} r="4" fill="var(--brand-purple)" stroke="white" strokeWidth="1.5" />
+                                <circle key={idx} cx={p.x} cy={p.y} r="4" fill="var(--brand-purple)" stroke="var(--text-on-primary)" strokeWidth="1.5" />
                               ))}
        
                               <defs>
@@ -2406,7 +2406,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             </div>
             <form onSubmit={handleSendEmail} className="p-5 space-y-4">
               {!gmailConnected && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-foreground">
+                <div className="p-3 bg-status-warning-text/10 border border-status-warning-text/20 rounded-lg text-xs text-foreground">
                   <strong>Gmail not connected.</strong> Go to <strong>Integrations</strong> in the sidebar to connect your Gmail account, then try again.
                 </div>
               )}

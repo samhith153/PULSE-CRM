@@ -52,7 +52,7 @@ export default function AuditLogsView() {
           </p>
         </div>
 
-        <button className="inline-flex items-center space-x-1.5 px-3.5 py-2 border border-slate-205 hover:bg-secondary text-xs font-bold rounded-lg text-foreground transition-colors cursor-pointer self-start sm:self-center">
+        <button className="inline-flex items-center space-x-1.5 px-3.5 py-2 border border-border hover:bg-secondary text-xs font-bold rounded-lg text-foreground transition-colors cursor-pointer self-start sm:self-center">
           <Download className="h-4 w-4 text-muted-foreground" />
           <span>Export Logs</span>
         </button>
@@ -113,7 +113,7 @@ export default function AuditLogsView() {
                       log.status === 'Authorized' 
                         ? 'bg-brand-cyan/15 text-brand-cyan' 
                         : log.status === 'Warning'
-                        ? 'bg-amber-50 text-amber-700'
+                        ? 'bg-status-warning-bg text-status-warning-text'
                         : 'bg-destructive/10 text-destructive'
                     }`}>
                       {log.status}

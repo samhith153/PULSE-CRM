@@ -38,11 +38,11 @@ export default function ManagerFunnelStageCard({ stages = [] }: Props) {
   }, [stages]);
 
   const stepColors = [
-    { accent: 'text-indigo-500', bg: 'bg-indigo-500', ring: 'ring-indigo-500/20', bar: 'from-indigo-500 to-indigo-400', badge: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border-indigo-500/20' },
-    { accent: 'text-violet-500', bg: 'bg-violet-500', ring: 'ring-violet-500/20', bar: 'from-violet-500 to-violet-400', badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-300 border-violet-500/20' },
-    { accent: 'text-purple-500', bg: 'bg-purple-500', ring: 'ring-purple-500/20', bar: 'from-purple-500 to-purple-400', badge: 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20' },
-    { accent: 'text-fuchsia-500', bg: 'bg-fuchsia-500', ring: 'ring-fuchsia-500/20', bar: 'from-fuchsia-500 to-fuchsia-400', badge: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-300 border-fuchsia-500/20' },
-    { accent: 'text-emerald-500', bg: 'bg-emerald-500', ring: 'ring-emerald-500/20', bar: 'from-emerald-500 to-emerald-400', badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border-emerald-500/20' },
+    { accent: 'text-accent-color', bg: 'bg-accent-color', ring: 'ring-accent-color/20', bar: 'from-accent-color to-accent-color/70', badge: 'bg-accent-color/10 text-accent-color dark:text-accent-color border-accent-color/20' },
+    { accent: 'text-accent-color', bg: 'bg-accent-color', ring: 'ring-accent-color/20', bar: 'from-accent-color to-accent-color/70', badge: 'bg-accent-color/10 text-accent-color dark:text-accent-color border-accent-color/20' },
+    { accent: 'text-accent-color', bg: 'bg-accent-color', ring: 'ring-accent-color/20', bar: 'from-accent-color to-accent-color/70', badge: 'bg-accent-color/10 text-accent-color dark:text-accent-color border-accent-color/20' },
+    { accent: 'text-accent-color', bg: 'bg-accent-color', ring: 'ring-accent-color/20', bar: 'from-accent-color to-accent-color/70', badge: 'bg-accent-color/10 text-accent-color dark:text-accent-color border-accent-color/20' },
+    { accent: 'text-status-success-text', bg: 'bg-status-success-bg', ring: 'ring-status-success-bg/20', bar: 'from-status-success-bg to-status-success-bg/70', badge: 'bg-status-success-bg/10 text-status-success-text dark:text-status-success-text border-status-success-bg/20' },
   ];
 
   if (!data.length) {
@@ -60,7 +60,7 @@ export default function ManagerFunnelStageCard({ stages = [] }: Props) {
       {/* Header */}
       <div className="flex items-center justify-between pb-4 mb-4 border-b border-border/50">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/15 flex items-center justify-center shadow-inner">
+          <div className="h-9 w-9 rounded-xl bg-status-success-bg/10 text-status-success-text border border-status-success-bg/15 flex items-center justify-center shadow-inner">
             <Award size={18} />
           </div>
           <div>
@@ -130,7 +130,7 @@ export default function ManagerFunnelStageCard({ stages = [] }: Props) {
                           {stage.convRate}% conv.
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-status-danger-bg/10 text-status-danger-text border border-status-danger-bg/20">
                           <TrendingDown size={9} />
                           {stage.convRate}% conv.
                         </span>

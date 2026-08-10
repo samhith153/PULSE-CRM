@@ -113,7 +113,7 @@ export default function DashboardCustomizer({ isOpen, onClose, settings, onToggl
             </div>
             <button 
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-secondary dark:hover:bg-slate-800 text-muted-foreground hover:text-muted-foreground transition-colors"
+              className="p-1.5 rounded-lg hover:bg-secondary dark:hover:bg-text-primary text-muted-foreground hover:text-muted-foreground transition-colors"
             >
               <X className="h-4.5 w-4.5" />
             </button>
@@ -143,7 +143,7 @@ export default function DashboardCustomizer({ isOpen, onClose, settings, onToggl
                       <div className={`mt-0.5 h-8 w-8 rounded-lg flex items-center justify-center shrink-0 border ${
                         isChecked 
                           ? 'bg-brand-purple/10 border-brand-accent/20 text-brand-purple' 
-                          : 'bg-secondary dark:bg-slate-800 border-border text-muted-foreground'
+                          : 'bg-secondary dark:bg-text-primary border-border text-muted-foreground'
                       }`}>
                         <Icon className="h-4 w-4" />
                       </div>
@@ -158,7 +158,7 @@ export default function DashboardCustomizer({ isOpen, onClose, settings, onToggl
                       className={`h-7 w-7 rounded-lg flex items-center justify-center shrink-0 transition-colors border ${
                         isChecked 
                           ? 'bg-brand-purple text-primary-foreground border-transparent' 
-                          : 'bg-secondary hover:bg-secondary dark:bg-slate-800 border-border text-muted-foreground hover:text-muted-foreground'
+                          : 'bg-secondary hover:bg-secondary dark:bg-text-primary border-border text-muted-foreground hover:text-muted-foreground'
                       }`}
                       aria-label={isChecked ? "Hide widget" : "Show widget"}
                     >

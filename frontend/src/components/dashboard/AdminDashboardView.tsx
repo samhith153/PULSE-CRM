@@ -213,10 +213,10 @@ function RevenueChart({
             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
               activeMetric === 'revenue'
                 ? 'opacity-40 bg-transparent border-border text-muted-foreground'
-                : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                : 'bg-status-success-bg border-status-success-text/30 text-status-success-text shadow-sm'
             }`}
           >
-            <span className="size-2 rounded-full bg-emerald-500 inline-block" />
+            <span className="size-2 rounded-full bg-status-success-text inline-block" />
             Leads
             <span className="ml-1 font-black tabular-nums">{totalLead.toLocaleString()}</span>
           </button>
@@ -242,14 +242,14 @@ function RevenueChart({
         >
           <defs>
             <linearGradient id="adminRevGrad2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8b5cf6" stopOpacity="0.32" />
-              <stop offset="60%" stopColor="#8b5cf6" stopOpacity="0.10" />
-              <stop offset="100%" stopColor="#8b5cf6" stopOpacity="0.00" />
+              <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="0.32" />
+              <stop offset="60%" stopColor="var(--accent-color)" stopOpacity="0.10" />
+              <stop offset="100%" stopColor="var(--accent-color)" stopOpacity="0.00" />
             </linearGradient>
             <linearGradient id="adminLeadGrad2" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#10b981" stopOpacity="0.28" />
-              <stop offset="60%" stopColor="#10b981" stopOpacity="0.08" />
-              <stop offset="100%" stopColor="#10b981" stopOpacity="0.00" />
+              <stop offset="0%" stopColor="var(--status-success-text)" stopOpacity="0.28" />
+              <stop offset="60%" stopColor="var(--status-success-text)" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="var(--status-success-text)" stopOpacity="0.00" />
             </linearGradient>
             {/* Hovered vertical line glow */}
             <filter id="glowLine" x="-100%" y="-20%" width="300%" height="140%">
@@ -271,7 +271,7 @@ function RevenueChart({
               x1={revCoords[hovered].x.toFixed(1)}
               x2={revCoords[hovered].x.toFixed(1)}
               y1="2" y2="88"
-              stroke="#8b5cf6"
+              stroke="var(--accent-color)"
               strokeWidth="1"
               strokeOpacity="0.5"
               strokeDasharray="2 2"
@@ -295,7 +295,7 @@ function RevenueChart({
             <motion.path
               d={revPathStr}
               fill="none"
-              stroke="#8b5cf6"
+              stroke="var(--accent-color)"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -321,7 +321,7 @@ function RevenueChart({
             <motion.path
               d={leadPathStr}
               fill="none"
-              stroke="#10b981"
+              stroke="var(--status-success-text)"
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -337,7 +337,7 @@ function RevenueChart({
             <circle key={`rev-${i}`}
               cx={c.x.toFixed(1)} cy={c.y.toFixed(1)}
               r={hovered === i ? '2.8' : '1.6'}
-              fill={hovered === i ? '#8b5cf6' : '#a78bfa'}
+              fill={hovered === i ? 'var(--accent-color)' : 'var(--chart-3)'}
               stroke="white" strokeWidth={hovered === i ? '1.8' : '1.2'}
               vectorEffect="non-scaling-stroke"
               style={{ transition: 'all 0.15s' }}
@@ -349,7 +349,7 @@ function RevenueChart({
             <circle key={`lead-${i}`}
               cx={c.x.toFixed(1)} cy={c.y.toFixed(1)}
               r={hovered === i ? '2.5' : '1.4'}
-              fill={hovered === i ? '#10b981' : '#34d399'}
+              fill={hovered === i ? 'var(--status-success-text)' : 'var(--status-success-strong)'}
               stroke="white" strokeWidth={hovered === i ? '1.8' : '1.2'}
               vectorEffect="non-scaling-stroke"
               style={{ transition: 'all 0.15s' }}
@@ -394,7 +394,7 @@ function RevenueChart({
                 {showRev && (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
-                      <span className="size-2 rounded-full bg-violet-500 shrink-0" />
+                      <span className="size-2 rounded-full bg-accent-color shrink-0" />
                       <span className="text-[11px] font-semibold text-muted-foreground">Revenue</span>
                     </div>
                     <span className="text-[11px] font-black text-foreground tabular-nums">{formatINR(asNumber(monthly[hovered].revenue))}</span>
@@ -403,7 +403,7 @@ function RevenueChart({
                 {showLead && (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
-                      <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="size-2 rounded-full bg-status-success-text shrink-0" />
                       <span className="text-[11px] font-semibold text-muted-foreground">Leads</span>
                     </div>
                     <span className="text-[11px] font-black text-foreground tabular-nums">{monthly[hovered].leads_created.toLocaleString()}</span>
@@ -743,11 +743,11 @@ export default function AdminDashboardView() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Telephony API</span>
-                <span className="font-semibold text-amber-500">Degraded (110ms)</span>
+                <span className="font-semibold text-status-warning-text">Degraded (110ms)</span>
               </div>
               <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center justify-between text-[10px] text-muted-foreground/80">
                 <span>Logs (24h): <strong className="text-foreground">0 Critical</strong></span>
-                <span className="text-amber-500 font-semibold">2 Warnings</span>
+                <span className="text-status-warning-text font-semibold">2 Warnings</span>
               </div>
             </div>
           </motion.div>
@@ -758,10 +758,10 @@ export default function AdminDashboardView() {
             className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-emerald-500">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-success-text">
                 <Database size={18} />
               </div>
-              <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500 uppercase tracking-wider">
+              <span className="rounded-full bg-status-success-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-success-text uppercase tracking-wider">
                 92.4% Health
               </span>
             </div>
@@ -773,7 +773,7 @@ export default function AdminDashboardView() {
             <div className="space-y-2.5 text-xs mt-1">
               <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">Duplicates Detected</span>
-                <span className="font-semibold text-amber-500 tabular-nums">14 contacts</span>
+                <span className="font-semibold text-status-warning-text tabular-nums">14 contacts</span>
               </div>
               <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">Incomplete Fields</span>
@@ -796,10 +796,10 @@ export default function AdminDashboardView() {
             className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-amber-500">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-warning-text">
                 <CreditCard size={18} />
               </div>
-              <span className="rounded-full bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-amber-500 uppercase tracking-wider">
+              <span className="rounded-full bg-status-warning-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-warning-text uppercase tracking-wider">
                 Enterprise
               </span>
             </div>
@@ -815,7 +815,7 @@ export default function AdminDashboardView() {
               </div>
               <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                 <div 
-                  className="h-full rounded-full bg-amber-500"
+                  className="h-full rounded-full bg-status-warning-text"
                   style={{ width: '42%' }}
                 />
               </div>
@@ -835,10 +835,10 @@ export default function AdminDashboardView() {
             className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer sm:col-span-2 lg:col-span-2"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-rose-500">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-danger-text">
                 <ShieldCheck size={18} />
               </div>
-              <span className="rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-rose-500 uppercase tracking-wider">
+              <span className="rounded-full bg-status-danger-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-danger-text uppercase tracking-wider">
                 Security &amp; Audit
               </span>
             </div>
@@ -850,7 +850,7 @@ export default function AdminDashboardView() {
             <div className="space-y-3 mt-1 text-xs">
               <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-2">
                 <div className="min-w-0 flex items-center gap-3">
-                  <span className="font-semibold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded text-[10px]">EXPORT</span>
+                  <span className="font-semibold text-status-danger-text bg-status-danger-bg px-2 py-0.5 rounded text-[10px]">EXPORT</span>
                   <p className="truncate text-foreground font-medium"><strong className="text-foreground">Admin</strong> exported 50 leads to CSV</p>
                 </div>
                 <div className="text-right shrink-0">
@@ -872,7 +872,7 @@ export default function AdminDashboardView() {
               
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex items-center gap-3">
-                  <span className="font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded text-[10px]">BULK_DEL</span>
+                  <span className="font-semibold text-status-warning-text bg-status-warning-bg px-2 py-0.5 rounded text-[10px]">BULK_DEL</span>
                   <p className="truncate text-foreground font-medium"><strong className="text-foreground">System</strong> bulk-deleted 18 dead leads</p>
                 </div>
                 <div className="text-right shrink-0">
@@ -889,10 +889,10 @@ export default function AdminDashboardView() {
             className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-blue-500">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-info-text">
                 <Plug size={18} />
               </div>
-              <span className="rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-500 uppercase tracking-wider">
+              <span className="rounded-full bg-status-info-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-info-text uppercase tracking-wider">
                 4 Active
               </span>
             </div>
@@ -935,10 +935,10 @@ export default function AdminDashboardView() {
             className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-orange-500">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-priority-high">
                 <Zap size={18} />
               </div>
-              <span className="rounded-full bg-orange-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-orange-500 uppercase tracking-wider">
+              <span className="rounded-full bg-priority-high-bg px-2.5 py-0.5 text-[10px] font-semibold text-priority-high uppercase tracking-wider">
                 Usage
               </span>
             </div>
@@ -960,7 +960,7 @@ export default function AdminDashboardView() {
                 <span className="text-muted-foreground">Lead Scoring</span>
                 <span className="font-semibold text-brand-cyan">92% Utilized</span>
               </div>
-              <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-amber-500/90 font-medium">
+              <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-status-warning-text/90 font-medium">
                 Tip: Archive 8 unused fields to save system load.
               </div>
             </div>
@@ -972,10 +972,10 @@ export default function AdminDashboardView() {
             className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-card transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-amber-500">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-warning-text">
                 <ShieldAlert size={18} />
               </div>
-              <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500 uppercase tracking-wider">
+              <span className="rounded-full bg-status-success-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-success-text uppercase tracking-wider">
                 Secure
               </span>
             </div>
@@ -987,7 +987,7 @@ export default function AdminDashboardView() {
             <div className="space-y-2.5 text-xs mt-1">
               <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">Failed Logins (24h)</span>
-                <span className="font-semibold text-emerald-500">0 attempts</span>
+                <span className="font-semibold text-status-success-text">0 attempts</span>
               </div>
               <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">API Key Usage</span>
@@ -995,10 +995,10 @@ export default function AdminDashboardView() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Unusual Exports</span>
-                <span className="font-semibold text-emerald-500">None</span>
+                <span className="font-semibold text-status-success-text">None</span>
               </div>
               <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="h-1.5 w-1.5 rounded-full bg-status-success-text animate-pulse"></span>
                 Threat monitoring online
               </div>
             </div>

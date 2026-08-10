@@ -173,42 +173,46 @@ export default function Sidebar({
   const isActive = (tab: string) =>
     activeTab.toLowerCase() === tab.toLowerCase();
 
-  /* NEW: Design Kit active / inactive styles with pill effect */
+  /* ui.md §6: Nav item — height 44px, --radius-md, icon 20px + label 14px/500 */
   const itemBase = cn(
-    'group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-all duration-300 cursor-pointer',
+    'group relative w-full flex items-center gap-3 rounded-[12px] px-3 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer',
   );
   const itemActive = cn(
-    'bg-brand text-primary-foreground shadow-[0_8px_18px_-8px_var(--brand)]',
+    'bg-accent-color text-text-on-primary shadow-[0_8px_18px_-8px_var(--accent-color)]',
   );
   const itemInactive = cn(
-    'text-sidebar-foreground hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+    'text-text-primary hover:bg-surface-hover',
   );
 
   return (
     <aside
       className={cn(
         'flex h-full flex-col shrink-0 overflow-hidden',
-        'bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
+        /* ui.md §6: White surface, no border, rounded outer corner */
+        'bg-surface-1 text-text-primary',
         'transition-[width] duration-300 ease-in-out z-40',
-        collapsed ? 'w-16' : 'w-[248px]',
+        collapsed ? 'w-[72px]' : 'w-[240px]',
+        /* Rounded outer corners per §6 */
+        'm-0 rounded-none',
       )}
+      style={{ borderRadius: '0' }}
     >
-      {/* ── Brand header ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 px-2 py-6 shrink-0 min-w-0">
-        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-brand text-primary-foreground shadow-[0_8px_18px_-8px_var(--brand)]">
+      {/* ── Brand header — ui.md §6 ─────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 px-4 py-5 shrink-0 min-w-0">
+        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-color text-text-on-primary shadow-[0_8px_18px_-8px_var(--accent-color)]">
           <Zap size={18} strokeWidth={2.6} />
         </div>
         {!collapsed && (
-          <span className="truncate text-[19px] font-extrabold tracking-tight text-sidebar-foreground">
+          <span className="truncate text-lg font-bold tracking-tight text-text-primary">
             Pulse CRM
           </span>
         )}
       </div>
 
-      {/* ── Scrollable nav ───────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-4 space-y-7">
+      {/* ── Scrollable nav — ui.md §6: md-lg padding ───────────────────── */}
+      <nav className="flex-1 overflow-y-auto px-3 space-y-6">
 
-        {/* Home */}
+        {/* Home — ui.md §6: icon 20px */}
         <button
           onClick={() => setActiveTab('home')}
           className={cn(
@@ -218,18 +222,18 @@ export default function Sidebar({
           )}
         >
           <LayoutDashboard
-            size={18}
+            size={20}
             strokeWidth={2}
             className={cn(
-              'shrink-0 transition-transform duration-300 group-hover:scale-110',
-              isActive('home') ? '' : 'text-sidebar-foreground',
+              'shrink-0 transition-transform duration-200 group-hover:scale-105',
+              isActive('home') ? '' : 'text-text-secondary',
             )}
           />
           {!collapsed && <span className="truncate">Home</span>}
 
-          {/* Collapsed tooltip */}
+          {/* Collapsed tooltip — ui.md §5: shadow-popover */}
           {collapsed && (
-            <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground shadow-nav opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+            <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-[12px] border border-border-default bg-surface-1 px-2.5 py-1.5 text-xs text-text-primary shadow-popover opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
               Home
             </span>
           )}
@@ -238,13 +242,13 @@ export default function Sidebar({
         {/* Sections */}
         {sections.map((section) => (
           <div key={section.label}>
-            {/* Group label - Design Kit style */}
+            {/* Group label — ui.md §3: 11px/600 uppercase 0.06em spacing */}
             {!collapsed ? (
-              <p className="px-3 pb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground select-none">
+              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted select-none">
                 {section.label}
               </p>
             ) : (
-              <div className="mx-2 mb-2 h-px bg-sidebar-border" />
+              <div className="mx-2 mb-2 h-px bg-border-default" />
             )}
 
             {section.items.map((item) => {
@@ -262,17 +266,17 @@ export default function Sidebar({
                   )}
                 >
                   <Icon
-                    size={18}
+                    size={20}
                     strokeWidth={2}
                     className={cn(
-                      'shrink-0 transition-transform duration-300 group-hover:scale-110',
-                      active ? '' : 'text-sidebar-foreground',
+                      'shrink-0 transition-transform duration-200 group-hover:scale-105',
+                      active ? '' : 'text-text-secondary',
                     )}
                   />
                   {!collapsed && <span className="truncate">{item.name}</span>}
 
                   {collapsed && (
-                    <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground shadow-nav opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
+                    <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-[12px] border border-border-default bg-surface-1 px-2.5 py-1.5 text-xs text-text-primary shadow-popover opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
                       {item.name}
                     </span>
                   )}
@@ -283,19 +287,19 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* ── User footer ──────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-sidebar-border p-3">
+      {/* ── User footer — ui.md §6 ──────────────────────────────────────── */}
+      <div className="shrink-0 border-t border-border-default p-3">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
           className={cn(
-            'w-full flex items-center gap-3 rounded-2xl p-3',
+            'w-full flex items-center gap-3 rounded-[12px] p-3',
             'text-left transition-colors duration-150 cursor-pointer',
-            'hover:bg-sidebar-accent',
+            'hover:bg-surface-hover',
             collapsed && 'justify-center',
           )}
         >
-          <div className="size-10 shrink-0 overflow-hidden rounded-full border border-sidebar-border flex items-center justify-center bg-brand-pale">
+          <div className="size-10 shrink-0 overflow-hidden rounded-full border border-border-default flex items-center justify-center bg-accent-muted">
             {currentUser?.avatar_url ? (
               <Image
                 src={resolveImageUrl(currentUser.avatar_url)}
@@ -306,20 +310,20 @@ export default function Sidebar({
                 unoptimized
               />
             ) : (
-              <span className="text-xs font-bold text-brand-deep select-none">{profileInitials}</span>
+              <span className="text-xs font-bold text-accent-color select-none">{profileInitials}</span>
             )}
           </div>
           {!collapsed && (
             <>
               <div className="min-w-0 flex-1 leading-tight">
-                <p className="truncate text-[14px] font-bold text-sidebar-foreground">
+                <p className="truncate text-sm font-semibold text-text-primary">
                   {profileName}
                 </p>
-                <p className="truncate text-xs text-muted-foreground">
+                <p className="truncate text-xs text-text-muted">
                   {profileRoleLabel}
                 </p>
               </div>
-              <ChevronsUpDown size={14} className="shrink-0 text-muted-foreground" />
+              <ChevronsUpDown size={14} className="shrink-0 text-text-muted" />
             </>
           )}
         </button>

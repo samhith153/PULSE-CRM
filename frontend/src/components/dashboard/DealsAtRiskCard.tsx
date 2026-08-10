@@ -110,22 +110,22 @@ export default function DealsAtRiskCard({
 
   return (
     <div
-      className={`bg-card/90 backdrop-blur-md border border-amber-500/20 dark:border-amber-500/25 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-amber-500/5 transition duration-300 flex flex-col justify-between relative overflow-hidden group ${className}`}
+      className={`bg-card/90 backdrop-blur-md border border-status-warning-text/20 dark:border-status-warning-text/25 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-status-warning-text/5 transition duration-300 flex flex-col justify-between relative overflow-hidden group ${className}`}
     >
       {/* Background ambient warm amber aura pulse */}
-      <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-amber-500/8 blur-3xl pointer-events-none group-hover:bg-amber-500/12 transition duration-500" />
+      <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-status-warning-text/8 blur-3xl pointer-events-none group-hover:bg-status-warning-text/12 transition duration-500" />
       <div>
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 mb-3.5 border-b border-border/60">
           <div className="flex items-center space-x-2.5">
             <div className="relative">
-              <div className="h-9 w-9 rounded-xl bg-amber-500/12 flex items-center justify-center text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-inner">
+              <div className="h-9 w-9 rounded-xl bg-status-warning-text/12 flex items-center justify-center text-status-warning-text dark:text-status-warning-text border border-status-warning-text/20 shadow-inner">
                 <AlertTriangle size={18} className="animate-pulse" />
               </div>
               {normalizedDeals.length > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-warning-text opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-status-warning-text"></span>
                 </span>
               )}
             </div>
@@ -133,7 +133,7 @@ export default function DealsAtRiskCard({
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-foreground text-sm tracking-tight">{title}</h3>
                 {normalizedDeals.length > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500/12 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-[10px] font-bold tabular-nums">
+                  <span className="px-2 py-0.5 rounded-full bg-status-warning-text/12 border border-status-warning-text/20 text-status-warning-text dark:text-status-warning-text text-[10px] font-bold tabular-nums">
                     {normalizedDeals.length}
                   </span>
                 )}
@@ -144,8 +144,8 @@ export default function DealsAtRiskCard({
 
           {/* Total Value Pill */}
           {normalizedDeals.length > 0 && (
-            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-bold self-start sm:self-auto">
-              <Flame size={13} className="text-amber-500 animate-bounce" />
+            <div className="flex items-center space-x-1.5 px-3 py-1 rounded-xl bg-status-warning-text/10 border border-status-warning-text/20 text-status-warning-text dark:text-status-warning-text text-xs font-bold self-start sm:self-auto">
+              <Flame size={13} className="text-status-warning-text animate-bounce" />
               <span>{formatINR(totalAtRiskValue)}</span>
             </div>
           )}
@@ -179,7 +179,7 @@ export default function DealsAtRiskCard({
                 onClick={() => setFilter('high_value')}
                 className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition ${
                   filter === 'high_value'
-                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 shadow-xs border border-amber-500/25'
+                    ? 'bg-status-warning-text/15 text-status-warning-text dark:text-status-warning-text shadow-xs border border-status-warning-text/25'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -201,7 +201,7 @@ export default function DealsAtRiskCard({
               animate={{ opacity: 1, scale: 1 }}
               className="py-10 flex flex-col items-center justify-center text-center space-y-2"
             >
-              <div className="h-12 w-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shadow-inner">
+              <div className="h-12 w-12 rounded-full bg-status-success-text/10 border border-status-success-text/20 flex items-center justify-center text-status-success-text shadow-inner">
                 <ShieldCheck size={24} />
               </div>
               <p className="text-xs font-bold text-foreground">All deals are healthy!</p>
@@ -229,19 +229,19 @@ export default function DealsAtRiskCard({
                     }}
                     className={`group/item rounded-xl p-3 border transition duration-200 cursor-pointer relative overflow-hidden ${
                       deal.isCritical
-                        ? 'border-amber-500/30 bg-amber-500/8 hover:bg-amber-500/12 hover:border-amber-500/45'
-                        : 'border-border/80 bg-muted/30 hover:bg-muted/60 hover:border-amber-500/30'
-                    } ${isExpanded ? 'ring-1 ring-amber-500/40 shadow-md' : ''}`}
+                        ? 'border-status-warning-text/30 bg-status-warning-text/8 hover:bg-status-warning-text/12 hover:border-status-warning-text/45'
+                        : 'border-border/80 bg-muted/30 hover:bg-muted/60 hover:border-status-warning-text/30'
+                    } ${isExpanded ? 'ring-1 ring-status-warning-text/40 shadow-md' : ''}`}
                   >
                     {/* Top Row: Name, Company, Value */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-xs font-extrabold text-foreground truncate group-hover/item:text-amber-600 dark:group-hover/item:text-amber-400 transition-colors">
+                          <p className="text-xs font-extrabold text-foreground truncate group-hover/item:text-status-warning-text dark:group-hover/item:text-status-warning-text transition-colors">
                             {deal.name}
                           </p>
                           {deal.isCritical && (
-                            <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25">
+                            <span className="shrink-0 px-1.5 py-0.2 rounded text-[8px] font-black uppercase tracking-wider bg-status-warning-text/15 text-status-warning-text dark:text-status-warning-text border border-status-warning-text/25">
                               Attention
                             </span>
                           )}
@@ -277,7 +277,7 @@ export default function DealsAtRiskCard({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-amber-500/12 text-amber-700 dark:text-amber-400 border border-amber-500/20 truncate max-w-[130px]">
+                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-status-warning-text/12 text-status-warning-text dark:text-status-warning-text border border-status-warning-text/20 truncate max-w-[130px]">
                           {deal.reason}
                         </span>
 
@@ -287,8 +287,8 @@ export default function DealsAtRiskCard({
                           title={`Send alert to ${deal.owner}`}
                           className={`px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 transition ${
                             isNudged
-                              ? 'bg-emerald-500/15 text-emerald-600 border border-emerald-500/30'
-                              : 'bg-card border border-border/80 hover:border-amber-500/50 text-foreground hover:text-amber-600 hover:bg-amber-500/10'
+                              ? 'bg-status-success-text/15 text-status-success-text border border-status-success-text/30'
+                              : 'bg-card border border-border/80 hover:border-status-warning-text/50 text-foreground hover:text-status-warning-text hover:bg-status-warning-text/10'
                           }`}
                         >
                           {isNudged ? (
@@ -314,9 +314,9 @@ export default function DealsAtRiskCard({
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ duration: 0.2 }}
-                          className="mt-2.5 pt-2 border-t border-amber-500/20 text-[10px] space-y-2 bg-amber-500/5 -mx-3 -mb-3 p-3 rounded-b-xl"
+                          className="mt-2.5 pt-2 border-t border-status-warning-text/20 text-[10px] space-y-2 bg-status-warning-text/5 -mx-3 -mb-3 p-3 rounded-b-xl"
                         >
-                          <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold">
+                          <div className="flex items-center gap-1.5 text-status-warning-text dark:text-status-warning-text font-bold">
                             <Sparkles size={12} />
                             <span>AI Recommended Action:</span>
                           </div>
@@ -325,7 +325,7 @@ export default function DealsAtRiskCard({
                           </p>
 
                           <div className="flex justify-end gap-2 pt-1">
-                            <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 hover:underline inline-flex items-center gap-0.5">
+                            <span className="text-[10px] font-bold text-status-warning-text dark:text-status-warning-text hover:underline inline-flex items-center gap-0.5">
                               Open Deal Details <ArrowUpRight size={11} />
                             </span>
                           </div>

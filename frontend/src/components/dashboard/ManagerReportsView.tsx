@@ -22,7 +22,7 @@ import {
 } from '@/utils/api';
 import { cn } from '@/utils/cn';
 
-const COLORS = ['var(--lime)', 'var(--brand-soft)', 'var(--brand)', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981'];
+const COLORS = ['var(--lime)', 'var(--brand-soft)', 'var(--brand)', 'var(--status-warning-text)', 'var(--chart-1)', 'var(--status-danger-text)', 'var(--chart-5)', 'var(--status-success-text)'];
 
 function fmt(n: number) {
   if (n >= 1e7) return `${(n / 1e7).toFixed(1)}Cr`;
@@ -257,7 +257,7 @@ export default function ManagerReportsView() {
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${Math.min(Number(q.achievement_pct) || 0, 100)}%`,
-                        background: Number(q.achievement_pct) >= 100 ? '#10b981' : Number(q.achievement_pct) >= 70 ? '#f59e0b' : '#ef4444',
+                        background: Number(q.achievement_pct) >= 100 ? 'var(--status-success-text)' : Number(q.achievement_pct) >= 70 ? 'var(--status-warning-text)' : 'var(--status-danger-text)',
                       }}
                     />
                     <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold">
@@ -451,10 +451,10 @@ export default function ManagerReportsView() {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="calls" fill="#10b981" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="emails" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="meetings" fill="#f59e0b" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="tasks" fill="#06b6d4" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="calls" fill="var(--status-success-text)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="emails" fill="var(--chart-1)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="meetings" fill="var(--status-warning-text)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="tasks" fill="var(--chart-5)" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -636,7 +636,7 @@ export default function ManagerReportsView() {
                         <td className="px-4 py-2.5">{d.owner_name}</td>
                         <td className="px-4 py-2.5">{d.stage}</td>
                         <td className="px-4 py-2.5 text-right font-semibold">{fmtCurrency(Number(d.value))}</td>
-                        <td className="px-4 py-2.5 text-rose-600 text-xs font-semibold">{d.risk_reason}</td>
+                        <td className="px-4 py-2.5 text-status-danger-text text-xs font-semibold">{d.risk_reason}</td>
                       </tr>
                     ))}
                   </tbody>

@@ -204,7 +204,7 @@ export default function AutomationView() {
       )}
 
       {error && !loading && (
-        <div className="bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 text-xs font-bold text-foreground flex items-center gap-2">
+        <div className="bg-status-warning-bg border border-status-warning-text/20 rounded-xl px-4 py-3 text-xs font-bold text-foreground flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" />
           <span>{error}</span>
         </div>
@@ -311,7 +311,7 @@ export default function AutomationView() {
                       log.status === 'Success'
                         ? 'bg-brand-cyan/15 text-brand-cyan'
                         : log.status === 'Pending'
-                          ? 'bg-amber-50 text-amber-700'
+                          ? 'bg-status-warning-bg text-status-warning-text'
                           : 'bg-destructive/10 text-destructive'
                     }`}>
                       {log.status}

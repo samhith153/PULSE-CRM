@@ -106,14 +106,14 @@ function FollowUpCard({
       : `Overdue ${item.days_overdue}d`;
   return (
     <div
-      className="p-2.5 bg-card border border-amber-100 rounded-lg cursor-pointer hover:border-amber-300 transition"
+      className="p-2.5 bg-card border border-status-warning-text/20 rounded-lg cursor-pointer hover:border-status-warning-text/40 transition"
       onClick={() => navigateToLead(item.lead_id, onNavigate)}
     >
       <div className="flex justify-between items-center">
         <span className="text-[10px] font-semibold text-foreground truncate max-w-[60%]">
           {item.lead_name}
         </span>
-        <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">
+        <span className="text-[9px] font-semibold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded shrink-0">
           {label}
         </span>
       </div>
@@ -285,7 +285,7 @@ function RecentSummaryCard({
         {item.summary}
       </p>
       {item.follow_up_suggestion && (
-        <p className="text-[8px] text-amber-600 font-semibold mt-1">
+        <p className="text-[8px] text-status-warning-text font-semibold mt-1">
           ⏰ {item.follow_up_suggestion}
         </p>
       )}
@@ -443,11 +443,11 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
               <div className="bg-secondary border border-border rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
                   <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
-                    <h4 className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center">
+                    <h4 className="text-xs font-semibold text-status-warning-text uppercase tracking-wider flex items-center">
                       <Clock className="h-3.5 w-3.5 mr-1.5" />
                       <span>Follow Up Due</span>
                     </h4>
-                    <span className="text-[9px] font-semibold bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-full">
+                    <span className="text-[9px] font-semibold bg-status-warning-bg text-status-warning-text px-1.5 py-0.5 rounded-full">
                       Missed
                     </span>
                   </div>
@@ -635,12 +635,12 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
                 <div>
                   <div className="flex justify-between text-[10px] font-semibold text-foreground mb-1">
                     <span className="flex items-center">
-                      <Meh className="h-3 w-3 text-amber-500 mr-1" /> Neutral
+                      <Meh className="h-3 w-3 text-status-warning-text mr-1" /> Neutral
                     </span>
                     <span className="tabular-nums">{sentiment?.neutral ?? 0}</span>
                   </div>
                   <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
-                    <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: sentPct(sentiment?.neutral ?? 0) }} />
+                    <div className="h-full bg-status-warning-text rounded-full transition-all duration-500" style={{ width: sentPct(sentiment?.neutral ?? 0) }} />
                   </div>
                 </div>
                 <div>

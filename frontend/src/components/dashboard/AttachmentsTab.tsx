@@ -110,7 +110,7 @@ export default function AttachmentsTab({ contactId, dealId, companyId }: Attachm
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-center gap-2 p-3 text-xs font-semibold text-rose-500 bg-rose-500/10 border border-rose-500/15 rounded-xl">
+        <div className="flex items-center gap-2 p-3 text-xs font-semibold text-status-danger-text bg-status-danger-text/10 border border-status-danger-text/15 rounded-xl">
           <AlertCircle className="size-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -197,7 +197,7 @@ export default function AttachmentsTab({ contactId, dealId, companyId }: Attachm
                   </a>
                   <button
                     onClick={() => handleDelete(file.id, file.file_name)}
-                    className="p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
+                    className="p-1.5 text-muted-foreground hover:text-status-danger-text hover:bg-status-danger-text/10 rounded-lg transition cursor-pointer"
                     title="Delete Attachment"
                   >
                     <Trash2 className="size-3.5" />

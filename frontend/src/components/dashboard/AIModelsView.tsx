@@ -86,7 +86,7 @@ export default function AIModelsView() {
             </div>
 
             {/* Performance status & Train buttons */}
-            <div className="flex flex-wrap md:flex-nowrap items-center gap-6 self-stretch md:self-auto border-t md:border-t-0 pt-4 md:pt-0 border-slate-150">
+            <div className="flex flex-wrap md:flex-nowrap items-center gap-6 self-stretch md:self-auto border-t md:border-t-0 pt-4 md:pt-0 border-border">
               <div className="text-left md:text-right">
                 <span className="text-[9px] font-bold text-muted-foreground uppercase block">Verification Precision</span>
                 <span className="text-base font-semibold text-foreground tabular-nums">{model.accuracy}</span>
@@ -102,7 +102,7 @@ export default function AIModelsView() {
                   model.status === 'Active' 
                     ? 'bg-brand-cyan/15 text-brand-cyan' 
                     : model.status === 'Training'
-                    ? 'bg-amber-50 text-amber-700'
+                    ? 'bg-status-warning-bg text-status-warning-text'
                     : 'bg-secondary text-foreground'
                 }`}>
                   {model.status === 'Training' && <RefreshCw className="h-2.5 w-2.5 animate-spin mr-1" />}
