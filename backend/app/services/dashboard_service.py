@@ -16,9 +16,13 @@ from app.models.activity import ActivityTimeline
 from app.models.company import Company
 from app.models.contact import Contact
 from app.models.deal import Deal
-from app.models.email import Email
+from app.models.email import Email, GmailConnection
 from app.models.lead import Lead
 from app.models.lead_score import LeadScore
+from app.models.calendar_event import CalendarEvent
+from app.models.event_outbox import EventOutbox
+from app.models.task import Task
+from app.models.workflow import WorkflowTask
 from app.models.user import User, UserRole
 from app.models.role import Role
 from app.repositories.pipeline_repository import PipelineRepository
@@ -148,7 +152,7 @@ class DashboardService:
         for days in (7, 14, 30):
             period_start = now - timedelta(days=days)
             stmt = select(
-                func.coalesce(func.sum(Deal.amount), 0),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
                 func.count(Deal.id),
             ).where(
                 Deal.organization_id == organization_id,
@@ -191,7 +195,7 @@ class DashboardService:
         return int(result.scalar_one() or 0)
 
     async def _sum_deal_amount(self, organization_id: UUID, *criteria) -> Decimal:
-        stmt = select(func.coalesce(func.sum(Deal.amount), 0)).where(
+        stmt = select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(
             Deal.organization_id == organization_id,
             Deal.is_active.is_(True),
             Deal.is_deleted.is_(False),
@@ -216,7 +220,7 @@ class DashboardService:
         for offset in range(months - 1, -1, -1):
             start, end = self._month_bounds(now, offset)
             stmt = select(
-                func.coalesce(func.sum(Deal.amount), 0),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
                 func.count(Deal.id),
             ).where(
                 Deal.organization_id == organization_id,
@@ -244,7 +248,7 @@ class DashboardService:
                 User.id,
                 User.full_name,
                 func.count(Deal.id),
-                func.coalesce(func.sum(Deal.amount), 0),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
                 func.coalesce(won_count, 0),
             )
             .select_from(User)
@@ -255,7 +259,7 @@ class DashboardService:
                 User.is_deleted.is_(False),
             )
             .group_by(User.id, User.full_name)
-            .order_by(func.coalesce(func.sum(Deal.amount), 0).desc(), func.count(Deal.id).desc())
+            .order_by(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0).desc(), func.count(Deal.id).desc())
             .limit(limit)
         )
         result = await self.db.execute(stmt)
@@ -304,9 +308,12 @@ class DashboardService:
             DashboardPriorityQueueCard,
             DashboardPriorityQueueItem,
             DashboardQuotaCard,
+            DashboardPipelineFunnelCard,
+            DashboardPipelineStage,
             DashboardTaskItem,
             DashboardTasksCard,
             DashboardUntouchedDealsCard,
+            DashboardWorkSummaryCard,
             RedesignedDashboardResponse,
         )
 
@@ -344,8 +351,12 @@ class DashboardService:
 
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         tomorrow_start = today_start + timedelta(days=1)
+        calls_summary = await repo.calls_today_summary(organization_id, user_id, today_start, tomorrow_start)
         calls_today = DashboardCallsTodayCard(
-            count=await repo.calls_today(organization_id, user_id, today_start, tomorrow_start)
+            count=calls_summary["total"],
+            pending=calls_summary["pending"],
+            completed=calls_summary["completed"],
+            total=calls_summary["total"],
         )
 
         my_leads = DashboardLeadsCard(
@@ -364,7 +375,19 @@ class DashboardService:
             )
             for row in task_rows
         ]
-        tasks = DashboardTasksCard(count=len(task_items), items=task_items)
+        task_summary = await repo.task_summary(organization_id, user_id, today_start, tomorrow_start)
+        tasks = DashboardTasksCard(
+            count=len(task_items),
+            today=task_summary["today"],
+            upcoming=task_summary["upcoming"],
+            overdue=task_summary["overdue"],
+            items=task_items,
+        )
+        todays_work_summary = DashboardWorkSummaryCard(
+            total=task_summary["total"],
+            completed=task_summary["completed"],
+            completion_percentage=self._percentage(task_summary["completed"], task_summary["total"]),
+        )
 
         meeting_rows = await repo.dashboard_meetings(organization_id, user_id, now)
         today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -418,6 +441,8 @@ class DashboardService:
                     task_id=task.id,
                     title=task.title,
                     priority_score=min(score, 100),
+                    label="Task",
+                    reason=reasons[0] if reasons else None,
                     reasons=reasons,
                     due_date=task_due,
                     overdue=task_due < now,
@@ -470,8 +495,10 @@ class DashboardService:
 
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         next_month = month_start.replace(year=month_start.year + 1, month=1) if month_start.month == 12 else month_start.replace(month=month_start.month + 1)
-        achieved = Decimal(str(await repo.won_revenue_between(organization_id, user_id, month_start, next_month)))
-        quota_target = await self._user_sales_quota(user_id, organization_id)
+        quota_stats = await repo.quota_stats(organization_id, user_id, month_start, next_month)
+        achieved = Decimal(str(quota_stats["achieved"] or 0))
+        quota_target_raw = await repo.user_sales_quota(organization_id, user_id)
+        quota_target = Decimal(str(quota_target_raw)) if quota_target_raw is not None else None
         elapsed_days = Decimal(str(now.day))
         days_in_month = Decimal(str((next_month - month_start).days))
         expected = (quota_target * elapsed_days / days_in_month) if quota_target else None
@@ -479,12 +506,27 @@ class DashboardService:
         quota_status = 'target_unavailable'
         if quota_target and expected is not None:
             quota_status = 'on_track' if achieved >= expected else 'behind'
+        won_deals = int(quota_stats["won_deals"] or 0)
         quota = DashboardQuotaCard(
             target=quota_target,
             achieved=achieved,
             expected=expected,
+            gap_to_goal=max((quota_target or Decimal("0")) - achieved, Decimal("0")),
             percentage=percentage,
+            won_deals=won_deals,
+            average_deal_size=Decimal(str(quota_stats["average_deal_size"] or 0)),
             status=quota_status,
+        )
+
+        pipeline_funnel = DashboardPipelineFunnelCard(
+            stages=[
+                DashboardPipelineStage(
+                    label=row["label"],
+                    count=row["count"],
+                    conversion_percentage=Decimal(str(row["conversion_percentage"])),
+                )
+                for row in await repo.pipeline_funnel(organization_id, user_id)
+            ]
         )
 
         return RedesignedDashboardResponse(
@@ -497,6 +539,8 @@ class DashboardService:
             priorityQueue=priority_queue,
             dealsAtRisk=deals_at_risk,
             quota=quota,
+            pipelineFunnel=pipeline_funnel,
+            todaysWorkSummary=todays_work_summary,
             lastUpdated=now,
         )
 
@@ -521,21 +565,36 @@ class DashboardService:
         """
         from app.models.organization import Organization
         from app.schemas.dashboard import (
+            AdminAuditLogItem,
             AdminCompanyStats,
             AdminContactStats,
+            AdminCustomWorkflowStats,
             AdminDashboardResponse,
+            AdminDataQuality,
             AdminDashboardSummary,
+            AdminIntegrationStatus,
             AdminLeadFunnelStage,
             AdminLeadSourceBreakdown,
             AdminLeadStats,
+            AdminLicenseUsage,
+            AdminMetricAvailability,
             AdminMonthlySalesPoint,
             AdminNotificationSummary,
             AdminOrganizationStats,
+            AdminOverviewCards,
+            AdminOverviewMetric,
             AdminRecentActivity,
+            AdminRevenueLeadSummary,
             AdminRevenueStats,
+            AdminRevenueTrendPoint,
+            AdminRoleDistributionItem,
+            AdminSecurityStats,
+            AdminServiceHealthItem,
+            AdminSystemHealth,
             AdminTaskStats,
             AdminTopCompany,
             AdminTopSalesRep,
+            AdminUserManagement,
             AdminUserStats,
         )
 
@@ -544,6 +603,7 @@ class DashboardService:
         week_start = now - timedelta(days=now.weekday())
         week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month = month_start.replace(year=month_start.year + 1, month=1) if month_start.month == 12 else month_start.replace(month=month_start.month + 1)
         year_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
         last_month_start, _ = self._month_bounds(now, 1)
 
@@ -602,11 +662,19 @@ class DashboardService:
         )
 
         # -- 2. Users ---------------------------------------------------------
+        admin_visible_roles = ["manager", "sales_rep", "sales_representative"]
         total_users = await _count(User)
-        active_users_stmt = select(func.count(User.id)).where(
-            User.organization_id == organization_id,
-            User.is_active.is_(True),
-            User.is_deleted.is_(False),
+        active_users_stmt = (
+            select(func.count(func.distinct(User.id)))
+            .select_from(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(
+                User.organization_id == organization_id,
+                User.is_active.is_(True),
+                User.is_deleted.is_(False),
+                Role.name.in_(admin_visible_roles),
+            )
         )
         active_users = int((await self.db.execute(active_users_stmt)).scalar_one() or 0)
         inactive_users = total_users - active_users
@@ -713,6 +781,42 @@ class DashboardService:
             growth_pct=rev_growth,
         )
 
+        prev_active_users_stmt = (
+            select(func.count(func.distinct(User.id)))
+            .select_from(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(
+                User.organization_id == organization_id,
+                User.is_deleted.is_(False),
+                Role.name.in_(admin_visible_roles),
+                User.created_at < month_start,
+            )
+        )
+        prev_active_users = int((await self.db.execute(prev_active_users_stmt)).scalar_one() or 0)
+        overview = AdminOverviewCards(
+            revenue_month=AdminOverviewMetric(
+                current_value=rev_month,
+                previous_value=prev_month_rev,
+                percentage_change=rev_growth,
+            ),
+            active_users=AdminOverviewMetric(
+                current_value=Decimal(active_users),
+                previous_value=Decimal(prev_active_users),
+                percentage_change=self._percentage(active_users - prev_active_users, max(prev_active_users, 1)),
+            ),
+            companies=AdminOverviewMetric(
+                current_value=Decimal(total_companies),
+                previous_value=Decimal(max(total_companies - new_companies_month + prev_companies, 0)),
+                percentage_change=company_growth,
+            ),
+            new_leads=AdminOverviewMetric(
+                current_value=Decimal(new_leads_month),
+                previous_value=Decimal(prev_leads),
+                percentage_change=lead_growth,
+            ),
+        )
+
         # -- 8. Tasks (via ActivityTimeline) ----------------------------------
         # "Tasks" are modelled as activity_timeline_events with action=meeting/call
         # We treat overdue = past meetings, pending = future, due today = today
@@ -753,37 +857,44 @@ class DashboardService:
         )
 
         # -- 9. Monthly Sales Analytics (12 months) ---------------------------
+        trend_start, _ = self._month_bounds(now, 11)
+        lead_month_stmt = (
+            select(func.date_trunc("month", Lead.created_at).label("month"), func.count(Lead.id))
+            .where(*_base(Lead), Lead.created_at >= trend_start, Lead.created_at < next_month)
+            .group_by("month")
+        )
+        revenue_month_stmt = (
+            select(
+                func.date_trunc("month", Deal.closed_at).label("month"),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
+            )
+            .where(*_base(Deal), Deal.status == DealStatus.WON.value, Deal.closed_at >= trend_start, Deal.closed_at < next_month)
+            .group_by("month")
+        )
+        converted_month_stmt = (
+            select(func.date_trunc("month", Lead.updated_at).label("month"), func.count(Lead.id))
+            .where(*_base(Lead), Lead.status.in_(["won", "converted"]), Lead.updated_at >= trend_start, Lead.updated_at < next_month)
+            .group_by("month")
+        )
+        lead_counts = {row[0].strftime("%Y-%m"): int(row[1] or 0) for row in (await self.db.execute(lead_month_stmt)).all() if row[0]}
+        revenue_counts = {row[0].strftime("%Y-%m"): Decimal(str(row[1] or 0)) for row in (await self.db.execute(revenue_month_stmt)).all() if row[0]}
+        converted_counts = {row[0].strftime("%Y-%m"): int(row[1] or 0) for row in (await self.db.execute(converted_month_stmt)).all() if row[0]}
         monthly_sales: list[AdminMonthlySalesPoint] = []
+        revenue_trend: list[AdminRevenueTrendPoint] = []
         for offset in range(11, -1, -1):
-            start, end = self._month_bounds(now, offset)
-            leads_created_stmt = select(func.count(Lead.id)).where(
-                *_base(Lead),
-                Lead.created_at >= start,
-                Lead.created_at < end,
-            )
-            leads_converted_stmt = select(func.count(Lead.id)).where(
-                *_base(Lead),
-                Lead.status == "won",
-                Lead.updated_at >= start,
-                Lead.updated_at < end,
-            )
-            rev_stmt = select(func.coalesce(func.sum(Deal.amount), 0)).where(
-                *_base(Deal),
-                Deal.status == DealStatus.WON.value,
-                Deal.closed_at >= start,
-                Deal.closed_at < end,
-            )
-            lc_result = await self.db.execute(leads_created_stmt)
-            lconv_result = await self.db.execute(leads_converted_stmt)
-            rev_result = await self.db.execute(rev_stmt)
+            start, _ = self._month_bounds(now, offset)
+            key = start.strftime("%Y-%m")
+            revenue_value = revenue_counts.get(key, Decimal("0"))
+            lead_count = lead_counts.get(key, 0)
             monthly_sales.append(
                 AdminMonthlySalesPoint(
-                    month=start.strftime("%Y-%m"),
-                    leads_created=int(lc_result.scalar_one() or 0),
-                    leads_converted=int(lconv_result.scalar_one() or 0),
-                    revenue=Decimal(str(rev_result.scalar_one() or 0)),
+                    month=key,
+                    leads_created=lead_count,
+                    leads_converted=converted_counts.get(key, 0),
+                    revenue=revenue_value,
                 )
             )
+            revenue_trend.append(AdminRevenueTrendPoint(month=key, revenue=revenue_value, lead_count=lead_count))
 
         # -- 10. Lead Source Analytics ----------------------------------------
         source_stmt = (
@@ -796,7 +907,7 @@ class DashboardService:
         total_leads_for_source = sum(r[1] for r in source_rows) or 1
         lead_sources = [
             AdminLeadSourceBreakdown(
-                source=str(r[0] or "unknown"),
+                source=str(r[0] or "Unknown"),
                 count=int(r[1]),
                 percentage=self._percentage(int(r[1]), total_leads_for_source),
             )
@@ -836,7 +947,7 @@ class DashboardService:
                 User.id,
                 User.full_name,
                 func.coalesce(total_deals_expr, 0),
-                func.coalesce(func.sum(Deal.amount), Decimal("0")),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), Decimal("0")),
                 func.coalesce(won_expr, 0),
             )
             .select_from(User)
@@ -845,9 +956,10 @@ class DashboardService:
                 User.organization_id == organization_id,
                 User.is_active.is_(True),
                 User.is_deleted.is_(False),
+                User.id.in_(select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.name.in_(admin_visible_roles))),
             )
             .group_by(User.id, User.full_name)
-            .order_by(func.coalesce(func.sum(Deal.amount), 0).desc())
+            .order_by(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0).desc())
             .limit(5)
         )
         top_reps_rows = (await self.db.execute(top_reps_stmt)).all()
@@ -867,7 +979,7 @@ class DashboardService:
             select(
                 Company.id,
                 Company.name,
-                func.coalesce(func.sum(Deal.amount), 0),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
                 func.count(Lead.id.distinct()),
                 func.count(Contact.id.distinct()),
             )
@@ -897,7 +1009,7 @@ class DashboardService:
                 Company.is_deleted.is_(False),
             )
             .group_by(Company.id, Company.name)
-            .order_by(func.coalesce(func.sum(Deal.amount), 0).desc())
+            .order_by(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0).desc())
             .limit(5)
         )
         top_companies_rows = (await self.db.execute(top_companies_stmt)).all()
@@ -951,11 +1063,149 @@ class DashboardService:
             system_alerts=0,              # no system-alert model yet
         )
 
+        role_distribution_stmt = (
+            select(Role.name, func.count(func.distinct(User.id)))
+            .select_from(User)
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(User.organization_id == organization_id, User.is_active.is_(True), User.is_deleted.is_(False))
+            .group_by(Role.name)
+        )
+        role_distribution = [
+            AdminRoleDistributionItem(role=str(role).upper(), count=int(count or 0))
+            for role, count in (await self.db.execute(role_distribution_stmt)).all()
+        ]
+
+        org_row = (await self.db.execute(select(Organization).where(Organization.id == organization_id))).scalar_one_or_none()
+        seat_limit = org_row.max_users if org_row else None
+        no_storage_source = "No persisted organization storage usage/limit source exists."
+        license_usage = AdminLicenseUsage(
+            storage_used=None,
+            storage_used_state=AdminMetricAvailability(value=None, available=False, reason=no_storage_source),
+            storage_limit=None,
+            storage_limit_state=AdminMetricAvailability(value=None, available=False, reason=no_storage_source),
+            active_seats=active_users,
+            seat_limit=seat_limit,
+            usage_percentage=self._percentage(active_users, seat_limit) if seat_limit else None,
+        )
+        user_management = AdminUserManagement(
+            active_seats=active_users,
+            invites_pending=None,
+            invites_pending_state=AdminMetricAvailability(value=None, available=False, reason="No persisted invitation table/model exists."),
+            role_distribution=role_distribution,
+        )
+
+        duplicate_queries = [
+            select(func.count()).select_from(select(Contact.organization_id, func.lower(func.trim(Contact.email))).where(*_base(Contact), Contact.email.is_not(None), func.trim(Contact.email) != "").group_by(Contact.organization_id, func.lower(func.trim(Contact.email))).having(func.count(Contact.id) > 1).subquery()),
+            select(func.count()).select_from(select(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).where(*_base(Contact), Contact.phone.is_not(None), func.regexp_replace(Contact.phone, r"\D+", "", "g") != "").group_by(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).having(func.count(Contact.id) > 1).subquery()),
+            select(func.count()).select_from(select(Lead.organization_id, func.lower(func.trim(Lead.email))).where(*_base(Lead), Lead.email.is_not(None), func.trim(Lead.email) != "").group_by(Lead.organization_id, func.lower(func.trim(Lead.email))).having(func.count(Lead.id) > 1).subquery()),
+            select(func.count()).select_from(select(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).where(*_base(Lead), Lead.phone.is_not(None), func.regexp_replace(Lead.phone, r"\D+", "", "g") != "").group_by(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).having(func.count(Lead.id) > 1).subquery()),
+            select(func.count()).select_from(select(Company.organization_id, func.lower(func.trim(Company.name))).where(*_base(Company)).group_by(Company.organization_id, func.lower(func.trim(Company.name))).having(func.count(Company.id) > 1).subquery()),
+        ]
+        duplicates_detected = 0
+        for query in duplicate_queries:
+            duplicates_detected += int((await self.db.execute(query)).scalar_one() or 0)
+        incomplete_fields = int((await self.db.execute(select(func.count(Lead.id)).where(*_base(Lead), or_(Lead.title.is_(None), Lead.title == "", Lead.email.is_(None), Lead.email == "")))).scalar_one() or 0)
+        orphaned_leads_stmt = (
+            select(func.count(Lead.id))
+            .select_from(Lead)
+            .outerjoin(User, User.id == Lead.owner_id)
+            .outerjoin(Company, Company.id == Lead.company_id)
+            .where(
+                Lead.organization_id == organization_id,
+                Lead.is_active.is_(True),
+                Lead.is_deleted.is_(False),
+                or_((Lead.owner_id.is_not(None)) & (User.id.is_(None)), (Lead.company_id.is_not(None)) & (Company.id.is_(None))),
+            )
+        )
+        data_quality = AdminDataQuality(
+            duplicates_detected=duplicates_detected,
+            incomplete_fields=incomplete_fields,
+            orphaned_leads=int((await self.db.execute(orphaned_leads_stmt)).scalar_one() or 0),
+        )
+
+        audit_rows = (await self.db.execute(
+            select(ActivityTimeline, User.full_name)
+            .outerjoin(User, User.id == ActivityTimeline.created_by)
+            .where(ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True))
+            .order_by(ActivityTimeline.created_at.desc())
+            .limit(10)
+        )).all()
+        audit_logs = [
+            AdminAuditLogItem(
+                event_type=row[0].action,
+                description=row[0].description or row[0].title,
+                performed_by=row[1] or "System",
+                timestamp=row[0].created_at,
+                ip_address=(row[0].payload or {}).get("ip_address") if row[0].payload else None,
+                metadata=row[0].payload,
+            )
+            for row in audit_rows
+        ]
+        unusual_exports = int((await self.db.execute(select(func.count(ActivityTimeline.id)).where(ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True), ActivityTimeline.action.ilike("%export%"), ActivityTimeline.created_at >= now - timedelta(hours=24)))).scalar_one() or 0)
+
+        gmail_row = (await self.db.execute(select(func.count(GmailConnection.id), func.max(GmailConnection.updated_at)).where(GmailConnection.organization_id == organization_id, GmailConnection.is_active.is_(True)))).one()
+        calendar_row = (await self.db.execute(select(func.count(CalendarEvent.id), func.max(CalendarEvent.updated_at)).where(CalendarEvent.organization_id == organization_id, CalendarEvent.is_active.is_(True), CalendarEvent.is_deleted.is_(False)))).one()
+        integrations = [
+            AdminIntegrationStatus(integration="Google/Gmail", status="active" if int(gmail_row[0] or 0) else "not_configured", last_sync=gmail_row[1], message=None),
+            AdminIntegrationStatus(integration="Calendar", status="active" if int(calendar_row[0] or 0) else "not_configured", last_sync=calendar_row[1], message=None),
+        ]
+        system_health = AdminSystemHealth(
+            services=[
+                AdminServiceHealthItem(service="API Gateway", status="unknown", message="No persisted API health metric is available."),
+                AdminServiceHealthItem(service="Database", status="unknown", message="No persisted database health metric is available."),
+                AdminServiceHealthItem(service="Async Workers", status="unknown", message="No persisted worker heartbeat is available."),
+                AdminServiceHealthItem(service="Google/Gmail", status=integrations[0].status),
+                AdminServiceHealthItem(service="Calendar", status=integrations[1].status),
+            ],
+            critical_logs_24h=None,
+            critical_logs_24h_state=AdminMetricAvailability(value=None, available=False, reason="No persisted application log severity table exists."),
+            warning_logs_24h=None,
+            warning_logs_24h_state=AdminMetricAvailability(value=None, available=False, reason="No persisted application log severity table exists."),
+        )
+
+        workflow_counts = {str(status): int(count or 0) for status, count in (await self.db.execute(select(WorkflowTask.status, func.count(WorkflowTask.id)).where(WorkflowTask.organization_id == organization_id, WorkflowTask.is_active.is_(True)).group_by(WorkflowTask.status))).all()}
+        scoring_usage = int((await self.db.execute(select(func.count(LeadScore.id)).where(LeadScore.organization_id == organization_id, LeadScore.is_active.is_(True)))).scalar_one() or 0)
+        custom_fields = AdminCustomWorkflowStats(
+            custom_fields_active=None,
+            custom_fields_active_state=AdminMetricAvailability(value=None, available=False, reason="No custom field table/model exists."),
+            custom_fields_idle=None,
+            custom_fields_idle_state=AdminMetricAvailability(value=None, available=False, reason="No custom field table/model exists."),
+            automations_active=workflow_counts.get("pending", 0) + workflow_counts.get("in_progress", 0),
+            automations_idle=workflow_counts.get("completed", 0) + workflow_counts.get("expired", 0) + workflow_counts.get("superseded", 0),
+            lead_scoring_usage=scoring_usage,
+        )
+        security = AdminSecurityStats(
+            failed_logins_24h=None,
+            failed_logins_24h_state=AdminMetricAvailability(value=None, available=False, reason="No persisted failed-login event source exists."),
+            active_api_keys=None,
+            active_api_keys_state=AdminMetricAvailability(value=None, available=False, reason="No API key table/model exists."),
+            unusual_exports=unusual_exports,
+            security_status="not_available" if unusual_exports == 0 else "review_exports",
+        )
+        revenue_lead_summary = AdminRevenueLeadSummary(
+            revenue_year=rev_year,
+            converted_leads=total_converted,
+            contacts=total_contacts,
+            tasks_pending=pending_tasks,
+        )
+
         return AdminDashboardResponse(
             summary=summary,
+            overview=overview,
+            revenue_trend=revenue_trend,
+            revenue_lead_summary=revenue_lead_summary,
             monthly_sales=monthly_sales,
             lead_sources=lead_sources,
             lead_funnel=lead_funnel,
+            user_management=user_management,
+            system_health=system_health,
+            data_quality=data_quality,
+            license_usage=license_usage,
+            audit_logs=audit_logs,
+            integrations=integrations,
+            custom_fields=custom_fields,
+            security=security,
             top_sales_reps=top_sales_reps,
             top_companies=top_companies,
             recent_activities=recent_activities,
@@ -1047,7 +1297,7 @@ class DashboardService:
 
         async def _deal_sum(*extra):
             r = await self.db.execute(
-                select(func.coalesce(func.sum(Deal.amount), 0)).where(*_deal_base(*extra))
+                select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(*_deal_base(*extra))
             )
             return Decimal(str(r.scalar_one() or 0))
 
@@ -1143,7 +1393,7 @@ class DashboardService:
         )
 
         stage_stmt = (
-            select(Deal.status, func.count(Deal.id), func.coalesce(func.sum(Deal.amount), 0))
+            select(Deal.status, func.count(Deal.id), func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0))
             .where(*_deal_base())
             .group_by(Deal.status)
         )
@@ -1177,7 +1427,7 @@ class DashboardService:
             select(
                 User.id,
                 User.full_name,
-                func.coalesce(func.sum(Deal.amount), 0),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
                 func.coalesce(
                     func.sum(
                         case((Deal.status == DealStatus.WON.value, Deal.amount), else_=0)
@@ -1569,7 +1819,7 @@ class DashboardService:
 
         async def _deal_sum(*extra):
             r = await self.db.execute(
-                select(func.coalesce(func.sum(Deal.amount), 0)).where(
+                select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(
                     *_rep_deals(*extra)
                 )
             )
@@ -1776,7 +2026,7 @@ class DashboardService:
 
         # -- 7. Deals by Stage -------------------------------------------------
         stage_stmt = (
-            select(Deal.status, func.count(Deal.id), func.coalesce(func.sum(Deal.amount), 0))
+            select(Deal.status, func.count(Deal.id), func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0))
             .where(*_rep_deals(Deal.created_at >= period_start))
             .group_by(Deal.status)
         )
@@ -1800,7 +2050,7 @@ class DashboardService:
             select(
                 Lead.source,
                 func.count(Deal.id),
-                func.coalesce(func.sum(Deal.amount), 0),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
             )
             .select_from(Deal)
             .outerjoin(Lead, Lead.id == Deal.lead_id)
@@ -1812,7 +2062,7 @@ class DashboardService:
         total_src = sum(int(r[1] or 0) for r in source_rows) or 1
         deals_by_source = [
             RepDealBySource(
-                source=str(r[0] or "unknown"),
+                source=str(r[0] or "Unknown"),
                 count=int(r[1] or 0),
                 percentage=self._percentage(int(r[1] or 0), total_src),
                 revenue=Decimal(str(r[2] or 0)),
@@ -1832,7 +2082,7 @@ class DashboardService:
         rev_by_size: list[RepRevenueByCompanySize] = []
         for label, low, high in size_buckets:
             bucket_stmt = (
-                select(func.coalesce(func.sum(Deal.amount), 0))
+                select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0))
                 .select_from(Deal)
                 .outerjoin(Company, Deal.company_id == Company.id)
                 .where(
@@ -2149,7 +2399,7 @@ class DashboardService:
         )
 
         # ── Query 5: Quota Pace - Closed Won Revenue (Widget 5) ────────────────
-        closed_won_stmt = select(func.coalesce(func.sum(Deal.amount), 0)).where(
+        closed_won_stmt = select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(
             Deal.owner_id == user_id,
             Deal.organization_id == organization_id,
             Deal.is_active.is_(True),

@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import BusinessRuleException, ConflictException, ForbiddenException, NotFoundException
+from app.core.exceptions import BusinessRuleException, ConflictException, DuplicateException, ForbiddenException, NotFoundException
 from app.core.logging import get_logger
 from app.models.deal import Deal
 from app.models.lead import Lead
@@ -99,6 +99,12 @@ class LeadService:
         created_by: UUID,
     ) -> Lead:
         data = payload.model_dump(exclude_none=True)
+        if data.get("email"):
+            data["email"] = str(data["email"]).strip().lower()
+        if data.get("email") and await self.repo.get_by_email_in_org(data["email"], organization_id):
+            raise DuplicateException("Lead", "email", data["email"])
+        if data.get("phone") and await self.repo.get_by_phone_in_org(data["phone"], organization_id):
+            raise DuplicateException("Lead", "phone", data["phone"])
 
         # Default owner to the creator if not explicitly assigned
         if not data.get("owner_id"):
@@ -172,6 +178,17 @@ class LeadService:
     async def update(self, lead_id: UUID, user: User, payload: LeadUpdateRequest) -> Lead:
         lead = await self.get(lead_id, user)
         update_data = payload.model_dump(exclude_none=True)
+
+        if update_data.get("email"):
+            update_data["email"] = str(update_data["email"]).strip().lower()
+        if "email" in update_data and update_data["email"] != lead.email:
+            existing = await self.repo.get_by_email_in_org(update_data["email"], user.organization_id)
+            if existing and existing.id != lead_id:
+                raise DuplicateException("Lead", "email", update_data["email"])
+        if "phone" in update_data and update_data["phone"] != lead.phone:
+            existing = await self.repo.get_by_phone_in_org(update_data["phone"], user.organization_id)
+            if existing and existing.id != lead_id:
+                raise DuplicateException("Lead", "phone", update_data["phone"])
 
         await self._validate_relations(
             user.organization_id,

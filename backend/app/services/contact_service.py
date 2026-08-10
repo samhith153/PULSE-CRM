@@ -49,9 +49,13 @@ class ContactService:
         organization_id: UUID,
         created_by: UUID,
     ) -> Contact:
-        existing = await self.repo.get_by_email_in_org(str(payload.email), organization_id)
+        data = payload.model_dump(exclude_none=True)
+        data["email"] = str(data["email"]).strip().lower()
+        existing = await self.repo.get_by_email_in_org(data["email"], organization_id)
         if existing:
-            raise DuplicateException("Contact", "email", str(payload.email))
+            raise DuplicateException("Contact", "email", data["email"])
+        if data.get("phone") and await self.repo.get_by_phone_in_org(data["phone"], organization_id):
+            raise DuplicateException("Contact", "phone", data["phone"])
 
         if payload.company_id:
             company = await self.company_repo.get_active_by_id(payload.company_id, organization_id)
@@ -61,7 +65,7 @@ class ContactService:
                 )
 
         contact = await self.repo.create(
-            **payload.model_dump(exclude_none=True),
+            **data,
             organization_id=organization_id,
             created_by=created_by,
         )
@@ -107,10 +111,16 @@ class ContactService:
 
         update_data = payload.model_dump(exclude_none=True)
 
+        if "email" in update_data and update_data["email"]:
+            update_data["email"] = str(update_data["email"]).strip().lower()
         if "email" in update_data and update_data["email"] != contact.email:
             existing = await self.repo.get_by_email_in_org(update_data["email"], user.organization_id)
             if existing and existing.id != contact_id:
                 raise DuplicateException("Contact", "email", update_data["email"])
+        if "phone" in update_data and update_data["phone"] != contact.phone:
+            existing = await self.repo.get_by_phone_in_org(update_data["phone"], user.organization_id)
+            if existing and existing.id != contact_id:
+                raise DuplicateException("Contact", "phone", update_data["phone"])
 
         if "company_id" in update_data and update_data["company_id"]:
             company = await self.company_repo.get_active_by_id(update_data["company_id"], user.organization_id)

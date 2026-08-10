@@ -4,7 +4,7 @@ Company Repository
 from typing import List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -32,6 +32,24 @@ class CompanyRepository(BaseRepository[Company]):
     ) -> Optional[Company]:
         stmt = self._base_query(organization_id).where(
             Company.name.ilike(name)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+    async def get_by_email_in_org(self, email: str, organization_id: UUID) -> Optional[Company]:
+        stmt = self._base_query(organization_id).where(
+            func.lower(func.trim(Company.email)) == email.strip().lower()
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_phone_in_org(self, phone: str, organization_id: UUID) -> Optional[Company]:
+        normalized = ''.join(ch for ch in phone if ch.isdigit())
+        if not normalized:
+            return None
+        stmt = self._base_query(organization_id).where(
+            func.regexp_replace(func.coalesce(Company.phone, ''), r'\D+', '', 'g') == normalized
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
