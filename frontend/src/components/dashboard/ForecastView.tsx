@@ -12,11 +12,14 @@ import {
   CheckCircle,
   HelpCircle,
   Sliders,
-  IndianRupee
+  IndianRupee,
+  Award
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   getManagerForecast,
   asNumber,
+  formatINR,
   type ManagerForecastData,
 } from '@/utils/api';
 
@@ -30,15 +33,57 @@ function fmtINR(v: string | number | null | undefined): string {
   return `₹${n.toLocaleString('en-IN')}`;
 }
 
-function fmtNum(v: string | number | null | undefined): string {
-  const n = asNumber(v);
-  return n.toLocaleString('en-IN');
-}
-
 // ── Skeleton ───────────────────────────────────────────────────────────────
 
-function SkeletonBlock({ h = 'h-5', w = 'w-full' }: { h?: string; w?: string }) {
-  return <div className={`${h} ${w} bg-slate-100 rounded animate-pulse`} />;
+function SkeletonBlock({ h = 'h-5', w = 'w-full', className }: { h?: string; w?: string; className?: string }) {
+  return <div className={`${h} ${w} ${className ?? ''} bg-muted/40 rounded-xl animate-pulse`} />;
+}
+
+// ── Radial Progress Ring ────────────────────────────────────────────────────
+
+function RadialProgressRing({ progress }: { progress: number }) {
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const clamped = Math.max(0, Math.min(100, progress));
+  const offset = circumference - (clamped / 100) * circumference;
+
+  return (
+    <div className="relative flex items-center justify-center">
+      <svg width="140" height="140" viewBox="0 0 140 140" className="-rotate-90">
+        <circle cx="70" cy="70" r={radius} fill="none" strokeWidth="10" className="stroke-muted/45" />
+        <motion.circle
+          cx="70"
+          cy="70"
+          r={radius}
+          fill="none"
+          strokeWidth="10"
+          strokeLinecap="round"
+          stroke="url(#forecastRingGradient)"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.2, ease: "easeOut", delay: 0.2 }}
+        />
+        <defs>
+          <linearGradient id="forecastRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="var(--brand-purple)" />
+            <stop offset="100%" stopColor="#a855f7" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <motion.span 
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+          className="text-3.5xl font-black text-foreground tracking-tight tabular-nums"
+        >
+          {Math.round(clamped)}%
+        </motion.span>
+        <span className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">Confidence</span>
+      </div>
+    </div>
+  );
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -47,6 +92,7 @@ export default function ForecastView() {
   const [data, setData]       = useState<ManagerForecastData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('Q4');
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +115,6 @@ export default function ForecastView() {
   const quarterLabel     = data?.expected_revenue.quarter ?? '—';
   const bestCase         = asNumber(data?.best_case_pipeline.best_case_pipeline);
   const coverageRatio    = asNumber(data?.pipeline_coverage.coverage_ratio);
-  const coverageStatus   = data?.pipeline_coverage.coverage_status ?? '—';
   const targetAchPct     = asNumber(data?.expected_revenue.target_achievement_pct);
   const quarterTarget    = asNumber(data?.quarterly_projection?.[0]?.quota_target ?? 0);
 
@@ -99,36 +144,28 @@ export default function ForecastView() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">
-            Sales Forecast
-          </h1>
-          <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
-            Projections of revenue targets and confidence tiers generated from active pipeline pipelines.
-          </p>
+          <SkeletonBlock h="h-9" w="w-48" />
+          <SkeletonBlock h="h-4" w="w-72" className="mt-2" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="col-span-12 md:col-span-7 bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
+          <div className="col-span-12 md:col-span-7 bg-card border border-border/60 rounded-2xl p-6 shadow-sm space-y-4">
             <SkeletonBlock h="h-8" w="w-48" />
             <SkeletonBlock h="h-4" />
             <SkeletonBlock h="h-4" w="w-3/4" />
-            <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/50">
               <SkeletonBlock h="h-6" />
               <SkeletonBlock h="h-6" />
             </div>
           </div>
-          <div className="col-span-12 md:col-span-5 bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col items-center space-y-4">
+          <div className="col-span-12 md:col-span-5 bg-card border border-border/60 rounded-2xl p-6 shadow-sm flex flex-col items-center space-y-4">
             <SkeletonBlock h="h-4" w="w-32" />
-            <div className="w-32 h-32 rounded-full bg-slate-100 animate-pulse" />
+            <div className="w-32 h-32 rounded-full bg-muted/40 animate-pulse" />
             <SkeletonBlock h="h-10" />
           </div>
         </div>
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
+        <div className="bg-card border border-border/60 rounded-2xl p-6 shadow-sm space-y-4">
           <SkeletonBlock h="h-5" w="w-48" />
           {[1, 2, 3].map((i) => <SkeletonBlock key={i} h="h-8" />)}
-        </div>
-        <div className="bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 space-y-4">
-          <SkeletonBlock h="h-5" w="w-48" />
-          <SkeletonBlock h="h-24" />
         </div>
       </div>
     );
@@ -140,14 +177,14 @@ export default function ForecastView() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-bold">Sales Forecast</h1>
-          <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
-            Projections of revenue targets and confidence tiers generated from active pipeline pipelines.
+          <h1 className="text-3xl font-sans text-foreground tracking-tight font-black">Sales Forecast</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-semibold tracking-wide">
+            Interactive projections and confidence tiers modeled dynamically from active pipelines.
           </p>
         </div>
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-6 text-rose-700">
-          <p className="font-bold text-sm">Couldn't load forecast data</p>
-          <p className="text-xs mt-1">{error}</p>
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 text-rose-600 dark:text-rose-400">
+          <p className="font-extrabold text-sm">Couldn't load forecast data</p>
+          <p className="text-xs mt-1 font-medium">{error}</p>
         </div>
       </div>
     );
@@ -156,12 +193,13 @@ export default function ForecastView() {
   // ── Main render ───────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-none">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-sans text-foreground tracking-tight font-black">
-            Sales Forecast
+          <h1 className="text-3xl font-sans text-foreground tracking-tight font-black flex items-center gap-2">
+            <span>Sales Forecast</span>
+            <Sparkles size={20} className="text-brand-purple animate-pulse" />
           </h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1 font-semibold tracking-wide">
             Interactive projections and confidence tiers modeled dynamically from active pipelines.
@@ -169,18 +207,23 @@ export default function ForecastView() {
         </div>
 
         {/* Tab Selector */}
-        <div className="flex bg-secondary p-1 rounded-xl border border-border/60 shrink-0 w-fit">
+        <div className="flex bg-muted/60 dark:bg-muted/30 p-1 rounded-xl border border-border/80 shadow-inner shrink-0 w-fit relative">
           {['Q3', 'Q4'].map((q) => (
             <button
               key={q}
               onClick={() => setActiveTab(q as any)}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 cursor-pointer ${
-                activeTab === q 
-                  ? 'bg-card text-foreground shadow-sm border border-border/40' 
-                  : 'text-muted-foreground hover:text-foreground'
+              className={`relative px-4 py-1.5 rounded-lg text-xs font-bold transition duration-200 cursor-pointer select-none ${
+                activeTab === q ? 'text-slate-900 font-extrabold' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {q} Projections
+              {activeTab === q && (
+                <motion.div
+                  layoutId="activeQuarterTab"
+                  className="absolute inset-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.06)] rounded-lg border border-slate-200/80"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10">{q} Projections</span>
             </button>
           ))}
         </div>
@@ -189,109 +232,157 @@ export default function ForecastView() {
       {/* Headline Grid */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
         {/* Expected Revenue (Col 7) */}
-        <div className="col-span-12 md:col-span-7 bg-white border border-brand-border-purple/20 rounded-xl p-5 shadow-sm/5 flex flex-col justify-between space-y-4">
-          <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-extrabold text-brand-text/60 uppercase block">Expected Revenue</span>
-              <h2 className="text-3xl font-bold text-brand-heading mt-1">{fmtINR(expectedRevenue)}</h2>
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="col-span-12 md:col-span-7 bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group flex flex-col justify-between"
+        >
+          <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-brand-purple/5 blur-3xl pointer-events-none group-hover:bg-brand-purple/8 transition duration-500" />
+          
+          <div>
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-xl bg-brand-purple/10 text-brand-purple border border-brand-purple/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                  <Target size={20} />
+                </div>
+                <div>
+                  <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-wider block">Expected Revenue</span>
+                  <h2 className="text-3xl font-black text-foreground mt-0.5 tracking-tight tabular-nums bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">{fmtINR(expectedRevenue)}</h2>
+                </div>
+              </div>
+              <span className="text-[9px] font-bold bg-brand-purple/10 text-brand-purple border border-brand-purple/15 px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                {quarterLabel} Projected
+              </span>
             </div>
-            <span className="text-[9px] font-extrabold bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded uppercase tracking-wider">
-              {quarterLabel} Projected
-            </span>
+
+            <p className="text-xs text-muted-foreground leading-relaxed font-semibold">
+              Based on active deals, historical conversion rates, and representative quota velocity.
+              {quarterTarget > 0
+                ? ` The team is projected to reach ${targetAchPct.toFixed(1)}% of the ${quarterLabel} quota of ${fmtINR(quarterTarget)}.`
+                : ' No pipeline data available.'}
+            </p>
           </div>
 
-          <p className="text-xs text-brand-text/75 leading-relaxed font-semibold">
-            Based on active deals, historical conversion rates, and representative quota velocity.
-            {quarterTarget > 0
-              ? ` The team is projected to reach ${targetAchPct.toFixed(1)}% of the ${quarterLabel} quota of ${fmtINR(quarterTarget)}.`
-              : ' No pipeline data available.'}
-          </p>
-
-          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border/60 mt-4">
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">Best Case Pipeline</span>
-              <p className="text-sm font-extrabold text-brand-text mt-0.5">
-                {bestCase > 0 ? fmtINR(bestCase) : '₹0'}
-              </p>
+          <div className="grid grid-cols-2 gap-6 pt-4 border-t border-border/50 mt-6 relative z-10">
+            <div className="flex items-start gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 border border-indigo-500/15">
+                <Award size={15} />
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Best Case Pipeline</span>
+                <p className="text-sm font-extrabold text-foreground mt-0.5 tabular-nums">
+                  {bestCase > 0 ? fmtINR(bestCase) : '₹0'}
+                </p>
+              </div>
             </div>
-            <div>
-              <span className="text-[9px] font-bold text-slate-400 uppercase">Active Pipe Coverage</span>
-              <p className="text-sm font-extrabold text-brand-text mt-0.5">
-                {coverageRatio > 0 ? `${coverageRatio.toFixed(2)}x Target` : 'No pipeline data available'}
-              </p>
+            <div className="flex items-start gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/15">
+                <TrendingUp size={15} />
+              </div>
+              <div>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block">Active Pipe Coverage</span>
+                <p className="text-sm font-extrabold text-foreground mt-0.5 tabular-nums">
+                  {coverageRatio > 0 ? `${coverageRatio.toFixed(2)}x Target` : 'No pipeline data available'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        {/* Confidence Score Gauge (Col 4) */}
-        <div className="col-span-12 lg:col-span-4 bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300 flex flex-col items-center justify-between text-center relative overflow-hidden">
-          <div className="w-full flex justify-between items-center text-left mb-2">
+        {/* Confidence Score Gauge (Col 5) */}
+        <motion.div 
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="col-span-12 md:col-span-5 bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group flex flex-col items-center justify-between text-center"
+        >
+          <div className="absolute -bottom-12 -right-12 w-32 h-32 rounded-full bg-brand-purple/5 blur-3xl pointer-events-none group-hover:bg-brand-purple/8 transition duration-500" />
+          
+          <div className="w-full flex justify-between items-center text-left mb-2 relative z-10">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">AI Confidence Score</span>
             <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help hover:text-foreground transition-colors" />
           </div>
 
-          <div className="relative flex items-center justify-center py-4 my-2">
+          <div className="relative flex items-center justify-center py-4 my-2 shrink-0 z-10">
             <RadialProgressRing progress={confidenceScore} />
           </div>
 
-          <div className="w-full p-2.5 bg-brand-sidebar-hover/10 border border-brand-border-purple/15 rounded-xl">
-            <p className="text-[10px] font-bold text-brand-text/80">
+          <div className="w-full p-3 bg-secondary/60 dark:bg-slate-900/40 border border-border/60 rounded-xl relative z-10">
+            <p className="text-[10px] font-bold text-foreground/80 leading-normal">
               {confidenceDesc}
             </p>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Monthly Forecast Breakdown */}
-      <div className="bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300">
-        <div className="flex items-center justify-between mb-4 pb-2 border-b border-border/40">
-          <h3 className="font-bold text-foreground text-sm flex items-center">
-            <Calendar className="h-4.5 w-4.5 mr-2 text-[var(--accent-color)]" />
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group"
+      >
+        <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-brand-purple/4 blur-3xl pointer-events-none" />
+
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 pb-4 border-b border-border/50">
+          <h3 className="font-extrabold text-foreground text-sm flex items-center">
+            <Calendar className="h-4.5 w-4.5 mr-2 text-brand-purple" />
             <span>Monthly Projections Distribution</span>
           </h3>
-          <div className="flex items-center gap-4 text-[10px] font-bold text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-[var(--accent-color)]/30" /> Expected
+              <span className="size-2.5 rounded-full bg-brand-blue" /> Expected
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-[var(--accent-color)]/10" /> Best Case
+              <span className="size-2.5 rounded-full bg-indigo-500/30 border border-indigo-500/25" /> Best Case
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-0.5 h-3 bg-[var(--accent-color)]" /> Pipeline Target
+              <span className="w-1.5 h-3 bg-brand-purple rounded-full" /> Pipeline Target
             </span>
           </div>
         </div>
 
         {monthlyForecast.length === 0 ? (
-          <p className="text-xs text-slate-400 py-4 text-center">No forecast data available.</p>
+          <p className="text-xs text-muted-foreground py-4 text-center font-bold">No forecast data available.</p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {monthlyForecast.map((item, idx) => (
-              <div key={idx} className="space-y-1.5">
-                <div className="flex justify-between text-xs font-bold text-brand-text">
-                  <span className="font-extrabold">{item.month}</span>
-                  <span className="tabular-nums font-extrabold text-brand-heading">
-                    Expected: {fmtINR(item.expected)} / Max: {fmtINR(item.bestCase)}
+              <div key={idx} className="space-y-2">
+                <div className="flex justify-between text-xs font-bold text-foreground">
+                  <span className="font-extrabold text-sm uppercase tracking-wide">{item.month}</span>
+                  <span className="tabular-nums font-black text-muted-foreground text-[11px] bg-secondary/80 px-2 py-0.5 rounded-md border border-border/40">
+                    Expected: <span className="text-foreground">{fmtINR(item.expected)}</span> / Max: <span className="text-foreground">{fmtINR(item.bestCase)}</span>
                   </span>
                 </div>
-                <div className="relative h-6 w-full bg-slate-100 rounded-lg overflow-hidden flex items-center px-2.5">
-                  {/* Expected bar */}
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 bg-brand-accent/35 border-r border-brand-accent/50 transition-all duration-300"
-                    style={{ width: `${Math.min((item.expected / maxVal) * 100, 100)}%` }}
-                  />
+                <div className="relative h-7 w-full bg-secondary/60 dark:bg-slate-900/40 rounded-xl overflow-hidden flex items-center px-3 border border-border/40">
                   {/* Best Case bar */}
-                  <div 
-                    className="absolute left-0 top-0 bottom-0 bg-brand-secondary-accent/15 border-r border-brand-secondary-accent/30 transition-all duration-300"
-                    style={{ width: `${Math.min((item.bestCase / maxVal) * 100, 100)}%` }}
+                  <motion.div 
+                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-indigo-500/10 to-indigo-500/20 border-r border-indigo-500/30 rounded-l-xl"
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${Math.min((item.bestCase / maxVal) * 100, 100)}%` }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                  />
+                  {/* Expected bar */}
+                  <motion.div 
+                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-brand-purple/20 to-brand-blue/30 border-r-2 border-brand-blue/60 rounded-l-xl"
+                    initial={{ width: 0 }}
+                    whileInView={{ width: `${Math.min((item.expected / maxVal) * 100, 100)}%` }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, ease: "easeOut", delay: 0.15 }}
                   />
                   {/* Pipeline line marker */}
-                  <div 
-                    className="absolute top-0 bottom-0 w-0.5 bg-brand-border-purple/80 z-10"
-                    style={{ left: `${Math.min((item.pipeline / maxVal) * 100, 100)}%` }}
+                  <motion.div 
+                    className="absolute top-0 bottom-0 w-0.75 bg-brand-purple shadow-sm z-10"
+                    initial={{ scaleY: 0 }}
+                    whileInView={{ scaleY: 1, left: `${Math.min((item.pipeline / maxVal) * 100, 100)}%` }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: 0.3 }}
                     title={`Pipeline coverage: ${fmtINR(item.pipeline)}`}
                   />
-                  <span className="z-20 text-[9px] font-extrabold text-brand-heading flex items-center">
+                  <span className="z-20 text-[9px] font-black text-foreground/80 flex items-center gap-1.5 select-none bg-background/80 backdrop-blur-sm border border-border/50 px-2 py-0.5 rounded-full shadow-sm">
+                    <span className="size-1.5 rounded-full bg-brand-purple" />
                     Pipeline: {fmtINR(item.pipeline)}
                   </span>
                 </div>
@@ -299,46 +390,76 @@ export default function ForecastView() {
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* Quarterly Forecast Grid */}
-      <div className="bg-card border border-border/85 rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md hover:border-brand-purple/20 transition-all duration-300">
-        <h3 className="font-bold text-foreground text-sm flex items-center mb-4 pb-2 border-b border-border/40">
-          <TrendingUp className="h-4.5 w-4.5 mr-2 text-[var(--accent-color)]" />
+      <motion.div 
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+        className="bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group"
+      >
+        <div className="absolute -bottom-12 -left-12 w-36 h-36 rounded-full bg-brand-purple/4 blur-3xl pointer-events-none" />
+
+        <h3 className="font-extrabold text-foreground text-sm flex items-center mb-6 pb-4 border-b border-border/50">
+          <TrendingUp className="h-4.5 w-4.5 mr-2 text-brand-purple" />
           <span>Quarterly Forecast Projections Matrix</span>
         </h3>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto select-text">
           <table className="w-full text-left border-collapse min-w-[600px]">
             <thead>
-              <tr className="border-b border-border/60 text-[9px] uppercase font-bold text-muted-foreground tracking-wider">
-                <th className="py-3">Quarter</th>
-                <th className="py-3 text-right">Quota Target</th>
-                <th className="py-3 text-right">Expected Closed</th>
-                <th className="py-3 text-right">Best Case Close</th>
-                <th className="py-3 text-right">Open Pipeline</th>
-                <th className="py-3 text-right">Target Achievement</th>
+              <tr className="border-b border-border/60 text-[9px] uppercase font-bold text-muted-foreground tracking-widest">
+                <th className="py-3.5">Quarter</th>
+                <th className="py-3.5 text-right">Quota Target</th>
+                <th className="py-3.5 text-right">Expected Closed</th>
+                <th className="py-3.5 text-right">Best Case Close</th>
+                <th className="py-3.5 text-right">Open Pipeline</th>
+                <th className="py-3.5 text-right">Target Achievement</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs font-semibold text-brand-text">
+            <tbody className="divide-y divide-border/40 text-xs font-semibold text-foreground">
               {quarterlyForecast.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-6 text-center text-xs text-slate-400">
+                  <td colSpan={6} className="py-6 text-center text-xs text-muted-foreground font-bold">
                     No pipeline data available.
                   </td>
                 </tr>
               ) : (
                 quarterlyForecast.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="py-3 font-extrabold">{item.quarter}</td>
-                    <td className="py-3 text-right tabular-nums">{fmtINR(item.quota)}</td>
-                    <td className="py-3 text-right tabular-nums font-extrabold text-brand-heading">{fmtINR(item.committed)}</td>
-                    <td className="py-3 text-right tabular-nums">{fmtINR(item.bestCase)}</td>
-                    <td className="py-3 text-right tabular-nums text-slate-500">{fmtINR(item.pipeline)}</td>
-                    <td className="py-3 text-right">
-                      <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-extrabold tabular-nums">
-                        {item.pct}%
-                      </span>
+                  <tr key={idx} className="hover:bg-muted/40 transition-colors duration-150">
+                    <td className="py-4 font-black text-sm">{item.quarter}</td>
+                    <td className="py-4 text-right tabular-nums text-muted-foreground">{fmtINR(item.quota)}</td>
+                    <td className="py-4 text-right tabular-nums font-black text-brand-purple">{fmtINR(item.committed)}</td>
+                    <td className="py-4 text-right tabular-nums">{fmtINR(item.bestCase)}</td>
+                    <td className="py-4 text-right tabular-nums text-muted-foreground/80">{fmtINR(item.pipeline)}</td>
+                    <td className="py-4 text-right">
+                      <div className="flex items-center gap-2.5 justify-end">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border select-none ${
+                          item.pct >= 100 
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                            : item.pct >= 75 
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
+                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                        }`}>
+                          {item.pct}%
+                        </span>
+                        <div className="w-16 h-1.5 bg-muted/65 dark:bg-slate-900/40 rounded-full overflow-hidden shrink-0 shadow-inner">
+                          <motion.div 
+                            className={`h-full rounded-full ${
+                              item.pct >= 100 
+                                ? 'bg-emerald-500' 
+                                : item.pct >= 75 
+                                ? 'bg-amber-500' 
+                                : 'bg-rose-500'
+                            }`}
+                            initial={{ width: 0 }}
+                            whileInView={{ width: `${Math.min(item.pct, 100)}%` }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.8, delay: 0.15 }}
+                          />
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -346,7 +467,8 @@ export default function ForecastView() {
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }
+

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
-import { PillButton } from "./PillButton";
+import { PillButton } from "@/components/landing/PillButton";
 
 type Step = {
   letter: string;

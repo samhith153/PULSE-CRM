@@ -216,7 +216,7 @@ export async function resetPassword(token: string, newPassword: string): Promise
 }
 
 export function resolveImageUrl(url: string | null | undefined): string {
-  if (!url) return 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80';
+  if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const cleanUrl = url.startsWith('/') ? url : `/${url}`;
@@ -329,6 +329,159 @@ export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecom
     body: JSON.stringify({ entity_type: 'lead', entity_id: leadId }),
   });
 }
+
+// =============================================================================
+// AI LEAD WORKFLOW
+// =============================================================================
+
+export interface WorkflowTask {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTask | null;
+  history: WorkflowTask[];
+}
+
+/**
+ * Fetch the AI-driven workflow for a lead.
+ *
+ * Backend:
+ * GET /api/v1/workflows/leads/{lead_id}
+ */
+
+
+// ============================================================
+// AI WORKFLOW TASKS
+// ============================================================
+// ============================================================
+// AI WORKFLOW API
+// Replace ONLY your existing workflow-related interfaces/functions
+// with this block. Do not replace the entire api.ts file.
+// ============================================================
+
+export interface WorkflowTaskItem {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTaskItem | null;
+  history: WorkflowTaskItem[];
+}
+
+/**
+ * Fetch the workflow for one lead.
+ *
+ * IMPORTANT:
+ * Backend route is /api/v1/workflow (singular), not /workflows.
+ */
+export async function getLeadWorkflow(
+  leadId: string
+): Promise<LeadWorkflowResponse> {
+  const result = await apiFetch(
+    `/api/v1/workflows/leads/${leadId}`
+  );
+
+  if (!result) {
+    return {
+      current_task: null,
+      history: [],
+    };
+  }
+
+  const data = result?.data ?? result;
+
+  return {
+    current_task: data?.current_task ?? null,
+    history: Array.isArray(data?.history)
+      ? data.history
+      : [],
+  };
+}
+
+/**
+ * Complete ONE workflow task.
+ *
+ * IMPORTANT:
+ * Pass the workflow task ID, NOT the lead ID.
+ */
+export async function completeWorkflowTask(
+  taskId: string
+): Promise<WorkflowTaskItem> {
+  const result = await apiFetch(
+    `/api/v1/workflows/tasks/${taskId}/complete`,
+    {
+      method: 'POST',
+    }
+  );
+
+  return (result?.data ?? result) as WorkflowTaskItem;
+}
+
+
+/**
+ * Optional task-list endpoint.
+ * The Workflow page above does not need this function,
+ * but keeping it here is useful for other components.
+ */
+export async function getWorkflowTasks(
+  status?: string
+): Promise<WorkflowTaskItem[]> {
+  const query = status
+    ? `?status=${encodeURIComponent(status)}`
+    : '';
+
+  const result = await apiFetch<any>(
+    `/api/v1/workflows/tasks${query}`
+  );
+
+  if (!result) return [];
+
+  const data = result?.data ?? result;
+
+  return Array.isArray(data) ? data : [];
+}
+/**
+ * Complete an AI workflow task.
+ */
+export interface WorkflowTaskResponse {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 
 export interface BatchRecommendationItem {
   lead_id: string;
@@ -468,10 +621,18 @@ export async function getDeals(): Promise<Deal[]> {
   }) as unknown as Deal[];
 }
 
-export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
+export async function updateDealStage(
+  dealId: string | number,
+  stageId: string,
+  closeReason?: string
+): Promise<any> {
   return apiFetch(`/api/v1/pipeline/move`, {
     method: 'PATCH',
-    body: JSON.stringify({ deal_id: dealId, stage_id: stageId })
+    body: JSON.stringify({
+      deal_id: dealId,
+      stage_id: stageId,
+      ...(closeReason ? { close_reason: closeReason } : {}),
+    }),
   });
 }
 
@@ -786,8 +947,26 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
   return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
 }
 
-export async function getManagerDashboard(): Promise<ManagerDashboardData> {
-  return apiFetch<ManagerDashboardData>('/api/v1/dashboard/manager');
+export type ManagerDashboardPeriod =
+  | 'week'
+  | 'month'
+  | 'quarter'
+  | 'year';
+
+export interface ManagerDashboardFilters {
+  period?: ManagerDashboardPeriod;
+  repId?: string;
+}
+
+export async function getManagerDashboard(
+  filters: ManagerDashboardFilters = {}
+): Promise<ManagerDashboardData> {
+  return apiFetch<ManagerDashboardData>(
+    `/api/v1/dashboard/manager${toQuery({
+      period: filters.period ?? 'quarter',
+      rep_id: filters.repId,
+    })}`
+  );
 }
 
 export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
@@ -1063,8 +1242,8 @@ export interface DashboardOverviewData {
   kpis: { open_deals: number; untouched_deals: number; calls_today: number; leads_assigned: number; leads_today?: number };
   open_tasks: { id: string; title: string; due_date: string; status: string; source?: string; lead_id?: string; deal_id?: string }[];
   meetings_today: { id: string; title: string; start_time: string; end_time: string; zoom_link?: string; contact_name?: string; transcript_status?: string }[];
-  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string }[];
-  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string }[];
+  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string; top_reasons?: string[] }[];
+  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string; probability?: number; company_name?: string | null; owner_name?: string | null }[];
   quota_pace: { closed_won_revenue: Decimal; target_revenue: Decimal; attained_percentage: Decimal; pace_status: string };
   deals?: { id: string; name: string; value: number; stage: string; owner: string; closeDate: string }[];
   leads?: { id: string; name: string; company: string; score: number; status: string; owner: string }[];
@@ -1244,6 +1423,10 @@ export async function getCrmActivities(
     `/api/v1/crm-activities${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`
   );
   return result ?? { data: [], meta: { total: 0, page: 1, page_size: 20, total_pages: 1, has_next: false, has_prev: false } };
+}
+
+export async function getCrmActivity(activityId: string): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/${activityId}`);
 }
 
 export async function getCrmActivityOwners(): Promise<CrmActivityOwner[]> {
@@ -1587,10 +1770,6 @@ export async function permanentDeleteUser(userId: string): Promise<void> {
 }
 
 // =============================================================================
-// GLOBAL SEARCH
-// =============================================================================
-
-// =============================================================================
 // SALES REP AI INSIGHTS API  (/api/v1/ai-insights/sales-rep)
 // =============================================================================
 
@@ -1724,4 +1903,339 @@ export async function searchGlobalCRM(query: string) {
     console.error('Error fetching global search:', error);
     return [];
   }
+}
+
+
+// ── Report Types & API Functions ─────────────────────────────────────────────
+
+export interface ReportParams {
+  period?: 'week' | 'month' | 'quarter' | 'year';
+  rep_id?: string;
+}
+
+export interface RevenueByRep {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  deal_count: number;
+  avg_deal_value: number;
+}
+
+export interface WinRateByRep {
+  rep_id: string;
+  rep_name: string;
+  won: number;
+  lost: number;
+  total_closed: number;
+  win_rate: number;
+}
+
+export interface QuotaAttainment {
+  rep_id: string;
+  rep_name: string;
+  target: number;
+  actual: number;
+  achievement_pct: number;
+  remaining: number;
+}
+
+export interface TopPerformer {
+  rank: number;
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  win_rate: number;
+  quota_pct: number;
+}
+
+export interface BottomPerformer {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  quota_pct: number;
+  gap: number;
+}
+
+export interface SalesPerformanceReport {
+  revenue_by_rep: RevenueByRep[];
+  win_rate_by_rep: WinRateByRep[];
+  quota_attainment: QuotaAttainment[];
+  top_performers: TopPerformer[];
+  bottom_performers: BottomPerformer[];
+  total_revenue: number;
+  team_win_rate: number;
+}
+
+export interface PipelineByStage {
+  stage: string;
+  stage_slug: string;
+  deal_count: number;
+  total_value: number;
+  percentage: number;
+}
+
+export interface StageConversion {
+  from_stage: string;
+  to_stage: string;
+  count: number;
+  conversion_pct: number;
+}
+
+export interface PipelineAging {
+  bucket: string;
+  count: number;
+  value: number;
+}
+
+export interface StalledDeal {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  stage: string;
+  value: number;
+  days_inactive: number;
+}
+
+export interface AvgTimeInStage {
+  stage: string;
+  avg_days: number;
+}
+
+export interface PipelineAnalyticsReport {
+  pipeline_by_stage: PipelineByStage[];
+  stage_conversion: StageConversion[];
+  pipeline_aging: PipelineAging[];
+  stalled_deals: StalledDeal[];
+  avg_time_in_stage: AvgTimeInStage[];
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  deals_won: number;
+  win_rate: number;
+  quota_pct: number;
+  avg_deal_size: number;
+  sales_cycle_days: number;
+}
+
+export interface RepComparison {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  win_rate: number;
+  deals_won: number;
+  quota_pct: number;
+  sales_cycle_days: number;
+  avg_deal_size: number;
+}
+
+export interface PerformanceVsPrior {
+  metric: string;
+  current: number;
+  previous: number;
+  change_pct: number;
+}
+
+export interface TeamPerformanceReport {
+  leaderboard: LeaderboardEntry[];
+  rep_comparison: RepComparison[];
+  sales_cycle_by_rep: SalesCycleByRep[];
+  performance_vs_prior: PerformanceVsPrior[];
+}
+
+export interface SalesCycleByRep {
+  rep_id: string;
+  rep_name: string;
+  avg_cycle_days: number;
+  deal_count: number;
+}
+
+export interface ActivitySummary {
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  notes: number;
+  total: number;
+}
+
+export interface ActivityByRep {
+  rep_id: string;
+  rep_name: string;
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  total: number;
+}
+
+export interface CompletedVsOverdue {
+  completed: number;
+  overdue: number;
+  pending: number;
+  completion_rate: number;
+}
+
+export interface ActivityAnalyticsReport {
+  activity_summary: ActivitySummary;
+  activity_by_rep: ActivityByRep[];
+  activity_trend: ActivityTrendPoint[];
+  completed_vs_overdue: CompletedVsOverdue;
+  activity_to_deal: ActivityToDeal;
+}
+
+export interface ActivityTrendPoint {
+  period: string;
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  total: number;
+}
+
+export interface ActivityToDeal {
+  total_deals: number;
+  deals_with_high_activity: number;
+  deals_with_low_activity: number;
+  high_activity_win_rate: number;
+  low_activity_win_rate: number;
+  insight: string;
+}
+
+export interface SourcePerformance {
+  source: string;
+  total: number;
+  qualified: number;
+  converted: number;
+  conversion_pct: number;
+}
+
+export interface ConversionFunnelStage {
+  stage: string;
+  count: number;
+  percentage: number;
+}
+
+export interface LeadAging {
+  bucket: string;
+  count: number;
+}
+
+export interface LeadAnalyticsReport {
+  source_performance: SourcePerformance[];
+  conversion_funnel: ConversionFunnelStage[];
+  conversion_by_rep: ConversionByRep[];
+  lead_aging: LeadAging[];
+  total_leads: number;
+  overall_conversion_rate: number;
+}
+
+export interface ConversionByRep {
+  rep_id: string;
+  rep_name: string;
+  total_leads: number;
+  converted: number;
+  conversion_pct: number;
+}
+
+export interface WonDealItem {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  close_date: string;
+  sales_cycle_days: number;
+}
+
+export interface LostDealItem {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  close_date: string;
+  lost_reason: string;
+}
+
+export interface LostReasonAnalysis {
+  reason: string;
+  count: number;
+  percentage: number;
+}
+
+export interface DealSizeStats {
+  current: number;
+  previous: number;
+  change_pct: number;
+}
+
+export interface DealClosingSoon {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  expected_close_date: string;
+  days_until: number;
+  stage: string;
+}
+
+export interface AtRiskDeal {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  stage: string;
+  value: number;
+  risk_reason: string;
+  days_inactive: number;
+}
+
+export interface DealAnalyticsReport {
+  won_deals: WonDealItem[];
+  lost_deals: LostDealItem[];
+  lost_reason_analysis: LostReasonAnalysis[];
+  avg_deal_size: DealSizeStats;
+  deals_closing_soon: DealClosingSoon[];
+  at_risk_deals: AtRiskDeal[];
+  total_won: number;
+  total_lost: number;
+  total_won_value: number;
+  total_lost_value: number;
+}
+
+export async function getSalesPerformanceReport(params?: ReportParams): Promise<SalesPerformanceReport> {
+  return apiFetch<SalesPerformanceReport>(
+    `/api/v1/reports/sales-performance${toQuery({ period: params?.period, rep_id: params?.rep_id })}`
+  );
+}
+
+export async function getPipelineAnalyticsReport(params?: ReportParams): Promise<PipelineAnalyticsReport> {
+  return apiFetch<PipelineAnalyticsReport>(
+    `/api/v1/reports/pipeline-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getTeamPerformanceReport(params?: ReportParams): Promise<TeamPerformanceReport> {
+  return apiFetch<TeamPerformanceReport>(
+    `/api/v1/reports/team-performance${toQuery({ period: params?.period, rep_id: params?.rep_id })}`
+  );
+}
+
+export async function getActivityAnalyticsReport(params?: ReportParams): Promise<ActivityAnalyticsReport> {
+  return apiFetch<ActivityAnalyticsReport>(
+    `/api/v1/reports/activity-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getLeadAnalyticsReport(params?: ReportParams): Promise<LeadAnalyticsReport> {
+  return apiFetch<LeadAnalyticsReport>(
+    `/api/v1/reports/lead-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getDealAnalyticsReport(params?: ReportParams): Promise<DealAnalyticsReport> {
+  return apiFetch<DealAnalyticsReport>(
+    `/api/v1/reports/deal-analytics${toQuery({ period: params?.period })}`
+  );
 }

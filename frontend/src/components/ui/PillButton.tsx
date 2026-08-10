@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 const pillVariants = cva(
   [
     'inline-flex items-center justify-center gap-2 rounded-full text-sm font-medium',
-    'transition-all duration-200 will-change-transform',
+    'transition duration-200 active:scale-[0.96]',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
     'disabled:pointer-events-none disabled:opacity-50',
     'cursor-pointer',

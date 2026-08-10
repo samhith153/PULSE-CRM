@@ -246,7 +246,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                 <button
                   type="button"
                   onClick={() => toggleViewMode('default')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'default'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -258,7 +258,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                 <button
                   type="button"
                   onClick={() => toggleViewMode('list')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'list'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -415,7 +415,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                         <tr 
                           key={comp.id} 
                           onClick={() => setSelectedId(comp.id)}
-                          className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                          className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
                         >
                           <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
                             <input 
@@ -478,7 +478,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                         e.stopPropagation();
                         setSelectedId(prevId => prevId === comp.id ? null : prevId);
                       }}
-                      className={`hover:bg-secondary/40 cursor-pointer transition-all duration-200 border-b border-border/40 ${comp.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
+                      className={`hover:bg-secondary/40 cursor-pointer transition duration-200 border-b border-border/40 ${comp.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
                     >
                       <td className="py-3.5 px-4 font-semibold text-foreground truncate max-w-[160px]">{comp.name}</td>
                       <td className="py-3.5 text-muted-foreground truncate max-w-[120px]">{comp.industry}</td>
@@ -523,7 +523,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
             {/* Close Button */}
             <button 
               onClick={() => setSelectedId(null)}
-              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
+              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
               title="Close Summary"
               aria-label="Close Summary"
             >

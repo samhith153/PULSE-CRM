@@ -170,7 +170,15 @@ async def get_admin_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
     dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
-async def get_manager_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+async def get_manager_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+    period: str = Query(
+        default="quarter",
+        pattern="^(week|month|quarter|year)$",
+    ),
+    rep_id: str | None = Query(default=None),
+) -> dict:
     """
     GET /api/v1/dashboard/manager
 
@@ -178,7 +186,11 @@ async def get_manager_dashboard(current_user: CurrentUser, db: DBSession) -> dic
     Scoped to the caller's organization_id; team = all users in the same org.
     """
     svc = DashboardService(db)
-    data = await svc.manager_kpi(current_user.id, current_user.organization_id)
+    data = await svc.manager_kpi(
+        current_user.id,
+        current_user.organization_id,
+        period=period,
+    )
     return {"success": True, "message": "Manager KPIs retrieved successfully.", "data": data}
 
 @router.get(

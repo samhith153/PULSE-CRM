@@ -145,10 +145,13 @@ export default function DashboardHome() {
     localStorage.setItem('pulse-crm-layout', JSON.stringify(updated));
   };
 
-  // Global listener for Ctrl+K
+  // Global listener for Ctrl+K (with input/textarea focus guard)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        const isEditable = (e.target as HTMLElement)?.isContentEditable;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || isEditable) return;
         e.preventDefault();
         setIsCommandPaletteOpen(prev => !prev);
       }
@@ -200,8 +203,8 @@ export default function DashboardHome() {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-surface-warm">
-        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 text-brand animate-spin" />
       </div>
     );
   }
@@ -211,7 +214,7 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="flex bg-background h-screen overflow-hidden font-sans text-foreground antialiased">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 

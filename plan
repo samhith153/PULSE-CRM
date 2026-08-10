@@ -1,0 +1,516 @@
+I already have a "Priority Queue" card on the Home dashboard.
+
+DO NOT create a new dashboard card.
+
+I want you to redesign and repurpose the EXISTING Priority Queue card so that it represents:
+
+"TODAY'S PRIORITY"
+
+The goal is:
+
+> Tell the sales representative what actions deserve attention today, not simply show the highest-scoring leads.
+
+==================================================
+IMPORTANT ARCHITECTURE DECISION
+==================================================
+
+Keep these systems untouched:
+
+- Backend service (port 8000)
+- AI service (port 8001)
+- Lead assessment pipeline
+- Fit Score
+- Engagement Score
+- Overall Score
+- Recommendation engine
+- Email summarization
+- AI Insights
+- Existing DealsAtRiskCard.tsx
+- dnd-kit SortableCardWrapper
+- Dashboard grid/layout
+- Existing card size ("half")
+- Other dashboard cards
+
+This is currently a FRONTEND/DASHBOARD presentation change.
+
+Do NOT create:
+- new AI model
+- new scoring algorithm
+- new backend endpoint
+- new database model
+- new scheduler
+- new task service
+- new recommendation logic
+
+==================================================
+EXISTING PRIORITY QUEUE
+==================================================
+
+Inspect the current implementation first.
+
+The existing dashboard already receives:
+
+dashboardData.priority_queue
+
+This data contains AI-ranked leads and fields such as:
+
+- lead information
+- score
+- tier
+- top_reason
+
+Use this existing backend data for this iteration.
+
+If dashboardData.priority_queue is empty, retain the existing fallback priorityItems so the card does not become blank.
+
+IMPORTANT:
+
+Do NOT interpret this as a final daily-task engine.
+
+For this iteration:
+
+dashboardData.priority_queue
+        ↓
+Existing Priority Queue card
+        ↓
+"Today's Priority" presentation
+
+Later we may introduce a persistent daily task planner.
+
+==================================================
+CARD TITLE
+==================================================
+
+Change:
+
+"Priority Queue"
+
+to:
+
+"Today's Priority"
+
+Do NOT create another card.
+
+The card must remain in the same dashboard grid position and retain the same size/layout.
+
+==================================================
+CARD PURPOSE
+==================================================
+
+The card should answer:
+
+"What should I focus on today?"
+
+It should NOT look like:
+
+"Here are my highest-scoring leads."
+
+Each row should therefore emphasize:
+
+1. ACTION
+2. LEAD
+3. COMPANY
+4. SCORE/TIER
+5. WHY NOW
+
+Example:
+
+TODAY'S PRIORITY
+
+🔴 Call Ajith Kumar
+   ABC Technologies
+   92 · Hot
+
+   Proposal follow-up is overdue
+
+   [Call] [Email] [Open]
+
+------------------------------------------------
+
+🟠 Follow up with Ravi
+   XYZ Corp
+   82 · Warm
+
+   No response for 5 days
+
+   [Email] [Open]
+
+------------------------------------------------
+
+🟠 Schedule Priya's demo
+   PQR Technologies
+   78 · Warm
+
+   Customer requested a demo
+
+   [Open]
+
+==================================================
+ACTION GENERATION
+==================================================
+
+Do NOT create a new recommendation engine.
+
+Use the existing recommendation/top_reason data.
+
+If the backend already provides a recommendation/action field, use it.
+
+If it does not, derive a simple presentation action from the existing recommendation data only.
+
+Do NOT invent arbitrary actions.
+
+Possible actions may include:
+
+- Call
+- Email
+- Follow up
+- Schedule Demo
+- Send Proposal
+- Open
+
+The UI must never display a fake "AI Recommended Action".
+
+The action should reflect the actual recommendation/state available from the backend.
+
+==================================================
+WHY NOW
+==================================================
+
+Use the existing:
+
+top_reason
+
+as the explanation.
+
+Example:
+
+"Proposal follow-up is overdue."
+
+"Customer requested a demo."
+
+"Engagement has declined."
+
+"High-value opportunity in negotiation."
+
+Do NOT fabricate reasons.
+
+Do NOT use random heuristics.
+
+Do NOT calculate a new reason in the frontend.
+
+==================================================
+SCORE / TIER
+==================================================
+
+Keep the existing score and tier.
+
+Example:
+
+92 · Hot
+
+82 · Warm
+
+Do not recalculate the score.
+
+Do not modify fit/engagement/overall scoring.
+
+The card is only presenting existing AI assessment information.
+
+==================================================
+ACTION BUTTONS
+==================================================
+
+Use existing frontend navigation/actions wherever available.
+
+Possible buttons:
+
+- Call
+- Email
+- Open
+
+"Open" should use the existing lead navigation/tab selection mechanism.
+
+Do NOT create a new navigation system.
+
+Do NOT create new backend APIs.
+
+If Call/Email actions already have existing handlers, reuse them.
+
+If an action cannot safely be implemented with an existing handler, do not fake it.
+
+==================================================
+DONE / SNOOZE
+==================================================
+
+For this iteration, Done and Snooze may remain frontend-only.
+
+Persist their state using localStorage.
+
+Example:
+
+Task/lead ID + action type
+
+must uniquely identify the dismissed item.
+
+Avoid duplicate localStorage entries.
+
+When marked Done:
+
+- hide it from the visible list
+
+When Snoozed:
+
+- hide it from the visible list
+
+Do NOT modify backend data.
+
+Do NOT claim that these are persistent CRM tasks.
+
+This is only a temporary UI interaction layer.
+
+==================================================
+IMPORTANT — DO NOT REGENERATE THE QUEUE
+==================================================
+
+The card must NOT:
+
+- call the AI service
+- call the scoring API
+- recalculate scores
+- generate tasks
+- modify backend data
+
+on:
+
+- dashboard render
+- dashboard refresh
+- component refresh
+
+It should simply consume existing dashboard data.
+
+==================================================
+CARD EMPTY STATE
+==================================================
+
+If there are no priority items:
+
+Show a useful empty state:
+
+"You're all caught up"
+
+or
+
+"No priority actions for today."
+
+Do not show fake tasks.
+
+==================================================
+FOOTER
+==================================================
+
+Add:
+
+"View all leads →"
+
+Use the existing navigation mechanism to open the Leads page.
+
+Do not create a new route.
+
+==================================================
+DEALS AT RISK
+==================================================
+
+Also update the existing HomeView wiring for Deals at Risk.
+
+Do NOT modify:
+
+DealsAtRiskCard.tsx
+
+It already handles the backend shape.
+
+Use:
+
+dashboardData.deals_at_risk
+
+as the primary source.
+
+Retain:
+
+riskDealsCalculated
+
+as fallback only when backend risk data is empty/unavailable.
+
+The card should therefore use:
+
+REAL BACKEND RISK DATA
+        ↓
+HomeView
+        ↓
+DealsAtRiskCard
+
+Do NOT create new frontend risk heuristics.
+
+Do NOT fabricate risk reasons.
+
+Do NOT use random logic such as:
+
+charCodeAt(id) % 4
+
+Do NOT create another risk model.
+
+==================================================
+DEALS AT RISK PURPOSE
+==================================================
+
+Keep this card separate from Today's Priority.
+
+Today's Priority answers:
+
+"What should I DO today?"
+
+Deals at Risk answers:
+
+"Which deals are in danger and WHY?"
+
+Example:
+
+DEALS AT RISK
+
+🔴 Enterprise Expansion
+₹4.8L
+12 days stalled
+
+"Proposal sent 12 days ago with no customer response."
+
+Recommended action:
+Call customer
+
+------------------------------------------------
+
+🟠 SaaS Renewal
+₹1.2L
+6 days stalled
+
+"Customer engagement has declined."
+
+Do not change DealsAtRiskCard internals unless absolutely required.
+
+==================================================
+DO NOT IMPLEMENT YET
+==================================================
+
+Do NOT implement:
+
+- persistent PriorityTask database
+- daily scheduler
+- 24-hour task generation
+- backend task API
+- real Nudge activity
+- Log Follow-up activity
+- new AI assessment triggers
+- new scoring rules
+- new risk scoring model
+- new recommendation rules
+
+Those belong to a later phase.
+
+==================================================
+FILES
+==================================================
+
+Prefer touching only:
+
+frontend/src/components/dashboard/HomeView.tsx
+
+and, if useful for clean separation:
+
+frontend/src/components/dashboard/PriorityQueueCard.tsx
+
+If the existing Priority Queue JSX is currently inline in HomeView, extract it into PriorityQueueCard.tsx.
+
+Do not modify unrelated dashboard components.
+
+Do not modify backend.
+
+Do not modify AI service.
+
+==================================================
+VISUAL DESIGN
+==================================================
+
+Make the card compact and actionable.
+
+Each row should have:
+
+[priority/tier indicator]
+[action + lead name]
+[company]
+[score/tier]
+[why now]
+[action buttons]
+
+Avoid excessive text.
+
+The salesperson should understand each task in approximately 2–3 seconds.
+
+The card should feel like a CRM work queue, not a generic lead list.
+
+==================================================
+IMPORTANT FUTURE ARCHITECTURE
+==================================================
+
+Do not implement this now, but keep the component architecture compatible with the eventual design:
+
+CRM EVENT
+   ↓
+AI Assessment
+   ↓
+Latest Score / Engagement / Intent / Recommendation
+   ↓
+AI Insights (real-time)
+
+Then later:
+
+Latest Assessment State
+   ↓
+Daily Priority Planner
+   ↓
+Persisted Today's Tasks
+   ↓
+Today's Priority card
+
+So the current component should be easy to change later from:
+
+dashboardData.priority_queue
+
+to:
+
+dashboardData.today_priority_tasks
+
+without redesigning the UI.
+
+==================================================
+VERIFICATION
+==================================================
+
+After implementation:
+
+1. Run frontend typecheck.
+2. Run build if typecheck is unavailable.
+3. Confirm no backend files changed.
+4. Confirm no AI-service files changed.
+5. Confirm DealsAtRiskCard.tsx is unchanged.
+6. Confirm dashboard grid/layout is unchanged.
+7. Confirm existing Priority Queue card remains in the same position.
+8. Confirm card title is "Today's Priority".
+9. Confirm backend priority_queue is used.
+10. Confirm fallback priorityItems still works.
+11. Confirm deals_at_risk backend data is used.
+12. Confirm riskDealsCalculated fallback still works.
+13. Confirm no AI/API call is triggered by rendering the card.
+14. Confirm Done/Snooze survives page refresh through localStorage.
+15. Confirm existing dashboard cards continue working.
+
+Before editing, inspect the existing code and explain exactly which lines/files you will change.
+
+Then implement only this scope.

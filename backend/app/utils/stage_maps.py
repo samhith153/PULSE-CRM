@@ -11,8 +11,10 @@ so the backend and ai-service stay in sync.
 # ── Deal slug → buying-stage slug ──────────────────────────────────────
 PIPELINE_STAGE_MAP: dict[str, str] = {
     "new": "new",
+    "contacted": "contacted",
     "qualified": "qualified",
     "proposal": "proposal_sent",
+    "proposal_sent": "proposal_sent",
     "negotiation": "negotiation",
     "won": "won",
     "lost": "lost",

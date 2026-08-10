@@ -122,7 +122,7 @@ export default function AttachmentsTab({ contactId, dealId, companyId }: Attachm
         onDragOver={handleDrag}
         onDragLeave={handleDrag}
         onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-2xl p-6 text-center flex flex-col items-center justify-center transition-all ${
+        className={`relative border-2 border-dashed rounded-2xl p-6 text-center flex flex-col items-center justify-center transition ${
           dragActive
             ? 'border-brand-purple bg-brand-purple/[0.04]'
             : 'border-border bg-secondary/20 hover:bg-secondary/40'
@@ -190,14 +190,14 @@ export default function AttachmentsTab({ contactId, dealId, companyId }: Attachm
                   <a
                     href={getDocumentDownloadUrl(file.id)}
                     download
-                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition-all"
+                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition"
                     title="Download File"
                   >
                     <Download className="size-3.5" />
                   </a>
                   <button
                     onClick={() => handleDelete(file.id, file.file_name)}
-                    className="p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
+                    className="p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition cursor-pointer"
                     title="Delete Attachment"
                   >
                     <Trash2 className="size-3.5" />

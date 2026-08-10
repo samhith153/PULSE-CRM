@@ -129,6 +129,16 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Catch-all for unexpected server errors."""
+    msg = str(exc)
+    if "EMAXCONNSESSION" in msg or "pool" in msg.lower() and "exhausted" in msg.lower():
+        logger.warning("DB pool exhausted on %s %s: %s", request.method, request.url.path, msg)
+        return _add_cors_headers(JSONResponse(
+            status_code=503,
+            content=_error_body(
+                "SERVICE_UNAVAILABLE",
+                "Database connection pool is temporarily exhausted. Please try again in a few seconds.",
+            ),
+        ))
     logger.exception("Unexpected error on %s %s", request.method, request.url.path)
     return _add_cors_headers(JSONResponse(
         status_code=500,

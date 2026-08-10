@@ -6,9 +6,10 @@ Users have Roles (M2M) which carry Permissions.
 """
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -77,6 +78,11 @@ class User(Base, AuditMixin):
     # ── Preferences ───────────────────────────────────────────────────────────
     timezone: Mapped[str] = mapped_column(String(50), default="UTC", nullable=False)
     locale: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
+
+    # ── Sales quota (assigned monthly/quarterly target) ───────────────────────
+    sales_quota: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )
 
     # ── Relationships ─────────────────────────────────────────────────────────
     organization: Mapped["Organization"] = relationship(

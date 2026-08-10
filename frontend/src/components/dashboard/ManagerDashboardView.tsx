@@ -1,681 +1,1038 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  TrendingUp, Target, AlertTriangle, Users, ArrowUpRight,
-  Activity, BellRing, ShieldAlert, Sparkles, Award,
-  Layers, Clock, ArrowRight, CheckCircle2, ChevronDown,
-  Briefcase, Percent, User, MessageSquare, AlertCircle, HelpCircle,
-  TrendingDown, ArrowDownRight, Compass
+  Activity,
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart3,
+  Bell,
+  CalendarDays,
+  ChevronRight,
+  Gauge,
+  RefreshCw,
+  Target,
+  TrendingUp,
+  Trophy,
+  Users,
 } from 'lucide-react';
 import {
-  getManagerDashboard, asNumber, formatINR, formatPct, ManagerDashboardData
+  getManagerDashboard,
+  ManagerDashboardData,
 } from '@/utils/api';
-import { motion, AnimatePresence } from 'framer-motion';
 
-export default function ManagerDashboardView({ onTabChange }: { onTabChange?: (tab: string) => void }) {
+type ManagerDashboardPeriod = 'week' | 'month' | 'quarter' | 'year';
+
+interface ManagerDashboardViewProps {
+  onTabChange?: (tab: string) => void;
+  onDealClick?: (dealId: string) => void;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCurrency = (value: unknown): string => {
+  const amount = toNumber(value);
+
+  if (Math.abs(amount) >= 10000000) {
+    return `\u20B9${(amount / 10000000).toFixed(2)}Cr`;
+  }
+
+  if (Math.abs(amount) >= 100000) {
+    return `\u20B9${(amount / 100000).toFixed(2)}L`;
+  }
+
+  if (Math.abs(amount) >= 1000) {
+    return `\u20B9${(amount / 1000).toFixed(1)}K`;
+  }
+
+  return `\u20B9${Math.round(amount).toLocaleString('en-IN')}`;
+};
+
+const formatPercent = (value: unknown): string =>
+  `${toNumber(value).toFixed(1)}%`;
+
+const formatUpdatedAt = (value?: string | null): string => {
+  if (!value) return 'Time unavailable';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Time unavailable';
+  }
+
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getInitials = (name?: string | null): string => {
+  if (!name) return 'NA';
+
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+};
+
+/* -------------------------------------------------------------------------- */
+/* Main component                                                             */
+/* -------------------------------------------------------------------------- */
+
+export default function ManagerDashboardView({
+  onTabChange,
+  onDealClick,
+}: ManagerDashboardViewProps) {
   const [data, setData] = useState<ManagerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] =
+    useState<ManagerDashboardPeriod>('quarter');
+  const [repId, setRepId] = useState<string>('all');
 
-  // Global filters state
-  const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
-  const [team, setTeam] = useState<string>('all');
-  const [productLine, setProductLine] = useState<string>('all');
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const dashboardData = await getManagerDashboard({
+        period,
+        repId: repId === 'all' ? undefined : repId,
+      });
+
+      setData(dashboardData);
+    } catch (err) {
+      console.error('Failed to load manager dashboard:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load manager dashboard.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
-    getManagerDashboard()
-      .then((d) => {
-        if (!cancelled) {
-          setData(d);
-          setLoading(false);
-        }
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setError(e?.message ?? 'Failed to load manager dashboard data.');
-          setLoading(false);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    loadDashboard();
+  }, [period, repId]);
 
-  // Compute days left in period dynamically
-  const periodInfo = useMemo(() => {
-    const now = new Date();
-    if (period === 'week') {
-      const day = now.getDay();
-      const daysLeft = 7 - day;
-      return { daysLeft, total: 7, label: 'days left in week' };
-    }
-    if (period === 'quarter') {
-      const currentMonth = now.getMonth();
-      const endOfQuarterMonth = Math.floor(currentMonth / 3) * 3 + 2;
-      const lastDayOfQuarterMonth = new Date(now.getFullYear(), endOfQuarterMonth + 1, 0);
-      const diffTime = lastDayOfQuarterMonth.getTime() - now.getTime();
-      const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return { daysLeft, total: 90, label: 'days left in quarter' };
-    }
-    // Default: month
-    const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = lastDayOfMonth - now.getDate();
-    return { daysLeft, total: lastDayOfMonth, label: 'days left in month' };
-  }, [period]);
+  /* ---------------------------------------------------------------------- */
+  /* Derived data                                                           */
+  /* ---------------------------------------------------------------------- */
 
-  // Red-first sort: highest risk (lowest attainment percentage) first
   const sortedReps = useMemo(() => {
-    if (!data?.rep_quota_attainment) return [];
-    return [...data.rep_quota_attainment].sort((a, b) => {
-      const aPct = asNumber(a.quota_achievement_pct);
-      const bPct = asNumber(b.quota_achievement_pct);
-      return aPct - bPct;
-    });
+    if (!data) return [];
+
+    return [...data.rep_quota_attainment]
+      .sort(
+        (a, b) =>
+          toNumber(b.quota_achievement_pct) -
+          toNumber(a.quota_achievement_pct)
+      )
+      .slice(0, 5);
   }, [data]);
 
-  // Coaching signals derived dynamically from alerts & underperforming reps
-  const coachingSignals = useMemo(() => {
+  const visibleActivities = useMemo(() => {
     if (!data) return [];
-    const signals: { repName: string; type: string; severity: 'HIGH' | 'MEDIUM' | 'LOW'; observation: string; action: string }[] = [];
 
-    // 1. Check underperforming reps (< 70% attainment)
-    sortedReps.forEach(rep => {
-      const pct = asNumber(rep.quota_achievement_pct);
-      if (pct < 40) {
-        signals.push({
-          repName: rep.full_name,
-          type: 'Activity Drop vs Baseline',
-          severity: 'HIGH',
-          observation: `Critical attainment gap (${pct}% to target). Activities dropped 35% below rolling average.`,
-          action: 'Schedule urgent 1:1 review of open pipelines and activities.'
-        });
-      } else if (pct < 70) {
-        signals.push({
-          repName: rep.full_name,
-          type: 'Missed Follow-ups',
-          severity: 'MEDIUM',
-          observation: `Attainment behind pace (${pct}%). Overdue CRM tasks detected on 5 key accounts.`,
-          action: 'Conduct quick sync to inspect follow-up discipline.'
-        });
-      }
-    });
+    return data.recent_activities.slice(0, 6);
+  }, [data]);
 
-    // 2. Map system alerts that look like person coaching signals
-    data.alerts.forEach(alert => {
-      if (alert.message.includes('call') || alert.message.includes('sentiment')) {
-        signals.push({
-          repName: 'Multiple Reps',
-          type: 'Call Quality/Sentiment Dip',
-          severity: alert.severity === 'high' ? 'HIGH' : 'MEDIUM',
-          observation: alert.message,
-          action: 'Listen to recorded conversations in the Conversational Intelligence module.'
-        });
-      }
-    });
+  const visibleRisks = useMemo(() => {
+    if (!data) return [];
 
-    // Default signals if none generated
-    if (signals.length === 0) {
-      signals.push({
-        repName: 'System Monitor',
-        type: 'Pipeline Quality',
-        severity: 'LOW',
-        observation: 'All representatives currently maintaining activity baseline targets.',
-        action: 'No immediate interventions required.'
-      });
+    return data.deals_at_risk.slice(0, 4);
+  }, [data]);
+
+  const visibleAlerts = useMemo(() => {
+    if (!data) return [];
+
+    return data.alerts.slice(0, 4);
+  }, [data]);
+
+  const revenueTrendMax = useMemo(() => {
+    if (!data || data.monthly_revenue_trend.length === 0) {
+      return 1;
     }
 
-    return signals;
-  }, [data, sortedReps]);
-
-  // Deal risks mapped from data.deals_at_risk
-  const dealRisks = useMemo(() => {
-    if (!data?.deals_at_risk) return [];
-    return data.deals_at_risk.map(deal => {
-      const val = asNumber(deal.deal_value);
-      // Assign fix ownership based on deal value/importance threshold
-      const fixOwner = val > 800000 ? 'Manager' : 'Rep';
-      const recommendedFix = val > 800000
-        ? 'Reach out directly to client executive sponsor to unblock.'
-        : 'Re-engage contact with fresh case study or alternative stakeholder.';
-      return {
-        id: deal.deal_id,
-        name: deal.deal_name,
-        amount: val,
-        owner: deal.owner_name || 'Unassigned',
-        reason: deal.risk_reason || `No activity logged for ${deal.days_since_last_activity} days.`,
-        daysInactive: deal.days_since_last_activity,
-        fixOwner,
-        recommendedFix
-      };
-    });
+    return Math.max(
+      ...data.monthly_revenue_trend.flatMap((month) => [
+        toNumber(month.revenue),
+        toNumber(month.target),
+      ]),
+      1
+    );
   }, [data]);
 
-  // Stage funnel and conversion calculations
-  const funnelStages = useMemo(() => {
-    if (!data?.pipeline_health?.stage_distribution) return [];
-    const stages = data.pipeline_health.stage_distribution;
-    return stages.map((st, index) => {
-      const nextStage = stages[index + 1];
-      const conversionRate = nextStage && st.deal_count > 0
-        ? (nextStage.deal_count / st.deal_count) * 100
-        : null;
-      return {
-        name: st.stage,
-        count: st.deal_count,
-        value: asNumber(st.total_value),
-        pct: asNumber(st.percentage),
-        conversionRate
-      };
-    });
-  }, [data]);
+  /* ---------------------------------------------------------------------- */
+  /* Loading                                                                */
+  /* ---------------------------------------------------------------------- */
 
   if (loading) {
     return (
-      <div className="space-y-8 animate-pulse px-6 py-8">
-        <div className="flex justify-between items-center">
-          <div className="space-y-2">
-            <div className="h-8 w-64 rounded-xl bg-secondary" />
-            <div className="h-4 w-40 rounded bg-secondary" />
-          </div>
-          <div className="h-10 w-60 rounded-xl bg-secondary" />
-        </div>
-        <div className="h-40 rounded-2xl bg-secondary" />
-        <div className="h-96 rounded-2xl bg-secondary" />
-        <div className="grid grid-cols-2 gap-8">
-          <div className="h-72 rounded-2xl bg-secondary" />
-          <div className="h-72 rounded-2xl bg-secondary" />
-        </div>
-      </div>
-    );
-  }
+      <div className="space-y-[var(--space-5)]">
+        <div className="animate-pulse space-y-[var(--space-5)]">
+          <div className="h-20 rounded-2xl bg-muted" />
 
-  if (error || !data) {
-    return (
-      <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-6 text-destructive m-6">
-        <p className="font-extrabold text-sm tracking-tight">Failed to Load Dashboard</p>
-        <p className="mt-1 text-xs font-semibold text-destructive/80">{error ?? 'No data was returned by the api.'}</p>
-      </div>
-    );
-  }
-
-  // Forecast numbers
-  const targetVal = asNumber(data.revenue_stats.team_target) || 15000000;
-  const actualVal = asNumber(data.revenue_stats.team_revenue_won) || 10200000;
-  const projectedMid = asNumber(data.forecast.projected_revenue) || 14600000;
-  const confidenceScore = asNumber(data.forecast.confidence_score) || 82;
-  const growthRate = asNumber(data.revenue_stats.monthly_growth_pct);
-  
-  // Calculate confidence band ranges
-  const bandOffset = projectedMid * ((100 - confidenceScore) / 100) * 0.5;
-  const projectedLow = projectedMid - bandOffset;
-  const projectedHigh = projectedMid + bandOffset;
-
-  // Calculate relative placement for confidence band visualization
-  const bandWidth = projectedHigh - projectedLow;
-  const actualPositionPercent = bandWidth > 0 
-    ? Math.max(0, Math.min(100, ((actualVal - projectedLow) / bandWidth) * 100))
-    : 50;
-
-  return (
-    <div className="space-y-8 max-w-7xl mx-auto px-6 pb-16 font-sans">
-      
-      {/* ── Global Filter Bar (Modern glass styling) ─────────────────── */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-border/40 pb-6">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground sm:text-4xl">
-            Manager Overview
-          </h1>
-          <p className="text-xs text-muted-foreground font-semibold mt-1.5 flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-            Decision Intelligence & Quota Pace prioritization.
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center space-x-1 bg-secondary/80 p-0.5 rounded-xl border border-border/40">
-            {(['week', 'month', 'quarter'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriod(p)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200 capitalize ${
-                  period === p ? 'bg-card text-foreground shadow-sm border border-border/40' : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                {p}
-              </button>
+          <div className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-32 rounded-2xl border bg-card"
+              />
             ))}
           </div>
 
-          <div className="relative">
-            <select
-              value={team}
-              onChange={(e) => setTeam(e.target.value)}
-              className="bg-card hover:bg-secondary/60 text-foreground border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple transition-all duration-200"
-            >
-              <option value="all">All Teams</option>
-              <option value="north">North Region</option>
-              <option value="south">South Region</option>
-            </select>
-            <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <div className="grid grid-cols-1 gap-[var(--space-4)] xl:grid-cols-3">
+            <div className="h-80 rounded-2xl border bg-card xl:col-span-2" />
+            <div className="h-80 rounded-2xl border bg-card" />
           </div>
 
-          <div className="relative">
-            <select
-              value={productLine}
-              onChange={(e) => setProductLine(e.target.value)}
-              className="bg-card hover:bg-secondary/60 text-foreground border border-border/60 rounded-xl pl-3 pr-8 py-1.5 text-xs font-bold appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple transition-all duration-200"
-            >
-              <option value="all">All Products</option>
-              <option value="crm">Core CRM</option>
-              <option value="ai">AI Copilot</option>
-            </select>
-            <ChevronDown size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <div className="h-72 rounded-2xl border bg-card" />
+
+          <div className="grid grid-cols-1 gap-[var(--space-4)] xl:grid-cols-2">
+            <div className="h-80 rounded-2xl border bg-card" />
+            <div className="h-80 rounded-2xl border bg-card" />
           </div>
         </div>
       </div>
+    );
+  }
 
-      {/* ── Section 1: Elevated Forecast Hero Strip ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Target vs Actual */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-blue" />
-          <div className="space-y-3.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Target vs Actual</span>
-              <span className="text-xs font-bold text-brand-blue">{Math.round((actualVal / targetVal) * 100)}% Attained</span>
+  /* ---------------------------------------------------------------------- */
+  /* Error                                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  if (error) {
+    return (
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+          <AlertTriangle className="mx-auto h-10 w-10 text-brand-purple" />
+
+          <h2 className="mt-4 text-sm font-semibold text-foreground">
+            Unable to load Manager Dashboard
+          </h2>
+
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            {error}
+          </p>
+
+          <button
+            type="button"
+            onClick={loadDashboard}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-brand-purple px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-brand-purple/90"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!data) {
+    return (
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-2xl border border-border/50 px-8">
+          <p>No manager dashboard data available</p>
+
+          <button
+            type="button"
+            onClick={loadDashboard}
+            className="mt-4 rounded-lg border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-secondary/40 transition"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Dashboard                                                              */
+  /* ---------------------------------------------------------------------- */
+
+  return (
+    <div className="space-y-[var(--space-5)]">
+
+      {/* ================================================================== */}
+      {/* HEADER                                                             */}
+      {/* ================================================================== */}
+
+      <div className="flex flex-col gap-[var(--space-4)] lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-sans font-bold tracking-tight text-foreground">
+              Welcome back, Manager
+            </h1>
+
+            <span className="rounded-full bg-brand-purple/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-purple border border-brand-purple/15">
+              Manager
+            </span>
+          </div>
+
+          <p className="mt-1 text-xs md:text-sm text-muted-foreground font-medium tracking-wide">
+            Sales performance &amp; team command center
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={period}
+            onChange={(e) =>
+              setPeriod(e.target.value as ManagerDashboardPeriod)
+            }
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-brand-purple/20"
+          >
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="year">This Year</option>
+          </select>
+
+          <select
+            value={repId}
+            onChange={(e) => setRepId(e.target.value)}
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-brand-purple/20"
+          >
+            <option value="all">All Reps</option>
+
+            {data.rep_quota_attainment.map((rep) => (
+              <option key={rep.user_id} value={rep.user_id}>
+                {rep.full_name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground"
+          >
+            All Pipelines
+          </button>
+
+          <button
+            type="button"
+            onClick={loadDashboard}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-secondary/40 disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${
+                loading ? 'animate-spin' : ''
+              }`}
+            />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* KPI CARDS — 5-column grid                                          */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-5">
+
+        {/* Team Revenue */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('reports')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('reports'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Team Revenue
+            </p>
+            <TrendingUp className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatCurrency(data.summary.team_revenue)}
+          </p>
+
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? (
+              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+            ) : (
+              <ArrowDownRight className="h-3.5 w-3.5 text-rose-500" />
+            )}
+            <span className={`font-semibold ${toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {formatPercent(data.revenue_stats.monthly_growth_pct)}
+            </span>
+            <span>growth</span>
+          </div>
+        </div>
+
+        {/* Pipeline Value */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('pipeline')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('pipeline'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Pipeline Value
+            </p>
+            <BarChart3 className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatCurrency(data.summary.pipeline_value)}
+          </p>
+
+          <p className="text-[10px] text-muted-foreground">
+            {data.pipeline_health.total_deals} active deals
+          </p>
+        </div>
+
+        {/* Forecast */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('forecast')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('forecast'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Forecast
+            </p>
+            <Gauge className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatCurrency(data.forecast.projected_revenue)}
+          </p>
+
+          <p className="text-[10px] text-muted-foreground">
+            {formatPercent(data.forecast.confidence_score)} confidence
+          </p>
+        </div>
+
+        {/* Quota Attainment */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Quota Attainment
+            </p>
+            <Target className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatPercent(data.revenue_stats.achievement_pct)}
+          </p>
+
+          <p className="text-[10px] text-muted-foreground">
+            Target {formatCurrency(data.revenue_stats.team_target)}
+          </p>
+        </div>
+
+        {/* Win Rate */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Win Rate
+            </p>
+            <Trophy className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatPercent(data.summary.win_rate)}
+          </p>
+
+          <p className="text-[10px] text-muted-foreground">
+            Conversion {formatPercent(data.summary.conversion_rate)}
+          </p>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* REVENUE CHART + FORECAST — 8/4 grid                                */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Revenue vs Target */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Revenue vs Target</h3>
+                <p className="text-[10px] text-muted-foreground">Monthly team revenue performance</p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <h3 className="text-2xl sm:text-3xl font-black text-foreground tabular-nums tracking-tight">
-                {formatINR(actualVal)}
-              </h3>
-              <p className="text-[11px] text-muted-foreground font-semibold">
-                of {formatINR(targetVal)} target ({formatINR(targetVal - actualVal)} remaining)
+            <button
+              type="button"
+              onClick={() => onTabChange?.('reports')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View Report
+            </button>
+          </div>
+
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-3xl font-sans font-bold tracking-tight text-foreground">
+                {formatCurrency(data.summary.team_revenue)}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">Current revenue</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-bold text-foreground">
+                Target {formatCurrency(data.revenue_stats.team_target)}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {formatPercent(data.revenue_stats.achievement_pct)} achieved
               </p>
             </div>
-            <div className="relative pt-1.5">
-              <div className="overflow-hidden h-1.5 text-xs flex rounded-full bg-secondary">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min((actualVal / targetVal) * 100, 100)}%` }}
-                  transition={{ duration: 0.8 }}
-                  className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-brand-blue to-brand-cyan rounded-full"
+          </div>
+
+          {data.monthly_revenue_trend.length > 0 ? (
+            <>
+              <div className="mt-4 flex h-52 items-end gap-2 border-b border-border px-2">
+                {data.monthly_revenue_trend.map((month) => {
+                  const revenue = toNumber(month.revenue);
+                  const target = toNumber(month.target);
+
+                  const revenueHeight =
+                    revenue > 0
+                      ? Math.max(5, (revenue / revenueTrendMax) * 100)
+                      : 3;
+
+                  const targetHeight =
+                    target > 0
+                      ? Math.max(5, (target / revenueTrendMax) * 100)
+                      : 3;
+
+                  return (
+                    <div
+                      key={month.month}
+                      className="flex h-full flex-1 items-end justify-center gap-1"
+                      title={`${month.month} \u2014 Revenue ${formatCurrency(revenue)} \u2014 Target ${formatCurrency(target)}`}
+                    >
+                      <div
+                        className="w-2 rounded-t bg-brand-purple"
+                        style={{ height: `${revenueHeight}%` }}
+                      />
+                      <div
+                        className="w-2 rounded-t bg-muted-foreground/20"
+                        style={{ height: `${targetHeight}%` }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
+                {data.monthly_revenue_trend.map((month) => (
+                  <span key={month.month}>
+                    {new Date(`${month.month}-01`).toLocaleDateString('en-US', { month: 'short' })}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-3 flex items-center gap-5 text-xs text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-brand-purple" />
+                  Revenue
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/20" />
+                  Target
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="mt-8 flex h-52 items-center justify-center bg-secondary/10 rounded-xl border border-border/50">
+              <p className="text-xs font-semibold text-muted-foreground">
+                No monthly revenue data available.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Forecast Health */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Forecast Health</h3>
+                <p className="text-[10px] text-muted-foreground">Current quarter outlook</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('forecast')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              Open
+            </button>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Expected Revenue
+            </p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-foreground tabular-nums">
+              {formatCurrency(data.forecast.projected_revenue)}
+            </p>
+          </div>
+
+          <div className="space-y-[var(--space-3)]">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Confidence</span>
+                <span className="text-xs font-bold text-foreground">{formatPercent(data.forecast.confidence_score)}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-brand-purple"
+                  style={{ width: `${Math.min(100, Math.max(0, toNumber(data.forecast.confidence_score)))}%` }}
                 />
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Confidence Band Range Bar */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-brand-purple" />
-          <div className="space-y-3.5">
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Forecast Accuracy</span>
+              <span className="text-xs font-bold text-foreground">{formatPercent(data.forecast.forecast_accuracy)}</span>
+            </div>
+
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground font-sans">Projected Range (Confidence Band)</span>
-              <span className="text-[10px] font-extrabold text-brand-purple uppercase tracking-widest font-mono">P50 Baseline</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Quarter Projection</span>
+              <span className="text-xs font-bold text-foreground">{formatCurrency(data.forecast.expected_quarter_revenue)}</span>
             </div>
-            
-            <div className="space-y-1">
-              <h3 className="text-2xl sm:text-3xl font-black text-foreground tabular-nums tracking-tight">
-                {formatINR(projectedMid)}
-              </h3>
-              <p className="text-[11px] text-muted-foreground font-semibold">
-                Model confidence score: {confidenceScore}%
+          </div>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* PIPELINE HEALTH — full width                                       */}
+      {/* ================================================================== */}
+
+      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+        <div className="flex items-center justify-between border-b border-border pb-2">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-brand-purple" />
+            <div>
+              <h3 className="font-semibold text-foreground text-sm">Pipeline Health</h3>
+              <p className="text-[10px] text-muted-foreground">Deal distribution across pipeline stages</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onTabChange?.('pipeline')}
+            className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-purple hover:underline"
+          >
+            View Pipeline
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {data.pipeline_health.stage_distribution.map((stage) => (
+            <div
+              key={stage.stage}
+              className="rounded-xl border border-border bg-secondary/10 p-[var(--space-3)] transition hover:bg-secondary/20"
+            >
+              <p className="truncate text-xs font-bold text-foreground">
+                {stage.stage}
               </p>
-            </div>
-
-            {/* Premium Range slider */}
-            <div className="space-y-2 pt-2 select-none">
-              <div className="relative h-1.5 bg-secondary rounded-full border border-border/20">
-                {/* Confidence Range Highlight */}
-                <div className="absolute left-[15%] right-[15%] h-full bg-brand-purple/20 rounded-full border-x border-brand-purple/40" />
-                
-                {/* Actual indicator dot */}
-                <motion.div
-                  initial={{ left: 0 }}
-                  animate={{ left: `${actualPositionPercent}%` }}
-                  transition={{ duration: 0.8 }}
-                  className="absolute -top-1.5 -translate-x-1/2 size-4.5 rounded-full bg-brand-purple border-3 border-card shadow-md flex items-center justify-center"
-                >
-                  <span className="size-1 bg-white rounded-full animate-ping" />
-                </motion.div>
-              </div>
-              <div className="flex justify-between text-[9px] font-bold text-muted-foreground/80 font-mono">
-                <span className="text-destructive/80">Low (P90): {formatINR(projectedLow)}</span>
-                <span className="text-emerald-500/80">High (P10): {formatINR(projectedHigh)}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Run-Rate & Trend */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 relative overflow-hidden group">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-500" />
-          <div className="space-y-3.5 flex flex-col justify-between h-full">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pacing &amp; Run-rate</span>
-              {growthRate >= 0 ? (
-                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-500 text-[10px] font-extrabold flex items-center gap-1">
-                  <TrendingUp size={11} />
-                  <span>Pace Improving</span>
-                </span>
-              ) : (
-                <span className="px-2.5 py-0.5 rounded-full bg-destructive/10 border border-destructive/25 text-destructive text-[10px] font-extrabold flex items-center gap-1">
-                  <TrendingDown size={11} />
-                  <span>Pace Declining</span>
-                </span>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <h3 className="text-2xl sm:text-3xl font-black text-foreground tabular-nums tracking-tight">
-                {formatINR(Math.max((targetVal - actualVal) / Math.max(periodInfo.daysLeft, 1), 0))}
-                <span className="text-xs font-bold text-muted-foreground ml-1">/ day</span>
-              </h3>
-              <p className="text-[11px] text-muted-foreground font-semibold">
-                Daily rate needed for {periodInfo.daysLeft} {periodInfo.label}
+              <p className="mt-2 text-xl font-bold text-foreground tabular-nums">
+                {stage.deal_count}
               </p>
-            </div>
-
-            <div className="pt-2 border-t border-border/30 flex justify-between items-center text-[10px] font-bold text-muted-foreground/80">
-              <span className="flex items-center gap-1"><Clock size={12} /> {periodInfo.daysLeft}d remaining</span>
-              <span>{Math.round((elapsedDays => elapsedDays / periodInfo.total * 100)(Math.max(periodInfo.total - periodInfo.daysLeft, 1)))}% of period elapsed</span>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── Section 2: Premium Team Quota Pace Table ─────────────────── */}
-      <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20">
-        <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
-          <div className="flex items-center space-x-2">
-            <Award size={18} className="text-brand-purple" />
-            <h3 className="font-extrabold text-foreground text-sm tracking-tight">Team Quota Pace</h3>
-          </div>
-          <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
-            Sorted by Risk (Furthest Behind First)
-          </span>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border/60 text-muted-foreground/70 font-semibold select-none">
-                <th className="pb-3 text-[10px] uppercase tracking-wider font-bold">Representative</th>
-                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">Quota</th>
-                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">Attained</th>
-                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">% Attainment</th>
-                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">Projected Attainment</th>
-                <th className="pb-3 text-right text-[10px] uppercase tracking-wider font-bold">Risk Level</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40 font-medium">
-              {sortedReps.map((rep, idx) => {
-                const quota = asNumber(rep.assigned_target);
-                const attained = asNumber(rep.revenue_generated);
-                const pct = asNumber(rep.quota_achievement_pct);
-                
-                // Calculate simulated projection based on remaining days
-                const daysInMonth = 30;
-                const elapsedDays = Math.max(daysInMonth - periodInfo.daysLeft, 1);
-                const paceMultiplier = daysInMonth / elapsedDays;
-                const projectedVal = attained * paceMultiplier;
-                const projectedPct = Math.round((projectedVal / quota) * 100) || 0;
-
-                // Traffic-light status styling
-                let riskText = 'On Track';
-                let RiskIcon = CheckCircle2;
-                let riskClass = 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500';
-                
-                if (pct < 40) {
-                  riskText = 'Critical';
-                  RiskIcon = AlertCircle;
-                  riskClass = 'bg-destructive/10 border-destructive/20 text-destructive animate-pulse';
-                } else if (pct < 75) {
-                  riskText = 'At Risk';
-                  RiskIcon = AlertTriangle;
-                  riskClass = 'bg-amber-500/10 border-amber-500/20 text-amber-500';
-                }
-
-                // Distinct colors for user avatar rings
-                const colors = ['from-brand-blue to-brand-cyan', 'from-brand-purple to-pink-500', 'from-emerald-400 to-teal-500', 'from-amber-400 to-orange-500'];
-                const avatarGradient = colors[idx % colors.length];
-
-                return (
-                  <motion.tr 
-                    key={rep.user_id} 
-                    className="hover:bg-muted/40 transition-all duration-200 cursor-pointer group"
-                    whileHover={{ x: 1 }}
-                  >
-                    {/* User Profile Info */}
-                    <td className="py-3.5 flex items-center space-x-3">
-                      <div className={`size-8 rounded-full bg-gradient-to-tr ${avatarGradient} flex items-center justify-center text-[10px] font-black text-white shadow-inner border border-white/10 shrink-0`}>
-                        {rep.full_name.split(' ').map(n=>n[0]).join('')}
-                      </div>
-                      <span className="font-extrabold text-foreground group-hover:text-brand-purple transition-colors duration-150">
-                        {rep.full_name}
-                      </span>
-                    </td>
-                    
-                    {/* Quota */}
-                    <td className="py-3.5 text-right tabular-nums text-muted-foreground/90 font-mono font-semibold">
-                      {formatINR(quota)}
-                    </td>
-                    
-                    {/* Attained */}
-                    <td className="py-3.5 text-right tabular-nums text-foreground font-bold font-mono">
-                      {formatINR(attained)}
-                    </td>
-                    
-                    {/* Attainment Progress Track */}
-                    <td className="py-3.5 text-right">
-                      <div className="inline-flex items-center space-x-2.5">
-                        <span className="font-bold tabular-nums font-mono text-foreground">{pct}%</span>
-                        <div className="w-16 h-1.5 rounded-full bg-secondary overflow-hidden border border-border/20">
-                          <div 
-                            className={`h-full rounded-full ${pct < 40 ? 'bg-destructive' : pct < 75 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                            style={{ width: `${Math.min(pct, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </td>
-                    
-                    {/* Projected */}
-                    <td className="py-3.5 text-right tabular-nums text-muted-foreground font-mono font-medium">
-                      {formatINR(projectedVal)} <span className="text-[10px] font-bold text-muted-foreground/60">({projectedPct}%)</span>
-                    </td>
-                    
-                    {/* Risk Badge */}
-                    <td className="py-3.5 text-right">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${riskClass} select-none`}>
-                        <RiskIcon size={10} className="shrink-0" />
-                        {riskText}
-                      </span>
-                    </td>
-                  </motion.tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Grid for Coaching Signals & Deal Risk */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-        {/* ── Section 3: Coaching Signals ────────────────────────────── */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
-              <div className="flex items-center space-x-2">
-                <Users size={18} className="text-brand-purple" />
-                <h3 className="font-extrabold text-foreground text-sm tracking-tight">Coaching Signals</h3>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                {formatCurrency(stage.total_value)}
+              </p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-brand-purple"
+                  style={{ width: `${Math.min(100, Math.max(0, toNumber(stage.percentage)))}%` }}
+                />
               </div>
-              <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
-                People-Level Alerts
-              </span>
-            </div>
-
-            <div className="space-y-4">
-              {coachingSignals.map((sig, idx) => (
-                <div key={idx} className="p-4 bg-secondary/35 border border-border/40 rounded-xl space-y-2 hover:border-brand-purple/20 transition-all duration-200">
-                  <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-foreground text-xs">{sig.repName}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
-                      sig.severity === 'HIGH'
-                        ? 'bg-destructive/10 border-destructive/20 text-destructive'
-                        : sig.severity === 'MEDIUM'
-                        ? 'bg-amber-500/10 border-amber-500/20 text-amber-500'
-                        : 'bg-blue-500/10 border-blue-500/20 text-blue-500'
-                    }`}>
-                      {sig.severity} Alert
-                    </span>
-                  </div>
-                  <div>
-                    <p className="text-[9px] text-muted-foreground font-black uppercase tracking-wider font-mono">{sig.type}</p>
-                    <p className="text-xs text-foreground/90 mt-1.5 font-medium leading-relaxed">{sig.observation}</p>
-                  </div>
-                  <div className="pt-2.5 border-t border-border/30 flex items-start gap-1 text-[11px] text-brand-purple font-semibold">
-                    <Sparkles size={13} className="shrink-0 mt-0.5" />
-                    <span>Suggested: {sig.action}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── Section 4: Deal Risk Radar ──────────────────────────────── */}
-        <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
-              <div className="flex items-center space-x-2">
-                <AlertTriangle size={18} className="text-amber-500" />
-                <h3 className="font-extrabold text-foreground text-sm tracking-tight">Deal Risk Radar</h3>
-              </div>
-              <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
-                Account-Level Blocks
-              </span>
-            </div>
-
-            <div className="space-y-4 max-h-[440px] overflow-y-auto pr-1">
-              {dealRisks.map((deal) => (
-                <div key={deal.id} className="p-4 bg-secondary/35 border border-border/40 rounded-xl space-y-2.5 hover:border-amber-500/20 transition-all duration-200">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-extrabold text-foreground text-xs hover:text-brand-purple transition-colors cursor-pointer">{deal.name}</h4>
-                      <p className="text-[10px] text-muted-foreground/80 font-bold mt-0.5">Owner: {deal.owner}</p>
-                    </div>
-                    <span className="text-xs font-black text-foreground tabular-nums font-mono">
-                      {formatINR(deal.amount)}
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 border border-amber-500/20 text-amber-500">
-                      {deal.reason}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/70 font-semibold font-mono">
-                      {deal.daysInactive}d inactive
-                    </span>
-                  </div>
-
-                  <div className="pt-2.5 border-t border-border/30 flex items-center justify-between text-[10px] font-medium">
-                    <div className="flex items-center space-x-1.5">
-                      <span className="text-muted-foreground/80 font-semibold">Fix Owner:</span>
-                      <span className={`px-2 py-0.5 rounded-md font-bold ${
-                        deal.fixOwner === 'Manager'
-                          ? 'bg-brand-purple/10 text-brand-purple border border-brand-purple/20'
-                          : 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
-                      }`}>
-                        {deal.fixOwner}
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground text-right truncate max-w-[200px] font-semibold" title={deal.recommendedFix}>
-                      Fix: {deal.recommendedFix}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {dealRisks.length === 0 && (
-                <div className="py-12 flex flex-col items-center justify-center text-center space-y-2 text-xs">
-                  <div className="size-10 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20 shadow-inner">
-                    <CheckCircle2 size={20} />
-                  </div>
-                  <p className="font-extrabold text-foreground">Zero Deals at Risk</p>
-                  <p className="text-muted-foreground text-[10px] max-w-xs font-semibold">All high-value client opportunities are paced on schedule.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* ── Section 5: Pipeline by Stage ────────────────────────────── */}
-      <div className="bg-card border border-border/60 rounded-[22px] p-6 shadow-md shadow-neutral-900/5 dark:shadow-neutral-950/20">
-        <div className="flex items-center justify-between border-b border-border/40 pb-4 mb-5">
-          <div className="flex items-center space-x-2">
-            <Layers size={18} className="text-brand-purple" />
-            <h3 className="font-extrabold text-foreground text-sm tracking-tight">Pipeline by Stage</h3>
-          </div>
-          <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">
-            Funnels &amp; Conversion Rates
-          </span>
-        </div>
-
-        <div className="space-y-4">
-          {funnelStages.map((stage, idx) => (
-            <div key={stage.name} className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <div className="flex items-center space-x-2">
-                  <span className="font-extrabold text-foreground">{stage.name}</span>
-                  <span className="text-[10px] text-muted-foreground font-bold">({stage.count} deals)</span>
-                </div>
-                <span className="font-black text-foreground tabular-nums font-mono">{formatINR(stage.value)}</span>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-3.5 rounded-lg bg-secondary overflow-hidden relative border border-border/20">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${stage.pct}%` }}
-                    transition={{ duration: 0.8 }}
-                    className="h-full rounded-lg bg-gradient-to-r from-brand-purple to-brand-blue opacity-85"
-                  />
-                </div>
-                {stage.conversionRate !== null && (
-                  <div className="w-24 shrink-0 text-right text-[10px] text-muted-foreground font-bold flex items-center justify-end gap-1">
-                    <Percent size={10} className="text-brand-purple" />
-                    <span className="font-mono">{Math.round(stage.conversionRate)}% to Next</span>
-                  </div>
-                )}
-              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {formatPercent(stage.percentage)}
+              </p>
             </div>
           ))}
         </div>
-      </div>
 
-      {/* ── Design Notes & Exclusions (Footer Info) ──────────────────── */}
-      <div className="bg-secondary/20 border border-border/40 rounded-[22px] p-5 text-[11px] text-muted-foreground space-y-1.5 leading-relaxed">
-        <div className="flex items-center space-x-1.5 text-foreground font-extrabold">
-          <HelpCircle size={13} className="text-brand-purple" />
-          <span>Overview Architectural Concerns</span>
+        <div className="grid grid-cols-1 gap-4 border-t border-border pt-3 sm:grid-cols-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Active Deals</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{data.pipeline_health.total_deals}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Pipeline Value</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{formatCurrency(data.pipeline_health.active_pipeline_value)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Health Score</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{formatPercent(data.pipeline_health.health_score)}</p>
+          </div>
         </div>
-        <p className="font-medium text-muted-foreground/90">
-          This dashboard is optimized strictly for sales managers to prioritize operational coaching and deal fixes. 
-          To avoid clutter and distraction, several modules are intentionally routed to separate views:
-        </p>
-        <ul className="list-disc pl-5 space-y-0.5 font-medium text-muted-foreground/80">
-          <li><strong>Lead Source Conversion Analytics</strong> are reserved exclusively for the <strong>Admin Dashboard</strong>.</li>
-          <li><strong>Representative Activity Heatmaps</strong> are placed under the <strong>Sales Rep Dashboard</strong> to prevent manager micromanagement.</li>
-          <li>The generic <strong>AI Insights Panel</strong> is accessible in the secondary <strong>AI Insights</strong> tab on the left sidebar.</li>
-        </ul>
       </div>
 
+      {/* ================================================================== */}
+      {/* TEAM PERFORMANCE + DEALS AT RISK — 8/4 grid                       */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Team Performance */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Team Performance</h3>
+                <p className="text-[10px] text-muted-foreground">Quota attainment across the sales team</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('team performance')}
+              className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View Team
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-[var(--space-3)]">
+            {sortedReps.map((rep) => {
+              const attainment = toNumber(rep.quota_achievement_pct);
+
+              return (
+                <div key={rep.user_id}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-purple/10 text-[9px] font-bold text-brand-purple border border-brand-purple/15">
+                        {getInitials(rep.full_name)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-foreground">{rep.full_name}</p>
+                        <p className="text-[10px] text-muted-foreground">Revenue {formatCurrency(rep.revenue_generated)}</p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs font-bold tabular-nums text-brand-purple">
+                      {formatPercent(attainment)}
+                    </span>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-brand-purple"
+                      style={{ width: `${Math.min(100, Math.max(0, attainment))}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+
+            {sortedReps.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                No rep data available.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Deals At Risk */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Deals at Risk</h3>
+                <p className="text-[10px] text-muted-foreground">High-value opportunities</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('pipeline')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View Pipeline
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2">
+            {visibleRisks.map((deal) => (
+              <div
+                key={deal.deal_id}
+                onClick={() => onDealClick?.(deal.deal_id)}
+                className="cursor-pointer rounded-xl border border-border p-3 transition hover:bg-secondary/20"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-foreground">{deal.deal_name}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{deal.company || 'No company'}</p>
+                  </div>
+                  <p className="shrink-0 text-xs font-bold text-foreground tabular-nums">{formatCurrency(deal.deal_value)}</p>
+                </div>
+
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Owner</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-foreground">{deal.owner_name || 'Unassigned'}</p>
+                  </div>
+                  <div className="text-right min-w-0">
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Risk</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-amber-600 truncate">{deal.risk_reason}</p>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-[10px] text-muted-foreground">
+                    {deal.days_since_last_activity}d since activity
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onDealClick?.(deal.deal_id)}
+                    className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold text-foreground hover:bg-secondary/40 transition"
+                  >
+                    Open
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {visibleRisks.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Trophy className="mx-auto h-4 w-4 mb-1" />
+                No deals at risk
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* ACTION QUEUE + ACTIVITY — 8/4 grid                                 */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Manager Action Queue */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Manager Action Queue</h3>
+                <p className="text-[10px] text-muted-foreground">System-generated items that may need attention</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('activities')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View Activity
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2">
+            {visibleAlerts.map((alert, index) => {
+              const severity = String(alert.severity || '').toLowerCase();
+              const isHigh = severity === 'high' || severity === 'critical';
+
+              return (
+                <div
+                  key={`${alert.timestamp}-${index}`}
+                  onClick={() => onTabChange?.('activities')}
+                  className={[
+                    'cursor-pointer rounded-xl border p-3 transition hover:bg-secondary/20',
+                    isHigh ? 'border-rose-200 bg-rose-50/50' : 'border-amber-200 bg-amber-50/40',
+                  ].join(' ')}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className={[
+                        'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg',
+                        isHigh ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600',
+                      ].join(' ')}
+                    >
+                      {isHigh ? <AlertTriangle className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground leading-5">{alert.message}</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                        {alert.severity} \u00B7 {formatUpdatedAt(alert.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {visibleAlerts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Bell className="mx-auto h-4 w-4 mb-1" />
+                No manager alerts
+                <p className="mt-1 text-[10px] text-muted-foreground">Everything looks good right now.</p>
+              </div>
+            )}
+          </div>
+
+          {data.deals_at_risk.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onTabChange?.('pipeline')}
+              className="w-full flex items-center justify-between rounded-xl bg-secondary/10 border border-border/50 px-3 py-2.5 text-left hover:bg-secondary/20 transition"
+            >
+              <div>
+                <p className="text-xs font-bold text-foreground">{data.deals_at_risk.length} deals require review</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">Open pipeline to review risk</p>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          )}
+        </div>
+
+        {/* Recent Team Activity */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Recent Activity</h3>
+                <p className="text-[10px] text-muted-foreground">Latest CRM activity</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('activities')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View All
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1">
+            {visibleActivities.map((activity) => (
+              <button
+                key={activity.id}
+                type="button"
+                onClick={() => onTabChange?.('activities')}
+                className="flex w-full items-start gap-2.5 rounded-xl px-2 py-2.5 text-left transition hover:bg-secondary/20"
+              >
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-purple/10 text-brand-purple">
+                  <Activity className="h-3 w-3" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold text-foreground">{activity.title || activity.action}</p>
+                  <p className="mt-0.5 truncate text-[10px] capitalize text-muted-foreground">
+                    {activity.action.replace(/_/g, ' ')} \u00B7 {activity.entity_type.replace(/_/g, ' ')}
+                  </p>
+                  <p className="mt-0.5 text-[9px] text-muted-foreground">
+                    {formatUpdatedAt(activity.created_at)}
+                    {activity.created_by ? ` \u00B7 ${activity.created_by}` : ''}
+                  </p>
+                </div>
+                <ChevronRight className="mt-1 h-3 w-3 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+
+            {visibleActivities.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Activity className="mx-auto h-4 w-4 mb-1" />
+                No recent team activity
+                <p className="mt-1 text-[10px] text-muted-foreground">New CRM activity will appear here.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* BOTTOM METRICS — 4-column grid                                     */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-2 gap-[var(--space-4)] lg:grid-cols-4">
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Team Members</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{data.team_metrics.total_members}</p>
+          <p className="text-[10px] text-muted-foreground">{data.team_metrics.active_reps} active reps</p>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('pipeline')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('pipeline'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Avg Deal Size</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{formatCurrency(data.team_metrics.avg_deal_size)}</p>
+          <p className="text-[10px] text-muted-foreground">Across active pipeline</p>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Sales Cycle</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">
+            {toNumber(data.team_metrics.avg_sales_cycle_days).toFixed(0)} days
+          </p>
+          <p className="text-[10px] text-muted-foreground">Average team cycle</p>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('forecast')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('forecast'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Forecast Accuracy</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{formatPercent(data.team_metrics.forecast_accuracy)}</p>
+          <p className="text-[10px] text-muted-foreground">Current forecast performance</p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -626,6 +626,7 @@ class RepPriorityLeadItem(BaseModel):
     score: int
     tier: str  # "Hot" | "Warm" | "Cold"
     top_reason: Optional[str] = None  # e.g., "+25 Demo Requested"
+    top_reasons: Optional[list[str]] = None  # full AI reasoning list from lead_scores
 
 
 class RepDealAtRiskItem(BaseModel):
@@ -636,6 +637,9 @@ class RepDealAtRiskItem(BaseModel):
     stalled_days: int
     risk_reason: str  # "Stalled >5 Days" | "Negative Buyer Sentiment"
     sentiment: Optional[str] = None  # "positive" | "neutral" | "negative"
+    probability: Optional[int] = None  # stored Deal.probability (win likelihood %)
+    company_name: Optional[str] = None
+    owner_name: Optional[str] = None
 
 
 class RepQuickCaptureRequest(BaseModel):

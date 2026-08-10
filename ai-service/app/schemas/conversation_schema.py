@@ -60,3 +60,31 @@ class ConversationResponse(BaseModel):
     follow_up_timing: Optional[str] = None
     processing_time_ms: Optional[int] = None
     model_version: Optional[str] = None
+class DraftEmailRequest(BaseModel):
+    """Request to draft a brand-new outreach email (no existing thread)."""
+    recipient_name: str = Field(..., min_length=1)
+    recipient_email: str = Field(..., min_length=3)
+    company: Optional[str] = None
+    designation: Optional[str] = None
+    purpose: str = Field(
+        default="follow_up",
+        description="One of: cold_intro, follow_up, check_in, proposal, thank_you, custom",
+    )
+    context: Optional[str] = Field(
+        default=None,
+        description="Extra context, e.g. lead status, deal stage, recent activity, or a free-text instruction.",
+    )
+    sender_name: Optional[str] = None
+
+    @field_validator("recipient_name")
+    @classmethod
+    def validate_recipient_name(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("recipient_name is required")
+        return v
+
+
+class DraftEmailResponse(BaseModel):
+    subject: str
+    body: str
+    model_version: Optional[str] = None

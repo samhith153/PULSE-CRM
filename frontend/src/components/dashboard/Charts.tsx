@@ -201,7 +201,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                       whileHover={{ scaleY: 1.03, originY: 1 }}
                       initial={{ scaleY: 0, originY: 1 }}
                       animate={chartVisible ? { scaleY: 1 } : { scaleY: 0 }}
-                      transition={{ duration: 0.6, ease: "easeOut", delay: idx * 0.05 }}
+                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
                       onMouseEnter={() => setRevenueHoveredPoint({ x: c.x, y: c.y, label: c.label, value: c.val })}
                     />
                   );

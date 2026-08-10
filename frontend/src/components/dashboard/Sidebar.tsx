@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { motion } from 'framer-motion';
 import {
   Home,
   Users,
@@ -30,6 +29,8 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
+import { resolveImageUrl } from '@/utils/api';
 
 interface SidebarProps {
   activeTab: string;
@@ -70,7 +71,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           label: 'Productivity',
           items: [
             { name: 'Activities',   icon: Activity,  tab: 'activities' },
-            { name: 'Tasks',        icon: ClipboardList, tab: 'tasks' },
             { name: 'Calendar',     icon: Calendar,  tab: 'calendar' },
             { name: 'AI Insights',  icon: Sparkles,  tab: 'ai insights' },
           ],
@@ -128,7 +128,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
             { name: 'Companies',    icon: Building2,  tab: 'companies' },
             { name: 'Deals',        icon: Layers,     tab: 'deals' },
             { name: 'Activities',   icon: Activity,   tab: 'activities' },
-            { name: 'Tasks',        icon: ClipboardList, tab: 'tasks' },
             { name: 'Emails',       icon: Mail,       tab: 'emails' },
           ],
         },
@@ -156,54 +155,33 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
   }
 }
 
-function getUserProfile(userRole: SidebarProps['userRole']) {
-  switch (userRole) {
-    case 'admin':
-      return {
-        name: 'System Admin',
-        role: 'Administrator',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&q=80',
-      };
-    case 'manager':
-      return {
-        name: 'Alex Johnson',
-        role: 'Sales Manager',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=80&fit=crop&q=80',
-      };
-    default:
-      return {
-        name: 'Sarah Johnson',
-        role: 'Sales Rep',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&q=80',
-      };
-  }
-}
-
 /* ── Component ───────────────────────────────────────────────────────── */
 
 export default function Sidebar({
   activeTab,
   setActiveTab,
   collapsed,
+  setCollapsed,
   userRole,
 }: SidebarProps) {
   const sections = getSections(userRole);
-  const profile  = getUserProfile(userRole);
+  const { user: currentUser } = useCurrentUser();
+  const profileName = currentUser?.full_name || 'User';
+  const profileRoleLabel = userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative';
+  const profileInitials = userInitials(currentUser?.full_name);
 
   const isActive = (tab: string) =>
     activeTab.toLowerCase() === tab.toLowerCase();
 
-  /* Shared active / inactive styles */
+  /* NEW: Design Kit active / inactive styles with pill effect */
   const itemBase = cn(
-    'group relative w-full flex items-center rounded-xl py-2 text-sm z-0 overflow-hidden',
-    'transition-all duration-200 cursor-pointer',
+    'group relative w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-all duration-300 cursor-pointer',
   );
   const itemActive = cn(
-    'text-brand-blue font-semibold',
+    'bg-brand text-primary-foreground shadow-[0_8px_18px_-8px_var(--brand)]',
   );
   const itemInactive = cn(
-    'text-sidebar-foreground/55 font-medium hover:text-sidebar-foreground',
-    'hover:bg-sidebar-accent/40',
+    'text-sidebar-foreground hover:translate-x-0.5 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
   );
 
   return (
@@ -212,43 +190,42 @@ export default function Sidebar({
         'flex h-full flex-col shrink-0 overflow-hidden',
         'bg-sidebar text-sidebar-foreground border-r border-sidebar-border',
         'transition-[width] duration-300 ease-in-out z-40',
-        collapsed ? 'w-16' : 'w-60',
+        collapsed ? 'w-16' : 'w-[248px]',
       )}
     >
       {/* ── Brand header ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 px-3 py-4 shrink-0 min-w-0">
-        <div className="grad-blue-purple grid size-9 shrink-0 place-items-center rounded-xl text-primary-foreground">
-          <Zap size={17} />
+      <div className="flex items-center gap-2.5 px-2 py-6 shrink-0 min-w-0">
+        <div className="grid size-9 shrink-0 place-items-center rounded-full bg-brand text-primary-foreground shadow-[0_8px_18px_-8px_var(--brand)]">
+          <Zap size={18} strokeWidth={2.6} />
         </div>
         {!collapsed && (
-          <span className="truncate text-base font-bold tracking-tight text-sidebar-foreground">
-            PULSE CRM
+          <span className="truncate text-[19px] font-extrabold tracking-tight text-sidebar-foreground">
+            Pulse CRM
           </span>
         )}
       </div>
 
       {/* ── Scrollable nav ───────────────────────────────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-4 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-4 space-y-7">
 
         {/* Home */}
         <button
           onClick={() => setActiveTab('home')}
           className={cn(
             itemBase,
-            collapsed ? 'justify-center px-2' : 'px-3 gap-2.5',
+            collapsed ? 'justify-center px-2' : '',
             isActive('home') ? itemActive : itemInactive,
           )}
         >
           <LayoutDashboard
-            size={16}
+            size={18}
             strokeWidth={2}
-            fill={isActive('home') ? "rgba(37, 99, 235, 0.15)" : "none"}
             className={cn(
-              'shrink-0 transition-colors',
-              isActive('dashboard') ? 'text-brand-purple' : 'text-muted-foreground group-hover:text-sidebar-foreground',
+              'shrink-0 transition-transform duration-300 group-hover:scale-110',
+              isActive('home') ? '' : 'text-sidebar-foreground',
             )}
           />
-          {!collapsed && <span className="truncate relative z-10">Home</span>}
+          {!collapsed && <span className="truncate">Home</span>}
 
           {/* Collapsed tooltip */}
           {collapsed && (
@@ -260,10 +237,10 @@ export default function Sidebar({
 
         {/* Sections */}
         {sections.map((section) => (
-          <div key={section.label} className="pt-3">
-            {/* Group label */}
+          <div key={section.label}>
+            {/* Group label - Design Kit style */}
             {!collapsed ? (
-              <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60 select-none">
+              <p className="px-3 pb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground select-none">
                 {section.label}
               </p>
             ) : (
@@ -280,31 +257,19 @@ export default function Sidebar({
                   onClick={() => setActiveTab(item.tab)}
                   className={cn(
                     itemBase,
-                    collapsed ? 'justify-center px-2' : 'px-3 gap-2.5',
+                    collapsed ? 'justify-center px-2' : '',
                     active ? itemActive : itemInactive,
                   )}
                 >
-                  {active && (
-                    <motion.div
-                      layoutId="activeNavIndicator"
-                      className="absolute inset-0 bg-brand-blue/[0.08] rounded-xl z-0"
-                      transition={{ type: 'spring', stiffness: 380, damping: 30 }}
-                    >
-                      <div className="absolute left-0 top-2 bottom-2 w-0.75 rounded-r bg-brand-blue" />
-                    </motion.div>
-                  )}
                   <Icon
-                    size={15}
+                    size={18}
                     strokeWidth={2}
-                    fill={active ? "rgba(37, 99, 235, 0.15)" : "none"}
                     className={cn(
-                      'shrink-0 transition-colors relative z-10',
-                      active
-                        ? 'text-brand-blue'
-                        : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                      'shrink-0 transition-transform duration-300 group-hover:scale-110',
+                      active ? '' : 'text-sidebar-foreground',
                     )}
                   />
-                  {!collapsed && <span className="truncate relative z-10">{item.name}</span>}
+                  {!collapsed && <span className="truncate">{item.name}</span>}
 
                   {collapsed && (
                     <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-lg border border-border bg-popover px-2.5 py-1.5 text-xs text-foreground shadow-nav opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
@@ -319,38 +284,42 @@ export default function Sidebar({
       </nav>
 
       {/* ── User footer ──────────────────────────────────────────────── */}
-      <div className="shrink-0 border-t border-sidebar-border px-2 py-3">
+      <div className="shrink-0 border-t border-sidebar-border p-3">
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
           className={cn(
-            'w-full flex items-center gap-2.5 rounded-xl p-2',
+            'w-full flex items-center gap-3 rounded-2xl p-3',
             'text-left transition-colors duration-150 cursor-pointer',
-            'hover:bg-sidebar-accent/60',
+            'hover:bg-sidebar-accent',
             collapsed && 'justify-center',
           )}
         >
-          <div className="size-8 shrink-0 overflow-hidden rounded-full border border-sidebar-border">
-            <Image
-              src={profile.avatar}
-              alt={profile.name}
-              width={32}
-              height={32}
-              className="h-full w-full object-cover"
-              unoptimized
-            />
+          <div className="size-10 shrink-0 overflow-hidden rounded-full border border-sidebar-border flex items-center justify-center bg-brand-pale">
+            {currentUser?.avatar_url ? (
+              <Image
+                src={resolveImageUrl(currentUser.avatar_url)}
+                alt={profileName}
+                width={40}
+                height={40}
+                className="h-full w-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <span className="text-xs font-bold text-brand-deep select-none">{profileInitials}</span>
+            )}
           </div>
           {!collapsed && (
             <>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold text-sidebar-foreground">
-                  {profile.name}
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="truncate text-[14px] font-bold text-sidebar-foreground">
+                  {profileName}
                 </p>
-                <p className="truncate text-[10px] text-muted-foreground">
-                  {profile.role}
+                <p className="truncate text-xs text-muted-foreground">
+                  {profileRoleLabel}
                 </p>
               </div>
-              <ChevronsUpDown size={13} className="shrink-0 text-muted-foreground" />
+              <ChevronsUpDown size={14} className="shrink-0 text-muted-foreground" />
             </>
           )}
         </button>

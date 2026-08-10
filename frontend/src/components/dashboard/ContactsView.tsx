@@ -39,7 +39,22 @@ interface ContactItem {
 
 const EMPTY_CONTACTS: ContactItem[] = [];
 
-export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () => void; onTabChange?: (tab: string) => void } = {}) {
+interface ContactsViewProps {
+  onLoaded?: () => void;
+  onTabChange?: (tab: string) => void;
+  onComposeEmail?: (target: { 
+    to: string; 
+    name?: string; 
+    company?: string; 
+    designation?: string;
+    purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+    context?: string;
+    externalEntityType?: string | null;
+    externalEntityId?: string | null;
+  }) => void;
+}
+
+export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: ContactsViewProps = {}) {
   const router = useRouter();
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
@@ -295,7 +310,7 @@ export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () 
                 <button
                   type="button"
                   onClick={() => toggleViewMode('default')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'default'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -307,7 +322,7 @@ export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () 
                 <button
                   type="button"
                   onClick={() => toggleViewMode('list')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'list'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -383,7 +398,7 @@ export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () 
                         <tr 
                           key={con.id} 
                           onClick={() => setSelectedId(con.id)}
-                          className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                          className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
                         >
                           <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
                             <input 
@@ -460,7 +475,7 @@ export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () 
                         e.stopPropagation();
                         setSelectedId(prevId => prevId === con.id ? null : prevId);
                       }}
-                      className={`hover:bg-secondary/40 cursor-pointer transition-all duration-200 border-b border-border/40 ${con.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
+                      className={`hover:bg-secondary/40 cursor-pointer transition duration-200 border-b border-border/40 ${con.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
                     >
                       <td className="py-3.5 px-4 font-semibold text-foreground truncate max-w-[150px]">{con.name}</td>
                       <td className="py-3.5 text-muted-foreground truncate max-w-[130px]">{con.company}</td>
@@ -518,7 +533,7 @@ export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () 
             {/* Close Button */}
             <button 
               onClick={() => setSelectedId(null)}
-              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
+              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
               title="Close Summary"
               aria-label="Close Summary"
             >
@@ -559,11 +574,24 @@ export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () 
               <span>Email Contact</span>
             </button>
             <button 
-              onClick={() => setIsCallModalOpen(true)}
+              onClick={() => {
+                if (onComposeEmail && active) {
+                  onComposeEmail({
+                    to: active.email,
+                    name: active.name,
+                    company: active.company,
+                    designation: active.designation,
+                    purpose: 'follow_up',
+                    context: active.notes || '',
+                    externalEntityType: 'contact',
+                    externalEntityId: String(active.id)
+                  });
+                }
+              }}
               className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer"
             >
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Log Call</span>
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Email Contact</span>
             </button>
           </div>
 
@@ -574,7 +602,7 @@ export default function ContactsView({ onLoaded, onTabChange }: { onLoaded?: () 
                 <button
                   key={tab}
                   onClick={() => setActiveHistoryTab(tab as any)}
-                  className={`pb-1.5 px-2 border-b-2 transition-all cursor-pointer ${
+                  className={`pb-1.5 px-2 border-b-2 transition cursor-pointer ${
                     activeHistoryTab === tab ? 'border-brand-purple text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >

@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Contact, 
-  Building2, 
-  Layers, 
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import {
+  LayoutDashboard,
+  Users,
+  Contact,
+  Building2,
+  Layers,
   Package,
-  Activity, 
-  Mail, 
+  Activity,
+  Mail,
   GitBranch,
   Sparkles,
   BarChart3,
@@ -19,8 +19,27 @@ import {
   Plus,
   Search,
   CornerDownLeft,
-  Calendar
+  Calendar,
+  Clock,
+  Zap,
 } from 'lucide-react';
+import Fuse from 'fuse.js';
+import { searchGlobalCRM } from '@/utils/api';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { ROLE_TABS, type Role } from '@/lib/roles';
+
+/* ── Types ────────────────────────────────────────────────────── */
+
+interface CommandItem {
+  id: string;
+  title: string;
+  description: string;
+  category: 'Suggestions' | 'Navigation' | 'Search' | 'Create Quick Actions' | 'Workflow Actions' | 'Productivity';
+  icon: React.ElementType;
+  action: () => void;
+  shortcut?: string;
+  roles?: Role[];
+}
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -29,25 +48,65 @@ interface CommandPaletteProps {
   onNewReportClick: () => void;
 }
 
+/* ── Recent commands helpers ──────────────────────────────────── */
+
+const RECENT_KEY = 'pulse-crm-recent-commands';
+const MAX_RECENT = 5;
+
+function getRecentCommands(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveRecentCommand(id: string) {
+  const recent = getRecentCommands().filter((r) => r !== id);
+  recent.unshift(id);
+  localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+}
+
+/* ── Component ────────────────────────────────────────────────── */
+
 export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewReportClick }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
+  const [dynamicResults, setDynamicResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [recentIds, setRecentIds] = useState<string[]>([]);
+
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const { user: currentUser } = useCurrentUser();
+  const userRole = (currentUser?.roles?.[0] as Role) || 'sales_rep';
+
+  // Load recent commands on mount and when palette opens
+  useEffect(() => {
+    if (isOpen) {
+      setRecentIds(getRecentCommands());
+    }
+  }, [isOpen]);
+
+  /* ── Global Ctrl+K is handled by DashboardShell / page.tsx ── */
 
   // Focus input on open
   useEffect(() => {
     if (isOpen) {
       setQuery('');
       setActiveIndex(0);
+      setSearchError(null);
       setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [isOpen]);
 
-  // Global listener for Escape to close
+  // Escape to close
   useEffect(() => {
     if (!isOpen) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -58,10 +117,9 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  /* ── Theme / sidebar utilities ────────────────────────────── */
 
-  // Global theme switch utility
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     const current = document.documentElement.getAttribute('data-theme') || 'dark';
     const next = current === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', next);
@@ -71,100 +129,240 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
     } else {
       document.documentElement.classList.remove('dark');
     }
-  };
+  }, []);
 
-  // Global sidebar toggle utility
-  const toggleSidebar = () => {
+  const toggleSidebar = useCallback(() => {
     const sidebarBtn = document.querySelector('[aria-label="Toggle Sidebar"]') as HTMLButtonElement;
     sidebarBtn?.click();
-  };
+  }, []);
 
-  // Helper to change tab and dispatch event for modal loading
-  const transitionAndEmit = (tab: string, eventName: string) => {
-    setActiveTab(tab);
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent(eventName));
-    }, 120);
-  };
+  const transitionAndEmit = useCallback(
+    (tab: string, eventName: string) => {
+      setActiveTab(tab);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent(eventName));
+      }, 120);
+    },
+    [setActiveTab],
+  );
 
-  const searchItems = [
-    // Dynamic top suggestions
-    { id: 'suggest-theme', title: 'Switch theme', description: 'Toggle light and dark appearance', category: 'Suggestions' as const, icon: Sparkles, action: () => { toggleTheme(); onClose(); } },
-    { id: 'suggest-sidebar', title: 'Toggle sidebar', description: 'Collapse or expand navigation panel', category: 'Suggestions' as const, icon: LayoutDashboard, action: () => { toggleSidebar(); onClose(); } },
-    { id: 'suggest-notif', title: 'Open notifications', description: 'View sync alerts and messages', category: 'Suggestions' as const, icon: Activity, action: () => { setActiveTab('notifications'); onClose(); } },
-    
-    // Navigation
-    { id: 'nav-dashboard', title: 'Go to Dashboard', description: 'View sales performance metrics', category: 'Navigation' as const, icon: LayoutDashboard, action: () => { setActiveTab('dashboard'); onClose(); } },
-    { id: 'nav-leads', title: 'Open Leads', description: 'Manage sales opportunities', category: 'Navigation' as const, icon: Users, action: () => { setActiveTab('leads'); onClose(); } },
-    { id: 'nav-contacts', title: 'Open Contacts', description: 'Browse directory contacts list', category: 'Navigation' as const, icon: Contact, action: () => { setActiveTab('contacts'); onClose(); } },
-    { id: 'nav-companies', title: 'Open Companies', description: 'Manage accounts and organizations', category: 'Navigation' as const, icon: Building2, action: () => { setActiveTab('companies'); onClose(); } },
-    { id: 'nav-invoices', title: 'Open Invoices', description: 'Check statement logs and billing details', category: 'Navigation' as const, icon: FileText, action: () => { alert('Invoices view is being initialized.'); onClose(); } },
-    { id: 'nav-tasks', title: 'Open Tasks', description: 'Manage your active to-do lists', category: 'Navigation' as const, icon: FileText, action: () => { setActiveTab('tasks'); onClose(); } },
-    { id: 'nav-meetings', title: 'Open Meetings', description: 'View calendar slots and schedules', category: 'Navigation' as const, icon: Calendar, action: () => { setActiveTab('calendar'); onClose(); } },
-    { id: 'nav-reports', title: 'Open Reports', description: 'View performance analytics and metrics', category: 'Navigation' as const, icon: BarChart3, action: () => { setActiveTab('reports'); onClose(); } },
-    { id: 'nav-settings', title: 'Open Settings', description: 'Configure integrations and workspace preferences', category: 'Navigation' as const, icon: Settings, action: () => { setActiveTab('settings'); onClose(); } },
-    
-    // Search pre-fills
-    { id: 'search-all', title: 'Search all records', description: 'Query companies, leads, and contacts', category: 'Search' as const, icon: Search, action: () => { setQuery(''); inputRef.current?.focus(); } },
-    { id: 'search-customers', title: 'Search customers', description: 'Filter contacts directory', category: 'Search' as const, icon: Search, action: () => { setQuery('contacts: '); inputRef.current?.focus(); } },
-    { id: 'search-invoices', title: 'Search invoices', description: 'Query invoice records', category: 'Search' as const, icon: Search, action: () => { setQuery('invoices: '); inputRef.current?.focus(); } },
-    { id: 'search-tasks', title: 'Search tasks', description: 'Query your to-do items', category: 'Search' as const, icon: Search, action: () => { setQuery('tasks: '); inputRef.current?.focus(); } },
-    { id: 'search-meetings', title: 'Search meetings', description: 'Query calendar events', category: 'Search' as const, icon: Search, action: () => { setQuery('meetings: '); inputRef.current?.focus(); } },
-    { id: 'search-notes', title: 'Search notes or activity logs', description: 'Filter history files log', category: 'Search' as const, icon: Search, action: () => { setQuery('notes: '); inputRef.current?.focus(); } },
+  /* ── Build static commands (memoized, role-filtered) ──────── */
 
-    // Create Quick Actions
-    { id: 'create-lead', title: 'New Lead', description: 'Create a new sales opportunity', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('leads', 'pulse-open-create-lead-modal'); onClose(); } },
-    { id: 'create-invoice', title: 'New Invoice', description: 'Generate billing statement', category: 'Create Quick Actions' as const, icon: Plus, action: () => { alert('New Invoice window created.'); onClose(); } },
-    { id: 'create-task', title: 'New Task', description: 'Create to-do checklist item', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('tasks', 'pulse-open-create-task-modal'); onClose(); } },
-    { id: 'create-meeting', title: 'New Meeting', description: 'Schedule new calendar event', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('activities', 'pulse-open-create-meeting-modal'); onClose(); } },
-    { id: 'create-customer', title: 'New Customer', description: 'Add new client contact profile', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('contacts', 'pulse-open-create-contact-modal'); onClose(); } },
-    { id: 'create-company', title: 'New Company', description: 'Add new business account profile', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('companies', 'pulse-open-create-company-modal'); onClose(); } },
-    { id: 'create-note', title: 'New Note', description: 'Write details to active lead timeline', category: 'Create Quick Actions' as const, icon: Plus, action: () => { transitionAndEmit('leads', 'pulse-open-create-note-modal'); onClose(); } },
+  const allCommands = useMemo<CommandItem[]>(() => {
+    const nav = (tab: string, roles?: Role[]): CommandItem => ({
+      id: `nav-${tab}`,
+      title: `Go to ${tab.charAt(0).toUpperCase() + tab.slice(1)}`,
+      description: `Navigate to ${tab}`,
+      category: 'Navigation',
+      icon: LayoutDashboard,
+      action: () => { setActiveTab(tab); onClose(); },
+      roles,
+    });
 
-    // Workflow Actions
-    { id: 'flow-tag', title: 'Add tag', description: 'Categorize selected record', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Tag added successfully.'); onClose(); } },
-    { id: 'flow-status', title: 'Change status', description: 'Update current stage', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Status modified successfully.'); onClose(); } },
-    { id: 'flow-owner', title: 'Assign owner', description: 'Assign manager/representative to lead', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Record owner assigned.'); onClose(); } },
-    { id: 'flow-priority', title: 'Set priority', description: 'Modify priority tier level', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Priority level set.'); onClose(); } },
-    { id: 'flow-paid', title: 'Mark as paid', description: 'Clear selected billing statement', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Invoice marked as paid.'); onClose(); } },
-    { id: 'flow-done', title: 'Mark as completed', description: 'Resolve selected task checklist', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Task resolved successfully.'); onClose(); } },
-    { id: 'flow-follow', title: 'Schedule follow-up', description: 'Book call alert for deal', category: 'Workflow Actions' as const, icon: Sparkles, action: () => { alert('Follow-up scheduled.'); onClose(); } },
+    return [
+      // ── Suggestions ──
+      { id: 'suggest-theme', title: 'Switch theme', description: 'Toggle light and dark appearance', category: 'Suggestions', icon: Sparkles, action: () => { toggleTheme(); onClose(); } },
+      { id: 'suggest-sidebar', title: 'Toggle sidebar', description: 'Collapse or expand navigation panel', category: 'Suggestions', icon: LayoutDashboard, action: () => { toggleSidebar(); onClose(); } },
+      { id: 'suggest-notif', title: 'Open notifications', description: 'View sync alerts and messages', category: 'Suggestions', icon: Activity, action: () => { setActiveTab('notifications'); onClose(); } },
 
-    // Productivity Actions
-    { id: 'prod-recent', title: 'Show recent items', description: 'Load historical pages list', category: 'Productivity' as const, icon: Activity, action: () => { alert('Recent items displayed.'); onClose(); } },
-    { id: 'prod-pinned', title: 'Show pinned items', description: 'Load bookmarked deals', category: 'Productivity' as const, icon: Activity, action: () => { alert('Pinned items displayed.'); onClose(); } },
-    { id: 'prod-notif', title: 'Open notifications', description: 'Show alerts and sync signals', category: 'Productivity' as const, icon: Activity, action: () => { setActiveTab('notifications'); onClose(); } },
-    { id: 'prod-shortcuts', title: 'Open shortcuts/help', description: 'Keyboard shortcut guide', category: 'Productivity' as const, icon: Activity, action: () => { alert('Shortcuts Guide:\n⌘K : Command Palette\nESC : Close Modal\n↑↓ : Navigate\nEnter : Execute'); onClose(); } },
-    { id: 'prod-theme', title: 'Switch theme', description: 'Toggle light and dark mode', category: 'Productivity' as const, icon: Activity, action: () => { toggleTheme(); onClose(); } },
-    { id: 'prod-sidebar', title: 'Toggle sidebar', description: 'Collapse/expand left navigation panel', category: 'Productivity' as const, icon: Activity, action: () => { toggleSidebar(); onClose(); } },
-    { id: 'prod-history', title: 'Open command history', description: 'View executed actions log', category: 'Productivity' as const, icon: Activity, action: () => { alert('Command history loaded.'); onClose(); } },
-  ];
+      // ── Navigation (role-filtered) ──
+      { id: 'nav-home', title: 'Go to Dashboard', description: 'View sales performance metrics', category: 'Navigation', icon: LayoutDashboard, action: () => { setActiveTab('home'); onClose(); }, shortcut: 'G H' },
+      { id: 'nav-leads', title: 'Go to Leads', description: 'Manage sales opportunities', category: 'Navigation', icon: Users, action: () => { setActiveTab('leads'); onClose(); }, shortcut: 'G L' },
+      { id: 'nav-contacts', title: 'Go to Contacts', description: 'Browse directory contacts list', category: 'Navigation', icon: Contact, action: () => { setActiveTab('contacts'); onClose(); }, shortcut: 'G C' },
+      { id: 'nav-companies', title: 'Go to Companies', description: 'Manage accounts and organizations', category: 'Navigation', icon: Building2, action: () => { setActiveTab('companies'); onClose(); }, shortcut: 'G O' },
+      { id: 'nav-deals', title: 'Go to Deals', description: 'View active sales pipeline', category: 'Navigation', icon: Layers, action: () => { setActiveTab('deals'); onClose(); }, shortcut: 'G D' },
+      { id: 'nav-tasks', title: 'Go to Tasks', description: 'Manage your active to-do lists', category: 'Navigation', icon: FileText, action: () => { setActiveTab('tasks'); onClose(); }, shortcut: 'G T' },
+      { id: 'nav-meetings', title: 'Go to Calendar', description: 'View calendar slots and schedules', category: 'Navigation', icon: Calendar, action: () => { setActiveTab('calendar'); onClose(); }, shortcut: 'G M' },
+      { id: 'nav-activities', title: 'Go to Activities', description: 'View calls, emails, and meetings', category: 'Navigation', icon: Activity, action: () => { setActiveTab('activities'); onClose(); } },
+      { id: 'nav-reports', title: 'Go to Reports', description: 'View performance analytics and metrics', category: 'Navigation', icon: BarChart3, action: () => { setActiveTab('reports'); onClose(); }, shortcut: 'G R' },
+      { id: 'nav-ai', title: 'Go to AI Insights', description: 'AI-powered recommendations and scoring', category: 'Navigation', icon: Sparkles, action: () => { setActiveTab('ai insights'); onClose(); } },
+      { id: 'nav-emails', title: 'Go to Emails', description: 'View and manage email communications', category: 'Navigation', icon: Mail, action: () => { setActiveTab('emails'); onClose(); } },
+      { id: 'nav-settings', title: 'Go to Settings', description: 'Configure integrations and workspace preferences', category: 'Navigation', icon: Settings, action: () => { setActiveTab('settings'); onClose(); }, shortcut: 'G S' },
+      { id: 'nav-profile', title: 'Go to Profile', description: 'View and edit your profile', category: 'Navigation', icon: User, action: () => { setActiveTab('profile'); onClose(); } },
+      { id: 'nav-documents', title: 'Go to Documents', description: 'Manage files and attachments', category: 'Navigation', icon: FileText, action: () => { setActiveTab('documents'); onClose(); } },
+      { id: 'nav-workflows', title: 'Go to Workflows', description: 'Manage automation workflows', category: 'Navigation', icon: GitBranch, action: () => { setActiveTab('workflows'); onClose(); } },
 
-  // Filter items based on search query
-  const filtered = searchItems.filter(item => {
-    const searchString = `${item.title} ${item.description} ${item.category}`.toLowerCase();
-    return searchString.includes(query.toLowerCase());
-  });
+      // ── Search ──
+      { id: 'search-all', title: 'Search all records', description: 'Query companies, leads, contacts, and deals', category: 'Search', icon: Search, action: () => { setQuery(''); inputRef.current?.focus(); }, shortcut: '/' },
 
-  // Handle arrow keys and enter
+      // ── Create Quick Actions ──
+      { id: 'create-lead', title: 'Create Lead', description: 'Create a new sales opportunity', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('leads', 'pulse-open-create-lead-modal'); onClose(); }, shortcut: 'N L' },
+      { id: 'create-contact', title: 'Create Contact', description: 'Add new client contact profile', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('contacts', 'pulse-open-create-contact-modal'); onClose(); }, shortcut: 'N C' },
+      { id: 'create-company', title: 'Create Company', description: 'Add new business account profile', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('companies', 'pulse-open-create-company-modal'); onClose(); }, shortcut: 'N O' },
+      { id: 'create-task', title: 'Create Task', description: 'Create to-do checklist item', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('tasks', 'pulse-open-create-task-modal'); onClose(); }, shortcut: 'N T' },
+      { id: 'create-meeting', title: 'Create Meeting', description: 'Schedule new calendar event', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('activities', 'pulse-open-create-meeting-modal'); onClose(); }, shortcut: 'N M' },
+      { id: 'create-note', title: 'Create Note', description: 'Write details to active lead timeline', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('leads', 'pulse-open-create-note-modal'); onClose(); } },
+
+      // ── Workflow Actions ──
+      { id: 'flow-tag', title: 'Add tag', description: 'Categorize selected record', category: 'Workflow Actions', icon: Zap, action: () => { alert('Tag added successfully.'); onClose(); } },
+      { id: 'flow-status', title: 'Change status', description: 'Update current stage', category: 'Workflow Actions', icon: Zap, action: () => { alert('Status modified successfully.'); onClose(); } },
+      { id: 'flow-owner', title: 'Assign owner', description: 'Assign manager/representative to lead', category: 'Workflow Actions', icon: Zap, action: () => { alert('Record owner assigned.'); onClose(); } },
+      { id: 'flow-priority', title: 'Set priority', description: 'Modify priority tier level', category: 'Workflow Actions', icon: Zap, action: () => { alert('Priority level set.'); onClose(); } },
+
+      // ── Productivity ──
+      { id: 'prod-theme', title: 'Switch theme', description: 'Toggle light and dark mode', category: 'Productivity', icon: Sparkles, action: () => { toggleTheme(); onClose(); }, shortcut: 'Shift+T' },
+      { id: 'prod-sidebar', title: 'Toggle sidebar', description: 'Collapse/expand left navigation panel', category: 'Productivity', icon: LayoutDashboard, action: () => { toggleSidebar(); onClose(); } },
+    ];
+  }, [setActiveTab, onClose, toggleTheme, toggleSidebar, transitionAndEmit]);
+
+  // Filter commands by user role
+  const roleFilteredCommands = useMemo(() => {
+    return allCommands.filter((cmd) => {
+      if (!cmd.roles) return true;
+      return cmd.roles.includes(userRole);
+    });
+  }, [allCommands, userRole]);
+
+  /* ── Fuzzy search (Fuse.js) for static commands ──────────── */
+
+  const fuse = useMemo(
+    () =>
+      new Fuse(roleFilteredCommands, {
+        keys: ['title', 'description', 'category'],
+        threshold: 0.4,
+        includeScore: true,
+      }),
+    [roleFilteredCommands],
+  );
+
+  const staticFiltered = useMemo(() => {
+    if (!query.trim()) return roleFilteredCommands;
+    return fuse.search(query).map((r) => r.item);
+  }, [query, fuse, roleFilteredCommands]);
+
+  /* ── Backend search (debounced, abortable) ────────────────── */
+
+  useEffect(() => {
+    // Cancel any in-flight request
+    abortRef.current?.abort();
+
+    if (query.trim().length < 2) {
+      setDynamicResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const fetchSearchResults = async () => {
+      setIsSearching(true);
+      setSearchError(null);
+      try {
+        const results = await searchGlobalCRM(query.trim());
+        if (!controller.signal.aborted) {
+          const formattedDynamic = (results || []).map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            description: item.description,
+            category: item.category as any,
+            icon: Search,
+            action: () => {
+              setActiveTab(item.type);
+              setTimeout(() => {
+                window.dispatchEvent(
+                  new CustomEvent('pulse-open-record', {
+                    detail: { id: item.db_id, type: item.type },
+                  }),
+                );
+              }, 120);
+              onClose();
+            },
+          }));
+          setDynamicResults(formattedDynamic);
+          setActiveIndex(0);
+        }
+      } catch (error: any) {
+        if (!controller.signal.aborted && error?.name !== 'AbortError') {
+          console.error('Search failed:', error);
+          setSearchError('Unable to search records right now.');
+          setDynamicResults([]);
+        }
+      } finally {
+        if (!controller.signal.aborted) setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(fetchSearchResults, 300);
+    return () => {
+      controller.abort();
+      clearTimeout(debounceTimer);
+    };
+  }, [query, setActiveTab, onClose]);
+
+  /* ── Combined results ─────────────────────────────────────── */
+
+  const filtered = useMemo(() => {
+    const hasQuery = query.trim().length > 0;
+    const items: any[] = [];
+
+    // Show recent commands when no query
+    if (!hasQuery && recentIds.length > 0) {
+      const recentCommands = recentIds
+        .map((id) => roleFilteredCommands.find((c) => c.id === id))
+        .filter(Boolean) as CommandItem[];
+      if (recentCommands.length > 0) {
+        items.push(
+          ...recentCommands.map((cmd) => ({ ...cmd, category: 'Recent' as const, icon: Clock })),
+        );
+      }
+    }
+
+    // Dynamic backend results
+    if (hasQuery && query.trim().length >= 2) {
+      items.push(...dynamicResults);
+    }
+
+    // Static filtered results
+    items.push(...staticFiltered);
+
+    // Deduplicate by id (backend results may overlap with static)
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }, [query, recentIds, dynamicResults, staticFiltered, roleFilteredCommands]);
+
+  /* ── Keyboard navigation ──────────────────────────────────── */
+
+  const executeCommand = useCallback(
+    (item: any) => {
+      saveRecentCommand(item.id);
+      item.action();
+    },
+    [],
+  );
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setActiveIndex(prev => (prev + 1) % filtered.length);
-      scrollActiveIntoView((activeIndex + 1) % filtered.length);
+      const next = (activeIndex + 1) % (filtered.length || 1);
+      setActiveIndex(next);
+      scrollActiveIntoView(next);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setActiveIndex(prev => (prev - 1 + filtered.length) % filtered.length);
-      scrollActiveIntoView((activeIndex - 1 + filtered.length) % filtered.length);
+      const prev = (activeIndex - 1 + filtered.length) % (filtered.length || 1);
+      setActiveIndex(prev);
+      scrollActiveIntoView(prev);
     } else if (e.key === 'Enter') {
       e.preventDefault();
       if (filtered[activeIndex]) {
-        filtered[activeIndex].action();
+        executeCommand(filtered[activeIndex]);
       }
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      setActiveIndex(0);
+      scrollActiveIntoView(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      const last = filtered.length - 1;
+      setActiveIndex(last);
+      scrollActiveIntoView(last);
     }
   };
 
-  // Scroll active item into view inside the list
   const scrollActiveIntoView = (index: number) => {
     if (!listRef.current) return;
     const items = listRef.current.querySelectorAll('.cmd-item');
@@ -193,10 +391,17 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
     }
   };
 
+  if (!isOpen) return null;
+
+  /* ── Render ────────────────────────────────────────────────── */
+
   return (
-    <div 
+    <div
       className="fixed inset-0 bg-ink/40 z-50 flex items-start justify-center pt-24 px-4 modal-backdrop-animate"
       onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Command palette"
     >
       <div className="bg-card border border-border w-full max-w-md rounded-xl overflow-hidden modal-content-animate flex flex-col max-h-[420px] shadow-float">
         {/* Search header bar */}
@@ -215,50 +420,86 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
             }}
             onKeyDown={handleKeyDown}
             className="w-full pl-11 pr-20 py-3.5 text-xs text-foreground bg-card placeholder-slate-400 focus:outline-none font-medium"
+            role="combobox"
+            aria-expanded={true}
+            aria-controls="command-list"
+            aria-activedescendant={filtered[activeIndex] ? `cmd-${filtered[activeIndex].id}` : undefined}
           />
+
+          {/* Loading Spinner */}
+          {isSearching && (
+            <div className="absolute right-12 flex items-center pointer-events-none">
+              <div className="h-4 w-4 border-2 border-brand-purple border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          )}
+
           <div className="absolute right-4 flex items-center space-x-1.5 pointer-events-none">
-            <span className="text-[9px] font-bold text-muted-foreground bg-secondary border border-border px-1 py-0.5 rounded ">ESC</span>
+            <span className="text-[9px] font-bold text-muted-foreground bg-secondary border border-border px-1 py-0.5 rounded">ESC</span>
           </div>
         </div>
 
         {/* Results list */}
-        <div 
+        <div
           ref={listRef}
+          id="command-list"
+          role="listbox"
           className="flex-1 overflow-y-auto p-2.5 space-y-0.5"
         >
-          {filtered.length > 0 ? (
+          {/* Error state */}
+          {searchError && (
+            <div className="py-4 px-3 text-center">
+              <p className="text-xs text-destructive font-semibold">{searchError}</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Try a different search term.</p>
+            </div>
+          )}
+
+          {/* Results */}
+          {!searchError && filtered.length > 0 ? (
             filtered.map((item, idx) => {
               const Icon = item.icon;
               const isActive = idx === activeIndex;
               const showHeader = idx === 0 || filtered[idx - 1].category !== item.category;
-              
+
               return (
-                <div key={item.id}>
+                <div key={item.id} role="option" aria-selected={isActive} id={`cmd-${item.id}`}>
                   {showHeader && (
-                    <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest px-3 py-1.5 select-none mt-2 first:mt-0">{item.category}</p>
+                    <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest px-3 py-1.5 select-none mt-2 first:mt-0">
+                      {item.category}
+                    </p>
                   )}
                   <button
-                    onClick={item.action}
+                    onClick={() => executeCommand(item)}
                     onMouseEnter={() => handleItemHover(idx)}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition-all duration-150 cmd-item ${
-                      isActive 
-                        ? 'bg-brand-blue/[0.08] text-brand-blue border-l-3 border-brand-blue pl-2' 
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition duration-150 cmd-item ${
+                      isActive
+                        ? 'bg-brand-blue/[0.08] text-brand-blue border-l-3 border-brand-blue pl-2'
                         : 'text-muted-foreground/75 hover:bg-secondary hover:text-muted-foreground border-l-3 border-transparent'
                     }`}
+                    role="option"
+                    aria-selected={isActive}
                   >
                     <div className="flex items-center space-x-3 min-w-0">
-                      <div className={`p-1.5 rounded-md ${
-                        isActive ? 'bg-brand-blue/15 text-brand-blue' : 'bg-secondary/80 text-slate-550'
-                      }`}>
+                      <div
+                        className={`p-1.5 rounded-md ${
+                          isActive ? 'bg-brand-blue/15 text-brand-blue' : 'bg-secondary/80 text-slate-550'
+                        }`}
+                      >
                         <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold truncate leading-tight">{item.title}</p>
-                        <p className="text-[10px] text-muted-foreground font-semibold truncate mt-0.5 leading-none">{item.description}</p>
+                        <p className="text-[10px] text-muted-foreground font-semibold truncate mt-0.5 leading-none">
+                          {item.description}
+                        </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center space-x-2 shrink-0">
+                      {item.shortcut && (
+                        <span className="text-[9px] font-bold text-muted-foreground/50 bg-secondary border border-border px-1.5 py-0.5 rounded hidden sm:inline">
+                          {item.shortcut}
+                        </span>
+                      )}
                       {isActive && (
                         <CornerDownLeft className="h-3.5 w-3.5 text-brand-blue animate-pulse shrink-0" strokeWidth={2.25} />
                       )}
@@ -268,19 +509,32 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
               );
             })
           ) : (
-            <div className="py-8 text-center text-xs text-muted-foreground font-semibold">
-              No results found matching "{query}"
-            </div>
+            !searchError && (
+              <div className="py-8 text-center text-xs text-muted-foreground font-semibold">
+                {query.trim() ? (
+                  <>No results found matching &ldquo;{query}&rdquo;</>
+                ) : (
+                  'Type to search commands and records...'
+                )}
+              </div>
+            )
           )}
         </div>
 
         {/* Footer info bar */}
         <div className="px-4 py-2 border-t border-border bg-secondary flex items-center justify-between text-[9px] text-muted-foreground font-bold shrink-0">
           <div className="flex space-x-3">
-            <span className="flex items-center gap-1"><kbd className="bg-card border border-border px-1 py-0.5 rounded ">↑↓</kbd> Navigate</span>
-            <span className="flex items-center gap-1"><kbd className="bg-card border border-border px-1 py-0.5 rounded ">↵</kbd> Select</span>
+            <span className="flex items-center gap-1">
+              <kbd className="bg-card border border-border px-1 py-0.5 rounded">↑↓</kbd> Navigate
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="bg-card border border-border px-1 py-0.5 rounded">↵</kbd> Select
+            </span>
+            <span className="flex items-center gap-1">
+              <kbd className="bg-card border border-border px-1 py-0.5 rounded">⌘K</kbd> Open
+            </span>
           </div>
-          <span>Pulse CRM Commands</span>
+          <span>Pulse CRM</span>
         </div>
       </div>
     </div>

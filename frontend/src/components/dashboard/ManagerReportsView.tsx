@@ -1,0 +1,651 @@
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import { Loader2, TrendingUp, TrendingDown, Users, BarChart3, Activity, Zap, AlertTriangle, ChevronDown, MoveUpRight, MoveDownRight } from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend,
+} from 'recharts';
+import {
+  getSalesPerformanceReport,
+  getPipelineAnalyticsReport,
+  getTeamPerformanceReport,
+  getActivityAnalyticsReport,
+  getLeadAnalyticsReport,
+  getDealAnalyticsReport,
+  type SalesPerformanceReport,
+  type PipelineAnalyticsReport,
+  type TeamPerformanceReport,
+  type ActivityAnalyticsReport,
+  type LeadAnalyticsReport,
+  type DealAnalyticsReport,
+} from '@/utils/api';
+import { cn } from '@/utils/cn';
+
+const COLORS = ['var(--lime)', 'var(--brand-soft)', 'var(--brand)', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981'];
+
+function fmt(n: number) {
+  if (n >= 1e7) return `${(n / 1e7).toFixed(1)}Cr`;
+  if (n >= 1e5) return `${(n / 1e5).toFixed(1)}L`;
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
+  return n.toLocaleString('en-IN');
+}
+
+function fmtCurrency(n: number) {
+  return n.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+}
+
+function fmtPct(n: number) { return `${Number(n || 0).toFixed(1)}%`; }
+
+function Delta({ value, negative }: { value: string; negative?: boolean }) {
+  const Icon = negative ? MoveDownRight : MoveUpRight;
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold',
+        negative ? 'bg-rose-soft text-rose-foreground' : 'bg-mint text-mint-foreground',
+      )}
+    >
+      <Icon className="size-3" />
+      {value}
+    </span>
+  );
+}
+
+function formatDelta(current: number, previous: number): string {
+  if (previous === 0) return current > 0 ? '+100%' : '0%';
+  const pct = ((current - previous) / previous) * 100;
+  const sign = pct > 0 ? '+' : '';
+  return `${sign}${pct.toFixed(1)}%`;
+}
+
+export default function ManagerReportsView() {
+  const [period, setPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('quarter');
+  const [loading, setLoading] = useState(true);
+  const [salesPerf, setSalesPerf] = useState<SalesPerformanceReport | null>(null);
+  const [pipeline, setPipeline] = useState<PipelineAnalyticsReport | null>(null);
+  const [teamPerf, setTeamPerf] = useState<TeamPerformanceReport | null>(null);
+  const [activity, setActivity] = useState<ActivityAnalyticsReport | null>(null);
+  const [leads, setLeads] = useState<LeadAnalyticsReport | null>(null);
+  const [deals, setDeals] = useState<DealAnalyticsReport | null>(null);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [sp, pp, tp, al, ld, dl] = await Promise.all([
+        getSalesPerformanceReport({ period }),
+        getPipelineAnalyticsReport({ period }),
+        getTeamPerformanceReport({ period }),
+        getActivityAnalyticsReport({ period }),
+        getLeadAnalyticsReport({ period }),
+        getDealAnalyticsReport({ period }),
+      ]);
+      setSalesPerf(sp);
+      setPipeline(pp);
+      setTeamPerf(tp);
+      setActivity(al);
+      setLeads(ld);
+      setDeals(dl);
+    } catch (e) {
+      console.error('Failed to load reports', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [period]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      </div>
+    );
+  }
+
+  const totalRevenue = salesPerf?.total_revenue || 0;
+  const pipelineValue = pipeline?.pipeline_by_stage?.reduce((s, p) => s + Number(p.total_value || 0), 0) || 0;
+  const totalLeads = leads?.total_leads || 0;
+  const activityTotal = activity?.activity_summary?.total || 0;
+  const teamWinRate = salesPerf?.team_win_rate || 0;
+  const pipelineDeals = pipeline?.pipeline_by_stage?.reduce((s, p) => s + p.deal_count, 0) || 0;
+  const leadConversion = leads?.overall_conversion_rate || 0;
+  const completedTasks = activity?.completed_vs_overdue?.completed || 0;
+
+  return (
+    <div className="w-full">
+      {/* Header */}
+      <div className="flex flex-wrap items-end gap-3 mb-6">
+        <div>
+          <h1 className="text-[30px] font-extrabold tracking-tight">Reports</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manager performance overview backed by live data.
+          </p>
+        </div>
+        <div className="ml-auto flex items-center gap-3">
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as any)}
+            className="rounded-full bg-card px-4 py-2.5 text-[13px] font-semibold shadow-[0_1px_3px_rgba(20,20,40,0.08)] border-0"
+          >
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="year">This Year</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        {/* ── KPI Cards ────────────────────────────────────────────── */}
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {/* Total Revenue — highlighted */}
+          <div className="card-surface overflow-hidden bg-brand text-primary-foreground relative p-6 pt-8">
+            <span className="shimmer" />
+            <span className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10" />
+            <span className="pointer-events-none absolute -bottom-24 -left-8 size-56 rounded-full bg-white/5" />
+            <p className="relative text-[15px] font-semibold text-primary-foreground/90">Total Revenue</p>
+            <div className="relative mt-8 flex items-center gap-2">
+              <p className="text-[26px] font-extrabold tracking-tight tabular-nums">{fmtCurrency(totalRevenue)}</p>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[11px] font-semibold">
+                {Number(teamWinRate) >= 0 ? <MoveUpRight className="size-3" /> : <MoveDownRight className="size-3" />}
+                {fmtPct(teamWinRate)} win rate
+              </span>
+            </div>
+            <p className="relative mt-3 text-xs text-primary-foreground/75">
+              {pipelineDeals} deals in pipeline
+            </p>
+          </div>
+
+          {/* Pipeline Value */}
+          <div className="card-surface p-6 pt-8">
+            <p className="text-[15px] font-semibold">Pipeline Value</p>
+            <div className="mt-8 flex items-center gap-2">
+              <p className="text-[26px] font-extrabold tracking-tight tabular-nums">{fmtCurrency(pipelineValue)}</p>
+              <Delta value={`${pipelineDeals} deals`} />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Across all stages
+            </p>
+          </div>
+
+          {/* Total Leads */}
+          <div className="card-surface p-6 pt-8">
+            <p className="text-[15px] font-semibold">Total Leads</p>
+            <div className="mt-8 flex items-center gap-2">
+              <p className="text-[26px] font-extrabold tracking-tight tabular-nums">{totalLeads.toLocaleString('en-IN')}</p>
+              <Delta value={`${fmtPct(leadConversion)} conversion`} />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Overall conversion rate
+            </p>
+          </div>
+
+          {/* Activity Score */}
+          <div className="card-surface p-6 pt-8">
+            <p className="text-[15px] font-semibold">Activity Score</p>
+            <div className="mt-8 flex items-center gap-2">
+              <p className="text-[26px] font-extrabold tracking-tight tabular-nums">{activityTotal}</p>
+              <Delta value={`${completedTasks} completed`} />
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">
+              Activities logged
+            </p>
+          </div>
+        </div>
+
+        {/* ── Sales Performance ─────────────────────────────────────── */}
+        <section className="card-surface p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
+              <TrendingUp className="size-4.5 text-brand-purple" />
+            </div>
+            <h2 className="text-[19px] font-bold tracking-tight">Sales Performance</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            {/* Revenue by Rep */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Revenue by Rep</h3>
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={salesPerf?.revenue_by_rep?.map(r => ({ name: r.rep_name.split(' ')[0], revenue: Number(r.revenue) })) || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => fmt(v)} />
+                    <Tooltip formatter={(v: any) => fmtCurrency(Number(v))} />
+                    <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                      {(salesPerf?.revenue_by_rep || []).map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Win Rate by Rep */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Win Rate by Rep</h3>
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={salesPerf?.win_rate_by_rep?.map(r => ({ name: r.rep_name.split(' ')[0], winRate: Number(r.win_rate) })) || []} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis type="number" tick={{ fontSize: 11 }} unit="%" />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={80} />
+                    <Tooltip formatter={(v: any) => `${Number(v).toFixed(1)}%`} />
+                    <Bar dataKey="winRate" radius={[0, 6, 6, 0]}>
+                      {(salesPerf?.win_rate_by_rep || []).map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Quota Achievement */}
+          <div className="mt-5">
+            <h3 className="text-sm font-bold mb-3">Quota Achievement</h3>
+            <div className="space-y-3">
+              {salesPerf?.quota_attainment?.map(q => (
+                <div key={q.rep_id} className="flex items-center gap-3">
+                  <span className="w-[120px] text-sm font-semibold truncate">{q.rep_name}</span>
+                  <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden relative">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(Number(q.achievement_pct) || 0, 100)}%`,
+                        background: Number(q.achievement_pct) >= 100 ? '#10b981' : Number(q.achievement_pct) >= 70 ? '#f59e0b' : '#ef4444',
+                      }}
+                    />
+                    <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold">
+                      {fmtPct(q.achievement_pct)} — {fmtCurrency(Number(q.actual))} / {fmtCurrency(Number(q.target))}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {(!salesPerf?.quota_attainment || salesPerf.quota_attainment.length === 0) && (
+                <p className="text-sm text-muted-foreground">No quota data available</p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Pipeline Analytics ────────────────────────────────────── */}
+        <section className="card-surface p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
+              <BarChart3 className="size-4.5 text-brand-purple" />
+            </div>
+            <h2 className="text-[19px] font-bold tracking-tight">Pipeline Analytics</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            {/* Pipeline by Stage */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Pipeline by Stage</h3>
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={pipeline?.pipeline_by_stage?.map(s => ({ name: s.stage, deals: s.deal_count, value: Number(s.total_value) })) || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Value" radius={[6, 6, 0, 0]}>
+                      {(pipeline?.pipeline_by_stage || []).map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Pipeline Aging */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Pipeline Aging</h3>
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={pipeline?.pipeline_aging?.map(a => ({ name: a.bucket, count: a.count, value: Number(a.value) })) || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="count" name="Deals" radius={[6, 6, 0, 0]} fill="var(--brand)">
+                      {(pipeline?.pipeline_aging || []).map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Stage Conversion */}
+          {pipeline?.stage_conversion && pipeline.stage_conversion.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-bold mb-3">Stage Conversion</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted text-xs text-muted-foreground">
+                      <th className="rounded-l-xl px-4 py-3 text-left font-medium">From</th>
+                      <th className="px-4 py-3 text-left font-medium">To</th>
+                      <th className="px-4 py-3 text-center font-medium">Count</th>
+                      <th className="rounded-r-xl px-4 py-3 text-right font-medium">Conversion %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pipeline.stage_conversion.slice(0, 6).map((c, i) => (
+                      <tr key={i} className="border-b border-border last:border-0">
+                        <td className="px-4 py-2.5">{c.from_stage}</td>
+                        <td className="px-4 py-2.5">{c.to_stage}</td>
+                        <td className="px-4 py-2.5 text-center font-semibold">{c.count}</td>
+                        <td className="px-4 py-2.5 text-right font-semibold">{fmtPct(Number(c.conversion_pct))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── Team Performance ──────────────────────────────────────── */}
+        <section className="card-surface p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
+              <Users className="size-4.5 text-brand-purple" />
+            </div>
+            <h2 className="text-[19px] font-bold tracking-tight">Team Performance</h2>
+          </div>
+
+          {/* Leaderboard */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted text-xs text-muted-foreground">
+                  <th className="rounded-l-xl px-4 py-3 text-left font-medium">Rank</th>
+                  <th className="px-4 py-3 text-left font-medium">Rep</th>
+                  <th className="px-4 py-3 text-right font-medium">Revenue</th>
+                  <th className="px-4 py-3 text-center font-medium">Won</th>
+                  <th className="px-4 py-3 text-center font-medium">Win Rate</th>
+                  <th className="rounded-r-xl px-4 py-3 text-right font-medium">Quota %</th>
+                </tr>
+              </thead>
+              <tbody>
+                {teamPerf?.leaderboard?.map(entry => (
+                  <tr key={entry.rep_id} className="border-b border-border last:border-0">
+                    <td className="px-4 py-3">
+                      <span className="grid size-7 place-items-center rounded-full bg-brand-soft/20 text-[11px] font-bold text-brand-purple">
+                        {entry.rank}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-semibold">{entry.rep_name}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{fmtCurrency(Number(entry.revenue))}</td>
+                    <td className="px-4 py-3 text-center">{entry.deals_won}</td>
+                    <td className="px-4 py-3 text-center">{fmtPct(Number(entry.win_rate))}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${Number(entry.quota_pct) >= 100 ? 'bg-mint text-mint-foreground' : Number(entry.quota_pct) >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-rose-soft text-rose-foreground'}`}>
+                        {fmtPct(Number(entry.quota_pct))}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {(!teamPerf?.leaderboard || teamPerf.leaderboard.length === 0) && (
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No team data available</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Performance vs Prior */}
+          {teamPerf?.performance_vs_prior && teamPerf.performance_vs_prior.length > 0 && (
+            <div className="mt-5 grid grid-cols-2 gap-4">
+              {teamPerf.performance_vs_prior.map(p => (
+                <div key={p.metric} className="rounded-xl bg-muted/50 p-4">
+                  <p className="text-xs text-muted-foreground">{p.metric}</p>
+                  <p className="mt-1 text-[22px] font-extrabold">{fmt(Number(p.current))}</p>
+                  <Delta value={`${fmtPct(Number(p.change_pct))} vs prior`} negative={Number(p.change_pct) < 0} />
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ── Activity Analytics ────────────────────────────────────── */}
+        <section className="card-surface p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
+              <Activity className="size-4.5 text-brand-purple" />
+            </div>
+            <h2 className="text-[19px] font-bold tracking-tight">Activity Analytics</h2>
+          </div>
+
+          <div className="grid grid-cols-5 gap-4 mb-5">
+            {[
+              { label: 'Calls', value: activity?.activity_summary?.calls || 0 },
+              { label: 'Emails', value: activity?.activity_summary?.emails || 0 },
+              { label: 'Meetings', value: activity?.activity_summary?.meetings || 0 },
+              { label: 'Tasks', value: activity?.activity_summary?.tasks || 0 },
+              { label: 'Notes', value: activity?.activity_summary?.notes || 0 },
+            ].map(a => (
+              <div key={a.label} className="rounded-xl bg-muted/50 p-3 text-center">
+                <p className="text-[22px] font-extrabold">{a.value}</p>
+                <p className="text-xs text-muted-foreground">{a.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Activity by Rep */}
+          <div className="h-[260px] mb-5">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={activity?.activity_by_rep?.slice(0, 8).map(r => ({
+                name: r.rep_name.split(' ')[0], calls: r.calls, emails: r.emails, meetings: r.meetings, tasks: r.tasks,
+              })) || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="calls" fill="#10b981" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="emails" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="meetings" fill="#f59e0b" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="tasks" fill="#06b6d4" radius={[2, 2, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Completed vs Overdue */}
+          {activity?.completed_vs_overdue && (
+            <div className="grid grid-cols-3 gap-4">
+              <div className="rounded-xl bg-mint p-4 text-center">
+                <p className="text-[22px] font-extrabold text-mint-foreground">{activity.completed_vs_overdue.completed}</p>
+                <p className="text-xs text-mint-foreground/80">Completed</p>
+              </div>
+              <div className="rounded-xl bg-rose-soft p-4 text-center">
+                <p className="text-[22px] font-extrabold text-rose-foreground">{activity.completed_vs_overdue.overdue}</p>
+                <p className="text-xs text-rose-foreground/80">Overdue</p>
+              </div>
+              <div className="rounded-xl bg-muted/50 p-4 text-center">
+                <p className="text-[22px] font-extrabold">{activity.completed_vs_overdue.pending}</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── Lead Analytics ────────────────────────────────────────── */}
+        <section className="card-surface p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
+              <Zap className="size-4.5 text-brand-purple" />
+            </div>
+            <h2 className="text-[19px] font-bold tracking-tight">Lead Analytics</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            {/* Source Performance */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Lead Source Performance</h3>
+              <div className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={leads?.source_performance?.map(s => ({ name: s.source, leads: s.total, converted: s.converted })) || []}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="leads" name="Total Leads" radius={[6, 6, 0, 0]} fill="var(--brand-soft)" />
+                    <Bar dataKey="converted" name="Converted" radius={[6, 6, 0, 0]} fill="var(--lime)" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Conversion Funnel */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Conversion Funnel</h3>
+              <div className="space-y-2">
+                {leads?.conversion_funnel?.map((s, i) => {
+                  const maxCount = Math.max(...(leads.conversion_funnel?.map(f => f.count) || [1]));
+                  const width = maxCount > 0 ? Math.max(20, (s.count / maxCount) * 100) : 20;
+                  return (
+                    <div key={s.stage} className="flex items-center gap-3">
+                      <span className="w-[110px] text-xs font-semibold capitalize">{s.stage.replace('_', ' ')}</span>
+                      <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden relative">
+                        <div
+                          className="h-full rounded-lg"
+                          style={{ width: `${width}%`, background: COLORS[i % COLORS.length] }}
+                        />
+                        <span className="absolute inset-0 flex items-center px-3 text-[11px] font-bold">
+                          {s.count} ({fmtPct(Number(s.percentage))})
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Lead Aging */}
+          {leads?.lead_aging && leads.lead_aging.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-bold mb-3">Lead Aging</h3>
+              <div className="flex gap-3">
+                {leads.lead_aging.map(a => (
+                  <div key={a.bucket} className="flex-1 rounded-xl bg-muted/50 p-3 text-center">
+                    <p className="text-[20px] font-extrabold">{a.count}</p>
+                    <p className="text-xs text-muted-foreground">{a.bucket}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* ── Deal Analytics ────────────────────────────────────────── */}
+        <section className="card-surface p-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
+              <AlertTriangle className="size-4.5 text-brand-purple" />
+            </div>
+            <h2 className="text-[19px] font-bold tracking-tight">Deal Analytics</h2>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+            {/* Deal KPIs */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="rounded-xl bg-muted/50 p-4">
+                <p className="text-xs text-muted-foreground">Won Deals</p>
+                <p className="mt-1 text-[22px] font-extrabold tracking-tight">{deals?.total_won || 0}</p>
+                <Delta value={fmtCurrency(deals?.total_won_value || 0)} />
+              </div>
+              <div className="rounded-xl bg-muted/50 p-4">
+                <p className="text-xs text-muted-foreground">Lost Deals</p>
+                <p className="mt-1 text-[22px] font-extrabold tracking-tight">{deals?.total_lost || 0}</p>
+                <Delta value={fmtCurrency(deals?.total_lost_value || 0)} negative />
+              </div>
+              <div className="rounded-xl bg-muted/50 p-4">
+                <p className="text-xs text-muted-foreground">Avg Deal Size</p>
+                <p className="mt-1 text-[22px] font-extrabold tracking-tight">{fmtCurrency(deals?.avg_deal_size?.current || 0)}</p>
+                <Delta value={`${fmtPct(deals?.avg_deal_size?.change_pct || 0)} change`} negative={Number(deals?.avg_deal_size?.change_pct || 0) < 0} />
+              </div>
+              <div className="rounded-xl bg-muted/50 p-4">
+                <p className="text-xs text-muted-foreground">Closing Soon</p>
+                <p className="mt-1 text-[22px] font-extrabold tracking-tight">{deals?.deals_closing_soon?.length || 0}</p>
+                <Delta value="Next 14 days" />
+              </div>
+            </div>
+
+            {/* Lost Reason Analysis */}
+            <div>
+              <h3 className="text-sm font-bold mb-3">Lost Reason Analysis</h3>
+              {deals?.lost_reason_analysis && deals.lost_reason_analysis.length > 0 ? (
+                <div className="h-[200px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={deals.lost_reason_analysis.map(r => ({ name: r.reason, value: r.count }))}
+                        dataKey="value"
+                        startAngle={210}
+                        endAngle={-30}
+                        innerRadius="55%"
+                        outerRadius="90%"
+                        paddingAngle={3}
+                        cornerRadius={10}
+                        stroke="none"
+                      >
+                        {deals.lost_reason_analysis.map((_, i) => (
+                          <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No lost deal data</p>
+              )}
+            </div>
+          </div>
+
+          {/* At-Risk Deals */}
+          {deals?.at_risk_deals && deals.at_risk_deals.length > 0 && (
+            <div className="mt-5">
+              <h3 className="text-sm font-bold mb-3">At-Risk Deals</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-muted text-xs text-muted-foreground">
+                      <th className="rounded-l-xl px-4 py-3 text-left font-medium">Deal</th>
+                      <th className="px-4 py-3 text-left font-medium">Owner</th>
+                      <th className="px-4 py-3 text-left font-medium">Stage</th>
+                      <th className="px-4 py-3 text-right font-medium">Value</th>
+                      <th className="rounded-r-xl px-4 py-3 text-left font-medium">Risk</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {deals.at_risk_deals.slice(0, 5).map(d => (
+                      <tr key={d.deal_id} className="border-b border-border last:border-0">
+                        <td className="px-4 py-2.5 font-semibold">{d.deal_name}</td>
+                        <td className="px-4 py-2.5">{d.owner_name}</td>
+                        <td className="px-4 py-2.5">{d.stage}</td>
+                        <td className="px-4 py-2.5 text-right font-semibold">{fmtCurrency(Number(d.value))}</td>
+                        <td className="px-4 py-2.5 text-rose-600 text-xs font-semibold">{d.risk_reason}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+}

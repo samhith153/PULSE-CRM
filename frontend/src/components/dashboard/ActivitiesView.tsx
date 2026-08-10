@@ -1,26 +1,33 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Plus, Search, Trash2, Download, ChevronDown, X,
   Calendar, ClipboardList, PhoneCall, Mail, FileText,
   Check, Filter, RefreshCw, ChevronLeft, ChevronRight,
+  Link2, CheckCircle2,
 } from 'lucide-react';
 import {
   getCrmActivities, getCrmActivityOwners, downloadCrmActivitiesExport,
-  createCrmTask, createCrmCall, createCrmMeeting, createCrmNote,
-  bulkDeleteCrmActivities,
+  createCrmTask, createCrmCall, createCrmMeeting, createCrmNote, createCrmEmail,
+  bulkDeleteCrmActivities, deleteCrmTask, deleteCrmCall, deleteCrmNote,
+  getLeads, getContacts, getCompanies, getDeals,
   type CrmActivity, type CrmActivityOwner, type CrmActivitiesListParams,
   type CreateTaskPayload, type CreateCallPayload,
   type CreateMeetingPayload, type CreateNotePayload,
+  type EmailComposeTarget,
 } from '@/utils/api';
 import ActivityDetailView from './ActivityDetailView';
+import CalendarView from './CalendarView';
+import TasksView from './TasksView';
 import { toast } from '@/lib/toast';
+
 
 interface ActivitiesViewProps {
   activityId?: string;
   onTabChange?: (tab: string) => void;
+  onComposeEmail?: (target: Omit<EmailComposeTarget, 'requestId'>) => void;
 }
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -57,7 +64,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
   const [loading, setLoading] = useState(true);
   const [owners, setOwners] = useState<CrmActivityOwner[]>([]);
 
-  const [activeTabType, setActiveTabType] = useState<'timeline'|'task'|'meeting'|'call'|'email'|'note'>('timeline');
+  const [activeTabType, setActiveTabType] = useState<'timeline'|'task'|'meeting'|'call'|'email'|'note'|'calendar'>('timeline');
   const [quickTab, setQuickTab] = useState<'all'|'today'|'upcoming'|'overdue'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -98,6 +105,106 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
 
   useEffect(() => { getCrmActivityOwners().then(setOwners).catch(() => {}); }, []);
 
+  // ── Autocomplete search for entity linking ─────────────────────────────────
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; subtitle?: string }>>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const searchEntities = useCallback(async (query: string, type: string) => {
+    if (!query.trim() || query.length < 2) {
+      setSearchResults([]);
+      setShowDropdown(false);
+      return;
+    }
+    setIsSearching(true);
+    setShowDropdown(true);
+    try {
+      let results: Array<{ id: string; name: string; subtitle?: string }> = [];
+      if (type === 'lead') {
+        const items = await getLeads(1, 10, query);
+        results = items.map((l: any) => ({
+          id: l.id,
+          name: l.title || l.company_name || 'Untitled Lead',
+          subtitle: l.company_name || l.status || '',
+        }));
+      } else if (type === 'contact') {
+        const items = await getContacts(1, 10, query);
+        results = items.map((c: any) => ({
+          id: c.id,
+          name: c.name || `${c.first_name} ${c.last_name}`,
+          subtitle: c.company || c.email || '',
+        }));
+      } else if (type === 'company') {
+        const items = await getCompanies(1, 10, query);
+        results = items.map((c: any) => ({
+          id: c.id,
+          name: c.name || 'Untitled Company',
+          subtitle: c.industry || '',
+        }));
+      } else if (type === 'deal') {
+        const items = await getDeals(1, 10, query);
+        results = items.map((d: any) => ({
+          id: d.id,
+          name: d.title || d.name || 'Untitled Deal',
+          subtitle: d.company || d.stage || '',
+        }));
+      }
+      setSearchResults(results);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  const handleSearchInput = useCallback((value: string) => {
+    setRelatedName(value);
+    if (relatedType === 'lead') setRelatedLeadId('');
+    else if (relatedType === 'contact') setRelatedContactId('');
+    else if (relatedType === 'company') setRelatedCompanyId('');
+    else setRelatedDealId('');
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      searchEntities(value, relatedType);
+    }, 300);
+  }, [relatedType, searchEntities]);
+
+  useEffect(() => {
+    setRelatedName('');
+    setRelatedLeadId(''); setRelatedContactId(''); setRelatedCompanyId(''); setRelatedDealId('');
+    setSearchResults([]);
+    setShowDropdown(false);
+  }, [relatedType]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Listen for command palette "Create Meeting" event
+  useEffect(() => {
+    const handleOpenCreateMeeting = () => {
+      setActiveFormType('meeting');
+    };
+    window.addEventListener('pulse-open-create-meeting-modal', handleOpenCreateMeeting);
+    return () => window.removeEventListener('pulse-open-create-meeting-modal', handleOpenCreateMeeting);
+  }, []);
+
+  const relatedIds = () => ({
+    related_entity_type: relatedName ? relatedType : undefined,
+    related_lead_id:    relatedType === 'lead'    && relatedLeadId    ? relatedLeadId    : undefined,
+    related_contact_id: relatedType === 'contact' && relatedContactId ? relatedContactId : undefined,
+    related_company_id: relatedType === 'company' && relatedCompanyId ? relatedCompanyId : undefined,
+    related_deal_id:    relatedType === 'deal'    && relatedDealId    ? relatedDealId    : undefined,
+  });
+
   useEffect(() => {
     const tab = searchParams.get('tab'); const type = searchParams.get('type');
     if (tab === 'today-tasks')       { setQuickTab('today');    setActiveTabType('task'); }
@@ -112,7 +219,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     setLoading(true);
     try {
       const params: CrmActivitiesListParams = { page: currentPage, page_size: pageSize, sort_order: 'desc' };
-      if (activeTabType !== 'timeline') params.view = activeTabType;
+      if (activeTabType !== 'timeline' && activeTabType !== 'calendar') params.view = activeTabType;
       if (searchQuery)   params.search   = searchQuery;
       if (statusFilter   !== 'All') params.status   = statusFilter.toLowerCase();
       if (priorityFilter !== 'All') params.priority = priorityFilter.toLowerCase();
@@ -126,8 +233,42 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     finally { setLoading(false); }
   }, [currentPage, activeTabType, searchQuery, statusFilter, priorityFilter, ownerFilter, quickTab, owners]);
 
-  useEffect(() => { fetchActivities(); }, [fetchActivities]);
-  useEffect(() => { setCurrentPage(1); }, [activeTabType, searchQuery, statusFilter, priorityFilter, ownerFilter, quickTab]);
+  useEffect(() => {
+  fetchActivities();
+}, [fetchActivities]);
+
+/*
+ * When the Workflow page automatically creates an
+ * AI-recommended CRM task, refresh Activities immediately.
+ */
+useEffect(() => {
+  const handleWorkflowActivityCreated = () => {
+    void fetchActivities();
+  };
+
+  window.addEventListener(
+    'pulse-crm-activity-created',
+    handleWorkflowActivityCreated
+  );
+
+  return () => {
+    window.removeEventListener(
+      'pulse-crm-activity-created',
+      handleWorkflowActivityCreated
+    );
+  };
+}, [fetchActivities]);
+
+useEffect(() => {
+  setCurrentPage(1);
+}, [
+  activeTabType,
+  searchQuery,
+  statusFilter,
+  priorityFilter,
+  ownerFilter,
+  quickTab,
+]);
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) =>
     setSelectedIds(e.target.checked ? new Set(activities.map(a => a.id)) : new Set());
@@ -143,10 +284,23 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     } catch { toast.error('Bulk delete failed.'); }
   };
 
+  const handleRowDelete = async (e: React.MouseEvent, a: CrmActivity) => {
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${a.subject}"?`)) return;
+    try {
+      if (a.activity_type === 'task') await deleteCrmTask(a.id);
+      else if (a.activity_type === 'call') await deleteCrmCall(a.id);
+      else if (a.activity_type === 'note') await deleteCrmNote(a.id);
+      else { toast.error('Deletion not supported for this type.'); return; }
+      toast.success('Activity deleted.');
+      fetchActivities();
+    } catch { toast.error('Delete failed.'); }
+  };
+
   const handleExport = async () => {
     try {
       const params: any = {};
-      if (activeTabType !== 'timeline') params.view = activeTabType;
+      if (activeTabType !== 'timeline' && activeTabType !== 'calendar') params.view = activeTabType;
       if (searchQuery)   params.search   = searchQuery;
       if (statusFilter   !== 'All') params.status   = statusFilter.toLowerCase();
       if (priorityFilter !== 'All') params.priority = priorityFilter.toLowerCase();
@@ -163,14 +317,6 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     setNoteBody(''); setRelatedName(''); setRelatedLeadId(''); setRelatedContactId(''); setRelatedCompanyId(''); setRelatedDealId('');
   };
 
-  const relatedIds = () => ({
-    related_entity_type: relatedName ? relatedType : undefined,
-    related_lead_id:    relatedType === 'lead'    && relatedLeadId    ? relatedLeadId    : undefined,
-    related_contact_id: relatedType === 'contact' && relatedContactId ? relatedContactId : undefined,
-    related_company_id: relatedType === 'company' && relatedCompanyId ? relatedCompanyId : undefined,
-    related_deal_id:    relatedType === 'deal'    && relatedDealId    ? relatedDealId    : undefined,
-  });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setSubmitting(true);
     try {
@@ -184,7 +330,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
       } else if (activeFormType === 'note') {
         await createCrmNote({ title: formSubject || `Note: ${noteBody.slice(0, 40)}`, body: noteBody, ...relatedIds() });
       } else if (activeFormType === 'email') {
-        toast.info('Emails sync automatically via Gmail integration.'); setActiveFormType(null); resetForm(); setSubmitting(false); return;
+        await createCrmEmail({ subject: formSubject, body: noteBody, direction: callType || 'outbound', recipient_email: callContact, recipient_name: relatedName, priority: formPriority, status: 'completed', ...relatedIds() });
       }
       toast.success('Activity saved.'); setActiveFormType(null); resetForm(); fetchActivities();
     } catch (err: any) { toast.error(err?.message || 'Failed to save activity.'); }
@@ -243,6 +389,22 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
         </div>
       </div>
 
+      {/* ─── Task Kanban Board (Separated and on Top) ─── */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+            <ClipboardList className="h-4 w-4 text-brand-purple" />
+            <span>Workspace Tasks Board</span>
+          </h3>
+        </div>
+        <TasksView isEmbedded={true} />
+      </div>
+
+      <div className="border-t border-border/60 my-2" />
+
+      {/* ─── CRM Activity Logs ─── */}
+      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Activity History Logs</h3>
+
       {/* Filters */}
       <div className="bg-card border border-border rounded-xl p-4 sm:px-5 py-4 shadow-sm space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -256,9 +418,9 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
             <span className="text-[10px] text-muted-foreground/75 font-bold uppercase">View:</span>
             <select value={activeTabType} onChange={e => { setActiveTabType(e.target.value as any); setCurrentPage(1); }}
               className="bg-secondary/30 border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none cursor-pointer text-xs font-bold">
-              <option value="timeline">Timeline</option><option value="task">Tasks</option>
+              <option value="timeline">Timeline Logs</option>
               <option value="meeting">Meetings</option><option value="call">Calls</option>
-              <option value="email">Emails</option><option value="note">Notes</option>
+              <option value="email">Emails</option><option value="note">Notes</option><option value="calendar">Calendar</option>
             </select>
           </div>
         </div>
@@ -297,6 +459,9 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
       </div>
 
       {/* Table */}
+      {activeTabType === 'calendar' ? (
+        <CalendarView />
+      ) : (
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold">
@@ -322,11 +487,12 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
                   <th className="py-3 px-3 text-center w-28">Priority</th>
                   <th className="py-3 px-3 text-right w-36">Due Date</th>
                   <th className="py-3 px-3 text-left w-[20%]">Related Record</th>
+                  <th className="py-3 px-3 w-10"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 text-xs font-semibold text-foreground">
                 {activities.map(a => (
-                  <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="hover:bg-secondary/15 transition-all cursor-pointer">
+                  <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="group hover:bg-secondary/15 transition-all cursor-pointer">
                     {isSelectMode && <td className="py-3 px-3 text-center" onClick={e=>e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(a.id)} onChange={()=>handleSelectRow(a.id)} className="cursor-pointer size-3.5" /></td>}
                     <td className="py-3 px-3 text-left whitespace-normal break-words">
                       <span className="font-bold text-foreground hover:text-brand-blue transition-colors block">{a.subject}</span>
@@ -347,6 +513,13 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
                         ? <span className="text-brand-blue hover:underline cursor-pointer">{a.related_record_name}</span>
                         : <span className="text-muted-foreground/50">—</span>}
                     </td>
+                    <td className="py-3 px-3 text-center" onClick={e => e.stopPropagation()}>
+                      <button onClick={e => handleRowDelete(e, a)}
+                        className="p-1.5 rounded-md text-muted-foreground/40 hover:text-[#E2604F] hover:bg-[#E2604F]/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                        title="Delete activity">
+                        <Trash2 size={12} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -354,6 +527,7 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
           </div>
         )}
       </div>
+      )}
 
       {/* Pagination */}
       <div className="bg-secondary/15 border border-border rounded-[10px] px-4 py-3 flex items-center justify-between text-xs select-none">
@@ -393,27 +567,91 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
             <form onSubmit={handleSubmit} className="space-y-3 overflow-y-auto pr-1 flex-1">
               {/* Related record */}
               <div className="bg-secondary/20 border border-border/85 rounded-xl p-3 space-y-3">
-                <span className="text-[8px] font-black uppercase text-brand-purple tracking-widest block">Linked CRM Context</span>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {(['lead','contact','company','deal'] as const).map(rt => (
-                    <button type="button" key={rt} onClick={()=>setRelatedType(rt)}
-                      className={`py-1.5 rounded-lg text-[9px] font-bold uppercase border cursor-pointer ${relatedType===rt?'bg-brand-purple/10 border-brand-purple/20 text-brand-purple':'bg-card border-border text-muted-foreground'}`}>
-                      {rt.charAt(0).toUpperCase()+rt.slice(1)}
+                <span className="text-[8px] font-black uppercase text-brand-purple tracking-widest block leading-none font-['Space_Grotesk']">Linked CRM Context</span>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'lead', label: 'Lead' },
+                    { id: 'contact', label: 'Contact' },
+                    { id: 'company', label: 'Company' },
+                    { id: 'deal', label: 'Deal' }
+                  ].map(rt => (
+                    <button
+                      type="button"
+                      key={rt.id}
+                      onClick={() => setRelatedType(rt.id as any)}
+                      className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all border cursor-pointer ${
+                        relatedType === rt.id
+                          ? 'bg-brand-purple/10 border-brand-purple/20 text-brand-purple font-extrabold shadow-sm'
+                          : 'bg-card border-border text-muted-foreground'
+                      }`}
+                    >
+                      {rt.label}
                     </button>
                   ))}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[8px] font-extrabold text-muted-foreground/80 uppercase">Record Name</label>
-                    <input type="text" placeholder="e.g. Acme Corp" value={relatedName} onChange={e=>setRelatedName(e.target.value)} className="mt-1 w-full bg-card border border-border rounded-lg px-2.5 py-1 text-xs focus:outline-none" />
+
+                <div className="relative" ref={dropdownRef}>
+                  <label className="block text-[8px] font-extrabold text-muted-foreground/80 uppercase">
+                    Search {relatedType.charAt(0).toUpperCase() + relatedType.slice(1)} {activeFormType !== 'email' && activeFormType !== 'note' && <span className="text-rose-500">*</span>}
+                  </label>
+                  <div className="relative mt-1">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                    <input
+                      type="text"
+                      placeholder={`Search ${relatedType}s by name...`}
+                      value={relatedName}
+                      onChange={(e) => handleSearchInput(e.target.value)}
+                      onFocus={() => relatedName.length >= 2 && setShowDropdown(true)}
+                      className="w-full bg-card border border-border rounded-lg pl-7 pr-8 py-1.5 text-xs text-foreground focus:outline-none"
+                    />
+                    {relatedName && (
+                      <button
+                        type="button"
+                        onClick={() => { setRelatedName(''); setRelatedLeadId(''); setRelatedContactId(''); setRelatedCompanyId(''); setRelatedDealId(''); setSearchResults([]); setShowDropdown(false); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-[8px] font-extrabold text-muted-foreground/80 uppercase">Record ID (optional)</label>
-                    <input type="text" placeholder="UUID"
-                      value={relatedType==='lead'?relatedLeadId:relatedType==='contact'?relatedContactId:relatedType==='company'?relatedCompanyId:relatedDealId}
-                      onChange={e=>{if(relatedType==='lead')setRelatedLeadId(e.target.value);else if(relatedType==='contact')setRelatedContactId(e.target.value);else if(relatedType==='company')setRelatedCompanyId(e.target.value);else setRelatedDealId(e.target.value);}}
-                      className="mt-1 w-full bg-card border border-border rounded-lg px-2.5 py-1 text-xs focus:outline-none" />
-                  </div>
+
+                  {showDropdown && (
+                    <div className="absolute z-50 mt-1 w-full bg-card border border-border rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                      {isSearching ? (
+                        <div className="px-3 py-2 text-[10px] text-muted-foreground">Searching...</div>
+                      ) : searchResults.length === 0 ? (
+                        <div className="px-3 py-2 text-[10px] text-muted-foreground">No results found</div>
+                      ) : (
+                        searchResults.map((item) => (
+                          <button
+                            key={item.id}
+                            type="button"
+                            onClick={() => {
+                              setRelatedName(item.name);
+                              if (relatedType === 'lead') setRelatedLeadId(item.id);
+                              else if (relatedType === 'contact') setRelatedContactId(item.id);
+                              else if (relatedType === 'company') setRelatedCompanyId(item.id);
+                              else setRelatedDealId(item.id);
+                              setShowDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-secondary transition-colors cursor-pointer border-b border-border/50 last:border-0"
+                          >
+                            <div className="text-xs font-semibold text-foreground truncate">{item.name}</div>
+                            {item.subtitle && (
+                              <div className="text-[10px] text-muted-foreground truncate">{item.subtitle}</div>
+                            )}
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
+
+                  {relatedLeadId || relatedContactId || relatedCompanyId || relatedDealId ? (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-brand-purple font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Linked: {relatedName}</span>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 
@@ -450,13 +688,18 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
                 <div><label className="block text-[9px] font-bold text-muted-foreground uppercase">Location / Link</label><input type="text" value={meetingLoc} onChange={e=>setMeetingLoc(e.target.value)} placeholder="https://zoom.us/..." className="mt-1 w-full bg-background border border-border rounded-lg px-2.5 py-1 text-xs focus:outline-none"/></div>
               </>)}
 
-              {activeFormType==='email'&&(
-                <div className="bg-[#E8A33D]/10 border border-[#E8A33D]/20 rounded-xl p-4 text-center">
-                  <Mail className="size-8 text-[#E8A33D] mx-auto mb-2"/>
-                  <p className="text-xs font-bold text-foreground">Email Sync via Gmail</p>
-                  <p className="text-[10px] text-muted-foreground mt-1">Emails sync automatically from your connected Gmail account.</p>
+              {activeFormType==='email'&&(<>
+                <div><label className="block text-[9px] font-bold text-muted-foreground uppercase">Subject *</label><input type="text" required value={formSubject} onChange={e=>setFormSubject(e.target.value)} className="mt-1 w-full bg-background border border-border rounded-lg px-2.5 py-1 text-xs focus:outline-none"/></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><label className="block text-[9px] font-bold text-muted-foreground uppercase">To Email *</label><input type="email" required value={callContact} onChange={e=>setCallContact(e.target.value)} placeholder="recipient@email.com" className="mt-1 w-full bg-background border border-border rounded-lg px-2.5 py-1 text-xs focus:outline-none"/></div>
+                  <div><label className="block text-[9px] font-bold text-muted-foreground uppercase">Direction</label>
+                    <select value={callType} onChange={e=>setCallType(e.target.value)} className="mt-1 w-full bg-background border border-border rounded-lg px-2 py-1 text-xs focus:outline-none">
+                      <option value="outbound">Outbound</option><option value="inbound">Inbound</option>
+                    </select>
+                  </div>
                 </div>
-              )}
+                <div><label className="block text-[9px] font-bold text-muted-foreground uppercase">Body *</label><textarea required value={noteBody} onChange={e=>setNoteBody(e.target.value)} rows={4} placeholder="Email body..." className="mt-1 w-full bg-background border border-border rounded-lg p-2.5 text-xs focus:outline-none"/></div>
+              </>)}
 
               {activeFormType==='note'&&(<>
                 <div><label className="block text-[9px] font-bold text-muted-foreground uppercase">Title</label><input type="text" value={formSubject} onChange={e=>setFormSubject(e.target.value)} placeholder="Optional title..." className="mt-1 w-full bg-background border border-border rounded-lg px-2.5 py-1 text-xs focus:outline-none"/></div>

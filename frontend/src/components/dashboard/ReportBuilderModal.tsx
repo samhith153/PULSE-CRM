@@ -44,7 +44,7 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
           <h3 className="font-bold text-foreground text-sm">Create Custom Report</h3>
           <button 
             onClick={onClose} 
-            className="text-muted-foreground hover:text-muted-foreground p-1 rounded-md hover:bg-slate-150 transition-all duration-150 cursor-pointer"
+            className="text-muted-foreground hover:text-muted-foreground p-1 rounded-md hover:bg-slate-150 transition duration-150 cursor-pointer"
             aria-label="Close modal"
           >
             <X className="h-4.5 w-4.5" strokeWidth={1.75} />
@@ -63,7 +63,7 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
               placeholder="e.g., Sales Performance Q3"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg text-xs text-muted-foreground placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent transition-all duration-200"
+              className="w-full px-3 py-2 border border-border rounded-lg text-xs text-muted-foreground placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent transition duration-200"
             />
           </div>
 
@@ -113,7 +113,7 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
                     key={type}
                     type="button"
                     onClick={() => setChartType(type)}
-                    className={`py-1.5 px-1 text-center rounded-lg text-[10px] font-bold border transition-all duration-150 cursor-pointer ${
+                    className={`py-1.5 px-1 text-center rounded-lg text-[10px] font-bold border transition duration-150 cursor-pointer ${
                       isSelected 
                         ? 'border-brand-accent bg-brand-sidebar-hover/20 text-brand-purple ' 
                         : 'border-border hover:border-border text-muted-foreground/75'
@@ -131,13 +131,13 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground/75 hover:bg-secondary transition-all duration-150 cursor-pointer"
+              className="px-4 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground/75 hover:bg-secondary transition duration-150 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="inline-flex items-center space-x-1 px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  hover: transition-all duration-150 cursor-pointer"
+              className="inline-flex items-center space-x-1 px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  hover: transition duration-150 cursor-pointer"
             >
               <Check className="h-3.5 w-3.5" strokeWidth={2} />
               <span>Generate Report</span>

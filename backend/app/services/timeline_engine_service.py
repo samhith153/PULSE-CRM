@@ -204,6 +204,20 @@ class TimelineEngineService:
         await self.record(org, by, "note", note_id, "note_deleted",
                           f"Note deleted: {title}", payload={"note_id": str(note_id)}, topic="activities")
 
+    # ── EMAIL helpers ─────────────────────────────────────────────────────────
+
+    async def email_sent(self, org: UUID, by: Optional[UUID], email_id: UUID,
+                         subject: str, direction: str, recipient: str) -> None:
+        await self.record(org, by, "crm_email", email_id, "email_sent",
+                          f"Email sent: {subject}",
+                          payload={"direction": direction, "recipient": recipient},
+                          topic="activities")
+
+    async def email_deleted(self, org: UUID, by: Optional[UUID], email_id: UUID, subject: str) -> None:
+        await self.record(org, by, "crm_email", email_id, "email_deleted",
+                          f"Email deleted: {subject}",
+                          payload={"email_id": str(email_id)}, topic="activities")
+
     # ── COMPANY helpers ───────────────────────────────────────────────────────
 
     async def company_created(self, org: UUID, by: Optional[UUID], company_id: UUID,
@@ -215,7 +229,6 @@ class TimelineEngineService:
 
     async def company_updated(self, org: UUID, by: Optional[UUID], company_id: UUID,
                               name: str, changes: dict) -> None:
-        # Emit granular events for important field changes
         if "owner_id" in changes:
             await self.record(org, by, "company", company_id, "company_owner_changed",
                               f"Owner changed for: {name}",

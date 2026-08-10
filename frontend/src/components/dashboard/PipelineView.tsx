@@ -124,6 +124,14 @@ export default function PipelineView({ onLoaded, userRole = 'manager' }: Pipelin
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const [draggedId, setDraggedId] = useState<number | string | null>(null);
+  const [pendingStageChange, setPendingStageChange] = useState<{
+    dealId: number | string;
+    stageId: string;
+    stageName: string;
+  } | null>(null);
+
+  const [closeReason, setCloseReason] = useState('');
+  const [isSavingStage, setIsSavingStage] = useState(false);
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>(() => {
     if (typeof window !== 'undefined') {
@@ -227,8 +235,17 @@ export default function PipelineView({ onLoaded, userRole = 'manager' }: Pipelin
   const weightedForecast = filteredDeals.reduce((acc, d) =>
     acc + (d.value * (stageProbabilities[d.stage] || 0)), 0);
 
-
   // ── Form validation ──────────────────────────────────────────────────────
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!form.title.trim()) errors.title = 'Deal title is required.';
+    if (!form.company.trim()) errors.company = 'Company is required.';
+    if (form.value < 0 || isNaN(form.value)) errors.value = 'Value must be a non-negative number.';
+    if (!form.stage) errors.stage = 'Stage is required.';
+    if (!form.priority) errors.priority = 'Priority is required.';
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
     if (!form.title.trim()) errors.title = 'Deal title is required.';
@@ -241,6 +258,124 @@ export default function PipelineView({ onLoaded, userRole = 'manager' }: Pipelin
   };
 
   // ── Create deal ──────────────────────────────────────────────────────────
+=======
+  const getAISuggestion = (deal: Deal) => {
+    if (deal.stage === 'Proposal' && deal.priority === 'High') {
+      return "Critical Deal: Proposal sent 3 days ago. Schedule a proposal review session immediately.";
+    }
+    if (deal.stage === 'Negotiation') {
+      return "Close Date approaching. Send the contract agreement link to confirm legal alignment.";
+    }
+    if (deal.priority === 'Low' && deal.stage === 'Qualified') {
+      return "Nurture track: Send standard developer sandboxing API resources.";
+    }
+    return "Check in with stakeholders to maintain deal velocity.";
+  };
+
+  const handleDragStart = (id: number | string) => {
+    setDraggedId(id);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const isClosingStage = (stageName: string) => {
+    const stage = stages.find(s => s.name === stageName);
+    const slug = String(stage?.slug || '').toLowerCase();
+
+    return (
+      slug === 'won' ||
+      slug === 'lost' ||
+      stageName.toLowerCase() === 'won' ||
+      stageName.toLowerCase() === 'lost'
+    );
+  };
+
+  const handleDrop = async (stageName: string) => {
+    if (draggedId === null) return;
+
+    const stageId = stageIdByName[stageName];
+    if (!stageId) {
+      setDraggedId(null);
+      return;
+    }
+
+    // Won/Lost requires a close reason from the backend.
+    if (isClosingStage(stageName)) {
+      setPendingStageChange({
+        dealId: draggedId,
+        stageId,
+        stageName,
+      });
+      setCloseReason('');
+      setDraggedId(null);
+      return;
+    }
+
+    // For normal stages, update backend first.
+    try {
+      await updateDealStage(draggedId, stageId);
+
+      setDeals(prev =>
+        prev.map(d =>
+          d.id === draggedId
+            ? { ...d, stage: stageName }
+            : d
+        )
+      );
+    } catch (err: any) {
+      console.error('Failed to update deal stage:', err);
+      toast.error(err?.message || 'Failed to update deal stage.');
+    }
+
+    setDraggedId(null);
+  };
+
+  const confirmStageChange = async () => {
+    if (!pendingStageChange) return;
+
+    const reason = closeReason.trim();
+
+    if (!reason) {
+      toast.error('Please enter a close reason.');
+      return;
+    }
+
+    setIsSavingStage(true);
+
+    try {
+      await updateDealStage(
+        pendingStageChange.dealId,
+        pendingStageChange.stageId,
+        reason
+      );
+
+      setDeals(prev =>
+        prev.map(d =>
+          d.id === pendingStageChange.dealId
+            ? { ...d, stage: pendingStageChange.stageName }
+            : d
+        )
+      );
+
+      toast.success(
+        `Deal moved to ${pendingStageChange.stageName}.`
+      );
+
+      setPendingStageChange(null);
+      setCloseReason('');
+    } catch (err: any) {
+      console.error('Failed to update deal stage:', err);
+      toast.error(
+        err?.message || 'Failed to update deal stage.'
+      );
+    } finally {
+      setIsSavingStage(false);
+    }
+  };
+
+>>>>>>> fa82a6304bd7c421509a99933e7fc24c30b6e36c
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -330,29 +465,6 @@ export default function PipelineView({ onLoaded, userRole = 'manager' }: Pipelin
     }
   };
 
-  // ── Drag & drop ───────────────────────────────────────────────────────────
-  const handleDragStart = (id: number | string) => setDraggedId(id);
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
-  const handleDrop = (stageName: string) => {
-    if (draggedId === null) return;
-    const stageId = stageIdByName[stageName];
-    setDeals(prev => prev.map(d => d.id === draggedId ? { ...d, stage: stageName } : d));
-    if (stageId) updateDealStage(draggedId, stageId).catch(() => {});
-    setDraggedId(null);
-  };
-
-  // ── AI suggestion ─────────────────────────────────────────────────────────
-  const getAISuggestion = (deal: Deal) => {
-    if (deal.stage === 'Proposal' && deal.priority === 'High')
-      return 'Critical Deal: Proposal sent 3 days ago. Schedule a proposal review session immediately.';
-    if (deal.stage === 'Negotiation')
-      return 'Close Date approaching. Send the contract agreement link to confirm legal alignment.';
-    if (deal.priority === 'Low' && deal.stage === 'Qualified')
-      return 'Nurture track: Send standard developer sandboxing API resources.';
-    return 'Check in with stakeholders to maintain deal velocity.';
-  };
-
-
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
@@ -368,12 +480,30 @@ export default function PipelineView({ onLoaded, userRole = 'manager' }: Pipelin
           <div className="flex items-center gap-3">
             {/* View toggle */}
             <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
-              <button type="button" onClick={() => toggleViewMode('kanban')}
-                className={`p-1.5 rounded-md transition cursor-pointer ${viewMode === 'kanban' ? 'bg-card text-brand-purple shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'}`}
-                title="Kanban View"><LayoutGrid size={14} /></button>
-              <button type="button" onClick={() => toggleViewMode('list')}
-                className={`p-1.5 rounded-md transition cursor-pointer ${viewMode === 'list' ? 'bg-card text-brand-purple shadow-sm font-bold' : 'text-muted-foreground hover:text-foreground'}`}
-                title="List Table View"><List size={14} /></button>
+              <button
+                type="button"
+                onClick={() => toggleViewMode('kanban')}
+                className={`p-1.5 rounded-md transition cursor-pointer ${
+                  viewMode === 'kanban'
+                    ? 'bg-card text-brand-purple shadow-sm font-bold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="Kanban View"
+              >
+                <LayoutGrid size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => toggleViewMode('list')}
+                className={`p-1.5 rounded-md transition cursor-pointer ${
+                  viewMode === 'list'
+                    ? 'bg-card text-brand-purple shadow-sm font-bold'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                title="List Table View"
+              >
+                <List size={14} />
+              </button>
             </div>
 
             {selectedIds.size > 0 && (
@@ -525,70 +655,231 @@ export default function PipelineView({ onLoaded, userRole = 'manager' }: Pipelin
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
-                {sortedDeals.length > 0 ? sortedDeals.map(deal => {
-                  const prob = Math.round((stageProbabilities[deal.stage] || 0) * 100);
-                  const isRowSelected = selectedIds.has(deal.id);
-                  return (
-                    <tr key={deal.id} className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}>
-                      <td className="py-3.5 px-4 text-left" onClick={e => e.stopPropagation()}>
-                        <input type="checkbox" checked={isRowSelected} onChange={() => handleToggleSelectRow(deal.id)}
-                          className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5" />
-                      </td>
-                      <td className="py-3.5 px-2 font-bold truncate" title={deal.title}>{deal.title}</td>
-                      <td className="py-3.5 px-2 text-muted-foreground truncate" title={deal.company}>{deal.company}</td>
-                      <td className="py-3.5 px-2 tabular-nums font-semibold">₹{deal.value.toLocaleString('en-IN')}</td>
-                      <td className="py-3.5 px-2">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-brand-purple/10 text-brand-purple border-brand-purple/15 inline-block truncate max-w-full" title={deal.stage}>{deal.stage}</span>
-                      </td>
-                      <td className="py-3.5 px-2 text-center tabular-nums">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
-                          prob >= 70 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15' :
-                          prob >= 40 ? 'bg-amber-500/10 text-amber-500 border-amber-500/15' :
-                          'bg-secondary text-muted-foreground border-border'}`}>{prob}%</span>
-                      </td>
-                      <td className="py-3.5 px-2 text-muted-foreground tabular-nums truncate">{deal.closeDate || '—'}</td>
-                      <td className="py-3.5 px-2">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
-                          deal.priority === 'High' ? 'bg-amber-500/10 text-amber-500 border-amber-500/15' :
-                          deal.priority === 'Medium' ? 'bg-brand-purple/10 text-brand-purple border-brand-purple/15' :
-                          deal.priority === 'Low' ? 'bg-secondary text-muted-foreground border-border' :
-                          'bg-secondary text-muted-foreground border-border'}`}>{deal.priority || '—'}</span>
-                      </td>
-                      <td className="py-3.5 px-2 text-muted-foreground truncate" title={deal.owner}>{deal.owner}</td>
-                      <td className="py-3.5 px-2 text-right pr-4" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-end gap-1.5">
-                          <button onClick={() => { setSelectedDeal(deal); setForm({ title: deal.title, company: deal.company, value: deal.value, stage: deal.stage, priority: deal.priority || 'Medium', owner: deal.owner, closeDate: deal.closeDate }); setFormErrors({}); setIsEditModalOpen(true); }}
-                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"><Edit className="h-3.5 w-3.5" /></button>
-                          <button onClick={() => handleDelete(deal.id)}
-                            className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"><Trash2 className="h-3.5 w-3.5" /></button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                }) : (
-                  <tr><td colSpan={10} className="py-8 text-center text-muted-foreground">No deals found.</td></tr>
+                {sortedDeals.length > 0 ? (
+                  sortedDeals.map((deal) => {
+                    const prob = Math.round((stageProbabilities[deal.stage] || 0) * 100);
+                    const isRowSelected = selectedIds.has(deal.id);
+                    return (
+                      <tr 
+                        key={deal.id}
+                        className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                      >
+                        <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
+                          <input 
+                            type="checkbox" 
+                            checked={isRowSelected}
+                            onChange={() => handleToggleSelectRow(deal.id)}
+                            className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
+                          />
+                        </td>
+                        <td className="py-3.5 px-2 font-bold truncate" title={deal.title}>{deal.title}</td>
+                        <td className="py-3.5 px-2 text-muted-foreground truncate" title={deal.company}>{deal.company}</td>
+                        <td className="py-3.5 px-2 tabular-nums font-semibold">₹{deal.value.toLocaleString('en-IN')}</td>
+                        <td className="py-3.5 px-2">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold border bg-brand-purple/10 text-brand-purple border-brand-purple/15 inline-block truncate max-w-full" title={deal.stage}>
+                            {deal.stage}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-2 text-center tabular-nums">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
+                            prob >= 70 ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15' :
+                            prob >= 40 ? 'bg-amber-500/10 text-amber-500 border-amber-500/15' :
+                            'bg-secondary text-muted-foreground border-border'
+                          }`}>
+                            {prob}%
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-2 text-muted-foreground tabular-nums truncate">{deal.closeDate || '—'}</td>
+                        <td className="py-3.5 px-2">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
+                            deal.priority === 'High' ? 'bg-amber-500/10 text-amber-500 border-amber-500/15' :
+                            deal.priority === 'Low' ? 'bg-secondary text-muted-foreground border-border' :
+                            'bg-brand-purple/10 text-brand-purple border-brand-purple/15'
+                          }`}>
+                            {deal.priority}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-2 text-muted-foreground truncate" title={deal.owner}>{deal.owner}</td>
+                        <td className="py-3.5 px-2 text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex justify-end gap-1.5">
+                            <button 
+                              onClick={() => {
+                                setSelectedDeal(deal);
+                                setForm({ title: deal.title, company: deal.company, value: deal.value, stage: deal.stage, priority: deal.priority, owner: deal.owner, closeDate: deal.closeDate });
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(deal.id)}
+                              className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={10} className="py-8 text-center text-muted-foreground">
+                      No deals found.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
           </div>
         </div>
-      ) : (
-
-
-        /* ── Kanban view ─────────────────────────────────────────────────── */
         <div className="flex space-x-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
-          {stages.map(stage => {
+          {stages.map((stage) => {
             const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
             const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
             return (
               <div key={stage.id}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(stage.name)}
-                className="bg-secondary border border-border rounded-2xl p-3 w-72 shrink-0 flex flex-col h-[550px]">
-                <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
-                  <div>
-                    <h3 className="text-[11px] font-semibold text-foreground uppercase tracking-wider">{stage.name}</h3>
-                    <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 tabular-nums">₹{stageSum.toLocaleString()}</p>
+                className="bg-secondary border border-border rounded-2xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
+              >
+              <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
+                <div>
+                  <h3 className="text-[11px] font-semibold text-foreground uppercase tracking-wider">{stage.name}</h3>
+                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 tabular-nums">₹{stageSum.toLocaleString()}</p>
+                </div>
+                <span className="text-[9px] font-semibold bg-brand-purple/10 text-brand-purple px-1.5 py-0.5 rounded-full tabular-nums">
+                  {stageDeals.length}
+                </span>
+              </div>
+
+              <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+                {stageDeals.map((deal) => (
+                  <div 
+                    key={deal.id}
+                    draggable
+                    onDragStart={() => handleDragStart(deal.id)}
+                    onClick={() => {
+                      setSelectedDeal(deal);
+                      setForm({
+                        title: deal.title,
+                        company: deal.company,
+                        value: deal.value,
+                        stage: deal.stage,
+                        priority: deal.priority,
+                        owner: deal.owner,
+                        closeDate: deal.closeDate
+                      });
+                      setIsEditModalOpen(true);
+                    }}
+                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
+                  >
+                    <div className="flex justify-between items-start gap-1">
+                      <h4 className="text-[11px] font-semibold text-foreground leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
+                      <span className={`text-[8px] font-bold px-1 py-0.25 rounded shrink-0 ${
+                        deal.priority === 'High' ? 'text-destructive bg-destructive/10' :
+                        deal.priority === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-muted-foreground bg-secondary'
+                      }`}>{deal.priority}</span>
+                    </div>
+
+                    <div className="text-[10px] text-muted-foreground mt-1 flex items-center">
+                      <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
+                      {deal.company}
+                    </div>
+
+                    {deal.createdAt && (
+                      <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+                        <CalendarDays className="h-2.5 w-2.5 text-muted-foreground/70" />
+                        <span>Created: {new Date(deal.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    )}
+
+                    <div className="mt-3.5 pt-2.5 border-t border-border flex justify-between items-center">
+                      <span className="text-[11px] font-semibold text-foreground tabular-nums">₹{deal.value.toLocaleString()}</span>
+                      
+                      <div className="flex space-x-1">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDeal(deal);
+                            setForm({
+                              title: deal.title,
+                              company: deal.company,
+                              value: deal.value,
+                              stage: deal.stage,
+                              priority: deal.priority,
+                              owner: deal.owner,
+                              closeDate: deal.closeDate
+                            });
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-0.5 text-muted-foreground hover:text-foreground rounded"
+                          title="Edit Deal"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </button>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(deal.id);
+                          }}
+                          className="p-0.5 text-muted-foreground hover:text-destructive rounded"
+                           title="Delete Deal (cascades to contact and company if no other active deals)"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-2 flex justify-between items-center text-[9px] font-semibold text-muted-foreground border-t border-border pt-1.5">
+                      <span>Shift Stage:</span>
+                      <select 
+                        value={deal.stage}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          e.stopPropagation();
+
+                          const newStage = e.target.value;
+                          const stageId = stageIdByName[newStage];
+
+                          if (!stageId) return;
+
+                          if (isClosingStage(newStage)) {
+                            setPendingStageChange({
+                              dealId: deal.id,
+                              stageId,
+                              stageName: newStage,
+                            });
+                            setCloseReason('');
+                            return;
+                          }
+
+                          updateDealStage(deal.id, stageId)
+                            .then(() => {
+                              setDeals(prev =>
+                                prev.map(d =>
+                                  d.id === deal.id
+                                    ? { ...d, stage: newStage }
+                                    : d
+                                )
+                              );
+                            })
+                            .catch((err: any) => {
+                              console.error('Failed to update deal stage:', err);
+                              toast.error(
+                                err?.message || 'Failed to update deal stage.'
+                              );
+                            });
+                        }}
+                        className="bg-transparent text-brand-purple focus:outline-none cursor-pointer"
+                      >
+                        {stageNames.map(st => (
+                          <option key={st} value={st}>{st}</option>
+                        ))}
+                      </select>
+                    </div>
+>>>>>>> fa82a6304bd7c421509a99933e7fc24c30b6e36c
                   </div>
                   <span className="text-[9px] font-semibold bg-brand-purple/10 text-brand-purple px-1.5 py-0.5 rounded-full tabular-nums">{stageDeals.length}</span>
                 </div>
@@ -790,6 +1081,91 @@ export default function PipelineView({ onLoaded, userRole = 'manager' }: Pipelin
           </div>
         </div>
       )}
+      {pendingStageChange && (
+  <div
+    className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200"
+    onClick={() => {
+      if (!isSavingStage) {
+        setPendingStageChange(null);
+        setCloseReason('');
+      }
+    }}
+  >
+    <div
+      className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+        <div>
+          <h3 className="font-semibold text-foreground text-sm">
+            Close Deal
+          </h3>
+
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Moving this deal to {pendingStageChange.stageName}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={isSavingStage}
+          onClick={() => {
+            setPendingStageChange(null);
+            setCloseReason('');
+          }}
+          className="text-muted-foreground hover:text-foreground p-1 cursor-pointer disabled:opacity-50"
+        >
+          <X className="h-4.5 w-4.5" />
+        </button>
+      </div>
+
+      <div className="p-5 space-y-4">
+        <div>
+          <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+            Close Reason *
+          </label>
+
+          <textarea
+            autoFocus
+            required
+            value={closeReason}
+            onChange={e => setCloseReason(e.target.value)}
+            placeholder={
+              pendingStageChange.stageName.toLowerCase() === 'won'
+                ? 'e.g. Customer signed the agreement'
+                : 'e.g. Customer selected another vendor'
+            }
+            className="w-full min-h-[90px] px-3 py-2 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/20 bg-background resize-none"
+            disabled={isSavingStage}
+          />
+        </div>
+
+        <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+          <button
+            type="button"
+            disabled={isSavingStage}
+            onClick={() => {
+              setPendingStageChange(null);
+              setCloseReason('');
+            }}
+            className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={isSavingStage || !closeReason.trim()}
+            onClick={confirmStageChange}
+            className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50"
+          >
+            {isSavingStage ? 'Saving...' : `Move to ${pendingStageChange.stageName}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

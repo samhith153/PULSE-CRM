@@ -108,7 +108,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
 
       {/* Key Metrics Summary */}
-      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300">
+      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300">
         <h3 className="font-bold text-foreground text-sm mb-4">Key metrics summary</h3>
         
         <div className="space-y-2">
@@ -117,7 +117,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
             return (
               <div 
                 key={idx} 
-                className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition-all duration-200 border border-transparent hover:border-border"
+                className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition duration-200 border border-transparent hover:border-border"
               >
                 {/* Icon (text-brand-purple, 14px/16px) */}
                 <div className="size-8 rounded-lg bg-background text-brand-purple flex items-center justify-center border border-border shrink-0">
@@ -149,19 +149,19 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
       </div>
 
       {/* Recent Reports */}
-      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300">
+      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-foreground text-sm">Recent reports</h3>
           {/* Avatar Stack implied collaboration detail */}
           <div className="flex items-center -space-x-1.5 overflow-hidden select-none" title="3 teammates active on these templates">
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
-              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=40&fit=crop&q=80" alt="Teammate 1" />
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-brand-purple/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-brand-purple">S</span>
             </div>
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
-              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&fit=crop&q=80" alt="Teammate 2" />
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-brand-blue/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-brand-blue">A</span>
             </div>
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-slate-200">
-              <img className="h-full w-full object-cover" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&fit=crop&q=80" alt="Teammate 3" />
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-[#4FB477]/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-[#4FB477]">K</span>
             </div>
           </div>
         </div>
@@ -177,7 +177,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, delay: idx * 0.06 }}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition-all duration-200 border cursor-pointer hover:-translate-y-0.5 hover:shadow-nav hover:bg-secondary/70",
+                  "flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition duration-200 border cursor-pointer hover:-translate-y-0.5 hover:shadow-nav hover:bg-secondary/70",
                   isFirst ? "border-brand-purple/30 bg-brand-purple/5 shadow-[inset_3px_0_0_0_var(--brand-purple)] pl-4" : "border-transparent hover:border-border"
                 )}
               >
@@ -203,7 +203,7 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
         <div className="mt-4 pt-3 border-t border-border text-center">
           <a 
             href="#" 
-            className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+            className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
           >
             <span>View all reports</span>
             <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />

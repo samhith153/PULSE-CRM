@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import { toast } from '@/lib/toast';
 import {
   User,
   Target,
@@ -14,8 +15,11 @@ import {
   ShieldAlert,
   Loader2,
   Camera,
+  X,
+  Pencil,
+  Check,
 } from 'lucide-react';
-import { getCurrentUser, getSalesRepDashboard, asNumber, formatINR, formatPct, SalesRepDashboardData, uploadAvatar } from '@/utils/api';
+import { getCurrentUser, getSalesRepDashboard, asNumber, formatINR, formatPct, SalesRepDashboardData, uploadAvatar, deleteAvatar, resolveImageUrl, updateUser } from '@/utils/api';
 
 interface ProfileShape {
   id: string;
@@ -34,6 +38,9 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState({ full_name: '', phone: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -54,7 +61,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground text-xs font-semibold">
-        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading profileâ€¦
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading profile...
       </div>
     );
   }
@@ -70,7 +77,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const achieved = asNumber(kpi?.summary?.total_revenue);
   const quota = asNumber(kpi?.revenue_stat?.total) || achieved || 1;
   const progressPercent = Math.min(100, Math.round((achieved / (quota || 1)) * 100));
-  const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'â€”';
+  const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '–';
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -80,6 +87,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
       await uploadAvatar(file);
       const fresh = await getCurrentUser();
       setProfile(fresh as unknown as ProfileShape);
+      window.dispatchEvent(new Event('pulse-profile-updated'));
     } catch (err) {
       console.error('Avatar upload failed:', err);
     } finally {
@@ -88,40 +96,168 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
     }
   };
 
+  const handleAvatarRemove = async () => {
+    setUploading(true);
+    try {
+      await deleteAvatar();
+      const fresh = await getCurrentUser();
+      setProfile(fresh as unknown as ProfileShape);
+      window.dispatchEvent(new Event('pulse-profile-updated'));
+    } catch (err) {
+      console.error('Avatar remove failed:', err);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const startEditing = () => {
+    setEditForm({
+      full_name: profile.full_name || '',
+      phone: profile.phone || '',
+    });
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setEditForm({ full_name: '', phone: '' });
+  };
+
+  const saveProfile = async () => {
+    if (!editForm.full_name.trim()) {
+      toast.error('Name cannot be empty.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await updateUser(profile.id, {
+        full_name: editForm.full_name.trim(),
+        phone: editForm.phone.trim() || undefined,
+      });
+      const fresh = await getCurrentUser();
+      setProfile(fresh as unknown as ProfileShape);
+      setEditing(false);
+      window.dispatchEvent(new Event('pulse-profile-updated'));
+      toast.success('Profile updated.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to update profile.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="bg-card border border-border rounded-2xl p-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5">
-          <div className="h-20 w-20 rounded-full overflow-hidden border border-border shrink-0 bg-secondary flex items-center justify-center">
-            {profile.avatar_url ? (
-              <Image src={profile.avatar_url} alt={profile.full_name} width={80} height={80} className="h-full w-full object-cover" unoptimized />
-            ) : (
-              <User className="h-8 w-8 text-muted-foreground" />
+          <div className="relative shrink-0">
+            <div className="h-20 w-20 rounded-full overflow-hidden border border-border bg-secondary flex items-center justify-center relative group cursor-pointer" onClick={() => !uploading && fileInputRef.current?.click()}>
+              {profile.avatar_url ? (
+                <Image src={resolveImageUrl(profile.avatar_url)} alt={profile.full_name} width={80} height={80} className="h-full w-full object-cover" unoptimized />
+              ) : (
+                <User className="h-8 w-8 text-muted-foreground" />
+              )}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                {uploading ? (
+                  <Loader2 className="h-5 w-5 text-white animate-spin" />
+                ) : (
+                  <Camera className="h-5 w-5 text-white" />
+                )}
+              </div>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarUpload}
+            />
+            {profile.avatar_url && !uploading && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); handleAvatarRemove(); }}
+                className="absolute -top-1 -right-1 z-10 size-5 rounded-full bg-destructive text-white flex items-center justify-center hover:bg-destructive/80 transition-colors cursor-pointer"
+                aria-label="Remove avatar"
+              >
+                <X className="h-3 w-3" />
+              </button>
             )}
           </div>
 
           <div className="flex-1 text-center sm:text-left min-w-0">
-            <h2 className="font-sans text-2xl text-foreground font-bold">{profile.full_name}</h2>
-            <p className="text-xs text-brand-purple font-semibold mt-0.5">{roleLabel} â€” {dept}</p>
+            {editing ? (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-muted-foreground uppercase mb-1">Full Name</label>
+                  <input
+                    type="text"
+                    value={editForm.full_name}
+                    onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-muted-foreground uppercase mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+                <div className="flex space-x-2 pt-1">
+                  <button
+                    onClick={saveProfile}
+                    disabled={saving}
+                    className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-white bg-brand-purple rounded-lg hover:bg-brand-purple/90 disabled:opacity-50 cursor-pointer"
+                  >
+                    {saving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
+                    Save
+                  </button>
+                  <button
+                    onClick={cancelEditing}
+                    disabled={saving}
+                    className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-secondary border border-border rounded-lg hover:bg-secondary/80 disabled:opacity-50 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center space-x-2">
+                  <h2 className="font-sans text-2xl text-foreground font-bold">{profile.full_name}</h2>
+                  <button
+                    onClick={startEditing}
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                    aria-label="Edit profile"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-brand-purple font-semibold mt-0.5">{roleLabel} – {dept}</p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-[11px] font-semibold text-muted-foreground">
-              <div className="flex items-center space-x-2">
-                <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.email}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{profile.phone || 'â€”'}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-                <span>{dept}</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>Joined {joined}</span>
-              </div>
-            </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-[11px] font-semibold text-muted-foreground">
+                  <div className="flex items-center space-x-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{profile.email}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{profile.phone || '–'}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <span>{dept}</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>Joined {joined}</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

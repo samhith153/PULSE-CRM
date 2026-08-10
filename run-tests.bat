@@ -1,6 +1,10 @@
 @echo off
+setlocal EnableExtensions
 title PULSE-CRM E2E Test Runner
 color 0A
+
+set "ROOT=%~dp0"
+set "FRONTEND=%ROOT%frontend"
 
 :MENU
 cls
@@ -65,104 +69,104 @@ goto MENU
 :ALL_CHROMIUM
 cls
 echo [RUNNING] All tests (chromium)...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium
 goto DONE
 
 :ALL_BROWSERS
 cls
 echo [RUNNING] All tests (all browsers)...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test
 goto DONE
 
 :PERFORMANCE
 cls
 echo [RUNNING] Performance tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=performance
 goto DONE
 
 :AUTH
 cls
 echo [RUNNING] Auth tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium tests/e2e/auth/
 goto DONE
 
 :CRM
 cls
 echo [RUNNING] CRM tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium tests/e2e/crm/
 goto DONE
 
 :DASHBOARD
 cls
 echo [RUNNING] Dashboard tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium tests/e2e/dashboard/
 goto DONE
 
 :ADMIN
 cls
 echo [RUNNING] Admin tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium tests/e2e/admin/
 goto DONE
 
 :NAVIGATION
 cls
 echo [RUNNING] Navigation tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium tests/e2e/navigation/
 goto DONE
 
 :MARKETING
 cls
 echo [RUNNING] Marketing pages tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium tests/e2e/navigation/marketing-pages.spec.ts
 goto DONE
 
 :AI
 cls
 echo [RUNNING] AI tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium tests/e2e/ai/
 goto DONE
 
 :INTEGRATIONS
 cls
 echo [RUNNING] Integrations tests...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=chromium tests/e2e/integrations/
 goto DONE
 
 :FIREFOX
 cls
 echo [RUNNING] All tests (firefox)...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=firefox
 goto DONE
 
 :MOBILE
 cls
 echo [RUNNING] All tests (mobile-chrome)...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright test --project=mobile-chrome
 goto DONE
 
 :REPORT
 cls
 echo Opening HTML test report...
-start "" "D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend\test-results\index.html"
+start "" "%FRONTEND%\test-results\index.html"
 goto MENU
 
 :INSTALL
 cls
 echo [INSTALLING] Playwright browsers...
-cd /d D:\programs\Python\Kalnet\PULSE\PULSE-CRM\frontend
+cd /d "%FRONTEND%"
 npx playwright install --with-deps
 goto DONE
 

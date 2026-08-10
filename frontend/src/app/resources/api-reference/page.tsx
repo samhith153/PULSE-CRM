@@ -167,7 +167,7 @@ function ApiIllustration() {
       >
         <motion.div
           animate={{ scale: [1, 1.08, 1] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: [0.43, 0.13, 0.23, 0.96] }}
         >
           <Activity size={32} color="#fff" strokeWidth={2} />
         </motion.div>

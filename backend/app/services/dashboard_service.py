@@ -10,6 +10,7 @@ from uuid import UUID
 
 from sqlalchemy import case, func, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.models.activity import ActivityTimeline
 from app.models.company import Company
@@ -40,6 +41,23 @@ from app.schemas.dashboard import (
 )
 from app.services.pipeline_service import PipelineService
 from app.utils.enums import DealStatus
+
+
+def _format_inr(value: Decimal) -> str:
+    """Format a decimal amount using Indian (lakh/crore) grouping, e.g. 1234567.5 -> 12,34,567.5"""
+    if value is None:
+        return "0"
+    raw = format(abs(value), ".0f")
+    integer_part = raw
+    sign = "-" if value < 0 else ""
+    if len(integer_part) <= 3:
+        grouped = integer_part
+    else:
+        last_three = integer_part[-3:]
+        rest = integer_part[:-3]
+        rest = rest[::-1]
+        grouped = ",".join(rest[i:i + 2] for i in range(0, len(rest), 2))[::-1] + "," + last_three
+    return f"{sign}{grouped}"
 
 
 class DashboardService:
@@ -922,7 +940,12 @@ class DashboardService:
     # Manager Dashboard KPI  (manager-scoped, org-tenanted)
     # -------------------------------------------------------------------------
 
-    async def manager_kpi(self, manager_id: UUID, organization_id: UUID):  # noqa: C901
+    async def manager_kpi(
+        self,
+        manager_id: UUID,
+        organization_id: UUID,
+        period: str = "quarter",
+    ):  # noqa: C901
         """
         Compute all Manager Dashboard KPIs scoped to the manager's team.
         A "team" = all Users whose deals are owned inside the same org,
@@ -2070,6 +2093,7 @@ class DashboardService:
         priority_queue_stmt = (
             select(Lead, LeadScore)
             .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
+            .options(selectinload(Lead.company))
             .where(
                 Lead.owner_id == user_id,
                 Lead.organization_id == organization_id,
@@ -2081,9 +2105,10 @@ class DashboardService:
             .limit(5)
         )
 
-        # ── Query 9: Deals at Risk - Stalled >5 Days or Negative (Widget 4) ───
+        # ── Query 9: Deals at Risk - Stalled, Low Probability, Negative or High Value (Widget 4) ───
         deals_at_risk_stmt = (
             select(Deal)
+            .options(selectinload(Deal.company), selectinload(Deal.owner))
             .where(
                 Deal.owner_id == user_id,
                 Deal.organization_id == organization_id,
@@ -2093,6 +2118,8 @@ class DashboardService:
                 or_(
                     Deal.updated_at <= stalled_date,
                     Deal.amount >= Decimal("50000.00"),
+                    Deal.probability < 30,
+                    Deal.sentiment == "negative",
                 ),
             )
             .order_by(Deal.updated_at.asc())
@@ -2102,6 +2129,10 @@ class DashboardService:
         # ───────────────────────────────────────────────────────────────────────
         # CONCURRENT EXECUTION VIA asyncio.gather
         # ───────────────────────────────────────────────────────────────────────
+        # Provision the session connection up-front. Without this, the 9
+        # concurrent execute() calls race while the first is still checking out
+        # a connection, which raises "concurrent operations are not permitted".
+        await self.db.connection()
         (
             res_open_deals,
             res_untouched,
@@ -2173,34 +2204,54 @@ class DashboardService:
 
         # ── Parse Priority Queue ──────────────────────────────────────────────
         priority_rows = res_priority_queue.all()
-        priority_queue = [
-            RepPriorityLeadItem(
-                lead_id=lead.id,
-                first_name=lead.first_name or "",
-                last_name=lead.last_name or "",
-                company_name=lead.company.name if getattr(lead, "company", None) else None,
-                email=lead.email or "",
-                score=score.overall_score if score else 70,
-                tier="Hot" if (score and score.overall_score >= 80) else "Warm",
-                top_reason="+25 High Intent Activity" if (score and score.overall_score >= 80) else "Strong Fit",
+        priority_queue = []
+        for lead, score in priority_rows:
+            top_reasons = list(score.top_reasons or []) if score and score.top_reasons else []
+            priority_queue.append(
+                RepPriorityLeadItem(
+                    lead_id=lead.id,
+                    first_name=lead.title or "",
+                    last_name="",
+                    company_name=lead.company_name or (lead.company.name if getattr(lead, "company", None) else None),
+                    email=lead.email or "",
+                    score=score.overall_score if score else 70,
+                    tier="Hot" if (score and score.overall_score >= 80) else "Warm",
+                    top_reason=top_reasons[0] if top_reasons else None,
+                    top_reasons=top_reasons,
+                )
             )
-            for lead, score in priority_rows
-        ]
 
         # ── Parse Deals at Risk ───────────────────────────────────────────────
         at_risk_rows = res_deals_at_risk.scalars().all()
         deals_at_risk = []
         for deal in at_risk_rows:
             stalled_days = (now - deal.updated_at).days if deal.updated_at else 5
-            risk_reason = "Stalled >5 Days" if stalled_days >= 5 else "High Value Inspection"
+            deal_amount = Decimal(str(deal.amount or 0))
+            deal_probability = getattr(deal, "probability", 50) or 0
+            deal_sentiment = getattr(deal, "sentiment", None)
+
+            risk_factors = []
+            if stalled_days >= 5:
+                risk_factors.append(f"No activity for {stalled_days} days")
+            if deal_amount >= Decimal("50000.00"):
+                risk_factors.append(f"High value deal - {_format_inr(deal_amount)}")
+            if deal_probability < 30:
+                risk_factors.append(f"Low win probability ({deal_probability}%)")
+            if deal_sentiment == "negative":
+                risk_factors.append("Negative buyer sentiment")
+            risk_reason = " · ".join(risk_factors) if risk_factors else "High value opportunity"
+
             deals_at_risk.append(
                 RepDealAtRiskItem(
                     deal_id=deal.id,
                     deal_title=deal.name,
-                    value=Decimal(str(deal.amount or 0)),
+                    value=deal_amount,
                     stalled_days=stalled_days,
                     risk_reason=risk_reason,
-                    sentiment=getattr(deal, "sentiment", "neutral"),
+                    sentiment=deal_sentiment,
+                    probability=deal_probability,
+                    company_name=deal.company.name if getattr(deal, "company", None) else None,
+                    owner_name=deal.owner.full_name if getattr(deal, "owner", None) else None,
                 )
             )
 

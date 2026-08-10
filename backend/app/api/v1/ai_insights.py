@@ -1399,7 +1399,7 @@ async def get_recent_summary_detail(
     return {"success": True, "message": "Summary detail retrieved.", "data": data}
 
 
-# ── Merge the all-roles sub-router into the main router ───────────────────────
-# This must appear AFTER all route definitions so FastAPI registers them
-# in the correct order (specific before dynamic paths).
-router.include_router(_all_roles_router)
+# Export separately so it can be mounted without the manager/admin gate.
+# Do NOT include it inside `router` here — the parent's dependencies would
+# override the permissive dependency on _all_roles_router.
+all_roles_router = _all_roles_router

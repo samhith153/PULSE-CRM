@@ -24,6 +24,8 @@ import SettingsView from '@/components/dashboard/SettingsView';
 import ProductsView from '@/components/dashboard/ProductsView';
 import DocumentsView from '@/components/dashboard/DocumentsView';
 import ReportsView from '@/components/dashboard/ReportsView';
+import ManagerReportsView from '@/components/dashboard/ManagerReportsView';
+import AdminReportsView from '@/components/dashboard/AdminReportsView';
 import WorkflowsView from '@/components/dashboard/WorkflowsView';
 import CommandPalette from '@/components/dashboard/CommandPalette';
 import AICopilotChat from '@/components/dashboard/AICopilotChat';
@@ -44,7 +46,7 @@ import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import HomeView from '@/components/dashboard/HomeView';
 import TasksView from '@/components/dashboard/TasksView';
 import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
-import { clearToken, setToken } from '@/utils/api';
+import { clearToken, setToken, EmailComposeTarget } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardOverview } from '@/hooks/use-dashboard';
 import { useCrmStream } from '@/hooks/use-crm-stream';
@@ -67,6 +69,15 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
   const [groupBy, setGroupBy] = useState('Stage');
   const [isLoading, setIsLoading] = useState(true);
   const [isEmpty, setIsEmpty] = useState(false);
+
+  const [composeTarget, setComposeTarget] = useState<EmailComposeTarget | null>(null);
+
+  // Opens the Emails page with a one-click AI draft ready for the given recipient.
+  const openEmailCompose = (target: Omit<EmailComposeTarget, 'requestId'>) => {
+    if (!target.to) return;
+    setComposeTarget({ ...target, requestId: Date.now() });
+    setActiveTab('emails');
+  };
 
   // ── Unified dashboard data hook (GET /api/v1/dashboard/me) ──────────────
   // Returns null gracefully when the backend endpoint is not yet deployed.
@@ -123,7 +134,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
     if (!auth) {
       // Redirect back to the landing page login, not the Next.js /login route
-      window.location.href = 'http://127.0.0.1:8081/login';
+      window.location.href = '/login';
       return;
     }
 
@@ -146,10 +157,14 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     toggleSetting(key);
   };
 
-  // Global listener for Ctrl+K
+  // Global listener for Ctrl+K (with input/textarea focus guard)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        const isEditable = (e.target as HTMLElement)?.isContentEditable;
+        // Don't open palette when user is typing in a form field
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || isEditable) return;
         e.preventDefault();
         setIsCommandPaletteOpen(prev => !prev);
       }
@@ -190,7 +205,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     localStorage.removeItem('pulse-crm-role');
     localStorage.removeItem('pulse-crm-user');
     clearToken();
-    window.location.href = 'http://127.0.0.1:8081/login';
+    window.location.href = '/login';
   };
 
   const mapRoleForLegacyComponent = (r: 'sales_rep' | 'manager' | 'admin'): 'representative' | 'manager' | 'admin' => {
@@ -216,7 +231,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
         setActiveTab={setActiveTab} 
         collapsed={sidebarCollapsed} 
         setCollapsed={setSidebarCollapsed} 
-        userRole={legacyRole}
+        userRole={requiredRole}
       />
 
       {/* Main dashboard content container */}
@@ -244,9 +259,9 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
             )
           ) : activeTab === 'leads' ? (
-            <LeadsView onTabChange={setActiveTab} />
+            <LeadsView onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
           ) : activeTab === 'contacts' ? (
-            <ContactsView onTabChange={setActiveTab} />
+            <ContactsView onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
           ) : activeTab === 'companies' ? (
             <CompaniesView />
           ) : activeTab === 'tasks' ? (
@@ -256,12 +271,14 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           ) : activeTab === 'products' ? (
             <ProductsView />
           ) : activeTab === 'activities' ? (
-            <ActivitiesView activityId={activityId} onTabChange={setActiveTab} />
+            <ActivitiesView activityId={activityId} onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
           ) : activeTab === 'emails' ? (
-            <EmailsView onTabChange={setActiveTab} />
+            <EmailsView onTabChange={setActiveTab} composeTarget={composeTarget} onComposeConsumed={() => setComposeTarget(null)} />
           ) : activeTab === 'documents' ? (
             <DocumentsView />
           ) : activeTab === 'reports' ? (
+            requiredRole === 'manager' ? <ManagerReportsView /> :
+            requiredRole === 'admin' ? <AdminReportsView /> :
             <ReportsView />
           ) : activeTab === 'workflows' ? (
             <WorkflowsView />
@@ -367,7 +384,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
               </div>
               {/* Report Builder Control Panel */}
-              <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-nav transition-all duration-300 mt-6">
+              <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-nav transition duration-300 mt-6">
                 <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
                   <div>
                     <h3 className="font-semibold text-foreground text-sm">Report builder</h3>
@@ -390,7 +407,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                         <select
                           value={reportType}
                           onChange={(e) => setReportType(e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all duration-200 cursor-pointer appearance-none pr-8 font-medium"
+                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
                         >
                           <option value="Sales Funnel">Sales Funnel Analysis</option>
                           <option value="Lead Conversion">Lead Conversion Rate</option>
@@ -411,7 +428,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                         <select
                           value={primaryMetric}
                           onChange={(e) => setPrimaryMetric(e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition-all duration-200 cursor-pointer appearance-none pr-8 font-medium"
+                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
                         >
                           <option value="Deal Value">Deal Value (INR)</option>
                           <option value="Lead Score">AI Lead Score</option>
@@ -436,7 +453,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                               key={group}
                               type="button"
                               onClick={() => setGroupBy(group)}
-                              className={`py-1.5 rounded-lg text-xs font-semibold border transition-all duration-200 cursor-pointer ${
+                              className={`py-1.5 rounded-lg text-xs font-semibold border transition duration-200 cursor-pointer ${
                                 isActiveGroup
                                   ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
                                   : 'border-border hover:border-brand-purple/50 text-muted-foreground hover:bg-secondary'
@@ -459,7 +476,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                     </div>
                     <button
                       onClick={() => setIsReportModalOpen(true)}
-                      className="inline-flex items-center justify-center gap-1.5 bg-ink hover:opacity-90 text-primary-foreground py-2 px-5 rounded-full text-xs font-semibold hover:-translate-y-0.5 hover:shadow-nav active:translate-y-0 transition-all duration-200 cursor-pointer w-full sm:w-auto shrink-0"
+                      className="inline-flex items-center justify-center gap-1.5 bg-ink hover:opacity-90 text-primary-foreground py-2 px-5 rounded-full text-xs font-semibold hover:-translate-y-0.5 hover:shadow-nav active:translate-y-0 transition duration-200 cursor-pointer w-full sm:w-auto shrink-0"
                     >
                       <Plus className="h-4 w-4" strokeWidth={2.5} />
                       <span>Generate Custom Report</span>
@@ -535,7 +552,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
         <button
           onClick={() => setIsFabOpen(!isFabOpen)}
-          className="h-14 w-14 rounded-full bg-ink text-primary-foreground border border-border shadow-float flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200 cursor-pointer group"
+          className="h-14 w-14 rounded-full bg-ink text-primary-foreground border border-border shadow-float flex items-center justify-center hover:scale-105 active:scale-95 transition duration-200 cursor-pointer group"
           aria-label="Quick Actions"
         >
           <Plus size={24} className={`transition-transform duration-300 ${isFabOpen ? 'rotate-45' : ''}`} />
@@ -561,4 +578,3 @@ export default function DashboardShell(props: DashboardShellProps) {
     </DashboardLayoutProvider>
   );
 }
-

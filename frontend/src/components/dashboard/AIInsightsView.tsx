@@ -597,9 +597,6 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
         <h3 className="font-semibold text-foreground text-sm mb-4 flex items-center">
           <BrainCircuit className="h-4 w-4 mr-2 text-brand-purple" />
           <span>Conversation Intelligence</span>
-          <span className="ml-2 text-[9px] font-semibold text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">
-            Bhavani
-          </span>
         </h3>
 
         <div className="grid grid-cols-12 gap-4">

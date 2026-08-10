@@ -12,11 +12,6 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: 'https',
-        hostname: 'images.unsplash.com',
-        pathname: '/**',
-      },
-      {
         protocol: 'http',
         hostname: 'localhost',
         port: '8000',
@@ -32,13 +27,7 @@ const nextConfig: NextConfig = {
   },
 
   async redirects() {
-    return [
-      {
-        source: '/login',
-        destination: '/',
-        permanent: false,
-      },
-    ];
+    return [];
   },
 };
 
