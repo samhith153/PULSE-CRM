@@ -12,6 +12,7 @@ import Widgets from '@/components/dashboard/Widgets';
 import RightPanel from '@/components/dashboard/RightPanel';
 import ReportBuilderModal from '@/components/dashboard/ReportBuilderModal';
 import LeadsView from '@/components/dashboard/LeadsView';
+import SalesLeadsView from '@/components/dashboard/SalesLeadsView';
 import CompaniesView from '@/components/dashboard/CompaniesView';
 import ContactsView from '@/components/dashboard/ContactsView';
 import PipelineView from '@/components/dashboard/PipelineView';
@@ -250,10 +251,12 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
             ) : requiredRole === 'admin' ? (
               <AdminDashboardView />
             ) : (
-              <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
+              <SalesRepDashboardView onTabChange={setActiveTab} />
             )
           ) : activeTab === 'leads' ? (
-            <LeadsView onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
+            <SalesLeadsView />
+          ) : activeTab === 'sales leads' ? (
+            <SalesLeadsView />
           ) : activeTab === 'contacts' ? (
             <ContactsView onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
           ) : activeTab === 'companies' ? (

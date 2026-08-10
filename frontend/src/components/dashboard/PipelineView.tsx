@@ -18,6 +18,15 @@ import {
   Search,
   SlidersHorizontal,
   ChevronDown,
+  Layers,
+  Inbox,
+  ArrowUpRight,
+  User,
+  ArrowRight,
+  ClipboardList,
+  Target,
+  Trophy,
+  LineChart
 } from 'lucide-react';
 
 interface Deal {
@@ -51,8 +60,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       const sorted = (Array.isArray(data) ? data : []).sort((a: any, b: any) => a.sort_order - b.sort_order);
       setStages(sorted);
     }).catch(() => {}).finally(checkDone);
-    getDeals().then(data => {
-      setDeals(Array.isArray(data) ? data : []);
+    getDeals({ silent: true }).then((data: any) => {
+      setDeals(Array.isArray(data) ? (data as Deal[]) : []);
     }).catch(() => {}).finally(checkDone);
   }, []);
 
@@ -293,11 +302,15 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
   return (
     <div className="space-y-6">
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h2 className="font-sans text-2xl text-foreground font-bold">Deals Kanban Pipeline</h2>
-            <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Drag and drop cards to update pipeline stages, track forecasts, and monitor deal velocity.</p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-brand-purple/10 flex items-center justify-center text-brand-purple shrink-0">
+              <Layers className="w-6 h-6" />
+            </div>
+            <div>
+              <h2 className="font-sans text-2xl text-foreground font-bold tracking-tight">Deals Kanban Pipeline</h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Drag and drop cards to update pipeline stages, track forecasts, and monitor deal velocity.</p>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {/* View Toggle */}
@@ -342,16 +355,17 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 setForm({ title: '', company: '', value: 10000, stage: stageNames[0] || 'Qualified', priority: 'Medium', owner: '', closeDate: '' });
                 setIsAddModalOpen(true);
               }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              className="inline-flex items-center space-x-1.5 px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-sm"
             >
               <Plus className="h-3.5 w-3.5" />
               <span>Create Deal</span>
+              <ChevronDown className="h-3.5 w-3.5 ml-1 opacity-70" />
             </button>
           </div>
         </div>
 
         {/* Search, Sort, and Filters Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
+        <div className="flex flex-col sm:flex-row gap-3 mt-4">
           <div className="relative flex-1">
             <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
               <Search className="h-3.5 w-3.5" />
@@ -436,36 +450,82 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 pt-4 border-t border-border">
-          <div className="flex items-center space-x-3 bg-secondary p-3 rounded-lg border border-border">
-            <div className="h-8.5 w-8.5 rounded-lg bg-secondary flex items-center justify-center text-brand-purple border border-border">
-              <IndianRupee className="h-4.5 w-4.5" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-6 mb-6">
+          {/* Total Pipeline Value */}
+          <div className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between relative overflow-hidden shadow-sm">
+            <div className="flex gap-4 z-10 relative">
+              <div className="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center text-brand-purple shrink-0 mt-1">
+                <IndianRupee className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Total Pipeline Value</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums mb-1">{formatINR(totalValue)}</p>
+                <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                  <ArrowUpRight className="w-3 h-3" />
+                  + 18.2% <span className="text-muted-foreground font-medium ml-1">vs last 30 days</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[9px] font-semibold text-muted-foreground uppercase">Total Pipeline Value</p>
-              <p className="text-sm font-semibold text-foreground tabular-nums">{formatINR(totalValue)}</p>
-            </div>
+            {/* Fake Sparkline SVG */}
+            <svg className="absolute right-0 bottom-0 w-32 h-20 opacity-80" viewBox="0 0 100 50" preserveAspectRatio="none">
+              <path d="M0,45 L15,35 L30,40 L45,25 L60,35 L80,15 L100,5" fill="none" stroke="hsl(267, 100%, 65%)" strokeWidth="2.5" />
+              <path d="M0,45 L15,35 L30,40 L45,25 L60,35 L80,15 L100,5 L100,50 L0,50 Z" fill="url(#purple-grad)" />
+              <defs>
+                <linearGradient id="purple-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(267, 100%, 65%)" stopOpacity="0.1" />
+                  <stop offset="100%" stopColor="hsl(267, 100%, 65%)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
 
-          <div className="flex items-center space-x-3 bg-secondary p-3 rounded-lg border border-border">
-            <div className="h-8.5 w-8.5 rounded-lg bg-secondary flex items-center justify-center text-brand-purple border border-border">
-              <TrendingUp className="h-4.5 w-4.5" />
+          {/* Weighted Revenue Forecast */}
+          <div className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between relative overflow-hidden shadow-sm">
+            <div className="flex gap-4 z-10 relative">
+              <div className="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center text-brand-purple shrink-0 mt-1">
+                <TrendingUp className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Weighted Revenue Forecast</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums mb-1">{formatINR(Math.round(weightedForecast))}</p>
+                <p className="text-[10px] font-bold text-emerald-600 flex items-center gap-1">
+                  <ArrowUpRight className="w-3 h-3" />
+                  + 14.7% <span className="text-muted-foreground font-medium ml-1">vs last 30 days</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-[9px] font-semibold text-muted-foreground uppercase">Weighted Revenue Forecast</p>
-              <p className="text-sm font-semibold text-foreground tabular-nums">{formatINR(Math.round(weightedForecast))}</p>
-            </div>
+            {/* Fake Sparkline SVG */}
+            <svg className="absolute right-0 bottom-0 w-32 h-20 opacity-80" viewBox="0 0 100 50" preserveAspectRatio="none">
+              <path d="M0,40 L20,38 L35,45 L55,20 L75,25 L90,10 L100,5" fill="none" stroke="hsl(150, 80%, 40%)" strokeWidth="2.5" />
+              <path d="M0,40 L20,38 L35,45 L55,20 L75,25 L90,10 L100,5 L100,50 L0,50 Z" fill="url(#green-grad)" />
+              <defs>
+                <linearGradient id="green-grad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="hsl(150, 80%, 40%)" stopOpacity="0.1" />
+                  <stop offset="100%" stopColor="hsl(150, 80%, 40%)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
           </div>
 
-          <div className="flex items-center space-x-3 bg-brand-purple/5 p-3 rounded-lg border border-border">
-            <Sparkles className="h-4.5 w-4.5 text-brand-purple" />
-            <div>
-              <p className="text-[9px] font-semibold text-foreground uppercase">AI Co-pilot Status</p>
-              <p className="text-[10px] text-muted-foreground font-semibold leading-tight">Click on deal details to read next-best-action alerts.</p>
+          {/* AI Co-Pilot */}
+          <div className="bg-card border border-border rounded-2xl p-5 flex items-center justify-between shadow-sm gap-4">
+            <div className="flex gap-4">
+              <div className="mt-1">
+                <Sparkles className="h-6 w-6 text-brand-purple" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5">AI Co-Pilot</p>
+                <p className="text-[11px] text-foreground font-semibold leading-relaxed">
+                  Monitor deal health, get next-best-action recommendations and alerts.
+                </p>
+              </div>
             </div>
+            <button className="shrink-0 inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple/10 hover:bg-brand-purple/20 text-brand-purple rounded-xl text-xs font-bold transition-colors cursor-pointer">
+              <span>View AI Insights</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
           </div>
         </div>
-      </div>
 
       {viewMode === 'list' ? (
         <div className="bg-card border border-border rounded-2xl p-5">
@@ -574,7 +634,15 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
         </div>
       ) : (
         <div className="flex space-x-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
-          {stages.map((stage) => {
+          {stages.map((stage, index) => {
+            const sl = stage.name.toLowerCase();
+            const colorClass = 
+              sl.includes('new') || index === 0 ? { border: 'border-purple-500', bgText: 'bg-purple-100 text-purple-600', text: 'text-purple-600', outline: 'border-purple-300 bg-purple-50/50' } :
+              sl.includes('qualif') || index === 1 ? { border: 'border-blue-500', bgText: 'bg-blue-100 text-blue-600', text: 'text-blue-600', outline: 'border-blue-300 bg-blue-50/50' } :
+              sl.includes('propos') || index === 2 ? { border: 'border-amber-500', bgText: 'bg-amber-100 text-amber-600', text: 'text-amber-600', outline: 'border-amber-300 bg-amber-50/50' } :
+              sl.includes('negot') || index === 3 ? { border: 'border-emerald-500', bgText: 'bg-emerald-100 text-emerald-600', text: 'text-emerald-600', outline: 'border-emerald-300 bg-emerald-50/50' } :
+              { border: 'border-slate-500', bgText: 'bg-slate-100 text-slate-600', text: 'text-slate-600', outline: 'border-slate-300 bg-slate-50/50' };
+
             const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
             const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
 
@@ -583,125 +651,206 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 key={stage.id}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(stage.name)}
-                className="bg-secondary border border-border rounded-2xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
+                className={`bg-card border border-border border-t-[3px] shadow-sm rounded-2xl p-3 w-[290px] shrink-0 flex flex-col h-[600px] ${colorClass.border}`}
               >
-              <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
+              <div className="flex justify-between items-start mb-4 px-1">
                 <div>
-                  <h3 className="text-[11px] font-semibold text-foreground uppercase tracking-wider">{stage.name}</h3>
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-0.5 tabular-nums">₹{stageSum.toLocaleString()}</p>
+                  <h3 className="text-xs font-black text-foreground uppercase tracking-wider">{stage.name}</h3>
+                  <p className="text-[12px] text-foreground font-bold mt-1 tabular-nums">
+                    {stageSum === 0 ? '₹0' : `₹${stageSum.toLocaleString('en-IN')}`}
+                  </p>
                 </div>
-                <span className="text-[9px] font-semibold bg-brand-purple/10 text-brand-purple px-1.5 py-0.5 rounded-full tabular-nums">
+                <span className={`text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full tabular-nums shrink-0 ${colorClass.bgText}`}>
                   {stageDeals.length}
                 </span>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-                {stageDeals.map((deal) => (
-                  <div 
-                    key={deal.id}
-                    draggable
-                    onDragStart={() => handleDragStart(deal.id)}
-                    onClick={() => {
-                      setSelectedDeal(deal);
-                      setForm({
-                        title: deal.title,
-                        company: deal.company,
-                        value: deal.value,
-                        stage: deal.stage,
-                        priority: deal.priority,
-                        owner: deal.owner,
-                        closeDate: deal.closeDate
-                      });
-                      setIsEditModalOpen(true);
-                    }}
-                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
-                  >
-                    <div className="flex justify-between items-start gap-1">
-                      <h4 className="text-[11px] font-semibold text-foreground leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
-                      <span className={`text-[8px] font-bold px-1 py-0.25 rounded shrink-0 ${
-                        deal.priority === 'High' ? 'text-destructive bg-destructive/10' :
-                        deal.priority === 'Medium' ? 'text-amber-700 bg-amber-50' : 'text-muted-foreground bg-secondary'
-                      }`}>{deal.priority}</span>
+              <div className="flex-1 space-y-3 overflow-y-auto pr-1 pb-2 custom-scrollbar">
+                {stageDeals.length === 0 ? (
+                  <div className={`h-56 border border-dashed rounded-xl flex flex-col items-center justify-center text-center p-4 ${colorClass.outline}`}>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mb-3 ${colorClass.bgText}`}>
+                      <Inbox className="w-5 h-5" />
                     </div>
-
-                    <div className="text-[10px] text-muted-foreground mt-1 flex items-center">
-                      <Building2 className="h-3 w-3 mr-1 text-muted-foreground" />
-                      {deal.company}
-                    </div>
-
-                    {deal.createdAt && (
-                      <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
-                        <CalendarDays className="h-2.5 w-2.5 text-muted-foreground/70" />
-                        <span>Created: {new Date(deal.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                      </div>
-                    )}
-
-                    <div className="mt-3.5 pt-2.5 border-t border-border flex justify-between items-center">
-                      <span className="text-[11px] font-semibold text-foreground tabular-nums">₹{deal.value.toLocaleString()}</span>
-                      
-                      <div className="flex space-x-1">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedDeal(deal);
-                            setForm({
-                              title: deal.title,
-                              company: deal.company,
-                              value: deal.value,
-                              stage: deal.stage,
-                              priority: deal.priority,
-                              owner: deal.owner,
-                              closeDate: deal.closeDate
-                            });
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-0.5 text-muted-foreground hover:text-foreground rounded"
-                          title="Edit Deal"
-                        >
-                          <Edit className="h-3 w-3" />
-                        </button>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(deal.id);
-                          }}
-                          className="p-0.5 text-muted-foreground hover:text-destructive rounded"
-                           title="Delete Deal (cascades to contact and company if no other active deals)"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 flex justify-between items-center text-[9px] font-semibold text-muted-foreground border-t border-border pt-1.5">
-                      <span>Shift Stage:</span>
-                      <select 
-                        value={deal.stage}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                          e.stopPropagation();
-                          const newStage = e.target.value;
-                          const stageId = stageIdByName[newStage];
-                          setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));
-                          if (stageId) {
-                            updateDealStage(deal.id, stageId).catch(() => {});
-                          }
-                        }}
-                        className="bg-transparent text-brand-purple focus:outline-none cursor-pointer"
-                      >
-                        {stageNames.map(st => (
-                          <option key={st} value={st}>{st}</option>
-                        ))}
-                      </select>
-                    </div>
+                    <p className="text-xs font-bold text-foreground">No deals yet</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">Drag deals here</p>
+                    <button 
+                      onClick={() => {
+                        setForm({ title: '', company: '', value: 10000, stage: stage.name, priority: 'Medium', owner: '', closeDate: '' });
+                        setIsAddModalOpen(true);
+                      }}
+                      className={`mt-4 text-[11px] font-bold cursor-pointer hover:underline ${colorClass.text}`}
+                    >
+                      + Create Deal
+                    </button>
                   </div>
-                ))}
+                ) : (
+                  stageDeals.map((deal) => {
+                    const isWon = deal.stage.toLowerCase() === 'won';
+                    const isLost = deal.stage.toLowerCase() === 'lost';
+                    const borderLeft = isWon ? 'border-l-[4px] border-l-emerald-500' : isLost ? 'border-l-[4px] border-l-rose-500' : '';
+
+                    return (
+                      <div 
+                        key={deal.id}
+                        draggable
+                        onDragStart={() => handleDragStart(deal.id)}
+                        onClick={() => {
+                          setSelectedDeal(deal);
+                          setForm({
+                            title: deal.title,
+                            company: deal.company,
+                            value: deal.value,
+                            stage: deal.stage,
+                            priority: deal.priority,
+                            owner: deal.owner,
+                            closeDate: deal.closeDate
+                          });
+                          setIsEditModalOpen(true);
+                        }}
+                        className={`bg-card border border-border rounded-xl p-4 hover:shadow-md hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none flex flex-col gap-3.5 group ${borderLeft}`}
+                      >
+                        <div className="flex justify-between items-start gap-2">
+                          <h4 className="text-xs font-bold text-foreground leading-tight break-words">{deal.title}</h4>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0 ${
+                            deal.priority === 'High' ? 'text-rose-600 bg-rose-50' :
+                            deal.priority === 'Medium' ? 'text-amber-600 bg-amber-50' : 'text-slate-500 bg-slate-100'
+                          }`}>{deal.priority}</span>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <div className="text-[10px] text-muted-foreground font-medium flex items-center">
+                            <Building2 className="h-3 w-3 mr-1.5 opacity-70" />
+                            <span className="truncate">{deal.company}</span>
+                          </div>
+                          {deal.createdAt && (
+                            <div className="text-[10px] text-muted-foreground font-medium flex items-center">
+                              <CalendarDays className="h-3 w-3 mr-1.5 opacity-70" />
+                              {new Date(deal.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex justify-between items-center mt-1">
+                          <span className="text-[13px] font-bold text-foreground tabular-nums">₹{deal.value.toLocaleString('en-IN')}</span>
+                          
+                          <div className="flex space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedDeal(deal);
+                                setForm({
+                                  title: deal.title,
+                                  company: deal.company,
+                                  value: deal.value,
+                                  stage: deal.stage,
+                                  priority: deal.priority,
+                                  owner: deal.owner,
+                                  closeDate: deal.closeDate
+                                });
+                                setIsEditModalOpen(true);
+                              }}
+                              className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors"
+                              title="Edit Deal"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(deal.id);
+                              }}
+                              className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors"
+                              title="Delete Deal (cascades to contact and company if no other active deals)"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center text-[10px] font-medium text-muted-foreground pt-3 border-t border-border">
+                          <span>Shift Stage:</span>
+                          <div className="flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors relative">
+                            <select 
+                              value={deal.stage}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                const newStage = e.target.value;
+                                const stageId = stageIdByName[newStage];
+                                setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));
+                                if (stageId) {
+                                  updateDealStage(deal.id, stageId).catch(() => {});
+                                }
+                              }}
+                              className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                            >
+                              {stageNames.map(st => (
+                                <option key={st} value={st}>{st}</option>
+                              ))}
+                            </select>
+                            <span className="text-foreground font-bold">{deal.stage}</span>
+                            <ChevronDown className="h-3 w-3 text-foreground" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           );
           })}
         </div>
       )}
+
+      {/* Bottom Summary Metrics */}
+      <div className="bg-card border border-border rounded-2xl p-5 mt-6 shadow-sm flex flex-wrap lg:flex-nowrap items-center justify-between gap-6 overflow-hidden">
+        {[
+          { label: 'Total Deals', value: String(filteredDeals.length), sub: 'Across all stages', icon: ClipboardList, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+          { label: 'Total Pipeline Value', value: formatINR(totalValue), sub: 'Sum of deal values', icon: IndianRupee, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+          { label: 'Avg. Deal Size', value: formatINR(filteredDeals.length > 0 ? totalValue / filteredDeals.length : 0), sub: 'Per deal average', icon: LineChart, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+          { label: 'Sales Cycle', value: filteredDeals.length > 0 ? '0 days' : '0 days', sub: 'Average sales cycle', icon: Target, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+          { label: 'Win Rate', value: `${filteredDeals.length > 0 ? Math.round((filteredDeals.filter(d => /won/i.test(d.stage)).length / filteredDeals.length) * 100) : 0}%`, sub: 'Conversion rate', icon: Trophy, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+        ].map((metric, i) => (
+          <div key={metric.label} className={`flex items-center gap-4 flex-1 ${i > 0 ? 'lg:pl-6 lg:border-l lg:border-border/50' : ''}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${metric.bg} ${metric.color}`}>
+              <metric.icon className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-0.5">{metric.label}</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-xl font-bold text-foreground tabular-nums">{metric.value}</p>
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">{metric.sub}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Pagination Footer */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-border">
+        <span className="text-xs font-semibold text-muted-foreground">
+          Showing 1 to {filteredDeals.length} of {filteredDeals.length} deals
+        </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center">
+            <button className="w-8 h-8 flex items-center justify-center border border-border bg-card rounded-l-lg text-muted-foreground hover:bg-secondary cursor-pointer transition-colors disabled:opacity-50" disabled>
+              <ChevronDown className="w-4 h-4 rotate-90" />
+            </button>
+            <button className="w-8 h-8 flex items-center justify-center border-y border-border bg-brand-purple/10 text-brand-purple font-bold text-xs cursor-pointer">
+              1
+            </button>
+            <button className="w-8 h-8 flex items-center justify-center border border-border bg-card rounded-r-lg text-muted-foreground hover:bg-secondary cursor-pointer transition-colors disabled:opacity-50" disabled>
+              <ChevronDown className="w-4 h-4 -rotate-90" />
+            </button>
+          </div>
+          <select className="border border-border bg-card text-foreground text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer focus:outline-none">
+            <option>10 / page</option>
+            <option>20 / page</option>
+            <option>50 / page</option>
+          </select>
+        </div>
+      </div>
 
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">

@@ -48,7 +48,7 @@ export function useCurrentUser() {
 
   const load = () => {
     setLoading(true);
-    getCurrentUser()
+    getCurrentUser({ silent: true })
       .then((me) => setUser(me as CurrentUserProfile))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
@@ -57,18 +57,14 @@ export function useCurrentUser() {
   useEffect(() => {
     let cancelled = false;
     const run = () => {
-      getCurrentUser()
+      getCurrentUser({ silent: true })
         .then((me) => {
-          if (!cancelled) setUser(me as CurrentUserProfile);
+          if (!cancelled) setUser(me as CurrentUserProfile ?? null);
         })
         .catch(() => {
-          if (!cancelled) {
-            setUser(null);
-            toast.error('Unable to load user profile. Please log in again.');
-            sessionStorage.removeItem('pulse-crm-auth');
-            localStorage.removeItem('pulse-crm-role');
-            window.location.href = 'http://127.0.0.1:8081/login';
-          }
+          // Don't redirect here — DashboardShell's own auth guard handles
+          // the redirect. Just clear the user so the header shows a fallback.
+          if (!cancelled) setUser(null);
         })
         .finally(() => {
           if (!cancelled) setLoading(false);

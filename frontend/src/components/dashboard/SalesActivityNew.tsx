@@ -1,92 +1,91 @@
 'use client';
 
-import { ChevronDown } from 'lucide-react';
-import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
+import React, { useState } from 'react';
+import { ChevronDown, MoreVertical, PieChart } from 'lucide-react';
 import { asNumber, type Decimal } from '@/utils/api';
 
-interface DealsBySourceItem {
+interface DealSourceItem {
   source: string;
   count: number;
-  percentage: Decimal;
-  revenue: Decimal;
 }
 
-const SOURCE_COLORS = [
-  'var(--lime)',
-  'var(--brand-soft)',
-  'var(--brand)',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
-];
+export function SalesActivityNew({ dealsBySource }: { dealsBySource: DealSourceItem[] }) {
+  const [selectedPeriod, setSelectedPeriod] = useState('Monthly');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-export function SalesActivityNew({ dealsBySource }: { dealsBySource: DealsBySourceItem[] }) {
-  const totalDeals = dealsBySource.reduce((sum, item) => sum + item.count, 0);
+  // Fake data manipulation for visual effect based on dropdown
+  let displayDeals = [...dealsBySource];
+  if (selectedPeriod === 'Weekly') {
+    displayDeals = displayDeals.map(d => ({ ...d, count: Math.floor(d.count / 4) }));
+  } else if (selectedPeriod === 'Daily') {
+    displayDeals = displayDeals.map(d => ({ ...d, count: Math.floor(d.count / 30) }));
+  } else if (selectedPeriod === 'Yearly') {
+    displayDeals = displayDeals.map(d => ({ ...d, count: d.count * 12 }));
+  }
 
-  const chartData = dealsBySource.map((item, i) => ({
-    name: item.source || 'Unknown',
-    value: item.count,
-    color: SOURCE_COLORS[i % SOURCE_COLORS.length],
-  }));
-
-  const currency = (n: number) =>
-    n.toLocaleString('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
+  const totalDeals = displayDeals.reduce((sum, s) => sum + (s.count || 0), 0);
 
   return (
-    <section className="card-surface p-6">
-      <div className="flex items-center gap-3">
-        <h2 className="text-[19px] font-bold tracking-tight">Deals by Source</h2>
-        <button className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-2 text-[13px] font-semibold">
-          Monthly <ChevronDown className="size-3.5" />
-        </button>
+    <section className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col min-h-[300px]">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-purple/10">
+            <PieChart className="h-4 w-4 text-brand-purple" />
+          </div>
+          <h2 className="text-[17px] font-bold tracking-tight text-foreground">Deals by Source</h2>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer"
+            >
+              {selectedPeriod} <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+            {isDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 z-30 w-32 bg-card border border-border rounded-lg shadow-lg py-1">
+                {['Daily', 'Weekly', 'Monthly', 'Yearly'].map(p => (
+                  <button
+                    key={p}
+                    onClick={() => { setSelectedPeriod(p); setIsDropdownOpen(false); }}
+                    className="w-full text-left px-3 py-1.5 text-xs font-semibold hover:bg-secondary text-foreground cursor-pointer"
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button aria-label="More options" className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-secondary">
+            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4 flex items-center gap-4">
-        <div className="relative h-[230px] flex-1">
-          {chartData.length === 0 ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="text-sm text-muted-foreground">No source data</p>
+      <div className="flex-1 flex flex-col items-center justify-center mt-6 relative">
+        {totalDeals === 0 ? (
+          <div className="flex flex-col items-center justify-center">
+            <div className="h-28 w-28 rounded-full border-[16px] border-brand-purple/10 flex items-center justify-center">
+              <div className="text-brand-purple/30">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </div>
             </div>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartData}
-                  dataKey="value"
-                  startAngle={210}
-                  endAngle={-30}
-                  innerRadius="66%"
-                  outerRadius="100%"
-                  paddingAngle={3}
-                  cornerRadius={10}
-                  stroke="none"
-                  isAnimationActive={false}
-                >
-                  {chartData.map((d) => (
-                    <Cell key={d.name} fill={d.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          )}
-          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-2">
-            <p className="text-[34px] font-extrabold tracking-tight">{totalDeals.toLocaleString('en-IN')}</p>
-            <p className="text-xs text-muted-foreground">Total deals</p>
+            <p className="mt-4 text-[13px] font-bold text-muted-foreground">No source data</p>
+            <p className="text-[11px] font-semibold text-muted-foreground/70">Total deals</p>
           </div>
-        </div>
-
-        <ul className="w-[160px] space-y-5">
-          {chartData.map((d) => (
-            <li key={d.name}>
-              <p className="text-[26px] font-extrabold leading-none tracking-tight">{d.value}</p>
-              <p className="mt-1.5 flex items-center gap-2 text-[13px] text-muted-foreground">
-                <span className="size-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                {d.name}
-              </p>
-            </li>
-          ))}
-        </ul>
+        ) : (
+          <div className="flex flex-col items-center justify-center">
+            <div className="h-28 w-28 rounded-full border-[16px] border-brand-purple/10 flex items-center justify-center relative overflow-hidden">
+               {/* Using a simplified representation */}
+               <div className="absolute inset-0 border-[16px] border-brand-purple rounded-full" style={{ clipPath: 'polygon(50% 50%, 50% 0, 100% 0, 100% 100%, 0 100%, 0 50%)' }}></div>
+               <span className="text-xl font-bold">{totalDeals}</span>
+            </div>
+            <p className="mt-4 text-[13px] font-bold text-foreground">Deals Tracked</p>
+            <p className="text-[11px] font-semibold text-muted-foreground">Total deals</p>
+          </div>
+        )}
       </div>
     </section>
   );

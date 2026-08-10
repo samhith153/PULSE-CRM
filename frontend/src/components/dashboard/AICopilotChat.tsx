@@ -59,17 +59,19 @@ export default function AICopilotChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Pre-fetch data for instant availability
+    // Pre-fetch data for instant availability — run silently to avoid
+    // toast spam if the backend is momentarily unavailable.
     async function loadCRMData() {
       try {
         const [fetchedLeads, fetchedDeals] = await Promise.all([
-          getLeads(),
-          getDeals()
+          getLeads({ silent: true }),
+          getDeals({ silent: true })
         ]);
         setLeads(fetchedLeads);
         setDeals(fetchedDeals as any);
       } catch (err) {
-        console.error('Error fetching data for AI Copilot:', err);
+        // Intentionally silent — this is a background prefetch.
+        // The copilot still works; it just won't have pre-loaded data.
       }
     }
     loadCRMData();

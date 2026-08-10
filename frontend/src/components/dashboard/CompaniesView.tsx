@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { getCompanies, updateCompany, deleteCompany } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import { 
@@ -8,23 +8,24 @@ import {
   Search, 
   Plus, 
   Edit, 
-  Eye, 
   Trash2, 
   UserPlus, 
   Users, 
-  IndianRupee, 
-  Briefcase, 
-  Clock, 
   Paperclip, 
-  Mail, 
   PlusCircle,
   X,
-  Check,
   LayoutGrid,
   List,
   SlidersHorizontal,
   ArrowUpDown,
-  ChevronDown
+  ChevronDown,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  IndianRupee,
+  Briefcase,
+  Handshake,
+  Receipt
 } from 'lucide-react';
 
 const formatCompanyRevenue = (val: string | number) => {
@@ -35,6 +36,54 @@ const formatCompanyRevenue = (val: string | number) => {
   if (isNaN(num)) return String(val);
   return `₹${num.toLocaleString('en-IN')}`;
 };
+
+const parseRevenue = (val: string | number) => {
+  if (!val) return 0;
+  const cleanStr = String(val).replace(/[^0-9.-]/g, '');
+  return Number(cleanStr) || 0;
+};
+
+// Avatar colors based on name hash
+const AVATAR_COLORS = [
+  { bg: 'bg-violet-100', text: 'text-violet-600' },
+  { bg: 'bg-blue-100', text: 'text-blue-600' },
+  { bg: 'bg-emerald-100', text: 'text-emerald-600' },
+  { bg: 'bg-amber-100', text: 'text-amber-600' },
+  { bg: 'bg-fuchsia-100', text: 'text-fuchsia-600' },
+  { bg: 'bg-rose-100', text: 'text-rose-600' },
+  { bg: 'bg-cyan-100', text: 'text-cyan-600' },
+];
+
+function getAvatarColorClass(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+}
+
+const INDUSTRY_COLORS: Record<string, string> = {
+  'Retail': 'violet-600',
+  'Media': 'blue-600',
+  'IT': 'emerald-600',
+  'IT Services': 'amber-600',
+  'Construction': 'emerald-600',
+  'Agriculture': 'blue-600',
+  'Manufacturing': 'violet-600',
+  'Legal': 'cyan-600',
+};
+
+function getIndustryColor(industry: string) {
+  return INDUSTRY_COLORS[industry] || 'slate-500';
+}
 
 interface Company {
   id: number;
@@ -63,9 +112,9 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
 
   const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('pulse-crm-view-mode-companies') as any) || 'default';
+      return (localStorage.getItem('pulse-crm-view-mode-companies') as any) || 'list';
     }
-    return 'default';
+    return 'list';
   });
 
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
@@ -74,6 +123,9 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
   const [filterIndustry, setFilterIndustry] = useState<string>('');
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
 
   const toggleViewMode = (mode: 'default' | 'list') => {
     setViewMode(mode);
@@ -151,12 +203,12 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
     (filterIndustry === '' || c.industry.toLowerCase() === filterIndustry.toLowerCase())
   );
 
-  const uniqueIndustries = React.useMemo(() => {
+  const uniqueIndustries = useMemo(() => {
     const set = new Set(companies.map(c => c.industry).filter(Boolean));
     return Array.from(set).sort();
   }, [companies]);
 
-  const sortedCompanies = React.useMemo(() => {
+  const sortedCompanies = useMemo(() => {
     return [...filtered].sort((a: any, b: any) => {
       let valA = (a[sortField] || '').toString().toLowerCase();
       let valB = (b[sortField] || '').toString().toLowerCase();
@@ -169,6 +221,9 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
       return 0;
     });
   }, [filtered, sortField, sortOrder]);
+
+  const totalPages = Math.ceil(sortedCompanies.length / pageSize);
+  const paginatedCompanies = sortedCompanies.slice((page - 1) * pageSize, page * pageSize);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,20 +284,30 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
     setIsAddContactModalOpen(false);
   };
 
+  // Stats calculation
+  const totalCompaniesCount = companies.length;
+  const totalRevenue = companies.reduce((sum, c) => sum + parseRevenue(c.revenue), 0);
+  const totalEmployeesCount = companies.reduce((sum, c) => sum + (Number(c.employees) || 0), 0);
+  const totalOpenDeals = companies.reduce((sum, c) => sum + (Number(c.openDeals) || 0), 0);
+
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Companies List */}
       <div className={`col-span-12 ${active && viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
-        <div className="bg-card border border-border rounded-2xl p-5">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 border-b border-border/40 pb-3">
-            <div>
-              <h2 className="font-sans text-2xl text-foreground font-bold">Companies</h2>
-              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Monitor accounts, track revenue sizes, and view contact chains.</p>
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-brand-purple/10 flex items-center justify-center text-brand-purple shrink-0">
+                <Building2 className="w-7 h-7" />
+              </div>
+              <div>
+                <h2 className="font-sans text-3xl text-foreground font-bold tracking-tight">Companies</h2>
+                <p className="text-sm text-muted-foreground mt-1 font-medium">Monitor accounts, track revenue sizes, and view contact chains.</p>
+              </div>
             </div>
             
-            {/* View Toggle + Actions Group */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/30 shrink-0 select-none">
                 <button
                   type="button"
                   onClick={() => toggleViewMode('default')}
@@ -253,7 +318,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                   }`}
                   title="Split View"
                 >
-                  <LayoutGrid size={14} />
+                  <LayoutGrid size={16} />
                 </button>
                 <button
                   type="button"
@@ -265,15 +330,15 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                   }`}
                   title="List Table View"
                 >
-                  <List size={14} />
+                  <List size={16} />
                 </button>
               </div>
               {selectedIds.size > 0 && (
                 <button 
                   onClick={handleDeleteSelectedCompanies}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  className="inline-flex items-center space-x-1.5 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <Trash2 className="h-4 w-4" />
                   <span>Delete ({selectedIds.size})</span>
                 </button>
               )}
@@ -282,43 +347,43 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                   setForm({ name: '', industry: '', revenue: '', employees: 10, owner: 'Sarah Johnson', notes: '' });
                   setIsAddModalOpen(true);
                 }}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                className="inline-flex items-center space-x-1.5 px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-sm font-semibold transition-colors cursor-pointer shadow-sm"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-4 w-4" />
                 <span>Add Company</span>
               </button>
             </div>
           </div>
 
           {/* Search, Sort, and Filters toolbar */}
-          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex flex-col lg:flex-row gap-4 mb-6">
             <div className="relative flex-1">
-              <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
-                <Search className="h-3.5 w-3.5" />
+              <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-muted-foreground">
+                <Search className="h-4 w-4" />
               </span>
               <input 
                 type="text" 
                 placeholder="Search companies..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-secondary/15"
+                className="w-full pl-9 pr-4 py-2.5 border border-border rounded-xl text-sm text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background hover:border-border/80 transition-colors shadow-sm"
               />
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {/* Sort Dropdown */}
               <div className="relative">
                 <button
                   type="button"
                   onClick={() => { setIsSortDropdownOpen(!isSortDropdownOpen); setIsFilterDropdownOpen(false); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border bg-card hover:bg-secondary rounded-lg text-xs font-bold text-foreground transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 border border-border bg-background hover:bg-secondary rounded-xl text-sm font-semibold text-foreground transition-colors cursor-pointer shadow-sm"
                 >
-                  <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
                   <span>Sort</span>
-                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isSortDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isSortDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[160px]">
+                  <div className="absolute right-0 top-full mt-2 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[180px]">
                     {[
                       { label: 'Name (A→Z)', field: 'name', order: 'asc' as const },
                       { label: 'Name (Z→A)', field: 'name', order: 'desc' as const },
@@ -332,7 +397,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                       <button
                         key={`${field}-${order}`}
                         onClick={() => { setSortField(field); setSortOrder(order); setIsSortDropdownOpen(false); }}
-                        className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
                           sortField === field && sortOrder === order
                             ? 'bg-brand-purple/10 text-brand-purple font-bold'
                             : 'text-foreground hover:bg-secondary'
@@ -350,19 +415,19 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                 <button
                   type="button"
                   onClick={() => { setIsFilterDropdownOpen(!isFilterDropdownOpen); setIsSortDropdownOpen(false); }}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                    filterIndustry ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-card hover:bg-secondary text-foreground'
+                  className={`inline-flex items-center gap-2 px-4 py-2.5 border rounded-xl text-sm font-semibold transition-colors cursor-pointer shadow-sm ${
+                    filterIndustry ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-background hover:bg-secondary text-foreground'
                   }`}
                 >
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
                   <span>{filterIndustry ? `Industry: ${filterIndustry}` : 'Filter'}</span>
-                  <ChevronDown className={`h-3 w-3 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {isFilterDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[200px] max-h-60 overflow-y-auto">
+                  <div className="absolute right-0 top-full mt-2 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[200px] max-h-60 overflow-y-auto">
                     <button
                       onClick={() => { setFilterIndustry(''); setIsFilterDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer mb-0.5 ${
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer mb-1 ${
                         filterIndustry === '' ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
                       }`}
                     >
@@ -372,7 +437,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
                       <button
                         key={ind}
                         onClick={() => { setFilterIndustry(ind); setIsFilterDropdownOpen(false); }}
-                        className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
                           filterIndustry === ind ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
                         }`}
                       >
@@ -385,234 +450,315 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
             </div>
           </div>
 
-          {viewMode === 'list' ? (
-            <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card custom-scrollbar">
-              <table className="w-full border-collapse text-left table-fixed">
-                <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
-                  <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
-                    <th className="py-3 px-4 w-[5%] text-left">
-                      <input 
-                        type="checkbox" 
-                        checked={sortedCompanies.length > 0 && selectedIds.size === sortedCompanies.length}
-                        onChange={() => handleToggleSelectAll(sortedCompanies)}
-                        className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
-                      />
-                    </th>
-                    <th className="py-3 px-2 w-[22%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>Company Name</th>
-                    <th className="py-3 px-2 w-[20%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('industry')}>Industry</th>
-                    <th className="py-3 px-2 w-[15%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('revenue')}>Revenue</th>
-                    <th className="py-3 px-2 w-[13%] cursor-pointer hover:text-foreground text-center" onClick={() => handleHeaderClick('employees')}>Employees</th>
-                    <th className="py-3 px-2 w-[13%] cursor-pointer hover:text-foreground text-center" onClick={() => handleHeaderClick('openDeals')}>Open Deals</th>
-                    <th className="py-3 px-2 w-[12%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('owner')}>Owner</th>
-                    <th className="py-3 px-2 w-[5%] text-right pr-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
-                  {sortedCompanies.length > 0 ? (
-                    sortedCompanies.map((comp) => {
-                      const isRowSelected = selectedIds.has(comp.id);
-                      return (
-                        <tr 
-                          key={comp.id} 
-                          onClick={() => setSelectedId(comp.id)}
-                          className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
-                        >
-                          <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
-                            <input 
-                              type="checkbox" 
-                              checked={isRowSelected}
-                              onChange={() => handleToggleSelectRow(comp.id)}
-                              className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
-                            />
-                          </td>
-                          <td className="py-3.5 px-2 font-bold truncate" title={comp.name}>{comp.name}</td>
-                          <td className="py-3.5 px-2 text-muted-foreground truncate" title={comp.industry}>{comp.industry}</td>
-                          <td className="py-3.5 px-2 text-muted-foreground tabular-nums truncate">{formatCompanyRevenue(comp.revenue)}</td>
-                          <td className="py-3.5 px-2 text-center tabular-nums">{comp.employees}</td>
-                          <td className="py-3.5 px-2 text-center tabular-nums">{comp.openDeals}</td>
-                          <td className="py-3.5 px-2 text-muted-foreground truncate" title={comp.owner}>{comp.owner}</td>
-                          <td className="py-3.5 px-2 text-right pr-4" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                              onClick={() => {
-                                setForm({ name: comp.name, industry: comp.industry, revenue: comp.revenue, employees: comp.employees, owner: comp.owner, notes: comp.notes });
-                                setSelectedId(comp.id);
-                                setIsEditModalOpen(true);
-                              }}
-                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
-                            >
-                              <Edit className="h-3.5 w-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={8} className="py-8 text-center text-muted-foreground">
-                        No companies matching search.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {/* Total Companies */}
+            <div className="p-4 pt-5 rounded-2xl border border-border/80 bg-card hover:shadow-sm transition-shadow relative overflow-hidden group cursor-pointer flex items-center justify-between">
+              <div className="absolute inset-x-6 bottom-0 h-[3px] bg-brand-purple rounded-t-full"></div>
+              <div className="flex gap-4 items-center">
+                <div className="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center text-brand-purple shrink-0">
+                  <Building2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-0.5">Total Companies</p>
+                  <p className="text-xl font-bold text-foreground">{totalCompaniesCount}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">Across all industries</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors self-start mt-1 shrink-0" />
             </div>
-          ) : (
-            <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card">
-              <table className="w-full border-collapse text-left">
-                <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
-                  <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
-                    <th className="py-3 px-4 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>Company Name</th>
-                    <th className="py-3 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('industry')}>Industry</th>
-                    <th className="py-3 cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('revenue')}>Revenue</th>
-                    <th className="py-3 text-center cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('employees')}>Employees</th>
-                    <th className="py-3 text-center cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('openDeals')}>Open Deals</th>
-                    <th className="py-3 text-right pr-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
-                  {sortedCompanies.map((comp) => (
-                    <tr 
-                      key={comp.id}
-                      onClick={() => setSelectedId(comp.id)}
-                      onDoubleClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedId(prevId => prevId === comp.id ? null : prevId);
-                      }}
-                      className={`hover:bg-secondary/40 cursor-pointer transition duration-200 border-b border-border/40 ${comp.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
-                    >
-                      <td className="py-3.5 px-4 font-semibold text-foreground truncate max-w-[160px]">{comp.name}</td>
-                      <td className="py-3.5 text-muted-foreground truncate max-w-[120px]">{comp.industry}</td>
-                      <td className="py-3.5 tabular-nums">{formatCompanyRevenue(comp.revenue)}</td>
-                      <td className="py-3.5 text-center tabular-nums">{comp.employees}</td>
-                      <td className="py-3.5 text-center tabular-nums">{comp.openDeals}</td>
-                      <td className="py-3.5 text-right pr-4" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-end space-x-1">
+
+            {/* Total Revenue */}
+            <div className="p-4 pt-5 rounded-2xl border border-border/80 bg-card hover:shadow-sm transition-shadow relative overflow-hidden group cursor-pointer flex items-center justify-between">
+              <div className="absolute inset-x-6 bottom-0 h-[3px] bg-emerald-500 rounded-t-full"></div>
+              <div className="flex gap-4 items-center">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
+                  <Receipt className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-0.5">Total Revenue</p>
+                  <p className="text-xl font-bold text-foreground">₹{totalRevenue.toLocaleString('en-IN')}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">Combined revenue</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors self-start mt-1 shrink-0" />
+            </div>
+
+            {/* Total Employees */}
+            <div className="p-4 pt-5 rounded-2xl border border-border/80 bg-card hover:shadow-sm transition-shadow relative overflow-hidden group cursor-pointer flex items-center justify-between">
+              <div className="absolute inset-x-6 bottom-0 h-[3px] bg-blue-500 rounded-t-full"></div>
+              <div className="flex gap-4 items-center">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-0.5">Total Employees</p>
+                  <p className="text-xl font-bold text-foreground">{totalEmployeesCount.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">Active across companies</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors self-start mt-1 shrink-0" />
+            </div>
+
+            {/* Open Deals */}
+            <div className="p-4 pt-5 rounded-2xl border border-border/80 bg-card hover:shadow-sm transition-shadow relative overflow-hidden group cursor-pointer flex items-center justify-between">
+              <div className="absolute inset-x-6 bottom-0 h-[3px] bg-amber-500 rounded-t-full"></div>
+              <div className="flex gap-4 items-center">
+                <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 shrink-0">
+                  <Handshake className="w-6 h-6" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-0.5">Open Deals</p>
+                  <p className="text-xl font-bold text-foreground">{totalOpenDeals}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">In progress</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors self-start mt-1 shrink-0" />
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-hidden border border-border/80 rounded-2xl bg-card">
+            <table className="w-full border-collapse text-left table-fixed">
+              <thead className="bg-muted/30 select-none border-b border-border">
+                <tr className="text-[11px] uppercase font-black tracking-wider text-muted-foreground">
+                  <th className="py-4 px-4 w-[28%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>
+                    <div className="flex items-center gap-1.5">Company Name <ArrowUpDown className="w-3 h-3 opacity-50" /></div>
+                  </th>
+                  <th className="py-4 px-4 w-[20%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('industry')}>
+                    <div className="flex items-center gap-1.5">Industry <ArrowUpDown className="w-3 h-3 opacity-50" /></div>
+                  </th>
+                  <th className="py-4 px-4 w-[20%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('revenue')}>
+                    <div className="flex items-center gap-1.5">Revenue <ArrowUpDown className="w-3 h-3 opacity-50" /></div>
+                  </th>
+                  <th className="py-4 px-4 w-[15%] text-center cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('employees')}>
+                    <div className="flex items-center justify-center gap-1.5">Employees <ArrowUpDown className="w-3 h-3 opacity-50" /></div>
+                  </th>
+                  <th className="py-4 px-4 w-[12%] text-center cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('openDeals')}>
+                    <div className="flex items-center justify-center gap-1.5">Open Deals <ArrowUpDown className="w-3 h-3 opacity-50" /></div>
+                  </th>
+                  <th className="py-4 px-4 w-[5%] text-right pr-6">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60 text-sm text-foreground font-medium">
+                {paginatedCompanies.length > 0 ? (
+                  paginatedCompanies.map((comp) => {
+                    const avatarColor = getAvatarColorClass(comp.name);
+                    const initials = getInitials(comp.name);
+                    const indColor = getIndustryColor(comp.industry);
+
+                    return (
+                      <tr 
+                        key={comp.id} 
+                        onClick={() => setSelectedId(comp.id)}
+                        className={`hover:bg-secondary/40 transition cursor-pointer ${comp.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-4">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 ${avatarColor.bg} ${avatarColor.text}`}>
+                              {initials}
+                            </div>
+                            <span className="font-bold truncate text-foreground text-[13px]">{comp.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <div className={`w-1.5 h-1.5 rounded-full bg-${indColor}`}></div>
+                            <span className={`text-[12px] font-semibold text-foreground`}>
+                              {comp.industry}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-muted-foreground tabular-nums text-[13px]">
+                          {formatCompanyRevenue(comp.revenue)}
+                        </td>
+                        <td className="py-3 px-4 text-center tabular-nums text-muted-foreground text-[13px]">
+                          {comp.employees}
+                        </td>
+                        <td className="py-3 px-4 text-center tabular-nums text-muted-foreground text-[13px]">
+                          {comp.openDeals}
+                        </td>
+                        <td className="py-3 px-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                           <button 
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setForm({ name: comp.name, industry: comp.industry, revenue: comp.revenue, employees: comp.employees, owner: comp.owner, notes: comp.notes });
+                              setSelectedId(comp.id);
                               setIsEditModalOpen(true);
                             }}
-                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
+                            className="w-8 h-8 inline-flex items-center justify-center bg-secondary hover:bg-secondary/80 rounded-full transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
                           >
-                            <Edit className="h-3.5 w-3.5" />
+                            <MoreHorizontal className="h-4 w-4" />
                           </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                      No companies matching your criteria.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            
+            {/* Pagination footer */}
+            {sortedCompanies.length > 0 && (
+              <div className="flex items-center justify-between px-6 py-4 border-t border-border">
+                <span className="text-xs text-muted-foreground font-semibold">
+                  Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, sortedCompanies.length)} of {sortedCompanies.length} companies
+                </span>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center">
+                    <button
+                      disabled={page <= 1}
+                      onClick={() => setPage(p => Math.max(1, p - 1))}
+                      className="p-2 border border-border rounded-l-lg bg-card hover:bg-secondary disabled:opacity-50 text-muted-foreground transition-colors"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <div className="px-4 py-1.5 border-y border-border bg-brand-purple/10 text-brand-purple text-xs font-bold min-w-[36px] text-center">
+                      {page}
+                    </div>
+                    {page < totalPages && (
+                      <div className="px-4 py-1.5 border border-border border-l-0 bg-card text-muted-foreground text-xs font-bold hover:bg-secondary cursor-pointer" onClick={() => setPage(page + 1)}>
+                        {page + 1}
+                      </div>
+                    )}
+                    <button
+                      disabled={page >= totalPages}
+                      onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                      className="p-2 border border-border rounded-r-lg bg-card hover:bg-secondary disabled:opacity-50 text-muted-foreground transition-colors"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="relative hidden sm:block">
+                    <select className="appearance-none pl-3 pr-8 py-2 border border-border rounded-lg text-xs font-bold bg-card text-foreground cursor-pointer focus:outline-none">
+                      <option value="10">{pageSize} / page</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Details Side Panel */}
-      {active && viewMode !== 'list' && <div className="col-span-12 lg:col-span-4 space-y-5">
-        <div className="bg-card border border-border rounded-2xl p-5 sticky top-20">
-          <div className="flex items-center justify-between pb-3 border-b border-border">
-            <div className="flex items-center space-x-2.5">
-              <div className="h-8.5 w-8.5 rounded-lg bg-secondary border border-border flex items-center justify-center text-brand-purple">
-                <Building2 className="h-4.5 w-4.5" />
+      {active && viewMode !== 'list' && (
+        <div className="col-span-12 lg:col-span-4 space-y-5">
+          <div className="bg-card border border-border rounded-2xl p-5 sticky top-20 shadow-sm">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-xl bg-brand-purple/10 border border-brand-purple/10 flex items-center justify-center text-brand-purple">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground text-base tracking-tight">{active.name}</h3>
+                  <p className="text-[11px] text-muted-foreground font-semibold">{active.industry}</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground text-sm">{active.name}</h3>
-                <p className="text-[10px] text-muted-foreground font-semibold">{active.industry}</p>
-              </div>
-            </div>
-            {/* Close Button */}
-            <button 
-              onClick={() => setSelectedId(null)}
-              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
-              title="Close Summary"
-              aria-label="Close Summary"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-
-          <div className="py-3 space-y-2.5 text-[11px] font-semibold border-b border-border">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Owner</span>
-              <span className="text-foreground">{active.owner}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Revenue Size</span>
-              <span className="text-muted-foreground tabular-nums">{formatCompanyRevenue(active.revenue)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Employees</span>
-              <span className="text-muted-foreground tabular-nums">{active.employees}</span>
-            </div>
-          </div>
-
-          {/* Contacts list */}
-          <div className="py-3 border-b border-border">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider">Company Contacts</h4>
+              {/* Close Button */}
               <button 
-                onClick={() => setIsAddContactModalOpen(true)}
-                className="text-brand-purple hover:text-brand-purple/80 inline-flex items-center space-x-0.5 text-[10px] font-bold cursor-pointer"
+                onClick={() => setSelectedId(null)}
+                className="p-1.5 bg-secondary hover:bg-secondary border border-border rounded-md text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
+                title="Close Summary"
               >
-                <PlusCircle className="h-3 w-3" />
-                <span>Add Link</span>
+                <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="space-y-1.5">
-              {active.contacts.length > 0 ? (
-                active.contacts.map((c, i) => (
-                  <div key={i} className="text-[11px] text-foreground font-semibold flex items-center">
-                    <Users className="h-3 w-3 mr-1.5 text-muted-foreground" />
-                    {c}
-                  </div>
-                ))
-              ) : (
-                <p className="text-muted-foreground text-[10px] font-semibold">No contacts linked yet.</p>
-              )}
-            </div>
-          </div>
 
-          {/* Notes */}
-          <div className="py-3 border-b border-border">
-            <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Notes</h4>
-            <p className="text-[11px] text-muted-foreground leading-relaxed font-semibold bg-secondary p-2 border border-border rounded-lg">{active.notes || 'No internal notes saved.'}</p>
-          </div>
-
-          {/* Timeline & Files */}
-          <div className="pt-3 space-y-4">
-            <div>
-              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-2">Recent Timeline</h4>
-              <div className="space-y-2">
-                {active.timeline.map((item) => (
-                  <div key={item.id} className="text-[10px] font-semibold flex justify-between">
-                    <span className="text-muted-foreground">{item.title}</span>
-                    <span className="text-muted-foreground font-bold">{item.time}</span>
-                  </div>
-                ))}
+            <div className="py-4 space-y-3 text-xs font-semibold border-b border-border">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5"/> Owner</span>
+                <span className="text-foreground">{active.owner}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground flex items-center gap-1.5"><IndianRupee className="w-3.5 h-3.5"/> Revenue Size</span>
+                <span className="text-foreground tabular-nums">{formatCompanyRevenue(active.revenue)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground flex items-center gap-1.5"><Users className="w-3.5 h-3.5"/> Employees</span>
+                <span className="text-foreground tabular-nums">{active.employees}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5"/> Open Deals</span>
+                <span className="text-foreground tabular-nums">{active.openDeals}</span>
               </div>
             </div>
 
-            <div>
-              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-2">Uploaded Attachments</h4>
-              <div className="space-y-1.5">
-                {active.files.length > 0 ? (
-                  active.files.map((file) => (
-                    <div key={file.id} className="p-2 border border-border rounded bg-secondary flex justify-between items-center text-[10px] font-semibold">
-                      <span className="flex items-center text-foreground font-semibold">
-                        <Paperclip className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        {file.name}
-                      </span>
-                      <span className="text-muted-foreground">{file.size}</span>
+            {/* Contacts list */}
+            <div className="py-4 border-b border-border">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Company Contacts</h4>
+                <button 
+                  onClick={() => setIsAddContactModalOpen(true)}
+                  className="text-brand-purple hover:text-brand-purple/80 inline-flex items-center space-x-1 text-[11px] font-bold cursor-pointer"
+                >
+                  <PlusCircle className="h-3.5 w-3.5" />
+                  <span>Add Link</span>
+                </button>
+              </div>
+              <div className="space-y-2">
+                {active.contacts.length > 0 ? (
+                  active.contacts.map((c, i) => (
+                    <div key={i} className="text-xs text-foreground font-semibold flex items-center bg-secondary/50 p-2 rounded-lg border border-border/50">
+                      <div className="w-6 h-6 rounded-md bg-white border border-border flex items-center justify-center mr-2.5 shrink-0">
+                        <Users className="h-3 w-3 text-brand-purple" />
+                      </div>
+                      <span className="truncate">{c}</span>
                     </div>
                   ))
                 ) : (
-                  <p className="text-muted-foreground text-[10px] font-semibold">No files uploaded.</p>
+                  <p className="text-muted-foreground text-xs font-medium text-center py-2 bg-secondary/30 rounded-lg border border-dashed border-border/80">No contacts linked yet.</p>
                 )}
               </div>
             </div>
+
+            {/* Notes */}
+            <div className="py-4 border-b border-border">
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Notes</h4>
+                <button 
+                  onClick={() => {
+                    setForm({ name: active.name, industry: active.industry, revenue: active.revenue, employees: active.employees, owner: active.owner, notes: active.notes });
+                    setIsEditModalOpen(true);
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <Edit className="w-3 h-3" />
+                </button>
+              </div>
+              <p className="text-xs text-foreground/80 leading-relaxed font-medium bg-secondary/50 p-3 border border-border/50 rounded-xl">{active.notes || 'No internal notes saved.'}</p>
+            </div>
+
+            {/* Timeline & Files */}
+            <div className="pt-4 space-y-5">
+              <div>
+                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-3">Recent Timeline</h4>
+                <div className="space-y-3 relative before:absolute before:inset-0 before:ml-2 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-border before:to-transparent pl-6 md:pl-0">
+                  {active.timeline.map((item) => (
+                    <div key={item.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                      <div className="flex items-center justify-center w-4 h-4 rounded-full border border-white bg-brand-purple text-slate-50 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 absolute -left-6 md:static">
+                        <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                      </div>
+                      <div className="w-[calc(100%-2rem)] md:w-[calc(50%-1.5rem)] p-2.5 rounded-xl border border-border bg-card shadow-sm">
+                        <div className="text-xs font-bold text-foreground mb-0.5">{item.title}</div>
+                        <div className="text-[10px] font-medium text-muted-foreground">{item.time}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-      </div>}
+      )}
 
       {/* Add Company Modal */}
       {isAddModalOpen && (
@@ -626,33 +772,33 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company Name</label>
-                  <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Industry</label>
-                  <input type="text" required placeholder="e.g. Software" value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <input type="text" required placeholder="e.g. Software" value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Revenue</label>
-                  <input type="text" placeholder="e.g. ₹5,000,000" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <input type="text" placeholder="e.g. ₹5,000,000" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Employees</label>
-                  <input type="number" value={form.employees} onChange={e => setForm({...form, employees: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <input type="number" value={form.employees} onChange={e => setForm({...form, employees: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
                 </div>
               </div>
               <div>
                 <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Owner</label>
-                <select value={form.owner} onChange={e => setForm({...form, owner: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer">
+                <select value={form.owner} onChange={e => setForm({...form, owner: e.target.value})} className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded-lg text-xs cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-purple/30">
                   <option>Sarah Johnson</option>
                   <option>Alex Johnson</option>
                 </select>
               </div>
               <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  cursor-pointer">Save Company</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold cursor-pointer">Save Company</button>
               </div>
             </form>
           </div>
@@ -671,26 +817,26 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Company Name</label>
-                  <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <input type="text" required value={form.name} onChange={e => setForm({...form, name: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Industry</label>
-                  <input type="text" required value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <input type="text" required value={form.industry} onChange={e => setForm({...form, industry: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Revenue</label>
-                  <input type="text" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <input type="text" value={form.revenue} onChange={e => setForm({...form, revenue: e.target.value})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
                 </div>
                 <div>
                   <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Employees</label>
-                  <input type="number" value={form.employees} onChange={e => setForm({...form, employees: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                  <input type="number" value={form.employees} onChange={e => setForm({...form, employees: Number(e.target.value)})} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
                 </div>
               </div>
               <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
                 <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  cursor-pointer">Save Changes</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold cursor-pointer">Save Changes</button>
               </div>
             </form>
           </div>
@@ -708,11 +854,11 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
             <form onSubmit={handleAddContact} className="p-5 space-y-4">
               <div>
                 <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Contact Name & Role</label>
-                <input type="text" required placeholder="e.g. Timothy Brown (CTO)" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
+                <input type="text" required placeholder="e.g. Timothy Brown (CTO)" value={contactName} onChange={e => setContactName(e.target.value)} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/30 bg-background" />
               </div>
               <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
                 <button type="button" onClick={() => setIsAddContactModalOpen(false)} className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  cursor-pointer">Link Contact</button>
+                <button type="submit" className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold cursor-pointer">Link Contact</button>
               </div>
             </form>
           </div>
@@ -721,4 +867,3 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
     </div>
   );
 }
-

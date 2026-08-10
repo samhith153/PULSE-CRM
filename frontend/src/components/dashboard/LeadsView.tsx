@@ -378,7 +378,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   };
 
   useEffect(() => {
-    getLeads().then(data => {
+    getLeads({ silent: true }).then(data => {
       const mapped = (data ?? []).map(backendToLocal);
       setLeads(mapped);
       const ids = mapped.map(l => l.id).filter(Boolean) as string[];

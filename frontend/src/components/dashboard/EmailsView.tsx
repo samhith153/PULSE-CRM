@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { AlertCircle, Bot, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Sparkles, Plus, X, Send, Menu, PenSquare, Trash2 } from 'lucide-react';
+import { AlertCircle, Bot, ChevronLeft, ChevronRight, Inbox, Loader2, Mail, MailOpen, Paperclip, RefreshCw, Search, Sparkles, Plus, X, Send, Menu, PenSquare, Trash2, Star, MoreHorizontal, Send as SendIcon, File as FileIcon, Archive, Clock as ClockIcon } from 'lucide-react';
 import { getEmail, getEmails, getEmailSummary, EmailSummaryData, SyncedEmail, getGmailStatus, sendGmailEmail, getLeads, getContacts, draftOutreachEmail, EmailComposeTarget } from '@/utils/api';
 import { toast } from '@/lib/toast';
 
@@ -278,10 +278,10 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
   };
 
   return (
-    <div className="flex border border-border rounded-2xl overflow-hidden bg-card h-[650px] relative">
-      <aside className={`shrink-0 border-r border-border bg-secondary flex flex-col gap-2 transition duration-300 ${isAsideCollapsed ? 'w-12 p-1.5' : 'w-56 p-3'}`}>
-        <div className="flex items-center justify-between mb-2">
-          {!isAsideCollapsed && <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider pl-2">Mailbox</span>}
+    <div className="flex border-none h-[calc(100vh-80px)] relative bg-background">
+      <aside className={`shrink-0 border-r border-border bg-card flex flex-col gap-2 transition duration-300 ${isAsideCollapsed ? 'w-16 p-2' : 'w-64 p-4'}`}>
+        <div className="flex items-center justify-between mb-4">
+          {!isAsideCollapsed && <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider pl-2">Mailbox</span>}
           <button 
             onClick={() => setIsAsideCollapsed(!isAsideCollapsed)}
             className={`p-1.5 hover:bg-card border border-border/40 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-colors ${isAsideCollapsed ? 'mx-auto' : ''}`}
@@ -293,39 +293,43 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
 
         <button 
           onClick={openBlankCompose}
-          className={`flex items-center justify-center gap-2 py-2 bg-brand-purple hover:bg-brand-purple/95 text-white rounded-xl text-xs font-bold transition cursor-pointer shadow-sm mb-2 ${isAsideCollapsed ? 'w-8 h-8 rounded-full p-0 mx-auto' : 'w-full'}`}
+          className={`flex items-center justify-center gap-2 py-3 bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl text-sm font-bold transition cursor-pointer shadow-sm mb-4 ${isAsideCollapsed ? 'w-10 h-10 rounded-full p-0 mx-auto' : 'w-full'}`}
           title="Compose"
         >
-          <Plus className="h-4 w-4" />
+          <PenSquare className="h-4.5 w-4.5" />
           {!isAsideCollapsed && <span>Compose</span>}
         </button>
 
-        <nav className="space-y-0.5">
+        <nav className="space-y-1">
           {[
             { id: 'all', label: 'All Mail', icon: Mail, count: total },
             { id: 'inbound', label: 'Inbox', icon: Inbox, count: unreadCount },
-            { id: 'outbound', label: 'Sent', icon: MailOpen, count: 0 },
-            { id: 'unread', label: 'Unread', icon: MailOpen, count: unreadCount }
+            { id: 'outbound', label: 'Sent', icon: SendIcon, count: 0 },
+            { id: 'drafts', label: 'Drafts', icon: FileIcon, count: 0 },
+            { id: 'unread', label: 'Unread', icon: MailOpen, count: unreadCount },
+            { id: 'starred', label: 'Starred', icon: Star, count: 0 },
+            { id: 'snoozed', label: 'Snoozed', icon: ClockIcon, count: 0 },
+            { id: 'trash', label: 'Trash', icon: Trash2, count: 0 }
           ].map(item => {
             const Icon = item.icon;
-            const active = filter === item.id;
+            const active = filter === item.id || (item.id === 'all' && filter === 'all'); // simplify logic for mockup
             return (
               <button 
                 key={item.id} 
-                onClick={() => { setFilter(item.id as MailboxFilter); setPage(1); }} 
-                className={`flex items-center rounded-r-full text-xs font-semibold transition cursor-pointer ${
+                onClick={() => { if (['all', 'inbound', 'outbound', 'unread'].includes(item.id)) { setFilter(item.id as MailboxFilter); setPage(1); } }} 
+                className={`flex items-center rounded-r-2xl text-sm font-semibold transition cursor-pointer ${
                   isAsideCollapsed 
-                    ? 'justify-center p-2 rounded-full w-8 h-8 mx-auto' 
-                    : 'w-full justify-between px-4 py-2'
-                } ${active ? 'bg-brand-purple/10 text-brand-purple border-l-3 border-brand-purple' : 'hover:bg-secondary text-muted-foreground hover:text-foreground'}`}
+                    ? 'justify-center p-2 rounded-2xl w-10 h-10 mx-auto' 
+                    : 'w-full justify-between px-4 py-2.5'
+                } ${active ? 'bg-brand-purple/10 text-brand-purple border-l-4 border-brand-purple' : 'hover:bg-secondary text-muted-foreground hover:text-foreground border-l-4 border-transparent'}`}
                 title={isAsideCollapsed ? item.label : undefined}
               >
                 <span className="flex items-center gap-3">
-                  <Icon className="h-4.5 w-4.5" />
+                  <Icon className="h-5 w-5" />
                   {!isAsideCollapsed && item.label}
                 </span>
                 {!isAsideCollapsed && item.count > 0 && (
-                  <span className="text-[10px] font-semibold bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full tabular-nums">{item.count}</span>
+                  <span className="text-[11px] font-bold bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full tabular-nums">{item.count}</span>
                 )}
               </button>
             );
@@ -333,45 +337,84 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
         </nav>
       </aside>
 
-      <section className="flex-1 min-w-0 flex flex-col border-l border-border bg-card">
-        <div className="h-12 border-b border-border px-4 flex items-center justify-between bg-secondary shrink-0 gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search sender, subject, preview..." className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-[11px] text-foreground focus:outline-none bg-background" />
+      <section className="flex-1 min-w-0 flex flex-col bg-card">
+        <div className="h-16 px-6 flex items-center justify-between shrink-0 gap-4 pt-2">
+          <div className="relative flex-1 max-w-2xl">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search sender, subject, preview..." className="w-full pl-11 pr-4 py-2.5 border border-border rounded-xl text-xs text-foreground focus:outline-none bg-background shadow-sm" />
           </div>
-          <button onClick={loadEmails} disabled={isLoading} className="p-1.5 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50" title="Refresh emails">
+          <button onClick={loadEmails} disabled={isLoading} className="p-2.5 hover:bg-secondary rounded-lg border border-border text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50" title="Refresh emails">
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
         </div>
 
-        {error && <div className="m-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}
+        {error && <div className="m-6 mt-0 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-xs font-semibold text-destructive flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}
 
-        <div className="flex-1 overflow-y-auto divide-y divide-border">
+        <div className="flex-1 overflow-y-auto mt-2 px-6 pb-24">
           {isLoading ? (
             <div className="h-full flex items-center justify-center text-muted-foreground text-xs font-semibold"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading emails...</div>
           ) : emails.length === 0 ? (
             <div className="h-full flex items-center justify-center text-muted-foreground text-xs font-semibold">No emails found.</div>
-          ) : emails.map(email => (
-            <button key={email.id} onClick={() => handleSingleClick(email)} onDoubleClick={() => handleDoubleClick(email)} className={`w-full text-left px-4 py-3.5 hover:bg-secondary/50 transition-colors ${selectedEmail?.id === email.id ? 'bg-brand-purple/5' : !email.is_read ? 'bg-secondary/50' : ''}`}>
-              <div className="flex items-center justify-between gap-3">
-                <p className={`truncate text-xs ${!email.is_read ? 'font-semibold text-foreground' : 'font-bold text-muted-foreground/80'}`}>{email.direction === 'outbound' ? email.receiver || 'Recipient' : email.sender}</p>
-                <span className="text-[10px] text-muted-foreground font-semibold shrink-0">{formatDate(email.sent_at)}</span>
-              </div>
-              <p className="text-xs font-semibold text-foreground truncate mt-1">{email.subject}</p>
-              <p className="text-[11px] text-muted-foreground font-semibold truncate mt-0.5">{email.body_preview || 'No preview available'}</p>
-              <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground font-semibold">
-                {email.thread_id && <span>Thread {email.thread_id}</span>}
-                {email.attachment_metadata?.length > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="h-3 w-3" />{email.attachment_metadata.length}</span>}
-              </div>
-            </button>
-          ))}
+          ) : (
+            <div className="space-y-2">
+              {emails.map((email, idx) => {
+                const colors = ['bg-blue-500/10 text-blue-600', 'bg-emerald-500/10 text-emerald-600', 'bg-amber-500/10 text-amber-600', 'bg-rose-500/10 text-rose-600', 'bg-purple-500/10 text-purple-600'];
+                const colorClass = colors[idx % colors.length];
+                const address = email.direction === 'outbound' ? email.receiver || 'Recipient' : email.sender;
+                const initial = address ? address.substring(0, 2).toUpperCase() : '??';
+
+                return (
+                  <button key={email.id} onClick={() => handleSingleClick(email)} onDoubleClick={() => handleDoubleClick(email)} className={`w-full text-left p-4 rounded-2xl hover:bg-secondary/40 transition-colors border ${selectedEmail?.id === email.id ? 'border-brand-purple/30 bg-brand-purple/5 shadow-sm' : !email.is_read ? 'border-border/60 bg-secondary/20' : 'border-transparent'}`}>
+                    <div className="flex gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${colorClass}`}>
+                        {initial}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between mb-1">
+                          <h4 className={`text-sm font-bold truncate ${!email.is_read ? 'text-foreground' : 'text-foreground/80'}`}>{address}</h4>
+                          <div className="flex items-center gap-3 shrink-0 text-muted-foreground">
+                            <span className="text-xs font-semibold">{formatDate(email.sent_at)}</span>
+                            <Star className="h-4 w-4 hover:text-amber-400 cursor-pointer" />
+                            <MoreHorizontal className="h-4 w-4 hover:text-foreground cursor-pointer" />
+                          </div>
+                        </div>
+                        <p className={`text-sm truncate mb-1 ${!email.is_read ? 'font-bold text-foreground' : 'font-semibold text-foreground/80'}`}>{email.subject}</p>
+                        <p className="text-xs text-muted-foreground font-semibold line-clamp-1">{email.body_preview || 'No preview available'}</p>
+                        <div className="flex items-center gap-3 mt-2 text-[10px] font-semibold text-muted-foreground">
+                          {email.thread_id && <span className="bg-secondary px-2 py-0.5 rounded text-muted-foreground border border-border/50">Thread ID: {email.thread_id}</span>}
+                          {email.attachment_metadata?.length > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="h-3 w-3" />{email.attachment_metadata.length}</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        <div className="h-11 border-t border-border px-4 flex items-center justify-between text-[10px] text-muted-foreground font-semibold shrink-0 bg-secondary/50">
-          <span>{total === 0 ? '0' : `${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, total)}`} of {total}</span>
-          <div className="flex border border-border rounded-md bg-background">
-            <button onClick={() => setPage(value => Math.max(1, value - 1))} disabled={page <= 1} className="p-1 hover:bg-secondary disabled:opacity-40"><ChevronLeft className="h-3.5 w-3.5" /></button>
-            <button onClick={() => setPage(value => Math.min(totalPages, value + 1))} disabled={page >= totalPages} className="p-1 hover:bg-secondary disabled:opacity-40"><ChevronRight className="h-3.5 w-3.5" /></button>
+        <div className="absolute bottom-6 left-6 right-6 flex items-center justify-between">
+          <span className="text-xs font-semibold text-muted-foreground pl-6">
+            Showing {total === 0 ? '0' : `${(page - 1) * pageSize + 1} to ${Math.min(page * pageSize, total)}`} of {total} emails
+          </span>
+          <div className="flex items-center gap-3 pr-[88px]">
+            <div className="flex items-center">
+              <button onClick={() => setPage(value => Math.max(1, value - 1))} disabled={page <= 1} className="w-8 h-8 flex items-center justify-center border border-border bg-card rounded-l-lg text-muted-foreground hover:bg-secondary cursor-pointer transition-colors disabled:opacity-50"><ChevronLeft className="h-4 w-4" /></button>
+              <button className="w-8 h-8 flex items-center justify-center border-y border-border bg-brand-purple/10 text-brand-purple font-bold text-xs cursor-pointer">{page}</button>
+              <button className="w-8 h-8 flex items-center justify-center border border-border bg-card hover:bg-secondary text-muted-foreground font-bold text-xs cursor-pointer">{Math.min(totalPages, page + 1)}</button>
+              <button className="w-8 h-8 flex items-center justify-center border-y border-border bg-card text-muted-foreground text-xs cursor-pointer">...</button>
+              <button className="w-8 h-8 flex items-center justify-center border border-border bg-card hover:bg-secondary text-muted-foreground font-bold text-xs cursor-pointer">{totalPages}</button>
+              <button onClick={() => setPage(value => Math.min(totalPages, value + 1))} disabled={page >= totalPages} className="w-8 h-8 flex items-center justify-center border border-border bg-card rounded-r-lg text-muted-foreground hover:bg-secondary cursor-pointer transition-colors disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </div>
+          
+          <div className="absolute bottom-0 right-0 flex items-center gap-3">
+            <button className="w-12 h-12 rounded-full bg-brand-purple text-white shadow-lg flex items-center justify-center hover:bg-brand-purple/90 transition-transform hover:scale-105 cursor-pointer">
+              <Plus className="h-6 w-6" />
+            </button>
+            <button className="w-12 h-12 rounded-full bg-card border border-border text-brand-purple shadow-lg flex items-center justify-center hover:bg-secondary transition-transform hover:scale-105 cursor-pointer">
+              <Sparkles className="h-5 w-5" />
+            </button>
           </div>
         </div>
       </section>

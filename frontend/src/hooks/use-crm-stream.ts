@@ -16,21 +16,18 @@ interface UseCrmStreamOptions {
  * Maintains a persistent Server-Sent Events (SSE) connection to
  * GET /api/v1/stream/dashboard for real-time background AI worker updates.
  *
- * When the backend pushes a LEAD_SCORE_UPDATED or DEAL_AT_RISK event,
- * this hook calls `onInvalidate()` — letting the caller decide whether
- * to trigger a full dashboard re-fetch, show a toast, or update local state.
- *
- * The token is passed as a query parameter because the native EventSource API
- * does not support custom request headers.
- *
- * Connection is automatically closed on component unmount.
- * Re-connects with exponential back-off on error (max 30s delay).
+ * Stops retrying after MAX_RETRIES consecutive failures to avoid log spam
+ * when the SSE endpoint is unavailable.
  */
+const MAX_RETRIES = 5;
+
 export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptions = {}) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const retryDelayRef = useRef<number>(2000);
+  const retryCountRef = useRef<number>(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onInvalidateRef = useRef(onInvalidate);
+  const mountedRef = useRef(true);
 
   // Keep the callback ref current without triggering effect re-runs
   useEffect(() => {
@@ -38,9 +35,18 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
   }, [onInvalidate]);
 
   useEffect(() => {
+    mountedRef.current = true;
     if (!enabled || typeof window === 'undefined') return;
 
     function connect() {
+      if (!mountedRef.current) return;
+
+      // Give up after too many consecutive failures
+      if (retryCountRef.current >= MAX_RETRIES) {
+        // Silent stop — no more log spam
+        return;
+      }
+
       const url = getDashboardStreamUrl();
       if (!url) return;
 
@@ -48,8 +54,9 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
       eventSourceRef.current = es;
 
       es.onopen = () => {
-        // Reset back-off on successful connection
+        // Connection established — reset back-off counters
         retryDelayRef.current = 2000;
+        retryCountRef.current = 0;
       };
 
       es.onmessage = (event) => {
@@ -62,14 +69,22 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
             onInvalidateRef.current?.();
           }
         } catch (err) {
-          console.error('[useCrmStream] Failed to parse SSE message:', err);
+          // Ignore parse errors on heartbeat/keepalive comments
         }
       };
 
       es.onerror = () => {
-        console.warn(`[useCrmStream] SSE connection error — retrying in ${retryDelayRef.current / 1000}s`);
         es.close();
         eventSourceRef.current = null;
+
+        if (!mountedRef.current) return;
+
+        retryCountRef.current += 1;
+
+        if (retryCountRef.current >= MAX_RETRIES) {
+          // Quietly stop — SSE is a non-critical enhancement
+          return;
+        }
 
         // Exponential back-off capped at 30 seconds
         retryTimerRef.current = setTimeout(() => {
@@ -82,6 +97,7 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
     connect();
 
     return () => {
+      mountedRef.current = false;
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
       if (retryTimerRef.current) {

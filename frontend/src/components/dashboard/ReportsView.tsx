@@ -18,7 +18,7 @@ export default function ReportsView() {
     let cancelled = false;
     (async () => {
       try {
-        const result = await getSalesRepDashboard('month');
+        const result = await getSalesRepDashboard('month', { silent: true });
         if (!cancelled) setData(result);
       } catch (err: any) {
         if (!cancelled) setError(err?.message || 'Failed to load reports');

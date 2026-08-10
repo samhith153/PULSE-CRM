@@ -117,7 +117,7 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
         },
       ];
 
-    case 'representative':
+    case 'sales_rep':
     default:
       return [
         {

@@ -261,7 +261,7 @@ export default function StatCards({
     const fetchKpi = () => {
       setKpiLoading(true);
       const period = timeFilter === 'all' ? 'quarter' : 'month';
-      getSalesRepDashboard(period as 'week' | 'month' | 'quarter' | 'year')
+      getSalesRepDashboard(period as 'week' | 'month' | 'quarter' | 'year', { silent: true })
         .then((d) => { if (!cancelled) setKpi(d); })
         .catch(() => { if (!cancelled) setKpi(null); })
         .finally(() => { if (!cancelled) setKpiLoading(false); });

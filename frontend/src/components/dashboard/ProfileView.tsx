@@ -46,7 +46,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([getCurrentUser(), getSalesRepDashboard('quarter')])
+    Promise.all([getCurrentUser({ silent: true }), getSalesRepDashboard('quarter', { silent: true })])
       .then(([u, k]) => {
         if (cancelled) return;
         setProfile(u as unknown as ProfileShape);

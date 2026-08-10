@@ -311,8 +311,8 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
 
     setStatsLoading(true);
     Promise.all([
-      getDeals().catch(() => [] as any[]),
-      getLeads().catch(() => [] as any[]),
+      getDeals({ silent: true }).catch(() => [] as any[]),
+      getLeads({ silent: true }).catch(() => [] as any[]),
       getActivities({ page_size: 50 }).catch(() => [] as any[])
     ]).then(([dealsRes, leadsRes, activitiesRes]: [any, any, any]) => {
       const dealsList = Array.isArray(dealsRes) ? dealsRes : (dealsRes?.data ?? []);

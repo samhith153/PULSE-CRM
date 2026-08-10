@@ -13,7 +13,10 @@ import {
   RefreshCw,
   Loader2,
   Archive,
-  Undo2
+  Undo2,
+  Calendar,
+  ChevronDown,
+  CheckSquare
 } from 'lucide-react';
 import { 
   UserData, RoleData, 
@@ -23,6 +26,52 @@ import {
 } from '@/utils/api';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from '@/lib/toast';
+
+/* ── Avatar color palette — deterministic per-user ────────────────────── */
+const AVATAR_COLORS = [
+  { bg: '#EDE9FE', text: '#7C3AED' },  // violet
+  { bg: '#DBEAFE', text: '#2563EB' },  // blue
+  { bg: '#D1FAE5', text: '#059669' },  // emerald
+  { bg: '#FEF3C7', text: '#D97706' },  // amber
+  { bg: '#FCE7F3', text: '#DB2777' },  // pink
+  { bg: '#E0E7FF', text: '#4F46E5' },  // indigo
+  { bg: '#CFFAFE', text: '#0891B2' },  // cyan
+  { bg: '#FEE2E2', text: '#DC2626' },  // red
+  { bg: '#F3E8FF', text: '#9333EA' },  // purple
+  { bg: '#ECFDF5', text: '#10B981' },  // green
+];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) {
+    return parts[0].substring(0, 2).toUpperCase();
+  }
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+/* ── Role badge styling ───────────────────────────────────────────────── */
+const ROLE_STYLES: Record<string, { bg: string; text: string }> = {
+  'Sales Representative': { bg: '#EDE9FE', text: '#7C3AED' },
+  'sales_rep':            { bg: '#EDE9FE', text: '#7C3AED' },
+  'Sales Manager':        { bg: '#DBEAFE', text: '#2563EB' },
+  'sales_manager':        { bg: '#DBEAFE', text: '#2563EB' },
+  'Manager':              { bg: '#DBEAFE', text: '#2563EB' },
+  'manager':              { bg: '#DBEAFE', text: '#2563EB' },
+  'Admin':                { bg: '#FCE7F3', text: '#DB2777' },
+  'admin':                { bg: '#FCE7F3', text: '#DB2777' },
+};
+
+function getRoleStyle(roleName: string) {
+  return ROLE_STYLES[roleName] || { bg: '#F3F4F6', text: '#6B7280' };
+}
 
 export default function UsersView() {
   const { user: currentUser } = useCurrentUser();
@@ -203,6 +252,16 @@ export default function UsersView() {
     return r?.display_name || role;
   };
 
+  const formatLastLogin = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return 'Never';
+    const d = new Date(dateStr);
+    const day = d.getDate();
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    const year = d.getFullYear();
+    const time = d.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+    return `${day} ${month} ${year}, ${time}`;
+  };
+
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const deletedTotalPages = Math.max(1, Math.ceil(deletedTotal / pageSize));
 
@@ -226,48 +285,57 @@ export default function UsersView() {
         </div>
       )}
 
+      {/* ── Page Header ────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
-            User Profiles Management
-          </h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
-            Provision user configurations, restrict roles authorization mapping, and cycle passwords.
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-brand-purple/10 mt-0.5">
+            <Users className="h-5 w-5 text-brand-purple" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-sans text-foreground tracking-tight font-bold leading-tight">
+              User Profiles Management
+            </h1>
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium tracking-wide">
+              Provision user configurations, restrict roles authorization mapping, and cycle passwords.
+            </p>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2.5">
           <button
             onClick={loadUsers}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 border border-border hover:bg-secondary rounded-lg text-xs font-bold text-muted-foreground transition cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-4 py-2 border border-border hover:bg-secondary rounded-lg text-xs font-semibold text-muted-foreground transition cursor-pointer"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className="h-3.5 w-3.5" />
             <span>Refresh</span>
           </button>
           <button 
             onClick={handleOpenCreate}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition duration-200 cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition duration-200 cursor-pointer"
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5" />
             <span>Create User</span>
           </button>
         </div>
       </div>
 
-      {/* Active Users */}
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-        <h3 className="font-semibold text-foreground text-sm flex items-center">
-          <Users className="h-4.5 w-4.5 mr-2 text-brand-purple" />
-          <span>Active Organization Users</span>
-          {loading && <Loader2 className="h-3.5 w-3.5 ml-2 animate-spin text-muted-foreground" />}
-        </h3>
+      {/* ── Active Users Card ──────────────────────────────────────────── */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        {/* Section header */}
+        <div className="px-5 pt-5 pb-3">
+          <h3 className="font-semibold text-foreground text-sm flex items-center">
+            <Users className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+            <span>Active Organization Users</span>
+            {loading && <Loader2 className="h-3.5 w-3.5 ml-2 animate-spin text-muted-foreground" />}
+          </h3>
+        </div>
 
         {loading && users.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground text-xs font-medium">
+          <div className="flex items-center justify-center py-16 text-muted-foreground text-xs font-medium">
             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
             Loading users...
           </div>
         ) : users.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-xs font-medium">
+          <div className="text-center py-16 text-muted-foreground text-xs font-medium">
             No users found. Create one to get started.
           </div>
         ) : (
@@ -275,83 +343,126 @@ export default function UsersView() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border text-[11px] uppercase font-black tracking-wider text-foreground bg-muted/40">
-                    <th className="py-2.5">User</th>
-                    <th className="py-2.5">Email</th>
-                    <th className="py-2.5">Authorization Role</th>
-                    <th className="py-2.5">Status</th>
-                    <th className="py-2.5">Last Login</th>
-                    <th className="py-2.5 text-right">Actions</th>
+                  <tr className="border-y border-border text-[11px] uppercase font-black tracking-wider text-muted-foreground">
+                    <th className="py-3 px-5 font-semibold">User</th>
+                    <th className="py-3 px-4 font-semibold">Email</th>
+                    <th className="py-3 px-4 font-semibold">Authorization Role</th>
+                    <th className="py-3 px-4 font-semibold">Status</th>
+                    <th className="py-3 px-4 font-semibold">Last Login</th>
+                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-xs font-semibold text-foreground">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-secondary transition-colors">
-                      <td className="py-3 font-semibold">{user.full_name}</td>
-                      <td className="py-3 text-muted-foreground">{user.email}</td>
-                      <td className="py-3">
-                        {(user.roles || []).length > 0 ? (
-                          <span className="bg-secondary text-foreground px-2 py-0.5 rounded text-[9px] font-semibold">
-                            {roleNameDisplay(user.roles[0])}
+                <tbody className="text-[13px] text-foreground">
+                  {users.map((user) => {
+                    const avatar = getAvatarColor(user.full_name);
+                    const initials = getInitials(user.full_name);
+                    const displayRole = (user.roles || []).length > 0 ? roleNameDisplay(user.roles[0]) : null;
+                    const roleStyle = displayRole ? getRoleStyle(displayRole) : null;
+
+                    return (
+                      <tr key={user.id} className="border-b border-border/60 hover:bg-secondary/50 transition-colors">
+                        {/* USER */}
+                        <td className="py-3 px-5">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold select-none"
+                              style={{ backgroundColor: avatar.bg, color: avatar.text }}
+                            >
+                              {initials}
+                            </div>
+                            <span className="font-semibold text-foreground whitespace-nowrap">{user.full_name}</span>
+                          </div>
+                        </td>
+
+                        {/* EMAIL */}
+                        <td className="py-3 px-4 text-muted-foreground font-normal text-[13px] whitespace-nowrap">
+                          {user.email}
+                        </td>
+
+                        {/* AUTHORIZATION ROLE */}
+                        <td className="py-3 px-4">
+                          {displayRole && roleStyle ? (
+                            <span
+                              className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap"
+                              style={{ backgroundColor: roleStyle.bg, color: roleStyle.text }}
+                            >
+                              {displayRole}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-[11px]">No role</span>
+                          )}
+                        </td>
+
+                        {/* STATUS */}
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide ${
+                            user.is_active 
+                              ? 'text-emerald-600' 
+                              : 'text-destructive'
+                          }`}>
+                            <span className={`w-2 h-2 rounded-full ${
+                              user.is_active ? 'bg-emerald-500' : 'bg-destructive'
+                            }`} />
+                            {user.is_active ? 'Active' : 'Disabled'}
                           </span>
-                        ) : (
-                          <span className="text-muted-foreground text-[9px]">No role</span>
-                        )}
-                      </td>
-                      <td className="py-3">
-                        <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide ${
-                          user.is_active 
-                            ? 'bg-brand-cyan/15 text-brand-cyan' 
-                            : 'bg-destructive/10 text-destructive'
-                        }`}>
-                          {user.is_active ? 'Active' : 'Disabled'}
-                        </span>
-                      </td>
-                      <td className="py-3 text-muted-foreground tabular-nums">
-                        {user.last_login_at 
-                          ? new Date(user.last_login_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                          : 'Never'}
-                      </td>
-                      <td className="py-3 text-right space-x-1 whitespace-nowrap">
-                        <button 
-                          onClick={() => handleOpenEdit(user)}
-                          className="p-1 text-muted-foreground hover:text-brand-purple rounded hover:bg-secondary transition cursor-pointer inline-block"
-                          title="Edit Profile"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleToggleStatus(user)}
-                          className={`p-1 rounded hover:bg-secondary transition cursor-pointer inline-block ${
-                            user.is_active ? 'text-destructive hover:text-destructive' : 'text-brand-cyan hover:text-brand-cyan'
-                          }`}
-                          title={user.is_active ? 'Disable User' : 'Enable User'}
-                        >
-                          <Ban className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleResetPassword(user)}
-                          className="p-1 text-muted-foreground hover:text-amber-500 rounded hover:bg-secondary transition cursor-pointer inline-block"
-                          title="Reset Password"
-                        >
-                          <Key className="h-4 w-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteUser(user)}
-                          className="p-1 text-muted-foreground hover:text-destructive rounded hover:bg-secondary transition cursor-pointer inline-block"
-                          title={isAdmin ? 'Permanently Delete' : 'Deactivate User'}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+
+                        {/* LAST LOGIN */}
+                        <td className="py-3 px-4 text-muted-foreground text-[13px] whitespace-nowrap">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-muted-foreground/70 flex-shrink-0" />
+                            <span className="tabular-nums">
+                              {formatLastLogin(user.last_login_at)}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* ACTIONS */}
+                        <td className="py-3 px-4 text-right">
+                          <div className="inline-flex items-center gap-1">
+                            <button 
+                              onClick={() => handleOpenEdit(user)}
+                              className="p-1.5 text-muted-foreground hover:text-brand-purple hover:bg-brand-purple/10 rounded-md transition-all duration-150 cursor-pointer"
+                              title="Edit Profile"
+                            >
+                              <CheckSquare className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleToggleStatus(user)}
+                              className={`p-1.5 rounded-md transition-all duration-150 cursor-pointer ${
+                                user.is_active 
+                                  ? 'text-muted-foreground hover:text-destructive hover:bg-destructive/10' 
+                                  : 'text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50'
+                              }`}
+                              title={user.is_active ? 'Disable User' : 'Enable User'}
+                            >
+                              <Ban className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleResetPassword(user)}
+                              className="p-1.5 text-muted-foreground hover:text-amber-600 hover:bg-amber-50 rounded-md transition-all duration-150 cursor-pointer"
+                              title="Reset Password"
+                            >
+                              <Key className="h-4 w-4" />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteUser(user)}
+                              className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all duration-150 cursor-pointer"
+                              title={isAdmin ? 'Permanently Delete' : 'Deactivate User'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-3 border-t border-border">
+              <div className="flex items-center justify-between px-5 py-3 border-t border-border">
                 <span className="text-[10px] text-muted-foreground font-medium">
                   Page {page} of {totalPages} ({total} total)
                 </span>
@@ -377,12 +488,12 @@ export default function UsersView() {
         )}
       </div>
 
-      {/* Archived Users Section — Admin Only */}
+      {/* ── Archived Users Section — Admin Only ────────────────────────── */}
       {isAdmin && (
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowArchived(!showArchived)}
-            className="w-full flex items-center justify-between text-left cursor-pointer"
+            className="w-full flex items-center justify-between text-left cursor-pointer px-5 py-4"
           >
             <h3 className="font-semibold text-foreground text-sm flex items-center">
               <Archive className="h-4.5 w-4.5 mr-2 text-amber-500" />
@@ -393,15 +504,16 @@ export default function UsersView() {
                 </span>
               )}
             </h3>
-            <span className="text-xs text-muted-foreground">
+            <span className="flex items-center gap-1 text-xs text-muted-foreground font-medium">
               {showArchived ? 'Hide' : 'Show'}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${showArchived ? 'rotate-180' : ''}`} />
             </span>
           </button>
 
           {showArchived && (
             <>
               {deletedUsers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-xs font-medium">
+                <div className="text-center py-10 text-muted-foreground text-xs font-medium border-t border-border">
                   No archived users.
                 </div>
               ) : (
@@ -409,63 +521,102 @@ export default function UsersView() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-border text-[11px] uppercase font-black tracking-wider text-foreground bg-muted/40">
-                          <th className="py-2.5">User</th>
-                          <th className="py-2.5">Email</th>
-                          <th className="py-2.5">Role</th>
-                          <th className="py-2.5">Status</th>
-                          <th className="py-2.5">Last Login</th>
-                          <th className="py-2.5 text-right">Actions</th>
+                        <tr className="border-y border-border text-[11px] uppercase font-black tracking-wider text-muted-foreground">
+                          <th className="py-3 px-5 font-semibold">User</th>
+                          <th className="py-3 px-4 font-semibold">Email</th>
+                          <th className="py-3 px-4 font-semibold">Role</th>
+                          <th className="py-3 px-4 font-semibold">Status</th>
+                          <th className="py-3 px-4 font-semibold">Last Login</th>
+                          <th className="py-3 px-4 font-semibold text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border text-xs font-semibold text-foreground">
-                        {deletedUsers.map((user) => (
-                          <tr key={user.id} className="hover:bg-secondary transition-colors opacity-75">
-                            <td className="py-3 font-semibold">{user.full_name}</td>
-                            <td className="py-3 text-muted-foreground">{user.email}</td>
-                            <td className="py-3">
-                              {(user.roles || []).length > 0 ? (
-                                <span className="bg-secondary text-foreground px-2 py-0.5 rounded text-[9px] font-semibold">
-                                  {roleNameDisplay(user.roles[0])}
+                      <tbody className="text-[13px] text-foreground">
+                        {deletedUsers.map((user) => {
+                          const avatar = getAvatarColor(user.full_name);
+                          const initials = getInitials(user.full_name);
+                          const displayRole = (user.roles || []).length > 0 ? roleNameDisplay(user.roles[0]) : null;
+                          const roleStyle = displayRole ? getRoleStyle(displayRole) : null;
+
+                          return (
+                            <tr key={user.id} className="border-b border-border/60 hover:bg-secondary/50 transition-colors opacity-75">
+                              {/* USER */}
+                              <td className="py-3 px-5">
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full text-xs font-bold select-none"
+                                    style={{ backgroundColor: avatar.bg, color: avatar.text }}
+                                  >
+                                    {initials}
+                                  </div>
+                                  <span className="font-semibold text-foreground whitespace-nowrap">{user.full_name}</span>
+                                </div>
+                              </td>
+
+                              {/* EMAIL */}
+                              <td className="py-3 px-4 text-muted-foreground font-normal text-[13px] whitespace-nowrap">
+                                {user.email}
+                              </td>
+
+                              {/* ROLE */}
+                              <td className="py-3 px-4">
+                                {displayRole && roleStyle ? (
+                                  <span
+                                    className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold whitespace-nowrap"
+                                    style={{ backgroundColor: roleStyle.bg, color: roleStyle.text }}
+                                  >
+                                    {displayRole}
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-[11px]">No role</span>
+                                )}
+                              </td>
+
+                              {/* STATUS */}
+                              <td className="py-3 px-4">
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-amber-600">
+                                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                  Archived
                                 </span>
-                              ) : (
-                                <span className="text-muted-foreground text-[9px]">No role</span>
-                              )}
-                            </td>
-                            <td className="py-3">
-                              <span className="px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide bg-amber-500/10 text-amber-500">
-                                Archived
-                              </span>
-                            </td>
-                            <td className="py-3 text-muted-foreground tabular-nums">
-                              {user.last_login_at 
-                                ? new Date(user.last_login_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                : 'Never'}
-                            </td>
-                            <td className="py-3 text-right space-x-1 whitespace-nowrap">
-                              <button 
-                                onClick={() => handleRestoreUser(user)}
-                                className="p-1 text-muted-foreground hover:text-brand-cyan rounded hover:bg-secondary transition cursor-pointer inline-block"
-                                title="Restore User"
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </button>
-                              <button 
-                                onClick={() => handlePermanentDelete(user)}
-                                className="p-1 text-muted-foreground hover:text-destructive rounded hover:bg-secondary transition cursor-pointer inline-block"
-                                title="Permanently Delete"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                              </td>
+
+                              {/* LAST LOGIN */}
+                              <td className="py-3 px-4 text-muted-foreground text-[13px] whitespace-nowrap">
+                                <div className="flex items-center gap-1.5">
+                                  <Calendar className="h-3.5 w-3.5 text-muted-foreground/70 flex-shrink-0" />
+                                  <span className="tabular-nums">
+                                    {formatLastLogin(user.last_login_at)}
+                                  </span>
+                                </div>
+                              </td>
+
+                              {/* ACTIONS */}
+                              <td className="py-3 px-4 text-right">
+                                <div className="inline-flex items-center gap-1">
+                                  <button 
+                                    onClick={() => handleRestoreUser(user)}
+                                    className="p-1.5 text-muted-foreground hover:text-brand-cyan hover:bg-brand-cyan/10 rounded-md transition-all duration-150 cursor-pointer"
+                                    title="Restore User"
+                                  >
+                                    <Undo2 className="h-4 w-4" />
+                                  </button>
+                                  <button 
+                                    onClick={() => handlePermanentDelete(user)}
+                                    className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-all duration-150 cursor-pointer"
+                                    title="Permanently Delete"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
 
                   {deletedTotalPages > 1 && (
-                    <div className="flex items-center justify-between pt-3 border-t border-border">
+                    <div className="flex items-center justify-between px-5 py-3 border-t border-border">
                       <span className="text-[10px] text-muted-foreground font-medium">
                         Page {deletedPage} of {deletedTotalPages} ({deletedTotal} total)
                       </span>
@@ -494,6 +645,7 @@ export default function UsersView() {
         </div>
       )}
 
+      {/* ── Create / Edit Modal ────────────────────────────────────────── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-card border border-border rounded-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">

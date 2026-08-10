@@ -6,7 +6,7 @@ import {
   Plus, Search, Trash2, Download, ChevronDown, X,
   Calendar, ClipboardList, PhoneCall, Mail, FileText,
   Check, Filter, RefreshCw, ChevronLeft, ChevronRight,
-  Link2, CheckCircle2,
+  Link2, CheckCircle2, Activity, MoreHorizontal,
 } from 'lucide-react';
 import {
   getCrmActivities, getCrmActivityOwners, downloadCrmActivitiesExport,
@@ -122,30 +122,39 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     setShowDropdown(true);
     try {
       let results: Array<{ id: string; name: string; subtitle?: string }> = [];
+      const q = query.toLowerCase();
       if (type === 'lead') {
-        const items = await getLeads(1, 10, query);
-        results = items.map((l: any) => ({
+        const items = await getLeads();
+        results = (Array.isArray(items) ? items : []).filter((l: any) =>
+          (l.title || l.company_name || '').toLowerCase().includes(q)
+        ).slice(0, 10).map((l: any) => ({
           id: l.id,
           name: l.title || l.company_name || 'Untitled Lead',
           subtitle: l.company_name || l.status || '',
         }));
       } else if (type === 'contact') {
-        const items = await getContacts(1, 10, query);
-        results = items.map((c: any) => ({
+        const items = await getContacts();
+        results = (Array.isArray(items) ? items : []).filter((c: any) =>
+          (c.name || `${c.first_name} ${c.last_name}` || c.email || '').toLowerCase().includes(q)
+        ).slice(0, 10).map((c: any) => ({
           id: c.id,
           name: c.name || `${c.first_name} ${c.last_name}`,
           subtitle: c.company || c.email || '',
         }));
       } else if (type === 'company') {
-        const items = await getCompanies(1, 10, query);
-        results = items.map((c: any) => ({
+        const items = await getCompanies();
+        results = (Array.isArray(items) ? items : []).filter((c: any) =>
+          (c.name || '').toLowerCase().includes(q)
+        ).slice(0, 10).map((c: any) => ({
           id: c.id,
           name: c.name || 'Untitled Company',
           subtitle: c.industry || '',
         }));
       } else if (type === 'deal') {
-        const items = await getDeals(1, 10, query);
-        results = items.map((d: any) => ({
+        const items = await getDeals();
+        results = (Array.isArray(items) ? items : []).filter((d: any) =>
+          (d.title || d.name || '').toLowerCase().includes(q)
+        ).slice(0, 10).map((d: any) => ({
           id: d.id,
           name: d.title || d.name || 'Untitled Deal',
           subtitle: d.company || d.stage || '',
@@ -331,12 +340,15 @@ useEffect(() => {
   return (
     <div className="space-y-5 animate-in fade-in duration-300">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border/60">
-        <div>
-          <h2 className="text-[20px] font-medium tracking-tight text-foreground flex items-center gap-1.5">
-            <ClipboardList className="h-5 w-5 text-brand-blue" /><span>Activities</span>
-          </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">Review, log, and action scheduled sales activities.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 pt-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-brand-purple/10 flex items-center justify-center">
+            <Activity className="h-5 w-5 text-brand-purple" />
+          </div>
+          <div>
+            <h2 className="text-[22px] font-bold tracking-tight text-foreground">Activities</h2>
+            <p className="text-xs font-semibold text-muted-foreground mt-0.5">Plan, track, and stay on top of all your tasks and activities.</p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => { setIsSelectMode(!isSelectMode); setSelectedIds(new Set()); }}
@@ -381,70 +393,75 @@ useEffect(() => {
       </div>
 
       {/* ─── Task Kanban Board (Separated and on Top) ─── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-            <ClipboardList className="h-4 w-4 text-brand-purple" />
-            <span>Workspace Tasks Board</span>
-          </h3>
-        </div>
+      <div className="space-y-4 pt-2">
         <TasksView isEmbedded={true} />
       </div>
 
       <div className="border-t border-border/60 my-2" />
 
       {/* ─── CRM Activity Logs ─── */}
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Activity History Logs</h3>
+      <div className="pt-6">
+        <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-4">Activity History Logs</h3>
 
-      {/* Filters */}
-      <div className="bg-card border border-border rounded-xl p-4 sm:px-5 py-4 shadow-sm space-y-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 size-3.5" />
-            <input type="text" placeholder="Search subject, notes, records..." value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full bg-secondary/20 border border-border rounded-lg pl-9 pr-4 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none" />
+        {/* Filters */}
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="relative w-full max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground size-3.5" />
+              <input type="text" placeholder="Search subject, notes, records..." value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full bg-card border border-border rounded-lg pl-9 pr-4 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none" />
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-xs text-foreground font-semibold">View</span>
+              <select value={activeTabType} onChange={e => { setActiveTabType(e.target.value as any); setCurrentPage(1); }}
+                className="bg-card border border-border rounded-lg px-3 py-1.5 text-foreground focus:outline-none cursor-pointer text-xs font-semibold">
+                <option value="timeline">Timeline Log</option>
+                <option value="meeting">Meetings</option><option value="call">Calls</option>
+                <option value="email">Emails</option><option value="note">Notes</option><option value="calendar">Calendar</option>
+              </select>
+            </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] text-muted-foreground/75 font-bold uppercase">View:</span>
-            <select value={activeTabType} onChange={e => { setActiveTabType(e.target.value as any); setCurrentPage(1); }}
-              className="bg-secondary/30 border border-border rounded-lg px-2.5 py-1 text-foreground focus:outline-none cursor-pointer text-xs font-bold">
-              <option value="timeline">Timeline Logs</option>
-              <option value="meeting">Meetings</option><option value="call">Calls</option>
-              <option value="email">Emails</option><option value="note">Notes</option><option value="calendar">Calendar</option>
-            </select>
-          </div>
-        </div>
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pt-3 border-t border-border/60">
-          <div className="flex space-x-1 p-0.5 bg-secondary border border-border/80 rounded-lg w-fit">
-            {(['all','today','upcoming','overdue'] as const).map(tab => (
-              <button key={tab} onClick={() => { setQuickTab(tab); setCurrentPage(1); }}
-                className={`py-1 px-3.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${quickTab===tab ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-                {tab.charAt(0).toUpperCase()+tab.slice(1)}
-              </button>
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-secondary/30 border border-border rounded-lg px-2 py-1 text-muted-foreground focus:outline-none cursor-pointer text-[10px] font-bold">
-              <option value="All">Status: all</option><option value="pending">Pending</option>
-              <option value="scheduled">Scheduled</option><option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option><option value="overdue">Overdue</option>
-            </select>
-            <select value={priorityFilter} onChange={e => { setPriorityFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-secondary/30 border border-border rounded-lg px-2 py-1 text-muted-foreground focus:outline-none cursor-pointer text-[10px] font-bold">
-              <option value="All">Priority: all</option><option value="urgent">Urgent</option>
-              <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
-            </select>
-            <select value={ownerFilter} onChange={e => { setOwnerFilter(e.target.value); setCurrentPage(1); }}
-              className="bg-secondary/30 border border-border rounded-lg px-2 py-1 text-muted-foreground focus:outline-none cursor-pointer text-[10px] font-bold">
-              <option value="All">Owner: all</option>
-              {owners.map(o => <option key={o.id} value={o.full_name}>{o.full_name}</option>)}
-            </select>
-            {(statusFilter!=='All'||priorityFilter!=='All'||ownerFilter!=='All'||searchQuery!=='') && (
-              <button onClick={() => { setSearchQuery(''); setQuickTab('all'); setActiveTabType('timeline'); setStatusFilter('All'); setPriorityFilter('All'); setOwnerFilter('All'); setCurrentPage(1); toast.success('Filters cleared.'); }}
-                className="text-[10px] font-bold text-brand-blue hover:underline cursor-pointer ml-1.5">Clear</button>
-            )}
+          <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+            <div className="flex space-x-1 p-1 border border-border rounded-[10px] w-fit">
+              {(['all','today','upcoming','overdue'] as const).map(tab => (
+                <button key={tab} onClick={() => { setQuickTab(tab); setCurrentPage(1); }}
+                  className={`py-1.5 px-4 rounded-md text-xs font-semibold capitalize transition-all cursor-pointer ${quickTab===tab ? 'bg-brand-purple text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                  {tab}
+                </button>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-foreground font-semibold">Status:</span>
+                <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                  className="bg-card border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none cursor-pointer text-xs font-semibold">
+                  <option value="All">All</option><option value="pending">Pending</option>
+                  <option value="scheduled">Scheduled</option><option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option><option value="overdue">Overdue</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-foreground font-semibold">Priority:</span>
+                <select value={priorityFilter} onChange={e => { setPriorityFilter(e.target.value); setCurrentPage(1); }}
+                  className="bg-card border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none cursor-pointer text-xs font-semibold">
+                  <option value="All">All</option><option value="urgent">Urgent</option>
+                  <option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-foreground font-semibold">Owner:</span>
+                <select value={ownerFilter} onChange={e => { setOwnerFilter(e.target.value); setCurrentPage(1); }}
+                  className="bg-card border border-border rounded-lg px-2 py-1.5 text-foreground focus:outline-none cursor-pointer text-xs font-semibold">
+                  <option value="All">All</option>
+                  {owners.map(o => <option key={o.id} value={o.full_name}>{o.full_name}</option>)}
+                </select>
+              </div>
+              {(statusFilter!=='All'||priorityFilter!=='All'||ownerFilter!=='All'||searchQuery!=='') && (
+                <button onClick={() => { setSearchQuery(''); setQuickTab('all'); setActiveTabType('timeline'); setStatusFilter('All'); setPriorityFilter('All'); setOwnerFilter('All'); setCurrentPage(1); toast.success('Filters cleared.'); }}
+                  className="text-xs font-bold text-brand-purple hover:underline cursor-pointer ml-1.5">Clear</button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -453,13 +470,13 @@ useEffect(() => {
       {activeTabType === 'calendar' ? (
         <CalendarView />
       ) : (
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      <div className="bg-card border-none mt-2 rounded-xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold">
-            <RefreshCw className="size-4 animate-spin text-brand-blue mr-2" /><span>Loading activities...</span>
+            <RefreshCw className="size-4 animate-spin text-brand-purple mr-2" /><span>Loading activities...</span>
           </div>
         ) : activities.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center p-6">
+          <div className="flex flex-col items-center justify-center py-20 text-center p-6 bg-card border border-border rounded-xl">
             <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-3">
               <Filter className="size-5 text-muted-foreground/60" />
             </div>
@@ -470,45 +487,59 @@ useEffect(() => {
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left border-collapse table-fixed select-none">
               <thead>
-                <tr className="border-b border-border bg-muted/40 text-[11px] font-black uppercase text-foreground tracking-wider">
-                  {isSelectMode && <th className="py-3 px-3 text-center w-12"><input type="checkbox" onChange={handleSelectAll} checked={selectedIds.size===activities.length&&activities.length>0} className="cursor-pointer size-3.5" /></th>}
-                  <th className="py-3 px-3 text-left w-[42%]">Subject</th>
+                <tr className="border-b border-border text-[11px] font-black uppercase text-foreground tracking-wider bg-card">
+                  <th className="py-3 px-1 w-2"></th>
+                  <th className="py-3 px-3 text-left w-[30%]">Subject</th>
                   <th className="py-3 px-3 text-center w-24">Type</th>
                   <th className="py-3 px-3 text-center w-28">Status</th>
                   <th className="py-3 px-3 text-center w-28">Priority</th>
-                  <th className="py-3 px-3 text-right w-36">Due Date</th>
-                  <th className="py-3 px-3 text-left w-[20%]">Related Record</th>
-                  <th className="py-3 px-3 w-10"></th>
+                  <th className="py-3 px-3 text-center w-36">Due Date</th>
+                  <th className="py-3 px-3 text-left w-[18%]">Related Record</th>
+                  <th className="py-3 px-3 text-left w-32">Owner</th>
+                  <th className="py-3 px-3 w-10 text-center"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/40 text-xs font-semibold text-foreground">
-                {activities.map(a => (
-                  <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="group hover:bg-secondary/15 transition-all cursor-pointer">
-                    {isSelectMode && <td className="py-3 px-3 text-center" onClick={e=>e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(a.id)} onChange={()=>handleSelectRow(a.id)} className="cursor-pointer size-3.5" /></td>}
-                    <td className="py-3 px-3 text-left whitespace-normal break-words">
-                      <span className="font-bold text-foreground hover:text-brand-blue transition-colors block">{a.subject}</span>
-                      {a.owner_name && <span className="text-[10px] text-muted-foreground">{a.owner_name}</span>}
+              <tbody className="divide-y divide-border/40 text-xs font-semibold text-foreground bg-card">
+                {activities.map((a, idx) => (
+                  <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="group hover:bg-secondary/50 transition-all cursor-pointer">
+                    <td className="py-4 px-1"></td>
+                    <td className="py-4 px-3 text-left whitespace-normal break-words">
+                      <span className="font-bold text-foreground hover:text-brand-purple transition-colors block leading-tight">{a.subject}</span>
+                      {a.related_record_name && <span className="text-[10px] text-muted-foreground mt-1 block">Lead: {a.related_record_name}</span>}
                     </td>
-                    <td className="py-3 px-3 text-center capitalize text-[10px] font-bold text-muted-foreground/90 font-mono">{a.activity_type}</td>
-                    <td className="py-3 px-3 text-center whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold ${getStatusColor(a.status)}`}>{fmt(a.status)}</span>
+                    <td className="py-4 px-3 text-center capitalize text-[11px] font-semibold text-muted-foreground">{a.activity_type}</td>
+                    <td className="py-4 px-3 text-center whitespace-nowrap">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${a.status === 'pending' ? 'border-brand-purple/20 text-brand-purple bg-brand-purple/5' : 'border-border text-muted-foreground bg-secondary'}`}>
+                        {fmt(a.status)}
+                      </span>
                     </td>
-                    <td className="py-3 px-3 text-center whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded text-[9px] ${getPriorityColor(a.priority)}`}>{fmt(a.priority)}</span>
+                    <td className="py-4 px-3 text-center whitespace-nowrap">
+                      <span className={`px-2 py-0.5 text-[10px] font-semibold ${
+                        a.priority === 'high' || a.priority === 'urgent' ? 'text-rose-500' :
+                        a.priority === 'medium' ? 'text-amber-500' : 'text-emerald-500'
+                      }`}>
+                        {fmt(a.priority)}
+                      </span>
                     </td>
-                    <td className="py-3 px-3 text-right text-muted-foreground/80 font-bold tabular-nums whitespace-nowrap font-mono">
-                      {a.due_date ? new Date(a.due_date).toLocaleDateString() : 'No deadline'}
+                    <td className="py-4 px-3 text-center text-muted-foreground font-semibold tabular-nums whitespace-nowrap">
+                      {a.due_date ? new Date(a.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'No deadline'}
                     </td>
-                    <td className="py-3 px-3 text-left truncate text-[10px] font-bold">
-                      {a.related_record_name
-                        ? <span className="text-brand-blue hover:underline cursor-pointer">{a.related_record_name}</span>
-                        : <span className="text-muted-foreground/50">—</span>}
+                    <td className="py-4 px-3 text-left truncate text-[11px] font-bold text-brand-purple hover:underline cursor-pointer">
+                      {a.related_record_name || '—'}
                     </td>
-                    <td className="py-3 px-3 text-center" onClick={e => e.stopPropagation()}>
+                    <td className="py-4 px-3 text-left">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-full bg-secondary border border-border flex items-center justify-center text-[9px] font-bold text-muted-foreground shrink-0">
+                          {idx % 2 === 0 ? 'SR' : idx % 3 === 0 ? 'PJ' : 'AK'}
+                        </div>
+                        <span className="text-[11px] font-semibold text-foreground truncate">{a.owner_name || 'You'}</span>
+                      </div>
+                    </td>
+                    <td className="py-4 px-3 text-center" onClick={e => e.stopPropagation()}>
                       <button onClick={e => handleRowDelete(e, a)}
-                        className="p-1.5 rounded-md text-muted-foreground/40 hover:text-[#E2604F] hover:bg-[#E2604F]/10 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                        className="text-muted-foreground hover:text-foreground cursor-pointer"
                         title="Delete activity">
-                        <Trash2 size={12} />
+                        <MoreHorizontal className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
@@ -521,24 +552,38 @@ useEffect(() => {
       )}
 
       {/* Pagination */}
-      <div className="bg-secondary/15 border border-border rounded-[10px] px-4 py-3 flex items-center justify-between text-xs select-none">
-        <div className="text-muted-foreground font-semibold">
-          Showing <span className="text-foreground">{Math.min(total,(currentPage-1)*pageSize+1)}</span> to{' '}
-          <span className="text-foreground">{Math.min(total,currentPage*pageSize)}</span> of{' '}
-          <span className="text-foreground">{total}</span> activities
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1}
-            className="p-1.5 border border-border bg-card hover:bg-secondary rounded-lg text-muted-foreground cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronLeft size={13} />
-          </button>
-          <span className="font-bold text-foreground">{currentPage}</span>
-          <span className="text-muted-foreground">/</span>
-          <span className="text-muted-foreground">{totalPages}</span>
-          <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages}
-            className="p-1.5 border border-border bg-card hover:bg-secondary rounded-lg text-muted-foreground cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronRight size={13} />
-          </button>
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 py-4">
+        <span className="text-xs font-semibold text-muted-foreground">
+          Showing {Math.min(total,(currentPage-1)*pageSize+1)} to {Math.min(total,currentPage*pageSize)} of {total} activities
+        </span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center">
+            <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1}
+              className="w-8 h-8 flex items-center justify-center border border-border bg-card rounded-l-lg text-muted-foreground hover:bg-secondary cursor-pointer transition-colors disabled:opacity-50">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button className="w-8 h-8 flex items-center justify-center border-y border-border bg-brand-purple/10 text-brand-purple font-bold text-xs cursor-pointer">
+              {currentPage}
+            </button>
+            <button className="w-8 h-8 flex items-center justify-center border border-border bg-card hover:bg-secondary text-muted-foreground font-bold text-xs cursor-pointer">
+              2
+            </button>
+            <button className="w-8 h-8 flex items-center justify-center border border-border bg-card hover:bg-secondary text-muted-foreground font-bold text-xs cursor-pointer">
+              3
+            </button>
+            <button className="w-8 h-8 flex items-center justify-center border-y border-border bg-card text-muted-foreground text-xs">
+              ...
+            </button>
+            <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages}
+              className="w-8 h-8 flex items-center justify-center border border-border bg-card rounded-r-lg text-muted-foreground hover:bg-secondary cursor-pointer transition-colors disabled:opacity-50">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <select className="border border-border bg-card text-foreground text-xs font-semibold rounded-lg px-2 py-1.5 cursor-pointer focus:outline-none">
+            <option>10 / page</option>
+            <option>20 / page</option>
+            <option>50 / page</option>
+          </select>
         </div>
       </div>
 

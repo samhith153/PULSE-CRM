@@ -43,12 +43,18 @@ export function useDashboardOverview(): UseDashboardOverviewResult {
     setError(null);
 
     try {
-      const result = await getDashboardMe();
+      const result = await getDashboardMe({ silent: true });
+      if (!result) {
+        // No token yet — will retry on next refetch cycle
+        return;
+      }
       lastFetchedAt.current = Date.now();
       setData(result);
     } catch (err: any) {
-      if (err?.name !== 'AbortError') {
-        setError(err?.message ?? 'Failed to fetch dashboard data');
+      const msg: string = err?.message ?? '';
+      // 401 triggers redirect via apiFetch — don't record as an error
+      if (!msg.includes('expired') && !msg.includes('401') && err?.name !== 'AbortError') {
+        setError(msg || 'Failed to fetch dashboard data');
       }
     } finally {
       setIsLoading(false);

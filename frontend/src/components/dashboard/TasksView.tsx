@@ -375,119 +375,113 @@ export default function TasksView({ isEmbedded = false }: Props) {
       ) : (
         /* Task Columns Grid */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Overdue Column */}
-        <div className="bg-secondary/50 border border-border rounded-xl p-4 min-h-[400px]">
-          <div className="flex justify-between items-center pb-2 border-b border-border mb-4">
-            <h3 className="text-xs font-semibold text-destructive uppercase tracking-wider flex items-center">
-              <AlertCircle className="h-4 w-4 mr-1.5" />
-              <span>Overdue Tasks</span>
-            </h3>
-            <span className="text-[10px] font-semibold bg-destructive/10 text-destructive px-2 py-0.5 rounded-full tabular-nums">
-              {overdueList.length}
-            </span>
-          </div>
+          {/* Overdue Column */}
+          <div className="bg-card border border-border rounded-xl p-4 min-h-[400px]">
+            <div className="flex justify-between items-center pb-3 border-b border-border/60 mb-4">
+              <h3 className="text-[10px] font-bold text-rose-500 uppercase tracking-wider flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5" />
+                <span>Overdue Tasks</span>
+              </h3>
+              <span className="text-[10px] font-bold bg-rose-50 text-rose-500 px-2 py-0.5 rounded-full tabular-nums">
+                {overdueList.length}
+              </span>
+            </div>
 
-          <div className="space-y-3">
-            {overdueList.map((t) => (
-              <div key={t.id} className="bg-destructive/10/70 border border-destructive/15 border-l-4 border-l-rose-500 rounded-lg p-3.5  flex items-start space-x-3">
-                <button onClick={() => handleToggle(t.id)} className="text-muted-foreground hover:text-brand-purple mt-0.5 cursor-pointer">
-                  <Circle className="h-4 w-4" />
-                </button>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-foreground leading-snug break-words">{t.title}</h4>
-                  <div className="flex items-center space-x-2 mt-2 text-[9px] font-semibold text-muted-foreground">
-                    <span className="text-destructive">● {t.priority}</span>
-                    <span className="flex items-center tabular-nums text-destructive">
-                      <Clock className="h-3 w-3 mr-0.5" />
-                      {t.deadline}
+            <div className="space-y-3">
+              {overdueList.map((t) => (
+                <div key={t.id} className="bg-card border border-border/80 rounded-lg p-3 hover:shadow-sm transition-shadow cursor-pointer">
+                  <div className="flex items-start justify-between gap-2 mb-2.5">
+                    <h4 className="text-[11px] font-bold text-foreground leading-snug break-words">{t.title}</h4>
+                    <span className="text-[9px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded border border-rose-100 shrink-0">
+                      Overdue
                     </span>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Pending Column */}
-        <div className="bg-secondary/50 border border-border rounded-xl p-4 min-h-[400px]">
-          <div className="flex justify-between items-center pb-2 border-b border-border mb-4">
-            <h3 className="text-xs font-semibold text-foreground uppercase tracking-wider flex items-center">
-              <Clock className="h-4 w-4 mr-1.5 text-brand-purple" />
-              <span>Pending Tasks</span>
-            </h3>
-            <span className="text-[10px] font-semibold bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full tabular-nums">
-              {pendingList.length}
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {pendingList.map((t) => (
-              <div key={t.id} className="bg-brand-purple/10/40 border border-border border-l-4 border-l-brand-accent rounded-lg p-3.5  flex items-start space-x-3">
-                <button onClick={() => handleToggle(t.id)} className="text-muted-foreground hover:text-brand-cyan mt-0.5 cursor-pointer">
-                  <Circle className="h-4 w-4" />
-                </button>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-foreground leading-snug break-words">{t.title}</h4>
-                  <div className="flex justify-between items-center mt-2.5">
-                    <div className="flex items-center space-x-2 text-[9px] font-semibold text-muted-foreground">
-                      <span className={t.priority === 'High' ? 'text-destructive' : 'text-muted-foreground'}>● {t.priority}</span>
-                      <span className="flex items-center tabular-nums">
-                        <Calendar className="h-3 w-3 mr-0.5" />
-                        {t.deadline}
-                      </span>
-                    </div>
-
-                    <div className="flex space-x-1">
-                      <button 
-                        onClick={() => {
-                          setSelectedTask(t);
-                          setForm({ title: t.title, deadline: t.deadline, priority: t.priority, status: t.status });
-                          setIsEditOpen(true);
-                        }}
-                        className="p-0.5 text-muted-foreground hover:text-foreground rounded cursor-pointer"
-                      >
-                        <Edit className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={() => handleDelete(t.id)} className="p-0.5 text-muted-foreground hover:text-destructive rounded cursor-pointer">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                  <div className="flex justify-between items-center mt-3">
+                    <span className="flex items-center text-[10px] font-semibold text-rose-600">
+                      <Calendar className="h-3 w-3 mr-1.5 opacity-80" />
+                      Due {t.deadline}
+                    </span>
+                    <div className="w-5 h-5 rounded-full bg-secondary border border-border flex items-center justify-center text-[8px] font-bold text-muted-foreground shrink-0">
+                      SR
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Completed Column */}
-        <div className="bg-secondary/50 border border-border rounded-xl p-4 min-h-[400px]">
-          <div className="flex justify-between items-center pb-2 border-b border-border mb-4">
-            <h3 className="text-xs font-semibold text-brand-cyan uppercase tracking-wider flex items-center">
-              <CheckCircle2 className="h-4 w-4 mr-1.5" />
-              <span>Completed Tasks</span>
-            </h3>
-            <span className="text-[10px] font-semibold bg-brand-cyan/15 text-brand-cyan px-2 py-0.5 rounded-full tabular-nums">
-              {completedList.length}
-            </span>
+              ))}
+              <button className="text-[10px] font-bold text-rose-500 hover:underline pt-2 w-full text-left">
+                + View all overdue tasks
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-3 opacity-60">
-            {completedList.map((t) => (
-              <div key={t.id} className="bg-brand-cyan/15/40 border border-brand-cyan/20 border-l-4 border-l-emerald-500 rounded-lg p-3.5  flex items-start space-x-3">
-                <button onClick={() => handleToggle(t.id)} className="text-brand-cyan mt-0.5 cursor-pointer">
-                  <CheckCircle2 className="h-4 w-4" />
-                </button>
-                <div className="flex-1 min-w-0 line-through">
-                  <h4 className="text-xs font-bold text-muted-foreground leading-snug break-words">{t.title}</h4>
-                  <div className="flex items-center space-x-2 mt-2 text-[9px] font-semibold text-muted-foreground">
-                    <span>{t.priority}</span>
-                    <span>Done</span>
+          {/* Pending Column */}
+          <div className="bg-card border border-border rounded-xl p-4 min-h-[400px]">
+            <div className="flex justify-between items-center pb-3 border-b border-border/60 mb-4">
+              <h3 className="text-[10px] font-bold text-brand-purple uppercase tracking-wider flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                <span>Pending Tasks</span>
+              </h3>
+              <span className="text-[10px] font-bold bg-brand-purple/10 text-brand-purple px-2 py-0.5 rounded-full tabular-nums">
+                {pendingList.length}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {pendingList.map((t, idx) => (
+                <div key={t.id} className="bg-card border border-border/80 rounded-lg p-3 hover:shadow-sm transition-shadow cursor-pointer">
+                  <h4 className="text-[11px] font-bold text-foreground leading-snug break-words mb-2.5 pr-8">{t.title}</h4>
+                  <div className="flex justify-between items-center mt-3">
+                    <span className="flex items-center text-[10px] font-semibold text-muted-foreground">
+                      <Calendar className="h-3 w-3 mr-1.5 opacity-70" />
+                      Due {t.deadline}
+                    </span>
+                    <div className="w-5 h-5 rounded-full bg-secondary border border-border flex items-center justify-center text-[8px] font-bold text-muted-foreground shrink-0">
+                      {idx % 2 === 0 ? 'SR' : idx % 3 === 0 ? 'PJ' : 'AK'}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+              <button className="text-[10px] font-bold text-brand-purple hover:underline pt-2 w-full text-left">
+                + View all pending tasks
+              </button>
+            </div>
           </div>
-        </div>
+
+          {/* Completed Column */}
+          <div className="bg-card border border-border rounded-xl p-4 min-h-[400px]">
+            <div className="flex justify-between items-center pb-3 border-b border-border/60 mb-4">
+              <h3 className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Completed Tasks</span>
+              </h3>
+              <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full tabular-nums">
+                {completedList.length}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {completedList.map((t, idx) => (
+                <div key={t.id} className="bg-card border border-border/80 rounded-lg p-3 hover:shadow-sm transition-shadow cursor-pointer relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-500 opacity-20"></div>
+                  <div className="flex items-start gap-2 mb-2.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                    <h4 className="text-[11px] font-bold text-foreground leading-snug break-words">{t.title}</h4>
+                  </div>
+                  <div className="flex justify-between items-center mt-3 pl-5">
+                    <span className="flex items-center text-[10px] font-semibold text-muted-foreground">
+                      <Calendar className="h-3 w-3 mr-1.5 opacity-70" />
+                      Completed on {t.deadline}
+                    </span>
+                    <div className="w-5 h-5 rounded-full bg-secondary border border-border flex items-center justify-center text-[8px] font-bold text-muted-foreground shrink-0">
+                      {idx % 2 === 0 ? 'SR' : idx % 3 === 0 ? 'PJ' : 'AK'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <button className="text-[10px] font-bold text-emerald-500 hover:underline pt-2 w-full text-left">
+                + View all completed tasks
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

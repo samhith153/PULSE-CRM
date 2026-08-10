@@ -224,7 +224,14 @@ export function resolveImageUrl(url: string | null | undefined): string {
 }
 
 
-async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+interface ApiFetchOptions extends RequestInit {
+  /** When true, suppresses toast notifications for server errors (5xx).
+   *  Use for background/prefetch calls where the user doesn't need to see
+   *  a toast for every transient failure. */
+  silent?: boolean;
+}
+
+async function apiFetch<T>(endpoint: string, options?: ApiFetchOptions): Promise<T> {
   // Guard: skip the network call entirely if no auth token is available.
   // This prevents a flood of 401s from components mounting before the auth
   // guard in DashboardShell has finished running.
@@ -236,12 +243,14 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
     return undefined as T;
   }
 
+  const { silent, ...fetchOptions } = options ?? {};
+
   const res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
+    ...fetchOptions,
     headers: {
       'Content-Type': 'application/json',
       ...getAuthHeaders(),
-      ...(options?.headers || {})
+      ...(fetchOptions?.headers || {})
     }
   });
   if (!res.ok) {
@@ -260,13 +269,24 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       }
     } catch {
     }
-    // Show toast for permission errors so users get immediate feedback
-    if (res.status === 403) {
-      toast.error(`Permission denied: ${message}`);
-    } else if (res.status === 401) {
-      toast.error('Session expired. Please log in again.');
-    } else if (res.status >= 500) {
-      toast.error(`Server error: ${message}`);
+    // Show toast for permission errors so users get immediate feedback.
+    // Skip toasts for silent (background) calls to avoid spamming the UI.
+    if (res.status === 401) {
+      // Token expired — clear all auth state and redirect to login regardless
+      // of whether this is a silent call or not.
+      if (typeof window !== 'undefined') {
+        sessionStorage.clear();
+        localStorage.removeItem('pulse-crm-role');
+        localStorage.removeItem('pulse-crm-user');
+        window.location.href = '/login';
+      }
+      if (!silent) toast.error('Session expired. Please log in again.');
+    } else if (!silent) {
+      if (res.status === 403) {
+        toast.error(`Permission denied: ${message}`);
+      } else if (res.status >= 500) {
+        toast.error(`Server error: ${message}`);
+      }
     }
     throw new Error(message);
   }
@@ -278,8 +298,8 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 }
 
 // --- Leads API ---
-export async function getLeads(): Promise<Lead[]> {
-  const dbResult = await apiFetch<any>('/api/v1/leads');
+export async function getLeads(options?: { silent?: boolean }): Promise<Lead[]> {
+  const dbResult = await apiFetch<any>('/api/v1/leads', options);
   const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return items.map((dl: any) => ({
     ...dl,
@@ -594,8 +614,8 @@ export async function deleteCompany(companyId: string | number): Promise<void> {
 }
 
 // --- Deals API ---
-export async function getDeals(): Promise<Deal[]> {
-  const dbResult = await apiFetch<any>('/api/v1/deals');
+export async function getDeals(options?: { silent?: boolean }): Promise<Deal[]> {
+  const dbResult = await apiFetch<any>('/api/v1/deals', options);
   const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbDeals.map((dd, idx) => {
     return {
@@ -926,27 +946,29 @@ export interface SalesRepDashboardData {
   key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
 }
 
-export async function getAdminDashboard(): Promise<AdminDashboardData> {
-  return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
+export async function getAdminDashboard(options?: { silent?: boolean }): Promise<AdminDashboardData> {
+  return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin', options);
 }
 
 export async function getManagerDashboard(
-  filters: { period?: 'week' | 'month' | 'quarter' | 'year'; repId?: string } = {}
+  filters: { period?: 'week' | 'month' | 'quarter' | 'year'; repId?: string } = {},
+  options?: { silent?: boolean }
 ): Promise<ManagerDashboardData> {
   return apiFetch<ManagerDashboardData>(
     `/api/v1/dashboard/manager${toQuery({
       period: filters.period ?? 'quarter',
       rep_id: filters.repId,
-    })}`
+    })}`,
+    options
   );
 }
 
-export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
-  return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
+export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month', options?: { silent?: boolean }): Promise<SalesRepDashboardData> {
+  return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`, options);
 }
 
-export async function getCurrentUser(): Promise<any> {
-  const me = await apiFetch<any>('/api/v1/auth/me');
+export async function getCurrentUser(options?: { silent?: boolean }): Promise<any> {
+  const me = await apiFetch<any>('/api/v1/auth/me', options);
   if (me && me.avatar_url) {
     me.avatar_url = resolveImageUrl(me.avatar_url);
   }
@@ -1234,8 +1256,8 @@ export interface DashboardDeal {
   createdAt?: string;
 }
 
-export async function getDashboardMe(): Promise<DashboardOverviewData> {
-  return apiFetch<DashboardOverviewData>('/api/v1/dashboard/me');
+export async function getDashboardMe(options?: { silent?: boolean }): Promise<DashboardOverviewData> {
+  return apiFetch<DashboardOverviewData>('/api/v1/dashboard/me', options);
 }
 
 // --- SSE Stream URL ---

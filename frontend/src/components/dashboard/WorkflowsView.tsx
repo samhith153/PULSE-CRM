@@ -240,7 +240,7 @@ export default function WorkflowsView({
       setLoadingLeads(true);
       setError(null);
 
-      const result = await getLeads();
+      const result = await getLeads({ silent: true });
       const nextLeads = Array.isArray(result) ? result : [];
 
       setLeads(nextLeads);
