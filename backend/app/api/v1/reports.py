@@ -1,4 +1,4 @@
-"""
+﻿"""
 Reports & Analytics routes.
 """
 from __future__ import annotations

@@ -16,6 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.core.config import settings
+from app.schemas.common import ErrorResponse
 
 
 class _TokenBucket:
@@ -81,15 +82,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         bucket = self._buckets[key]
 
         if not bucket.take():
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "error_code": "RATE_LIMIT_EXCEEDED",
-                    "message": "Too many requests. Please slow down.",
-                    "details": [],
-                    "request_id": request.headers.get("x-request-id", "system"),
-                },
-            )
+            content = ErrorResponse(
+                error_code="RATE_LIMIT_EXCEEDED",
+                message="Too many requests. Please slow down.",
+                details=[],
+                request_id=request.headers.get("x-request-id", "system"),
+            ).model_dump()
+            response = JSONResponse(status_code=429, content=content)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            return response
 
         response = await call_next(request)
         response.headers["X-RateLimit-Limit"] = str(self.burst)

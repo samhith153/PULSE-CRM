@@ -75,7 +75,7 @@ class Settings(BaseSettings):
 
     ENABLE_RATE_LIMIT: bool = True
     RATE_LIMIT_PER_MINUTE: int = 600
-    RATE_LIMIT_BURST: int = 120
+    RATE_LIMIT_BURST: int = 200
 
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100

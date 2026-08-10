@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -58,6 +58,7 @@ export default function DashboardHome() {
     const authFromLanding = params.get('auth') === 'true';
     const roleParam = params.get('role');
     const emailParam = params.get('email');
+    const tabParam = params.get('tab');
     const validRoles = ['representative', 'manager', 'admin', 'sales_rep'] as const;
 
     if (authFromLanding && roleParam && validRoles.includes(roleParam as typeof validRoles[number])) {
@@ -67,6 +68,12 @@ export default function DashboardHome() {
       if (emailParam) localStorage.setItem('pulse-crm-user', emailParam);
       setIsAuthenticated(true);
       setUserRole(mappedRole as 'sales_rep' | 'manager' | 'admin');
+      
+      // Set the active tab if specified in URL
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+      
       window.history.replaceState({}, '', window.location.pathname);
       setIsAuthLoading(false);
       return;
@@ -319,7 +326,7 @@ export default function DashboardHome() {
                     <div className="flex items-center space-x-2 shrink-0 self-start md:self-auto">
                       <button className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition-all duration-200 cursor-pointer">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
-                        <span className="tabular-nums">May 12 – May 18, 2025</span>
+                        <span className="tabular-nums">May 12 ΓÇô May 18, 2025</span>
                       </button>
 
                       <button 

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deal Model
 Represents an active sales opportunity derived from a lead or created directly.
 """
@@ -85,6 +85,7 @@ class Deal(Base, TenantMixin):
         index=True,
     )
     priority: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default=None)
+    sentiment: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default=None)
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
@@ -111,7 +112,9 @@ class Deal(Base, TenantMixin):
     @property
     def deal_value(self) -> Decimal | None:
         """Alias for amount to expose deal_value consistently."""
-        return self.amount
+        return self.value if self.value is not None else self.amount
 
     def __repr__(self) -> str:
         return f"<Deal id={self.id} name={self.name!r} status={self.status!r}>"
+
+

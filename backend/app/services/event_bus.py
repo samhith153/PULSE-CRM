@@ -30,6 +30,7 @@ class EventEnvelope:
     source: Optional[str]
     status: str
     created_at: datetime
+    actor_id: Optional[UUID] = None
 
 
 class EventConsumer:
@@ -41,8 +42,29 @@ class EventBus:
     def __init__(self) -> None:
         self._consumers: dict[str, list[EventConsumer]] = defaultdict(list)
         self._queue: asyncio.Queue[EventEnvelope] = asyncio.Queue()
-        self._subscribers: dict[str, list[asyncio.Queue]] = defaultdict(list)
+        self._subscribers: dict[str, set[asyncio.Queue[EventEnvelope]]] = defaultdict(set)
+    async def subscribe(
+        self,
+        topic: str,
+    ) -> asyncio.Queue[EventEnvelope]:
+        subscriber: asyncio.Queue[EventEnvelope] = asyncio.Queue()
+        self._subscribers[topic].add(subscriber)
+        return subscriber
 
+    async def unsubscribe(
+        self,
+        topic: str,
+        subscriber: asyncio.Queue[EventEnvelope],
+    ) -> None:
+        subscribers = self._subscribers.get(topic)
+
+        if not subscribers:
+            return
+
+        subscribers.discard(subscriber)
+
+        if not subscribers:
+            self._subscribers.pop(topic, None)
     def register(self, topic: str, consumer: EventConsumer) -> None:
         if consumer not in self._consumers[topic]:
             self._consumers[topic].append(consumer)
@@ -66,16 +88,6 @@ class EventBus:
             except asyncio.QueueFull:
                 pass
 
-    async def subscribe(self, channel: str) -> asyncio.Queue:
-        q: asyncio.Queue = asyncio.Queue(maxsize=100)
-        self._subscribers[channel].append(q)
-        return q
-
-    async def unsubscribe(self, channel: str, queue: asyncio.Queue) -> None:
-        subs = self._subscribers.get(channel, [])
-        if queue in subs:
-            subs.remove(queue)
-
     async def dispatch_once(self) -> None:
         if self._queue.empty():
             return
@@ -90,7 +102,6 @@ class EventBus:
             if topic and event.topic != topic:
                 continue
             await self.publish(event)
-
 
 class LoggingEventConsumer(EventConsumer):
     async def handle(self, event: EventEnvelope) -> None:

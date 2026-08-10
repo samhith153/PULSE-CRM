@@ -1,4 +1,4 @@
-"""
+﻿"""
 Contact Repository
 """
 from typing import List, Optional, Tuple
@@ -32,6 +32,17 @@ class ContactRepository(BaseRepository[Contact]):
     ) -> Optional[Contact]:
         stmt = self._base_query(organization_id).where(
             func.lower(Contact.email) == email.lower()
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+    async def get_by_phone_in_org(self, phone: str, organization_id: UUID) -> Optional[Contact]:
+        normalized = ''.join(ch for ch in phone if ch.isdigit())
+        if not normalized:
+            return None
+        stmt = self._base_query(organization_id).where(
+            func.regexp_replace(func.coalesce(Contact.phone, ''), r'\D+', '', 'g') == normalized
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()

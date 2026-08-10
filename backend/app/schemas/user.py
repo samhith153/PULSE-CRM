@@ -1,7 +1,8 @@
-"""
+﻿"""
 User Schemas (Pydantic V2)
 """
 from datetime import datetime
+from decimal import Decimal
 from typing import List, Optional
 from uuid import UUID
 
@@ -15,6 +16,7 @@ class UserBase(BaseModel):
     email: EmailStr
     phone: Optional[str] = Field(default=None, max_length=30)
     job_title: Optional[str] = Field(default=None, max_length=100)
+    sales_quota: Optional[Decimal] = Field(default=None, ge=0)
     timezone: str = Field(default="UTC", max_length=50)
     locale: str = Field(default="en", max_length=10)
 
@@ -36,6 +38,7 @@ class UserUpdateRequest(BaseModel):
     full_name: Optional[str] = Field(default=None, min_length=2, max_length=255)
     phone: Optional[str] = Field(default=None, max_length=30)
     job_title: Optional[str] = Field(default=None, max_length=100)
+    sales_quota: Optional[Decimal] = Field(default=None, ge=0)
     timezone: Optional[str] = Field(default=None, max_length=50)
     locale: Optional[str] = Field(default=None, max_length=10)
     avatar_url: Optional[str] = Field(default=None, max_length=500)
@@ -51,6 +54,7 @@ class UserResponse(BaseModel):
     full_name: str
     phone: Optional[str]
     job_title: Optional[str]
+    sales_quota: Optional[Decimal]
     avatar_url: Optional[str]
     organization_id: UUID
     is_active: bool
@@ -72,6 +76,7 @@ class UserResponse(BaseModel):
             full_name=user.full_name,
             phone=user.phone,
             job_title=user.job_title,
+            sales_quota=user.sales_quota,
             avatar_url=user.avatar_url,
             organization_id=user.organization_id,
             is_active=user.is_active,
@@ -82,3 +87,5 @@ class UserResponse(BaseModel):
             created_at=user.created_at,
             updated_at=user.updated_at,
         )
+
+
