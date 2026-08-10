@@ -1,876 +1,1038 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  TrendingUp, Target, AlertTriangle, Users, ArrowUpRight,
-  Activity, BellRing, ShieldAlert, Sparkles, Award,
-  BarChart3, Layers, Clock, ArrowRight, CheckCircle2, ChevronDown,
+  Activity,
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
+  BarChart3,
+  Bell,
+  CalendarDays,
+  ChevronRight,
+  Gauge,
+  RefreshCw,
+  Target,
+  TrendingUp,
+  Trophy,
+  Users,
 } from 'lucide-react';
 import {
-  getManagerDashboard, asNumber, formatINR, formatPct, ManagerDashboardData,
+  getManagerDashboard,
+  ManagerDashboardData,
 } from '@/utils/api';
-import { useReveal, useCountUp } from '@/hooks/use-reveal';
-import { motion, AnimatePresence } from 'framer-motion';
-import DealsAtRiskCard from './DealsAtRiskCard';
 
-interface ManagerDashboardViewProps { onTabChange?: (tab: string) => void; }
+type ManagerDashboardPeriod = 'week' | 'month' | 'quarter' | 'year';
 
-/* ── Stage bar colors ramp (brand-blue → brand-cyan → brand-purple) ─── */
-const STAGE_COLORS = [
-  'bg-brand-blue',
-  'bg-brand-cyan',
-  'bg-brand-purple',
-  'bg-brand-blue/70',
-  'bg-brand-purple/70',
-  'bg-muted-foreground/40',
-];
-
-/* ── Radial progress ring ───────────────────────────────────────────── */
-function RadialProgressRing({ progress, size = 50, strokeWidth = 4.5 }: { progress: number; size?: number; strokeWidth?: number }) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const strokeDashoffset = circumference - (Math.min(progress, 100) / 100) * circumference;
-
-  return (
-    <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="transform -rotate-90">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--secondary)"
-          strokeWidth={strokeWidth}
-        />
-        <motion.circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="var(--brand-purple)"
-          strokeWidth={strokeWidth}
-          strokeDasharray={circumference}
-          initial={{ strokeDashoffset: circumference }}
-          animate={{ strokeDashoffset }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          strokeLinecap="round"
-        />
-      </svg>
-      <span className="absolute text-[10px] font-bold text-foreground tabular-nums">
-        {Math.round(progress)}%
-      </span>
-    </div>
-  );
+interface ManagerDashboardViewProps {
+  onTabChange?: (tab: string) => void;
+  onDealClick?: (dealId: string) => void;
 }
 
-/* ── KPI summary tile ────────────────────────────────────────────────── */
-function KpiTile({
-  title, value, sub, progress, badge, delay = 0, targetValue, prefix = ''
-}: {
-  title: string; value: string; sub: string;
-  progress: number; badge?: string; delay?: number;
-  targetValue: number; prefix?: string;
-}) {
-  const { ref, value: animatedVal, visible } = useCountUp(targetValue, 1000);
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
 
-  const displayVal = targetValue === 0 
-    ? value 
-    : `${prefix}${animatedVal.toLocaleString()}`;
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
-  return (
-    <motion.div
-      ref={ref as React.RefObject<HTMLDivElement>}
-      initial={{ opacity: 0, y: 15 }}
-      animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
-      whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className="flex items-center justify-between gap-[var(--space-3)] rounded-2xl border border-border bg-card p-[var(--space-4)] shadow-card transition-colors duration-200 cursor-pointer"
-    >
-      <div className="flex-1 min-w-0 space-y-1.5">
-        <div className="flex items-center gap-2">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{title}</p>
-          {badge && (
-            <span className="shrink-0 rounded-full bg-brand-purple/10 px-2 py-0.5 text-[10px] font-semibold text-brand-purple">
-              {badge}
-            </span>
-          )}
-        </div>
-        <p className="text-2xl font-semibold text-foreground tabular-nums leading-none">{displayVal}</p>
-        <p className="text-xs text-muted-foreground leading-snug">{sub}</p>
-        <p className="text-[10px] text-muted-foreground/60 font-semibold">{Math.round(progress)}% Target Achieved</p>
-      </div>
-      <RadialProgressRing progress={progress} size={54} strokeWidth={4.5} />
-    </motion.div>
-  );
-}
+const formatCurrency = (value: unknown): string => {
+  const amount = toNumber(value);
 
-/* ── Monthly revenue line chart ─────────────────────────────────────── */
-function RevenueChart({ trend }: { trend: ManagerDashboardData['monthly_revenue_trend'] }) {
-  const [hovered, setHovered] = useState<number | null>(null);
-  const { ref, visible } = useReveal<HTMLDivElement>();
-  const n = trend.length;
-  if (n === 0) return <div className="h-40 flex items-center justify-center text-sm text-muted-foreground">No data yet.</div>;
+  if (Math.abs(amount) >= 10000000) {
+    return `\u20B9${(amount / 10000000).toFixed(2)}Cr`;
+  }
 
-  const actuals = trend.map((m) => asNumber(m.revenue));
-  const targets = trend.map((m) => asNumber(m.target));
-  const maxVal  = Math.max(...actuals, ...targets, 1);
+  if (Math.abs(amount) >= 100000) {
+    return `\u20B9${(amount / 100000).toFixed(2)}L`;
+  }
 
-  const toCoords = (vals: number[]) =>
-    vals.map((v, i) => ({ x: (i / (n - 1)) * 100, y: 84 - (v / maxVal) * 76 + 2 }));
+  if (Math.abs(amount) >= 1000) {
+    return `\u20B9${(amount / 1000).toFixed(1)}K`;
+  }
 
-  const actualCoords = toCoords(actuals);
-  const targetCoords = toCoords(targets);
+  return `\u20B9${Math.round(amount).toLocaleString('en-IN')}`;
+};
 
-  const curvePath = (coords: { x: number; y: number }[]) => {
-    if (coords.length === 0) return '';
-    let path = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
-    for (let i = 0; i < coords.length - 1; i++) {
-      const p0 = coords[i];
-      const p1 = coords[i + 1];
-      const cpX1 = p0.x + (p1.x - p0.x) / 3;
-      const cpY1 = p0.y;
-      const cpX2 = p0.x + 2 * (p1.x - p0.x) / 3;
-      const cpY2 = p1.y;
-      path += ` C ${cpX1.toFixed(1)} ${cpY1.toFixed(1)}, ${cpX2.toFixed(1)} ${cpY2.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+const formatPercent = (value: unknown): string =>
+  `${toNumber(value).toFixed(1)}%`;
+
+const formatUpdatedAt = (value?: string | null): string => {
+  if (!value) return 'Time unavailable';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Time unavailable';
+  }
+
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getInitials = (name?: string | null): string => {
+  if (!name) return 'NA';
+
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+};
+
+/* -------------------------------------------------------------------------- */
+/* Main component                                                             */
+/* -------------------------------------------------------------------------- */
+
+export default function ManagerDashboardView({
+  onTabChange,
+  onDealClick,
+}: ManagerDashboardViewProps) {
+  const [data, setData] = useState<ManagerDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [period, setPeriod] =
+    useState<ManagerDashboardPeriod>('quarter');
+  const [repId, setRepId] = useState<string>('all');
+
+  const loadDashboard = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const dashboardData = await getManagerDashboard({
+        period,
+        repId: repId === 'all' ? undefined : repId,
+      });
+
+      setData(dashboardData);
+    } catch (err) {
+      console.error('Failed to load manager dashboard:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load manager dashboard.'
+      );
+    } finally {
+      setLoading(false);
     }
-    return path;
   };
 
-  const actualPathStr = curvePath(actualCoords);
-  const actualAreaStr = `${actualPathStr} L 100 90 L 0 90 Z`;
-  const targetPathStr = curvePath(targetCoords);
-
-  return (
-    <div ref={ref as React.RefObject<HTMLDivElement>} className="reveal mt-4 relative">
-      <svg viewBox="0 0 100 90" preserveAspectRatio="none" className="h-40 w-full overflow-visible" aria-hidden>
-        <defs>
-          <linearGradient id="managerRevGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--brand-purple)" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="var(--brand-purple)" stopOpacity="0.0" />
-          </linearGradient>
-        </defs>
-
-        {[0, 22, 44, 66, 88].map((y) => (
-          <line key={y} x1="0" x2="100" y1={y} y2={y}
-            stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" strokeOpacity={0.4} vectorEffect="non-scaling-stroke" className="text-border" />
-        ))}
-
-        {/* Target dashed line */}
-        <motion.path 
-          d={targetPathStr} 
-          fill="none" 
-          stroke="var(--muted-foreground)" 
-          strokeWidth="1.5"
-          strokeDasharray="3 3"
-          strokeOpacity={0.5} 
-          vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0 }}
-          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
-          transition={{ duration: 1 }}
-        />
-
-        {/* Actual area */}
-        <motion.path 
-          d={actualAreaStr}
-          fill="url(#managerRevGrad)" 
-          initial={{ opacity: 0 }}
-          animate={visible ? { opacity: 1 } : { opacity: 0 }}
-          transition={{ duration: 0.8 }}
-        />
-
-        {/* Actual line */}
-        <motion.path 
-          d={actualPathStr} 
-          fill="none" 
-          stroke="var(--brand-purple)"
-          strokeWidth="2.5" 
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-          initial={{ pathLength: 0 }}
-          animate={visible ? { pathLength: 1 } : { pathLength: 0 }}
-          transition={{ duration: 1.2, ease: "easeInOut" }}
-        />
-
-        {actualCoords.map((c, i) => (
-          <g key={i}>
-            <circle cx={c.x.toFixed(1)} cy={c.y.toFixed(1)}
-              r={hovered === i ? '2.5' : '1.8'} fill="var(--brand-cyan)" stroke="var(--background)" strokeWidth="1.5"
-              vectorEffect="non-scaling-stroke" className="transition-all duration-150" />
-            <rect x={`${c.x - 4}`} y="0" width="8" height="90"
-              fill="transparent" className="cursor-pointer"
-              onMouseEnter={() => setHovered(i)} onMouseLeave={() => setHovered(null)} />
-          </g>
-        ))}
-      </svg>
-
-      <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
-        {trend.map((m) => <span key={m.month}>{m.month}</span>)}
-      </div>
-
-      {/* Hover tooltip */}
-      <AnimatePresence>
-        {hovered !== null && (
-          <motion.div 
-            initial={{ opacity: 0, y: 8, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.95 }}
-            transition={{ duration: 0.15 }}
-            className="absolute top-2 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-float p-3 text-xs flex gap-4 z-20"
-          >
-            <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground">Month</p>
-              <p className="font-semibold text-foreground mt-0.5">{trend[hovered].month}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-brand-purple">Actual</p>
-              <p className="font-semibold text-foreground mt-0.5">{formatINR(asNumber(trend[hovered].revenue))}</p>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-muted-foreground/60">Target</p>
-              <p className="font-semibold text-foreground mt-0.5">{formatINR(asNumber(trend[hovered].target))}</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ── Main component ───────────────────────────────────────────────────── */
-export default function ManagerDashboardView({ onTabChange }: ManagerDashboardViewProps) {
-  const [data, setData]       = useState<ManagerDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
-
   useEffect(() => {
-    let cancelled = false;
-    getManagerDashboard()
-      .then((d) => { if (!cancelled) { setData(d); setLoading(false); } })
-      .catch((e) => { if (!cancelled) { setError(e?.message ?? 'Failed'); setLoading(false); } });
-    return () => { cancelled = true; };
-  }, []);
+    loadDashboard();
+  }, [period, repId]);
+
+  /* ---------------------------------------------------------------------- */
+  /* Derived data                                                           */
+  /* ---------------------------------------------------------------------- */
+
+  const sortedReps = useMemo(() => {
+    if (!data) return [];
+
+    return [...data.rep_quota_attainment]
+      .sort(
+        (a, b) =>
+          toNumber(b.quota_achievement_pct) -
+          toNumber(a.quota_achievement_pct)
+      )
+      .slice(0, 5);
+  }, [data]);
+
+  const visibleActivities = useMemo(() => {
+    if (!data) return [];
+
+    return data.recent_activities.slice(0, 6);
+  }, [data]);
+
+  const visibleRisks = useMemo(() => {
+    if (!data) return [];
+
+    return data.deals_at_risk.slice(0, 4);
+  }, [data]);
+
+  const visibleAlerts = useMemo(() => {
+    if (!data) return [];
+
+    return data.alerts.slice(0, 4);
+  }, [data]);
+
+  const revenueTrendMax = useMemo(() => {
+    if (!data || data.monthly_revenue_trend.length === 0) {
+      return 1;
+    }
+
+    return Math.max(
+      ...data.monthly_revenue_trend.flatMap((month) => [
+        toNumber(month.revenue),
+        toNumber(month.target),
+      ]),
+      1
+    );
+  }, [data]);
+
+  /* ---------------------------------------------------------------------- */
+  /* Loading                                                                */
+  /* ---------------------------------------------------------------------- */
 
   if (loading) {
     return (
-      <div className="space-y-[var(--space-5)] animate-pulse">
-        <div className="h-8 w-64 rounded-xl bg-secondary" />
-        <div className="grid gap-[var(--space-4)] md:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-36 rounded-2xl border border-border bg-card" />
-          ))}
-        </div>
-        <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
-          <div className="h-72 rounded-2xl border border-border bg-card" />
-          <div className="h-72 rounded-2xl border border-border bg-card" />
+      <div className="space-y-[var(--space-5)]">
+        <div className="animate-pulse space-y-[var(--space-5)]">
+          <div className="h-20 rounded-2xl bg-muted" />
+
+          <div className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-32 rounded-2xl border bg-card"
+              />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-[var(--space-4)] xl:grid-cols-3">
+            <div className="h-80 rounded-2xl border bg-card xl:col-span-2" />
+            <div className="h-80 rounded-2xl border bg-card" />
+          </div>
+
+          <div className="h-72 rounded-2xl border bg-card" />
+
+          <div className="grid grid-cols-1 gap-[var(--space-4)] xl:grid-cols-2">
+            <div className="h-80 rounded-2xl border bg-card" />
+            <div className="h-80 rounded-2xl border bg-card" />
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error || !data) {
+  /* ---------------------------------------------------------------------- */
+  /* Error                                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  if (error) {
     return (
-      <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-6 text-destructive">
-        <p className="font-semibold">Couldn't load manager dashboard</p>
-        <p className="mt-1 text-sm">{error ?? 'No data returned.'}</p>
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+          <AlertTriangle className="mx-auto h-10 w-10 text-brand-purple" />
+
+          <h2 className="mt-4 text-sm font-semibold text-foreground">
+            Unable to load Manager Dashboard
+          </h2>
+
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            {error}
+          </p>
+
+          <button
+            type="button"
+            onClick={loadDashboard}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-brand-purple px-4 py-2 text-xs font-semibold text-primary-foreground transition hover:bg-brand-purple/90"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
-  const s        = data.summary;
-  const pipeline = data.pipeline_health;
-  const forecast = data.forecast;
-  const revenue  = data.revenue_stats;
-  const leaderboards = [...data.rep_quota_attainment].sort((a, b) => a.rank - b.rank);
-  const riskDeals    = data.deals_at_risk;
-  const alerts       = data.alerts;
-  const activities   = data.recent_activities;
+  if (!data) {
+    return (
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-2xl border border-border/50 px-8">
+          <p>No manager dashboard data available</p>
 
-  const pipelineStages = pipeline.stage_distribution.map((st, i) => ({
-    name:  st.stage,
-    count: st.deal_count,
-    value: formatINR(st.total_value),
-    pct:   Math.max(Math.round(asNumber(st.percentage)), 3),
-    bg:    STAGE_COLORS[i % STAGE_COLORS.length],
-  }));
-  const maxPct = Math.max(...pipelineStages.map((s) => s.pct), 1);
+          <button
+            type="button"
+            onClick={loadDashboard}
+            className="mt-4 rounded-lg border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-secondary/40 transition"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Dashboard                                                              */
+  /* ---------------------------------------------------------------------- */
 
   return (
     <div className="space-y-[var(--space-5)]">
 
-      {/* Page title — flat, no card wrapper */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.75rem]">
-          Sales overview
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-          Team at <strong className="font-semibold text-foreground">{formatPct(s.quota_achievement)}</strong> quota
-          across <strong className="font-semibold text-foreground">{s.team_members}</strong> members.
-        </p>
-      </div>
+      {/* ================================================================== */}
+      {/* HEADER                                                             */}
+      {/* ================================================================== */}
 
-      {/* 3 KPI tiles */}
-      <div className="grid gap-[var(--space-4)] md:grid-cols-3">
-        <KpiTile
-          title="Team Revenue Won"
-          value={formatINR(revenue.team_revenue_won)}
-          sub={`Target ${formatINR(revenue.team_target)}`}
-          progress={asNumber(revenue.achievement_pct)}
-          badge={formatPct(revenue.monthly_growth_pct)}
-          targetValue={asNumber(revenue.team_revenue_won)}
-          prefix="₹"
-          delay={0}
-        />
-        <KpiTile
-          title="Forecast Projection"
-          value={formatINR(forecast.projected_revenue)}
-          sub={`Confidence ${Math.round(asNumber(forecast.confidence_score))}% · Accuracy ${Math.round(asNumber(forecast.forecast_accuracy))}%`}
-          progress={asNumber(forecast.confidence_score)}
-          targetValue={asNumber(forecast.projected_revenue)}
-          prefix="₹"
-          delay={75}
-        />
-        <KpiTile
-          title="Pipeline Health"
-          value={formatINR(pipeline.active_pipeline_value)}
-          sub={`${pipeline.total_deals} active deals`}
-          progress={asNumber(pipeline.health_score)}
-          badge={asNumber(pipeline.health_score) >= 70 ? 'Strong' : 'Watch'}
-          targetValue={asNumber(pipeline.active_pipeline_value)}
-          prefix="₹"
-          delay={150}
-        />
-      </div>
+      <div className="flex flex-col gap-[var(--space-4)] lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-sans font-bold tracking-tight text-foreground">
+              Welcome back, Manager
+            </h1>
 
-      {/* Quota attainment + Pipeline stage breakdown */}
-      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
-
-        {/* Quota attainment bars */}
-        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <BarChart3 size={15} className="text-brand-purple" />
-              Rep quota attainment
-            </h2>
-            <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground">
-              This quarter <ChevronDown size={13} />
+            <span className="rounded-full bg-brand-purple/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-purple border border-brand-purple/15">
+              Manager
             </span>
           </div>
-          <div className="space-y-4">
-            {leaderboards.map((rep) => {
-              const pct = asNumber(rep.assigned_target) > 0
-                ? Math.round((asNumber(rep.revenue_generated) / asNumber(rep.assigned_target)) * 100)
-                : 0;
-              return (
-                <div key={rep.user_id} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="flex items-center gap-2 font-medium text-foreground">
-                      <span className="grid size-5 place-items-center rounded-full bg-secondary text-[10px] font-semibold text-brand-purple">
-                        {rep.rank}
-                      </span>
-                      <span className="truncate max-w-[130px]">{rep.full_name}</span>
-                    </span>
-                    <div className="flex items-center gap-2 tabular-nums">
-                      <span className="font-semibold text-foreground">{formatINR(rep.revenue_generated)}</span>
-                      <span className={`rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${pct >= 90 ? 'bg-brand-cyan/15 text-brand-cyan' : 'bg-brand-purple/10 text-brand-purple'}`}>
-                        {pct}%
-                      </span>
+
+          <p className="mt-1 text-xs md:text-sm text-muted-foreground font-medium tracking-wide">
+            Sales performance &amp; team command center
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={period}
+            onChange={(e) =>
+              setPeriod(e.target.value as ManagerDashboardPeriod)
+            }
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-brand-purple/20"
+          >
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="year">This Year</option>
+          </select>
+
+          <select
+            value={repId}
+            onChange={(e) => setRepId(e.target.value)}
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-brand-purple/20"
+          >
+            <option value="all">All Reps</option>
+
+            {data.rep_quota_attainment.map((rep) => (
+              <option key={rep.user_id} value={rep.user_id}>
+                {rep.full_name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground"
+          >
+            All Pipelines
+          </button>
+
+          <button
+            type="button"
+            onClick={loadDashboard}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-secondary/40 disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${
+                loading ? 'animate-spin' : ''
+              }`}
+            />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* KPI CARDS — 5-column grid                                          */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-5">
+
+        {/* Team Revenue */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('reports')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('reports'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Team Revenue
+            </p>
+            <TrendingUp className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatCurrency(data.summary.team_revenue)}
+          </p>
+
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            {toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? (
+              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+            ) : (
+              <ArrowDownRight className="h-3.5 w-3.5 text-rose-500" />
+            )}
+            <span className={`font-semibold ${toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+              {formatPercent(data.revenue_stats.monthly_growth_pct)}
+            </span>
+            <span>growth</span>
+          </div>
+        </div>
+
+        {/* Pipeline Value */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('pipeline')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('pipeline'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Pipeline Value
+            </p>
+            <BarChart3 className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatCurrency(data.summary.pipeline_value)}
+          </p>
+
+          <p className="text-[10px] text-muted-foreground">
+            {data.pipeline_health.total_deals} active deals
+          </p>
+        </div>
+
+        {/* Forecast */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('forecast')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('forecast'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Forecast
+            </p>
+            <Gauge className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatCurrency(data.forecast.projected_revenue)}
+          </p>
+
+          <p className="text-[10px] text-muted-foreground">
+            {formatPercent(data.forecast.confidence_score)} confidence
+          </p>
+        </div>
+
+        {/* Quota Attainment */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Quota Attainment
+            </p>
+            <Target className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatPercent(data.revenue_stats.achievement_pct)}
+          </p>
+
+          <p className="text-[10px] text-muted-foreground">
+            Target {formatCurrency(data.revenue_stats.team_target)}
+          </p>
+        </div>
+
+        {/* Win Rate */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Win Rate
+            </p>
+            <Trophy className="h-4 w-4 text-brand-purple" />
+          </div>
+
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
+            {formatPercent(data.summary.win_rate)}
+          </p>
+
+          <p className="text-[10px] text-muted-foreground">
+            Conversion {formatPercent(data.summary.conversion_rate)}
+          </p>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* REVENUE CHART + FORECAST — 8/4 grid                                */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Revenue vs Target */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Revenue vs Target</h3>
+                <p className="text-[10px] text-muted-foreground">Monthly team revenue performance</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('reports')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View Report
+            </button>
+          </div>
+
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-3xl font-sans font-bold tracking-tight text-foreground">
+                {formatCurrency(data.summary.team_revenue)}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">Current revenue</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-bold text-foreground">
+                Target {formatCurrency(data.revenue_stats.team_target)}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {formatPercent(data.revenue_stats.achievement_pct)} achieved
+              </p>
+            </div>
+          </div>
+
+          {data.monthly_revenue_trend.length > 0 ? (
+            <>
+              <div className="mt-4 flex h-52 items-end gap-2 border-b border-border px-2">
+                {data.monthly_revenue_trend.map((month) => {
+                  const revenue = toNumber(month.revenue);
+                  const target = toNumber(month.target);
+
+                  const revenueHeight =
+                    revenue > 0
+                      ? Math.max(5, (revenue / revenueTrendMax) * 100)
+                      : 3;
+
+                  const targetHeight =
+                    target > 0
+                      ? Math.max(5, (target / revenueTrendMax) * 100)
+                      : 3;
+
+                  return (
+                    <div
+                      key={month.month}
+                      className="flex h-full flex-1 items-end justify-center gap-1"
+                      title={`${month.month} \u2014 Revenue ${formatCurrency(revenue)} \u2014 Target ${formatCurrency(target)}`}
+                    >
+                      <div
+                        className="w-2 rounded-t bg-brand-purple"
+                        style={{ height: `${revenueHeight}%` }}
+                      />
+                      <div
+                        className="w-2 rounded-t bg-muted-foreground/20"
+                        style={{ height: `${targetHeight}%` }}
+                      />
                     </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
+                {data.monthly_revenue_trend.map((month) => (
+                  <span key={month.month}>
+                    {new Date(`${month.month}-01`).toLocaleDateString('en-US', { month: 'short' })}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-3 flex items-center gap-5 text-xs text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-brand-purple" />
+                  Revenue
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/20" />
+                  Target
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="mt-8 flex h-52 items-center justify-center bg-secondary/10 rounded-xl border border-border/50">
+              <p className="text-xs font-semibold text-muted-foreground">
+                No monthly revenue data available.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Forecast Health */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Forecast Health</h3>
+                <p className="text-[10px] text-muted-foreground">Current quarter outlook</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('forecast')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              Open
+            </button>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+              Expected Revenue
+            </p>
+            <p className="mt-1 text-2xl font-bold tracking-tight text-foreground tabular-nums">
+              {formatCurrency(data.forecast.projected_revenue)}
+            </p>
+          </div>
+
+          <div className="space-y-[var(--space-3)]">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Confidence</span>
+                <span className="text-xs font-bold text-foreground">{formatPercent(data.forecast.confidence_score)}</span>
+              </div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-brand-purple"
+                  style={{ width: `${Math.min(100, Math.max(0, toNumber(data.forecast.confidence_score)))}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Forecast Accuracy</span>
+              <span className="text-xs font-bold text-foreground">{formatPercent(data.forecast.forecast_accuracy)}</span>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Quarter Projection</span>
+              <span className="text-xs font-bold text-foreground">{formatCurrency(data.forecast.expected_quarter_revenue)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* PIPELINE HEALTH — full width                                       */}
+      {/* ================================================================== */}
+
+      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+        <div className="flex items-center justify-between border-b border-border pb-2">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-brand-purple" />
+            <div>
+              <h3 className="font-semibold text-foreground text-sm">Pipeline Health</h3>
+              <p className="text-[10px] text-muted-foreground">Deal distribution across pipeline stages</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onTabChange?.('pipeline')}
+            className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-purple hover:underline"
+          >
+            View Pipeline
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {data.pipeline_health.stage_distribution.map((stage) => (
+            <div
+              key={stage.stage}
+              className="rounded-xl border border-border bg-secondary/10 p-[var(--space-3)] transition hover:bg-secondary/20"
+            >
+              <p className="truncate text-xs font-bold text-foreground">
+                {stage.stage}
+              </p>
+              <p className="mt-2 text-xl font-bold text-foreground tabular-nums">
+                {stage.deal_count}
+              </p>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                {formatCurrency(stage.total_value)}
+              </p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-brand-purple"
+                  style={{ width: `${Math.min(100, Math.max(0, toNumber(stage.percentage)))}%` }}
+                />
+              </div>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {formatPercent(stage.percentage)}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 border-t border-border pt-3 sm:grid-cols-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Active Deals</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{data.pipeline_health.total_deals}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Pipeline Value</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{formatCurrency(data.pipeline_health.active_pipeline_value)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Health Score</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{formatPercent(data.pipeline_health.health_score)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* TEAM PERFORMANCE + DEALS AT RISK — 8/4 grid                       */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Team Performance */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Team Performance</h3>
+                <p className="text-[10px] text-muted-foreground">Quota attainment across the sales team</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('team performance')}
+              className="inline-flex items-center gap-1 text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View Team
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-[var(--space-3)]">
+            {sortedReps.map((rep) => {
+              const attainment = toNumber(rep.quota_achievement_pct);
+
+              return (
+                <div key={rep.user_id}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-purple/10 text-[9px] font-bold text-brand-purple border border-brand-purple/15">
+                        {getInitials(rep.full_name)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-foreground">{rep.full_name}</p>
+                        <p className="text-[10px] text-muted-foreground">Revenue {formatCurrency(rep.revenue_generated)}</p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs font-bold tabular-nums text-brand-purple">
+                      {formatPercent(attainment)}
+                    </span>
                   </div>
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(pct, 100)}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      className={`h-full rounded-full ${pct >= 100 ? 'bg-emerald-500' : 'bg-brand-purple'}`}
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-brand-purple"
+                      style={{ width: `${Math.min(100, Math.max(0, attainment))}%` }}
                     />
                   </div>
                 </div>
               );
             })}
-            {leaderboards.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">No rep data yet.</p>
-            )}
-          </div>
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-            <span className="text-xs text-muted-foreground">
-              Avg attainment: <strong className="font-semibold text-foreground">
-                {leaderboards.length
-                  ? Math.round(leaderboards.reduce((a, r) => a + asNumber(r.quota_achievement_pct), 0) / leaderboards.length)
-                  : 0}%
-              </strong>
-            </span>
-            <button onClick={() => onTabChange?.('team performance')}
-              className="flex items-center gap-1 text-xs font-medium text-brand-purple hover:underline cursor-pointer">
-              Details <ArrowUpRight size={12} />
-            </button>
-          </div>
-        </div>
 
-        {/* Pipeline stage breakdown — rounded-full bars */}
-        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <Layers size={15} className="text-brand-purple" />
-              Deals by stage
-            </h2>
-            <span className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground">
-              This month <ChevronDown size={13} />
-            </span>
-          </div>
-          <ul className="space-y-3">
-            {pipelineStages.map((st, i) => (
-              <li key={st.name} className="grid grid-cols-[7rem_minmax(0,1fr)_2.5rem] items-center gap-3">
-                <span className="truncate text-xs font-medium text-foreground">{st.name}</span>
-                <div className="h-6 overflow-hidden rounded-full bg-secondary block">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(st.pct / maxPct) * 100}%` }}
-                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: i * 0.07 }}
-                    className={`grid h-full place-items-center rounded-full text-[10px] font-semibold text-primary-foreground ${st.bg}`}
-                  >
-                    {st.count}
-                  </motion.div>
-                </div>
-                <span className="text-right text-xs text-muted-foreground tabular-nums">{st.count}</span>
-              </li>
-            ))}
-            {pipelineStages.length === 0 && (
-              <li className="py-4 text-center text-sm text-muted-foreground">No pipeline data yet.</li>
-            )}
-          </ul>
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-            <span className="text-xs text-muted-foreground">
-              Conversion: <strong className="font-semibold text-foreground">{formatPct(s.conversion_rate)}</strong>
-            </span>
-            <button onClick={() => onTabChange?.('leads')}
-              className="flex items-center gap-1 text-xs font-medium text-brand-purple hover:underline cursor-pointer">
-              Funnel <ArrowUpRight size={12} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Monthly revenue trend */}
-      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-            <TrendingUp size={15} className="text-brand-purple" />
-            Monthly revenue vs target
-          </h2>
-          <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full" style={{ backgroundColor: 'var(--brand-purple)' }} />
-              Actual
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-muted-foreground/40" />
-              Target
-            </span>
-          </div>
-        </div>
-        <RevenueChart trend={data.monthly_revenue_trend} />
-      </div>
-
-      {/* Forecast Strip */}
-      <div 
-        className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[var(--line,#2A323F)] overflow-hidden select-none"
-        style={{
-          backgroundColor: 'var(--panel, #181D25)',
-          borderRadius: '10px',
-          border: '1px solid var(--line, #2A323F)',
-          borderColor: 'var(--line, #2A323F)',
-        }}
-      >
-        {/* Block 1 */}
-        <div className="p-5 flex flex-col justify-center">
-          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
-            Forecast this month
-          </span>
-          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
-            ₹41.2L / ₹50L
-          </span>
-          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}>
-            82% &middot; confidence band &plusmn;6%
-          </span>
-        </div>
-
-        {/* Block 2 */}
-        <div className="p-5 flex flex-col justify-center" style={{ borderColor: 'var(--line, #2A323F)' }}>
-          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
-            Team win rate
-          </span>
-          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
-            31%
-          </span>
-          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--green, #4FB477)' }}>
-            &uarr; 4pts vs last month
-          </span>
-        </div>
-
-        {/* Block 3 */}
-        <div className="p-5 flex flex-col justify-center" style={{ borderColor: 'var(--line, #2A323F)' }}>
-          <span className="text-[10px] uppercase tracking-wider font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}>
-            Avg deal velocity
-          </span>
-          <span className="text-2xl font-bold mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}>
-            18d
-          </span>
-          <span className="text-xs font-semibold mt-1" style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}>
-            &uarr; 2d slower
-          </span>
-        </div>
-      </div>
-
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.3fr_1fr] gap-[20px]">
-        
-        {/* Card 1 — Team Quota Pace */}
-        <div 
-          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
-          style={{
-            backgroundColor: 'var(--panel, #181D25)',
-            borderRadius: '10px',
-            padding: '20px',
-            border: '1px solid var(--line, #2A323F)',
-          }}
-        >
-          <div>
-            <h2 
-              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
-              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-            >
-              Team Quota Pace
-            </h2>
-            <div className="space-y-4">
-              {[
-                { name: 'Meera', pct: 29, status: 'danger' },
-                { name: 'Rohan', pct: 52, status: 'warning' },
-                { name: 'Deepak', pct: 61, status: 'warning' },
-                { name: 'Priya', pct: 78, status: 'success' },
-                { name: 'Kavya', pct: 85, status: 'success' },
-                { name: 'Aarav', pct: 91, status: 'success' },
-              ].map((rep) => {
-                const repColor = 
-                  rep.status === 'success' ? 'var(--green, #4FB477)' :
-                  rep.status === 'warning' ? 'var(--amber, #E8A33D)' :
-                  'var(--red, #E2604F)';
-                return (
-                  <div key={rep.name} className="flex items-center justify-between gap-4">
-                    {/* Status dot + Name */}
-                    <div className="flex items-center gap-2.5 w-[110px] shrink-0">
-                      <span 
-                        className="size-2 rounded-full shrink-0 animate-pulse" 
-                        style={{ backgroundColor: repColor }}
-                      />
-                      <span 
-                        className="font-bold text-xs"
-                        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
-                      >
-                        {rep.name}
-                      </span>
-                    </div>
-
-                    {/* Progress track & fill */}
-                    <div 
-                      className="flex-1 h-2 rounded-full overflow-hidden relative"
-                      style={{ backgroundColor: 'var(--line, #2A323F)' }}
-                    >
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${rep.pct}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="h-full rounded-full"
-                        style={{ backgroundColor: repColor }}
-                      />
-                    </div>
-
-                    {/* Mono percentage */}
-                    <span 
-                      className="text-xs font-semibold text-right w-10 shrink-0"
-                      style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
-                    >
-                      {rep.pct}%
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2 — Coaching Signals */}
-        <div 
-          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
-          style={{
-            backgroundColor: 'var(--panel, #181D25)',
-            borderRadius: '10px',
-            padding: '20px',
-            border: '1px solid var(--line, #2A323F)',
-          }}
-        >
-          <div>
-            <h2 
-              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
-              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-            >
-              Coaching Signals
-            </h2>
-            <div className="space-y-4">
-              {[
-                { name: 'Meera D.', reason: 'Activity down 40% this week' },
-                { name: 'Rohan M.', reason: '6 overdue follow-ups' },
-                { name: 'Deepak V.', reason: 'Call quality score dropped' },
-              ].map((item) => (
-                <div key={item.name} className="flex flex-col gap-1 border-b border-[var(--line, #2A323F)]/40 pb-3 last:border-b-0 last:pb-0">
-                  <span 
-                    className="text-xs font-bold"
-                    style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
-                  >
-                    {item.name}
-                  </span>
-                  <span 
-                    className="text-[11px] font-medium"
-                    style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--amber, #E8A33D)' }}
-                  >
-                    {item.reason}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3 — Deal Risk Radar */}
-        <div 
-          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
-          style={{
-            backgroundColor: 'var(--panel, #181D25)',
-            borderRadius: '10px',
-            padding: '20px',
-            border: '1px solid var(--line, #2A323F)',
-          }}
-        >
-          <div>
-            <h2 
-              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
-              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-            >
-              Deal Risk Radar
-            </h2>
-            <div className="space-y-4">
-              {[
-                { name: 'Orbit Pharma', reason: 'No movement 14d &middot; Meera', value: '₹9.4L' },
-                { name: 'Delta Freight', reason: 'Stuck in negotiation &middot; Priya', value: '₹6.1L' },
-                { name: 'Kavya Traders', reason: 'Champion went silent &middot; Rohan', value: '₹4.8L' },
-              ].map((deal) => (
-                <div key={deal.name} className="flex justify-between items-center gap-4 py-2 border-b border-[var(--line, #2A323F)]/40 last:border-b-0 last:pb-0">
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <span 
-                      className="text-xs font-bold text-foreground truncate"
-                      style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text, #E8EAED)' }}
-                    >
-                      {deal.name}
-                    </span>
-                    <span 
-                      className="text-[10px] font-medium truncate"
-                      style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--red, #E2604F)' }}
-                      dangerouslySetInnerHTML={{ __html: deal.reason }}
-                    />
-                  </div>
-                  <span 
-                    className="text-xs font-bold tabular-nums shrink-0"
-                    style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
-                  >
-                    {deal.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4 — Pipeline by Stage */}
-        <div 
-          className="hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between"
-          style={{
-            backgroundColor: 'var(--panel, #181D25)',
-            borderRadius: '10px',
-            padding: '20px',
-            border: '1px solid var(--line, #2A323F)',
-          }}
-        >
-          <div>
-            <h2 
-              className="text-[12px] uppercase tracking-wider font-bold mb-5 select-none"
-              style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-            >
-              Pipeline by Stage
-            </h2>
-            <div className="space-y-4">
-              {[
-                { label: 'Prospecting', count: 142, width: 100 },
-                { label: 'Qualified', count: 98, width: 70 },
-                { label: 'Proposal', count: 54, width: 38 },
-                { label: 'Negotiation', count: 26, width: 18 },
-                { label: 'Closed won', count: 13, width: 9, isWon: true },
-              ].map((stage) => {
-                const barColor = stage.isWon ? 'var(--green, #4FB477)' : 'var(--blue, #5B9BD5)';
-                return (
-                  <div key={stage.label} className="space-y-1">
-                    <div className="flex justify-between items-center text-xs">
-                      <span 
-                        className="font-bold"
-                        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'var(--text-dim, #8B94A3)' }}
-                      >
-                        {stage.label}
-                      </span>
-                      <span 
-                        className="font-semibold tabular-nums"
-                        style={{ fontFamily: 'IBM Plex Mono, monospace', color: 'var(--text, #E8EAED)' }}
-                      >
-                        {stage.count}
-                      </span>
-                    </div>
-
-                    <div 
-                      className="h-4 w-full rounded overflow-hidden relative flex items-center"
-                      style={{ backgroundColor: 'var(--line, #2A323F)' }}
-                    >
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${stage.width}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="h-full rounded"
-                        style={{ backgroundColor: barColor }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Leaderboard + Deals at risk */}
-      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
-
-        {/* Leaderboard */}
-        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-foreground">
-              <Award size={15} className="text-brand-purple" />
-              Top reps
-            </h2>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Quota attainment
-            </span>
-          </div>
-          <div className="space-y-2.5">
-            {leaderboards.map((rep) => (
-              <div key={rep.user_id}
-                className="flex items-center gap-3 rounded-xl border border-border bg-secondary/50 py-[var(--space-2)] px-[var(--space-3)] hover:bg-secondary transition-colors">
-                <span className="text-xs font-semibold text-brand-purple w-4 shrink-0">#{rep.rank}</span>
-                <div className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary border border-border text-[11px] font-semibold text-brand-purple">
-                  {rep.full_name.charAt(0)}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium text-foreground">{rep.full_name}</p>
-                  <p className="text-[10px] text-muted-foreground tabular-nums">{formatINR(rep.revenue_generated)}</p>
-                </div>
-                <div className="w-20 h-1.5 overflow-hidden rounded-full bg-border shrink-0">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: `${Math.min(asNumber(rep.quota_achievement_pct), 100)}%` }}
-                    transition={{ duration: 0.8 }}
-                    className="h-full rounded-full bg-brand-purple"
-                  />
-                </div>
+            {sortedReps.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                No rep data available.
               </div>
-            ))}
-            {leaderboards.length === 0 && (
-              <p className="py-4 text-center text-sm text-muted-foreground">No rep data yet.</p>
             )}
-          </div>
-          <div className="mt-4 flex justify-end border-t border-border pt-3">
-            <button onClick={() => onTabChange?.('team performance')}
-              className="flex items-center gap-1 text-xs font-medium text-brand-purple hover:underline cursor-pointer">
-              Full leaderboard <ArrowRight size={12} />
-            </button>
           </div>
         </div>
 
-        {/* Deals at risk */}
-        <DealsAtRiskCard deals={riskDeals} />
-      </div>
+        {/* Deals At Risk */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Deals at Risk</h3>
+                <p className="text-[10px] text-muted-foreground">High-value opportunities</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('pipeline')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View Pipeline
+            </button>
+          </div>
 
-      {/* Alerts */}
-      <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground border-b border-border pb-3">
-          <BellRing size={15} className="text-brand-purple" />
-          Alerts &amp; signals
-        </h2>
-        <div className="space-y-2.5">
-          {alerts.map((alert, idx) => {
-            const isWarn = alert.severity === 'high' || alert.severity === 'warning';
-            const isOk   = alert.severity === 'success';
-            return (
-              <div key={idx}
-                className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-xs
-                  ${isWarn ? 'border-destructive/25 bg-destructive/8 text-foreground'
-                    : isOk  ? 'border-brand-cyan/25 bg-brand-cyan/8 text-foreground'
-                            : 'border-border bg-secondary text-foreground'}`}
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2">
+            {visibleRisks.map((deal) => (
+              <div
+                key={deal.deal_id}
+                onClick={() => onDealClick?.(deal.deal_id)}
+                className="cursor-pointer rounded-xl border border-border p-3 transition hover:bg-secondary/20"
               >
-                <div className="flex items-start gap-2.5">
-                  {isWarn ? <ShieldAlert size={14} className="mt-0.5 shrink-0 text-destructive" />
-                    : isOk ? <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-brand-cyan" />
-                           : <Sparkles size={14} className="mt-0.5 shrink-0 text-brand-purple" />}
-                  <span>{alert.message}</span>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-foreground">{deal.deal_name}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{deal.company || 'No company'}</p>
+                  </div>
+                  <p className="shrink-0 text-xs font-bold text-foreground tabular-nums">{formatCurrency(deal.deal_value)}</p>
                 </div>
-                <span className="shrink-0 text-[10px] text-muted-foreground tabular-nums">
-                  {new Date(alert.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
+
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Owner</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-foreground">{deal.owner_name || 'Unassigned'}</p>
+                  </div>
+                  <div className="text-right min-w-0">
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Risk</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-amber-600 truncate">{deal.risk_reason}</p>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-[10px] text-muted-foreground">
+                    {deal.days_since_last_activity}d since activity
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onDealClick?.(deal.deal_id)}
+                    className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold text-foreground hover:bg-secondary/40 transition"
+                  >
+                    Open
+                  </button>
+                </div>
               </div>
-            );
-          })}
-          {alerts.length === 0 && <p className="py-2 text-sm text-muted-foreground">No active alerts.</p>}
+            ))}
+
+            {visibleRisks.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Trophy className="mx-auto h-4 w-4 mb-1" />
+                No deals at risk
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Team activity */}
-      <div className="rounded-2xl border border-border bg-card p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-200">
-        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold tracking-tight text-foreground border-b border-border pb-3">
-          <Activity size={15} className="text-brand-purple" />
-          Recent team activity
-        </h2>
-        <div className="divide-y divide-border">
-          {activities.map((act, idx) => (
-            <div key={idx} className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
-              <div className="grid size-7 shrink-0 place-items-center rounded-full bg-secondary text-[10px] font-semibold text-brand-purple border border-border mt-0.5">
-                {act.title.charAt(0)}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-foreground leading-relaxed">
-                  <span className="font-medium">{act.title}</span> {act.action}
-                </p>
-                <span className="flex items-center gap-1 mt-0.5 text-[10px] text-muted-foreground">
-                  <Clock size={10} />
-                  {new Date(act.created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                </span>
+      {/* ================================================================== */}
+      {/* ACTION QUEUE + ACTIVITY — 8/4 grid                                 */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Manager Action Queue */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Manager Action Queue</h3>
+                <p className="text-[10px] text-muted-foreground">System-generated items that may need attention</p>
               </div>
             </div>
-          ))}
-          {activities.length === 0 && <p className="py-2 text-sm text-muted-foreground">No recent activity.</p>}
+            <button
+              type="button"
+              onClick={() => onTabChange?.('activities')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View Activity
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2">
+            {visibleAlerts.map((alert, index) => {
+              const severity = String(alert.severity || '').toLowerCase();
+              const isHigh = severity === 'high' || severity === 'critical';
+
+              return (
+                <div
+                  key={`${alert.timestamp}-${index}`}
+                  onClick={() => onTabChange?.('activities')}
+                  className={[
+                    'cursor-pointer rounded-xl border p-3 transition hover:bg-secondary/20',
+                    isHigh ? 'border-rose-200 bg-rose-50/50' : 'border-amber-200 bg-amber-50/40',
+                  ].join(' ')}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className={[
+                        'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg',
+                        isHigh ? 'bg-rose-100 text-rose-600' : 'bg-amber-100 text-amber-600',
+                      ].join(' ')}
+                    >
+                      {isHigh ? <AlertTriangle className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground leading-5">{alert.message}</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                        {alert.severity} \u00B7 {formatUpdatedAt(alert.timestamp)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {visibleAlerts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Bell className="mx-auto h-4 w-4 mb-1" />
+                No manager alerts
+                <p className="mt-1 text-[10px] text-muted-foreground">Everything looks good right now.</p>
+              </div>
+            )}
+          </div>
+
+          {data.deals_at_risk.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onTabChange?.('pipeline')}
+              className="w-full flex items-center justify-between rounded-xl bg-secondary/10 border border-border/50 px-3 py-2.5 text-left hover:bg-secondary/20 transition"
+            >
+              <div>
+                <p className="text-xs font-bold text-foreground">{data.deals_at_risk.length} deals require review</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">Open pipeline to review risk</p>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          )}
         </div>
-        <div className="mt-4 flex justify-end border-t border-border pt-3">
-          <button onClick={() => onTabChange?.('reports')}
-            className="flex items-center gap-1 text-xs font-medium text-brand-purple hover:underline cursor-pointer">
-            View all reports <ArrowRight size={12} />
-          </button>
+
+        {/* Recent Team Activity */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-brand-purple" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Recent Activity</h3>
+                <p className="text-[10px] text-muted-foreground">Latest CRM activity</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('activities')}
+              className="text-[10px] font-bold text-brand-purple hover:underline"
+            >
+              View All
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1">
+            {visibleActivities.map((activity) => (
+              <button
+                key={activity.id}
+                type="button"
+                onClick={() => onTabChange?.('activities')}
+                className="flex w-full items-start gap-2.5 rounded-xl px-2 py-2.5 text-left transition hover:bg-secondary/20"
+              >
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-purple/10 text-brand-purple">
+                  <Activity className="h-3 w-3" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold text-foreground">{activity.title || activity.action}</p>
+                  <p className="mt-0.5 truncate text-[10px] capitalize text-muted-foreground">
+                    {activity.action.replace(/_/g, ' ')} \u00B7 {activity.entity_type.replace(/_/g, ' ')}
+                  </p>
+                  <p className="mt-0.5 text-[9px] text-muted-foreground">
+                    {formatUpdatedAt(activity.created_at)}
+                    {activity.created_by ? ` \u00B7 ${activity.created_by}` : ''}
+                  </p>
+                </div>
+                <ChevronRight className="mt-1 h-3 w-3 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+
+            {visibleActivities.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Activity className="mx-auto h-4 w-4 mb-1" />
+                No recent team activity
+                <p className="mt-1 text-[10px] text-muted-foreground">New CRM activity will appear here.</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* ================================================================== */}
+      {/* BOTTOM METRICS — 4-column grid                                     */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-2 gap-[var(--space-4)] lg:grid-cols-4">
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Team Members</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{data.team_metrics.total_members}</p>
+          <p className="text-[10px] text-muted-foreground">{data.team_metrics.active_reps} active reps</p>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('pipeline')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('pipeline'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Avg Deal Size</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{formatCurrency(data.team_metrics.avg_deal_size)}</p>
+          <p className="text-[10px] text-muted-foreground">Across active pipeline</p>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Sales Cycle</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">
+            {toNumber(data.team_metrics.avg_sales_cycle_days).toFixed(0)} days
+          </p>
+          <p className="text-[10px] text-muted-foreground">Average team cycle</p>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('forecast')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('forecast'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Forecast Accuracy</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{formatPercent(data.team_metrics.forecast_accuracy)}</p>
+          <p className="text-[10px] text-muted-foreground">Current forecast performance</p>
+        </div>
+      </div>
     </div>
   );
 }

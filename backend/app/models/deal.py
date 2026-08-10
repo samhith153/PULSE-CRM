@@ -37,6 +37,7 @@ class Deal(Base, TenantMixin):
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
     expected_close_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
     probability: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
+    sentiment: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     close_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

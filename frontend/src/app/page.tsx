@@ -34,6 +34,7 @@ import TeamPerformanceView from '@/components/dashboard/TeamPerformanceView';
 import AdminDashboardView from '@/components/dashboard/AdminDashboardView';
 import SalesRepDashboardView from '@/components/dashboard/SalesRepDashboardView';
 import HomeView from '@/components/dashboard/HomeView';
+import TasksView from '@/components/dashboard/TasksView';
 import UsersView from '@/components/dashboard/UsersView';
 import RolesPermissionsView from '@/components/dashboard/RolesPermissionsView';
 import IntegrationsView from '@/components/dashboard/IntegrationsView';
@@ -50,7 +51,7 @@ export default function DashboardHome() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
+  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('manager');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -61,11 +62,11 @@ export default function DashboardHome() {
 
     if (authFromLanding && roleParam && validRoles.includes(roleParam as typeof validRoles[number])) {
       sessionStorage.setItem('pulse-crm-auth', 'true');
-      const mappedRole = roleParam === 'sales_rep' ? 'representative' : roleParam;
+      const mappedRole = roleParam === 'representative' ? 'sales_rep' : roleParam;
       localStorage.setItem('pulse-crm-role', mappedRole);
       if (emailParam) localStorage.setItem('pulse-crm-user', emailParam);
       setIsAuthenticated(true);
-      setUserRole(mappedRole as 'representative' | 'manager' | 'admin');
+      setUserRole(mappedRole as 'sales_rep' | 'manager' | 'admin');
       window.history.replaceState({}, '', window.location.pathname);
       setIsAuthLoading(false);
       return;
@@ -81,21 +82,21 @@ export default function DashboardHome() {
 
     setIsAuthenticated(true);
     let savedRole = localStorage.getItem('pulse-crm-role');
-    if (savedRole === 'sales_rep') {
-      savedRole = 'representative';
-      localStorage.setItem('pulse-crm-role', 'representative');
+    if (savedRole === 'representative') {
+      savedRole = 'sales_rep';
+      localStorage.setItem('pulse-crm-role', 'sales_rep');
     }
-    const legacyRoles = ['representative', 'manager', 'admin'] as const;
+    const legacyRoles = ['sales_rep', 'manager', 'admin'] as const;
     if (savedRole && legacyRoles.includes(savedRole as typeof legacyRoles[number])) {
-      setUserRole(savedRole as 'representative' | 'manager' | 'admin');
+      setUserRole(savedRole as 'sales_rep' | 'manager' | 'admin');
     }
     setIsAuthLoading(false);
   }, [router]);
 
   const handleLogin = (role: string) => {
-    const mappedRole = role === 'sales_rep' ? 'representative' : role;
+    const mappedRole = role === 'representative' ? 'sales_rep' : role;
     setIsAuthenticated(true);
-    setUserRole(mappedRole as 'representative' | 'manager' | 'admin');
+    setUserRole(mappedRole as 'sales_rep' | 'manager' | 'admin');
   };
 
   const handleSignOut = () => {
@@ -144,10 +145,13 @@ export default function DashboardHome() {
     localStorage.setItem('pulse-crm-layout', JSON.stringify(updated));
   };
 
-  // Global listener for Ctrl+K
+  // Global listener for Ctrl+K (with input/textarea focus guard)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        const isEditable = (e.target as HTMLElement)?.isContentEditable;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || isEditable) return;
         e.preventDefault();
         setIsCommandPaletteOpen(prev => !prev);
       }
@@ -199,8 +203,8 @@ export default function DashboardHome() {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-surface-warm">
-        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      <div className="min-h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 text-brand animate-spin" />
       </div>
     );
   }
@@ -210,7 +214,7 @@ export default function DashboardHome() {
   }
 
   return (
-    <div className="flex bg-background h-screen overflow-hidden font-sans text-foreground antialiased">
+    <div className="flex h-screen overflow-hidden bg-background text-foreground antialiased font-sans">
       {/* Sidebar navigation - toned down background */}
       <Sidebar 
         activeTab={activeTab} 
@@ -239,21 +243,29 @@ export default function DashboardHome() {
           <AnimatePresence mode="wait">
             <PageTransition key={activeTab}>
               {activeTab === 'home' ? (
-                <HomeView onTabChange={setActiveTab} />
+                userRole === 'manager' ? (
+                  <ManagerDashboardView onTabChange={setActiveTab} />
+                ) : userRole === 'admin' ? (
+                  <AdminDashboardView />
+                ) : (
+                  <HomeView onTabChange={setActiveTab} />
+                )
               ) : activeTab === 'leads' ? (
-                <LeadsView />
+                <LeadsView onTabChange={setActiveTab} />
               ) : activeTab === 'contacts' ? (
-                <ContactsView />
+                <ContactsView onTabChange={setActiveTab} />
               ) : activeTab === 'companies' ? (
                 <CompaniesView />
+              ) : activeTab === 'tasks' ? (
+                <TasksView />
               ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
                 <PipelineView />
               ) : activeTab === 'products' ? (
                 <ProductsView />
               ) : activeTab === 'activities' ? (
-                <ActivitiesView />
+                <ActivitiesView onTabChange={setActiveTab} />
               ) : activeTab === 'emails' ? (
-                <EmailsView />
+                <EmailsView onTabChange={setActiveTab} />
               ) : activeTab === 'documents' ? (
                 <DocumentsView />
               ) : activeTab === 'reports' ? (
@@ -261,7 +273,7 @@ export default function DashboardHome() {
               ) : activeTab === 'workflows' ? (
                 <WorkflowsView />
               ) : activeTab === 'ai insights' ? (
-                <AIInsightsView />
+                <AIInsightsView onTabChange={setActiveTab} />
               ) : activeTab === 'settings' ? (
                 <SettingsView userRole={userRole} />
               ) : activeTab === 'profile' ? (

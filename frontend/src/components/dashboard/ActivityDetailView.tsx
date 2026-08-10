@@ -4,8 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, 
-  ChevronLeft, 
-  ChevronRight, 
   Edit3, 
   Trash2, 
   Save, 
@@ -26,7 +24,7 @@ import {
   TrendingUp,
   Activity as ActivityIcon
 } from 'lucide-react';
-import { getActivitiesFromStorage, saveActivitiesToStorage, Activity } from '@/utils/activityDb';
+import { getLeads, getContacts, getCrmActivity, CrmActivity, updateCrmTask, deleteCrmTask, updateCrmCall, deleteCrmCall, updateCrmNote, deleteCrmNote, createCrmTask } from '@/utils/api';
 import ContextPanel from './ContextPanel';
 import { toast } from '@/lib/toast';
 
@@ -38,8 +36,7 @@ interface ActivityDetailViewProps {
 
 export default function ActivityDetailView({ id, onBack, onTabChange }: ActivityDetailViewProps) {
   const router = useRouter();
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [activity, setActivity] = useState<Activity | null>(null);
+  const [activity, setActivity] = useState<CrmActivity | null>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'timeline'>('overview');
@@ -52,6 +49,70 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   const [priority, setPriority] = useState('');
   const [notes, setNotes] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [relatedEmail, setRelatedEmail] = useState<string | null>(null);
+  const [mergedTimeline, setMergedTimeline] = useState<any[]>([]);
+  const [timelineFilter, setTimelineFilter] = useState<'all' | 'timeline' | 'email' | 'call' | 'meeting'>('all');
+
+  useEffect(() => {
+    if (!activity) return;
+    
+    let baseTimeline: any[] = [];
+
+    if (activity.activity_type === 'email' && (activity.details as any)?.receiver) {
+      setRelatedEmail((activity.details as any).receiver);
+    } else {
+      setRelatedEmail(null);
+    }
+
+    const relType = activity.related_entity_type;
+    const relId = activity.related_record_id;
+    if (!relType || !relId) {
+      setMergedTimeline(baseTimeline);
+      return;
+    }
+
+    if (relType === 'lead') {
+      getLeads().then((leadsList) => {
+        const found = leadsList.find((l) => String(l.id) === String(relId));
+        if (found) {
+          if (found.contact_email) {
+            setRelatedEmail(found.contact_email);
+          }
+          const extraLogs: any[] = [];
+          if ((found as any).timeline) {
+            (found as any).timeline.forEach((t: any) => {
+              extraLogs.push({ action: t.title, time: t.time || new Date().toISOString(), user: 'System', desc: t.desc, type: 'timeline' });
+            });
+          }
+          setMergedTimeline([...baseTimeline, ...extraLogs]);
+        } else {
+          setMergedTimeline(baseTimeline);
+        }
+      }).catch(() => {
+        setMergedTimeline(baseTimeline);
+      });
+    } else if (relType === 'contact') {
+      getContacts().then((contactsList) => {
+        const found = contactsList.find((c) => String(c.id) === String(relId));
+        if (found) {
+          if (found.email) setRelatedEmail(found.email);
+          const extraLogs: any[] = [];
+          if ((found as any).timeline) {
+            (found as any).timeline.forEach((t: any) => {
+              extraLogs.push({ action: t.title, time: t.time || new Date().toISOString(), user: 'System', desc: '', type: 'timeline' });
+            });
+          }
+          setMergedTimeline([...baseTimeline, ...extraLogs]);
+        } else {
+          setMergedTimeline(baseTimeline);
+        }
+      }).catch(() => {
+        setMergedTimeline(baseTimeline);
+      });
+    } else {
+      setMergedTimeline(baseTimeline);
+    }
+  }, [activity]);
 
   // AI loading simulator
   const [aiGenerating, setAiGenerating] = useState(true);
@@ -63,31 +124,26 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   } | null>(null);
 
   useEffect(() => {
-    const list = getActivitiesFromStorage();
-    setActivities(list);
-    const found = list.find(a => a.id === id);
-    if (found) {
-      setActivity(found);
-      setSubject(found.subject);
-      setStatus(found.status);
-      setPriority(found.priority);
-      setNotes(found.details.notes || found.details.description || found.details.body || '');
-      setDueDate(found.dueDate ? found.dueDate.slice(0, 16) : '');
-    }
-    setLoading(false);
+    let cancelled = false;
 
-    // Simulate AI Generation
-    const timer = setTimeout(() => {
-      setAiInsights({
-        summary: found ? `Client alignment focused on resolving custom SSO configurations. The customer expressed keen interest but needs SOC2 confirmation.` : `General follow-up regarding system specifications.`,
-        sentiment: found?.type === 'email' ? 'Positive' : 'Neutral',
-        nextAction: "Send custom SOC2 compliance documentation packet by end of day.",
-        recommendation: "Schedule a 15-minute follow-up alignment meeting for tomorrow at 3:00 PM."
-      });
-      setAiGenerating(false);
-    }, 1000);
+    const loadActivity = async () => {
+      try {
+        const remote = await getCrmActivity(id);
+        if (cancelled) return;
+        setActivity(remote);
+        setSubject(remote.subject);
+        setStatus(remote.status);
+        setPriority(remote.priority);
+        setNotes((remote.details as any)?.notes || (remote.details as any)?.description || '');
+        setDueDate(remote.due_date ? String(remote.due_date).slice(0, 16) : '');
+      } catch {
+        if (!cancelled) setActivity(null);
+      }
+      if (!cancelled) setLoading(false);
+    };
 
-    return () => clearTimeout(timer);
+    loadActivity();
+    return () => { cancelled = true; };
   }, [id]);
 
   if (loading) {
@@ -123,87 +179,77 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   }
 
   // Prev/Next Navigation in List
-  const currentIndex = activities.findIndex(a => a.id === id);
-  const handlePrevActivity = () => {
-    if (currentIndex > 0) {
-      router.push(`/activities/${activities[currentIndex - 1].id}`);
-    } else {
-      toast.info("You are at the first activity in the list.");
-    }
-  };
-
-  const handleNextActivity = () => {
-    if (currentIndex < activities.length - 1) {
-      router.push(`/activities/${activities[currentIndex + 1].id}`);
-    } else {
-      toast.info("You are at the last activity in the list.");
-    }
-  };
-
   // Save changes
-  const handleSave = () => {
-    if (!subject.trim()) {
+  const handleSave = async () => {
+    if (!activity || !subject.trim()) {
       toast.error("Subject is required!");
       return;
     }
-    const updated: Activity = {
-      ...activity,
-      subject,
-      status,
-      priority,
-      dueDate: dueDate ? new Date(dueDate).toISOString() : activity.dueDate,
-      details: {
-        ...activity.details,
-        notes: activity.type === 'call' || activity.type === 'meeting' ? notes : undefined,
-        description: activity.type === 'task' ? notes : undefined,
-        body: activity.type === 'note' ? notes : undefined
-      },
-      timeline: [
-        ...(activity.timeline || []),
-        { action: 'Updated', time: new Date().toISOString(), user: 'Sarah Johnson', desc: 'Fields updated by owner.' }
-      ]
-    };
-
-    const newActivities = activities.map(a => a.id === id ? updated : a);
-    saveActivitiesToStorage(newActivities);
-    setActivity(updated);
-    setIsEditing(false);
-    toast.success("Activity details saved successfully.");
+    try {
+      const type = activity.activity_type;
+      if (type === 'task') {
+        await updateCrmTask(activity.id, { subject, status, priority, due_date: dueDate || undefined } as any);
+      } else if (type === 'call') {
+        await updateCrmCall(activity.id, { subject, status, priority } as any);
+      } else if (type === 'note') {
+        await updateCrmNote(activity.id, { title: subject } as any);
+      }
+      // Re-fetch to get fresh data
+      const fresh = await getCrmActivity(id);
+      setActivity(fresh);
+      setSubject(fresh.subject);
+      setStatus(fresh.status);
+      setPriority(fresh.priority);
+      setNotes((fresh.details as any)?.notes || (fresh.details as any)?.description || '');
+      setDueDate(fresh.due_date ? String(fresh.due_date).slice(0, 16) : '');
+      setIsEditing(false);
+      toast.success("Activity details saved successfully.");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save activity.");
+    }
   };
 
   // Delete activity
-  const handleDelete = () => {
+  const handleDelete = async () => {
+    if (!activity) return;
     if (!window.confirm("Are you sure you want to delete this activity?")) return;
-    const newActivities = activities.filter(a => a.id !== id);
-    saveActivitiesToStorage(newActivities);
-    toast.success("Activity deleted.");
-    if (onBack) onBack();
-    else router.push('/activities');
+    try {
+      const type = activity.activity_type;
+      if (type === 'task') {
+        await deleteCrmTask(activity.id);
+      } else if (type === 'call') {
+        await deleteCrmCall(activity.id);
+      } else if (type === 'note') {
+        await deleteCrmNote(activity.id);
+      } else {
+        toast.error("Deletion not supported for this activity type.");
+        return;
+      }
+      toast.success("Activity deleted.");
+      if (onBack) onBack();
+      else router.push('/activities');
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to delete activity.");
+    }
   };
 
   // AI Create task shortcut
-  const handleCreateTaskFromAI = () => {
+  const handleCreateTaskFromAI = async () => {
     if (!aiInsights) return;
-    const newTask: Activity = {
-      id: `act-${Date.now()}`,
-      type: 'task',
-      subject: `AI Follow-up: ${aiInsights.nextAction.slice(0, 40)}...`,
-      status: 'Pending',
-      priority: 'High',
-      dueDate: new Date(Date.now() + 86400000).toISOString(), // due tomorrow
-      owner: 'Sarah Johnson',
-      relatedRecord: activity.relatedRecord,
-      details: {
-        title: `AI Follow-up: ${aiInsights.nextAction.slice(0, 40)}...`,
+    try {
+      await createCrmTask({
+        subject: `AI Follow-up: ${aiInsights.nextAction.slice(0, 40)}...`,
         description: aiInsights.nextAction,
-        assignedTo: 'Sarah Johnson'
-      },
-      timeline: [
-        { action: 'Created', time: new Date().toISOString(), user: 'AI Copilot', desc: 'Recommended next best action task created.' }
-      ]
-    };
-    saveActivitiesToStorage([newTask, ...activities]);
-    toast.success("Task created from AI recommendation!");
+        priority: 'high',
+        status: 'pending',
+        related_entity_type: activity?.related_entity_type || undefined,
+        related_lead_id: activity?.related_entity_type === 'lead' ? (activity.related_record_id || undefined) : undefined,
+        related_contact_id: activity?.related_entity_type === 'contact' ? (activity.related_record_id || undefined) : undefined,
+      });
+      toast.success("Task created from AI recommendation!");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to create task.");
+    }
   };
 
   // Color mappings
@@ -236,7 +282,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
     }
   };
 
-  const themeColors = getTypeColor(activity.type);
+  const themeColors = getTypeColor(activity.activity_type);
   const TypeIcon = themeColors.icon;
 
   return (
@@ -256,7 +302,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             <div className="flex items-center gap-2">
               <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border flex items-center gap-1 ${themeColors.bg} ${themeColors.text} ${themeColors.border}`}>
                 <TypeIcon size={10} />
-                <span>{activity.type}</span>
+                <span>{activity.activity_type}</span>
               </span>
               <span className="text-[10px] text-muted-foreground font-bold font-mono uppercase tracking-wider">ID: {activity.id}</span>
             </div>
@@ -280,7 +326,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             <>
               <button 
                 onClick={handleSave}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#4FB477] hover:bg-[#4FB477]/90 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#4FB477] hover:bg-[#4FB477]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Save size={13} />
                 <span>Save</span>
@@ -291,9 +337,9 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                   setSubject(activity.subject);
                   setStatus(activity.status);
                   setPriority(activity.priority);
-                  setNotes(activity.details.notes || activity.details.description || activity.details.body || '');
+                  setNotes((activity.details as any)?.notes || (activity.details as any)?.description || (activity.details as any)?.body || '');
                 }}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <X size={13} />
                 <span>Cancel</span>
@@ -301,40 +347,38 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             </>
           ) : (
             <>
+              {relatedEmail && (
+                <button
+                  onClick={() => {
+                    router.push(`?compose=${encodeURIComponent(relatedEmail)}`);
+                    onTabChange?.('emails');
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: relatedEmail } }));
+                    }, 150);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-brand-purple rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+                  title={`Email ${relatedEmail}`}
+                >
+                  <Mail size={13} />
+                  <span>Email</span>
+                </button>
+              )}
               <button 
                 onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Edit3 size={13} />
                 <span>Edit</span>
               </button>
               <button 
                 onClick={handleDelete}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#E2604F] hover:bg-[#E2604F]/90 text-white rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#E2604F] hover:bg-[#E2604F]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Trash2 size={13} />
                 <span>Delete</span>
               </button>
             </>
           )}
-
-          {/* Pagination nodes */}
-          <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shadow-sm ml-1.5">
-            <button 
-              onClick={handlePrevActivity}
-              className="p-1.5 hover:bg-card rounded text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-              title="Previous Activity"
-            >
-              <ChevronLeft size={13} />
-            </button>
-            <button 
-              onClick={handleNextActivity}
-              className="p-1.5 hover:bg-card rounded text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-              title="Next Activity"
-            >
-              <ChevronRight size={13} />
-            </button>
-          </div>
         </div>
       </div>
 
@@ -348,7 +392,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
           <div className="flex space-x-1.5 p-1 bg-secondary border border-border rounded-xl w-fit select-none shadow-sm">
             <button
               onClick={() => setActiveTab('overview')}
-              className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition duration-200 cursor-pointer ${
                 activeTab === 'overview' 
                   ? 'bg-brand-purple text-white shadow-sm font-black' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
@@ -358,7 +402,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             </button>
             <button
               onClick={() => setActiveTab('timeline')}
-              className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+              className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition duration-200 cursor-pointer ${
                 activeTab === 'timeline' 
                   ? 'bg-brand-purple text-white shadow-sm font-black' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
@@ -398,7 +442,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                     ) : (
                       <p className="text-xs font-bold text-foreground mt-1 flex items-center gap-1.5 font-mono">
                         <Clock size={12} className="text-muted-foreground" />
-                        <span>{activity.dueDate ? new Date(activity.dueDate).toLocaleString('en-IN') : 'No deadline'}</span>
+                        <span>{activity.due_date ? new Date(activity.due_date).toLocaleString('en-IN') : 'No deadline'}</span>
                       </p>
                     )}
                   </div>
@@ -447,7 +491,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                   </div>
 
                   {/* Related Record */}
-                  {activity.relatedRecord && (
+                  {activity.related_record_id && activity.related_entity_type && (
                     <div className="border-b border-border/40 pb-2 md:border-b-0 md:pb-0">
                       <span className="block text-[9px] font-bold text-muted-foreground uppercase tracking-wider font-['Space_Grotesk']">Related Record Context</span>
                       <button
@@ -459,15 +503,15 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                               company: 'companies',
                               deal: 'deals'
                             };
-                            onTabChange(tabMap[activity.relatedRecord?.type || ''] || 'home');
+                            onTabChange(tabMap[activity.related_entity_type || ''] || 'home');
                           } else {
-                            router.push(`/${activity.relatedRecord?.type}s`);
+                            router.push(`/${activity.related_entity_type}s`);
                           }
                         }}
                         className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-brand-purple hover:underline text-left cursor-pointer"
                       >
                         <Link2 size={12} />
-                        <span>{activity.relatedRecord.name} ({activity.relatedRecord.type})</span>
+                        <span>{activity.related_record_name || activity.related_entity_type} ({activity.related_entity_type})</span>
                       </button>
                     </div>
                   )}
@@ -477,9 +521,9 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                     <span className="block text-[9px] font-bold text-muted-foreground uppercase tracking-wider font-['Space_Grotesk']">Owner / Assigned To</span>
                     <p className="text-xs font-bold text-foreground mt-1.5 flex items-center gap-1.5">
                       <span className="size-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-extrabold text-brand-purple border border-brand-purple/20">
-                        {activity.owner.charAt(0)}
+                        {(activity.owner_name || '?').charAt(0)}
                       </span>
-                      <span>{activity.owner}</span>
+                      <span>{activity.owner_name || 'Unassigned'}</span>
                     </p>
                   </div>
                 </div>
@@ -581,37 +625,87 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
 
             </div>
           ) : (
-            /* Timeline History Tab */
+            /* Timeline History Tab - uses mergedTimeline */
             <div className="bg-card border border-border rounded-[10px] p-5 shadow-sm space-y-5 animate-in fade-in duration-300">
               <h3 className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5 select-none font-['Space_Grotesk']">
                 <Clock className="h-4 w-4 text-brand-purple" />
                 <span>Lifecycle History Log</span>
+                <span className="ml-auto px-2 py-0.5 bg-brand-purple/10 text-brand-purple rounded-full text-[9px] font-bold">{mergedTimeline.length} events</span>
               </h3>
 
-              <div className="relative border-l border-border ml-3 space-y-6">
-                {[...(activity.timeline || [])]
-                  .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-                  .map((log, index) => (
-                    <div key={index} className="relative pl-8 animate-in slide-in-from-left-1 duration-200">
-                      <div className="absolute left-0 top-0.5 -translate-x-1/2 h-5 w-5 rounded-full bg-card border border-border flex items-center justify-center z-10 shadow-sm">
-                        <div className="size-2 rounded-full bg-brand-purple" />
-                      </div>
+              {/* Type filter pills */}
+              <div className="flex flex-wrap gap-1.5">
+                {(
+                  [
+                    { label: 'All', key: 'all' },
+                    { label: 'Timelines', key: 'timeline' },
+                    { label: 'Emails', key: 'email' },
+                    { label: 'Calls', key: 'call' },
+                    { label: 'Meetings', key: 'meeting' },
+                  ] as { label: string; key: 'all' | 'timeline' | 'email' | 'call' | 'meeting' }[]
+                ).map(({ label, key }) => {
+                  const count = key === 'all' ? mergedTimeline.length : mergedTimeline.filter(e => e.type === key).length;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setTimelineFilter(key)}
+                      className={`px-2.5 py-1 rounded-full text-[9px] font-bold border transition cursor-pointer ${
+                        timelineFilter === key
+                          ? 'bg-brand-purple text-white border-brand-purple shadow-sm'
+                          : 'bg-secondary text-muted-foreground border-border hover:text-foreground hover:border-foreground/20'
+                      }`}
+                    >
+                      {label} ({count})
+                    </button>
+                  );
+                })}
+              </div>
 
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <h4 className="text-xs font-bold text-foreground leading-none">{log.action}</h4>
-                          <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
-                            {new Date(log.time).toLocaleDateString('en-IN')} &middot; {new Date(log.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1 font-semibold">{log.desc}</p>
-                        <p className="text-[9px] text-brand-purple font-extrabold mt-0.5">by {log.user}</p>
-                      </div>
-                    </div>
-                  ))}
-                
-                {(activity.timeline || []).length === 0 && (
+              <div className="relative border-l-2 border-brand-purple/20 ml-3 space-y-5">
+                {mergedTimeline.filter(e => timelineFilter === 'all' || e.type === timelineFilter).length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center font-semibold select-none">No lifecycle events logged yet.</p>
+                ) : (
+                  [...mergedTimeline.filter(e => timelineFilter === 'all' || e.type === timelineFilter)]
+                    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+                    .map((log, index) => {
+                      const typeColors: Record<string, string> = {
+                        email: 'bg-brand-purple',
+                        call: 'bg-emerald-500',
+                        meeting: 'bg-blue-500',
+                        timeline: 'bg-amber-500',
+                      };
+                      const typeBadge: Record<string, string> = {
+                        email: 'bg-brand-purple/10 text-brand-purple',
+                        call: 'bg-emerald-500/10 text-emerald-600',
+                        meeting: 'bg-blue-500/10 text-blue-600',
+                        timeline: 'bg-amber-500/10 text-amber-600',
+                      };
+                      const dotColor = typeColors[log.type] ?? 'bg-brand-purple';
+                      const badgeColor = typeBadge[log.type] ?? 'bg-secondary text-muted-foreground';
+                      return (
+                        <div key={index} className="relative pl-8 animate-in slide-in-from-left-1 duration-200 group">
+                          <div className={`absolute left-0 top-1 -translate-x-1/2 h-5 w-5 rounded-full bg-card border-2 border-border flex items-center justify-center z-10 shadow-sm group-hover:scale-110 transition-transform`}>
+                            <div className={`size-2 rounded-full ${dotColor}`} />
+                          </div>
+
+                          <div className="bg-secondary/30 dark:bg-secondary/20 border border-border/60 rounded-xl p-3 group-hover:bg-secondary/50 transition-colors">
+                            <div className="flex justify-between items-start gap-2 mb-1">
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider shrink-0 ${badgeColor}`}>
+                                  {log.type}
+                                </span>
+                                <h4 className="text-xs font-bold text-foreground leading-none truncate">{log.action}</h4>
+                              </div>
+                              <span className="text-[9px] text-muted-foreground font-mono tabular-nums shrink-0">
+                                {new Date(log.time).toLocaleDateString('en-IN')} &middot; {new Date(log.time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            {log.desc && <p className="text-[10px] text-muted-foreground font-semibold leading-relaxed">{log.desc}</p>}
+                            <p className="text-[9px] text-brand-purple font-extrabold mt-1">by {log.user}</p>
+                          </div>
+                        </div>
+                      );
+                    })
                 )}
               </div>
             </div>
@@ -622,8 +716,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
         {/* Right Side: Sidebar Context and Settings Log */}
         <div className="col-span-12 lg:col-span-4 space-y-5 pt-[46px]">
           <ContextPanel 
-            contactName={activity.relatedRecord?.type === 'contact' ? activity.relatedRecord.name : undefined}
-            companyName={activity.relatedRecord?.type === 'company' ? activity.relatedRecord.name : undefined}
+            contactName={activity.related_entity_type === 'contact' ? (activity.related_record_name || undefined) : undefined}
+            companyName={activity.related_entity_type === 'company' ? (activity.related_record_name || undefined) : undefined}
             onTabChange={onTabChange}
           />
 
@@ -648,7 +742,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                 </div>
                 <div>
                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block font-['Space_Grotesk']">Last Modified By</span>
-                  <p className="text-xs font-semibold text-foreground mt-1">{activity.owner} &middot; Just now</p>
+                  <p className="text-xs font-semibold text-foreground mt-1">{activity.owner_name || 'Unassigned'} &middot; Just now</p>
                 </div>
                 <div>
                   <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider block font-['Space_Grotesk']">Reminder Trigger</span>

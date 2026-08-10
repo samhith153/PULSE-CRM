@@ -38,7 +38,6 @@ class EventWorker:
                 except Exception as exc:
                     await repository.mark_retry(event, str(exc), max_attempts=self.max_attempts)
             await db.commit()
-        await self.bus.dispatch_once()
         return processed
 
     async def run_forever(self, sleep_seconds: float = 1.0) -> None:  # pragma: no cover - loop helper
@@ -55,6 +54,7 @@ class EventWorker:
         ]
         for consumer in consumers:
             await consumer.handle(envelope)
+        await self.bus.publish(envelope)
 
     def _to_envelope(self, event: EventOutbox) -> EventEnvelope:
         payload = dict(event.payload or {})

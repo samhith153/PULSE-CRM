@@ -194,7 +194,7 @@ export default function RolesPermissionsView() {
         <button 
           onClick={handleSave}
           disabled={saving || loading}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-brand-purple hover:bg-brand-purple/90 disabled:opacity-50 text-primary-foreground rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer hover:shadow-nav self-start sm:self-center"
+          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-brand-purple hover:bg-brand-purple/90 disabled:opacity-50 text-primary-foreground rounded-xl text-xs font-bold transition duration-200 cursor-pointer hover:shadow-nav self-start sm:self-center"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           <span>{saving ? 'Saving...' : 'Save Changes'}</span>
@@ -206,7 +206,7 @@ export default function RolesPermissionsView() {
         {roles.map((role) => (
           <div 
             key={role.id}
-            className="bg-card border border-border/90 rounded-2xl p-5  space-y-2 hover:shadow-nav hover:border-border transition-all duration-300"
+            className="bg-card border border-border/90 rounded-2xl p-5  space-y-2 hover:shadow-nav hover:border-border transition duration-300"
           >
             <div className="flex justify-between items-center">
               <span className="text-sm font-semibold text-foreground">{role.display_name}</span>
@@ -269,7 +269,7 @@ export default function RolesPermissionsView() {
                           type="button"
                           disabled={r.name === 'admin'}
                           onClick={() => togglePermission(row.codename, r.name)}
-                          className={`h-5 w-5 rounded-md border transition-all flex items-center justify-center mx-auto ${
+                          className={`h-5 w-5 rounded-md border transition flex items-center justify-center mx-auto ${
                             r.name === 'admin'
                               ? 'border-brand-purple/20 bg-brand-purple/10 text-brand-purple cursor-not-allowed opacity-75'
                               : matrix[r.name]?.[row.codename]

@@ -1,18 +1,20 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Plus, 
-  CheckCircle2, 
-  Circle, 
-  Clock, 
-  AlertCircle, 
-  X, 
-  Edit, 
+import {
+  Plus,
+  CheckCircle2,
+  Circle,
+  Clock,
+  AlertCircle,
+  X,
+  Edit,
   Trash2,
-  Calendar
+  Calendar,
+  List,
+  LayoutGrid
 } from 'lucide-react';
-import { getTasks, createTask, updateTask, deleteTask } from '@/utils/api';
+import type { ActivityTimelineItem } from '@/utils/api';
 
 interface Task {
   id: string | number;
@@ -22,8 +24,67 @@ interface Task {
   status: 'Pending' | 'Completed' | 'Overdue' | 'Not Started' | 'In Progress';
 }
 
-export default function TasksView() {
+function activityToTask(activity: ActivityTimelineItem): Task {
+  const payload = activity.payload as Record<string, unknown> | null;
+  const deadline = typeof payload?.deadline === 'string'
+    ? payload.deadline.slice(0, 10)
+    : activity.created_at.slice(0, 10);
+  const priority = payload?.priority === 'High' || payload?.priority === 'Low' || payload?.priority === 'Medium'
+    ? payload.priority
+    : 'Medium';
+  return {
+    id: Number(activity.id) || Date.now(),
+    title: activity.title,
+    deadline,
+    priority,
+    status: 'Pending',
+  };
+}
+
+function getSourceTaskId(activity: ActivityTimelineItem): string | null {
+  const source = activity.payload?.source_task_id;
+  return typeof source === 'string' && source ? source : null;
+}
+
+function getTaskRootId(activity: ActivityTimelineItem, byId: Map<string, ActivityTimelineItem>): string {
+  const seen = new Set<string>();
+  let current = activity;
+
+  while (!seen.has(current.id)) {
+    seen.add(current.id);
+    const sourceId = getSourceTaskId(current);
+    const source = sourceId ? byId.get(sourceId) : null;
+    if (!source) return sourceId || current.id;
+    current = source;
+  }
+
+  return current.id;
+}
+
+function latestTasksFromActivities(items: ActivityTimelineItem[]): Task[] {
+  const byId = new Map(items.map(item => [item.id, item]));
+  const latestByRoot = new Map<string, ActivityTimelineItem>();
+
+  items.forEach((item) => {
+    const rootId = getTaskRootId(item, byId);
+    const existing = latestByRoot.get(rootId);
+    if (!existing || new Date(item.created_at).getTime() >= new Date(existing.created_at).getTime()) {
+      latestByRoot.set(rootId, item);
+    }
+  });
+
+  return Array.from(latestByRoot.values())
+    .map(activityToTask)
+    .sort((a, b) => a.deadline.localeCompare(b.deadline));
+}
+
+interface Props {
+  isEmbedded?: boolean;
+}
+
+export default function TasksView({ isEmbedded = false }: Props) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -144,16 +205,43 @@ export default function TasksView() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-card border border-border rounded-xl p-5 ">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <h2 className="font-sans text-2xl text-foreground font-bold">CRM Tasks Workspace</h2>
-            <p className="text-[11px] text-muted-foreground/60 mt-0.5 font-bold">Track operational duties, set deadlines, and manage completion states.</p>
+      {/* Header / Toolbar */}
+      {isEmbedded ? (
+        <div className="bg-card border border-border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Layout:</span>
+            <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
+              <button
+                type="button"
+                onClick={() => setViewMode('kanban')}
+                className={`p-1.5 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                  viewMode === 'kanban'
+                    ? 'bg-card text-brand-purple shadow-sm font-bold text-[10px] uppercase'
+                    : 'text-muted-foreground hover:text-foreground text-[10px] uppercase font-bold'
+                }`}
+                title="Kanban Board"
+              >
+                <LayoutGrid size={12} />
+                <span>Kanban</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-md transition cursor-pointer flex items-center gap-1 ${
+                  viewMode === 'list'
+                    ? 'bg-card text-brand-purple shadow-sm font-bold text-[10px] uppercase'
+                    : 'text-muted-foreground hover:text-foreground text-[10px] uppercase font-bold'
+                }`}
+                title="List View"
+              >
+                <List size={12} />
+                <span>List</span>
+              </button>
+            </div>
           </div>
           <button 
             onClick={() => {
-              setForm({ title: '', deadline: '2025-05-14', priority: 'Medium', status: 'Pending' });
+              setForm({ title: '', deadline: '2026-08-04', priority: 'Medium', status: 'Pending' });
               setIsAddOpen(true);
             }}
             className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold transition-colors cursor-pointer"
@@ -162,10 +250,152 @@ export default function TasksView() {
             <span>Create Task</span>
           </button>
         </div>
-      </div>
+      ) : (
+        <div className="bg-card border border-border rounded-xl p-5 ">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="font-sans text-2xl text-foreground font-bold">CRM Tasks Workspace</h2>
+              <p className="text-[11px] text-muted-foreground/60 mt-0.5 font-bold">Track operational duties, set deadlines, and manage completion states.</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('kanban')}
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
+                    viewMode === 'kanban'
+                      ? 'bg-card text-brand-purple shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="Kanban Board"
+                >
+                  <LayoutGrid size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-card text-brand-purple shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="List View"
+                >
+                  <List size={14} />
+                </button>
+              </div>
+              <button 
+                onClick={() => {
+                  setForm({ title: '', deadline: '2026-08-04', priority: 'Medium', status: 'Pending' });
+                  setIsAddOpen(true);
+                }}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Create Task</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Task Columns Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content View Switcher */}
+      {viewMode === 'list' ? (
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse select-none">
+              <thead>
+                <tr className="border-b border-border bg-muted/40 text-[11px] font-black uppercase text-foreground tracking-wider">
+                  <th className="py-3 px-4 text-center w-12">Done</th>
+                  <th className="py-3 px-3 text-left">Task Title</th>
+                  <th className="py-3 px-3 text-center w-28">Priority</th>
+                  <th className="py-3 px-3 text-center w-32">Status</th>
+                  <th className="py-3 px-3 text-right w-36">Deadline</th>
+                  <th className="py-3 px-4 text-right w-24">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/40 text-xs font-semibold text-foreground">
+                {tasks.length > 0 ? (
+                  tasks.map((t) => {
+                    const isCompleted = t.status === 'Completed';
+                    const isOverdue = t.status === 'Overdue';
+                    return (
+                      <tr key={t.id} className={`hover:bg-secondary/15 transition-all ${isCompleted ? 'opacity-60' : ''}`}>
+                        <td className="py-3 px-4 text-center">
+                          <button onClick={() => handleToggle(t.id)} className="text-muted-foreground hover:text-brand-purple cursor-pointer transition-colors">
+                            {isCompleted ? (
+                              <CheckCircle2 className="h-4.5 w-4.5 text-brand-cyan" />
+                            ) : (
+                              <Circle className="h-4.5 w-4.5" />
+                            )}
+                          </button>
+                        </td>
+                        <td className={`py-3 px-3 text-left whitespace-normal break-words ${isCompleted ? 'line-through text-muted-foreground' : ''}`}>
+                          <span className="font-bold text-foreground">{t.title}</span>
+                        </td>
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${
+                            t.priority === 'High' ? 'bg-destructive/10 text-destructive border border-destructive/15' :
+                            t.priority === 'Medium' ? 'bg-amber-500/10 text-amber-600 border border-amber-500/15' :
+                            'bg-secondary text-muted-foreground border border-border'
+                          }`}>
+                            {t.priority}
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-center whitespace-nowrap">
+                          <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold ${
+                            isCompleted ? 'bg-brand-cyan/15 text-brand-cyan border border-brand-cyan/20' :
+                            isOverdue ? 'bg-destructive/10 text-destructive border border-destructive/15' :
+                            'bg-brand-purple/10 text-brand-purple border border-brand-purple/15'
+                          }`}>
+                            {t.status}
+                          </span>
+                        </td>
+                        <td className={`py-3 px-3 text-right font-bold tabular-nums font-mono whitespace-nowrap ${isOverdue ? 'text-destructive' : 'text-muted-foreground/80'}`}>
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {t.deadline}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <div className="flex justify-end gap-1.5">
+                            <button 
+                              onClick={() => {
+                                setSelectedTask(t);
+                                setForm({ title: t.title, deadline: t.deadline, priority: t.priority, status: t.status });
+                                setIsEditOpen(true);
+                              }}
+                              className="p-1 text-muted-foreground hover:text-foreground rounded cursor-pointer transition-colors"
+                              title="Edit Task"
+                            >
+                              <Edit className="h-3.5 w-3.5" />
+                            </button>
+                            <button 
+                              onClick={() => handleDelete(t.id)} 
+                              className="p-1 text-muted-foreground hover:text-destructive rounded cursor-pointer transition-colors"
+                              title="Delete Task"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-muted-foreground font-semibold">
+                      No tasks found. Click "Create Task" to add one.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* Task Columns Grid */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Overdue Column */}
         <div className="bg-secondary/50 border border-border rounded-xl p-4 min-h-[400px]">
           <div className="flex justify-between items-center pb-2 border-b border-border mb-4">
@@ -279,7 +509,8 @@ export default function TasksView() {
             ))}
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Add Task Modal */}
       {isAddOpen && (

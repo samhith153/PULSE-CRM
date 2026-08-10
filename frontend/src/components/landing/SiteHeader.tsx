@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Menu, Search, X, ArrowUpRight, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { pillVariants } from "./PillButton";
-import promoImage from "../../../public/images/landing/promo-mega.jpg";
-import promoTeams from "../../../public/images/landing/promo-teams.jpg";
-import promoSolutions from "../../../public/images/landing/promo-solutions.jpg";
-import promoResources from "../../../public/images/landing/promo-resources.jpg";
+const promoImage = "/landing/promo-mega.jpg";
+const promoTeams = "/landing/promo-teams.jpg";
+const promoSolutions = "/landing/promo-solutions.jpg";
+const promoResources = "/landing/promo-resources.jpg";
 import { cn } from "@/lib/utils";
 
 const navLinks = ["Platform", "Products", "Solutions", "Pricing", "Resources"];
@@ -16,7 +16,7 @@ type Plan = { name: string; desc: string };
 type MenuConfig = {
   columns?: MenuColumn[];
   plans?: { heading: string; items: Plan[]; link: string };
-  promo: { image?: any; heading: string; desc: string; link: string; cta?: boolean };
+  promo: { image?: string; heading: string; desc: string; link: string; cta?: boolean };
 };
 
 const menus: Record<string, MenuConfig> = {
@@ -149,12 +149,7 @@ const menus: Record<string, MenuConfig> = {
   },
 };
 
-export interface SiteHeaderProps {
-  onOpenSignUp: () => void;
-  onOpenSignIn: () => void;
-}
-
-export function SiteHeader({ onOpenSignUp, onOpenSignIn }: SiteHeaderProps) {
+export function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [dir, setDir] = useState<"left" | "right">("right");
@@ -235,15 +230,21 @@ export function SiteHeader({ onOpenSignUp, onOpenSignIn }: SiteHeaderProps) {
             >
               <Search size={17} />
             </button>
-            <button
-              onClick={onOpenSignUp}
+            <Link
+              href="/login"
+              className="hidden items-center rounded-full px-3.5 py-2 text-sm font-medium text-ink transition-colors hover:text-link sm:inline-flex"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/signup"
               className={pillVariants({
                 size: "sm",
-                className: "arrow-nudge hidden sm:inline-flex cursor-pointer",
+                className: "arrow-nudge hidden sm:inline-flex",
               })}
             >
               Get started <ArrowUpRight size={15} />
-            </button>
+            </Link>
             <button
               aria-label="Open menu"
               onClick={() => setMobileOpen((v) => !v)}
@@ -315,7 +316,7 @@ export function SiteHeader({ onOpenSignUp, onOpenSignIn }: SiteHeaderProps) {
                 <div className="overflow-hidden rounded-3xl bg-surface-warm">
                   {active.promo.image ? (
                     <img
-                      src={typeof active.promo.image === "object" ? active.promo.image.src : active.promo.image}
+                      src={active.promo.image}
                       alt={active.promo.heading}
                       loading="lazy"
                       width={800}
@@ -329,15 +330,15 @@ export function SiteHeader({ onOpenSignUp, onOpenSignIn }: SiteHeaderProps) {
                     <p className="text-sm font-semibold text-ink">{active.promo.heading}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{active.promo.desc}</p>
                     {active.promo.cta ? (
-                      <button
-                        onClick={onOpenSignUp}
+                      <Link
+                        href="/signup"
                         className={pillVariants({
                           size: "sm",
-                          className: "arrow-nudge mt-4 cursor-pointer",
+                          className: "arrow-nudge mt-4",
                         })}
                       >
                         {active.promo.link} <ArrowUpRight size={15} />
-                      </button>
+                      </Link>
                     ) : (
                       <a
                         href="#"
@@ -407,9 +408,14 @@ export function SiteHeader({ onOpenSignUp, onOpenSignIn }: SiteHeaderProps) {
               </li>
             ))}
           </ul>
-          <button onClick={onOpenSignUp} className={pillVariants({ className: "arrow-nudge mt-4 w-full cursor-pointer" })}>
-            Get started <ArrowUpRight size={15} />
-          </button>
+          <div className="mt-4 flex flex-col gap-2">
+            <Link href="/login" className="text-center text-sm font-medium text-ink py-2 rounded-full border border-border hover:bg-secondary transition-colors">
+              Sign in
+            </Link>
+            <Link href="/signup" className={pillVariants({ className: "arrow-nudge w-full" })}>
+              Get started <ArrowUpRight size={15} />
+            </Link>
+          </div>
         </div>
       )}
     </header>

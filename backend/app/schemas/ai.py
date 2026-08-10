@@ -90,7 +90,7 @@ class AIBatchRecommendationItem(BaseModel):
     lead_id: UUID
     recommended_action: str = ""
     reason: str = ""
-    current_score: int = 0
+    current_score: float = 0
     current_stage: str = ""
     all_candidates: list[dict[str, Any]] = Field(default_factory=list)
 

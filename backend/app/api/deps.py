@@ -8,7 +8,7 @@ Provides reusable dependencies for:
 from typing import Annotated, Callable
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,14 +24,26 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Validate JWT access token and return the authenticated User."""
-    if not credentials:
+    """Validate JWT access token and return the authenticated User.
+
+    Accepts the token from the ``Authorization`` header (preferred) **or**
+    from the ``token`` query parameter as a fallback for clients that cannot
+    set custom headers (e.g. the browser ``EventSource`` API used for SSE).
+    """
+    token = None
+    if credentials:
+        token = credentials.credentials
+    else:
+        token = request.query_params.get("token")
+
+    if not token:
         raise UnauthorizedException("Missing Bearer token.")
 
-    payload = decode_access_token(credentials.credentials)
+    payload = decode_access_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise UnauthorizedException("Invalid token payload.")

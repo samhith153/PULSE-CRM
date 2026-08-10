@@ -202,7 +202,7 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
                   whileInView={{ pathLength: 1, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{
-                    pathLength: { delay: idx * 0.15, duration: 0.6, ease: "easeOut" },
+                    pathLength: { delay: idx * 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] },
                     opacity: { delay: idx * 0.15, duration: 0.3 }
                   }}
                 />

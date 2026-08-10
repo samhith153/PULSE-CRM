@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   ClipboardList,
   Calendar,
@@ -18,6 +19,7 @@ interface ActivitySummaryCardProps {
 }
 
 export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCardProps) {
+  const router = useRouter();
   const [activities, setActivities] = useState<Activity[]>([]);
 
   useEffect(() => {
@@ -56,9 +58,9 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
   const maxCount = Math.max(...allStats.map(s => s.count), 1);
 
   return (
-    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 w-full relative overflow-hidden group">
+    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 w-full relative overflow-hidden group">
       {/* Background ambient radial aura pulse */}
-      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
 
       {/* Header */}
       <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-border/60 relative">
@@ -104,7 +106,20 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
             return (
               <button
                 key={item.filter}
-                onClick={() => onTabChange?.('activities')}
+                onClick={() => {
+                  if (item.filter === 'today-tasks') {
+                    onTabChange?.('tasks');
+                  } else if (item.filter === 'overdue-tasks') {
+                    onTabChange?.('tasks');
+                  } else if (item.filter === 'pending-calls') {
+                    router.push('?tab=pending-calls&type=call');
+                    onTabChange?.('activities');
+                  } else if (item.filter === 'upcoming-meetings') {
+                    onTabChange?.('calendar');
+                  } else {
+                    onTabChange?.('activities');
+                  }
+                }}
                 className="w-full flex items-center gap-3 group cursor-pointer hover:bg-secondary/25 rounded-xl px-2 py-1.5 -mx-2 transition-colors duration-150"
               >
                 {/* Icon */}
@@ -120,7 +135,7 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
                   {/* Mini progress bar */}
                   <div className="h-1 rounded-full bg-border/40 w-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
+                      className={`h-full rounded-full transition-[width] duration-500 ${
                         item.color === 'text-brand-purple' ? 'bg-brand-purple' :
                         item.color === 'text-brand-blue'   ? 'bg-brand-blue' :
                         item.color === 'text-brand-cyan'   ? 'bg-brand-cyan' :
@@ -145,7 +160,16 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
             return (
               <button
                 key={item.filter}
-                onClick={() => onTabChange?.('activities')}
+                onClick={() => {
+                  if (item.filter === 'emails-sent' || item.filter === 'emails-received') {
+                    onTabChange?.('emails');
+                  } else if (item.filter === 'completed') {
+                    router.push('?tab=completed');
+                    onTabChange?.('activities');
+                  } else {
+                    onTabChange?.('activities');
+                  }
+                }}
                 className="w-full flex items-center gap-3 group cursor-pointer hover:bg-secondary/25 rounded-xl px-2 py-1.5 -mx-2 transition-colors duration-150"
               >
                 <div className={`h-7 w-7 rounded-lg flex items-center justify-center border shrink-0 ${item.bg} ${item.color}`}>
@@ -158,7 +182,7 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
                   </div>
                   <div className="h-1 rounded-full bg-border/40 w-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full transition-all duration-500 ${
+                      className={`h-full rounded-full transition-[width] duration-500 ${
                         item.color === 'text-emerald-500' ? 'bg-emerald-500' :
                         item.color === 'text-amber-500'   ? 'bg-amber-500' :
                         item.color === 'text-indigo-500'  ? 'bg-indigo-500' :

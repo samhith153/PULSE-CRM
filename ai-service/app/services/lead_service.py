@@ -1,6 +1,8 @@
 """Lead service: orchestrates the lead scoring + recommendation workflow."""
 from __future__ import annotations
 
+import logging
+
 from app.schemas.lead_schema import (
     FitResult, EngagementResult, OverallResult, FitFeatures, EngagementFeatures,
     RecommendationSummary, VersionInfo, LeadAssessRequest, LeadAssessResponse,
@@ -43,31 +45,35 @@ class LeadService:
         result = score_lead(raw)
 
         # ── Recommendation ─────────────────────────────────────────────
-        rec_raw = {
-            **raw,
-            "score": result["engagement_score"],
-            "engagement_score": result["engagement_score"],
-            "last_contact_time": request.last_inbound_at,
-            "is_outbound": request.is_outbound or False,
-        }
-        rec_result = recommend(rec_raw)
-
         rec_summary = RecommendationSummary()
-        recs = rec_result.get("recommendations", [])
-        if recs:
-            top = recs[0]
-            rec_summary = RecommendationSummary(
-                status="recommendation",
-                action=top.get("action"),
-                score=top.get("score"),
-                reasons=top.get("reasons", []),
-                all_recommendations=recs,
-                lead_id=rec_result.get("lead_id"),
-                stage=rec_result.get("stage"),
-                engagement_score=rec_result.get("engagement_score"),
-                contact_time=rec_result.get("contact_time"),
-                deal_value=rec_result.get("deal_value"),
-            )
+        try:
+            rec_raw = {
+                **raw,
+                "score": result["engagement_score"],
+                "engagement_score": result["engagement_score"],
+                "last_contact_time": request.last_inbound_at,
+                "is_outbound": request.is_outbound or False,
+            }
+            rec_result = recommend(rec_raw)
+
+            recs = rec_result.get("recommendations", [])
+            if recs:
+                top = recs[0]
+                rec_summary = RecommendationSummary(
+                    status="recommendation",
+                    action=top.get("action"),
+                    score=top.get("score"),
+                    reasons=top.get("reasons", []),
+                    all_recommendations=recs,
+                    lead_id=rec_result.get("lead_id"),
+                    stage=rec_result.get("stage"),
+                    engagement_score=rec_result.get("engagement_score"),
+                    contact_time=rec_result.get("contact_time"),
+                    deal_value=rec_result.get("deal_value"),
+                )
+        except Exception:
+            logger = logging.getLogger(__name__)
+            logger.exception("[LEAD_SERVICE] Recommendation failed for lead %s — returning scores without recommendations", request.lead_id)
 
         # ── Build response ─────────────────────────────────────────────
         fit = result["features"]["fit"]

@@ -41,6 +41,7 @@ class EventBus:
     def __init__(self) -> None:
         self._consumers: dict[str, list[EventConsumer]] = defaultdict(list)
         self._queue: asyncio.Queue[EventEnvelope] = asyncio.Queue()
+        self._subscribers: dict[str, list[asyncio.Queue]] = defaultdict(list)
 
     def register(self, topic: str, consumer: EventConsumer) -> None:
         if consumer not in self._consumers[topic]:
@@ -48,6 +49,32 @@ class EventBus:
 
     async def publish(self, event: EventEnvelope) -> None:
         await self._queue.put(event)
+        org_channel = f"org_events_{event.organization_id}"
+        for q in self._subscribers.get(org_channel, []):
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+        for q in self._subscribers.get(event.topic, []):
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+        for q in self._subscribers.get("*", []):
+            try:
+                q.put_nowait(event)
+            except asyncio.QueueFull:
+                pass
+
+    async def subscribe(self, channel: str) -> asyncio.Queue:
+        q: asyncio.Queue = asyncio.Queue(maxsize=100)
+        self._subscribers[channel].append(q)
+        return q
+
+    async def unsubscribe(self, channel: str, queue: asyncio.Queue) -> None:
+        subs = self._subscribers.get(channel, [])
+        if queue in subs:
+            subs.remove(queue)
 
     async def dispatch_once(self) -> None:
         if self._queue.empty():

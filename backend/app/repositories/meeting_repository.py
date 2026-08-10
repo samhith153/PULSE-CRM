@@ -1,4 +1,4 @@
-﻿"""
+"""
 Meeting repository backed by calendar_events.
 """
 from __future__ import annotations
@@ -26,18 +26,19 @@ class MeetingRepository(BaseRepository[CalendarEvent]):
 
     def _enriched_select(self):
         owner = aliased(User, name="meeting_owner")
+        contact = aliased(Contact, name="meeting_contact")
         return (
             select(
                 CalendarEvent,
                 owner.full_name.label("owner_name"),
                 Lead.title.label("lead_name"),
-                Contact.full_name.label("contact_name"),
+                func.concat(contact.first_name, ' ', contact.last_name).label("contact_name"),
                 Company.name.label("company_name"),
                 Deal.name.label("deal_name"),
             )
             .outerjoin(owner, owner.id == CalendarEvent.owner_id)
             .outerjoin(Lead, Lead.id == CalendarEvent.related_lead_id)
-            .outerjoin(Contact, Contact.id == CalendarEvent.related_contact_id)
+            .outerjoin(contact, contact.id == CalendarEvent.related_contact_id)
             .outerjoin(Company, Company.id == CalendarEvent.related_company_id)
             .outerjoin(Deal, Deal.id == CalendarEvent.related_deal_id)
         )
@@ -71,6 +72,10 @@ class MeetingRepository(BaseRepository[CalendarEvent]):
         end: Optional[datetime],
         page: int,
         page_size: int,
+        related_lead_id: Optional[UUID] = None,
+        related_contact_id: Optional[UUID] = None,
+        related_company_id: Optional[UUID] = None,
+        related_deal_id: Optional[UUID] = None,
     ) -> tuple[list[dict[str, Any]], int]:
         stmt = self._enriched_select().where(
             CalendarEvent.organization_id == organization_id,
@@ -85,6 +90,14 @@ class MeetingRepository(BaseRepository[CalendarEvent]):
             stmt = stmt.where(CalendarEvent.start_datetime >= start)
         if end:
             stmt = stmt.where(CalendarEvent.start_datetime < end)
+        if related_lead_id:
+            stmt = stmt.where(CalendarEvent.related_lead_id == related_lead_id)
+        if related_contact_id:
+            stmt = stmt.where(CalendarEvent.related_contact_id == related_contact_id)
+        if related_company_id:
+            stmt = stmt.where(CalendarEvent.related_company_id == related_company_id)
+        if related_deal_id:
+            stmt = stmt.where(CalendarEvent.related_deal_id == related_deal_id)
 
         count_stmt = select(func.count()).select_from(stmt.subquery())
         total = int((await self.db.execute(count_stmt)).scalar_one() or 0)
@@ -97,15 +110,7 @@ class MeetingRepository(BaseRepository[CalendarEvent]):
         now = datetime.now(timezone.utc)
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         end = start.replace(hour=23, minute=59, second=59, microsecond=999999)
-        rows, _ = await self.list(
-            organization_id,
-            owner_id=owner_id,
-            status=None,
-            start=start,
-            end=end,
-            page=1,
-            page_size=100,
-        )
+        rows, _ = await self.list(organization_id, owner_id=owner_id, status=None, start=start, end=end, page=1, page_size=100)
         return rows
 
     async def get_upcoming(self, organization_id: UUID, owner_id: UUID, limit: int = 10) -> list[dict[str, Any]]:
@@ -136,11 +141,10 @@ class MeetingRepository(BaseRepository[CalendarEvent]):
     @staticmethod
     def _row_to_dict(row) -> dict[str, Any]:
         meeting: CalendarEvent = row[0]
-        data = {column.name: getattr(meeting, column.name) for column in meeting.__table__.columns}
-        data["meeting_link"] = meeting.meeting_url
-        data["owner_name"] = row[1] if len(row) > 1 else None
-        data["lead_name"] = row[2] if len(row) > 2 else None
+        data = {col.name: getattr(meeting, col.name) for col in meeting.__table__.columns}
+        data["owner_name"]   = row[1] if len(row) > 1 else None
+        data["lead_name"]    = row[2] if len(row) > 2 else None
         data["contact_name"] = row[3] if len(row) > 3 else None
         data["company_name"] = row[4] if len(row) > 4 else None
-        data["deal_name"] = row[5] if len(row) > 5 else None
+        data["deal_name"]    = row[5] if len(row) > 5 else None
         return data

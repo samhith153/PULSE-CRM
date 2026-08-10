@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -94,7 +94,7 @@ export default function Widgets({
       
       {/* Team Performance Leaderboard */}
       {showLeaderboard && (
-        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 ${showProductivity ? 'lg:col-span-2' : 'lg:col-span-3'} flex flex-col justify-between`}>
+        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 ${showProductivity ? 'lg:col-span-2' : 'lg:col-span-3'} flex flex-col justify-between`}>
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-foreground text-sm">Team performance</h3>
@@ -125,8 +125,12 @@ export default function Widgets({
                       <tr key={index} className="hover:bg-secondary/20 transition-colors">
                         {/* Member Info */}
                         <td className="py-2.5 flex items-center space-x-2.5">
-                          <div className="h-6.5 w-6.5 rounded-full overflow-hidden shrink-0 border border-border">
-                            <Image src={member.avatar} alt={member.name} width={26} height={26} className="h-full w-full object-cover" unoptimized />
+                          <div className="h-6.5 w-6.5 rounded-full overflow-hidden shrink-0 border border-border flex items-center justify-center bg-brand-purple/10 text-brand-purple font-bold text-[9px]">
+                            {member.avatar ? (
+                              <Image src={member.avatar} alt={member.name} width={26} height={26} className="h-full w-full object-cover" unoptimized />
+                            ) : (
+                              <span>{member.name.split(' ').map(n => n[0]).join('')}</span>
+                            )}
                           </div>
                           <span className="font-bold text-foreground truncate max-w-[120px]">{member.name}</span>
                         </td>
@@ -158,7 +162,7 @@ export default function Widgets({
           <div className="mt-4 pt-3 border-t border-border text-center">
             <button 
               onClick={() => onTabChange?.('reports')}
-              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
             >
               <span>View full leaderboard</span>
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />
@@ -169,7 +173,7 @@ export default function Widgets({
 
       {/* Activity Overview */}
       {showProductivity && (
-        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 ${showLeaderboard ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col justify-between`}>
+        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 ${showLeaderboard ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col justify-between`}>
           <div>
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-foreground text-sm">Activity overview</h3>
@@ -211,7 +215,7 @@ export default function Widgets({
           <div className="mt-4 pt-3 border-t border-border text-center">
             <button 
               onClick={() => onTabChange?.('reports')}
-              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
             >
               <span>View all reports</span>
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />

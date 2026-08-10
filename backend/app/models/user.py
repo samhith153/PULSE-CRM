@@ -80,6 +80,11 @@ class User(Base, AuditMixin):
     timezone: Mapped[str] = mapped_column(String(50), default="UTC", nullable=False)
     locale: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
+    # ── Sales quota (assigned monthly/quarterly target) ───────────────────────
+    sales_quota: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )
+
     # ── Relationships ─────────────────────────────────────────────────────────
     organization: Mapped["Organization"] = relationship(
         "Organization", back_populates="users", lazy="select"

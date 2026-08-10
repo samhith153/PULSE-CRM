@@ -1,12 +1,9 @@
 import { ArrowRight } from "lucide-react";
-import { PillButton } from "./PillButton";
+import Link from "next/link";
+import { pillVariants } from "./PillButton";
 import { useReveal } from "@/hooks/use-reveal";
 
-export interface BottomCtaProps {
-  onOpenSignUp: () => void;
-}
-
-export function BottomCta({ onOpenSignUp }: BottomCtaProps) {
+export function BottomCta() {
   const { ref, visible } = useReveal<HTMLDivElement>();
   return (
     <section className="mesh-hero bg-ink-band py-28 md:py-36">
@@ -25,9 +22,16 @@ export function BottomCta({ onOpenSignUp }: BottomCtaProps) {
         <p className="mt-5 text-base text-primary-foreground/80">
           Set up Pulse in an afternoon and watch your first scored pipeline land the same day.
         </p>
-        <PillButton onClick={onOpenSignUp} size="lg" variant="light" className="arrow-nudge mt-9 cursor-pointer">
+        <Link
+          href="/signup"
+          className={pillVariants({
+            variant: "light",
+            size: "lg",
+            className: "arrow-nudge mt-9",
+          })}
+        >
           Get started free <ArrowRight size={16} />
-        </PillButton>
+        </Link>
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { getContacts, createContact, updateContact, deleteContact } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import { 
@@ -36,7 +37,23 @@ interface ContactItem {
 
 const EMPTY_CONTACTS: ContactItem[] = [];
 
-export default function ContactsView() {
+interface ContactsViewProps {
+  onLoaded?: () => void;
+  onTabChange?: (tab: string) => void;
+  onComposeEmail?: (target: { 
+    to: string; 
+    name?: string; 
+    company?: string; 
+    designation?: string;
+    purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+    context?: string;
+    externalEntityType?: string | null;
+    externalEntityId?: string | null;
+  }) => void;
+}
+
+export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: ContactsViewProps = {}) {
+  const router = useRouter();
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
 
@@ -64,7 +81,14 @@ export default function ContactsView() {
       if (!cancelled) {
         setContacts(data as any);
         setLoading(false);
-        if (data.length && !selectedId) setSelectedId((data as any)[0].id);
+        const storedId = localStorage.getItem('pulse-selected-contact-id');
+        if (storedId) {
+          const match = data.find((c: any) => String(c.id) === storedId);
+          if (match) {
+            setSelectedId(match.id);
+            localStorage.removeItem('pulse-selected-contact-id');
+          }
+        }
       }
     }).catch(() => {
       if (!cancelled) setLoading(false);
@@ -194,16 +218,56 @@ export default function ContactsView() {
               <h2 className="font-sans text-2xl text-foreground font-bold">Contacts Directory</h2>
               <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Track profiles, designation hierarchies, phone links, and messaging history.</p>
             </div>
-            <button 
-              onClick={() => {
-                setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
-                setIsAddModalOpen(true);
-              }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>Add Contact</span>
-            </button>
+            <div className="flex items-center gap-3">
+              {/* View Toggle Button */}
+              <div className="flex items-center border border-border rounded-lg overflow-hidden p-0.5 bg-secondary/50 shrink-0 select-none">
+                <button
+                  type="button"
+                  onClick={() => toggleViewMode('default')}
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
+                    viewMode === 'default'
+                      ? 'bg-card text-brand-purple shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="Split View"
+                >
+                  <LayoutGrid size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleViewMode('list')}
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
+                    viewMode === 'list'
+                      ? 'bg-card text-brand-purple shadow-sm font-bold'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  title="List Table View"
+                >
+                  <List size={14} />
+                </button>
+              </div>
+
+              {selectedIds.size > 0 && (
+                <button 
+                  onClick={handleDeleteSelectedContacts}
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer mr-2"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>Delete Selected ({selectedIds.size})</span>
+                </button>
+              )}
+
+              <button 
+                onClick={() => {
+                  setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
+                  setIsAddModalOpen(true);
+                }}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add Contact</span>
+              </button>
+            </div>
           </div>
 
           <div className="relative mb-4">
@@ -219,65 +283,75 @@ export default function ContactsView() {
             />
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left">
-              <thead>
-                <tr className="border-b border-border text-[9px] uppercase font-semibold tracking-widest text-muted-foreground pb-2">
-                  <th className="pb-2">Contact Name</th>
-                  <th className="pb-2">Company</th>
-                  <th className="pb-2">Designation</th>
-                  <th className="pb-2">Phone</th>
-                  <th className="pb-2">Email</th>
-                  <th className="pb-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border text-xs text-foreground font-semibold">
-                {filtered.map((con) => (
-                  <tr 
-                    key={con.id}
-                    onClick={() => setSelectedId(con.id)}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedId(prevId => prevId === con.id ? null : prevId);
-                    }}
-                    className={`hover:bg-secondary/50 cursor-pointer transition-colors ${con.id === selectedId ? 'bg-brand-purple/5' : ''}`}
-                  >
-                    <td className="py-3 font-semibold text-foreground truncate max-w-[150px]">{con.name}</td>
-                    <td className="py-3 text-muted-foreground truncate max-w-[130px]">{con.company}</td>
-                    <td className="py-3 truncate max-w-[120px]">{con.designation}</td>
-                    <td className="py-3 tabular-nums">{con.phone}</td>
-                    <td className="py-3 truncate max-w-[120px]">{con.email}</td>
-                    <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
-                      <div className="flex justify-end space-x-1">
-                        <button 
-                          onClick={() => {
-                            setForm({
-                              name: con.name,
-                              company: con.company,
-                              designation: con.designation,
-                              phone: con.phone,
-                              email: con.email,
-                              notes: con.notes
-                            });
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
-                        >
-                          <Edit className="h-3.5 w-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(con.id)}
-                          className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    </td>
+          {viewMode === 'list' && (
+            <div className="overflow-y-auto max-h-[580px] border border-border/60 rounded-xl bg-card custom-scrollbar">
+              <table className="w-full border-collapse text-left table-fixed">
+                <thead className="sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
+                  <tr className="text-[11px] uppercase font-black tracking-wider text-foreground border-b border-border bg-muted/40">
+                    <th className="py-3 px-4 w-[5%] text-left">
+                      <input 
+                        type="checkbox" 
+                        checked={sortedContacts.length > 0 && selectedIds.size === sortedContacts.length}
+                        onChange={() => handleToggleSelectAll(sortedContacts)}
+                        className="rounded border-border text-brand-purple focus:ring-brand-purple cursor-pointer size-3.5"
+                      />
+                    </th>
+                    <th className="py-3 px-2 w-[22%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('name')}>Contact Name</th>
+                    <th className="py-3 px-2 w-[20%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('company')}>Company</th>
+                    <th className="py-3 px-2 w-[20%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('designation')}>Designation</th>
+                    <th className="py-3 px-2 w-[13%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('phone')}>Phone</th>
+                    <th className="py-3 px-2 w-[13%] cursor-pointer hover:text-foreground" onClick={() => handleHeaderClick('email')}>Email</th>
+                    <th className="py-3 px-2 w-[7%] text-right pr-4">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-border/40 text-xs text-foreground font-medium">
+                  {sortedContacts.map((con) => (
+                    <tr 
+                      key={con.id}
+                      onClick={() => setSelectedId(con.id)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedId(prevId => prevId === con.id ? null : prevId);
+                      }}
+                      className={`hover:bg-secondary/40 cursor-pointer transition duration-200 border-b border-border/40 ${con.id === selectedId ? 'bg-brand-blue/[0.04]' : ''}`}
+                    >
+                      <td className="py-3.5 px-4 font-semibold text-foreground truncate max-w-[150px]">{con.name}</td>
+                      <td className="py-3.5 text-muted-foreground truncate max-w-[130px]">{con.company}</td>
+                      <td className="py-3.5 truncate max-w-[120px]">{con.designation}</td>
+                      <td className="py-3.5 tabular-nums">{con.phone}</td>
+                      <td className="py-3.5 truncate max-w-[120px]">{con.email}</td>
+                      <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-end space-x-1">
+                          <button 
+                            onClick={() => {
+                              setForm({
+                                name: con.name,
+                                company: con.company,
+                                designation: con.designation,
+                                phone: con.phone,
+                                email: con.email,
+                                notes: con.notes
+                              });
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(con.id)}
+                            className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
 
@@ -297,7 +371,7 @@ export default function ContactsView() {
             {/* Close Button */}
             <button 
               onClick={() => setSelectedId(null)}
-              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
+              className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
               title="Close Summary"
               aria-label="Close Summary"
             >
@@ -325,18 +399,37 @@ export default function ContactsView() {
           {/* Communication triggers */}
           <div className="grid grid-cols-2 gap-2 py-3 border-b border-border">
             <button 
-              onClick={() => setIsEmailModalOpen(true)}
+              onClick={() => {
+                router.push(`?compose=${encodeURIComponent(active.email)}`);
+                onTabChange?.('emails');
+                setTimeout(() => {
+                  window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: active.email } }));
+                }, 150);
+              }}
               className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer"
             >
               <Mail className="h-3.5 w-3.5 text-muted-foreground" />
               <span>Email Contact</span>
             </button>
             <button 
-              onClick={() => setIsCallModalOpen(true)}
+              onClick={() => {
+                if (onComposeEmail && active) {
+                  onComposeEmail({
+                    to: active.email,
+                    name: active.name,
+                    company: active.company,
+                    designation: active.designation,
+                    purpose: 'follow_up',
+                    context: active.notes || '',
+                    externalEntityType: 'contact',
+                    externalEntityId: String(active.id)
+                  });
+                }
+              }}
               className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer"
             >
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Log Call</span>
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>Email Contact</span>
             </button>
           </div>
 
@@ -347,7 +440,7 @@ export default function ContactsView() {
                 <button
                   key={tab}
                   onClick={() => setActiveHistoryTab(tab as any)}
-                  className={`pb-1.5 px-2 border-b-2 transition-all cursor-pointer ${
+                  className={`pb-1.5 px-2 border-b-2 transition cursor-pointer ${
                     activeHistoryTab === tab ? 'border-brand-purple text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
                   }`}
                 >

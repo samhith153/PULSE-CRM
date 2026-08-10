@@ -1,0 +1,52 @@
+▲ Next.js 16.2.10
+- Local:         http://localhost:3000
+- Network:       http://10.226.80.252:3000
+✓ Ready in 332ms
+⨯ Error: Cannot find module 'C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\node_modules\next\dist\server\next-server.js
+- C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\node_modules\next\dist\server\next.js
+- C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\node_modules\next\dist\server\lib\start-server.js
+- C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\node_modules\next\dist\cli\next-start.js
+    at ignore-listed frames {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\node_modules\\next\\dist\\server\\next-server.js',
+    'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\node_modules\\next\\dist\\server\\next.js',
+    'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\node_modules\\next\\dist\\server\\lib\\start-server.js',
+    'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\node_modules\\next\\dist\\cli\\next-start.js'
+  ]
+}
+⨯ Error: Cannot find module 'C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\node_modules\next\dist\server\next-server.js
+- C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\node_modules\next\dist\server\next.js
+- C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\node_modules\next\dist\server\lib\start-server.js
+- C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\node_modules\next\dist\cli\next-start.js
+    at ignore-listed frames {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\node_modules\\next\\dist\\server\\next-server.js',
+    'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\node_modules\\next\\dist\\server\\next.js',
+    'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\node_modules\\next\\dist\\server\\lib\\start-server.js',
+    'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\node_modules\\next\\dist\\cli\\next-start.js'
+  ]
+}
+⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\.next\BUILD_ID'
+    at ignore-listed frames {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\.next\\BUILD_ID'
+}
+⨯ Error: Failed to load static file for page: /500 ENOENT: no such file or directory, open 'C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\.next\server\pages\500.html'
+    at ignore-listed frames
+⨯ Error: ENOENT: no such file or directory, open 'C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\.next\BUILD_ID'
+    at async Module.eI [as handler] (C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\.next\server\chunks\[root-of-the-server]__1doahrz._.js:11:78097) {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\frontend\\.next\\BUILD_ID'
+}
+⨯ Error: Failed to load static file for page: /500 ENOENT: no such file or directory, open 'C:\Users\Admin\Documents\GitHub\PULSE-CRM\frontend\.next\server\pages\500.html'
+    at ignore-listed frames

@@ -1,6 +1,6 @@
 import { toast } from '@/lib/toast';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 
 export function getToken(): string | null {
@@ -57,6 +57,7 @@ export interface Lead {
   contact_email: string | null;
   contact_phone: string | null;
   owner_name: string | null;
+  owner_avatar_url?: string | null;
 }
 
 export interface Contact {
@@ -203,6 +204,26 @@ export async function loginWithGoogle(credential: string): Promise<{ access_toke
   return json.data ?? json;
 }
 
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/v1/auth/reset-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, new_password: newPassword })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.message || `Reset password failed (${res.status})`);
+  }
+}
+
+export function resolveImageUrl(url: string | null | undefined): string {
+  if (!url) return '';
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+  return `${base}${cleanUrl}`;
+}
+
 
 async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
   // Guard: skip the network call entirely if no auth token is available.
@@ -261,11 +282,18 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
 export async function getLeads(): Promise<Lead[]> {
   const dbResult = await apiFetch<any>('/api/v1/leads');
   const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return items as Lead[];
+  return items.map((dl: any) => ({
+    ...dl,
+    ownerAvatar: resolveImageUrl(dl.owner_avatar || dl.ownerAvatar),
+  })) as unknown as Lead[];
 }
 
 export async function getLead(leadId: string): Promise<Lead> {
-  return apiFetch<Lead>(`/api/v1/leads/${leadId}`);
+  const dl = await apiFetch<any>(`/api/v1/leads/${leadId}`);
+  if (dl) {
+    dl.ownerAvatar = resolveImageUrl(dl.owner_avatar || dl.ownerAvatar);
+  }
+  return dl as Lead;
 }
 
 export async function createLead(leadData: Record<string, unknown>): Promise<Lead> {
@@ -302,6 +330,156 @@ export async function fetchLeadRecommendation(leadId: string): Promise<LeadRecom
     body: JSON.stringify({ entity_type: 'lead', entity_id: leadId }),
   });
 }
+
+// =============================================================================
+// AI LEAD WORKFLOW
+// =============================================================================
+
+export interface WorkflowTask {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+}
+
+export interface LeadWorkflowResponse {
+  current_task: WorkflowTaskItem | null;
+  history: WorkflowTaskItem[];
+}
+
+/**
+ * Fetch the AI-driven workflow for a lead.
+ *
+ * Backend:
+ * GET /api/v1/workflows/leads/{lead_id}
+ */
+
+
+// ============================================================
+// AI WORKFLOW TASKS
+// ============================================================
+// ============================================================
+// AI WORKFLOW API
+// Replace ONLY your existing workflow-related interfaces/functions
+// with this block. Do not replace the entire api.ts file.
+// ============================================================
+
+export interface WorkflowTaskItem {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+
+
+/**
+ * Fetch the workflow for one lead.
+ *
+ * IMPORTANT:
+ * Backend route is /api/v1/workflow (singular), not /workflows.
+ */
+export async function getLeadWorkflow(
+  leadId: string
+): Promise<LeadWorkflowResponse> {
+  const result = await apiFetch<any>(
+    `/api/v1/workflows/leads/${leadId}`
+  );
+
+  if (!result) {
+    return {
+      current_task: null,
+      history: [],
+    };
+  }
+
+  const data = result?.data ?? result;
+
+  return {
+    current_task: data?.current_task ?? null,
+    history: Array.isArray(data?.history)
+      ? data.history
+      : [],
+  };
+}
+
+/**
+ * Complete ONE workflow task.
+ *
+ * IMPORTANT:
+ * Pass the workflow task ID, NOT the lead ID.
+ */
+export async function completeWorkflowTask(
+  taskId: string
+): Promise<WorkflowTaskItem> {
+  const result = await apiFetch<any>(
+    `/api/v1/workflows/tasks/${taskId}/complete`,
+    {
+      method: 'POST',
+    }
+  );
+
+  return (result?.data ?? result) as WorkflowTaskItem;
+}
+
+
+/**
+ * Optional task-list endpoint.
+ * The Workflow page above does not need this function,
+ * but keeping it here is useful for other components.
+ */
+export async function getWorkflowTasks(
+  status?: string
+): Promise<WorkflowTaskItem[]> {
+  const query = status
+    ? `?status=${encodeURIComponent(status)}`
+    : '';
+
+  const result = await apiFetch<any>(
+    `/api/v1/workflows/tasks${query}`
+  );
+
+  if (!result) return [];
+
+  const data = result?.data ?? result;
+
+  return Array.isArray(data) ? data : [];
+}
+/**
+ * Complete an AI workflow task.
+ */
+export interface WorkflowTaskResponse {
+  id: string;
+  lead_id: string;
+  source_recommendation_id?: string | null;
+  action_type: string;
+  reasoning?: string | null;
+  priority: string;
+  current_stage?: string | null;
+  status: string;
+  stall_count: number;
+  due_at: string;
+  completed_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 
 export interface BatchRecommendationItem {
   lead_id: string;
@@ -386,7 +564,7 @@ export async function getCompanies(): Promise<Company[]> {
       contacts: [],
       openDeals: dc.open_deals ?? 0,
       owner: dc.owner_name || dc.owner || '',
-      ownerAvatar: dc.owner_avatar || '',
+      ownerAvatar: resolveImageUrl(dc.owner_avatar || dc.ownerAvatar || ''),
       notes: dc.notes || '',
       timeline: [],
       emails: [],
@@ -427,14 +605,23 @@ export async function getDeals(): Promise<Deal[]> {
       priority: dd.priority || '',
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
+      createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
     };
   }) as unknown as Deal[];
 }
 
-export async function updateDealStage(dealId: string | number, stageId: string): Promise<any> {
+export async function updateDealStage(
+  dealId: string | number,
+  stageId: string,
+  closeReason?: string
+): Promise<any> {
   return apiFetch(`/api/v1/pipeline/move`, {
     method: 'PATCH',
-    body: JSON.stringify({ deal_id: dealId, stage_id: stageId })
+    body: JSON.stringify({
+      deal_id: dealId,
+      stage_id: stageId,
+      ...(closeReason ? { close_reason: closeReason } : {}),
+    }),
   });
 }
 
@@ -658,7 +845,7 @@ export function asNumber(v: Decimal | undefined | null): number {
 export function formatINR(v: Decimal | undefined | null): string {
   const n = asNumber(v);
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(2)}L`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}L`;
   if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
   return `₹${n.toLocaleString('en-IN')}`;
 }
@@ -743,22 +930,45 @@ export interface SalesRepDashboardData {
   deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
   deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
   key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
+  activity_overview?: { emails_sent: number; calls_made: number; meetings_held: number; tasks_completed: number; notes_added: number } | null;
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
   return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
 }
 
-export async function getManagerDashboard(): Promise<ManagerDashboardData> {
-  return apiFetch<ManagerDashboardData>('/api/v1/dashboard/manager');
+export type ManagerDashboardPeriod =
+  | 'week'
+  | 'month'
+  | 'quarter'
+  | 'year';
+
+export interface ManagerDashboardFilters {
+  period?: ManagerDashboardPeriod;
+  repId?: string;
+}
+
+export async function getManagerDashboard(
+  filters: ManagerDashboardFilters = {}
+): Promise<ManagerDashboardData> {
+  return apiFetch<ManagerDashboardData>(
+    `/api/v1/dashboard/manager${toQuery({
+      period: filters.period ?? 'quarter',
+      rep_id: filters.repId,
+    })}`
+  );
 }
 
 export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
   return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
 }
 
-export async function getCurrentUser(): Promise<{ id: string; email: string; full_name: string; organization_id: string; roles: string[]; permissions: string[]; is_verified: boolean }> {
-  return apiFetch('/api/v1/auth/me');
+export async function getCurrentUser(): Promise<any> {
+  const me = await apiFetch<any>('/api/v1/auth/me');
+  if (me && me.avatar_url) {
+    me.avatar_url = resolveImageUrl(me.avatar_url);
+  }
+  return me;
 }
 
 // --- Automation / Events API ---
@@ -1088,12 +1298,24 @@ export interface DashboardOverviewData {
   kpis: { open_deals: number; untouched_deals: number; calls_today: number; leads_assigned: number; leads_today?: number };
   open_tasks: { id: string; title: string; due_date: string; status: string; source?: string; lead_id?: string; deal_id?: string }[];
   meetings_today: { id: string; title: string; start_time: string; end_time: string; zoom_link?: string; contact_name?: string; transcript_status?: string }[];
-  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string }[];
-  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string }[];
+  priority_queue: { lead_id: string; first_name: string; last_name: string; company_name?: string; email: string; score: number; tier: string; top_reason?: string; top_reasons?: string[] }[];
+  deals_at_risk: { deal_id: string; deal_title: string; value: Decimal; stalled_days: number; risk_reason: string; sentiment?: string; probability?: number; company_name?: string | null; owner_name?: string | null }[];
   quota_pace: { closed_won_revenue: Decimal; target_revenue: Decimal; attained_percentage: Decimal; pace_status: string };
   deals?: { id: string; name: string; value: number; stage: string; owner: string; closeDate: string }[];
   leads?: { id: string; name: string; company: string; score: number; status: string; owner: string }[];
   generated_at: string;
+}
+
+export interface DashboardDeal {
+  id: number | string;
+  title: string;
+  company: string;
+  value: number;
+  stage: string;
+  priority: 'High' | 'Medium' | 'Low';
+  owner: string;
+  closeDate: string;
+  createdAt?: string;
 }
 
 export async function getDashboardMe(): Promise<DashboardOverviewData> {
@@ -1170,4 +1392,912 @@ export async function uploadAvatar(file: File): Promise<{ url: string }> {
     throw new Error(detail.detail || 'Avatar upload failed');
   }
   return res.json();
+}
+
+// =============================================================================
+// CRM ACTIVITIES API  (/api/v1/crm-activities)
+// =============================================================================
+
+export interface CrmActivityDetails {
+  description?: string | null;
+  reminder_minutes?: number | null;
+  completed_at?: string | null;
+  contact_name?: string | null;
+  phone_number?: string | null;
+  call_type?: string | null;
+  duration_minutes?: number | null;
+  outcome?: string | null;
+  notes?: string | null;
+  end_datetime?: string | null;
+  location?: string | null;
+  meeting_link?: string | null;
+  direction?: string | null;
+  sender?: string | null;
+  receiver?: string | null;
+  body_preview?: string | null;
+  thread_id?: string | null;
+  is_read?: boolean | null;
+  body?: string | null;
+}
+
+export interface CrmActivity {
+  id: string;
+  activity_type: 'task' | 'call' | 'meeting' | 'email' | 'note';
+  subject: string;
+  status: string;
+  priority: string;
+  due_date: string | null;
+  owner_id: string | null;
+  owner_name: string | null;
+  related_entity_type: string | null;
+  related_record_id: string | null;
+  related_record_name: string | null;
+  organization_id: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  details: CrmActivityDetails;
+}
+
+export interface CrmActivityOwner {
+  id: string;
+  full_name: string;
+  email: string;
+  avatar_url: string | null;
+}
+
+export interface CrmActivitiesListParams {
+  view?: 'timeline' | 'task' | 'call' | 'meeting' | 'email' | 'note';
+  search?: string;
+  status?: string;
+  priority?: string;
+  owner_id?: string;
+  from_date?: string;
+  to_date?: string;
+  quick_tab?: 'all' | 'today' | 'upcoming' | 'overdue';
+  sort_order?: 'asc' | 'desc';
+  page?: number;
+  page_size?: number;
+}
+
+export interface PaginatedCrmActivities {
+  data: CrmActivity[];
+  meta: {
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
+export async function getCrmActivities(
+  params: CrmActivitiesListParams = {}
+): Promise<PaginatedCrmActivities> {
+  const result = await apiFetch<PaginatedCrmActivities>(
+    `/api/v1/crm-activities${toQuery(params as Record<string, string | number | boolean | null | undefined>)}`
+  );
+  return result ?? { data: [], meta: { total: 0, page: 1, page_size: 20, total_pages: 1, has_next: false, has_prev: false } };
+}
+
+export async function getCrmActivity(activityId: string): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/${activityId}`);
+}
+
+export async function getCrmActivityOwners(): Promise<CrmActivityOwner[]> {
+  const result = await apiFetch<CrmActivityOwner[]>('/api/v1/crm-activities/owners');
+  return Array.isArray(result) ? result : [];
+}
+
+export async function downloadCrmActivitiesExport(
+  params: Omit<CrmActivitiesListParams, 'page' | 'page_size'>
+): Promise<void> {
+  const qs = toQuery(params as Record<string, string | number | boolean | null | undefined>);
+  const token = getToken();
+  if (!token) throw new Error('Not authenticated');
+  const res = await fetch(`${API_BASE_URL}/api/v1/crm-activities/export${qs}`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'text/csv' },
+  });
+  if (!res.ok) {
+    let msg = `Export failed (${res.status})`;
+    try { const b = await res.json(); if (b?.message) msg = b.message; } catch {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `activities_export_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+}
+
+export interface CreateTaskPayload {
+  subject: string; description?: string; due_date?: string; priority?: string;
+  status?: string; owner_id?: string; reminder_minutes?: number;
+  related_entity_type?: string; related_lead_id?: string;
+  related_contact_id?: string; related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmTask(payload: CreateTaskPayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/tasks', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmTask(id: string, payload: Partial<CreateTaskPayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmTask(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/tasks/${id}`, { method: 'DELETE' });
+}
+
+export interface CreateCallPayload {
+  subject: string; contact_name?: string; phone_number?: string; call_type?: string;
+  duration_minutes?: number; outcome?: string; notes?: string; priority?: string;
+  status?: string; called_at?: string; owner_id?: string;
+  related_entity_type?: string; related_lead_id?: string;
+  related_contact_id?: string; related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmCall(payload: CreateCallPayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/calls', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmCall(id: string, payload: Partial<CreateCallPayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/calls/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmCall(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/calls/${id}`, { method: 'DELETE' });
+}
+
+export interface CreateMeetingPayload {
+  title: string; description?: string; start_datetime: string; end_datetime: string;
+  status?: string; owner_id?: string; meeting_link?: string; location?: string;
+  reminder_minutes?: number; related_lead_id?: string; related_contact_id?: string;
+  related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmMeeting(payload: CreateMeetingPayload): Promise<any> {
+  return apiFetch<any>('/api/v1/crm-activities/meetings', { method: 'POST', body: JSON.stringify(payload) });
+}
+
+export interface CreateNotePayload {
+  title: string; body?: string; owner_id?: string; related_entity_type?: string;
+  related_lead_id?: string; related_contact_id?: string;
+  related_company_id?: string; related_deal_id?: string;
+}
+export async function createCrmNote(payload: CreateNotePayload): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>('/api/v1/crm-activities/notes', { method: 'POST', body: JSON.stringify(payload) });
+}
+export async function updateCrmNote(id: string, payload: Partial<CreateNotePayload>): Promise<CrmActivity> {
+  return apiFetch<CrmActivity>(`/api/v1/crm-activities/notes/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+}
+export async function deleteCrmNote(id: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/crm-activities/notes/${id}`, { method: 'DELETE' });
+}
+
+export async function bulkDeleteCrmActivities(ids: string[]): Promise<{ affected: number; message: string }> {
+  return apiFetch<{ affected: number; message: string }>('/api/v1/crm-activities/bulk-delete', {
+    method: 'POST', body: JSON.stringify({ ids }),
+  });
+}
+export async function bulkUpdateCrmActivities(payload: { ids: string[]; status?: string; owner_id?: string; archive?: boolean }): Promise<{ affected: number; message: string }> {
+  return apiFetch<{ affected: number; message: string }>('/api/v1/crm-activities/bulk-update', {
+    method: 'POST', body: JSON.stringify(payload),
+  });
+}
+
+// =============================================================================
+// LEAD DETAIL PANEL  — real data for Timeline / Emails / Calls / Meetings / Chart
+// =============================================================================
+
+export interface LeadTimelineEntry {
+  timeline_id: string;
+  activity_type: string;
+  title: string;
+  description?: string | null;
+  performed_by: string;
+  performed_by_avatar?: string | null;
+  icon: string;
+  color: string;
+  created_at: string;
+  relative_time: string;
+}
+
+export interface LeadPanelCall {
+  id: string;
+  subject: string;
+  call_type: string;
+  outcome?: string | null;
+  duration_minutes?: number | null;
+  notes?: string | null;
+  called_at?: string | null;
+  owner_name?: string | null;
+  created_at: string;
+}
+
+export interface LeadPanelMeeting {
+  id: string;
+  title: string;
+  status: string;
+  start_datetime: string;
+  end_datetime: string;
+  location?: string | null;
+  meeting_link?: string | null;
+  owner_name?: string | null;
+}
+
+export interface LeadPanelNote {
+  id: string;
+  title: string;
+  body?: string | null;
+  author_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Fetch real timeline events for a lead */
+export async function getLeadTimeline(
+  leadId: string,
+  params: { page?: number; page_size?: number } = {}
+): Promise<{ entries: LeadTimelineEntry[]; total_records: number }> {
+  const qs = toQuery({ page: params.page ?? 1, page_size: params.page_size ?? 20 } as any);
+  const result = await apiFetch<any>(
+    `/api/v1/crm-activities/lead/${leadId}/timeline${qs}`
+  );
+  return result ?? { entries: [], total_records: 0 };
+}
+
+/** Fetch emails linked to a lead (via Gmail sync) */
+export async function getLeadEmails(leadId: string): Promise<SyncedEmail[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/emails${toQuery({ external_entity_type: 'lead', external_entity_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  if (Array.isArray(result)) return result;
+  if (result.data && Array.isArray(result.data)) return result.data;
+  if (result.records && Array.isArray(result.records)) return result.records;
+  return [];
+}
+
+/** Fetch calls linked to a lead */
+export async function getLeadCalls(leadId: string): Promise<LeadPanelCall[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/crm-activities/calls${toQuery({ related_lead_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  const items = result.data ?? result;
+  return Array.isArray(items) ? items : [];
+}
+
+/** Fetch meetings linked to a lead */
+export async function getLeadMeetings(leadId: string): Promise<LeadPanelMeeting[]> {
+  const result = await apiFetch<any>(
+    `/api/v1/meetings${toQuery({ related_lead_id: leadId, page_size: 50 } as any)}`
+  );
+  if (!result) return [];
+  const items = result.data ?? result;
+  return Array.isArray(items) ? items : [];
+}
+
+/** Fetch lead score for the chart */
+export async function getLeadScore(leadId: string): Promise<{ score: number; fit_score: number; engagement_score: number } | null> {
+  try {
+    const result = await apiFetch<any>(`/api/v1/lead-scores/leads/${leadId}`);
+    return result ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// =============================================================================
+// AVATAR API
+// =============================================================================
+
+export async function deleteAvatar(): Promise<void> {
+  const token = getToken();
+  const res = await fetch(`${API_BASE_URL}/api/v1/uploads/avatars`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const detail = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(detail.detail || 'Failed to remove avatar');
+  }
+}
+
+// =============================================================================
+// NOTIFICATIONS API
+// =============================================================================
+
+export interface NotificationData {
+  id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  payload: Record<string, unknown> | null;
+  is_read: boolean;
+  read_at: string | null;
+  is_dismissed: boolean;
+  created_at: string;
+}
+
+export interface NotificationListData {
+  items: NotificationData[];
+  total: number;
+  unread_count: number;
+}
+
+export async function getNotifications(page = 1, pageSize = 20, unreadOnly = false): Promise<NotificationListData> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  if (unreadOnly) params.set('unread_only', 'true');
+  return apiFetch<NotificationListData>(`/api/v1/notifications?${params}`);
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const result = await apiFetch<{ unread_count: number }>('/api/v1/notifications/unread-count');
+  return result?.unread_count ?? 0;
+}
+
+export async function markNotificationRead(id: string): Promise<NotificationData> {
+  return apiFetch<NotificationData>(`/api/v1/notifications/${id}/read`, { method: 'POST' });
+}
+
+export async function markAllNotificationsRead(): Promise<void> {
+  await apiFetch(`/api/v1/notifications/read-all`, { method: 'POST' });
+}
+
+export async function dismissNotification(id: string): Promise<void> {
+  await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
+}
+
+// =============================================================================
+// EMAIL DRAFT API
+// =============================================================================
+
+export interface EmailDraftRequestPayload {
+  recipient_name: string;
+  recipient_email: string;
+  company?: string;
+  designation?: string;
+  purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+  context?: string;
+  external_entity_type?: string | null;
+  external_entity_id?: string | null;
+}
+
+export interface EmailDraftResult {
+  subject: string;
+  body: string;
+  model_version?: string | null;
+}
+
+export async function draftOutreachEmail(payload: EmailDraftRequestPayload): Promise<EmailDraftResult> {
+  return apiFetch<EmailDraftResult>('/api/v1/emails/draft-outreach', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+/** Shared shape passed from any "Send Email" trigger to the Emails page's compose panel. */
+export interface EmailComposeTarget {
+  to: string;
+  name?: string;
+  company?: string;
+  designation?: string;
+  purpose?: EmailDraftRequestPayload['purpose'];
+  context?: string;
+  externalEntityType?: string | null;
+  externalEntityId?: string | null;
+  /** Bumped on every open so EmailsView re-triggers even if the same contact is clicked twice. */
+  requestId: number;
+}
+
+export interface CreateEmailPayload {
+  subject: string;
+  body?: string;
+  direction?: string;
+  recipient_email?: string;
+  recipient_name?: string;
+  priority?: string;
+  status?: string;
+  related_entity_type?: string;
+  related_lead_id?: string;
+  related_contact_id?: string;
+  related_company_id?: string;
+  related_deal_id?: string;
+}
+
+export async function createCrmEmail(payload: CreateEmailPayload): Promise<any> {
+  return apiFetch('/api/v1/crm-activities/emails', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+// =============================================================================
+// USER MANAGEMENT (soft-delete / restore / permanent-delete)
+// =============================================================================
+
+export async function getDeletedUsers(page = 1, pageSize = 20, search?: string): Promise<PaginatedResult<UserData>> {
+  return apiFetch<PaginatedResult<UserData>>(`/api/v1/users/deleted${toQuery({ page, page_size: pageSize, search })}`);
+}
+
+export async function restoreUser(userId: string): Promise<UserData> {
+  return apiFetch<UserData>(`/api/v1/users/${userId}/restore`, { method: 'POST' });
+}
+
+export async function permanentDeleteUser(userId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/users/${userId}/permanent`, { method: 'DELETE' });
+}
+
+// =============================================================================
+// SALES REP AI INSIGHTS API  (/api/v1/ai-insights/sales-rep)
+// =============================================================================
+
+export interface SalesRepActionItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  score: number;
+  reason: string;
+  deal_id: string | null;
+  deal_name: string | null;
+  deal_value: number;
+}
+
+export interface SalesRepFollowUpItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  days_overdue: number;
+  reason: string;
+  deal_id: string | null;
+  deal_value: number;
+}
+
+export interface SalesRepColdItem {
+  lead_id: string;
+  lead_name: string;
+  company: string | null;
+  score: number;
+  reason: string;
+  days_inactive: number;
+  deal_id: string | null;
+}
+
+export interface SalesRepActionCenter {
+  immediate_action: SalesRepActionItem[];
+  follow_up_due: SalesRepFollowUpItem[];
+  rising_interest: SalesRepActionItem[];
+  going_cold: SalesRepColdItem[];
+}
+
+export interface SalesRepPipelineHealth {
+  score: number;
+  status: string;
+  trend_label: string;
+  explanation: string;
+}
+
+export interface SalesRepPriorityItem {
+  priority_id: string;
+  title: string;
+  description: string;
+  priority_level: string;
+  related_lead: string | null;
+  related_lead_id: string | null;
+  related_deal: string | null;
+  related_deal_id: string | null;
+  related_company: string | null;
+  deal_value: number;
+  due_date: string | null;
+}
+
+export interface SalesRepSentimentBreakdown {
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+export interface SalesRepIntentItem {
+  label: string;
+  count: number;
+}
+
+export interface SalesRepRecentSummary {
+  id: string;
+  contact_name: string;
+  company: string | null;
+  summary: string;
+  sentiment: string;
+  category: string;
+  follow_up_suggestion: string | null;
+  date: string;
+}
+
+export interface SalesRepConversationIntelligence {
+  sentiment: SalesRepSentimentBreakdown;
+  intent_distribution: SalesRepIntentItem[];
+  recent_summaries: SalesRepRecentSummary[];
+  powered_by: string;
+}
+
+export interface SalesRepAIInsightsData {
+  action_center: SalesRepActionCenter;
+  pipeline_health: SalesRepPipelineHealth;
+  daily_priorities: SalesRepPriorityItem[];
+  conversation_intelligence: SalesRepConversationIntelligence;
+  generated_at: string;
+}
+
+export async function getSalesRepAIInsights(): Promise<SalesRepAIInsightsData> {
+  return apiFetch<SalesRepAIInsightsData>('/api/v1/ai-insights/sales-rep');
+}
+
+// =============================================================================
+// GLOBAL SEARCH
+// =============================================================================
+
+export async function searchGlobalCRM(query: string) {
+  const token = getToken();
+  if (!token) {
+    console.error('No auth token found for search');
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Search failed with status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data || []; 
+  } catch (error) {
+    console.error('Error fetching global search:', error);
+    return [];
+  }
+}
+
+
+// ── Report Types & API Functions ─────────────────────────────────────────────
+
+export interface ReportParams {
+  period?: 'week' | 'month' | 'quarter' | 'year';
+  rep_id?: string;
+}
+
+export interface RevenueByRep {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  deal_count: number;
+  avg_deal_value: number;
+}
+
+export interface WinRateByRep {
+  rep_id: string;
+  rep_name: string;
+  won: number;
+  lost: number;
+  total_closed: number;
+  win_rate: number;
+}
+
+export interface QuotaAttainment {
+  rep_id: string;
+  rep_name: string;
+  target: number;
+  actual: number;
+  achievement_pct: number;
+  remaining: number;
+}
+
+export interface TopPerformer {
+  rank: number;
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  win_rate: number;
+  quota_pct: number;
+}
+
+export interface BottomPerformer {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  quota_pct: number;
+  gap: number;
+}
+
+export interface SalesPerformanceReport {
+  revenue_by_rep: RevenueByRep[];
+  win_rate_by_rep: WinRateByRep[];
+  quota_attainment: QuotaAttainment[];
+  top_performers: TopPerformer[];
+  bottom_performers: BottomPerformer[];
+  total_revenue: number;
+  team_win_rate: number;
+}
+
+export interface PipelineByStage {
+  stage: string;
+  stage_slug: string;
+  deal_count: number;
+  total_value: number;
+  percentage: number;
+}
+
+export interface StageConversion {
+  from_stage: string;
+  to_stage: string;
+  count: number;
+  conversion_pct: number;
+}
+
+export interface PipelineAging {
+  bucket: string;
+  count: number;
+  value: number;
+}
+
+export interface StalledDeal {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  stage: string;
+  value: number;
+  days_inactive: number;
+}
+
+export interface AvgTimeInStage {
+  stage: string;
+  avg_days: number;
+}
+
+export interface PipelineAnalyticsReport {
+  pipeline_by_stage: PipelineByStage[];
+  stage_conversion: StageConversion[];
+  pipeline_aging: PipelineAging[];
+  stalled_deals: StalledDeal[];
+  avg_time_in_stage: AvgTimeInStage[];
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  deals_won: number;
+  win_rate: number;
+  quota_pct: number;
+  avg_deal_size: number;
+  sales_cycle_days: number;
+}
+
+export interface RepComparison {
+  rep_id: string;
+  rep_name: string;
+  revenue: number;
+  win_rate: number;
+  deals_won: number;
+  quota_pct: number;
+  sales_cycle_days: number;
+  avg_deal_size: number;
+}
+
+export interface PerformanceVsPrior {
+  metric: string;
+  current: number;
+  previous: number;
+  change_pct: number;
+}
+
+export interface TeamPerformanceReport {
+  leaderboard: LeaderboardEntry[];
+  rep_comparison: RepComparison[];
+  sales_cycle_by_rep: SalesCycleByRep[];
+  performance_vs_prior: PerformanceVsPrior[];
+}
+
+export interface SalesCycleByRep {
+  rep_id: string;
+  rep_name: string;
+  avg_cycle_days: number;
+  deal_count: number;
+}
+
+export interface ActivitySummary {
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  notes: number;
+  total: number;
+}
+
+export interface ActivityByRep {
+  rep_id: string;
+  rep_name: string;
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  total: number;
+}
+
+export interface CompletedVsOverdue {
+  completed: number;
+  overdue: number;
+  pending: number;
+  completion_rate: number;
+}
+
+export interface ActivityAnalyticsReport {
+  activity_summary: ActivitySummary;
+  activity_by_rep: ActivityByRep[];
+  activity_trend: ActivityTrendPoint[];
+  completed_vs_overdue: CompletedVsOverdue;
+  activity_to_deal: ActivityToDeal;
+}
+
+export interface ActivityTrendPoint {
+  period: string;
+  calls: number;
+  emails: number;
+  meetings: number;
+  tasks: number;
+  total: number;
+}
+
+export interface ActivityToDeal {
+  total_deals: number;
+  deals_with_high_activity: number;
+  deals_with_low_activity: number;
+  high_activity_win_rate: number;
+  low_activity_win_rate: number;
+  insight: string;
+}
+
+export interface SourcePerformance {
+  source: string;
+  total: number;
+  qualified: number;
+  converted: number;
+  conversion_pct: number;
+}
+
+export interface ConversionFunnelStage {
+  stage: string;
+  count: number;
+  percentage: number;
+}
+
+export interface LeadAging {
+  bucket: string;
+  count: number;
+}
+
+export interface LeadAnalyticsReport {
+  source_performance: SourcePerformance[];
+  conversion_funnel: ConversionFunnelStage[];
+  conversion_by_rep: ConversionByRep[];
+  lead_aging: LeadAging[];
+  total_leads: number;
+  overall_conversion_rate: number;
+}
+
+export interface ConversionByRep {
+  rep_id: string;
+  rep_name: string;
+  total_leads: number;
+  converted: number;
+  conversion_pct: number;
+}
+
+export interface WonDealItem {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  close_date: string;
+  sales_cycle_days: number;
+}
+
+export interface LostDealItem {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  close_date: string;
+  lost_reason: string;
+}
+
+export interface LostReasonAnalysis {
+  reason: string;
+  count: number;
+  percentage: number;
+}
+
+export interface DealSizeStats {
+  current: number;
+  previous: number;
+  change_pct: number;
+}
+
+export interface DealClosingSoon {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  amount: number;
+  expected_close_date: string;
+  days_until: number;
+  stage: string;
+}
+
+export interface AtRiskDeal {
+  deal_id: string;
+  deal_name: string;
+  owner_name: string;
+  stage: string;
+  value: number;
+  risk_reason: string;
+  days_inactive: number;
+}
+
+export interface DealAnalyticsReport {
+  won_deals: WonDealItem[];
+  lost_deals: LostDealItem[];
+  lost_reason_analysis: LostReasonAnalysis[];
+  avg_deal_size: DealSizeStats;
+  deals_closing_soon: DealClosingSoon[];
+  at_risk_deals: AtRiskDeal[];
+  total_won: number;
+  total_lost: number;
+  total_won_value: number;
+  total_lost_value: number;
+}
+
+export async function getSalesPerformanceReport(params?: ReportParams): Promise<SalesPerformanceReport> {
+  return apiFetch<SalesPerformanceReport>(
+    `/api/v1/reports/sales-performance${toQuery({ period: params?.period, rep_id: params?.rep_id })}`
+  );
+}
+
+export async function getPipelineAnalyticsReport(params?: ReportParams): Promise<PipelineAnalyticsReport> {
+  return apiFetch<PipelineAnalyticsReport>(
+    `/api/v1/reports/pipeline-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getTeamPerformanceReport(params?: ReportParams): Promise<TeamPerformanceReport> {
+  return apiFetch<TeamPerformanceReport>(
+    `/api/v1/reports/team-performance${toQuery({ period: params?.period, rep_id: params?.rep_id })}`
+  );
+}
+
+export async function getActivityAnalyticsReport(params?: ReportParams): Promise<ActivityAnalyticsReport> {
+  return apiFetch<ActivityAnalyticsReport>(
+    `/api/v1/reports/activity-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getLeadAnalyticsReport(params?: ReportParams): Promise<LeadAnalyticsReport> {
+  return apiFetch<LeadAnalyticsReport>(
+    `/api/v1/reports/lead-analytics${toQuery({ period: params?.period })}`
+  );
+}
+
+export async function getDealAnalyticsReport(params?: ReportParams): Promise<DealAnalyticsReport> {
+  return apiFetch<DealAnalyticsReport>(
+    `/api/v1/reports/deal-analytics${toQuery({ period: params?.period })}`
+  );
 }

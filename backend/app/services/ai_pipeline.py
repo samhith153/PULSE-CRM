@@ -41,6 +41,7 @@ from app.repositories.lead_repository import LeadRepository
 from app.repositories.lead_score_repository import LeadScoreRepository
 from app.services.ai_client import AIClient
 from app.services.email_analytics import EmailStatsService
+from app.services.workflow_service import WorkflowService
 from app.utils.stage_maps import PIPELINE_STAGE_MAP
 from app.utils.assessment_events import AssessmentEvent, EVENT_COMPUTATION
 
@@ -93,7 +94,9 @@ async def _fetch_latest_intent(db: AsyncSession, lead_id: UUID) -> Optional[str]
     result = await db.execute(stmt)
     summary = result.scalar_one_or_none()
     if summary:
-        return summary.intent or summary.summary_word
+        logger.info("[FETCH_INTENT] Found summary for lead=%s: intent=%s summary_word=%s", lead_id, summary.intent, summary.summary_word)
+        return summary.summary_word or summary.intent
+    logger.warning("[FETCH_INTENT] No summary found for lead=%s", lead_id)
     return None
 
 
@@ -126,6 +129,7 @@ async def run_lead_assessment(
     organization_id: UUID,
     created_by: UUID,
     trigger: str = "lead_updated",
+    intent: Optional[str] = None,
 ) -> Optional[dict]:
     """
     End-to-end lead assessment: gather data → call ai-service → persist.
@@ -181,7 +185,6 @@ async def run_lead_assessment(
 
     # ── Email analytics (only if engagement is needed) ──────────────────
     email_stats = None
-    intent = None
     if computation["engagement"]:
         email_svc = EmailStatsService(db)
         email_stats = await email_svc.get_lead_email_stats(lead_id, organization_id)
@@ -194,8 +197,15 @@ async def run_lead_assessment(
         raw_data["last_inbound_at"] = last_inbound.isoformat() if last_inbound else None
 
         # ── Intent ──────────────────────────────────────────────────────
-        intent = await _fetch_latest_intent(db, lead_id)
-        raw_data["intent"] = intent
+        # Use the intent passed from summarization (avoids race condition
+        # with uncommitted email rows). Fall back to DB query.
+        if intent:
+            raw_data["intent"] = intent
+        else:
+            intent = await _fetch_latest_intent(db, lead_id)
+            raw_data["intent"] = intent
+        logger.info("[ASSESS_PIPELINE] lead=%s trigger=%s intent=%s inbound=%s initiated=%s last_inbound=%s",
+            lead_id, trigger, intent, email_stats["inbound_count"], email_stats["initiated_count"], last_inbound)
     else:
         # Still include basic email stats for fit-only events
         email_svc = EmailStatsService(db)
@@ -204,15 +214,28 @@ async def run_lead_assessment(
         raw_data["initiated_count"] = email_stats["initiated_count"]
 
     # ── Call ai-service ─────────────────────────────────────────────────
+    logger.info("[ASSESS_PIPELINE] Sending payload to AI service for lead=%s trigger=%s raw_data=%s", lead_id, trigger, raw_data)
     ai_client = AIClient()
     try:
         result = await ai_client.assess_lead(str(lead_id), raw_data)
+        logger.info("[ASSESS_PIPELINE] AI service returned type=%s is_none=%s", type(result).__name__, result is None)
+    except Exception:
+        logger.exception("[ASSESS_PIPELINE] Exception calling AI service for lead=%s", lead_id)
+        result = None
     finally:
         await ai_client.close()
 
     if not result:
-        logger.warning("AI service unavailable; lead %s not assessed", lead_id)
+        logger.warning("[ASSESS_PIPELINE] AI service returned None for lead %s — raw payload was: %s", lead_id, raw_data)
         return None
+
+    logger.info("[ASSESS_PIPELINE] AI service responded for lead=%s: fit=%s engagement=%s overall=%s tier=%s",
+        lead_id,
+        result.get("fit", {}).get("score"),
+        result.get("engagement", {}).get("score"),
+        result.get("overall", {}).get("score"),
+        result.get("overall", {}).get("tier"),
+    )
 
     # ── Persist lead_scores ─────────────────────────────────────────────
     scores_data = {
@@ -224,22 +247,27 @@ async def run_lead_assessment(
         "priority_tier": result["overall"]["tier"],
         "top_reasons": result["overall"]["top_reasons"],
     }
+    logger.info("[ASSESS_PIPELINE] Persisting scores for lead=%s: %s", lead_id, scores_data)
     score_repo = LeadScoreRepository(db)
     ls = await score_repo.upsert_for_lead(
         lead_id, organization_id, created_by, scores_data
     )
+    logger.info("[ASSESS_PIPELINE] Lead scores upserted: id=%s", ls.id if ls else "None")
 
     # ── Persist ai_recommendation ───────────────────────────────────────
+        # ── Persist ai_recommendation + synchronize workflow ────────────────
     rec = result.get("recommendation", {})
+    logger.info("[ASSESS_PIPELINE] Recommendation: action=%s score=%s", rec.get("action"), rec.get("score"))
     if rec and rec.get("action"):
         rec_repo = AIRecommendationRepository(db)
+
         priority = "medium"
         if (rec.get("score") or 0) > 80:
             priority = "high"
         elif (rec.get("score") or 0) < 40:
             priority = "low"
 
-        await rec_repo.upsert_for_lead(
+        recommendation = await rec_repo.upsert_for_lead(
             lead_id,
             organization_id,
             created_by,
@@ -254,7 +282,17 @@ async def run_lead_assessment(
                 "trigger": trigger,
             },
         )
+        logger.info("[ASSESS_PIPELINE] Recommendation persisted for lead=%s", lead_id)
 
+        # AI recommendation is the source of truth for the workflow.
+        workflow_service = WorkflowService(db)
+
+        await workflow_service.sync_from_recommendation(
+            recommendation=recommendation,
+            lead_id=lead_id,
+            organization_id=organization_id,
+            created_by=created_by,
+        )
     # ── Persist feature_vectors (audit only) ────────────────────────────
     fv_repo = FeatureVectorRepository(db)
     fv_features = {
@@ -281,6 +319,8 @@ async def run_lead_assessment(
         "model_version": result.get("versions", {}).get("model_version"),
         "prompt_version": result.get("versions", {}).get("prompt_version"),
     }
-    await fv_repo.upsert_for_lead(lead_id, organization_id, created_by, fv_features)
+    logger.info("[ASSESS_PIPELINE] Persisting feature vector for lead=%s: %s", lead_id, fv_features)
+    fv = await fv_repo.upsert_for_lead(lead_id, organization_id, created_by, fv_features)
+    logger.info("[ASSESS_PIPELINE] Feature vector upserted: id=%s updated_at=%s", fv.id if fv else "None", fv.updated_at if fv else "None")
 
     return result

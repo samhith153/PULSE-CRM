@@ -1,19 +1,19 @@
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
 
-import browserbase from "../../../public/images/landing/logos/browserbase.svg";
-import inngest from "../../../public/images/landing/logos/inngest.svg";
-import davidAi from "../../../public/images/landing/logos/david-ai.svg";
-import braintrust from "../../../public/images/landing/logos/braintrust.svg";
-import durable from "../../../public/images/landing/logos/durable.svg";
-import openRouter from "../../../public/images/landing/logos/open-router.svg";
-import higgsfield from "../../../public/images/landing/logos/higgsfield.svg";
-import upstash from "../../../public/images/landing/logos/upstash.svg";
-import samaya from "../../../public/images/landing/logos/samaya.svg";
-import consensus from "../../../public/images/landing/logos/consensus.svg";
-import cartesia from "../../../public/images/landing/logos/cartesia.svg";
+const browserbase = "/landing/logos/browserbase.svg";
+const inngest = "/landing/logos/inngest.svg";
+const davidAi = "/landing/logos/david-ai.svg";
+const braintrust = "/landing/logos/braintrust.svg";
+const durable = "/landing/logos/durable.svg";
+const openRouter = "/landing/logos/open-router.svg";
+const higgsfield = "/landing/logos/higgsfield.svg";
+const upstash = "/landing/logos/upstash.svg";
+const samaya = "/landing/logos/samaya.svg";
+const consensus = "/landing/logos/consensus.svg";
+const cartesia = "/landing/logos/cartesia.svg";
 
-type Logo = { src: any; alt: string };
+type Logo = { src: string; alt: string };
 
 type Segment = Logo[];
 
@@ -73,7 +73,7 @@ function LogoSegment({ logos, offset }: { logos: Logo[]; offset: number }) {
     >
       <img
         key={current.alt}
-        src={typeof current.src === "object" ? current.src.src : current.src}
+        src={current.src}
         alt={current.alt}
         loading="lazy"
         className="absolute h-7 w-auto max-w-[80%] object-contain opacity-45 grayscale transition-[opacity,filter] duration-300 group-hover:opacity-100 group-hover:grayscale-0 md:h-8"

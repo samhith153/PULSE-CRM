@@ -3,7 +3,8 @@ import { PillButton } from "./PillButton";
 import { useCountUp, useReveal } from "@/hooks/use-reveal";
 
 function Stat({ value, suffix, label }: { value: number; suffix: string; label: string }) {
-  const { ref, value: n, visible } = useCountUp(value);
+  const { ref, visible } = useReveal<HTMLDivElement>();
+  const n = useCountUp(value, visible);
   return (
     <div ref={ref} className="reveal" data-visible={visible}>
       <div className="text-4xl font-bold tracking-tight text-primary-foreground md:text-5xl">

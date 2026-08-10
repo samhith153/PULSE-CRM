@@ -1,7 +1,9 @@
 'use client';
 
+import { toast } from '@/lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation } from '@/utils/api';
+import { useRouter } from 'next/navigation';
+import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -30,7 +32,9 @@ import {
   Users,
   LayoutGrid,
   List,
-  ArrowLeft
+  ArrowLeft,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 // Mapping helpers
@@ -65,7 +69,7 @@ function backendToLocal(b: BackendLead): Lead {
     status: STATUS_UNMAP[b.status] || 'New',
     priority: (b.priority as Lead['priority']) ?? 'Low',
     owner: b.owner_name || 'Unassigned',
-    ownerAvatar: null,
+    ownerAvatar: resolveImageUrl(b.owner_avatar_url),
     notes: b.notes || '',
     source: mappedSource,
     industry: b.industry || undefined,
@@ -172,7 +176,7 @@ interface Lead {
   status: 'New' | 'Contacted' | 'Qualified' | 'Converted' | 'Lost';
   priority: 'Critical' | 'High' | 'Medium' | 'Low';
   owner: string;
-  ownerAvatar: string | null;
+  ownerAvatar: string;
   notes: string;
   source?: string;
   value?: string | number;
@@ -189,7 +193,61 @@ interface Lead {
   meetings: MeetingItem[];
 }
 
-export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) {
+interface LeadsViewProps {
+  onLoaded?: () => void;
+  onTabChange?: (tab: string) => void;
+  onComposeEmail?: (target: { 
+    to: string; 
+    name?: string; 
+    company?: string; 
+    designation?: string;
+    purpose?: 'cold_intro' | 'follow_up' | 'check_in' | 'proposal' | 'thank_you' | 'custom';
+    context?: string;
+    externalEntityType?: string | null;
+    externalEntityId?: string | null;
+  }) => void;
+}
+
+export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: LeadsViewProps = {}) {
+  const router = useRouter();
+  // NEW: Listen for the Command Palette search click to open a specific lead
+  useEffect(() => {
+    const handleOpenRecord = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { id, type } = customEvent.detail;
+      
+      // Ensure we only process events meant for the Leads view
+      if (type === 'leads' && id) {
+        
+        // Remove the 'lead_' prefix if it exists (from the backend response format)
+        let rawId = String(id);
+        if (rawId.startsWith('lead_')) {
+          rawId = rawId.replace('lead_', '');
+        }
+
+        // Check if we need to parse it as a number or leave as string
+        const finalId = /^\d+$/.test(rawId) ? Number(rawId) : rawId;
+        
+        // This opens the right-side details panel for the lead
+        setSelectedLeadId(finalId);
+        
+        // Ensure we are not in list mode so the details drawer actually shows
+        setViewMode('default');
+      }
+    };
+
+    window.addEventListener('pulse-open-record', handleOpenRecord);
+    return () => window.removeEventListener('pulse-open-record', handleOpenRecord);
+  }, []);
+
+  // Listen for command palette "Create Lead" event
+  useEffect(() => {
+    const handleOpenCreate = () => {
+      setIsCreatingFullPage(true);
+    };
+    window.addEventListener('pulse-open-create-lead-modal', handleOpenCreate);
+    return () => window.removeEventListener('pulse-open-create-lead-modal', handleOpenCreate);
+  }, []);
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
   const leadsRef = useRef<Lead[]>([]);
@@ -247,6 +305,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
       setLeads(prev => prev.filter(lead => !selectedIds.has(lead.id)));
       setSelectedIds(new Set());
       setSelectedLeadId(null);
+      window.dispatchEvent(new CustomEvent('pulse-leads-changed'));
       toast.success("Selected leads deleted successfully.");
     } catch (e: any) {
       console.error(e);
@@ -261,9 +320,12 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [activeHistoryTab, setActiveHistoryTab] = useState<string>('timeline');
   const [isPriorityView, setIsPriorityView] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   // Modal Open/Close States
   const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
+  const [isEditingFullPage, setIsEditingFullPage] = useState(false);
+  const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
@@ -357,6 +419,57 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
 
   // Get currently active lead object
   const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
+
+  // ── Load real panel data when a lead is selected ────────────────────────
+  useEffect(() => {
+    if (!selectedLeadId) return;
+    const lid = String(selectedLeadId);
+
+    // Fetch timeline
+    import('@/utils/api').then(({ getLeadTimeline, getLeadEmails, getLeadCalls, getLeadMeetings }) => {
+      getLeadTimeline(lid, { page_size: 30 }).then(tl => {
+        const entries = (tl.entries ?? []).map((e: any, idx: number) => ({
+          id: idx,
+          type: 'email' as const,
+          title: e.title,
+          desc: e.description || e.relative_time,
+          time: e.relative_time,
+        }));
+        setLeads(prev => prev.map(l => l.id === lid ? { ...l, timeline: entries } : l));
+      }).catch(() => {});
+
+      getLeadEmails(lid).then(emails => {
+        const mapped = (emails ?? []).map((e: any, idx: number) => ({
+          id: idx,
+          subject: e.subject || '(no subject)',
+          body: e.body_preview || '',
+          time: e.sent_at ? new Date(e.sent_at).toLocaleString() : '',
+        }));
+        setLeads(prev => prev.map(l => l.id === lid ? { ...l, emails: mapped } : l));
+      }).catch(() => {});
+
+      getLeadCalls(lid).then(calls => {
+        const mapped = (calls ?? []).map((c: any, idx: number) => ({
+          id: idx,
+          outcome: c.outcome || c.status || 'Logged',
+          notes: c.notes || c.subject || '',
+          time: c.called_at ? new Date(c.called_at).toLocaleString() : (c.created_at ? new Date(c.created_at).toLocaleString() : ''),
+        }));
+        setLeads(prev => prev.map(l => l.id === lid ? { ...l, calls: mapped } : l));
+      }).catch(() => {});
+
+      getLeadMeetings(lid).then(meetings => {
+        const mapped = (meetings ?? []).map((m: any, idx: number) => ({
+          id: idx,
+          title: m.title,
+          date: m.start_datetime ? new Date(m.start_datetime).toLocaleDateString() : '',
+          time: m.start_datetime ? new Date(m.start_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+          desc: m.description || m.location || m.meeting_link || '',
+        }));
+        setLeads(prev => prev.map(l => l.id === lid ? { ...l, meetings: mapped } : l));
+      }).catch(() => {});
+    });
+  }, [selectedLeadId]);
 
   // AI Recommendation engine — returns cached backend recommendation or loading text
   const getAIRecommendation = (lead: Lead) => {
@@ -455,6 +568,8 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     } catch (err) {
       console.error("Failed to update lead:", err);
     }
+    setIsEditingFullPage(false);
+    setEditingLeadId(null);
     setIsEditModalOpen(false);
   };
 
@@ -468,6 +583,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
       if (selectedLeadId === deleteConfirmId) {
         setSelectedLeadId(remaining.length > 0 ? remaining[0].id : null);
       }
+      window.dispatchEvent(new CustomEvent('pulse-leads-changed'));
     } catch (err) {
       console.error("Failed to delete lead:", err);
     }
@@ -675,7 +791,8 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
     }));
   };
 
-  if (isCreatingFullPage) {
+  if (isCreatingFullPage || isEditingFullPage) {
+    const isEdit = isEditingFullPage;
     return (
       <div className="space-y-6 max-w-5xl mx-auto animate-in fade-in duration-200">
         {/* Full page header */}
@@ -684,19 +801,21 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
             <button
               onClick={() => {
                 setIsCreatingFullPage(false);
+                setIsEditingFullPage(false);
+                setEditingLeadId(null);
                 setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
               }}
-              className="p-2 border border-border hover:bg-secondary rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition-all hover:scale-105"
+              className="p-2 border border-border hover:bg-secondary rounded-xl text-muted-foreground hover:text-foreground cursor-pointer transition hover:scale-105"
               title="Back to Leads"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
             <div>
               <div className="flex items-center gap-2">
-                <span className="bg-brand-purple/10 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">New Prospect</span>
+                <span className="bg-brand-purple/10 text-brand-purple text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">{isEdit ? 'Editing' : 'New Prospect'}</span>
               </div>
-              <h2 className="font-sans text-2xl text-foreground font-bold tracking-tight mt-1">Create New Lead</h2>
-              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">Enter all details across prospect, company, and technology dimensions.</p>
+              <h2 className="font-sans text-2xl text-foreground font-bold tracking-tight mt-1">{isEdit ? 'Edit Lead' : 'Create New Lead'}</h2>
+              <p className="text-[11px] text-muted-foreground mt-0.5 font-semibold">{isEdit ? 'Update lead details across all dimensions.' : 'Enter all details across prospect, company, and technology dimensions.'}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3 self-end sm:self-auto">
@@ -704,6 +823,8 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
               type="button"
               onClick={() => {
                 setIsCreatingFullPage(false);
+                setIsEditingFullPage(false);
+                setEditingLeadId(null);
                 setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
               }}
               className="px-4.5 py-2 border border-border rounded-xl text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer transition-colors"
@@ -713,14 +834,14 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
             <button
               type="submit"
               form="full-page-lead-form"
-              className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition-all hover:-translate-y-0.5"
+              className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition hover:-translate-y-0.5"
             >
-              Create Lead
+              {isEdit ? 'Save Changes' : 'Create Lead'}
             </button>
           </div>
         </div>
 
-        <form id="full-page-lead-form" onSubmit={handleCreateLead} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form id="full-page-lead-form" onSubmit={isEdit ? handleEditLead : handleCreateLead} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           {/* Card 1: Contact Information */}
           <div className="bg-card border border-border rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
@@ -746,7 +867,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                     placeholder="e.g. John Doe"
                     value={leadForm.name}
                     onChange={(e) => setLeadForm({ ...leadForm, name: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -756,7 +877,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                     placeholder="e.g. VP of Engineering"
                     value={leadForm.jobTitle}
                     onChange={(e) => setLeadForm({ ...leadForm, jobTitle: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
               </div>
@@ -772,7 +893,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                     placeholder="name@company.com"
                     value={leadForm.email}
                     onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -782,7 +903,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                     placeholder="+1 (555) 000-0000"
                     value={leadForm.phone}
                     onChange={(e) => setLeadForm({ ...leadForm, phone: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
               </div>
@@ -813,7 +934,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                     placeholder="e.g. Acme Corp"
                     value={leadForm.company}
                     onChange={(e) => setLeadForm({ ...leadForm, company: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -824,7 +945,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                     required
                     value={leadForm.industry}
                     onChange={(e) => setLeadForm({ ...leadForm, industry: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="">Select Industry</option>
                     <option value="Manufacturing">Manufacturing</option>
@@ -855,7 +976,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                     placeholder="e.g. San Francisco, CA"
                     value={leadForm.location}
                     onChange={(e) => setLeadForm({ ...leadForm, location: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                   />
                 </div>
                 <div>
@@ -863,7 +984,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                   <select
                     value={leadForm.numberOfEmployees}
                     onChange={(e) => setLeadForm({ ...leadForm, numberOfEmployees: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="">Select Range</option>
                     <option value="1">1</option>
@@ -900,7 +1021,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                     required
                     value={leadForm.source}
                     onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="">Select Source</option>
                     <option value="Website">Website</option>
@@ -920,7 +1041,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                   <select
                     value={leadForm.priority}
                     onChange={(e) => setLeadForm({ ...leadForm, priority: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -932,7 +1053,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                   <select
                     value={leadForm.status}
                     onChange={(e) => setLeadForm({ ...leadForm, status: e.target.value as any })}
-                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition-all"
+                    className="w-full px-3 py-2 border border-border rounded-xl text-xs text-foreground bg-background cursor-pointer focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple transition"
                   >
                     <option value="New">New</option>
                     <option value="Contacted">Contacted</option>
@@ -950,7 +1071,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                   placeholder="e.g. Sarah Johnson"
                   value={leadForm.owner}
                   onChange={(e) => setLeadForm({ ...leadForm, owner: e.target.value })}
-                  className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
+                  className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
                 />
               </div>
             </div>
@@ -972,23 +1093,43 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Current CRM</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Salesforce, HubSpot"
+                  <select
                     value={leadForm.currentCRM}
                     onChange={(e) => setLeadForm({ ...leadForm, currentCRM: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
-                  />
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
+                  >
+                    <option value="">Select CRM...</option>
+                    <option value="No CRM">No CRM</option>
+                    <option value="Excel">Excel</option>
+                    <option value="Google Sheets">Google Sheets</option>
+                    <option value="Manual">Manual</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Basic CRM">Basic CRM</option>
+                    <option value="HubSpot">HubSpot</option>
+                    <option value="Zoho">Zoho</option>
+                    <option value="Salesforce">Salesforce</option>
+                    <option value="Custom Software">Custom Software</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[9px] font-bold text-foreground uppercase tracking-wider mb-1">Operational System</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. SAP, Oracle ERP"
+                  <select
                     value={leadForm.operationalSystem}
                     onChange={(e) => setLeadForm({ ...leadForm, operationalSystem: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all"
-                  />
+                    className="w-full px-3.5 py-2 border border-border rounded-xl text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition"
+                  >
+                    <option value="">Select system...</option>
+                    <option value="No Structured System">No Structured System</option>
+                    <option value="Excel">Excel</option>
+                    <option value="Google Sheets">Google Sheets</option>
+                    <option value="Manual">Manual</option>
+                    <option value="Spreadsheets">Spreadsheets</option>
+                    <option value="CRM">CRM</option>
+                    <option value="ERP">ERP</option>
+                    <option value="Structured Business Software">Structured Business Software</option>
+                    <option value="Custom Software">Custom Software</option>
+                    <option value="Custom Internal Software">Custom Internal Software</option>
+                  </select>
                 </div>
               </div>
 
@@ -998,7 +1139,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                   placeholder="Enter initial conversations, requirements or key context..."
                   value={leadForm.notes}
                   onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })}
-                  className="w-full h-19 px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition-all resize-none"
+                  className="w-full h-19 px-3.5 py-2 border border-border rounded-xl text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/25 focus:border-brand-purple bg-background transition resize-none"
                 />
               </div>
             </div>
@@ -1022,7 +1163,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
               </button>
               <button
                 type="submit"
-                className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition-all hover:-translate-y-0.5"
+                className="px-5.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-brand-purple/10 hover:shadow-brand-purple/20 transition hover:-translate-y-0.5"
               >
                 Create Lead
               </button>
@@ -1048,7 +1189,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 <button
                   type="button"
                   onClick={() => setIsPriorityView(!isPriorityView)}
-                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all duration-200 cursor-pointer ${
+                  className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition duration-200 cursor-pointer ${
                     isPriorityView
                       ? 'bg-brand-purple text-primary-foreground ring-2 ring-brand-purple/25'
                       : 'bg-secondary hover:bg-secondary text-foreground hover:text-foreground'
@@ -1066,7 +1207,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 <button
                   type="button"
                   onClick={() => toggleViewMode('default')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'default'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -1078,7 +1219,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                 <button
                   type="button"
                   onClick={() => toggleViewMode('list')}
-                  className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                  className={`p-1.5 rounded-md transition cursor-pointer ${
                     viewMode === 'list'
                       ? 'bg-card text-brand-purple shadow-sm font-bold'
                       : 'text-muted-foreground hover:text-foreground'
@@ -1189,7 +1330,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                         <tr 
                           key={lead.id} 
                           onClick={() => setSelectedLeadId(lead.id)}
-                          className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                          className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
                         >
                           <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
                             <input 
@@ -1251,8 +1392,9 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                                     owner: lead.owner,
                                     notes: lead.notes
                                   });
+                                  setEditingLeadId(String(lead.id));
                                   setSelectedLeadId(lead.id);
-                                  setIsEditModalOpen(true);
+                                  setIsEditingFullPage(true);
                                 }}
                                 className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
                               >
@@ -1316,7 +1458,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                           e.stopPropagation();
                           setSelectedLeadId(prevId => prevId === lead.id ? null : prevId);
                         }}
-                        className={`hover:bg-secondary/40 cursor-pointer transition-all duration-200 border-b border-border/40 ${
+                        className={`hover:bg-secondary/40 cursor-pointer transition duration-200 border-b border-border/40 ${
                           isSelected ? 'bg-brand-blue/[0.04]' : ''
                         } ${isTopPriority ? 'bg-brand-blue/[0.01]' : ''}`}
                       >
@@ -1415,7 +1557,7 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                             {/* Owner */}
                             <td className="py-3.5">
                               <div className="flex items-center space-x-1.5">
-                                <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-border" />
+                                <img src={lead.ownerAvatar || ''} alt={lead.owner} className="h-5 w-5 rounded-full border border-border" />
                                 <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
                               </div>
                             </td>
@@ -1453,7 +1595,9 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
                                   owner: lead.owner,
                                   notes: lead.notes
                                 });
-                                setIsEditModalOpen(true);
+                                setEditingLeadId(String(lead.id));
+                                setSelectedLeadId(lead.id);
+                                setIsEditingFullPage(true);
                               }}
                               className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded transition-colors cursor-pointer"
                             >
@@ -1485,392 +1629,703 @@ export default function LeadsView({ onLoaded }: { onLoaded?: () => void } = {}) 
       </div>
 
       {/* Right Pane (Selected Lead Details drawer, activities, timeline logs, editable notes, AI advice) */}
-      {activeLead && viewMode !== 'list' && <div className="col-span-12 lg:col-span-4 space-y-5">
-        <div className="bg-card border border-border rounded-2xl p-5 sticky top-20">
-          {/* Card Title Header */}
-          <div className="flex items-start justify-between border-b border-border pb-3">
-            <div>
-              <h3 className="font-semibold text-foreground text-sm">{activeLead.name}</h3>
-              <p className="text-[10px] text-muted-foreground font-semibold">{activeLead.company}</p>
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              {/* Circular score progress indicator */}
-              <div className="flex items-center space-x-1 bg-secondary border border-border rounded-lg px-2 py-0.5">
-                <Award className="h-3.5 w-3.5 text-brand-purple" strokeWidth={2} />
-                <span className="text-[10px] font-semibold text-foreground tabular-nums">{activeLead.score}%</span>
-              </div>
-              
-              {/* Close Button */}
-              <button 
-                onClick={() => setSelectedLeadId(null)}
-                className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
-                title="Close Summary"
-                aria-label="Close Summary"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Quick Details Fields list */}
-          <div className="py-3.5 space-y-2.5 text-[11px] font-semibold border-b border-border">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Status</span>
-              <span className={`font-semibold px-1.5 py-0.25 rounded ${
-                activeLead.status === 'Converted' ? 'text-brand-cyan bg-brand-cyan/15' : 'text-foreground'
-              }`}>{activeLead.status}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Priority</span>
-              <span className={`font-semibold ${
-                activeLead.priorityTier === 'Critical' ? 'text-brand-cyan bg-brand-cyan/15 px-1.5 py-0.25 rounded' :
-                activeLead.priorityTier === 'High' ? 'text-amber-700 bg-amber-50 px-1.5 py-0.25 rounded' :
-                activeLead.priorityTier === 'Medium' ? 'text-blue-700 bg-blue-50 px-1.5 py-0.25 rounded' :
-                activeLead.priorityTier === 'Low' ? 'text-muted-foreground bg-secondary px-1.5 py-0.25 rounded' : ''
-              }`}>{activeLead.priorityTier || activeLead.priority}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Email</span>
-              <a href={`mailto:${activeLead.email}`} className="text-brand-purple hover:underline truncate max-w-[150px]">{activeLead.email}</a>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Phone</span>
-              <span className="text-foreground tabular-nums">{activeLead.phone}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Owner</span>
-              <div className="flex items-center space-x-1">
-                <img src={activeLead.ownerAvatar} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-border" />
-                <span className="text-foreground">{activeLead.owner}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Engineered AI Features (ML Pipeline Integration) */}
-          <div className="py-3.5 border-b border-border space-y-3">
-            <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider flex items-center space-x-1">
-              <Award className="h-4 w-4 text-brand-purple" />
-              <span>AI Pipeline Features</span>
-            </h4>
-            
-            <div className="grid grid-cols-2 gap-2.5 text-[10px] font-semibold">
-              {/* Engagement Level */}
-              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Engagement Level</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-semibold">{getEngagementDetails(activeLead.emails).score} pts</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide ${
-                    getEngagementDetails(activeLead.emails).level === 'HIGH' 
-                      ? 'bg-brand-cyan/15 text-brand-cyan' 
-                      : getEngagementDetails(activeLead.emails).level === 'MEDIUM'
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-destructive/10 text-destructive'
-                  }`}>
-                    {getEngagementDetails(activeLead.emails).level}
-                  </span>
-                </div>
-              </div>
-
-              {/* Reply Rate */}
-              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Reply Velocity</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-semibold">{getReplyDetails(activeLead.emails).rate}%</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide ${
-                    getReplyDetails(activeLead.emails).level === 'FAST' 
-                      ? 'bg-brand-cyan/15 text-brand-cyan' 
-                      : getReplyDetails(activeLead.emails).level === 'MEDIUM'
-                      ? 'bg-amber-50 text-amber-700'
-                      : getReplyDetails(activeLead.emails).level === 'SLOW'
-                      ? 'bg-destructive/10 text-destructive'
-                      : 'bg-secondary text-muted-foreground'
-                  }`}>
-                    {getReplyDetails(activeLead.emails).level}
-                  </span>
-                </div>
-              </div>
-
-              {/* Recency */}
-              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Touchpoint Recency</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-semibold">
-                    {getRecencyDays(activeLead.timeline) === 999 ? 'No touch' : `${getRecencyDays(activeLead.timeline)} days`}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide bg-blue-50 text-blue-700">
-                    {getRecencyDays(activeLead.timeline) <= 3 ? 'Active' : getRecencyDays(activeLead.timeline) <= 7 ? 'Warm' : 'Cold'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Company Band & Source */}
-              <div className="bg-secondary border border-border rounded-lg p-2 flex flex-col justify-between space-y-1">
-                <span className="text-muted-foreground uppercase tracking-wide text-[8.5px]">Firmographic Band</span>
-                <div className="flex items-center justify-between">
-                  <span className="text-foreground font-semibold truncate max-w-[55px]" title={activeLead.company}>
-                    {getCompanyBand(activeLead.company)}
-                  </span>
-                  <span className="px-1.5 py-0.5 rounded text-[8px] font-semibold uppercase tracking-wide bg-brand-purple/10 text-brand-purple">
-                    Q: {getSourceQuality(activeLead.source)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* AI Recommendation Alert box */}
-          <div className="mt-4 bg-brand-purple/5 border border-border rounded-xl p-3.5 flex items-start space-x-2">
-            <Sparkles className="h-4.5 w-4.5 text-brand-purple shrink-0 mt-0.5" strokeWidth={2} />
-            <div>
-              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider">AI Next Best Action</h4>
-              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{getAIRecommendation(activeLead)}</p>
-            </div>
-          </div>
-
-          {/* Priority View - Advanced Scoring Details (toggled on/off) */}
-          {isPriorityView && (
-            <div className="mt-4 border border-border rounded-xl p-3.5">
-              <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider flex items-center space-x-1 mb-3">
-                <Award className="h-4 w-4 text-brand-purple" />
-                <span>Priority Scoring Details</span>
-              </h4>
-              <div className="space-y-2.5 text-[10px] font-semibold">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Fit Score</span>
-                  <span className="font-semibold text-foreground">{activeLead.fit_score ?? 0}%</span>
-                </div>
-                {activeLead.fitReasons.length > 0 && (
-                  <div className="reason-subtext">
-                    {activeLead.fitReasons.slice(0, 2).map((r, i) => (
-                      <div key={i} className="mb-0.5">• {r}</div>
-                    ))}
-                  </div>
-                )}
-                <div className="border-t border-border" />
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Engagement Score</span>
-                  <span className="font-semibold text-foreground">{activeLead.engagement_score ?? 0}%</span>
-                </div>
-                {activeLead.engagementReasons.length > 0 && (
-                  <div className="reason-subtext">
-                    {activeLead.engagementReasons.slice(0, 2).map((r, i) => (
-                      <div key={i} className="mb-0.5">• {r}</div>
-                    ))}
-                  </div>
-                )}
-                <div className="border-t border-border" />
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Overall Score</span>
-                  <span className={`font-semibold tabular-nums ${
-                    activeLead.score >= 80 ? 'text-brand-cyan' : activeLead.score >= 60 ? 'text-amber-600' : 'text-destructive'
-                  }`}>{activeLead.score}%</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Tier</span>
-                  <span className={`font-semibold ${
-                    activeLead.priorityTier === 'Critical' ? 'text-brand-cyan' :
-                    activeLead.priorityTier === 'High' ? 'text-amber-600' :
-                    activeLead.priorityTier === 'Medium' ? 'text-blue-600' :
-                    activeLead.priorityTier === 'Low' ? 'text-muted-foreground' : 'text-muted-foreground'
-                  }`}>{activeLead.priorityTier || activeLead.priority}</span>
-                </div>
-                {activeLead.topReasons.length > 0 && (
-                  <div className="border-t border-border pt-2">
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Top Reasons</span>
-                    <div className="mt-1 text-[9px] text-muted-foreground leading-relaxed">
-                      {activeLead.topReasons.slice(0, 3).map((r, i) => (
-                        <div key={i} className="mb-0.5">• {r}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+      {activeLead && viewMode !== 'list' && (
+        <div className="col-span-12 lg:col-span-4 space-y-5">
+          {/* Maximized Overlay Backdrop */}
+          {isMaximized && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={() => setIsMaximized(false)} />
           )}
 
-          {/* Live Notes block */}
-          <div className="mt-4">
-            <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Internal Notes</h4>
-            <textarea
-              className="w-full p-2 border border-border rounded-lg text-[11px] font-semibold text-foreground bg-secondary placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 min-h-[70px] resize-y leading-relaxed"
-              value={activeLead.notes}
-              onChange={(e) => handleSaveNotes(e.target.value)}
-              placeholder="Record lead feedback, key challenges, sizing metrics..."
-            />
-          </div>
+          <div className={isMaximized
+            ? "fixed inset-4 md:inset-8 z-50 flex flex-col rounded-2xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.35)] animate-in zoom-in-95 duration-200"
+            : "bg-card border border-border rounded-2xl p-5 sticky top-20"
+          }
+          style={isMaximized ? { background: '#ffffff', color: '#111827' } : undefined}
+          >
+            {isMaximized ? (
+              /* ===== MAXIMIZED LIGHT-THEME LAYOUT ===== */
+              <>
+                {/* Top bar */}
+                <div className="flex items-center justify-between px-6 py-4 border-b shrink-0" style={{ background: '#f3f4f6', borderColor: '#e5e7eb' }}>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                      <span className="text-purple-700 font-bold text-sm">{activeLead.name?.[0] || '?'}</span>
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-gray-900 text-base leading-tight">{activeLead.name}</h2>
+                      <p className="text-xs text-gray-500 font-medium">{activeLead.company}</p>
+                    </div>
+                    <span className={`ml-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                      activeLead.status === 'Converted' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      activeLead.status === 'Lost' ? 'bg-red-50 text-red-700 border-red-200' :
+                      activeLead.status === 'Qualified' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                      activeLead.status === 'Contacted' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      'bg-blue-50 text-blue-700 border-blue-200'
+                    }`}>{activeLead.status}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => setIsMaximized(false)}
+                      className="p-2 rounded-lg border cursor-pointer transition bg-white border-gray-200 hover:bg-gray-100 text-gray-500 hover:text-gray-800" title="Minimize">
+                      <Minimize2 className="h-4 w-4" />
+                    </button>
+                    <button onClick={() => { setSelectedLeadId(null); setIsMaximized(false); }}
+                      className="p-2 rounded-lg border cursor-pointer transition bg-white border-gray-200 hover:bg-red-50 hover:text-red-600 text-gray-500" title="Close">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
 
-          {/* Action Triggers panel */}
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <button 
-              onClick={() => setIsEmailModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
-            >
-              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Email</span>
-            </button>
-            <button 
-              onClick={() => setIsCallModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
-            >
-              <PhoneCall className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Log Call</span>
-            </button>
-            <button 
-              onClick={() => setIsMeetingModalOpen(true)}
-              className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
-            >
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-              <span>Meet</span>
-            </button>
-          </div>          {/* Activity Feeds Tabs toggles */}
-          <div className="mt-5 border-t border-border pt-4">
-            <div className="flex border-b border-border text-[10px] font-semibold uppercase flex-wrap">
-              {['timeline', 'emails', 'calls', 'meetings', 'activity chart'].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveHistoryTab(tab)}
-                  className={`pb-1.5 px-2.5 border-b-2 transition-all cursor-pointer ${
-                    activeHistoryTab === tab 
-                      ? 'border-brand-purple text-foreground' 
-                      : 'border-transparent text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
- 
-            {/* Tab content loops */}
-            <div className="mt-3.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin">
-              {activeHistoryTab === 'timeline' && (
-                <div className="space-y-3 pl-2 border-l border-border">
-                  {activeLead.timeline.length > 0 ? (
-                    activeLead.timeline.map((act) => (
-                      <div key={act.id} className="relative text-[10px] font-semibold leading-relaxed">
-                        {/* Dot indicator */}
-                        <div className="absolute -left-[12.5px] top-1 h-2 w-2 rounded-full bg-brand-purple border border-card" />
-                        <div className="font-semibold text-foreground flex justify-between">
-                          <span>{act.title}</span>
-                          <span className="text-muted-foreground font-semibold">{act.time}</span>
-                        </div>
-                        <p className="text-muted-foreground mt-0.5">{act.desc}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground py-3 text-[10px]">No timeline logs recorded.</p>
-                  )}
-                </div>
-              )}
- 
-              {activeHistoryTab === 'emails' && (
-                <div className="space-y-2.5">
-                  {activeLead.emails.length > 0 ? (
-                    activeLead.emails.map((e) => (
-                      <div key={e.id} className="p-2 border border-border rounded-lg bg-secondary">
-                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
-                          <span className="truncate max-w-[150px]">{e.subject}</span>
-                          <span className="text-muted-foreground font-semibold">{e.time}</span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{e.body}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground py-3 text-[10px]">No emails logged.</p>
-                  )}
-                </div>
-              )}
- 
-              {activeHistoryTab === 'calls' && (
-                <div className="space-y-2.5">
-                  {activeLead.calls.length > 0 ? (
-                    activeLead.calls.map((c) => (
-                      <div key={c.id} className="p-2 border border-border rounded-lg bg-secondary">
-                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
-                          <span>{c.outcome}</span>
-                          <span className="text-muted-foreground font-semibold">{c.time}</span>
-                        </div>
-                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{c.notes}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground py-3 text-[10px]">No call notes logged.</p>
-                  )}
-                </div>
-              )}
- 
-              {activeHistoryTab === 'meetings' && (
-                <div className="space-y-2.5">
-                  {activeLead.meetings.length > 0 ? (
-                    activeLead.meetings.map((m) => (
-                      <div key={m.id} className="p-2 border border-border rounded-lg bg-secondary">
-                        <div className="flex justify-between items-center text-[10px] font-semibold text-foreground">
-                          <span>{m.title}</span>
-                          <span className="text-brand-purple">{m.date}</span>
-                        </div>
-                        <p className="text-[9px] text-muted-foreground mt-0.5 font-semibold">Time: {m.time}</p>
-                        <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed font-semibold">{m.desc}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground py-3 text-[10px]">No meetings scheduled.</p>
-                  )}
-                </div>
-              )}
+                {/* Body: Two-column layout */}
+                <div className="flex-1 overflow-y-auto p-6" style={{ background: '#ffffff' }}>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-              {activeHistoryTab === 'activity chart' && (
-                <div className="space-y-3 p-1">
-                  <div className="p-3 border border-border rounded-xl bg-secondary">
-                    <h5 className="text-[9px] font-semibold text-foreground uppercase tracking-wider mb-2 flex items-center space-x-1">
-                      <TrendingUp className="h-3.5 w-3.5 text-brand-purple" />
-                      <span>Lead Progression & Score Trend</span>
-                    </h5>
-                    <div className="w-full h-32 relative">
-                      <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
-                        <line x1="0" y1="90" x2="300" y2="90" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" />
-                        <line x1="0" y1="50" x2="300" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
-                        <line x1="0" y1="10" x2="300" y2="10" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
-                        
-                        <path
-                          d={getProgressPoints(activeLead.score).areaPath}
-                          fill="url(#purpleGradLeads)"
-                          opacity="0.15"
-                        />
-                        
-                        <path
-                          d={getProgressPoints(activeLead.score).path}
-                          fill="none"
-                          stroke="var(--brand-purple)"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                        />
-                        
-                        {getProgressPoints(activeLead.score).points.map((p, idx) => (
-                          <circle key={idx} cx={p.x} cy={p.y} r="4" fill="var(--brand-purple)" stroke="white" strokeWidth="1.5" />
-                        ))}
+                    {/* LEFT COLUMN */}
+                    <div className="space-y-5 text-gray-800">
 
-                        <defs>
-                          <linearGradient id="purpleGradLeads" x1="0%" y1="0%" x2="0%" y2="100%">
-                            <stop offset="0%" stopColor="var(--brand-purple)" />
-                            <stop offset="100%" stopColor="var(--brand-purple)" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                      </svg>
-                      
-                      <div className="flex justify-between text-[8px] font-semibold text-muted-foreground mt-1">
-                        <span>Created ({activeLead.timeline[activeLead.timeline.length - 1]?.time || '5d ago'})</span>
-                        <span>Midpoint</span>
-                        <span>Today (Score: {activeLead.score})</span>
+                      {/* Contact Info */}
+                      <div className="rounded-xl border overflow-hidden border-gray-200">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Contact Information</span>
+                        </div>
+                        <div className="p-4 space-y-3">
+                          {[
+                            { label: 'Email', value: activeLead.email, link: `mailto:${activeLead.email}` },
+                            { label: 'Phone', value: activeLead.phone },
+                            { label: 'Job Title', value: activeLead.jobTitle },
+                            { label: 'Location', value: activeLead.location },
+                            { label: 'Source', value: activeLead.source },
+                          ].map(row => (
+                            <div key={row.label} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                              <span className="text-xs font-semibold text-gray-500">{row.label}</span>
+                              {row.link ? (
+                                <a href={row.link} className="text-xs font-bold truncate max-w-[240px] text-purple-600 hover:underline">{row.value || '—'}</a>
+                              ) : (
+                                <span className="text-xs font-bold text-gray-800">{row.value || '—'}</span>
+                              )}
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-xs font-semibold text-gray-500">Owner</span>
+                            <div className="flex items-center gap-1.5">
+                              <img src={activeLead.ownerAvatar || ''} alt={activeLead.owner} className="h-5 w-5 rounded-full border border-gray-200" />
+                              <span className="text-xs font-bold text-gray-800">{activeLead.owner}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Lead Scoring */}
+                      <div className="rounded-xl border overflow-hidden border-gray-200">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Lead Scoring</span>
+                        </div>
+                        <div className="p-4 space-y-3">
+                          {[
+                            { label: 'Overall Score', value: activeLead.score, color: activeLead.score >= 80 ? '#10b981' : activeLead.score >= 60 ? '#f59e0b' : '#ef4444' },
+                            { label: 'Fit Score', value: activeLead.fit_score ?? 0, color: '#6366f1' },
+                            { label: 'Engagement Score', value: activeLead.engagement_score ?? 0, color: '#8b5cf6' },
+                          ].map(s => (
+                            <div key={s.label}>
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-semibold text-gray-500">{s.label}</span>
+                                <span className="text-xs font-bold tabular-nums" style={{ color: s.color }}>{s.value}%</span>
+                              </div>
+                              <div className="h-1.5 rounded-full overflow-hidden bg-gray-100">
+                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.value}%`, background: s.color }} />
+                              </div>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between pt-1">
+                            <span className="text-xs font-semibold text-gray-500">Priority Tier</span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                              activeLead.priorityTier === 'Critical' ? 'bg-cyan-50 text-cyan-700 border-cyan-200' :
+                              activeLead.priorityTier === 'High' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                              activeLead.priorityTier === 'Medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              'bg-gray-50 text-gray-600 border-gray-200'
+                            }`}>{activeLead.priorityTier || activeLead.priority || '—'}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Company & Technology Details */}
+                      <div className="rounded-xl border overflow-hidden border-gray-200">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Company & Technology Details</span>
+                        </div>
+                        <div className="p-4 space-y-3">
+                          {[
+                            { label: 'Industry', value: activeLead.industry },
+                            { label: 'Employee Count', value: activeLead.numberOfEmployees || activeLead.employee_count },
+                            { label: 'Estimated Deal Value', value: activeLead.value ? `$${Number(activeLead.value).toLocaleString()}` : '—' },
+                            { label: 'Current CRM', value: activeLead.currentCRM },
+                            { label: 'Operational System', value: activeLead.operationalSystem },
+                          ].map(row => (
+                            <div key={row.label} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                              <span className="text-xs font-semibold text-gray-500">{row.label}</span>
+                              <span className="text-xs font-bold text-gray-800">{row.value || '—'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* AI Scoring Insights & Recommendations */}
+                      <div className="rounded-xl border overflow-hidden border-gray-200">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">AI Scoring Insights</span>
+                        </div>
+                        <div className="p-4 space-y-4">
+                          {activeLead.topReasons && activeLead.topReasons.length > 0 && (
+                            <div>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Key AI Insights</span>
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {activeLead.topReasons.map((r, i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-semibold border border-purple-100">{r}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {activeLead.fitReasons && activeLead.fitReasons.length > 0 && (
+                            <div>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Fit Reasons</span>
+                              <ul className="mt-1 list-disc list-inside text-xs text-gray-700 space-y-1">
+                                {activeLead.fitReasons.map((r, i) => <li key={i} className="font-medium">{r}</li>)}
+                              </ul>
+                            </div>
+                          )}
+
+                          {activeLead.engagementReasons && activeLead.engagementReasons.length > 0 && (
+                            <div>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Engagement Signals</span>
+                              <ul className="mt-1 list-disc list-inside text-xs text-gray-700 space-y-1">
+                                {activeLead.engagementReasons.map((r, i) => <li key={i} className="font-medium">{r}</li>)}
+                              </ul>
+                            </div>
+                          )}
+
+                          {leadRecommendations[activeLead.id] && (
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-blue-600">Recommended Next Action</span>
+                              <p className="mt-1 text-xs font-bold text-gray-800 leading-relaxed">{leadRecommendations[activeLead.id]}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Quick Action Buttons */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <button onClick={() => { router.push(`?compose=${encodeURIComponent(activeLead.email)}`); onTabChange?.('emails'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } })); }, 150); }}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 text-gray-700 cursor-pointer transition">
+                          <Mail className="h-4 w-4" /><span>Email</span>
+                        </button>
+                        <button onClick={() => setIsCallModalOpen(true)}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-emerald-50 hover:border-emerald-300 hover:text-emerald-700 text-gray-700 cursor-pointer transition">
+                          <PhoneCall className="h-4 w-4" /><span>Call</span>
+                        </button>
+                        <button onClick={() => { onTabChange?.('calendar'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-open-create-calendar-event-modal', { detail: { title: `Meet with ${activeLead.name}`, attendees: activeLead.email || activeLead.name, date: new Date().toISOString().slice(0, 10), time: '11:00 AM', type: 'meeting' } })); }, 150); }}
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-gray-700 cursor-pointer transition">
+                          <Calendar className="h-4 w-4" /><span>Meet</span>
+                        </button>
+                      </div>
+
+                      {/* Notes */}
+                      <div className="rounded-xl border border-gray-200 overflow-hidden">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Internal Notes</span>
+                        </div>
+                        <div className="p-4">
+                          <textarea
+                            className="w-full p-3 rounded-lg text-xs leading-relaxed resize-y min-h-[90px] focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300 text-gray-800 bg-gray-50 border border-gray-200"
+                            value={activeLead.notes}
+                            onChange={(e) => handleSaveNotes(e.target.value)}
+                            placeholder="Record lead feedback, key challenges, sizing metrics..."
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RIGHT COLUMN — Activity History */}
+                    <div className="rounded-xl border flex flex-col border-gray-200" style={{ maxHeight: '78vh' }}>
+                      <div className="px-4 py-2.5 border-b shrink-0 bg-gray-50 border-gray-200">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Activity History</span>
+                      </div>
+                      <div className="flex gap-1 px-4 pt-3 pb-2 flex-wrap shrink-0 border-b border-gray-100">
+                        {[
+                          { id: 'timeline', label: 'Timeline', icon: Clock },
+                          { id: 'emails', label: 'Emails', icon: Mail },
+                          { id: 'calls', label: 'Calls', icon: PhoneCall },
+                          { id: 'meetings', label: 'Meetings', icon: Calendar },
+                          { id: 'activity chart', label: 'Chart', icon: TrendingUp },
+                        ].map(tab => {
+                          const Icon = tab.icon;
+                          const active = activeHistoryTab === tab.id;
+                          return (
+                            <button key={tab.id} onClick={() => setActiveHistoryTab(tab.id)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer"
+                              style={active ? { background: '#7c3aed', color: '#fff', border: '1px solid #7c3aed' } : { background: '#fff', color: '#6b7280', border: '1px solid #e5e7eb' }}>
+                              <Icon className="h-3 w-3 shrink-0" />
+                              <span>{tab.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-white">
+                        {activeHistoryTab === 'timeline' && (
+                          activeLead.timeline.length > 0 ? activeLead.timeline.map(act => (
+                            <div key={act.id} className="flex gap-3 p-3 rounded-lg border bg-gray-50 border-gray-100 hover:bg-purple-50 hover:border-purple-100 transition">
+                              <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 bg-purple-50 border border-purple-100">
+                                <Clock className="h-3.5 w-3.5 text-purple-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <p className="text-xs font-bold leading-snug text-gray-800">{act.title}</p>
+                                  <span className="text-[9px] font-mono shrink-0 text-gray-400">{act.time}</span>
+                                </div>
+                                <p className="text-[10px] mt-0.5 text-gray-500">{act.desc}</p>
+                              </div>
+                            </div>
+                          )) : <p className="text-center py-8 text-xs text-gray-400">No timeline activity yet.</p>
+                        )}
+                        {activeHistoryTab === 'emails' && (
+                          activeLead.emails.length > 0 ? activeLead.emails.map(e => (
+                            <div key={e.id} className="p-3 rounded-lg border bg-purple-50/30 border-purple-100 hover:bg-purple-50 transition">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <p className="text-[9px] text-gray-400 mb-0.5">To: {activeLead.email}</p>
+                                  <p className="text-xs font-bold text-purple-700">{e.subject}</p>
+                                </div>
+                                <span className="text-[9px] font-mono shrink-0 text-gray-400">{e.time}</span>
+                              </div>
+                            </div>
+                          )) : <p className="text-center py-8 text-xs text-gray-400">No emails logged.</p>
+                        )}
+                        {activeHistoryTab === 'calls' && (
+                          activeLead.calls.length > 0 ? activeLead.calls.map(c => {
+                            const connected = c.outcome?.toLowerCase().includes('connect');
+                            return (
+                              <div key={c.id} className="p-3 rounded-lg border" style={{ background: connected ? '#f0fdf4' : '#fff1f2', borderColor: connected ? '#bbf7d0' : '#fecdd3' }}>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <span className="px-2 py-0.5 rounded text-[9px] font-bold" style={connected ? { background: '#d1fae5', color: '#065f46' } : { background: '#fee2e2', color: '#991b1b' }}>{c.outcome}</span>
+                                  <span className="text-[9px] font-mono text-gray-400">{c.time}</span>
+                                </div>
+                                <p className="text-[10px] text-gray-600">{c.notes}</p>
+                              </div>
+                            );
+                          }) : <p className="text-center py-8 text-xs text-gray-400">No calls logged.</p>
+                        )}
+                        {activeHistoryTab === 'meetings' && (
+                          activeLead.meetings.length > 0 ? activeLead.meetings.map(m => (
+                            <div key={m.id} className="p-3 rounded-lg border border-blue-100 bg-blue-50/50 hover:bg-blue-50 transition">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <p className="text-xs font-bold text-blue-800">{m.title}</p>
+                                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold shrink-0 bg-purple-100 text-purple-700">{m.date}</span>
+                              </div>
+                              <p className="text-[10px] flex items-center gap-1 mb-1 text-blue-600"><Clock className="h-2.5 w-2.5" />{m.time}</p>
+                              <p className="text-[10px] text-gray-500">{m.desc}</p>
+                            </div>
+                          )) : <p className="text-center py-8 text-xs text-gray-400">No meetings scheduled.</p>
+                        )}
+                        {activeHistoryTab === 'activity chart' && (
+                          <div className="p-3 rounded-lg border bg-gray-50 border-gray-100">
+                            <h5 className="text-[9px] font-bold uppercase tracking-wider mb-3 flex items-center gap-1 text-gray-500">
+                              <TrendingUp className="h-3.5 w-3.5 text-purple-500" />Lead Score Progression
+                            </h5>
+                            <div className="w-full h-40 relative">
+                              <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
+                                <line x1="0" y1="90" x2="300" y2="90" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
+                                <line x1="0" y1="50" x2="300" y2="50" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
+                                <line x1="0" y1="10" x2="300" y2="10" stroke="#e5e7eb" strokeWidth="1" strokeDasharray="3,3" />
+                                <path d={getProgressPoints(activeLead.score).areaPath} fill="url(#purpleGradMax)" opacity="0.2" />
+                                <path d={getProgressPoints(activeLead.score).path} fill="none" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" />
+                                {getProgressPoints(activeLead.score).points.map((p, idx) => (
+                                  <circle key={idx} cx={p.x} cy={p.y} r="4" fill="#7c3aed" stroke="white" strokeWidth="1.5" />
+                                ))}
+                                <defs>
+                                  <linearGradient id="purpleGradMax" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#7c3aed" />
+                                    <stop offset="100%" stopColor="#7c3aed" stopOpacity="0" />
+                                  </linearGradient>
+                                </defs>
+                              </svg>
+                              <div className="flex justify-between text-[8px] font-medium mt-1 text-gray-400">
+                                <span>Start</span><span>Midpoint</span><span>Today ({activeLead.score})</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </>
+            ) : (
+              /* ===== COMPACT SIDEBAR LAYOUT ===== */
+              <>
+                {/* Card Title Header */}
+                <div className="flex items-start justify-between border-b border-border pb-3">
+                  <div>
+                    <h3 className="font-semibold text-foreground text-sm">{activeLead.name}</h3>
+                    <p className="text-[10px] text-muted-foreground font-semibold">{activeLead.company}</p>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <button 
+                      type="button"
+                      onClick={() => setIsMaximized(true)}
+                      className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
+                      title="Maximize Summary"
+                    >
+                      <Maximize2 className="h-4 w-4" />
+                    </button>
+                    {/* Close Button */}
+                    <button 
+                      onClick={() => setSelectedLeadId(null)}
+                      className="p-1 bg-secondary hover:bg-secondary border border-border rounded text-muted-foreground hover:text-foreground transition duration-200 cursor-pointer"
+                      title="Close Summary"
+                      aria-label="Close Summary"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Quick Details Fields list */}
+                <div className="py-3.5 space-y-2.5 text-[11px] font-semibold border-b border-border">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <span className={`font-semibold px-1.5 py-0.25 rounded ${
+                      activeLead.status === 'Converted' ? 'text-brand-cyan bg-brand-cyan/15' : 'text-foreground'
+                    }`}>{activeLead.status}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Priority</span>
+                    <span className={`font-semibold ${
+                      activeLead.priorityTier === 'Critical' ? 'text-brand-cyan bg-brand-cyan/15 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'High' ? 'text-amber-700 bg-amber-50 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'Medium' ? 'text-blue-700 bg-blue-50 px-1.5 py-0.25 rounded' :
+                      activeLead.priorityTier === 'Low' ? 'text-muted-foreground bg-secondary px-1.5 py-0.25 rounded' : ''
+                    }`}>{activeLead.priorityTier || activeLead.priority}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Email</span>
+                    <a href={`mailto:${activeLead.email}`} className="text-brand-purple hover:underline truncate max-w-[150px]">{activeLead.email}</a>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Phone</span>
+                    <span className="text-foreground tabular-nums">{activeLead.phone}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Owner</span>
+                    <div className="flex items-center space-x-1">
+                      <img src={activeLead.ownerAvatar || ''} alt={activeLead.owner} className="h-4.5 w-4.5 rounded-full border border-border" />
+                      <span className="text-foreground">{activeLead.owner}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Priority View - Advanced Scoring Details (toggled on/off) */}
+                {isPriorityView && (
+                  <div className="mt-4 border border-border rounded-xl p-3.5">
+                    <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider flex items-center space-x-1 mb-3">
+                      <Award className="h-4 w-4 text-brand-purple" />
+                      <span>Priority Scoring Details</span>
+                    </h4>
+                    <div className="space-y-2.5 text-[10px] font-semibold">
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Fit Score</span>
+                        <span className="font-semibold text-foreground">{activeLead.fit_score ?? 0}%</span>
+                      </div>
+                      {activeLead.fitReasons.length > 0 && (
+                        <div className="reason-subtext">
+                          {activeLead.fitReasons.slice(0, 2).map((r, i) => (
+                            <div key={i} className="mb-0.5">• {r}</div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="border-t border-border" />
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Engagement Score</span>
+                        <span className="font-semibold text-foreground">{activeLead.engagement_score ?? 0}%</span>
+                      </div>
+                      {activeLead.engagementReasons.length > 0 && (
+                        <div className="reason-subtext">
+                          {activeLead.engagementReasons.slice(0, 2).map((r, i) => (
+                            <div key={i} className="mb-0.5">• {r}</div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="border-t border-border" />
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Overall Score</span>
+                        <span className={`font-semibold tabular-nums ${
+                          activeLead.score >= 80 ? 'text-brand-cyan' : activeLead.score >= 60 ? 'text-amber-600' : 'text-destructive'
+                        }`}>{activeLead.score}%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-muted-foreground">Tier</span>
+                        <span className={`font-semibold ${
+                          activeLead.priorityTier === 'Critical' ? 'text-brand-cyan' :
+                          activeLead.priorityTier === 'High' ? 'text-amber-600' :
+                          activeLead.priorityTier === 'Medium' ? 'text-blue-600' :
+                          activeLead.priorityTier === 'Low' ? 'text-muted-foreground' : 'text-muted-foreground'
+                        }`}>{activeLead.priorityTier || activeLead.priority}</span>
+                      </div>
+                      {activeLead.topReasons.length > 0 && (
+                        <div className="border-t border-border pt-2">
+                          <span className="text-[9px] text-muted-foreground uppercase tracking-wider font-semibold">Top Reasons</span>
+                          <div className="mt-1 text-[9px] text-muted-foreground leading-relaxed">
+                            {activeLead.topReasons.slice(0, 3).map((r, i) => (
+                              <div key={i} className="mb-0.5">• {r}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Live Notes block */}
+                <div className="mt-4">
+                  <h4 className="text-[10px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Internal Notes</h4>
+                  <textarea
+                    className="w-full p-2 border border-border rounded-lg text-[11px] font-semibold text-foreground bg-secondary placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 min-h-[70px] resize-y leading-relaxed"
+                    value={activeLead.notes}
+                    onChange={(e) => handleSaveNotes(e.target.value)}
+                    placeholder="Record lead feedback, key challenges, sizing metrics..."
+                  />
+                </div>
+
+                {/* Action Triggers panel */}
+                <div className="grid grid-cols-3 gap-2 mt-4">
+                  <button 
+                    onClick={() => {
+                      router.push(`?compose=${encodeURIComponent(activeLead.email)}`);
+                      onTabChange?.('emails');
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } }));
+                      }, 150);
+                    }}
+                    className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
+                  >
+                    <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>Email</span>
+                  </button>
+                  <button 
+                    onClick={() => setIsCallModalOpen(true)}
+                    className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
+                  >
+                    <PhoneCall className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>calls</span>
+                  </button>
+                  <button 
+                    onClick={() => {
+                      onTabChange?.('calendar');
+                      setTimeout(() => {
+                        const event = new CustomEvent('pulse-open-create-calendar-event-modal', {
+                          detail: {
+                            title: `Meet with ${activeLead.name}`,
+                            attendees: activeLead.email || activeLead.name,
+                            details: `Meeting scheduled from Leads page context. Lead: ${activeLead.name} at ${activeLead.company}.`,
+                            date: new Date().toISOString().slice(0, 10),
+                            time: '11:00 AM',
+                            type: 'meeting'
+                          }
+                        });
+                        window.dispatchEvent(event);
+                      }, 150);
+                    }}
+                    className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border hover:bg-secondary rounded-lg text-[10px] font-semibold text-muted-foreground cursor-pointer transition-colors"
+                  >
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span>Meet</span>
+                  </button>
+                </div>
+
+                {/* History Tabs */}
+                <div className="mt-5 border-t border-border pt-4">
+                  <div className="flex flex-wrap bg-secondary/60 dark:bg-secondary/35 p-1 rounded-xl gap-1 text-[9px] font-semibold uppercase mb-4 border border-border/40">
+                    {[
+                      { id: 'timeline', label: 'Timeline', icon: Clock },
+                      { id: 'emails', label: 'Emails', icon: Mail },
+                      { id: 'calls', label: 'Calls', icon: PhoneCall },
+                      { id: 'meetings', label: 'Meetings', icon: Calendar },
+                      { id: 'activity chart', label: 'Chart', icon: TrendingUp }
+                    ].map((tabItem) => {
+                      const IconComp = tabItem.icon;
+                      const isActive = activeHistoryTab === tabItem.id;
+                      return (
+                        <button
+                          key={tabItem.id}
+                          onClick={() => setActiveHistoryTab(tabItem.id)}
+                          className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg transition duration-200 cursor-pointer text-[9px] flex-grow min-w-[62px] shrink-0 ${
+                            isActive 
+                              ? 'bg-card text-brand-purple border border-border/50 shadow-sm font-bold scale-[1.02]' 
+                              : 'text-muted-foreground hover:text-foreground hover:bg-background/20'
+                          }`}
+                        >
+                          <IconComp className="h-3 w-3 shrink-0" />
+                          <span>{tabItem.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+       
+                  {/* Tab content loops */}
+                  <div className="mt-3.5 max-h-56 overflow-y-auto pr-1 scrollbar-thin space-y-3">
+                    {activeHistoryTab === 'timeline' && (
+                      <div className="space-y-4 py-1">
+                        {activeLead.timeline.length > 0 ? (
+                          activeLead.timeline.map((act) => {
+                            return (
+                              <div key={act.id} className="text-[10px] leading-relaxed border-b border-border/40 pb-2 last:border-0">
+                                <div className="font-bold text-foreground flex justify-between">
+                                  <span className="text-brand-purple">{act.title}</span>
+                                  <span className="text-muted-foreground font-semibold flex items-center gap-1 font-mono text-[9px]">
+                                    <Clock className="h-2.5 w-2.5 text-muted-foreground/60" />
+                                    {act.time}
+                                  </span>
+                                </div>
+                                <p className="text-muted-foreground mt-1 font-medium">{act.desc}</p>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-center text-muted-foreground py-3 text-[10px]">No timeline logs recorded.</p>
+                        )}
+                      </div>
+                    )}
+       
+                    {activeHistoryTab === 'emails' && (
+                      <div className="space-y-2.5">
+                        {activeLead.emails.length > 0 ? (
+                          activeLead.emails.map((e) => (
+                            <div key={e.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-brand-purple/20 transition duration-200 shadow-sm relative overflow-hidden group/item">
+                              <div className="absolute top-0 left-0 w-1 h-full bg-brand-purple/50" />
+                              <div className="flex justify-between items-center text-[10px] font-bold text-foreground">
+                                <div className="flex flex-col">
+                                  <span className="text-[9px] text-muted-foreground">To: {activeLead.email}</span>
+                                  <span className="text-brand-purple font-extrabold group-hover/item:underline mt-0.5">{e.subject}</span>
+                                </div>
+                                <span className="text-muted-foreground font-semibold flex items-center gap-1 font-mono text-[9px] shrink-0 self-start">
+                                  <Clock className="h-2.5 w-2.5 text-muted-foreground/60" />
+                                  {e.time}
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-center text-muted-foreground py-3 text-[10px]">No emails logged.</p>
+                        )}
+                      </div>
+                    )}
+       
+                    {activeHistoryTab === 'calls' && (
+                      <div className="space-y-2.5">
+                        {activeLead.calls.length > 0 ? (
+                          activeLead.calls.map((c) => {
+                            const isConnected = c.outcome?.toLowerCase().includes('connect');
+                            return (
+                              <div key={c.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-emerald-500/20 transition duration-200 shadow-sm relative overflow-hidden group/item">
+                                <div className={`absolute top-0 left-0 w-1 h-full ${isConnected ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                                <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1.5">
+                                  <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold uppercase tracking-wider ${
+                                    isConnected ? 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border border-rose-500/20'
+                                  }`}>
+                                    {c.outcome}
+                                  </span>
+                                  <span className="text-muted-foreground font-semibold flex items-center gap-1 font-mono text-[9px]">
+                                    <Clock className="h-2.5 w-2.5 text-muted-foreground/60" />
+                                    {c.time}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">{c.notes}</p>
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-center text-muted-foreground py-3 text-[10px]">No call notes logged.</p>
+                        )}
+                      </div>
+                    )}
+       
+                    {activeHistoryTab === 'meetings' && (
+                      <div className="space-y-2.5">
+                        {activeLead.meetings.length > 0 ? (
+                          activeLead.meetings.map((m) => (
+                            <div key={m.id} className="p-3 border border-border rounded-xl bg-card/60 backdrop-blur-sm hover:bg-secondary/20 hover:border-brand-blue/20 transition duration-200 shadow-sm relative overflow-hidden group/item">
+                              <div className="absolute top-0 left-0 w-1 h-full bg-brand-blue" />
+                              <div className="flex justify-between items-center text-[10px] font-bold text-foreground mb-1">
+                                <span className="text-brand-blue font-extrabold">{m.title}</span>
+                                <span className="px-1.5 py-0.5 bg-brand-purple/10 text-brand-purple border border-brand-purple/15 rounded text-[8.5px] font-extrabold">{m.date}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground font-semibold mb-1.5">
+                                <Clock className="h-2.5 w-2.5 text-brand-purple/70" />
+                                <span>{m.time}</span>
+                              </div>
+                              <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">{m.desc}</p>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-center text-muted-foreground py-3 text-[10px]">No meetings scheduled.</p>
+                        )}
+                      </div>
+                    )}
+       
+                    {activeHistoryTab === 'activity chart' && (
+                      <div className="space-y-3 p-1">
+                        <div className="p-3 border border-border rounded-xl bg-secondary">
+                          <h5 className="text-[9px] font-semibold text-foreground uppercase tracking-wider mb-2 flex items-center space-x-1">
+                            <TrendingUp className="h-3.5 w-3.5 text-brand-purple" />
+                            <span>Lead Progression & Score Trend</span>
+                          </h5>
+                          <div className="w-full h-32 relative">
+                            <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
+                              <line x1="0" y1="90" x2="300" y2="90" stroke="#cbd5e1" strokeWidth="1" strokeDasharray="3,3" />
+                              <line x1="0" y1="50" x2="300" y2="50" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
+                              <line x1="0" y1="10" x2="300" y2="10" stroke="#e2e8f0" strokeWidth="1" strokeDasharray="3,3" />
+                              
+                              <path
+                                d={getProgressPoints(activeLead.score).areaPath}
+                                fill="url(#purpleGradLeads)"
+                                opacity="0.15"
+                              />
+                              
+                              <path
+                                d={getProgressPoints(activeLead.score).path}
+                                fill="none"
+                                stroke="var(--brand-purple)"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                              />
+                              
+                              {getProgressPoints(activeLead.score).points.map((p, idx) => (
+                                <circle key={idx} cx={p.x} cy={p.y} r="4" fill="var(--brand-purple)" stroke="white" strokeWidth="1.5" />
+                              ))}
+       
+                              <defs>
+                                <linearGradient id="purpleGradLeads" x1="0%" y1="0%" x2="0%" y2="100%">
+                                  <stop offset="0%" stopColor="var(--brand-purple)" />
+                                  <stop offset="100%" stopColor="var(--brand-purple)" stopOpacity="0" />
+                                </linearGradient>
+                              </defs>
+                            </svg>
+                            
+                            <div className="flex justify-between text-[8px] font-semibold text-muted-foreground mt-1">
+                              <span>Created ({activeLead.timeline[activeLead.timeline.length - 1]?.time || '5d ago'})</span>
+                              <span>Midpoint</span>
+                              <span>Today (Score: {activeLead.score})</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
-      </div>
-      }
+      )}
 
       {/* Create Lead modal removed — replaced by full page create view */}
 

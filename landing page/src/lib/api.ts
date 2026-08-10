@@ -1,4 +1,4 @@
-const API_BASE = (import.meta.env.VITE_API_URL ?? "http://localhost:8000").replace(/\/+$/, "");
+const API_BASE = (import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000").trim().replace(/\/+$/, "");
 const TOKEN_KEY = "pulse-crm-token";
 
 export function getToken(): string | null {

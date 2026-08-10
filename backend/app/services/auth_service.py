@@ -7,6 +7,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
@@ -71,7 +72,7 @@ class AuthService:
         if not is_valid:
             raise WeakPasswordException(reason)
 
-        existing = await self.user_repo.get_by_email(payload.email.lower())
+        existing = await self.user_repo.get_by_email_any(payload.email.lower())
         if existing:
             raise DuplicateException("User", "email", payload.email)
 
@@ -85,15 +86,19 @@ class AuthService:
 
         admin_role = await self.role_repo.get_by_name("admin")
 
-        user = await self.user_repo.create(
-            email=payload.email.lower(),
-            full_name=payload.full_name.strip(),
-            hashed_password=hash_password(payload.password),
-            organization_id=organization.id,
-            is_verified=True,
-            last_login_ip=client_ip,
-            last_login_at=datetime.now(timezone.utc),
-        )
+        try:
+            user = await self.user_repo.create(
+                email=payload.email.lower(),
+                full_name=payload.full_name.strip(),
+                hashed_password=hash_password(payload.password),
+                organization_id=organization.id,
+                is_verified=True,
+                last_login_ip=client_ip,
+                last_login_at=datetime.now(timezone.utc),
+            )
+        except IntegrityError:
+            await self.db.rollback()
+            raise DuplicateException("User", "email", payload.email)
 
         if admin_role:
             await self.user_repo.assign_role(user, admin_role.id, user.id)
@@ -294,7 +299,7 @@ class AuthService:
             logger.error("Failed to verify Google token", exc_info=True)
             raise InvalidCredentialsException("Invalid Google token or verification failed.")
 
-        user = await self.user_repo.get_by_email(email)
+        user = await self.user_repo.get_by_email_any(email)
 
         if not user:
             # Auto-register user and create a default organization
@@ -313,16 +318,22 @@ class AuthService:
             import secrets
             random_pw = secrets.token_urlsafe(32)
 
-            user = await self.user_repo.create(
-                email=email,
-                full_name=full_name,
-                hashed_password=hash_password(random_pw),
-                organization_id=organization.id,
-                avatar_url=avatar_url,
-                is_verified=True,
-                last_login_ip=client_ip,
-                last_login_at=datetime.now(timezone.utc),
-            )
+            try:
+                user = await self.user_repo.create(
+                    email=email,
+                    full_name=full_name,
+                    hashed_password=hash_password(random_pw),
+                    organization_id=organization.id,
+                    avatar_url=avatar_url,
+                    is_verified=True,
+                    last_login_ip=client_ip,
+                    last_login_at=datetime.now(timezone.utc),
+                )
+            except IntegrityError:
+                await self.db.rollback()
+                user = await self.user_repo.get_by_email_any(email)
+                if not user:
+                    raise
 
             if admin_role:
                 await self.user_repo.assign_role(user, admin_role.id, user.id)

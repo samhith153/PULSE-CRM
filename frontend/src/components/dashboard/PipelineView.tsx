@@ -14,6 +14,10 @@ import {
   Building2,
   LayoutGrid,
   List,
+  CalendarDays,
+  Search,
+  SlidersHorizontal,
+  ChevronDown,
 } from 'lucide-react';
 
 interface Deal {
@@ -25,6 +29,7 @@ interface Deal {
   priority: 'High' | 'Medium' | 'Low';
   owner: string;
   closeDate: string;
+  createdAt?: string;
 }
 
 interface PipelineStage {
@@ -40,15 +45,31 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   const [stages, setStages] = useState<PipelineStage[]>([]);
 
   useEffect(() => {
-    let loaded = 0;
-    const checkDone = () => { loaded++; if (loaded >= 2) onLoaded?.(); };
-    getPipelineStages().then(data => {
-      const sorted = (data as any[]).sort((a: any, b: any) => a.sort_order - b.sort_order);
-      setStages(sorted);
-    }).catch(() => {}).finally(checkDone);
-    getDeals().then(data => {
-      setDeals(data as any);
-    }).catch(() => {}).finally(checkDone);
+    Promise.all([getPipelineStages(), getDeals()]).then(([stagesData, dealsData]) => {
+      const sortedStages = (Array.isArray(stagesData) ? stagesData : []).sort((a: any, b: any) => a.sort_order - b.sort_order);
+      setStages(sortedStages);
+
+      const mappedDeals = (Array.isArray(dealsData) ? dealsData : []).map(d => {
+        const stageObj = sortedStages.find(s => s.id === d.pipeline_stage_id);
+        const stageName = stageObj ? stageObj.name : 'New';
+        return {
+          id: d.id,
+          title: d.name || 'Untitled Deal',
+          company: d.company_name || 'Acme Corp',
+          value: d.amount ? Number(d.amount) : 0,
+          stage: stageName,
+          priority: (d.priority || 'Medium') as Deal['priority'],
+          owner: d.owner_name || 'Unassigned',
+          closeDate: d.expected_close_date || '',
+          createdAt: d.created_at || new Date().toISOString()
+        };
+      });
+      setDeals(mappedDeals);
+    }).catch(err => {
+      console.error("Failed to load pipeline data:", err);
+    }).finally(() => {
+      onLoaded?.();
+    });
   }, []);
 
   const stageNames = stages.map(s => s.name);
@@ -77,6 +98,14 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   });
 
   const [draggedId, setDraggedId] = useState<number | string | null>(null);
+  const [pendingStageChange, setPendingStageChange] = useState<{
+    dealId: number | string;
+    stageId: string;
+    stageName: string;
+  } | null>(null);
+
+  const [closeReason, setCloseReason] = useState('');
+  const [isSavingStage, setIsSavingStage] = useState(false);
 
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>(() => {
     if (typeof window !== 'undefined') {
@@ -88,6 +117,12 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const [sortField, setSortField] = useState<string>('title');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState('All');
+  const [ownerFilter, setOwnerFilter] = useState('All');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isOwnerDropdownOpen, setIsOwnerDropdownOpen] = useState(false);
 
   const toggleViewMode = (mode: 'kanban' | 'list') => {
     setViewMode(mode);
@@ -136,8 +171,28 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     }
   };
 
+  const uniqueOwners = React.useMemo(() => {
+    const owners = new Set<string>();
+    deals.forEach(d => { if (d.owner) owners.add(d.owner); });
+    return Array.from(owners).sort();
+  }, [deals]);
+
+  const filteredDeals = React.useMemo(() => {
+    return deals.filter(deal => {
+      const matchesSearch = 
+        deal.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        deal.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (deal.owner || '').toLowerCase().includes(searchQuery.toLowerCase());
+        
+      const matchesPriority = priorityFilter === 'All' || deal.priority === priorityFilter;
+      const matchesOwner = ownerFilter === 'All' || deal.owner === ownerFilter;
+      
+      return matchesSearch && matchesPriority && matchesOwner;
+    });
+  }, [deals, searchQuery, priorityFilter, ownerFilter]);
+
   const sortedDeals = React.useMemo(() => {
-    return [...deals].sort((a: any, b: any) => {
+    return [...filteredDeals].sort((a: any, b: any) => {
       let valA: any = (a[sortField] || '').toString().toLowerCase();
       let valB: any = (b[sortField] || '').toString().toLowerCase();
       if (sortField === 'value') {
@@ -148,14 +203,14 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [deals, sortField, sortOrder]);
+  }, [filteredDeals, sortField, sortOrder]);
 
-  const totalValue = deals.reduce((acc, d) => {
+  const totalValue = filteredDeals.reduce((acc, d) => {
     const stage = stages.find(s => s.name === d.stage);
     if (stage && stage.slug !== 'lost') return acc + d.value;
     return acc;
   }, 0);
-  const weightedForecast = deals.reduce((acc, d) => acc + (d.value * (stageProbabilities[d.stage] || 0)), 0);
+  const weightedForecast = filteredDeals.reduce((acc, d) => acc + (d.value * (stageProbabilities[d.stage] || 0)), 0);
 
   const getAISuggestion = (deal: Deal) => {
     if (deal.stage === 'Proposal' && deal.priority === 'High') {
@@ -178,14 +233,99 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     e.preventDefault();
   };
 
-  const handleDrop = (stageName: string) => {
+  const isClosingStage = (stageName: string) => {
+    const stage = stages.find(s => s.name === stageName);
+    const slug = String(stage?.slug || '').toLowerCase();
+
+    return (
+      slug === 'won' ||
+      slug === 'lost' ||
+      stageName.toLowerCase() === 'won' ||
+      stageName.toLowerCase() === 'lost'
+    );
+  };
+
+  const handleDrop = async (stageName: string) => {
     if (draggedId === null) return;
+
     const stageId = stageIdByName[stageName];
-    setDeals(deals.map(d => d.id === draggedId ? { ...d, stage: stageName } : d));
-    if (stageId) {
-      updateDealStage(draggedId, stageId).catch(err => console.warn("Failed to update deal stage", err));
+    if (!stageId) {
+      setDraggedId(null);
+      return;
     }
+
+    // Won/Lost requires a close reason from the backend.
+    if (isClosingStage(stageName)) {
+      setPendingStageChange({
+        dealId: draggedId,
+        stageId,
+        stageName,
+      });
+      setCloseReason('');
+      setDraggedId(null);
+      return;
+    }
+
+    // For normal stages, update backend first.
+    try {
+      await updateDealStage(draggedId, stageId);
+
+      setDeals(prev =>
+        prev.map(d =>
+          d.id === draggedId
+            ? { ...d, stage: stageName }
+            : d
+        )
+      );
+    } catch (err: any) {
+      console.error('Failed to update deal stage:', err);
+      toast.error(err?.message || 'Failed to update deal stage.');
+    }
+
     setDraggedId(null);
+  };
+
+  const confirmStageChange = async () => {
+    if (!pendingStageChange) return;
+
+    const reason = closeReason.trim();
+
+    if (!reason) {
+      toast.error('Please enter a close reason.');
+      return;
+    }
+
+    setIsSavingStage(true);
+
+    try {
+      await updateDealStage(
+        pendingStageChange.dealId,
+        pendingStageChange.stageId,
+        reason
+      );
+
+      setDeals(prev =>
+        prev.map(d =>
+          d.id === pendingStageChange.dealId
+            ? { ...d, stage: pendingStageChange.stageName }
+            : d
+        )
+      );
+
+      toast.success(
+        `Deal moved to ${pendingStageChange.stageName}.`
+      );
+
+      setPendingStageChange(null);
+      setCloseReason('');
+    } catch (err: any) {
+      console.error('Failed to update deal stage:', err);
+      toast.error(
+        err?.message || 'Failed to update deal stage.'
+      );
+    } finally {
+      setIsSavingStage(false);
+    }
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -207,7 +347,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
         stage: form.stage,
         priority: form.priority,
         owner: form.owner,
-        closeDate: form.closeDate
+        closeDate: form.closeDate,
+        createdAt: created?.created_at || new Date().toISOString()
       };
       setDeals([...deals, newDeal]);
     } catch (err) {
@@ -273,7 +414,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               <button
                 type="button"
                 onClick={() => toggleViewMode('kanban')}
-                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                className={`p-1.5 rounded-md transition cursor-pointer ${
                   viewMode === 'kanban'
                     ? 'bg-card text-brand-purple shadow-sm font-bold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -285,7 +426,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               <button
                 type="button"
                 onClick={() => toggleViewMode('list')}
-                className={`p-1.5 rounded-md transition-all cursor-pointer ${
+                className={`p-1.5 rounded-md transition cursor-pointer ${
                   viewMode === 'list'
                     ? 'bg-card text-brand-purple shadow-sm font-bold'
                     : 'text-muted-foreground hover:text-foreground'
@@ -315,6 +456,92 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               <Plus className="h-3.5 w-3.5" />
               <span>Create Deal</span>
             </button>
+          </div>
+        </div>
+
+        {/* Search, Sort, and Filters Toolbar */}
+        <div className="flex flex-col sm:flex-row gap-3 mt-4 pt-4 border-t border-border">
+          <div className="relative flex-1">
+            <span className="absolute inset-y-0 left-2.5 flex items-center pointer-events-none text-muted-foreground">
+              <Search className="h-3.5 w-3.5" />
+            </span>
+            <input 
+              type="text" 
+              placeholder="Search deals by title, company, owner..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-secondary/15"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Priority Filter */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setIsFilterDropdownOpen(!isFilterDropdownOpen); setIsOwnerDropdownOpen(false); }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  priorityFilter !== 'All' ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-card hover:bg-secondary text-foreground'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>{priorityFilter !== 'All' ? `Priority: ${priorityFilter}` : 'Filter Priority'}</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${isFilterDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isFilterDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[150px]">
+                  {['All', 'High', 'Medium', 'Low'].map(prio => (
+                    <button
+                      key={prio}
+                      onClick={() => { setPriorityFilter(prio); setIsFilterDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        priorityFilter === prio ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {prio === 'All' ? 'All Priorities' : prio}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Owner Filter */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => { setIsOwnerDropdownOpen(!isOwnerDropdownOpen); setIsFilterDropdownOpen(false); }}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                  ownerFilter !== 'All' ? 'bg-brand-purple/10 border-brand-purple/30 text-brand-purple' : 'border-border bg-card hover:bg-secondary text-foreground'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>{ownerFilter !== 'All' ? `Owner: ${ownerFilter}` : 'Filter Owner'}</span>
+                <ChevronDown className={`h-3 w-3 transition-transform ${isOwnerDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isOwnerDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1.5 z-30 bg-card border border-border rounded-xl shadow-lg p-1.5 min-w-[180px] max-h-60 overflow-y-auto">
+                  <button
+                    onClick={() => { setOwnerFilter('All'); setIsOwnerDropdownOpen(false); }}
+                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer mb-0.5 ${
+                      ownerFilter === 'All' ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                    }`}
+                  >
+                    All Owners
+                  </button>
+                  {uniqueOwners.map(own => (
+                    <button
+                      key={own}
+                      onClick={() => { setOwnerFilter(own); setIsOwnerDropdownOpen(false); }}
+                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                        ownerFilter === own ? 'bg-brand-purple/10 text-brand-purple font-bold' : 'text-foreground hover:bg-secondary'
+                      }`}
+                    >
+                      {own}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -382,7 +609,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                     return (
                       <tr 
                         key={deal.id}
-                        className={`hover:bg-secondary/20 transition-all border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
+                        className={`hover:bg-secondary/20 transition border-b border-border/40 ${isRowSelected ? 'bg-brand-blue/[0.02]' : ''}`}
                       >
                         <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
                           <input 
@@ -455,9 +682,9 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
         </div>
       ) : (
-        <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-brand-border-purple/20 scrollbar-track-transparent">
+        <div className="flex space-x-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
           {stages.map((stage) => {
-            const stageDeals = deals.filter(d => d.stage === stage.name);
+            const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
             const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
 
             return (
@@ -483,7 +710,20 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                     key={deal.id}
                     draggable
                     onDragStart={() => handleDragStart(deal.id)}
-                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-200 cursor-grab active:cursor-grabbing"
+                    onClick={() => {
+                      setSelectedDeal(deal);
+                      setForm({
+                        title: deal.title,
+                        company: deal.company,
+                        value: deal.value,
+                        stage: deal.stage,
+                        priority: deal.priority,
+                        owner: deal.owner,
+                        closeDate: deal.closeDate
+                      });
+                      setIsEditModalOpen(true);
+                    }}
+                    className="bg-card border border-border rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
                   >
                     <div className="flex justify-between items-start gap-1">
                       <h4 className="text-[11px] font-semibold text-foreground leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
@@ -498,12 +738,20 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       {deal.company}
                     </div>
 
+                    {deal.createdAt && (
+                      <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">
+                        <CalendarDays className="h-2.5 w-2.5 text-muted-foreground/70" />
+                        <span>Created: {new Date(deal.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                      </div>
+                    )}
+
                     <div className="mt-3.5 pt-2.5 border-t border-border flex justify-between items-center">
                       <span className="text-[11px] font-semibold text-foreground tabular-nums">₹{deal.value.toLocaleString()}</span>
                       
                       <div className="flex space-x-1">
                         <button 
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setSelectedDeal(deal);
                             setForm({
                               title: deal.title,
@@ -522,7 +770,10 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                           <Edit className="h-3 w-3" />
                         </button>
                         <button 
-                          onClick={() => handleDelete(deal.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(deal.id);
+                          }}
                           className="p-0.5 text-muted-foreground hover:text-destructive rounded"
                            title="Delete Deal (cascades to contact and company if no other active deals)"
                         >
@@ -535,13 +786,41 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       <span>Shift Stage:</span>
                       <select 
                         value={deal.stage}
+                        onClick={(e) => e.stopPropagation()}
                         onChange={(e) => {
+                          e.stopPropagation();
+
                           const newStage = e.target.value;
                           const stageId = stageIdByName[newStage];
-                          setDeals(deals.map(d => d.id === deal.id ? { ...d, stage: newStage } : d));
-                          if (stageId) {
-                            updateDealStage(deal.id, stageId).catch(() => {});
+
+                          if (!stageId) return;
+
+                          if (isClosingStage(newStage)) {
+                            setPendingStageChange({
+                              dealId: deal.id,
+                              stageId,
+                              stageName: newStage,
+                            });
+                            setCloseReason('');
+                            return;
                           }
+
+                          updateDealStage(deal.id, stageId)
+                            .then(() => {
+                              setDeals(prev =>
+                                prev.map(d =>
+                                  d.id === deal.id
+                                    ? { ...d, stage: newStage }
+                                    : d
+                                )
+                              );
+                            })
+                            .catch((err: any) => {
+                              console.error('Failed to update deal stage:', err);
+                              toast.error(
+                                err?.message || 'Failed to update deal stage.'
+                              );
+                            });
                         }}
                         className="bg-transparent text-brand-purple focus:outline-none cursor-pointer"
                       >
@@ -673,6 +952,91 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
         </div>
       )}
+      {pendingStageChange && (
+  <div
+    className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4 animate-in fade-in duration-200"
+    onClick={() => {
+      if (!isSavingStage) {
+        setPendingStageChange(null);
+        setCloseReason('');
+      }
+    }}
+  >
+    <div
+      className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
+        <div>
+          <h3 className="font-semibold text-foreground text-sm">
+            Close Deal
+          </h3>
+
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Moving this deal to {pendingStageChange.stageName}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          disabled={isSavingStage}
+          onClick={() => {
+            setPendingStageChange(null);
+            setCloseReason('');
+          }}
+          className="text-muted-foreground hover:text-foreground p-1 cursor-pointer disabled:opacity-50"
+        >
+          <X className="h-4.5 w-4.5" />
+        </button>
+      </div>
+
+      <div className="p-5 space-y-4">
+        <div>
+          <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+            Close Reason *
+          </label>
+
+          <textarea
+            autoFocus
+            required
+            value={closeReason}
+            onChange={e => setCloseReason(e.target.value)}
+            placeholder={
+              pendingStageChange.stageName.toLowerCase() === 'won'
+                ? 'e.g. Customer signed the agreement'
+                : 'e.g. Customer selected another vendor'
+            }
+            className="w-full min-h-[90px] px-3 py-2 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/20 bg-background resize-none"
+            disabled={isSavingStage}
+          />
+        </div>
+
+        <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+          <button
+            type="button"
+            disabled={isSavingStage}
+            onClick={() => {
+              setPendingStageChange(null);
+              setCloseReason('');
+            }}
+            className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer disabled:opacity-50"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            disabled={isSavingStage || !closeReason.trim()}
+            onClick={confirmStageChange}
+            className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50"
+          >
+            {isSavingStage ? 'Saving...' : `Move to ${pendingStageChange.stageName}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

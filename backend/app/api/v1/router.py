@@ -1,4 +1,4 @@
-"""
+﻿"""
 API v1 Router
 Aggregates all domain routers under /api/v1.
 """
@@ -9,9 +9,7 @@ from typing import Any, Callable, Sequence
 from fastapi import APIRouter
 from starlette.routing import Router as StarletteRouter
 
-# FastAPI 0.115.x expects router startup/shutdown attributes, while the
-# installed Starlette router constructor does not accept those keywords.
-# This compatibility shim keeps router imports and include_router() working.
+# FastAPI / Starlette compatibility shim
 if not getattr(StarletteRouter.__init__, "__pulse_compat__", False):
     _starlette_router_init = StarletteRouter.__init__
 
@@ -33,103 +31,104 @@ if not getattr(StarletteRouter.__init__, "__pulse_compat__", False):
             redirect_slashes=redirect_slashes,
             default=default,
             lifespan=lifespan,
-            
+            middleware=middleware,
             **kwargs,
         )
-        # Recreate the older FastAPI router attributes that include_router reads.
         self.on_startup = list(on_startup or [])
         self.on_shutdown = list(on_shutdown or [])
 
     _compat_router_init.__pulse_compat__ = True  # type: ignore[attr-defined]
     StarletteRouter.__init__ = _compat_router_init  # type: ignore[assignment]
 
-# Keep APIRouter instances compatible with older include_router expectations.
 if not hasattr(APIRouter, "on_startup"):
     APIRouter.on_startup = []  # type: ignore[attr-defined]
 if not hasattr(APIRouter, "on_shutdown"):
     APIRouter.on_shutdown = []  # type: ignore[attr-defined]
 
-from app.api.v1.activities import router as activities_router
-from app.api.v1.ai import router as ai_router
-from app.api.v1.auth import router as auth_router
-from app.api.v1.activity import router as activity_router
-from app.api.v1.companies import router as companies_router
-from app.api.v1.contacts import router as contacts_router
-from app.api.v1.dashboard import router as dashboard_router
-from app.api.v1.deals import router as deals_router
-from app.api.v1.documents import router as documents_router
-from app.api.v1.emails import router as emails_router
-from app.api.v1.events import router as events_router
-from app.api.v1.webhooks import router as webhooks_router
-from app.api.v1.uploads import router as uploads_router
-from app.api.v1.gmail import router as gmail_router
-from app.api.v1.health import router as health_router
-from app.api.v1.leads import router as leads_router
-from app.api.v1.roles import router as roles_router
-from app.api.v1.lead_scores import router as lead_scores_router
-from app.api.v1.organizations import router as orgs_router
-from app.api.v1.pipeline import router as pipeline_router
+# ── Router imports ────────────────────────────────────────────────────────────
+from app.api.v1.activities       import router as activities_router
+from app.api.v1.activity         import router as activity_router
+from app.api.v1.ai               import router as ai_router
+from app.api.v1.ai_insights      import router as ai_insights_router
+from app.api.v1.ai_insights      import all_roles_router as ai_insights_all_roles_router
+from app.api.v1.assistant        import router as assistant_router
+from app.api.v1.auth             import router as auth_router
+from app.api.v1.brevo            import router as brevo_router
+from app.api.v1.calendar         import router as calendar_router
+from app.api.v1.companies        import router as companies_router
+from app.api.v1.contacts         import router as contacts_router
+from app.api.v1.crm_activities   import router as crm_activities_router
+from app.api.v1.dashboard        import router as dashboard_router
+from app.api.v1.deals            import router as deals_router
+from app.api.v1.documents        import router as documents_router
+from app.api.v1.emails           import router as emails_router
+from app.api.v1.events           import router as events_router
+from app.api.v1.feature_vectors  import router as feature_vectors_router
+from app.api.v1.gmail            import router as gmail_router
+from app.api.v1.health           import router as health_router
+from app.api.v1.lead_scores      import router as lead_scores_router
+from app.api.v1.leads            import router as leads_router
+from app.api.v1.meetings         import router as meetings_router
+from app.api.v1.notifications    import router as notifications_router
+from app.api.v1.organizations    import router as orgs_router
+from app.api.v1.pipeline         import router as pipeline_router
 from app.api.v1.recommendation_features import router as recommendation_features_router
-from app.api.v1.feature_vectors import router as feature_vectors_router
-from app.api.v1.timeline import router as timeline_router
-from app.api.v1.users import router as users_router
-from app.api.v1.smtp import router as smtp_router
+from app.api.v1.roles            import router as roles_router
+from app.api.v1.smtp             import router as smtp_router
+from app.api.v1.stream           import router as stream_router
+from app.api.v1.timeline         import router as timeline_router
+from app.api.v1.uploads          import router as uploads_router
+from app.api.v1.users            import router as users_router
+from app.api.v1.webhooks         import router as webhooks_router
+from app.api.v1.workflow import router as workflow_router
+from app.api.v1.search import router as search_router
+from app.api.v1.reports import router as reports_router
 
-from app.api.v1.brevo import router as brevo_router
-from app.api.v1.calendar import router as calendar_router
-from app.api.v1.meetings import router as meetings_router
-from app.api.v1.tasks import router as tasks_router
-from app.api.v1.ai_insights import router as ai_insights_router
-from app.api.v1.notifications import router as notifications_router
-from app.api.v1.documents import router as documents_router
-from app.api.v1.assistant import router as assistant_router
-from app.api.v1.stream import router as stream_router
-
+# ── Assemble ──────────────────────────────────────────────────────────────────
 api_router = APIRouter()
 
-api_router.include_router(health_router, prefix="/health", tags=["Health"])
-api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
-api_router.include_router(users_router, prefix="/users", tags=["Users"])
-api_router.include_router(orgs_router, prefix="/organizations", tags=["Organizations"])
-api_router.include_router(companies_router, prefix="/companies", tags=["Companies"])
-api_router.include_router(contacts_router, prefix="/contacts", tags=["Contacts"])
-api_router.include_router(leads_router, prefix="/leads", tags=["Leads"])
-api_router.include_router(deals_router, prefix="/deals", tags=["Deals"])
-api_router.include_router(documents_router, prefix="/documents", tags=["Documents"])
-api_router.include_router(activity_router, prefix="/activity", tags=["Activity"])
-api_router.include_router(activities_router, prefix="/activities", tags=["Activities"])
-api_router.include_router(timeline_router, prefix="/timeline", tags=["Timeline"])
-api_router.include_router(pipeline_router, prefix="/pipeline", tags=["Pipeline"])
-api_router.include_router(gmail_router, prefix="/gmail", tags=["Gmail"])
-api_router.include_router(smtp_router, prefix="/smtp", tags=["SMTP"])
-api_router.include_router(emails_router, prefix="/emails", tags=["Emails"])
-api_router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
-api_router.include_router(ai_router, prefix="/ai", tags=["AI"])
+api_router.include_router(health_router,               prefix="/health",                    tags=["Health"])
+api_router.include_router(auth_router,                 prefix="/auth",                      tags=["Authentication"])
+api_router.include_router(users_router,                prefix="/users",                     tags=["Users"])
+api_router.include_router(roles_router,                prefix="/roles",                     tags=["Roles"])
+api_router.include_router(orgs_router,                 prefix="/organizations",             tags=["Organizations"])
+api_router.include_router(companies_router,            prefix="/companies",                 tags=["Companies"])
+api_router.include_router(contacts_router,             prefix="/contacts",                  tags=["Contacts"])
+api_router.include_router(leads_router,                prefix="/leads",                     tags=["Leads"])
+api_router.include_router(deals_router,                prefix="/deals",                     tags=["Deals"])
+api_router.include_router(documents_router,            prefix="/documents",                 tags=["Documents"])
+api_router.include_router(activity_router,             prefix="/activity",                  tags=["Activity"])
+api_router.include_router(activities_router,           prefix="/activities",                tags=["Activities"])
+api_router.include_router(crm_activities_router,       prefix="/crm-activities",            tags=["CRM Activities"])
+api_router.include_router(timeline_router,             prefix="/timeline",                  tags=["Timeline"])
+api_router.include_router(pipeline_router,             prefix="/pipeline",                  tags=["Pipeline"])
+api_router.include_router(gmail_router,                prefix="/gmail",                     tags=["Gmail"])
+api_router.include_router(smtp_router,                 prefix="/smtp",                      tags=["SMTP"])
+api_router.include_router(emails_router,               prefix="/emails",                    tags=["Emails"])
+api_router.include_router(meetings_router,             prefix="/meetings",                  tags=["Meetings"])
+api_router.include_router(calendar_router,             prefix="/calendar",                  tags=["Calendar"])
+api_router.include_router(dashboard_router,            prefix="/dashboard",                 tags=["Dashboard"])
+api_router.include_router(ai_router,                   prefix="/ai",                        tags=["AI"])
+api_router.include_router(ai_insights_router,          prefix="/ai-insights",               tags=["AI Insights"])
+api_router.include_router(ai_insights_all_roles_router,prefix="/ai-insights",               tags=["AI Insights"])
+api_router.include_router(assistant_router,            prefix="/assistant",                 tags=["Assistant"])
+api_router.include_router(lead_scores_router,          prefix="/lead-scores",               tags=["Lead Scores"])
+api_router.include_router(recommendation_features_router, prefix="/recommendation-features", tags=["Recommendation Features"])
+api_router.include_router(feature_vectors_router,      prefix="/feature-vectors",           tags=["Feature Vectors"])
+api_router.include_router(notifications_router,        prefix="/notifications",             tags=["Notifications"])
+api_router.include_router(events_router,               prefix="/events",                    tags=["Events"])
+api_router.include_router(webhooks_router,             prefix="/webhooks",                  tags=["Webhooks"])
+api_router.include_router(uploads_router,              prefix="/uploads",                   tags=["Uploads"])
+api_router.include_router(brevo_router,                prefix="/brevo",                     tags=["Brevo"])
+api_router.include_router(stream_router,               prefix="/stream",                    tags=["Real-time Stream"])
+api_router.include_router(search_router,               prefix="/search",                    tags=["Search"])
 api_router.include_router(
-    lead_scores_router,
-    prefix="/lead-scores",
-    tags=["Lead Scores"],
+    workflow_router,
+    prefix="/workflows",
+    tags=["Workflows"],
 )
 api_router.include_router(
-    recommendation_features_router,
-    prefix="/recommendation-features",
-    tags=["Recommendation Features"],
+    reports_router,
+    prefix="/reports",
+    tags=["Reports"],
 )
-api_router.include_router(
-    feature_vectors_router,
-    prefix="/feature-vectors",
-    tags=["Feature Vectors"],
-)
-api_router.include_router(events_router, prefix="/events", tags=["Events"])
-api_router.include_router(webhooks_router, prefix="/webhooks", tags=["Webhooks"])
-api_router.include_router(uploads_router, prefix="/uploads", tags=["Uploads"])
-api_router.include_router(
-    brevo_router,
-    prefix="/brevo",
-    tags=["Brevo"],
-)
-
-
-api_router.include_router(documents_router, prefix="/documents", tags=["documents"])
-api_router.include_router(assistant_router, prefix="/assistant", tags=["Assistant"])
-api_router.include_router(stream_router, prefix="/stream", tags=["Real-time Stream"])

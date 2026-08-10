@@ -138,7 +138,7 @@ def build_lead_features(lead, now=None):
         "owner_user_id": lead.get("owner_user_id"),
         "user_id": lead.get("user_id"),
         "rep_id": lead.get("rep_id"),
-        "rep_workload": lead.get("rep_workload"),
+        "rep_workload": lead.get("rep_workload") if lead.get("rep_workload") is not None else 0.5,
         "company_name": lead.get("company_name"),
         "tags": lead.get("tags"),
         "deal_value": lead.get("deal_value"),

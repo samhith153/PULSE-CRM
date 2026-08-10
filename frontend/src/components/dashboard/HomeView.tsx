@@ -42,6 +42,7 @@ import {
 import { getLeads, getDeals, getActivities, formatINR } from '@/utils/api';
 import QuotaPaceCard from './QuotaPaceCard';
 import DealsAtRiskCard from './DealsAtRiskCard';
+import PriorityQueueCard from './PriorityQueueCard';
 import FunnelChartCard from './FunnelChartCard';
 import QuickCaptureCard from './QuickCaptureCard';
 import ActivitySummaryCard from './ActivitySummaryCard';
@@ -480,6 +481,31 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     return items.slice(0, 5);
   }, [tasks, leadsListState]);
 
+  const todayPriorityItems = useMemo(() => {
+    const backendQueue = dashboardData?.priority_queue;
+    if (backendQueue && backendQueue.length > 0) {
+      return backendQueue.map((item) => ({
+        id: `lead-${item.lead_id}`,
+        leadId: item.lead_id,
+        name: `${item.first_name} ${item.last_name}`.trim() || 'Lead',
+        type: 'lead' as const,
+        company: item.company_name ?? undefined,
+        score: item.score,
+        tier: item.tier,
+        reason: item.top_reasons?.[0] ?? item.top_reason ?? undefined,
+      }));
+    }
+    return priorityItems.map((item) => ({
+      id: item.id,
+      leadId: item.type === 'lead' ? item.id.replace(/^lead-/, '') : undefined,
+      name: item.name,
+      type: item.type,
+      company: item.type === 'lead' ? (item.detail.split(' • ')[0] ?? undefined) : undefined,
+      score: item.score,
+      reason: item.detail,
+    }));
+  }, [dashboardData, priorityItems]);
+
   const riskDealsCalculated = useMemo(() => {
     const openDeals = deals.filter(d => d.status !== 'Won' && d.status !== 'Lost' && d.status !== 'Closed');
     const items = openDeals.map(d => {
@@ -494,15 +520,33 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
       }
       return {
         id: d.id,
-        name: d.name,
-        company: d.company_name || '—',
-        value: d.amount || 0,
-        owner: d.owner_name || 'Unassigned',
+        name: d.title || d.name,
+        company: d.company_name || d.company || '—',
+        value: Number(d.amount || d.value || 0),
+        owner: d.owner_name || d.owner || 'Unassigned',
         reason: reason
       };
     });
     return items.slice(0, 4);
   }, [deals]);
+
+  const riskDeals = useMemo(() => {
+    const backendRisk = dashboardData?.deals_at_risk;
+    if (backendRisk && backendRisk.length > 0) {
+      return backendRisk.map((deal) => ({
+        deal_id: deal.deal_id,
+        deal_name: deal.deal_title,
+        deal_value: Number(deal.value ?? 0),
+        risk_reason: deal.risk_reason,
+        days_since_last_activity: deal.stalled_days,
+        sentiment: deal.sentiment,
+        probability: deal.probability,
+        company: deal.company_name ?? null,
+        owner: deal.owner_name ?? null,
+      }));
+    }
+    return riskDealsCalculated;
+  }, [dashboardData, riskDealsCalculated]);
 
   const handleToggleTask = (id: number) => {
     const updated = tasks.map(t => {
@@ -545,7 +589,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-[2.25rem] capitalize flex items-center gap-2">
             <span>Welcome,</span>
-            <span className="text-brand-purple">{userName}</span>
+            <span className="text-brand">{userName}</span>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground font-medium">
             Here's a snapshot of your agenda and performance metrics.
@@ -556,7 +600,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
             onClick={() => setIsEditMode(!isEditMode)}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer select-none ${
               isEditMode
-                ? 'bg-brand-purple text-primary-foreground border-transparent shadow-sm'
+                ? 'bg-brand text-primary-foreground border-transparent shadow-sm'
                 : 'bg-secondary/35 hover:bg-secondary border-border text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -564,7 +608,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
             <span>{isEditMode ? 'Save Layout' : 'Customize Layout'}</span>
           </button>
           <div className="flex items-center gap-2 bg-secondary/35 border border-border px-3 py-1.5 rounded-full text-xs font-semibold text-muted-foreground select-none">
-            <Calendar size={13} className="text-brand-purple" />
+            <Calendar size={13} className="text-brand" />
             <span className="capitalize">{userName}'s Home</span>
           </div>
         </div>
@@ -633,86 +677,102 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
               if (itemId === 'stats') {
                 // Render KPI cards row
                 cardContent = (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-4)]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                      { 
-                        title: 'My Open Deals', 
-                        value: openDealsCount, 
-                        icon: Layers, 
-                        color: 'text-brand-blue bg-brand-blue/10 border-brand-blue/20',
-                        emptyLabel: 'No active deals'
+                      {
+                        title: 'My Open Deals',
+                        value: openDealsCount,
+                        sub: 'in pipeline',
+                        icon: Layers,
+                        highlight: true,
+                        emptyLabel: 'No active deals',
+                        iconColor: 'text-white',
+                        iconBg: 'bg-white/20',
                       },
-                      { 
-                        title: 'My Untouched Deals', 
-                        value: untouchedDealsCount, 
-                        icon: AlertCircle, 
-                        color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-                        emptyLabel: 'All deals touched'
+                      {
+                        title: 'My Untouched Deals',
+                        value: untouchedDealsCount,
+                        sub: 'Needs follow-up today',
+                        icon: AlertCircle,
+                        highlight: false,
+                        emptyLabel: 'All deals touched',
+                        iconColor: 'text-amber-500',
+                        iconBg: 'bg-amber-50 dark:bg-amber-500/10',
                       },
-                      { 
-                        title: 'My Calls Today', 
-                        value: callsTodayCount, 
-                        icon: PhoneCall, 
-                        color: 'text-brand-cyan bg-brand-cyan/10 border-brand-cyan/20',
-                        emptyLabel: 'No calls logged'
+                      {
+                        title: 'My Calls Today',
+                        value: callsTodayCount,
+                        sub: 'scheduled & logged',
+                        icon: PhoneCall,
+                        highlight: false,
+                        emptyLabel: 'No calls logged',
+                        iconColor: 'text-emerald-500',
+                        iconBg: 'bg-emerald-50 dark:bg-emerald-500/10',
                       },
-                      { 
-                        title: 'My Leads', 
-                        value: leadsCount, 
-                        icon: Users, 
-                        color: 'text-brand-purple bg-brand-purple/10 border-brand-purple/20',
-                        emptyLabel: 'No leads assigned'
+                      {
+                        title: 'My Leads',
+                        value: leadsCount,
+                        sub: 'new this week',
+                        icon: Users,
+                        highlight: false,
+                        emptyLabel: 'No leads assigned',
+                        iconColor: 'text-brand',
+                        iconBg: 'bg-brand-pale',
                       },
                     ].map((card, i) => {
                       const Icon = card.icon;
-                      
-                      // Shape definition mapping for Part 2 requirements
-                      let shapeClass = 'rounded-xl';
-                      let clipPath = undefined;
-                      let rotateWrapper = false;
-
-                      if (card.title === 'My Leads') {
-                        shapeClass = 'rounded-full'; // perfect circle
-                      } else if (card.title === 'My Open Deals') {
-                        shapeClass = 'rounded-[10px]'; // squircle (~30% radius)
-                      } else if (card.title === 'My Untouched Deals') {
-                        shapeClass = ''; // custom hexagon clip-path
-                        clipPath = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
-                      } else if (card.title === 'My Calls Today') {
-                        shapeClass = 'rounded-md'; // diamond (rotate 45deg)
-                        rotateWrapper = true;
-                      }
-
                       return (
-                        <div 
-                          key={i} 
-                          className="bg-card border border-border rounded-[8px] p-3 hover:shadow-nav hover:-translate-y-0.5 transition-all duration-300 flex items-center justify-between h-20 select-none"
+                        <div
+                          key={i}
+                          className={`relative rounded-2xl p-5 flex flex-col gap-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${
+                            card.highlight
+                              ? 'bg-brand text-white shadow-[0_8px_24px_-8px_var(--brand)]'
+                              : 'bg-card border border-border text-foreground shadow-sm hover:shadow-md'
+                          }`}
                         >
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
+                          {/* decorative circle on highlight card */}
+                          {card.highlight && (
+                            <span className="pointer-events-none absolute -right-8 -top-8 size-36 rounded-full bg-white/10" />
+                          )}
+
+                          {/* top row: label + icon */}
+                          <div className="flex items-start justify-between gap-3">
+                            <p className={`text-[10px] font-bold uppercase tracking-widest leading-none ${
+                              card.highlight ? 'text-white/75' : 'text-muted-foreground'
+                            }`}>
                               {card.title}
                             </p>
-                            <div className="mt-2.5 flex items-baseline">
-                              {statsLoading ? (
-                                <span className="text-xl font-extrabold text-muted-foreground/45 animate-pulse">...</span>
-                              ) : card.value === null || card.value === 0 ? (
-                                <span className="text-[10px] font-semibold text-muted-foreground/75 bg-secondary/40 px-2 py-0.5 rounded border border-border/80 inline-block select-none">
-                                  {card.emptyLabel}
-                                </span>
-                              ) : (
-                                <h3 className="text-2xl font-black text-foreground tracking-tight tabular-nums leading-none">
-                                  {card.value}
-                                </h3>
-                              )}
-                            </div>
+                            <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${card.iconBg}`}>
+                              <Icon size={16} strokeWidth={2} className={card.iconColor} />
+                            </span>
                           </div>
 
-                          {/* Nested badge design securely inside the card container */}
-                          <div 
-                            style={{ clipPath }}
-                            className={`h-9 w-9 flex items-center justify-center border shrink-0 shadow-sm transition-transform duration-300 ${card.color} ${shapeClass} ${rotateWrapper ? 'rotate-45' : ''}`}
-                          >
-                            <Icon size={15} strokeWidth={2.25} className={rotateWrapper ? '-rotate-45' : ''} />
+                          {/* value */}
+                          <div>
+                            {statsLoading ? (
+                              <div className={`h-8 w-16 rounded-lg animate-pulse ${card.highlight ? 'bg-white/20' : 'bg-secondary'}`} />
+                            ) : card.value === null || card.value === 0 ? (
+                              <span className={`inline-block text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${
+                                card.highlight
+                                  ? 'bg-white/15 border-white/25 text-white/80'
+                                  : 'bg-secondary border-border text-muted-foreground'
+                              }`}>
+                                {card.emptyLabel}
+                              </span>
+                            ) : (
+                              <div>
+                                <h3 className={`text-3xl font-extrabold tracking-tight tabular-nums leading-none ${
+                                  card.highlight ? 'text-white' : 'text-foreground'
+                                }`}>
+                                  {card.value}
+                                </h3>
+                                <p className={`mt-1.5 text-xs leading-snug ${
+                                  card.highlight ? 'text-white/65' : 'text-muted-foreground'
+                                }`}>
+                                  {card.sub}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
@@ -996,46 +1056,26 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                   </div>
                 );
               } else if (itemId === 'priorityQueue') {
-                // Priority Queue widget
+                // Today's Priority widget
                 cardContent = (
-                  <div className="bg-card border border-border rounded-xl p-[var(--space-4)] flex flex-col justify-between h-[360px]">
-                    <div>
-                      <h3 className="font-bold text-foreground text-sm flex items-center gap-1.5 pb-[var(--space-2)] border-b border-border/80 mb-[var(--space-3)] select-none">
-                        <Layers className="h-4.5 w-4.5 text-brand-purple" />
-                        <span>Priority Queue</span>
-                      </h3>
-                      <div className="space-y-[var(--space-2)] overflow-y-auto max-h-[260px] custom-scrollbar pr-1">
-                        {priorityItems.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-10 font-semibold">No high priority items.</p>
-                        ) : (
-                          priorityItems.map(item => (
-                            <div key={item.id} className="p-[var(--space-2)] rounded-xl border border-border/60 bg-secondary/10 hover:bg-secondary/20 transition-all flex items-start justify-between gap-[var(--space-2)]">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`text-[8px] font-extrabold uppercase px-1.5 py-0.5 rounded ${
-                                    item.type === 'task' ? 'bg-brand-purple/10 text-brand-purple' : 'bg-brand-cyan/10 text-brand-cyan'
-                                  }`}>
-                                    {item.type}
-                                  </span>
-                                  <span className="text-[10px] font-bold text-foreground truncate block max-w-[140px]">{item.name}</span>
-                                </div>
-                                <p className="text-[9px] text-muted-foreground mt-1 font-semibold">{item.detail}</p>
-                              </div>
-                              {item.score !== undefined && (
-                                <span className="text-[9px] font-extrabold bg-brand-cyan/10 text-brand-cyan px-1.5 py-0.5 rounded-full select-none shrink-0">
-                                  {item.score} Score
-                                </span>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <PriorityQueueCard
+                    items={todayPriorityItems}
+                    onOpenLead={(leadId) => {
+                      if (leadId) {
+                        try {
+                          localStorage.setItem('pulse-selected-lead-id', String(leadId));
+                        } catch (e) {
+                          console.error('Failed to persist selected lead', e);
+                        }
+                      }
+                      onTabChange('leads');
+                    }}
+                    onViewAll={() => onTabChange('leads')}
+                  />
                 );
               } else if (itemId === 'atRisk') {
                 // Deals at risk widget
-                cardContent = <DealsAtRiskCard deals={riskDealsCalculated} />;
+                cardContent = <DealsAtRiskCard deals={riskDeals} />;
               } else if (itemId === 'activitySummary') {
                 // Render Today's Work summary card
                 cardContent = <ActivitySummaryCard onTabChange={onTabChange} />;

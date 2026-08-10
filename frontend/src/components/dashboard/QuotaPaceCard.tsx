@@ -16,6 +16,8 @@ import {
   ChevronUp,
   Info
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useReveal, useCountUp } from '@/hooks/use-reveal';
 
 interface QuotaPaceCardProps {
   deals?: any[];
@@ -23,8 +25,10 @@ interface QuotaPaceCardProps {
   className?: string;
 }
 
+/* ─── Design Kit: Quota Pace Component ─────────────────────────────── */
 export default function QuotaPaceCard({ deals = [], customTarget = 5000000, className = "" }: QuotaPaceCardProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const { ref, inView } = useReveal<HTMLDivElement>();
 
   const quota = useMemo(() => {
     const wonDeals = deals.filter(
@@ -38,62 +42,23 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
     const gap = Math.max(0, target - achieved);
     const avgDealSize = wonDeals.length > 0 ? Math.round(achieved / wonDeals.length) : 0;
 
+    // Design Kit colors - On Pace uses mint, At Risk uses amber, Behind uses rose
     let status: 'success' | 'warning' | 'danger';
     let statusText: string;
     let Icon: typeof CheckCircle2;
-    let barGradient: string;
-    let glowColor: string;
-    let badgeBg: string;
-    let badgeBorder: string;
-    let badgeText: string;
-    let cardAccentClass: string;
-    let iconBgClass: string;
-    let iconTextClass: string;
-    let trackColor: string;
-    let themeColorHex: string;
 
     if (paceRatio >= 90) {
       status = 'success';
-      statusText = `On Track • ${percentage}%`;
+      statusText = `On Pace • ${percentage}%`;
       Icon = CheckCircle2;
-      barGradient = 'linear-gradient(90deg, #1e40af 0%, #2563eb 60%, #60a5fa 100%)';
-      glowColor = 'rgba(37,99,235,0.45)';
-      badgeBg = 'rgba(37,99,235,0.1)';
-      badgeBorder = '#2563eb';
-      badgeText = '#2563eb';
-      cardAccentClass = 'border-blue-500/30 dark:border-blue-500/20 hover:border-blue-500/50';
-      iconBgClass = 'bg-blue-500/12';
-      iconTextClass = 'text-blue-600 dark:text-blue-400';
-      trackColor = 'rgba(37,99,235,0.12)';
-      themeColorHex = '#2563eb';
     } else if (paceRatio >= 70) {
       status = 'warning';
       statusText = `At Risk • ${percentage}%`;
       Icon = AlertTriangle;
-      barGradient = 'linear-gradient(90deg, #2563eb 0%, #3b82f6 60%, #93c5fd 100%)';
-      glowColor = 'rgba(59,130,246,0.45)';
-      badgeBg = 'rgba(59,130,246,0.1)';
-      badgeBorder = '#3b82f6';
-      badgeText = '#3b82f6';
-      cardAccentClass = 'border-blue-400/30 dark:border-blue-400/20 hover:border-blue-400/50';
-      iconBgClass = 'bg-blue-500/12';
-      iconTextClass = 'text-blue-600 dark:text-blue-400';
-      trackColor = 'rgba(59,130,246,0.12)';
-      themeColorHex = '#3b82f6';
     } else {
       status = 'danger';
       statusText = `Behind Pace • ${percentage}%`;
       Icon = AlertCircle;
-      barGradient = 'linear-gradient(90deg, #1d4ed8 0%, #2563eb 60%, #60a5fa 100%)';
-      glowColor = 'rgba(37,99,235,0.35)';
-      badgeBg = 'rgba(37,99,235,0.1)';
-      badgeBorder = '#2563eb';
-      badgeText = '#2563eb';
-      cardAccentClass = 'border-blue-500/25 dark:border-blue-500/20 hover:border-blue-500/40';
-      iconBgClass = 'bg-blue-500/12';
-      iconTextClass = 'text-blue-600 dark:text-blue-400';
-      trackColor = 'rgba(37,99,235,0.1)';
-      themeColorHex = '#2563eb';
     }
 
     return {
@@ -105,16 +70,6 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
       statusText,
       Icon,
       status,
-      barGradient,
-      glowColor,
-      badgeBg,
-      badgeBorder,
-      badgeText,
-      cardAccentClass,
-      iconBgClass,
-      iconTextClass,
-      trackColor,
-      themeColorHex,
       gap,
       avgDealSize,
     };
@@ -122,203 +77,129 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
 
   const {
     wonDealsCount, achieved, target, percentage, statusText, Icon, status,
-    barGradient, glowColor, badgeBg, badgeBorder, badgeText,
-    cardAccentClass, iconBgClass, iconTextClass, trackColor, themeColorHex,
     gap, avgDealSize
   } = quota;
 
+  const pct = useCountUp(percentage, inView);
   const fillWidth = Math.min(Math.max(percentage, 0), 100);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-      className={`bg-card/95 backdrop-blur-md border ${cardAccentClass} rounded-[22px] p-6 shadow-sm hover:shadow-xl hover:shadow-emerald-500/5 transition-all duration-300 w-full overflow-hidden relative group ${className}`}
-    >
-      {/* Background radial glow effect matching status */}
-      <div
-        className="absolute -top-16 -right-16 w-48 h-48 rounded-full opacity-15 pointer-events-none group-hover:opacity-25 transition-opacity duration-500"
-        style={{ background: barGradient, filter: 'blur(36px)' }}
-      />
-      <div
-        className="absolute -bottom-16 -left-16 w-44 h-44 rounded-full opacity-10 pointer-events-none"
-        style={{ background: barGradient, filter: 'blur(32px)' }}
-      />
+  // Design Kit tile data
+  const tiles = [
+    { label: "Gap to Goal", value: gap === 0 ? "₹0" : formatINR(gap), icon: Zap, tone: "text-lime" },
+    { label: "Deals Won", value: `${wonDealsCount} deals`, icon: Award, tone: "text-brand" },
+    { label: "Avg Deal Size", value: avgDealSize > 0 ? formatINR(avgDealSize) : "₹0", icon: Sparkles, tone: "text-mint-foreground" },
+  ];
 
-      {/* Header row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[var(--space-2)] mb-[var(--space-4)] relative">
-        <div className="flex items-center space-x-3">
-          <motion.div
-            whileHover={{ scale: 1.08, rotate: 5 }}
-            className={`h-10 w-10 rounded-2xl ${iconBgClass} flex items-center justify-center ${iconTextClass} border border-border/40 shadow-inner`}
-          >
-            <Target size={20} />
-          </motion.div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="text-sm font-black text-foreground tracking-tight">Quota Pace</h4>
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-muted text-muted-foreground border border-border/40">
-                Q3 Target
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mt-0.5">
-              Revenue & Goal Tracking
-            </p>
+  return (
+    <section
+      ref={ref}
+      className={cn(
+        "reveal relative overflow-hidden bg-linear-to-br from-brand-pale via-card to-card p-6 card-surface",
+        inView && "is-in",
+        className
+      )}
+    >
+      {/* Design Kit ambient glow */}
+      <span className="pointer-events-none absolute -right-16 -top-24 size-64 rounded-full bg-brand/10 blur-2xl" />
+
+      <div className="relative flex flex-wrap items-start gap-4">
+        {/* Header Icon */}
+        <span className="grid size-11 place-items-center rounded-2xl bg-brand-pale text-brand-deep ring-1 ring-brand-soft/70">
+          <Target className="size-[20px]" strokeWidth={2.2} />
+        </span>
+        
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-[19px] font-bold tracking-tight">Quota Pace</h2>
+            <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              Q3 Target
+            </span>
           </div>
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            Revenue &amp; goal tracking
+          </p>
         </div>
 
-        {/* Status badge with animated pulsing radar dot */}
-        <div className="flex items-center gap-2">
-          <motion.div
-            whileHover={{ scale: 1.03 }}
-            className="flex items-center space-x-2 px-3 py-1 rounded-full border text-xs font-extrabold select-none shadow-xs"
-            style={{
-              backgroundColor: badgeBg,
-              borderColor: `color-mix(in srgb, ${badgeBorder} 40%, transparent)`,
-              color: badgeText,
-            }}
-          >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ backgroundColor: themeColorHex }} />
-              <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: themeColorHex }} />
-            </span>
-            <Icon size={13} />
-            <span>{statusText}</span>
-          </motion.div>
-
+        {/* Status Badge - Design Kit style */}
+        <div className="ml-auto flex items-center gap-2">
+          <span className={cn(
+            "inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-bold",
+            status === 'success' && "bg-mint text-mint-foreground",
+            status === 'warning' && "bg-lime-soft text-foreground",
+            status === 'danger' && "bg-rose-soft text-rose-foreground"
+          )}>
+            {status === 'success' && (
+              <span className="size-2 animate-pulse rounded-full bg-mint-foreground" />
+            )}
+            <Icon size={14} />
+            {Math.round(pct)}%
+          </span>
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="p-1 rounded-lg hover:bg-muted/80 text-muted-foreground transition-colors"
+            className="grid size-9 place-items-center rounded-full bg-card ring-1 ring-border hover:bg-secondary transition-colors"
             title="Toggle details"
           >
-            {showDetails ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", showDetails && "rotate-180")} />
           </button>
         </div>
       </div>
 
-      {/* Main Stats Row */}
-      <div className="flex items-baseline justify-between mb-3 relative">
-        <div className="flex items-baseline gap-2.5">
-          <motion.span
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ duration: 0.3 }}
-            className={`text-4xl font-black tabular-nums leading-none tracking-tight ${iconTextClass}`}
-          >
-            {percentage}%
-          </motion.span>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-bold">
-            <TrendingUp size={14} className={iconTextClass} />
-            <span>of {formatINR(target)} target</span>
-          </div>
+      {/* Main Stats Row - Design Kit style */}
+      <div className="relative mt-7 flex flex-wrap items-end justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <p className="text-[38px] font-extrabold leading-none tracking-tight text-brand tabular-nums">
+            {Math.round(pct)}%
+          </p>
+          <p className="text-sm font-medium text-muted-foreground">of {formatINR(target)} target</p>
         </div>
-
         <div className="text-right">
-          <span className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider block">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
             Achieved
-          </span>
-          <span className={`text-sm font-black tabular-nums ${iconTextClass}`}>
-            {formatINR(achieved)}
-          </span>
+          </p>
+          <p className="text-[17px] font-extrabold tabular-nums">{formatINR(achieved)}</p>
         </div>
       </div>
 
-      {/* Progress Bar Container */}
-      <div className="space-y-2 relative mb-4">
-        <div className="relative h-3.5 w-full rounded-full bg-muted/60 border border-border/50 p-0.5 overflow-hidden shadow-inner">
-          {/* Tinted Track background */}
-          <div
-            className="absolute inset-0 rounded-full"
-            style={{ background: trackColor }}
-          />
-
-          {/* Animated gradient fill */}
+      {/* Progress Bar - Design Kit style with gradient */}
+      <div className="relative mt-5">
+        <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
           <motion.div
             initial={{ width: 0 }}
-            animate={{ width: `${fillWidth}%` }}
-            transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-            className="h-full rounded-full relative overflow-hidden"
-            style={{
-              background: barGradient,
-              boxShadow: `0 0 12px ${glowColor}, 0 2px 4px ${glowColor}`,
-              minWidth: fillWidth > 0 ? '8px' : '0px',
-            }}
-          >
-            {/* Shimmer sweep animation overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"
-                 style={{
-                   backgroundSize: '200% 100%',
-                   animation: 'shimmerSweep 2.5s infinite linear'
-                 }}
-            />
-          </motion.div>
-
-          {/* Expected pace marker */}
-          <div
-            className="absolute z-20 pointer-events-none transition-all duration-500"
-            style={{
-              left: `${quota.expectedPacePct}%`,
-              top: '50%',
-              transform: 'translate(-50%, -50%)',
-            }}
-            title={`Expected Pace Benchmark: ${quota.expectedPacePct}%`}
-          >
-            <div className="w-3.5 h-3.5 rounded-full bg-foreground border-2 border-card shadow-md flex items-center justify-center">
-              <div className="w-1 h-1 rounded-full bg-card" />
-            </div>
-          </div>
+            animate={{ width: `${inView ? fillWidth : 0}%` }}
+            transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
+            className="h-full rounded-full bg-linear-to-r from-brand-deep via-brand to-lime"
+          />
         </div>
-
-        {/* Milestone Scale Ticks */}
-        <div className="flex justify-between px-1">
-          {[0, 25, 50, 75, 100].map((tick) => {
-            const isPassed = tick <= fillWidth;
-            return (
-              <span
-                key={tick}
-                className={`text-[10px] font-extrabold tabular-nums transition-colors duration-300 ${
-                  isPassed ? iconTextClass : 'text-muted-foreground/40'
-                }`}
-              >
-                {tick}%
-              </span>
-            );
-          })}
+        {/* Scrubber handle */}
+        <span
+          className="absolute -top-1 size-5 rounded-full border-[3px] border-card bg-brand-deep shadow-[0_6px_14px_-6px_var(--brand)] transition-all duration-1400 ease-out"
+          style={{ left: `calc(${inView ? fillWidth : 0}% - 10px)` }}
+        />
+        {/* Scale ticks */}
+        <div className="mt-3 flex justify-between text-[11px] font-semibold text-muted-foreground">
+          {["0%", "25%", "50%", "75%", "100%"].map((t) => (
+            <span key={t}>{t}</span>
+          ))}
         </div>
       </div>
 
-      {/* Mini KPI Cards Grid */}
-      <div className="grid grid-cols-3 gap-2.5 pt-3 border-t border-border/50">
-        <div className="p-2.5 rounded-xl bg-muted/40 border border-border/40 hover:bg-muted/70 transition-colors">
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground mb-0.5">
-            <Zap size={11} className="text-amber-500" />
-            <span>Gap to Goal</span>
-          </div>
-          <p className="text-xs font-black text-foreground tabular-nums truncate">
-            {gap === 0 ? 'Goal Hit! 🎉' : formatINR(gap)}
-          </p>
-        </div>
-
-        <div className="p-2.5 rounded-xl bg-muted/40 border border-border/40 hover:bg-muted/70 transition-colors">
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground mb-0.5">
-            <Award size={11} className="text-brand-purple" />
-            <span>Deals Won</span>
-          </div>
-          <p className="text-xs font-black text-foreground tabular-nums truncate">
-            {wonDealsCount} deal{wonDealsCount !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        <div className="p-2.5 rounded-xl bg-muted/40 border border-border/40 hover:bg-muted/70 transition-colors">
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground mb-0.5">
-            <Sparkles size={11} className="text-emerald-500" />
-            <span>Avg Deal Size</span>
-          </div>
-          <p className="text-xs font-black text-foreground tabular-nums truncate">
-            {avgDealSize > 0 ? formatINR(avgDealSize) : '—'}
-          </p>
-        </div>
+      {/* Mini KPI Cards - Design Kit style */}
+      <div className="relative mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {tiles.map((t) => {
+          const Icon = t.icon;
+          return (
+            <div
+              key={t.label}
+              className="rounded-2xl bg-card p-4 ring-1 ring-border transition-transform duration-300 hover:-translate-y-1"
+            >
+              <p className={cn("flex items-center gap-2 text-[13px] font-semibold text-muted-foreground", t.tone)}>
+                <Icon className="size-4" />
+                {t.label}
+              </p>
+              <p className="mt-2 text-[18px] font-extrabold tabular-nums">{t.value}</p>
+            </div>
+          );
+        })}
       </div>
 
       {/* Expanded Breakdown Drawer */}
@@ -329,21 +210,24 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="mt-3 pt-3 border-t border-border/60 text-xs space-y-2"
+            className="mt-4 pt-4 border-t border-border/60 text-xs space-y-2"
           >
             <div className="flex items-center justify-between text-muted-foreground font-semibold text-[11px]">
               <span>Pace Benchmark:</span>
-              <span className="text-foreground font-extrabold">{quota.expectedPacePct}% expected at this point in quarter</span>
+              <span className="text-foreground font-extrabold">{quota.expectedPacePct}% expected at this point</span>
             </div>
             <div className="flex items-center justify-between text-muted-foreground font-semibold text-[11px]">
               <span>Target Surplus / Deficit:</span>
-              <span className={`font-black ${status === 'success' ? 'text-emerald-500' : 'text-rose-500'}`}>
+              <span className={cn(
+                "font-black",
+                status === 'success' ? "text-mint-foreground" : "text-rose-foreground"
+              )}>
                 {status === 'success' ? '+' : '-'}{formatINR(Math.abs(achieved - (target * (quota.expectedPacePct / 100))))}
               </span>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </motion.div>
+    </section>
   );
 }
