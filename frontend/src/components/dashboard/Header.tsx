@@ -19,7 +19,7 @@ interface HeaderProps {
   onTabChange?: (tab: string) => void;
   onOpenCommandPalette?: () => void;
   onSignOut?: () => void;
-  userRole: 'representative' | 'manager' | 'admin';
+  userRole: 'sales_rep' | 'manager' | 'admin';
 }
 
 export default function Header({
@@ -134,7 +134,7 @@ export default function Header({
         <span className="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground select-none">
           <span className="size-2 rounded-full bg-lime animate-pulse" />
           Role: <span className="font-semibold text-foreground">
-            {userRole === 'representative' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
+            {userRole === 'sales_rep' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
           </span>
         </span>
 

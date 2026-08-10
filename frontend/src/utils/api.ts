@@ -57,6 +57,7 @@ export interface Lead {
   contact_email: string | null;
   contact_phone: string | null;
   owner_name: string | null;
+  owner_avatar_url?: string | null;
 }
 
 export interface Contact {
@@ -349,8 +350,8 @@ export interface WorkflowTask {
 }
 
 export interface LeadWorkflowResponse {
-  current_task: WorkflowTask | null;
-  history: WorkflowTask[];
+  current_task: WorkflowTaskItem | null;
+  history: WorkflowTaskItem[];
 }
 
 /**
@@ -386,10 +387,7 @@ export interface WorkflowTaskItem {
   updated_at?: string;
 }
 
-export interface LeadWorkflowResponse {
-  current_task: WorkflowTaskItem | null;
-  history: WorkflowTaskItem[];
-}
+
 
 /**
  * Fetch the workflow for one lead.
@@ -400,7 +398,7 @@ export interface LeadWorkflowResponse {
 export async function getLeadWorkflow(
   leadId: string
 ): Promise<LeadWorkflowResponse> {
-  const result = await apiFetch(
+  const result = await apiFetch<any>(
     `/api/v1/workflows/leads/${leadId}`
   );
 
@@ -430,7 +428,7 @@ export async function getLeadWorkflow(
 export async function completeWorkflowTask(
   taskId: string
 ): Promise<WorkflowTaskItem> {
-  const result = await apiFetch(
+  const result = await apiFetch<any>(
     `/api/v1/workflows/tasks/${taskId}/complete`,
     {
       method: 'POST',
@@ -932,6 +930,7 @@ export interface SalesRepDashboardData {
   deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
   deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
   key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
+  activity_overview?: { emails_sent: number; calls_made: number; meetings_held: number; tasks_completed: number; notes_added: number } | null;
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
@@ -1728,16 +1727,22 @@ export interface EmailComposeTarget {
   requestId: number;
 }
 
-// =============================================================================
-// CRM EMAIL ACTIVITY
-// =============================================================================
-
-export async function createCrmEmail(payload: CrmActivityPayload & {
+export interface CreateEmailPayload {
+  subject: string;
   body?: string;
   direction?: string;
   recipient_email?: string;
   recipient_name?: string;
-}): Promise<any> {
+  priority?: string;
+  status?: string;
+  related_entity_type?: string;
+  related_lead_id?: string;
+  related_contact_id?: string;
+  related_company_id?: string;
+  related_deal_id?: string;
+}
+
+export async function createCrmEmail(payload: CreateEmailPayload): Promise<any> {
   return apiFetch('/api/v1/crm-activities/emails', {
     method: 'POST',
     body: JSON.stringify(payload)

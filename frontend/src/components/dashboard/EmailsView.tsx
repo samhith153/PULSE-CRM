@@ -465,60 +465,111 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
 
       {/* AI Compose Modal */}
       {isComposeOpen && (
-        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200" onClick={closeCompose}>
-          <div className="bg-card border border-border rounded-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
-              <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
-                <PenSquare className="h-4 w-4 text-brand-purple" />
-                {composeForm.name ? `Email ${composeForm.name}` : 'New Email'}
-              </h3>
-              <button onClick={closeCompose} className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+        <div className="fixed inset-0 bg-background z-50 flex flex-col animate-in fade-in duration-200" onClick={e => e.stopPropagation()}>
+          <form onSubmit={handleSendCompose} className="w-full h-full flex flex-col">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-border flex justify-between items-center bg-secondary shrink-0">
+              <div className="flex items-center gap-2">
+                <PenSquare className="h-5 w-5 text-brand-purple" />
+                <h3 className="font-bold text-foreground text-base">
+                  {composeForm.name ? `Email ${composeForm.name}` : 'New Email'}
+                </h3>
+              </div>
+              <button type="button" onClick={closeCompose} className="text-muted-foreground hover:text-foreground p-2 hover:bg-secondary/85 rounded-lg cursor-pointer transition-colors" title="Close">
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
-            {gmailConnected === false && (
-              <div className="mx-5 mt-4 rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] font-semibold text-amber-700">
-                Gmail is not connected. Go to <strong>Integrations</strong> in the sidebar to connect your Gmail account, then try again.
-              </div>
-            )}
-
-            <form onSubmit={handleSendCompose} className="p-5 space-y-4">
-              <div>
-                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">To</label>
-                <input type="email" required placeholder="name@company.com" value={composeForm.to} onChange={e => setComposeForm({ ...composeForm, to: e.target.value })} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background" />
-              </div>
-              <div>
-                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">Subject</label>
-                <input type="text" required placeholder="Subject line" value={composeForm.subject} onChange={e => setComposeForm({ ...composeForm, subject: e.target.value })} disabled={isDrafting} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background disabled:opacity-50" />
-              </div>
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider">Email Body</label>
-                  {isDrafting && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-purple">
-                      <Sparkles className="h-3 w-3 animate-pulse" /> AI drafting...
-                    </span>
-                  )}
-                </div>
-                {isDrafting ? (
-                  <div className="w-full min-h-[140px] border border-border rounded-lg bg-secondary flex items-center justify-center">
-                    <Loader2 className="h-5 w-5 animate-spin text-brand-purple" />
+            {/* Split layout body */}
+            <div className="flex-1 flex overflow-hidden min-h-0 bg-card">
+              {/* Left Column - Rich Editor */}
+              <div className="flex-1 flex flex-col p-6 space-y-4 overflow-y-auto border-r border-border min-w-0">
+                {gmailConnected === false && (
+                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-700">
+                    Gmail is not connected. Go to <strong>Integrations</strong> in the sidebar to connect your Gmail account, then try again.
                   </div>
-                ) : (
-                  <textarea required placeholder="Write message..." value={composeForm.body} onChange={e => setComposeForm({ ...composeForm, body: e.target.value })} className="w-full p-2.5 border border-border rounded-lg text-xs text-foreground focus:outline-none min-h-[140px] bg-background leading-relaxed" />
                 )}
-                {!isDrafting && composeForm.body && composeContext && (
-                  <p className="text-[10px] text-muted-foreground font-semibold mt-1.5 flex items-center gap-1"><Bot className="h-3 w-3" /> AI-drafted — review and edit before sending.</p>
-                )}
+                <div className="space-y-4 flex-1 flex flex-col">
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">To</label>
+                    <input type="email" required placeholder="name@company.com" value={composeForm.to} onChange={e => setComposeForm({ ...composeForm, to: e.target.value })} className="w-full px-4 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-none bg-background focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple transition-all" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Subject</label>
+                    <input type="text" required placeholder="Subject line" value={composeForm.subject} onChange={e => setComposeForm({ ...composeForm, subject: e.target.value })} disabled={isDrafting} className="w-full px-4 py-2 border border-border rounded-xl text-sm text-foreground focus:outline-none bg-background disabled:opacity-50 focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple transition-all" />
+                  </div>
+                  <div className="flex-1 flex flex-col min-h-[300px]">
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Email Body</label>
+                    </div>
+                    {isDrafting ? (
+                      <div className="w-full flex-1 border border-border rounded-xl bg-secondary flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <Loader2 className="h-6 w-6 animate-spin text-brand-purple" />
+                          <span className="text-xs text-muted-foreground font-semibold">AI is drafting your email...</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <textarea required placeholder="Write message..." value={composeForm.body} onChange={e => setComposeForm({ ...composeForm, body: e.target.value })} className="w-full flex-1 p-4 border border-border rounded-xl text-sm text-foreground focus:outline-none bg-background leading-relaxed resize-none focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple transition-all" />
+                    )}
+                    {!isDrafting && composeForm.body && composeContext && (
+                      <p className="text-[11px] text-brand-purple font-semibold mt-2 flex items-center gap-1.5"><Bot className="h-3.5 w-3.5" /> AI-drafted — feel free to customize and edit before sending.</p>
+                    )}
+                  </div>
+                </div>
+                {composeError && <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{composeError}</div>}
+                <div className="pt-4 border-t border-border flex justify-between items-center shrink-0">
+                  <button type="button" onClick={closeCompose} className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-xl cursor-pointer transition-all">
+                    <Trash2 className="h-4 w-4" />
+                    <span>Discard</span>
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSending || isDrafting || gmailConnected === false || !composeForm.to || !composeForm.subject || !composeForm.body}
+                    className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-brand-purple hover:bg-brand-purple/90 text-white rounded-xl text-xs font-bold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
+                  >
+                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    <span>{isSending ? 'Sending...' : 'Send Email'}</span>
+                  </button>
+                </div>
               </div>
 
-              {composeError && <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-[11px] font-semibold text-destructive flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{composeError}</div>}
-
-              <div className="pt-3 border-t border-border flex justify-between items-center">
-                <button type="button" onClick={closeCompose} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-muted-foreground hover:text-destructive cursor-pointer">
-                  <Trash2 className="h-3.5 w-3.5" />
-                  <span>Discard</span>
-                </button>
-                <div className="flex gap-2.5">
+              {/* Right Column - AI Copilot Sidebar */}
+              <div className="w-[380px] bg-secondary p-6 overflow-y-auto shrink-0 flex flex-col space-y-5">
+                <div className="flex items-center gap-2 text-brand-purple border-b border-border pb-3 shrink-0">
+                  <Sparkles className="h-5 w-5" />
+                  <h4 className="font-bold text-foreground text-sm">AI Outreach Assistant</h4>
+                </div>
+                <div className="space-y-4 flex-1">
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Recipient Name</label>
+                    <input type="text" placeholder="e.g. Sarah" value={composeForm.name || ''} onChange={e => setComposeForm({ ...composeForm, name: e.target.value })} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Company</label>
+                    <input type="text" placeholder="e.g. Acme Corp" value={composeContext?.company || ''} onChange={e => setComposeContext(prev => prev ? { ...prev, company: e.target.value } : { to: composeForm.to, company: e.target.value, requestId: Date.now() })} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Designation</label>
+                    <input type="text" placeholder="e.g. Director of Sales" value={composeContext?.designation || ''} onChange={e => setComposeContext(prev => prev ? { ...prev, designation: e.target.value } : { to: composeForm.to, designation: e.target.value, requestId: Date.now() })} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Email Purpose</label>
+                    <select value={composeContext?.purpose || 'follow_up'} onChange={e => setComposeContext(prev => prev ? { ...prev, purpose: e.target.value as any } : { to: composeForm.to, purpose: e.target.value as any, requestId: Date.now() })} className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple cursor-pointer font-semibold">
+                      <option value="cold_intro">Cold Introduction</option>
+                      <option value="follow_up">Follow Up</option>
+                      <option value="check_in">Check In</option>
+                      <option value="proposal">Send Proposal</option>
+                      <option value="thank_you">Thank You</option>
+                      <option value="custom">Custom Outreach</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Context / Custom Notes</label>
+                    <textarea placeholder="e.g. Met at the conference, interested in enterprise custom reporting integrations..." value={composeContext?.context || ''} onChange={e => setComposeContext(prev => prev ? { ...prev, context: e.target.value } : { to: composeForm.to, context: e.target.value, requestId: Date.now() })} className="w-full p-2.5 border border-border rounded-lg text-xs text-foreground focus:outline-none bg-background min-h-[100px] leading-relaxed focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple" />
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-border shrink-0">
                   <button
                     type="button"
                     onClick={() => generateDraft({
@@ -533,22 +584,15 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
                       requestId: Date.now()
                     })}
                     disabled={isDrafting || !composeForm.to}
-                    className="px-4 py-1.5 border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-secondary cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full py-2.5 bg-brand-purple text-white rounded-xl text-xs font-bold hover:bg-brand-purple/90 transition-all shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
-                    Regenerate
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSending || isDrafting || gmailConnected === false || !composeForm.to || !composeForm.subject || !composeForm.body}
-                    className="inline-flex items-center space-x-1.5 px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    <span>{isSending ? 'Sending...' : 'Send Email'}</span>
+                    <Sparkles className="h-4 w-4" />
+                    <span>{composeForm.body ? 'Regenerate Draft' : 'Generate Draft'}</span>
                   </button>
                 </div>
               </div>
-            </form>
-          </div>
+            </div>
+          </form>
         </div>
       )}
     </div>

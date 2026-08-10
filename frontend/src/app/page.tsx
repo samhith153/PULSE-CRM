@@ -51,7 +51,7 @@ export default function DashboardHome() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
+  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('manager');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -62,11 +62,11 @@ export default function DashboardHome() {
 
     if (authFromLanding && roleParam && validRoles.includes(roleParam as typeof validRoles[number])) {
       sessionStorage.setItem('pulse-crm-auth', 'true');
-      const mappedRole = roleParam === 'sales_rep' ? 'representative' : roleParam;
+      const mappedRole = roleParam === 'representative' ? 'sales_rep' : roleParam;
       localStorage.setItem('pulse-crm-role', mappedRole);
       if (emailParam) localStorage.setItem('pulse-crm-user', emailParam);
       setIsAuthenticated(true);
-      setUserRole(mappedRole as 'representative' | 'manager' | 'admin');
+      setUserRole(mappedRole as 'sales_rep' | 'manager' | 'admin');
       window.history.replaceState({}, '', window.location.pathname);
       setIsAuthLoading(false);
       return;
@@ -82,21 +82,21 @@ export default function DashboardHome() {
 
     setIsAuthenticated(true);
     let savedRole = localStorage.getItem('pulse-crm-role');
-    if (savedRole === 'sales_rep') {
-      savedRole = 'representative';
-      localStorage.setItem('pulse-crm-role', 'representative');
+    if (savedRole === 'representative') {
+      savedRole = 'sales_rep';
+      localStorage.setItem('pulse-crm-role', 'sales_rep');
     }
-    const legacyRoles = ['representative', 'manager', 'admin'] as const;
+    const legacyRoles = ['sales_rep', 'manager', 'admin'] as const;
     if (savedRole && legacyRoles.includes(savedRole as typeof legacyRoles[number])) {
-      setUserRole(savedRole as 'representative' | 'manager' | 'admin');
+      setUserRole(savedRole as 'sales_rep' | 'manager' | 'admin');
     }
     setIsAuthLoading(false);
   }, [router]);
 
   const handleLogin = (role: string) => {
-    const mappedRole = role === 'sales_rep' ? 'representative' : role;
+    const mappedRole = role === 'representative' ? 'sales_rep' : role;
     setIsAuthenticated(true);
-    setUserRole(mappedRole as 'representative' | 'manager' | 'admin');
+    setUserRole(mappedRole as 'sales_rep' | 'manager' | 'admin');
   };
 
   const handleSignOut = () => {

@@ -18,7 +18,7 @@ import {
   formatINR,
   SalesRepDashboardData,
 } from '@/utils/api';
-import { useCountUp } from '@/hooks/use-reveal';
+import { useCountUp, useReveal } from '@/hooks/use-reveal';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
 
@@ -133,7 +133,8 @@ function Spark({
 
 /* ─── Single stat tile ──────────────────────────────────────────────── */
 function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
-  const { ref, value, visible } = useCountUp(stat.targetValue, 1000);
+  const { ref, visible } = useReveal<HTMLDivElement>();
+  const value = useCountUp(stat.targetValue, visible, 1000);
   const [showDelta, setShowDelta] = useState(false);
 
   useEffect(() => {
