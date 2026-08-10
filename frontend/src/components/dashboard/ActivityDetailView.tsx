@@ -79,8 +79,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             setRelatedEmail(found.contact_email);
           }
           const extraLogs: any[] = [];
-          if (found.timeline) {
-            found.timeline.forEach((t: any) => {
+          if ((found as any).timeline) {
+            (found as any).timeline.forEach((t: any) => {
               extraLogs.push({ action: t.title, time: t.time || new Date().toISOString(), user: 'System', desc: t.desc, type: 'timeline' });
             });
           }
@@ -97,8 +97,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
         if (found) {
           if (found.email) setRelatedEmail(found.email);
           const extraLogs: any[] = [];
-          if (found.timeline) {
-            found.timeline.forEach((t: any) => {
+          if ((found as any).timeline) {
+            (found as any).timeline.forEach((t: any) => {
               extraLogs.push({ action: t.title, time: t.time || new Date().toISOString(), user: 'System', desc: '', type: 'timeline' });
             });
           }
@@ -243,8 +243,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
         priority: 'high',
         status: 'pending',
         related_entity_type: activity?.related_entity_type || undefined,
-        related_lead_id: activity?.related_entity_type === 'lead' ? activity.related_record_id : undefined,
-        related_contact_id: activity?.related_entity_type === 'contact' ? activity.related_record_id : undefined,
+        related_lead_id: activity?.related_entity_type === 'lead' ? (activity.related_record_id || undefined) : undefined,
+        related_contact_id: activity?.related_entity_type === 'contact' ? (activity.related_record_id || undefined) : undefined,
       });
       toast.success("Task created from AI recommendation!");
     } catch (err: any) {
@@ -716,8 +716,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
         {/* Right Side: Sidebar Context and Settings Log */}
         <div className="col-span-12 lg:col-span-4 space-y-5 pt-[46px]">
           <ContextPanel 
-            contactName={activity.related_entity_type === 'contact' ? activity.related_record_name : undefined}
-            companyName={activity.related_entity_type === 'company' ? activity.related_record_name : undefined}
+            contactName={activity.related_entity_type === 'contact' ? (activity.related_record_name || undefined) : undefined}
+            companyName={activity.related_entity_type === 'company' ? (activity.related_record_name || undefined) : undefined}
             onTabChange={onTabChange}
           />
 

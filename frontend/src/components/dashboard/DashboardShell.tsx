@@ -208,12 +208,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     window.location.href = '/login';
   };
 
-  const mapRoleForLegacyComponent = (r: 'sales_rep' | 'manager' | 'admin'): 'representative' | 'manager' | 'admin' => {
-    if (r === 'sales_rep') return 'representative';
-    return r;
-  };
-
-  const legacyRole = mapRoleForLegacyComponent(requiredRole);
+  const legacyRole = requiredRole;
 
   if (!authorized) {
     return (

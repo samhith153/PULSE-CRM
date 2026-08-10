@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Image from 'next/image';
@@ -125,8 +125,12 @@ export default function Widgets({
                       <tr key={index} className="hover:bg-secondary/20 transition-colors">
                         {/* Member Info */}
                         <td className="py-2.5 flex items-center space-x-2.5">
-                          <div className="h-6.5 w-6.5 rounded-full overflow-hidden shrink-0 border border-border">
-                            <Image src={member.avatar} alt={member.name} width={26} height={26} className="h-full w-full object-cover" unoptimized />
+                          <div className="h-6.5 w-6.5 rounded-full overflow-hidden shrink-0 border border-border flex items-center justify-center bg-brand-purple/10 text-brand-purple font-bold text-[9px]">
+                            {member.avatar ? (
+                              <Image src={member.avatar} alt={member.name} width={26} height={26} className="h-full w-full object-cover" unoptimized />
+                            ) : (
+                              <span>{member.name.split(' ').map(n => n[0]).join('')}</span>
+                            )}
                           </div>
                           <span className="font-bold text-foreground truncate max-w-[120px]">{member.name}</span>
                         </td>

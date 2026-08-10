@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { mediaUrl } from '@/utils/api';
+import { resolveImageUrl } from '@/utils/api';
 
 interface AvatarProps {
   /** Full name used to derive initials when no photo is present. */
@@ -29,7 +29,7 @@ function initials(name: string): string {
 
 export default function Avatar({ name, src, size = 'sm', className = '' }: AvatarProps) {
   const [broken, setBroken] = useState(false);
-  const url = src ? mediaUrl(src) : '';
+  const url = src ? resolveImageUrl(src) : '';
   const showImage = url && !broken;
 
   return (

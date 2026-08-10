@@ -8,6 +8,8 @@ import {
   Check, Filter, RefreshCw, ChevronLeft, ChevronRight,
   Link2, CheckCircle2,
 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { CollapseToggle } from '@/components/ui/CollapseToggle';
 import {
   getCrmActivities, getCrmActivityOwners, downloadCrmActivitiesExport,
   createCrmTask, createCrmCall, createCrmMeeting, createCrmNote, createCrmEmail,
@@ -74,6 +76,8 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
   const pageSize = 10;
 
   const [isSelectMode, setIsSelectMode] = useState(false);
+  const [isTasksCollapsed, setIsTasksCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState<'kanban' | 'logs'>('kanban');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [isAddDropdownOpen, setIsAddDropdownOpen] = useState(false);
@@ -123,29 +127,45 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     try {
       let results: Array<{ id: string; name: string; subtitle?: string }> = [];
       if (type === 'lead') {
-        const items = await getLeads(1, 10, query);
-        results = items.map((l: any) => ({
+        const items = await getLeads();
+        const filtered = items.filter((l: any) =>
+          (l.title || '').toLowerCase().includes(query.toLowerCase()) ||
+          (l.company_name || '').toLowerCase().includes(query.toLowerCase())
+        );
+        results = filtered.slice(0, 10).map((l: any) => ({
           id: l.id,
           name: l.title || l.company_name || 'Untitled Lead',
           subtitle: l.company_name || l.status || '',
         }));
       } else if (type === 'contact') {
-        const items = await getContacts(1, 10, query);
-        results = items.map((c: any) => ({
+        const items = await getContacts();
+        const filtered = items.filter((c: any) =>
+          (c.name || `${c.first_name || ''} ${c.last_name || ''}`).toLowerCase().includes(query.toLowerCase()) ||
+          (c.email || '').toLowerCase().includes(query.toLowerCase())
+        );
+        results = filtered.slice(0, 10).map((c: any) => ({
           id: c.id,
           name: c.name || `${c.first_name} ${c.last_name}`,
           subtitle: c.company || c.email || '',
         }));
       } else if (type === 'company') {
-        const items = await getCompanies(1, 10, query);
-        results = items.map((c: any) => ({
+        const items = await getCompanies();
+        const filtered = items.filter((c: any) =>
+          (c.name || '').toLowerCase().includes(query.toLowerCase()) ||
+          (c.industry || '').toLowerCase().includes(query.toLowerCase())
+        );
+        results = filtered.slice(0, 10).map((c: any) => ({
           id: c.id,
           name: c.name || 'Untitled Company',
           subtitle: c.industry || '',
         }));
       } else if (type === 'deal') {
-        const items = await getDeals(1, 10, query);
-        results = items.map((d: any) => ({
+        const items = await getDeals();
+        const filtered = items.filter((d: any) =>
+          (d.title || d.name || '').toLowerCase().includes(query.toLowerCase()) ||
+          (d.company || '').toLowerCase().includes(query.toLowerCase())
+        );
+        results = filtered.slice(0, 10).map((d: any) => ({
           id: d.id,
           name: d.title || d.name || 'Untitled Deal',
           subtitle: d.company || d.stage || '',
@@ -348,6 +368,16 @@ useEffect(() => {
           <p className="text-xs text-muted-foreground mt-0.5">Review, log, and action scheduled sales activities.</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Segmented Switch for Kanban Board vs Timeline Logs */}
+          <div className="flex border border-border rounded-lg p-0.5 bg-secondary/30 shrink-0 select-none mr-2">
+            <button type="button" onClick={() => setViewMode('kanban')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'kanban' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              Tasks Board
+            </button>
+            <button type="button" onClick={() => setViewMode('logs')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'logs' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              Activity Logs
+            </button>
+          </div>
+
           <button onClick={() => { setIsSelectMode(!isSelectMode); setSelectedIds(new Set()); }}
             className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm ${isSelectMode ? 'bg-brand-blue text-white border-brand-blue' : 'border-border bg-card hover:bg-secondary text-foreground'}`}>
             <Check size={13} /><span>Select</span>
@@ -355,7 +385,7 @@ useEffect(() => {
           <div className="relative">
             <button onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
               className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white rounded-lg text-xs font-bold cursor-pointer shadow-sm">
-              <Plus size={13} /><span>+ Add activity</span>
+              <span>Add activity</span>
               <ChevronDown size={12} className={`transition-transform ${isAddDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {isAddDropdownOpen && (
@@ -389,21 +419,22 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* ─── Task Kanban Board (Separated and on Top) ─── */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-            <ClipboardList className="h-4 w-4 text-brand-purple" />
-            <span>Workspace Tasks Board</span>
-          </h3>
+      {viewMode === 'kanban' ? (
+        /* ─── Task Kanban Board (Separated and on Top) ─── */
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <ClipboardList className="h-4 w-4 text-brand-purple" />
+                <span>Workspace Tasks Board</span>
+              </h3>
+              <CollapseToggle isCollapsed={isTasksCollapsed} onToggle={() => setIsTasksCollapsed(!isTasksCollapsed)} />
+            </div>
+            {!isTasksCollapsed && <TasksView isEmbedded={true} />}
         </div>
-        <TasksView isEmbedded={true} />
-      </div>
-
-      <div className="border-t border-border/60 my-2" />
-
-      {/* ─── CRM Activity Logs ─── */}
-      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Activity History Logs</h3>
+      ) : (
+        /* ─── CRM Activity Logs ─── */
+        <>
+          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Activity History Logs</h3>
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-xl p-4 sm:px-5 py-4 shadow-sm space-y-3">
@@ -550,6 +581,8 @@ useEffect(() => {
           </button>
         </div>
       </div>
+      </>
+      )}
 
       {/* Add Activity Modal */}
       {activeFormType && (

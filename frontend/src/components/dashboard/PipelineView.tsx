@@ -45,15 +45,31 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   const [stages, setStages] = useState<PipelineStage[]>([]);
 
   useEffect(() => {
-    let loaded = 0;
-    const checkDone = () => { loaded++; if (loaded >= 2) onLoaded?.(); };
-    getPipelineStages().then(data => {
-      const sorted = (Array.isArray(data) ? data : []).sort((a: any, b: any) => a.sort_order - b.sort_order);
-      setStages(sorted);
-    }).catch(() => {}).finally(checkDone);
-    getDeals().then(data => {
-      setDeals(Array.isArray(data) ? data : []);
-    }).catch(() => {}).finally(checkDone);
+    Promise.all([getPipelineStages(), getDeals()]).then(([stagesData, dealsData]) => {
+      const sortedStages = (Array.isArray(stagesData) ? stagesData : []).sort((a: any, b: any) => a.sort_order - b.sort_order);
+      setStages(sortedStages);
+
+      const mappedDeals = (Array.isArray(dealsData) ? dealsData : []).map(d => {
+        const stageObj = sortedStages.find(s => s.id === d.pipeline_stage_id);
+        const stageName = stageObj ? stageObj.name : 'New';
+        return {
+          id: d.id,
+          title: d.name || 'Untitled Deal',
+          company: d.company_name || 'Acme Corp',
+          value: d.amount ? Number(d.amount) : 0,
+          stage: stageName,
+          priority: (d.priority || 'Medium') as Deal['priority'],
+          owner: d.owner_name || 'Unassigned',
+          closeDate: d.expected_close_date || '',
+          createdAt: d.created_at || new Date().toISOString()
+        };
+      });
+      setDeals(mappedDeals);
+    }).catch(err => {
+      console.error("Failed to load pipeline data:", err);
+    }).finally(() => {
+      onLoaded?.();
+    });
   }, []);
 
   const stageNames = stages.map(s => s.name);

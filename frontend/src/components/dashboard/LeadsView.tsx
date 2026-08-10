@@ -1747,6 +1747,71 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                         </div>
                       </div>
 
+                      {/* Company & Technology Details */}
+                      <div className="rounded-xl border overflow-hidden border-gray-200">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Company & Technology Details</span>
+                        </div>
+                        <div className="p-4 space-y-3">
+                          {[
+                            { label: 'Industry', value: activeLead.industry },
+                            { label: 'Employee Count', value: activeLead.numberOfEmployees || activeLead.employee_count },
+                            { label: 'Estimated Deal Value', value: activeLead.value ? `$${Number(activeLead.value).toLocaleString()}` : '—' },
+                            { label: 'Current CRM', value: activeLead.currentCRM },
+                            { label: 'Operational System', value: activeLead.operationalSystem },
+                          ].map(row => (
+                            <div key={row.label} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                              <span className="text-xs font-semibold text-gray-500">{row.label}</span>
+                              <span className="text-xs font-bold text-gray-800">{row.value || '—'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* AI Scoring Insights & Recommendations */}
+                      <div className="rounded-xl border overflow-hidden border-gray-200">
+                        <div className="px-4 py-2.5 border-b bg-gray-50 border-gray-200">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">AI Scoring Insights</span>
+                        </div>
+                        <div className="p-4 space-y-4">
+                          {activeLead.topReasons && activeLead.topReasons.length > 0 && (
+                            <div>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Key AI Insights</span>
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {activeLead.topReasons.map((r, i) => (
+                                  <span key={i} className="px-2 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-semibold border border-purple-100">{r}</span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {activeLead.fitReasons && activeLead.fitReasons.length > 0 && (
+                            <div>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Fit Reasons</span>
+                              <ul className="mt-1 list-disc list-inside text-xs text-gray-700 space-y-1">
+                                {activeLead.fitReasons.map((r, i) => <li key={i} className="font-medium">{r}</li>)}
+                              </ul>
+                            </div>
+                          )}
+
+                          {activeLead.engagementReasons && activeLead.engagementReasons.length > 0 && (
+                            <div>
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Engagement Signals</span>
+                              <ul className="mt-1 list-disc list-inside text-xs text-gray-700 space-y-1">
+                                {activeLead.engagementReasons.map((r, i) => <li key={i} className="font-medium">{r}</li>)}
+                              </ul>
+                            </div>
+                          )}
+
+                          {leadRecommendations[activeLead.id] && (
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                              <span className="text-[9px] font-bold uppercase tracking-wider text-blue-600">Recommended Next Action</span>
+                              <p className="mt-1 text-xs font-bold text-gray-800 leading-relaxed">{leadRecommendations[activeLead.id]}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       {/* Quick Action Buttons */}
                       <div className="grid grid-cols-3 gap-2">
                         <button onClick={() => { router.push(`?compose=${encodeURIComponent(activeLead.email)}`); onTabChange?.('emails'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } })); }, 150); }}
