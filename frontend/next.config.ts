@@ -21,6 +21,11 @@ const nextConfig: NextConfig = {
         port: '8000',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'pulse-crm-backend.onrender.com',
+        pathname: '/**',
+      },
     ],
   },
 

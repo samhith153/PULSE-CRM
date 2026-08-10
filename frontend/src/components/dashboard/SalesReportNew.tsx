@@ -1,24 +1,17 @@
 'use client';
 
-import React from 'react';
 import {
+  ChevronDown,
   TrendingUp,
   MoveUpRight,
   MoveDownRight,
 } from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
+
 import {
   asNumber,
   type Decimal,
 } from '@/utils/api';
+
 import type { ReportPeriod } from './ReportsView';
 
 interface RevenueTrendItem {
@@ -32,6 +25,13 @@ interface SalesReportNewProps {
   onPeriodChange: (period: ReportPeriod) => void;
 }
 
+const STAGE_COLORS = [
+  'bg-lime',
+  'bg-brand-soft',
+  'bg-brand',
+  'bg-linear-to-b from-brand-soft to-lime-soft',
+];
+
 const PERIOD_LABELS: Record<ReportPeriod, string> = {
   week: 'Weekly',
   month: 'Monthly',
@@ -39,13 +39,24 @@ const PERIOD_LABELS: Record<ReportPeriod, string> = {
   year: 'Yearly',
 };
 
+/**
+ * Converts API period values into readable labels.
+ *
+ * 2026-01 -> Jan
+ * 2026-02 -> Feb
+ * 2026-03 -> Mar
+ *
+ * Other values are left unchanged.
+ */
 function formatPeriodLabel(period: string): string {
   if (/^\d{4}-\d{2}$/.test(period)) {
     const [year, month] = period.split('-').map(Number);
+
     return new Intl.DateTimeFormat('en-US', {
       month: 'short',
     }).format(new Date(year, month - 1, 1));
   }
+
   return period;
 }
 
@@ -54,19 +65,57 @@ export function SalesReportNew({
   period,
   onPeriodChange,
 }: SalesReportNewProps) {
-  const chartData = revenueTrend.map((item) => ({
-    label: formatPeriodLabel(item.period),
-    revenue: asNumber(item.revenue) || 0,
-  }));
+  const maxRevenue = revenueTrend.reduce(
+    (max, item) =>
+      Math.max(max, asNumber(item.revenue) || 0),
+    0
+  );
 
-  const totalRevenue = chartData.reduce((sum, item) => sum + item.revenue, 0);
+  const bars = revenueTrend.map((item, i) => {
+    const value = asNumber(item.revenue) || 0;
 
-  const previousValue = chartData.length > 1 ? chartData[chartData.length - 2]?.revenue || 0 : 0;
-  const currentValue = chartData.length > 0 ? chartData[chartData.length - 1]?.revenue || 0 : 0;
+    const height =
+      maxRevenue > 0
+        ? Math.max(
+            40,
+            (value / maxRevenue) * 180
+          )
+        : 40;
+
+    return {
+      label: formatPeriodLabel(item.period),
+      originalPeriod: item.period,
+      height,
+      className:
+        STAGE_COLORS[
+          i % STAGE_COLORS.length
+        ],
+      value,
+      active:
+        i === revenueTrend.length - 1,
+    };
+  });
+
+  const totalRevenue = bars.reduce(
+    (sum, b) => sum + b.value,
+    0
+  );
+
+  const previousValue =
+    bars.length > 1
+      ? bars[bars.length - 2]?.value || 0
+      : 0;
+
+  const currentValue =
+    bars.length > 0
+      ? bars[bars.length - 1]?.value || 0
+      : 0;
 
   const growthPct =
     previousValue > 0
-      ? ((currentValue - previousValue) / previousValue) * 100
+      ? ((currentValue - previousValue) /
+          previousValue) *
+        100
       : 0;
 
   const currency = (n: number) =>
@@ -77,116 +126,140 @@ export function SalesReportNew({
     });
 
   return (
-    <section className="card-surface p-6 bg-card border border-border rounded-2xl shadow-sm space-y-5">
+    <section className="card-surface p-5">
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h3 className="text-base font-bold text-foreground">
+        <div>
+          <h3 className="text-[15px] font-bold text-foreground">
             Revenue Trend
           </h3>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+
+          <span
+            className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+              growthPct >= 0
+                ? 'bg-mint text-mint-foreground'
+                : 'bg-rose-soft text-rose-foreground'
+            }`}
+          >
             {growthPct >= 0 ? (
-              <MoveUpRight className="h-3.5 w-3.5 text-emerald-500" />
+              <MoveUpRight className="size-2.5" />
             ) : (
-              <MoveDownRight className="h-3.5 w-3.5 text-rose-500" />
+              <MoveDownRight className="size-2.5" />
             )}
-            <span className={`font-semibold ${growthPct >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-              {growthPct >= 0 ? '+' : ''}{growthPct.toFixed(1)}%
+
+            {growthPct >= 0 ? '+' : ''}
+            {growthPct.toFixed(1)}%
+
+            <span className="ml-1 font-normal">
+              vs last period
             </span>
-            <span>vs last period</span>
-          </div>
+          </span>
         </div>
 
-        <select
-          value={period}
-          onChange={(e) => onPeriodChange(e.target.value as ReportPeriod)}
-          className="rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-brand-purple/20 cursor-pointer"
-        >
-          <option value="week">Weekly</option>
-          <option value="month">Monthly</option>
-          <option value="quarter">Quarterly</option>
-          <option value="year">Yearly</option>
-        </select>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <select
+              value={period}
+              onChange={(e) => {
+                const nextPeriod =
+                  e.target.value as ReportPeriod;
+
+                console.log(
+                  '📅 PERIOD CHANGED:',
+                  nextPeriod
+                );
+
+                onPeriodChange(nextPeriod);
+              }}
+              className="cursor-pointer appearance-none bg-transparent pr-6 text-[12px] font-semibold text-muted-foreground outline-none"
+            >
+              <option value="week">
+                Weekly
+              </option>
+
+              <option value="month">
+                Monthly
+              </option>
+
+              <option value="quarter">
+                Quarterly
+              </option>
+
+              <option value="year">
+                Yearly
+              </option>
+            </select>
+
+            <ChevronDown className="pointer-events-none absolute right-0 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
+        </div>
       </div>
 
-      <div className="flex flex-col xl:flex-row gap-6 items-stretch">
-        {/* Chart area */}
-        <div className="flex-1 h-[260px] min-w-0">
-          {chartData.length === 0 ? (
-            <div className="flex h-full items-center justify-center border border-dashed border-border rounded-xl">
-              <p className="text-sm text-muted-foreground">
-                No revenue data available
-              </p>
-            </div>
+      <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-end">
+        <div className="flex flex-1 items-end gap-4">
+          {bars.length === 0 ? (
+            <p className="py-8 text-sm text-muted-foreground">
+              No revenue data available
+            </p>
           ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--brand-purple)" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="var(--brand-purple)" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis
-                  dataKey="label"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(val) => {
-                    if (val >= 1e7) return `${(val / 1e7).toFixed(0)}Cr`;
-                    if (val >= 1e5) return `${(val / 1e5).toFixed(0)}L`;
-                    if (val >= 1e3) return `${(val / 1e3).toFixed(0)}K`;
-                    return val;
+            bars.map((b, index) => (
+              <div
+                key={b.originalPeriod}
+                className="flex flex-1 flex-col items-center"
+              >
+                <div
+                  title={`${b.originalPeriod}: ${currency(
+                    b.value
+                  )}`}
+                  className={`relative flex w-full max-w-[62px] items-start justify-center rounded-2xl ${b.className}`}
+                  style={{
+                    height: b.height,
                   }}
-                  tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-                />
-                <Tooltip
-                  formatter={(value: any) => [currency(Number(value)), 'Revenue']}
-                  contentStyle={{
-                    borderRadius: '12px',
-                    border: '1px solid var(--border)',
-                    background: 'var(--card)',
-                    fontSize: '12px',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="var(--brand-purple)"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#revenueGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+                >
+                  <span className="mt-2 inline-flex items-center gap-0.5 rounded-full bg-card/90 px-1.5 py-1 text-[10px] font-semibold text-foreground">
+                    {b.value >=
+                    (bars[index - 1]?.value ??
+                      0) ? (
+                      <MoveUpRight className="size-2.5" />
+                    ) : (
+                      <MoveDownRight className="size-2.5" />
+                    )}
+
+                    {currency(b.value)}
+                  </span>
+                </div>
+
+                <span
+                  className={`mt-3 text-[13px] font-semibold ${
+                    b.active
+                      ? 'text-brand'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  {b.label}
+                </span>
+              </div>
+            ))
           )}
         </div>
 
-        {/* Total Summary side box */}
-        <div className="xl:w-[200px] border border-border bg-secondary/15 rounded-xl p-4 flex flex-col justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="grid size-8 place-items-center rounded-lg bg-brand-purple/10 text-brand-purple">
-              <TrendingUp className="size-4" />
-            </div>
-            <p className="text-xs font-semibold text-muted-foreground leading-snug">
-              Total Revenue
+        <div className="sm:w-[190px]">
+          <div className="flex items-start gap-2">
+            <TrendingUp className="mt-1 size-5 text-brand" />
+
+            <p className="text-[13px] font-medium leading-snug text-muted-foreground">
+              Total revenue
               <br />
-              {PERIOD_LABELS[period]}
+              {PERIOD_LABELS[period].toLowerCase()}
             </p>
           </div>
 
-          <div className="mt-4 xl:mt-0 space-y-1">
-            <p className="text-3xl font-bold tracking-tight text-foreground">
-              {currency(totalRevenue)}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {chartData.length} periods logged
-            </p>
-          </div>
+          <p className="mt-8 text-[30px] font-extrabold tracking-tight">
+            {currency(totalRevenue)}
+          </p>
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            {bars.length} periods
+          </p>
         </div>
       </div>
     </section>
