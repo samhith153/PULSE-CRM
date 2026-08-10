@@ -88,7 +88,7 @@ export default function ActivityHeatmap() {
 
   // Determine background color weight dynamically
   const getCellColor = (count: number) => {
-    if (count === 0) return 'bg-secondary dark:bg-slate-800';
+    if (count === 0) return 'bg-surface-2 dark:bg-slate-800';
     
     // Scale color density based on filter type threshold
     let limit = 8;
@@ -97,10 +97,10 @@ export default function ActivityHeatmap() {
 
     const intensity = Math.min(count / limit, 1);
     
-    if (intensity <= 0.25) return 'bg-brand-purple/20 border-brand-accent/15';
-    if (intensity <= 0.5) return 'bg-brand-purple/40 border-brand-accent/30';
-    if (intensity <= 0.75) return 'bg-brand-purple/70 border-brand-accent/60';
-    return 'bg-brand-purple border-transparent';
+    if (intensity <= 0.25) return 'bg-accent-color/20 border-brand-accent/15';
+    if (intensity <= 0.5) return 'bg-accent-color/40 border-brand-accent/30';
+    if (intensity <= 0.75) return 'bg-accent-color/70 border-brand-accent/60';
+    return 'bg-accent-color border-transparent';
   };
 
   const handleMouseEnter = (e: React.MouseEvent, cell: ActivityCell) => {
@@ -117,22 +117,22 @@ export default function ActivityHeatmap() {
   };
 
   return (
-    <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav hover:border-border transition duration-300 relative text-foreground">
+    <div className="bg-surface-1 border border-border-default rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav hover:border-border-default transition duration-300 relative text-text-primary">
       
       {/* Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 pb-3 border-b border-border">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 pb-3 border-b border-border-default">
         <div className="flex items-start space-x-2.5">
-          <div className="h-9 w-9 rounded-xl bg-brand-purple/15 flex items-center justify-center text-brand-purple border border-brand-accent/25 shrink-0 animate-pulse">
+          <div className="h-9 w-9 rounded-xl bg-accent-color/15 flex items-center justify-center text-accent-color border border-brand-accent/25 shrink-0 animate-pulse">
             <Flame className="h-4.5 w-4.5" />
           </div>
           <div>
-            <h3 className="font-semibold text-sm text-foreground">Sales Activity Heatmap</h3>
-            <p className="text-[10px] text-muted-foreground font-bold mt-0.5 uppercase tracking-wider">Historical Engagement Heatmap</p>
+            <h3 className="font-semibold text-sm text-text-primary">Sales Activity Heatmap</h3>
+            <p className="text-[10px] text-text-muted font-bold mt-0.5 uppercase tracking-wider">Historical Engagement Heatmap</p>
           </div>
         </div>
 
         {/* Filter controls */}
-        <div className="flex bg-secondary dark:bg-ink border border-border p-1 rounded-lg self-start sm:self-center">
+        <div className="flex bg-surface-2 dark:bg-ink border border-border-default p-1 rounded-lg self-start sm:self-center">
           {[
             { id: 'all', label: 'All', icon: Flame },
             { id: 'emails', label: 'Emails', icon: Mail },
@@ -147,8 +147,8 @@ export default function ActivityHeatmap() {
                 onClick={() => setFilterType(type.id as any)}
                 className={`flex items-center space-x-1.5 px-2.5 py-1 rounded text-[10px] font-bold transition cursor-pointer ${
                   isSelected 
-                    ? 'bg-brand-purple text-primary-foreground' 
-                    : 'text-muted-foreground hover:text-foreground hover:bg-secondary dark:hover:bg-slate-800'
+                    ? 'bg-accent-color text-surface-0' 
+                    : 'text-text-muted hover:text-text-primary hover:bg-surface-2 dark:hover:bg-slate-800'
                 }`}
               >
                 <Icon className="h-3 w-3" />
@@ -164,7 +164,7 @@ export default function ActivityHeatmap() {
         <div className="flex min-w-[700px] justify-center items-start">
           
           {/* Weekday indicators */}
-          <div className="flex flex-col justify-between h-[105px] text-[9px] font-bold text-muted-foreground mr-2.5 pt-1.5 select-none text-right w-6 shrink-0">
+          <div className="flex flex-col justify-between h-[105px] text-[9px] font-bold text-text-muted mr-2.5 pt-1.5 select-none text-right w-6 shrink-0">
             <span>Mon</span>
             <span>Wed</span>
             <span>Fri</span>
@@ -173,7 +173,7 @@ export default function ActivityHeatmap() {
           {/* Grid Blocks */}
           <div className="flex flex-col">
             {/* Month Labels along top */}
-            <div className="flex justify-between w-full text-[9px] font-bold text-muted-foreground mb-1 px-1 select-none">
+            <div className="flex justify-between w-full text-[9px] font-bold text-text-muted mb-1 px-1 select-none">
               <span>February</span>
               <span>March</span>
               <span>April</span>
@@ -202,18 +202,18 @@ export default function ActivityHeatmap() {
       </div>
 
       {/* Grid Legend & Info Footer */}
-      <div className="flex items-center justify-between mt-4 text-[9.5px] font-bold text-muted-foreground select-none">
+      <div className="flex items-center justify-between mt-4 text-[9.5px] font-bold text-text-muted select-none">
         <div className="flex items-center space-x-1.5">
-          <Info className="h-3.5 w-3.5 text-muted-foreground" />
+          <Info className="h-3.5 w-3.5 text-text-muted" />
           <span>Intensity shifts depending on filtered actions count.</span>
         </div>
         <div className="flex items-center space-x-1.5">
           <span>Less</span>
-          <div className="h-2.5 w-2.5 rounded-[2px] bg-secondary dark:bg-slate-800" />
-          <div className="h-2.5 w-2.5 rounded-[2px] bg-brand-purple/20" />
-          <div className="h-2.5 w-2.5 rounded-[2px] bg-brand-purple/40" />
-          <div className="h-2.5 w-2.5 rounded-[2px] bg-brand-purple/70" />
-          <div className="h-2.5 w-2.5 rounded-[2px] bg-brand-purple" />
+          <div className="h-2.5 w-2.5 rounded-[2px] bg-surface-2 dark:bg-slate-800" />
+          <div className="h-2.5 w-2.5 rounded-[2px] bg-accent-color/20" />
+          <div className="h-2.5 w-2.5 rounded-[2px] bg-accent-color/40" />
+          <div className="h-2.5 w-2.5 rounded-[2px] bg-accent-color/70" />
+          <div className="h-2.5 w-2.5 rounded-[2px] bg-accent-color" />
           <span>More</span>
         </div>
       </div>
@@ -221,26 +221,26 @@ export default function ActivityHeatmap() {
       {/* Floating Hover Tooltip */}
       {hoveredCell && (
         <div 
-          className="fixed bg-ink text-primary-foreground text-[10px] leading-relaxed p-2.5 rounded-lg z-50 pointer-events-none -translate-x-1/2 border border-slate-700 animate-in fade-in zoom-in-95 duration-150"
+          className="fixed bg-ink text-surface-0 text-[10px] leading-relaxed p-2.5 rounded-lg z-50 pointer-events-none -translate-x-1/2 border border-slate-700 animate-in fade-in zoom-in-95 duration-150"
           style={{ left: hoveredCell.x, top: hoveredCell.y }}
         >
           <p className="font-semibold text-[11px] border-b border-slate-700 pb-1 mb-1.5">{hoveredCell.cell.dateStr}</p>
-          <div className="space-y-0.5 font-semibold text-muted-foreground">
+          <div className="space-y-0.5 font-semibold text-text-muted">
             <div className="flex justify-between space-x-4">
               <span>📧 Emails Sent:</span>
-              <span className="text-primary-foreground font-semibold tabular-nums">{hoveredCell.cell.emails}</span>
+              <span className="text-surface-0 font-semibold tabular-nums">{hoveredCell.cell.emails}</span>
             </div>
             <div className="flex justify-between space-x-4">
               <span>📞 Calls Made:</span>
-              <span className="text-primary-foreground font-semibold tabular-nums">{hoveredCell.cell.calls}</span>
+              <span className="text-surface-0 font-semibold tabular-nums">{hoveredCell.cell.calls}</span>
             </div>
             <div className="flex justify-between space-x-4">
               <span>📅 Meetings Logged:</span>
-              <span className="text-primary-foreground font-semibold tabular-nums">{hoveredCell.cell.meetings}</span>
+              <span className="text-surface-0 font-semibold tabular-nums">{hoveredCell.cell.meetings}</span>
             </div>
             <div className="flex justify-between space-x-4 border-t border-slate-700/50 pt-1 mt-1 font-semibold text-brand-secondary-accent">
               <span>Total Activity:</span>
-              <span className="text-primary-foreground tabular-nums">{hoveredCell.cell.allCount}</span>
+              <span className="text-surface-0 tabular-nums">{hoveredCell.cell.allCount}</span>
             </div>
           </div>
         </div>

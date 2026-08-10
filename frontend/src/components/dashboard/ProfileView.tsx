@@ -60,7 +60,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-24 text-muted-foreground text-xs font-semibold">
+      <div className="flex items-center justify-center py-24 text-text-muted text-xs font-semibold">
         <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading profile...
       </div>
     );
@@ -148,14 +148,14 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
 
   return (
     <div className="space-y-6">
-      <div className="bg-card border border-border rounded-2xl p-6">
+      <div className="bg-surface-1 border border-border-default rounded-2xl p-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-5">
           <div className="relative shrink-0">
-            <div className="h-20 w-20 rounded-full overflow-hidden border border-border bg-secondary flex items-center justify-center relative group cursor-pointer" onClick={() => !uploading && fileInputRef.current?.click()}>
+            <div className="h-20 w-20 rounded-full overflow-hidden border border-border-default bg-surface-2 flex items-center justify-center relative group cursor-pointer" onClick={() => !uploading && fileInputRef.current?.click()}>
               {profile.avatar_url ? (
                 <Image src={resolveImageUrl(profile.avatar_url)} alt={profile.full_name} width={80} height={80} className="h-full w-full object-cover" unoptimized />
               ) : (
-                <User className="h-8 w-8 text-muted-foreground" />
+                <User className="h-8 w-8 text-text-muted" />
               )}
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
                 {uploading ? (
@@ -188,21 +188,21 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
             {editing ? (
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-muted-foreground uppercase mb-1">Full Name</label>
+                  <label className="block text-[10px] font-semibold text-text-muted uppercase mb-1">Full Name</label>
                   <input
                     type="text"
                     value={editForm.full_name}
                     onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                    className="w-full px-3 py-2 text-sm border border-border-default rounded-lg bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-color"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-semibold text-muted-foreground uppercase mb-1">Phone</label>
+                  <label className="block text-[10px] font-semibold text-text-muted uppercase mb-1">Phone</label>
                   <input
                     type="tel"
                     value={editForm.phone}
                     onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple"
+                    className="w-full px-3 py-2 text-sm border border-border-default rounded-lg bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-color"
                     placeholder="Enter phone number"
                   />
                 </div>
@@ -210,7 +210,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
                   <button
                     onClick={saveProfile}
                     disabled={saving}
-                    className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-white bg-brand-purple rounded-lg hover:bg-brand-purple/90 disabled:opacity-50 cursor-pointer"
+                    className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-white bg-accent-color rounded-lg hover:bg-accent-color/90 disabled:opacity-50 cursor-pointer"
                   >
                     {saving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />}
                     Save
@@ -218,7 +218,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
                   <button
                     onClick={cancelEditing}
                     disabled={saving}
-                    className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-muted-foreground bg-secondary border border-border rounded-lg hover:bg-secondary/80 disabled:opacity-50 cursor-pointer"
+                    className="inline-flex items-center px-3 py-1.5 text-xs font-semibold text-text-muted bg-surface-2 border border-border-default rounded-lg hover:bg-surface-2/80 disabled:opacity-50 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -227,32 +227,32 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
             ) : (
               <>
                 <div className="flex items-center space-x-2">
-                  <h2 className="font-sans text-2xl text-foreground font-bold">{profile.full_name}</h2>
+                  <h2 className="font-sans text-2xl text-text-primary font-bold">{profile.full_name}</h2>
                   <button
                     onClick={startEditing}
-                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
+                    className="p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
                     aria-label="Edit profile"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
                 </div>
-                <p className="text-xs text-brand-purple font-semibold mt-0.5">{roleLabel} – {dept}</p>
+                <p className="text-xs text-accent-color font-semibold mt-0.5">{roleLabel} – {dept}</p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-[11px] font-semibold text-muted-foreground">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-4 text-[11px] font-semibold text-text-muted">
                   <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <Mail className="h-4 w-4 text-text-muted" />
                     <span>{profile.email}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <Phone className="h-4 w-4 text-text-muted" />
                     <span>{profile.phone || '–'}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <Building2 className="h-4 w-4 text-text-muted" />
                     <span>{dept}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <Calendar className="h-4 w-4 text-text-muted" />
                     <span>Joined {joined}</span>
                   </div>
                 </div>
@@ -263,53 +263,53 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-        <div className="col-span-12 md:col-span-7 bg-card border border-border rounded-2xl p-5 space-y-4">
-          <h3 className="font-semibold text-foreground text-sm flex items-center">
-            <Target className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+        <div className="col-span-12 md:col-span-7 bg-surface-1 border border-border-default rounded-2xl p-5 space-y-4">
+          <h3 className="font-semibold text-text-primary text-sm flex items-center">
+            <Target className="h-4.5 w-4.5 mr-2 text-accent-color" />
             <span>Quarter Target Progress</span>
           </h3>
 
           <div className="space-y-2">
-            <div className="flex justify-between text-xs font-semibold text-foreground">
+            <div className="flex justify-between text-xs font-semibold text-text-primary">
               <span>Revenue Target reached</span>
               <span className="tabular-nums">{progressPercent}%</span>
             </div>
 
-            <div className="h-3 w-full bg-secondary rounded-full overflow-hidden">
-              <div className="h-full bg-brand-purple rounded-full" style={{ width: `${progressPercent}%` }} />
+            <div className="h-3 w-full bg-surface-2 rounded-full overflow-hidden">
+              <div className="h-full bg-accent-color rounded-full" style={{ width: `${progressPercent}%` }} />
             </div>
 
-            <div className="flex justify-between text-[10px] font-semibold text-muted-foreground mt-1.5 tabular-nums">
+            <div className="flex justify-between text-[10px] font-semibold text-text-muted mt-1.5 tabular-nums">
               <span>Achieved: {formatINR(achieved)}</span>
               <span>Target: {formatINR(quota)}</span>
             </div>
           </div>
 
-          <div className="mt-4 p-3.5 bg-secondary border border-border rounded-xl text-[10px] font-semibold text-foreground flex items-start space-x-2">
-            <Award className="h-4.5 w-4.5 text-brand-purple shrink-0 mt-0.5" />
+          <div className="mt-4 p-3.5 bg-surface-2 border border-border-default rounded-xl text-[10px] font-semibold text-text-primary flex items-start space-x-2">
+            <Award className="h-4.5 w-4.5 text-accent-color shrink-0 mt-0.5" />
             <div>
               <span>Live KPIs pulled from your sales-rep dashboard. Win rate {formatPct(asNumber(kpi?.summary?.win_rate))} this period.</span>
             </div>
           </div>
         </div>
 
-        <div className="col-span-12 md:col-span-5 bg-card border border-border rounded-2xl p-5 space-y-4">
-          <h3 className="font-semibold text-foreground text-sm">Quarterly summary</h3>
+        <div className="col-span-12 md:col-span-5 bg-surface-1 border border-border-default rounded-2xl p-5 space-y-4">
+          <h3 className="font-semibold text-text-primary text-sm">Quarterly summary</h3>
 
           <div className="space-y-3.5">
-            <div className="flex justify-between items-center p-2.5 border border-border rounded-lg bg-secondary">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase">Deals closed</span>
-              <span className="text-xs font-semibold text-foreground tabular-nums">{asNumber(kpi?.summary?.won_deals)}</span>
+            <div className="flex justify-between items-center p-2.5 border border-border-default rounded-lg bg-surface-2">
+              <span className="text-[10px] font-semibold text-text-muted uppercase">Deals closed</span>
+              <span className="text-xs font-semibold text-text-primary tabular-nums">{asNumber(kpi?.summary?.won_deals)}</span>
             </div>
 
-            <div className="flex justify-between items-center p-2.5 border border-border rounded-lg bg-secondary">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase">Win Rate ratio</span>
-              <span className="text-xs font-semibold text-foreground tabular-nums">{formatPct(asNumber(kpi?.summary?.win_rate))}</span>
+            <div className="flex justify-between items-center p-2.5 border border-border-default rounded-lg bg-surface-2">
+              <span className="text-[10px] font-semibold text-text-muted uppercase">Win Rate ratio</span>
+              <span className="text-xs font-semibold text-text-primary tabular-nums">{formatPct(asNumber(kpi?.summary?.win_rate))}</span>
             </div>
 
-            <div className="flex justify-between items-center p-2.5 border border-border rounded-lg bg-secondary">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase">Avg. cycle time</span>
-              <span className="text-xs font-semibold text-foreground tabular-nums">{asNumber(kpi?.summary?.average_sales_cycle)} days</span>
+            <div className="flex justify-between items-center p-2.5 border border-border-default rounded-lg bg-surface-2">
+              <span className="text-[10px] font-semibold text-text-muted uppercase">Avg. cycle time</span>
+              <span className="text-xs font-semibold text-text-primary tabular-nums">{asNumber(kpi?.summary?.average_sales_cycle)} days</span>
             </div>
           </div>
         </div>

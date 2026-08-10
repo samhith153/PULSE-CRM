@@ -35,7 +35,7 @@ function CardSkeleton({ rows = 2 }: { rows?: number }) {
   return (
     <div className="space-y-3 animate-pulse">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="p-2.5 bg-card border border-border rounded-lg">
+        <div key={i} className="p-2.5 bg-surface-1 border border-border-default rounded-lg">
           <div className="flex justify-between items-center">
             <div className="h-2.5 bg-muted rounded w-28" />
             <div className="h-2.5 bg-muted rounded w-12" />
@@ -50,7 +50,7 @@ function CardSkeleton({ rows = 2 }: { rows?: number }) {
 // ── Empty state ──────────────────────────────────────────────────────────────
 function EmptyState({ message }: { message: string }) {
   return (
-    <p className="text-[9px] text-muted-foreground font-semibold italic py-2">
+    <p className="text-[9px] text-text-muted font-semibold italic py-2">
       {message}
     </p>
   );
@@ -74,18 +74,18 @@ function ImmediateActionCard({
 }) {
   return (
     <div
-      className="p-2.5 bg-card border border-destructive/10 rounded-lg cursor-pointer hover:border-destructive/30 transition"
+      className="p-2.5 bg-surface-1 border border-destructive/10 rounded-lg cursor-pointer hover:border-destructive/30 transition"
       onClick={() => navigateToLead(item.lead_id, onNavigate)}
     >
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-semibold text-foreground truncate max-w-[60%]">
+        <span className="text-[10px] font-semibold text-text-primary truncate max-w-[60%]">
           {item.lead_name}
         </span>
         <span className="text-[9px] font-semibold text-destructive bg-destructive/10 px-1.5 py-0.5 rounded shrink-0">
           {item.score} Score
         </span>
       </div>
-      <p className="text-[9px] text-muted-foreground mt-1 font-semibold leading-relaxed line-clamp-2">
+      <p className="text-[9px] text-text-muted mt-1 font-semibold leading-relaxed line-clamp-2">
         {item.reason}
       </p>
     </div>
@@ -106,18 +106,18 @@ function FollowUpCard({
       : `Overdue ${item.days_overdue}d`;
   return (
     <div
-      className="p-2.5 bg-card border border-status-warning-text/20 rounded-lg cursor-pointer hover:border-status-warning-text/40 transition"
+      className="p-2.5 bg-surface-1 border border-status-warning-text/20 rounded-lg cursor-pointer hover:border-status-warning-text/40 transition"
       onClick={() => navigateToLead(item.lead_id, onNavigate)}
     >
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-semibold text-foreground truncate max-w-[60%]">
+        <span className="text-[10px] font-semibold text-text-primary truncate max-w-[60%]">
           {item.lead_name}
         </span>
         <span className="text-[9px] font-semibold text-status-warning-text bg-status-warning-bg px-1.5 py-0.5 rounded shrink-0">
           {label}
         </span>
       </div>
-      <p className="text-[9px] text-muted-foreground mt-1 font-semibold leading-relaxed line-clamp-2">
+      <p className="text-[9px] text-text-muted mt-1 font-semibold leading-relaxed line-clamp-2">
         {item.reason}
       </p>
     </div>
@@ -134,18 +134,18 @@ function RisingCard({
 }) {
   return (
     <div
-      className="p-2.5 bg-card border border-border rounded-lg cursor-pointer hover:border-brand-cyan/40 transition"
+      className="p-2.5 bg-surface-1 border border-border-default rounded-lg cursor-pointer hover:border-accent-color/40 transition"
       onClick={() => navigateToLead(item.lead_id, onNavigate)}
     >
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-semibold text-foreground truncate max-w-[60%]">
+        <span className="text-[10px] font-semibold text-text-primary truncate max-w-[60%]">
           {item.lead_name}
         </span>
-        <span className="text-[9px] font-semibold text-brand-cyan bg-brand-cyan/15 px-1.5 py-0.5 rounded shrink-0">
+        <span className="text-[9px] font-semibold text-accent-color bg-accent-color/15 px-1.5 py-0.5 rounded shrink-0">
           Score {item.score}
         </span>
       </div>
-      <p className="text-[9px] text-muted-foreground mt-1 font-semibold leading-relaxed line-clamp-2">
+      <p className="text-[9px] text-text-muted mt-1 font-semibold leading-relaxed line-clamp-2">
         {item.reason}
       </p>
     </div>
@@ -162,18 +162,18 @@ function ColdCard({
 }) {
   return (
     <div
-      className="p-2.5 bg-card border border-border rounded-lg cursor-pointer hover:border-muted-foreground/30 transition"
+      className="p-2.5 bg-surface-1 border border-border-default rounded-lg cursor-pointer hover:border-muted-foreground/30 transition"
       onClick={() => navigateToLead(item.lead_id, onNavigate)}
     >
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-semibold text-foreground truncate max-w-[60%]">
+        <span className="text-[10px] font-semibold text-text-primary truncate max-w-[60%]">
           {item.lead_name}
         </span>
-        <span className="text-[9px] font-semibold text-muted-foreground bg-secondary px-1.5 py-0.5 rounded shrink-0">
+        <span className="text-[9px] font-semibold text-text-muted bg-surface-2 px-1.5 py-0.5 rounded shrink-0">
           Score {item.score}
         </span>
       </div>
-      <p className="text-[9px] text-muted-foreground mt-1 font-semibold leading-relaxed line-clamp-2">
+      <p className="text-[9px] text-text-muted mt-1 font-semibold leading-relaxed line-clamp-2">
         {item.reason}
       </p>
     </div>
@@ -207,32 +207,32 @@ function PriorityItem({
       <div
         className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 mt-0.5 ${
           checked
-            ? 'bg-brand-purple border-brand-purple text-primary-foreground'
-            : 'border-border bg-background'
+            ? 'bg-accent-color border-accent-color text-surface-0'
+            : 'border-border-default bg-surface-0'
         }`}
       >
         {checked && <Check className="h-3 w-3" strokeWidth={3} />}
       </div>
       <div className={checked ? 'line-through opacity-55' : ''}>
         <div className="flex justify-between items-center w-full gap-2">
-          <h4 className="text-[11px] font-semibold text-foreground leading-tight">
+          <h4 className="text-[11px] font-semibold text-text-primary leading-tight">
             {item.title}
           </h4>
           <span
             className={`text-[8px] font-bold shrink-0 ${
               item.priority_level === 'High' || item.priority_level === 'Critical'
                 ? 'text-destructive'
-                : 'text-muted-foreground'
+                : 'text-text-muted'
             }`}
           >
             {item.priority_level === 'Critical' ? 'High' : item.priority_level}
           </span>
         </div>
-        <p className="text-[9px] text-muted-foreground mt-0.5 leading-relaxed font-semibold line-clamp-2">
+        <p className="text-[9px] text-text-muted mt-0.5 leading-relaxed font-semibold line-clamp-2">
           {item.description}
         </p>
         {formattedValue && (
-          <p className="text-[9px] text-brand-purple font-semibold mt-1">
+          <p className="text-[9px] text-accent-color font-semibold mt-1">
             Value: {formattedValue}
           </p>
         )}
@@ -251,25 +251,25 @@ function RecentSummaryCard({
 }) {
   const sentimentStyle =
     item.sentiment === 'positive'
-      ? 'bg-brand-cyan/15 text-brand-cyan'
+      ? 'bg-accent-color/15 text-accent-color'
       : item.sentiment === 'negative'
       ? 'bg-destructive/10 text-destructive'
-      : 'bg-secondary text-muted-foreground';
+      : 'bg-surface-2 text-text-muted';
 
   const categoryStyle =
     item.category === 'sales'
-      ? 'bg-brand-cyan/15 text-brand-cyan'
+      ? 'bg-accent-color/15 text-accent-color'
       : item.category === 'urgent'
       ? 'bg-destructive/10 text-destructive'
-      : 'bg-secondary text-muted-foreground';
+      : 'bg-surface-2 text-text-muted';
 
   return (
     <div
-      className="p-2.5 bg-card border border-border rounded-lg cursor-pointer hover:border-brand-purple/30 transition"
+      className="p-2.5 bg-surface-1 border border-border-default rounded-lg cursor-pointer hover:border-accent-color/30 transition"
       onClick={() => onNavigate?.('emails')}
     >
       <div className="flex items-center justify-between mb-1">
-        <span className="text-[9px] font-semibold text-foreground truncate max-w-[50%]">
+        <span className="text-[9px] font-semibold text-text-primary truncate max-w-[50%]">
           {item.contact_name}
         </span>
         <div className="flex items-center space-x-1">
@@ -281,7 +281,7 @@ function RecentSummaryCard({
           </span>
         </div>
       </div>
-      <p className="text-[9px] text-muted-foreground font-semibold leading-relaxed line-clamp-2">
+      <p className="text-[9px] text-text-muted font-semibold leading-relaxed line-clamp-2">
         {item.summary}
       </p>
       {item.follow_up_suggestion && (
@@ -362,14 +362,14 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
   return (
     <div className="space-y-6">
       {/* ── Top Banner ─────────────────────────────────────────────────────── */}
-      <div className="border border-border rounded-2xl p-5 flex items-start justify-between space-x-3.5">
+      <div className="border border-border-default rounded-2xl p-5 flex items-start justify-between space-x-3.5">
         <div className="flex items-start space-x-3.5">
-          <div className="h-10 w-10 rounded-xl bg-brand-purple flex items-center justify-center text-primary-foreground shrink-0">
+          <div className="h-10 w-10 rounded-xl bg-accent-color flex items-center justify-center text-surface-0 shrink-0">
             <Sparkles className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-sans text-2xl text-foreground font-bold">AI Copilot Insights</h2>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed font-semibold max-w-2xl">
+            <h2 className="font-sans text-2xl text-text-primary font-bold">AI Copilot Insights</h2>
+            <p className="text-xs text-text-muted mt-1 leading-relaxed font-semibold max-w-2xl">
               Real-time recommendations powered by predictive lead scoring, conversation intelligence, compliance
               mapping, and contact velocity.
             </p>
@@ -378,7 +378,7 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
         <button
           onClick={refresh}
           disabled={loading}
-          className="shrink-0 flex items-center gap-1.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground transition px-2 py-1 rounded-lg hover:bg-secondary"
+          className="shrink-0 flex items-center gap-1.5 text-[10px] font-semibold text-text-muted hover:text-text-primary transition px-2 py-1 rounded-lg hover:bg-surface-2"
           title="Refresh AI insights"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -405,18 +405,18 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
 
         {/* ── Left: AI Action Center (8 cols) ─────────────────────────────── */}
         <div className="col-span-12 lg:col-span-8 space-y-6">
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <h3 className="font-semibold text-foreground text-sm mb-4 flex items-center">
-              <BrainCircuit className="h-4 w-4 mr-2 text-brand-purple" />
+          <div className="bg-surface-1 border border-border-default rounded-2xl p-5">
+            <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center">
+              <BrainCircuit className="h-4 w-4 mr-2 text-accent-color" />
               <span>AI Action Center</span>
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* IMMEDIATE ACTION */}
-              <div className="bg-secondary border border-border rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
+              <div className="bg-surface-2 border border-border-default rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
-                  <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-border-default mb-3">
                     <h4 className="text-xs font-semibold text-destructive uppercase tracking-wider flex items-center">
                       <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
                       <span>Immediate Action</span>
@@ -440,9 +440,9 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
               </div>
 
               {/* FOLLOW UP DUE */}
-              <div className="bg-secondary border border-border rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
+              <div className="bg-surface-2 border border-border-default rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
-                  <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
+                  <div className="flex justify-between items-center pb-2 border-b border-border-default mb-3">
                     <h4 className="text-xs font-semibold text-status-warning-text uppercase tracking-wider flex items-center">
                       <Clock className="h-3.5 w-3.5 mr-1.5" />
                       <span>Follow Up Due</span>
@@ -466,14 +466,14 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
               </div>
 
               {/* RISING INTEREST */}
-              <div className="bg-secondary border border-border rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
+              <div className="bg-surface-2 border border-border-default rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
-                  <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
-                    <h4 className="text-xs font-semibold text-brand-cyan uppercase tracking-wider flex items-center">
+                  <div className="flex justify-between items-center pb-2 border-b border-border-default mb-3">
+                    <h4 className="text-xs font-semibold text-accent-color uppercase tracking-wider flex items-center">
                       <Flame className="h-3.5 w-3.5 mr-1.5 animate-pulse" />
                       <span>Rising Interest</span>
                     </h4>
-                    <span className="text-[9px] font-semibold bg-brand-cyan/15 text-brand-cyan px-1.5 py-0.5 rounded-full">
+                    <span className="text-[9px] font-semibold bg-accent-color/15 text-accent-color px-1.5 py-0.5 rounded-full">
                       Spiking
                     </span>
                   </div>
@@ -492,14 +492,14 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
               </div>
 
               {/* GOING COLD */}
-              <div className="bg-secondary border border-border rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
+              <div className="bg-surface-2 border border-border-default rounded-xl p-4 flex flex-col justify-between min-h-[220px]">
                 <div>
-                  <div className="flex justify-between items-center pb-2 border-b border-border mb-3">
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center">
+                  <div className="flex justify-between items-center pb-2 border-b border-border-default mb-3">
+                    <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center">
                       <TrendingDown className="h-3.5 w-3.5 mr-1.5" />
                       <span>Going Cold</span>
                     </h4>
-                    <span className="text-[9px] font-semibold bg-secondary text-muted-foreground px-1.5 py-0.5 rounded-full">
+                    <span className="text-[9px] font-semibold bg-surface-2 text-text-muted px-1.5 py-0.5 rounded-full">
                       At Risk
                     </span>
                   </div>
@@ -525,9 +525,9 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
         <div className="col-span-12 lg:col-span-4 space-y-6">
 
           {/* Pipeline Health Index */}
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <h3 className="font-semibold text-foreground text-sm mb-3.5 flex items-center">
-              <ShieldCheck className="h-4 w-4 mr-2 text-brand-purple" />
+          <div className="bg-surface-1 border border-border-default rounded-2xl p-5">
+            <h3 className="font-semibold text-text-primary text-sm mb-3.5 flex items-center">
+              <ShieldCheck className="h-4 w-4 mr-2 text-accent-color" />
               <span>Pipeline Health Index</span>
             </h3>
             {loading ? (
@@ -537,16 +537,16 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
               </div>
             ) : (
               <>
-                <div className="text-center py-4 bg-secondary border border-border rounded-xl">
-                  <span className="text-4xl font-serif text-foreground font-normal tabular-nums">
+                <div className="text-center py-4 bg-surface-2 border border-border-default rounded-xl">
+                  <span className="text-4xl font-serif text-text-primary font-normal tabular-nums">
                     {ph?.score ?? 0}
-                    <span className="text-sm font-sans text-muted-foreground">/100</span>
+                    <span className="text-sm font-sans text-text-muted">/100</span>
                   </span>
-                  <p className="text-[10px] text-brand-cyan font-semibold mt-1.5">
+                  <p className="text-[10px] text-accent-color font-semibold mt-1.5">
                     {ph?.trend_label ?? '—'}
                   </p>
                 </div>
-                <p className="text-[9px] text-muted-foreground font-semibold mt-3 leading-relaxed">
+                <p className="text-[9px] text-text-muted font-semibold mt-3 leading-relaxed">
                   {ph?.explanation ?? 'Calculated from your pipeline data.'}
                 </p>
               </>
@@ -554,9 +554,9 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
           </div>
 
           {/* Daily Priorities checklist */}
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <h3 className="font-semibold text-foreground text-sm mb-4 flex items-center">
-              <CheckSquare className="h-4 w-4 mr-2 text-brand-purple" />
+          <div className="bg-surface-1 border border-border-default rounded-2xl p-5">
+            <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center">
+              <CheckSquare className="h-4 w-4 mr-2 text-accent-color" />
               <span>Daily Priorities</span>
             </h3>
             {loading ? (
@@ -593,18 +593,18 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
       </div>
 
       {/* ── Conversation Intelligence ──────────────────────────────────────── */}
-      <div className="bg-card border border-border rounded-2xl p-5">
-        <h3 className="font-semibold text-foreground text-sm mb-4 flex items-center">
-          <BrainCircuit className="h-4 w-4 mr-2 text-brand-purple" />
+      <div className="bg-surface-1 border border-border-default rounded-2xl p-5">
+        <h3 className="font-semibold text-text-primary text-sm mb-4 flex items-center">
+          <BrainCircuit className="h-4 w-4 mr-2 text-accent-color" />
           <span>Conversation Intelligence</span>
         </h3>
 
         <div className="grid grid-cols-12 gap-4">
 
           {/* Sentiment Breakdown */}
-          <div className="col-span-12 lg:col-span-4 p-4 border border-border rounded-xl bg-secondary">
-            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center">
-              <Smile className="h-3.5 w-3.5 mr-1.5 text-brand-purple" />
+          <div className="col-span-12 lg:col-span-4 p-4 border border-border-default rounded-xl bg-surface-2">
+            <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-3 flex items-center">
+              <Smile className="h-3.5 w-3.5 mr-1.5 text-accent-color" />
               Sentiment Breakdown
             </h4>
             {loading ? (
@@ -622,35 +622,35 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
             ) : (
               <div className="space-y-2.5">
                 <div>
-                  <div className="flex justify-between text-[10px] font-semibold text-foreground mb-1">
+                  <div className="flex justify-between text-[10px] font-semibold text-text-primary mb-1">
                     <span className="flex items-center">
-                      <Smile className="h-3 w-3 text-brand-cyan mr-1" /> Positive
+                      <Smile className="h-3 w-3 text-accent-color mr-1" /> Positive
                     </span>
                     <span className="tabular-nums">{sentiment?.positive ?? 0}</span>
                   </div>
-                  <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
-                    <div className="h-full bg-brand-cyan rounded-full transition-all duration-500" style={{ width: sentPct(sentiment?.positive ?? 0) }} />
+                  <div className="h-1.5 w-full bg-surface-0 rounded-full overflow-hidden">
+                    <div className="h-full bg-accent-color rounded-full transition-all duration-500" style={{ width: sentPct(sentiment?.positive ?? 0) }} />
                   </div>
                 </div>
                 <div>
-                  <div className="flex justify-between text-[10px] font-semibold text-foreground mb-1">
+                  <div className="flex justify-between text-[10px] font-semibold text-text-primary mb-1">
                     <span className="flex items-center">
                       <Meh className="h-3 w-3 text-status-warning-text mr-1" /> Neutral
                     </span>
                     <span className="tabular-nums">{sentiment?.neutral ?? 0}</span>
                   </div>
-                  <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-surface-0 rounded-full overflow-hidden">
                     <div className="h-full bg-status-warning-text rounded-full transition-all duration-500" style={{ width: sentPct(sentiment?.neutral ?? 0) }} />
                   </div>
                 </div>
                 <div>
-                  <div className="flex justify-between text-[10px] font-semibold text-foreground mb-1">
+                  <div className="flex justify-between text-[10px] font-semibold text-text-primary mb-1">
                     <span className="flex items-center">
                       <Frown className="h-3 w-3 text-destructive mr-1" /> Negative
                     </span>
                     <span className="tabular-nums">{sentiment?.negative ?? 0}</span>
                   </div>
-                  <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-surface-0 rounded-full overflow-hidden">
                     <div className="h-full bg-destructive rounded-full transition-all duration-500" style={{ width: sentPct(sentiment?.negative ?? 0) }} />
                   </div>
                 </div>
@@ -659,9 +659,9 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
           </div>
 
           {/* Intent Distribution */}
-          <div className="col-span-12 lg:col-span-4 p-4 border border-border rounded-xl bg-secondary">
-            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center">
-              <Target className="h-3.5 w-3.5 mr-1.5 text-brand-purple" />
+          <div className="col-span-12 lg:col-span-4 p-4 border border-border-default rounded-xl bg-surface-2">
+            <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-3 flex items-center">
+              <Target className="h-3.5 w-3.5 mr-1.5 text-accent-color" />
               Intent Distribution
             </h4>
             {loading ? (
@@ -682,13 +682,13 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
               <div className="space-y-2.5">
                 {intentDist.slice(0, 5).map((item) => (
                   <div key={item.label}>
-                    <div className="flex justify-between text-[10px] font-semibold text-foreground mb-1">
+                    <div className="flex justify-between text-[10px] font-semibold text-text-primary mb-1">
                       <span>{item.label}</span>
                       <span className="tabular-nums">{item.count}</span>
                     </div>
-                    <div className="h-1.5 w-full bg-background rounded-full overflow-hidden">
+                    <div className="h-1.5 w-full bg-surface-0 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-brand-purple rounded-full transition-all duration-500"
+                        className="h-full bg-accent-color rounded-full transition-all duration-500"
                         style={{ width: `${Math.round((item.count / intentMax) * 100)}%` }}
                       />
                     </div>
@@ -696,21 +696,21 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
                 ))}
               </div>
             )}
-            <p className="text-[9px] text-muted-foreground font-semibold mt-3 leading-relaxed">
+            <p className="text-[9px] text-text-muted font-semibold mt-3 leading-relaxed">
               Based on email thread analysis via Groq LLM
             </p>
           </div>
 
           {/* Recent Summaries */}
-          <div className="col-span-12 lg:col-span-4 p-4 border border-border rounded-xl bg-secondary">
-            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center">
-              <MessageSquare className="h-3.5 w-3.5 mr-1.5 text-brand-purple" />
+          <div className="col-span-12 lg:col-span-4 p-4 border border-border-default rounded-xl bg-surface-2">
+            <h4 className="text-[10px] font-semibold text-text-muted uppercase tracking-wider mb-3 flex items-center">
+              <MessageSquare className="h-3.5 w-3.5 mr-1.5 text-accent-color" />
               Recent Summaries
             </h4>
             {loading ? (
               <div className="animate-pulse space-y-2.5">
                 {[1, 2, 3].map((n) => (
-                  <div key={n} className="p-2.5 bg-card border border-border rounded-lg">
+                  <div key={n} className="p-2.5 bg-surface-1 border border-border-default rounded-lg">
                     <div className="flex justify-between mb-1">
                       <div className="h-2.5 bg-muted rounded w-20" />
                       <div className="flex gap-1">
@@ -732,8 +732,8 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
                 ))}
               </div>
             )}
-            <div className="mt-3 pt-3 border-t border-border">
-              <p className="text-[9px] text-brand-purple font-semibold flex items-center">
+            <div className="mt-3 pt-3 border-t border-border-default">
+              <p className="text-[9px] text-accent-color font-semibold flex items-center">
                 <Sparkles className="h-3 w-3 mr-1" />
                 Powered by {conv?.powered_by ?? 'Groq (llama-3.1-8b-instant)'}
               </p>

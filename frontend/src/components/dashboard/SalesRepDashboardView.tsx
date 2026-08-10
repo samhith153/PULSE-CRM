@@ -231,12 +231,12 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
           <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
             <div className="flex items-center justify-between border-b border-border pb-2">
               <h3 className="font-semibold text-foreground text-sm flex items-center">
-                <CheckCircle2 className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+                <CheckCircle2 className="h-4.5 w-4.5 mr-2 text-accent-color" />
                 <span>My Tasks Today</span>
               </h3>
               <button
                 onClick={() => setIsAddOpen(true)}
-                className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-[11px] font-bold transition cursor-pointer"
+                className="inline-flex items-center space-x-1.5 px-2.5 py-1 bg-accent-color hover:bg-accent-color/90 text-primary-foreground rounded-lg text-[11px] font-bold transition cursor-pointer"
               >
                 <Plus className="h-3.5 w-3.5" />
                 <span>Add Task</span>
@@ -259,7 +259,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                       <div className="flex items-start space-x-3 min-w-0">
                         <button
                           onClick={() => handleToggleTask(task.id)}
-                          className="mt-0.5 text-muted-foreground hover:text-brand-purple transition-colors cursor-pointer"
+                          className="mt-0.5 text-muted-foreground hover:text-accent-color transition-colors cursor-pointer"
                         >
                           <Circle className="h-4.5 w-4.5" />
                         </button>
@@ -273,9 +273,9 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                             <span
                               className={`px-1.5 py-0.25 rounded-[4px] font-bold text-[9px] ${
                                 task.priority === 'High'
-                                  ? 'bg-rose-500/10 text-rose-500 border border-rose-500/15'
+                                  ? 'bg-status-danger/10 text-status-danger border border-status-danger/15'
                                   : task.priority === 'Medium'
-                                  ? 'bg-amber-500/10 text-amber-600 border border-amber-500/15'
+                                  ? 'bg-status-warning/10 text-status-warning border border-status-warning/15'
                                   : 'bg-slate-500/10 text-muted-foreground border border-slate-500/15'
                               }`}
                             >
@@ -309,7 +309,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
           <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
             <div className="border-b border-border pb-2">
               <h3 className="font-semibold text-foreground text-sm flex items-center">
-                <Calendar className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+                <Calendar className="h-4.5 w-4.5 mr-2 text-accent-color" />
                 <span>My Meetings</span>
               </h3>
             </div>
@@ -333,7 +333,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                       <h4 className="text-xs font-bold text-foreground leading-snug">{meeting.title}</h4>
                       <p className="text-[10px] text-muted-foreground font-semibold mt-1">Client: {meeting.attendees}</p>
                     </div>
-                    <div className="flex items-center text-[10px] text-brand-purple font-bold">
+                    <div className="flex items-center text-[10px] text-accent-color font-bold">
                       <Clock className="h-3 w-3 mr-1" />
                       <span>{meeting.time}</span>
                     </div>
@@ -356,23 +356,23 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
             <div className="grid grid-cols-3 gap-2.5">
               <button
                 onClick={() => triggerQuickAdd('lead')}
-                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
+                className="flex flex-col items-center justify-center p-3 border border-border hover:border-accent-color/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
               >
-                <Users className="h-5 w-5 text-muted-foreground group-hover:text-brand-purple mb-1.5 transition-colors" />
+                <Users className="h-5 w-5 text-muted-foreground group-hover:text-accent-color mb-1.5 transition-colors" />
                 <span className="text-[10px] font-bold text-foreground">Add Lead</span>
               </button>
               <button
                 onClick={() => triggerQuickAdd('deal')}
-                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
+                className="flex flex-col items-center justify-center p-3 border border-border hover:border-accent-color/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
               >
-                <Layers className="h-5 w-5 text-muted-foreground group-hover:text-brand-purple mb-1.5 transition-colors" />
+                <Layers className="h-5 w-5 text-muted-foreground group-hover:text-accent-color mb-1.5 transition-colors" />
                 <span className="text-[10px] font-bold text-foreground">Add Deal</span>
               </button>
               <button
                 onClick={() => triggerQuickAdd('contact')}
-                className="flex flex-col items-center justify-center p-3 border border-border hover:border-brand-purple/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
+                className="flex flex-col items-center justify-center p-3 border border-border hover:border-accent-color/45 hover:bg-secondary/40 rounded-xl text-center cursor-pointer transition duration-200 group"
               >
-                <Contact className="h-5 w-5 text-muted-foreground group-hover:text-brand-purple mb-1.5 transition-colors" />
+                <Contact className="h-5 w-5 text-muted-foreground group-hover:text-accent-color mb-1.5 transition-colors" />
                 <span className="text-[10px] font-bold text-foreground">Add Contact</span>
               </button>
             </div>
@@ -382,7 +382,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
           <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
             <div className="border-b border-border pb-2">
               <h3 className="font-semibold text-foreground text-sm flex items-center">
-                <Briefcase className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+                <Briefcase className="h-4.5 w-4.5 mr-2 text-accent-color" />
                 <span>My Leads</span>
               </h3>
             </div>
@@ -415,12 +415,12 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                     </div>
                     
                     <div className="flex items-center space-x-2 shrink-0">
-                      <span className="text-[10px] font-bold tabular-nums text-brand-purple">
+                      <span className="text-[10px] font-bold tabular-nums text-accent-color">
                         {lead.score ? `${lead.score}%` : '—'}
                       </span>
                       <span
                         className={`text-[9px] font-bold px-1.5 py-0.25 rounded uppercase tracking-wider ${
-                          lead.status === 'new' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-secondary text-muted-foreground'
+                          lead.status === 'new' ? 'bg-status-success/10 text-status-success' : 'bg-secondary text-muted-foreground'
                         }`}
                       >
                         {lead.status}
@@ -454,7 +454,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                   placeholder="e.g. Follow up on proposal contract"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-background"
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent-color/20 bg-background"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -465,7 +465,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                     required
                     value={form.deadline}
                     onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-background"
+                    className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent-color/20 bg-background"
                   />
                 </div>
                 <div>
@@ -483,7 +483,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
               </div>
               <button
                 type="submit"
-                className="w-full py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer"
+                className="w-full py-2 bg-accent-color hover:bg-accent-color/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer"
               >
                 Create Task
               </button>
@@ -510,7 +510,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                   required
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-background"
+                  className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent-color/20 bg-background"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -521,7 +521,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
                     required
                     value={form.deadline}
                     onChange={(e) => setForm({ ...form, deadline: e.target.value })}
-                    className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 bg-background"
+                    className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent-color/20 bg-background"
                   />
                 </div>
                 <div>
@@ -539,7 +539,7 @@ export default function SalesRepDashboardView({ onTabChange }: SalesRepDashboard
               </div>
               <button
                 type="submit"
-                className="w-full py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer"
+                className="w-full py-2 bg-accent-color hover:bg-accent-color/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer"
               >
                 Save Changes
               </button>

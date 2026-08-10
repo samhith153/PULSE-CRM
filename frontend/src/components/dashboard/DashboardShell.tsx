@@ -314,23 +314,23 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               {/* Page heading */}
               <div className="grid grid-cols-[minmax(0,1fr)] items-end gap-4 lg:flex lg:justify-between">
                 <div className="min-w-0">
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.5rem]">
+                  <h1 className="text-3xl font-bold tracking-tight text-text-primary md:text-[2.5rem]">
                     Reports &amp; analytics
                   </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-2 text-sm text-text-muted">
                     Track performance, analyze trends, and make data-driven decisions.
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2 self-start md:self-auto">
-                  <button className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-secondary cursor-pointer">
-                    <Calendar size={14} className="text-muted-foreground" />
+                  <button className="inline-flex items-center gap-2 rounded-full border border-border-default bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-surface-2 cursor-pointer">
+                    <Calendar size={14} className="text-text-muted" />
                     <span className="tabular-nums">May 12 – May 18, 2026</span>
                   </button>
                   <button
                     onClick={() => setIsCustomizerOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-secondary cursor-pointer"
+                    className="inline-flex items-center gap-2 rounded-full border border-border-default bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-surface-2 cursor-pointer"
                   >
-                    <Settings2 size={14} className="text-muted-foreground" />
+                    <Settings2 size={14} className="text-text-muted" />
                     <span>Customize layout</span>
                   </button>
                 </div>
@@ -379,15 +379,15 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
               </div>
               {/* Report Builder Control Panel */}
-              <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-nav transition duration-300 mt-6">
-                <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
+              <div className="bg-surface-1 border border-border-default rounded-2xl p-5 hover:shadow-nav transition duration-300 mt-6">
+                <div className="flex items-center justify-between mb-4 border-b border-border-default pb-2">
                   <div>
-                    <h3 className="font-semibold text-foreground text-sm">Report builder</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    <h3 className="font-semibold text-text-primary text-sm">Report builder</h3>
+                    <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
                       Configure template, metrics, and grouping to dynamically compile custom reports.
                     </p>
                   </div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-purple/10 text-brand-purple uppercase tracking-wider">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent-color/10 text-accent-color uppercase tracking-wider">
                     Customizer
                   </span>
                 </div>
@@ -395,49 +395,49 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
-                      <label className="block text-[11px] font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">
                         Report Template
                       </label>
                       <div className="relative">
                         <select
                           value={reportType}
                           onChange={(e) => setReportType(e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
+                          className="w-full px-2.5 py-1.5 border border-border-default bg-background rounded-lg text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
                         >
                           <option value="Sales Funnel">Sales Funnel Analysis</option>
                           <option value="Lead Conversion">Lead Conversion Rate</option>
                           <option value="Activity Log">Rep Activity Metrics</option>
                           <option value="Revenue Projection">Revenue Forecast Q3</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted-foreground">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-text-muted">
                           <ChevronDown className="h-3 w-3" strokeWidth={2} />
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">
                         Primary Metric
                       </label>
                       <div className="relative">
                         <select
                           value={primaryMetric}
                           onChange={(e) => setPrimaryMetric(e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
+                          className="w-full px-2.5 py-1.5 border border-border-default bg-background rounded-lg text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
                         >
                           <option value="Deal Value">Deal Value (INR)</option>
                           <option value="Lead Score">AI Lead Score</option>
                           <option value="Conversion Rate">Conversion Rate (%)</option>
                           <option value="Task Count">Total Activities</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted-foreground">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-text-muted">
                           <ChevronDown className="h-3 w-3" strokeWidth={2} />
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">
                         Group By
                       </label>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -450,8 +450,8 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                               onClick={() => setGroupBy(group)}
                               className={`py-1.5 rounded-lg text-xs font-semibold border transition duration-200 cursor-pointer ${
                                 isActiveGroup
-                                  ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
-                                  : 'border-border hover:border-brand-purple/50 text-muted-foreground hover:bg-secondary'
+                                  ? 'border-accent-color bg-accent-color/10 text-accent-color'
+                                  : 'border-border-default hover:border-accent-color/50 text-text-muted hover:bg-surface-2'
                               }`}
                             >
                               {group}
@@ -462,10 +462,10 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-secondary border border-border rounded-xl p-3.5 mt-2">
-                    <div className="flex items-center gap-2 text-xs text-foreground font-medium overflow-hidden w-full sm:w-auto">
-                      <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[11px] shrink-0">Output:</span>
-                      <span className="font-mono bg-background px-2.5 py-1 rounded border border-border text-brand-purple font-semibold truncate max-w-full sm:max-w-md">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-2 border border-border-default rounded-xl p-3.5 mt-2">
+                    <div className="flex items-center gap-2 text-xs text-text-primary font-medium overflow-hidden w-full sm:w-auto">
+                      <span className="text-text-muted font-semibold uppercase tracking-wider text-[11px] shrink-0">Output:</span>
+                      <span className="font-mono bg-background px-2.5 py-1 rounded border border-border-default text-accent-color font-semibold truncate max-w-full sm:max-w-md">
                         {`${reportType.toLowerCase().replace(/\s+/g, '_')}_by_${groupBy.toLowerCase()}.csv`}
                       </span>
                     </div>
@@ -506,39 +506,39 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className="mb-3 bg-popover border border-border shadow-float rounded-2xl p-2 w-48 flex flex-col gap-0.5"
+              className="mb-3 bg-popover border border-border-default shadow-float rounded-2xl p-2 w-48 flex flex-col gap-0.5"
             >
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-3 py-1.5 border-b border-border/60 mb-1 select-none">Quick Actions</p>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 py-1.5 border-b border-border-default/60 mb-1 select-none">Quick Actions</p>
               
               <button
                 onClick={() => { setIsFabOpen(false); setActiveTab('leads'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
               >
-                <Plus size={14} className="text-brand-blue" />
+                <Plus size={14} className="text-accent-color" />
                 <span>New Lead</span>
               </button>
               
               <button
                 onClick={() => { setIsFabOpen(false); setActiveTab('tasks'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
               >
-                <Plus size={14} className="text-brand-purple" />
+                <Plus size={14} className="text-accent-color" />
                 <span>New Task</span>
               </button>
 
               <button
                 onClick={() => { setIsFabOpen(false); setActiveTab('calendar'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
               >
-                <Plus size={14} className="text-emerald-500" />
+                <Plus size={14} className="text-status-success" />
                 <span>New Meeting</span>
               </button>
 
               <button
                 onClick={() => { setIsFabOpen(false); alert('New Invoice action triggered: Invoice layout will open shortly.'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
               >
-                <Plus size={14} className="text-amber-500" />
+                <Plus size={14} className="text-status-warning" />
                 <span>New Invoice</span>
               </button>
             </motion.div>
@@ -547,7 +547,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
         <button
           onClick={() => setIsFabOpen(!isFabOpen)}
-          className="h-14 w-14 rounded-full bg-ink text-primary-foreground border border-border shadow-float flex items-center justify-center hover:scale-105 active:scale-95 transition duration-200 cursor-pointer group"
+          className="h-14 w-14 rounded-full bg-ink text-primary-foreground border border-border-default shadow-float flex items-center justify-center hover:scale-105 active:scale-95 transition duration-200 cursor-pointer group"
           aria-label="Quick Actions"
         >
           <Plus size={24} className={`transition-transform duration-300 ${isFabOpen ? 'rotate-45' : ''}`} />

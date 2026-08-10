@@ -10,7 +10,7 @@ function Delta({ value, negative }: { value: string; negative?: boolean }) {
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold',
-        negative ? 'bg-rose-soft text-rose-foreground' : 'bg-mint text-mint-foreground',
+        negative ? 'bg-status-danger/10 text-rose-foreground' : 'bg-mint text-mint-foreground',
       )}
     >
       <Icon className="size-3" />
@@ -27,8 +27,8 @@ function NotchBadge({ filled, inView }: { filled: boolean; inView: boolean }) {
           'reveal-badge grid size-10 place-items-center rounded-full',
           inView && 'is-in',
           filled
-            ? 'bg-card text-brand ring-1 ring-brand-soft/70'
-            : 'bg-card text-foreground ring-1 ring-border',
+            ? 'bg-surface-1 text-brand ring-1 ring-brand-soft/70'
+            : 'bg-surface-1 text-text-primary ring-1 ring-border',
         )}
         style={{ transitionDelay: inView ? '150ms' : '0ms' }}
       >
@@ -126,14 +126,14 @@ export default function StatCardsNew({
       <StatCard
         index={0}
         filledBadge
-        className="overflow-hidden bg-brand text-primary-foreground"
+        className="overflow-hidden bg-brand text-surface-0"
       >
         {(inView) => (
           <>
             <span className="shimmer" />
             <span className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10" />
             <span className="pointer-events-none absolute -bottom-24 -left-8 size-56 rounded-full bg-white/5" />
-            <p className="relative text-[15px] font-semibold text-primary-foreground/90">
+            <p className="relative text-[15px] font-semibold text-surface-0/90">
               Total Revenue
             </p>
             <div className="relative mt-8 flex items-center gap-2">
@@ -152,7 +152,7 @@ export default function StatCardsNew({
                 {formatDelta(revenue, revenue - revenueGrowth)}
               </span>
             </div>
-            <p className="relative mt-3 text-xs text-primary-foreground/75">
+            <p className="relative mt-3 text-xs text-surface-0/75">
               vs last month {currency(revenue - revenueGrowth, 2)}
             </p>
           </>
@@ -173,7 +173,7 @@ export default function StatCardsNew({
               />
               <Delta value={wonDealsDelta} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 text-xs text-text-muted">
               vs last month {Math.max(0, wonDeals - Math.round(dealsGrowth))} deals
             </p>
           </>
@@ -194,7 +194,7 @@ export default function StatCardsNew({
               />
               <Delta value={winRateDelta} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 text-xs text-text-muted">
               vs last month {(winRate - winRateGrowth).toFixed(1)}%
             </p>
           </>

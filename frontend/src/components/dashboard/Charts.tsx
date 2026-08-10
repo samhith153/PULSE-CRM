@@ -34,31 +34,31 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
     { x: 100, y: 8, val: "₹3.85M", label: "May 20, 2025" }
   ];
 
-  // Stage funnel bars: premium brand-purple accent with varying opacity levels
-  const pipelineStages = [
-    { name: "Leads", count: 120, bg: "bg-brand-purple" },
-    { name: "Qualified", count: 86, bg: "bg-brand-purple/85" },
-    { name: "Proposal Sent", count: 40, bg: "bg-brand-purple/70" },
-    { name: "Negotiation", count: 28, bg: "bg-brand-purple/55" },
-    { name: "Won", count: 23, bg: "bg-brand-purple/40" }
+  // Stage funnel bars: ui.md §2 chart-1 primary accent with varying opacity
+  const funnelData = [
+    { name: "Leads", count: 120, bg: "bg-accent-color" },
+    { name: "Qualified", count: 86, bg: "bg-accent-color/85" },
+    { name: "Proposal Sent", count: 40, bg: "bg-accent-color/70" },
+    { name: "Negotiation", count: 28, bg: "bg-accent-color/55" },
+    { name: "Won", count: 23, bg: "bg-accent-color/40" }
   ];
 
   const maxStageCount = Math.max(...pipelineStages.map((s) => s.count));
 
-  // Source chart percentages using new accents
+  // Source chart percentages — ui.md §2 data-viz palette
   const sources = [
-    { name: "Website", pct: 45, color: "var(--brand-purple)", val: "₹1.73M" },
-    { name: "Referral", pct: 25, color: "var(--brand-cyan)", val: "₹0.96M" },
-    { name: "Email", pct: 15, color: "var(--brand-blue)", val: "₹0.58M" },
+    { name: "Website", pct: 45, color: "var(--chart-1)", val: "₹1.73M" },
+    { name: "Referral", pct: 25, color: "var(--chart-2)", val: "₹0.96M" },
+    { name: "Email", pct: 15, color: "var(--chart-3)", val: "₹0.58M" },
     { name: "Social Media", pct: 10, color: "var(--chart-4)", val: "₹0.39M" },
     { name: "Other", pct: 5, color: "var(--chart-5)", val: "₹0.19M" }
   ];
 
-  // Company size percentages using new accents
+  // Company size percentages — ui.md §2 data-viz palette
   const companySizes = [
-    { name: "1-10 emp", pct: 15, color: "var(--brand-blue)" },
-    { name: "11-50 emp", pct: 25, color: "var(--brand-purple)" },
-    { name: "51-200 emp", pct: 30, color: "var(--brand-cyan)" },
+    { name: "1-10 emp", pct: 15, color: "var(--chart-3)" },
+    { name: "11-50 emp", pct: 25, color: "var(--chart-1)" },
+    { name: "51-200 emp", pct: 30, color: "var(--chart-2)" },
     { name: "201-1000 emp", pct: 20, color: "var(--chart-4)" },
     { name: "1000+ emp", pct: 10, color: "var(--chart-5)" }
   ];
@@ -100,11 +100,11 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
   if (loading) {
     return (
       <div className="space-y-6">
-        <div className="bg-card border border-border rounded-2xl p-5 h-76 animate-pulse" />
+        <div className="bg-card border border-border-default rounded-2xl p-5 h-76 animate-pulse" />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-card border border-border rounded-2xl p-5 h-76 animate-pulse" />
-          <div className="bg-card border border-border rounded-2xl p-5 h-76 animate-pulse" />
-          <div className="bg-card border border-border rounded-2xl p-5 h-76 animate-pulse" />
+          <div className="bg-card border border-border-default rounded-2xl p-5 h-76 animate-pulse" />
+          <div className="bg-card border border-border-default rounded-2xl p-5 h-76 animate-pulse" />
+          <div className="bg-card border border-border-default rounded-2xl p-5 h-76 animate-pulse" />
         </div>
       </div>
     );
@@ -112,12 +112,12 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
 
   if (empty) {
     return (
-      <div className="bg-card border border-border rounded-2xl p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
-        <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center border border-border text-brand-purple">
+      <div className="bg-surface-1 border border-border-default-default rounded-[20px] p-12 text-center flex flex-col items-center justify-center min-h-[300px] shadow-card">
+        <div className="h-12 w-12 rounded-full bg-surface-2 flex items-center justify-center border border-border-default-default text-accent-color">
           <BarChart2 className="h-6 w-6" strokeWidth={1.5} />
         </div>
-        <h4 className="text-sm font-bold text-foreground mt-4">No report data available</h4>
-        <p className="text-xs text-muted-foreground mt-1.5 max-w-sm leading-relaxed">
+        <h4 className="text-sm font-bold text-text-primary mt-4">No report data available</h4>
+        <p className="text-xs text-text-muted mt-1.5 max-w-sm leading-relaxed">
           There are no analytics records matching your selection. Try adjusting the date range filters or selecting a different pipeline.
         </p>
       </div>
@@ -129,26 +129,26 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
       {/* 1. Hero Revenue Line Chart (Spans full horizontal container width) */}
       <div 
         data-visible={chartVisible}
-        className="reveal bg-card border border-border rounded-2xl p-6 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 w-full relative"
+        className="reveal bg-card border border-border-default rounded-2xl p-6 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 w-full relative"
       >
         <div>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold tracking-tight text-foreground">
+              <h2 className="text-base font-semibold tracking-tight text-text-primary">
                 Revenue over time
               </h2>
-              <p className="mt-0.5 text-xs text-muted-foreground">
+              <p className="mt-0.5 text-xs text-text-muted">
                 Closed-won revenue, rolling 18 days
               </p>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border-default bg-background px-3 py-1.5 text-xs text-text-muted">
               This month <ChevronDown size={13} />
             </span>
           </div>
 
           <div className="mt-6 grid grid-cols-[auto_minmax(0,1fr)] gap-4">
             {/* Axis labels y-axis */}
-            <div className="flex flex-col justify-between py-1 text-[10px] text-muted-foreground">
+            <div className="flex flex-col justify-between py-1 text-[10px] text-text-muted">
               {["₹4M", "₹3M", "₹2M", "₹1M", "₹0"].map((t) => (
                 <span key={t}>{t}</span>
               ))}
@@ -162,12 +162,12 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
               >
                 <defs>
                   <linearGradient id="revenueBarGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--brand-blue)" />
-                    <stop offset="100%" stopColor="var(--brand-purple)" />
+                    <stop offset="0%" stopColor="var(--chart-1)" />
+                    <stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0.6" />
                   </linearGradient>
                   <linearGradient id="revenueBarHoverGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--brand-cyan)" />
-                    <stop offset="100%" stopColor="var(--brand-purple)" />
+                    <stop offset="0%" stopColor="var(--chart-2)" />
+                    <stop offset="100%" stopColor="var(--chart-1)" />
                   </linearGradient>
                 </defs>
                 {[0, 22.5, 45, 67.5, 90].map((y) => (
@@ -207,9 +207,9 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                   );
                 })}
               </svg>
-              <div className="mt-2.5 flex justify-between text-[10px] text-muted-foreground">
+              <div className="mt-2.5 flex justify-between text-[10px] text-text-muted">
                 {coords.map((pt, idx) => (
-                  <span key={idx} className="cursor-pointer hover:text-foreground transition-colors" onMouseEnter={() => setRevenueHoveredPoint({ x: pt.x, y: pt.y, label: pt.label, value: pt.val })}>{pt.label.split(',')[0]}</span>
+                  <span key={idx} className="cursor-pointer hover:text-text-primary transition-colors" onMouseEnter={() => setRevenueHoveredPoint({ x: pt.x, y: pt.y, label: pt.label, value: pt.val })}>{pt.label.split(',')[0]}</span>
                 ))}
               </div>
             </div>
@@ -224,15 +224,15 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute top-4 left-1/2 -translate-x-1/2 bg-popover border border-border rounded-xl shadow-float p-3 text-xs flex gap-4 z-20"
+              className="absolute top-4 left-1/2 -translate-x-1/2 bg-popover border border-border-default rounded-xl shadow-float p-3 text-xs flex gap-4 z-20"
             >
               <div>
-                <p className="text-[10px] uppercase font-bold text-muted-foreground">Date</p>
-                <p className="font-semibold text-foreground mt-0.5">{revenueHoveredPoint.label}</p>
+                <p className="text-[10px] uppercase font-bold text-text-muted">Date</p>
+                <p className="font-semibold text-text-primary mt-0.5">{revenueHoveredPoint.label}</p>
               </div>
               <div>
-                <p className="text-[10px] uppercase font-bold text-brand-purple">Revenue</p>
-                <p className="font-semibold text-foreground mt-0.5">{revenueHoveredPoint.value}</p>
+                <p className="text-[10px] uppercase font-bold text-accent-color">Revenue</p>
+                <p className="font-semibold text-text-primary mt-0.5">{revenueHoveredPoint.value}</p>
               </div>
             </motion.div>
           )}
@@ -244,14 +244,14 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
         
         {/* Deals by Pipeline Stage Funnel Chart */}
         <div 
-          className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300"
+          className="bg-card border border-border-default rounded-2xl p-5 flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300"
         >
           <div>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-sm font-bold text-foreground">
+              <h2 className="text-sm font-bold text-text-primary">
                 Deals by stage
               </h2>
-              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-border bg-background px-2 py-1 text-[10px] font-semibold text-muted-foreground">
+              <span className="inline-flex shrink-0 items-center gap-0.5 rounded-lg border border-border-default bg-background px-2 py-1 text-[10px] font-semibold text-text-muted">
                 Month <ChevronDown size={10} />
               </span>
             </div>
@@ -263,10 +263,10 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                 return (
                   <li key={stage.name} className="grid grid-cols-[5.5rem_minmax(0,1fr)_1.5rem] items-center gap-2 group/item">
                     <div className="min-w-0">
-                      <span className="truncate text-[10px] font-bold text-foreground/80 block leading-tight">{stage.name}</span>
-                      <span className="text-[8px] text-muted-foreground/60 font-semibold">{convPct}% conv</span>
+                      <span className="truncate text-[10px] font-bold text-text-primary/80 block leading-tight">{stage.name}</span>
+                      <span className="text-[8px] text-text-muted/60 font-semibold">{convPct}% conv</span>
                     </div>
-                    <span className="h-5 overflow-hidden rounded-full bg-secondary block relative cursor-pointer">
+                    <span className="h-5 overflow-hidden rounded-full bg-surface-2 block relative cursor-pointer">
                       <motion.span 
                         initial={{ width: "0%" }}
                         animate={chartVisible ? { width: `${(stage.count / maxStageCount) * 100}%` } : { width: "0%" }}
@@ -276,35 +276,35 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                         {stage.count >= 20 && stage.count}
                       </motion.span>
                     </span>
-                    <span className="text-right text-[10px] font-bold text-muted-foreground tabular-nums">{stage.count}</span>
+                    <span className="text-right text-[10px] font-bold text-text-muted tabular-nums">{stage.count}</span>
                   </li>
                 );
               })}
             </ul>
           </div>
 
-          <div className="mt-5 flex items-center justify-between border-t border-border/20 pt-3">
-            <span className="text-[11px] font-medium text-muted-foreground">Avg Conversion</span>
-            <span className="text-xs font-bold text-foreground">19.2%</span>
+          <div className="mt-5 flex items-center justify-between border-t border-border-default/20 pt-3">
+            <span className="text-[11px] font-medium text-text-muted">Avg Conversion</span>
+            <span className="text-xs font-bold text-text-primary">19.2%</span>
           </div>
         </div>
 
         {/* Deals by Source Donut Chart */}
-        <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 flex flex-col justify-between">
+        <div className="bg-card border border-border-default rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center">
               <div className="flex items-center space-x-1.5">
-                <h3 className="font-bold text-foreground text-sm">Deals by source</h3>
+                <h3 className="font-bold text-text-primary text-sm">Deals by source</h3>
                 <span title="Percentage of deals initiated per source channel">
-                  <Info className="h-3 w-3 text-muted-foreground cursor-help" strokeWidth={1.75} />
+                  <Info className="h-3 w-3 text-text-muted cursor-help" strokeWidth={1.75} />
                 </span>
               </div>
               <div className="relative">
-                <select className="appearance-none bg-secondary border border-border text-foreground focus:border-brand-purple rounded-lg px-2.5 py-1 pr-6 text-[10px] font-bold focus:outline-none cursor-pointer">
+                <select className="appearance-none bg-surface-2 border border-border-default text-text-primary focus:border-accent-color rounded-lg px-2.5 py-1 pr-6 text-[10px] font-bold focus:outline-none cursor-pointer">
                   <option>Month</option>
                   <option>All</option>
                 </select>
-                <ChevronDown className="absolute right-1.5 top-1.5 h-3 w-3 text-muted-foreground pointer-events-none" strokeWidth={1.75} />
+                <ChevronDown className="absolute right-1.5 top-1.5 h-3 w-3 text-text-muted pointer-events-none" strokeWidth={1.75} />
               </div>
             </div>
 
@@ -332,31 +332,31 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                   ))}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                  <span className="text-sm font-bold text-foreground leading-none font-sans tabular-nums">
+                  <span className="text-sm font-bold text-text-primary leading-none font-sans tabular-nums">
                     {hoveredSourceIdx !== null ? sources[hoveredSourceIdx].val : "₹3.85M"}
                   </span>
-                  <span className="text-[8px] text-muted-foreground font-bold tracking-wider uppercase mt-1 leading-none">
+                  <span className="text-[8px] text-text-muted font-bold tracking-wider uppercase mt-1 leading-none">
                     {hoveredSourceIdx !== null ? sources[hoveredSourceIdx].name : "Total"}
                   </span>
                 </div>
               </div>
 
               {/* Legend */}
-              <div className="mt-5 space-y-1 w-full border-t border-border/20 pt-3">
+              <div className="mt-5 space-y-1 w-full border-t border-border-default/20 pt-3">
                 {sources.map((src, idx) => (
                   <div 
                     key={idx} 
                     className={`flex items-center justify-between p-0.5 rounded transition-colors ${
-                      hoveredSourceIdx === idx ? 'bg-secondary' : ''
+                      hoveredSourceIdx === idx ? 'bg-surface-2' : ''
                     }`}
                     onMouseEnter={() => setHoveredSourceIdx(idx)}
                     onMouseLeave={() => setHoveredSourceIdx(null)}
                   >
                     <div className="flex items-center space-x-1.5 min-w-0">
                       <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: src.color }} />
-                      <span className="text-[10px] font-semibold text-muted-foreground truncate">{src.name}</span>
+                      <span className="text-[10px] font-semibold text-text-muted truncate">{src.name}</span>
                     </div>
-                    <span className="text-[10px] font-bold text-foreground tabular-nums">{src.pct}%</span>
+                    <span className="text-[10px] font-bold text-text-primary tabular-nums">{src.pct}%</span>
                   </div>
                 ))}
               </div>
@@ -365,16 +365,16 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
         </div>
 
         {/* Revenue by Company Size Donut Chart */}
-        <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 flex flex-col justify-between">
+        <div className="bg-card border border-border-default rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition-all duration-300 flex flex-col justify-between">
           <div>
             <div className="flex justify-between items-center">
-              <h3 className="font-bold text-foreground text-sm">Company size</h3>
+              <h3 className="font-bold text-text-primary text-sm">Company size</h3>
               <div className="relative">
-                <select className="appearance-none bg-secondary border border-border text-foreground focus:border-brand-purple rounded-lg px-2.5 py-1 pr-6 text-[10px] font-bold focus:outline-none cursor-pointer">
+                <select className="appearance-none bg-surface-2 border border-border-default text-text-primary focus:border-accent-color rounded-lg px-2.5 py-1 pr-6 text-[10px] font-bold focus:outline-none cursor-pointer">
                   <option>Quarter</option>
                   <option>Year</option>
                 </select>
-                <ChevronDown className="absolute right-1.5 top-1.5 h-3 w-3 text-muted-foreground pointer-events-none" strokeWidth={1.75} />
+                <ChevronDown className="absolute right-1.5 top-1.5 h-3 w-3 text-text-muted pointer-events-none" strokeWidth={1.75} />
               </div>
             </div>
 
@@ -402,31 +402,31 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
                   ))}
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                  <span className="text-sm font-bold text-foreground leading-none font-sans tabular-nums">
+                  <span className="text-sm font-bold text-text-primary leading-none font-sans tabular-nums">
                     {hoveredSizeIdx !== null ? `${companySizes[hoveredSizeIdx].pct}%` : "₹3.85M"}
                   </span>
-                  <span className="text-[8px] text-muted-foreground font-bold tracking-wider uppercase mt-1 leading-none">
+                  <span className="text-[8px] text-text-muted font-bold tracking-wider uppercase mt-1 leading-none">
                     {hoveredSizeIdx !== null ? companySizes[hoveredSizeIdx].name.split(' ')[0] : "Total"}
                   </span>
                 </div>
               </div>
 
               {/* Legend */}
-              <div className="mt-5 space-y-1 w-full border-t border-border/20 pt-3">
+              <div className="mt-5 space-y-1 w-full border-t border-border-default/20 pt-3">
                 {companySizes.map((sz, idx) => (
                   <div 
                     key={idx} 
                     className={`flex items-center justify-between p-0.5 rounded transition-colors ${
-                      hoveredSizeIdx === idx ? 'bg-secondary' : ''
+                      hoveredSizeIdx === idx ? 'bg-surface-2' : ''
                     }`}
                     onMouseEnter={() => setHoveredSizeIdx(idx)}
                     onMouseLeave={() => setHoveredSizeIdx(null)}
                   >
                     <div className="flex items-center space-x-1.5 min-w-0">
                       <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: sz.color }} />
-                      <span className="text-[10px] font-semibold text-muted-foreground truncate">{sz.name}</span>
+                      <span className="text-[10px] font-semibold text-text-muted truncate">{sz.name}</span>
                     </div>
-                    <span className="text-[10px] font-bold text-foreground tabular-nums">{sz.pct}%</span>
+                    <span className="text-[10px] font-bold text-text-primary tabular-nums">{sz.pct}%</span>
                   </div>
                 ))}
               </div>

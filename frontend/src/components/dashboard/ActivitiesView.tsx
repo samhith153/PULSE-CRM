@@ -363,36 +363,36 @@ useEffect(() => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-3 border-b border-border/60">
         <div>
           <h2 className="text-[20px] font-medium tracking-tight text-foreground flex items-center gap-1.5">
-            <ClipboardList className="h-5 w-5 text-brand-blue" /><span>Activities</span>
+            <ClipboardList className="h-5 w-5 text-accent-color" /><span>Activities</span>
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">Review, log, and action scheduled sales activities.</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Segmented Switch for Kanban Board vs Timeline Logs */}
           <div className="flex border border-border rounded-lg p-0.5 bg-secondary/30 shrink-0 select-none mr-2">
-            <button type="button" onClick={() => setViewMode('kanban')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'kanban' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button type="button" onClick={() => setViewMode('kanban')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'kanban' ? 'bg-accent-color text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
               Tasks Board
             </button>
-            <button type="button" onClick={() => setViewMode('logs')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'logs' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button type="button" onClick={() => setViewMode('logs')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'logs' ? 'bg-accent-color text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
               Activity Logs
             </button>
           </div>
 
           <button onClick={() => { setIsSelectMode(!isSelectMode); setSelectedIds(new Set()); }}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm ${isSelectMode ? 'bg-brand-blue text-white border-brand-blue' : 'border-border bg-card hover:bg-secondary text-foreground'}`}>
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'border-border bg-card hover:bg-secondary text-foreground'}`}>
             <Check size={13} /><span>Select</span>
           </button>
           <div className="relative">
             <button onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-blue hover:bg-brand-blue/90 text-white rounded-lg text-xs font-bold cursor-pointer shadow-sm">
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-xs font-bold cursor-pointer shadow-sm">
               <span>Add activity</span>
               <ChevronDown size={12} className={`transition-transform ${isAddDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {isAddDropdownOpen && (
               <div className="absolute right-0 mt-1.5 bg-card border border-border rounded-xl shadow-lg py-1.5 w-44 z-50">
-                {([{ type:'task', label:'Create Task', icon:ClipboardList, color:'text-brand-purple' },
+                {([{ type:'task', label:'Create Task', icon:ClipboardList, color:'text-accent-color' },
                    { type:'call', label:'Log Call', icon:PhoneCall, color:'text-status-success-text' },
-                   { type:'meeting', label:'Schedule Meeting', icon:Calendar, color:'text-brand-blue' },
+                   { type:'meeting', label:'Schedule Meeting', icon:Calendar, color:'text-accent-color' },
                    { type:'email', label:'Sync Email', icon:Mail, color:'text-priority-high' },
                    { type:'note', label:'Add Note', icon:FileText, color:'text-status-success-text' }] as const).map(item => {
                   const Icon = item.icon;
@@ -424,7 +424,7 @@ useEffect(() => {
         <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <ClipboardList className="h-4 w-4 text-brand-purple" />
+                <ClipboardList className="h-4 w-4 text-accent-color" />
                 <span>Workspace Tasks Board</span>
               </h3>
               <CollapseToggle isCollapsed={isTasksCollapsed} onToggle={() => setIsTasksCollapsed(!isTasksCollapsed)} />
@@ -459,7 +459,7 @@ useEffect(() => {
           <div className="flex space-x-1 p-0.5 bg-secondary border border-border/80 rounded-lg w-fit">
             {(['all','today','upcoming','overdue'] as const).map(tab => (
               <button key={tab} onClick={() => { setQuickTab(tab); setCurrentPage(1); }}
-                className={`py-1 px-3.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${quickTab===tab ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                className={`py-1 px-3.5 rounded-md text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer ${quickTab===tab ? 'bg-accent-color text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
                 {tab.charAt(0).toUpperCase()+tab.slice(1)}
               </button>
             ))}
@@ -483,7 +483,7 @@ useEffect(() => {
             </select>
             {(statusFilter!=='All'||priorityFilter!=='All'||ownerFilter!=='All'||searchQuery!=='') && (
               <button onClick={() => { setSearchQuery(''); setQuickTab('all'); setActiveTabType('timeline'); setStatusFilter('All'); setPriorityFilter('All'); setOwnerFilter('All'); setCurrentPage(1); toast.success('Filters cleared.'); }}
-                className="text-[10px] font-bold text-brand-blue hover:underline cursor-pointer ml-1.5">Clear</button>
+                className="text-[10px] font-bold text-accent-color hover:underline cursor-pointer ml-1.5">Clear</button>
             )}
           </div>
         </div>
@@ -496,7 +496,7 @@ useEffect(() => {
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         {loading ? (
           <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold">
-            <RefreshCw className="size-4 animate-spin text-brand-blue mr-2" /><span>Loading activities...</span>
+            <RefreshCw className="size-4 animate-spin text-accent-color mr-2" /><span>Loading activities...</span>
           </div>
         ) : activities.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center p-6">
@@ -526,7 +526,7 @@ useEffect(() => {
                   <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="group hover:bg-secondary/15 transition-all cursor-pointer">
                     {isSelectMode && <td className="py-3 px-3 text-center" onClick={e=>e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(a.id)} onChange={()=>handleSelectRow(a.id)} className="cursor-pointer size-3.5" /></td>}
                     <td className="py-3 px-3 text-left whitespace-normal break-words">
-                      <span className="font-bold text-foreground hover:text-brand-blue transition-colors block">{a.subject}</span>
+                      <span className="font-bold text-foreground hover:text-accent-color transition-colors block">{a.subject}</span>
                       {a.owner_name && <span className="text-[10px] text-muted-foreground">{a.owner_name}</span>}
                     </td>
                     <td className="py-3 px-3 text-center capitalize text-[10px] font-bold text-muted-foreground/90 font-mono">{a.activity_type}</td>
@@ -541,7 +541,7 @@ useEffect(() => {
                     </td>
                     <td className="py-3 px-3 text-left truncate text-[10px] font-bold">
                       {a.related_record_name
-                        ? <span className="text-brand-blue hover:underline cursor-pointer">{a.related_record_name}</span>
+                        ? <span className="text-accent-color hover:underline cursor-pointer">{a.related_record_name}</span>
                         : <span className="text-muted-foreground/50">—</span>}
                     </td>
                     <td className="py-3 px-3 text-center" onClick={e => e.stopPropagation()}>
@@ -590,7 +590,7 @@ useEffect(() => {
           <div className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-2xl p-5 flex flex-col max-h-[90vh]">
             <div className="flex items-center justify-between border-b border-border pb-2 mb-4 shrink-0">
               <div className="flex items-center gap-2">
-                <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${activeFormType==='task'?'bg-brand-purple/10 text-brand-purple border-brand-purple/15':activeFormType==='meeting'?'bg-brand-blue/10 text-brand-blue border-brand-blue/15':activeFormType==='call'?'bg-status-success-bg text-status-success-text border-status-success-text/15':activeFormType==='email'?'bg-priority-high-bg text-priority-high border-priority-high/15':'bg-status-success-bg text-status-success-text border-status-success-text/15'}`}>{activeFormType}</span>
+                <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded border ${activeFormType==='task'?'bg-accent-color/10 text-accent-color border-accent-color/15':activeFormType==='meeting'?'bg-accent-color/10 text-accent-color border-accent-color/15':activeFormType==='call'?'bg-status-success-bg text-status-success-text border-status-success-text/15':activeFormType==='email'?'bg-priority-high-bg text-priority-high border-priority-high/15':'bg-status-success-bg text-status-success-text border-status-success-text/15'}`}>{activeFormType}</span>
                 <h3 className="font-bold text-foreground text-sm">
                   {activeFormType==='task'?'Log New Task':activeFormType==='call'?'Log Call Outcome':activeFormType==='meeting'?'Schedule Meeting':activeFormType==='email'?'Sync Email':'Add Note'}
                 </h3>
@@ -600,7 +600,7 @@ useEffect(() => {
             <form onSubmit={handleSubmit} className="space-y-3 overflow-y-auto pr-1 flex-1">
               {/* Related record */}
               <div className="bg-secondary/20 border border-border/85 rounded-xl p-3 space-y-3">
-                <span className="text-[8px] font-black uppercase text-brand-purple tracking-widest block leading-none font-['Space_Grotesk']">Linked CRM Context</span>
+                <span className="text-[8px] font-black uppercase text-accent-color tracking-widest block leading-none font-['Space_Grotesk']">Linked CRM Context</span>
                 <div className="grid grid-cols-4 gap-2">
                   {[
                     { id: 'lead', label: 'Lead' },
@@ -614,7 +614,7 @@ useEffect(() => {
                       onClick={() => setRelatedType(rt.id as any)}
                       className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all border cursor-pointer ${
                         relatedType === rt.id
-                          ? 'bg-brand-purple/10 border-brand-purple/20 text-brand-purple font-extrabold shadow-sm'
+                          ? 'bg-accent-color/10 border-accent-color/20 text-accent-color font-extrabold shadow-sm'
                           : 'bg-card border-border text-muted-foreground'
                       }`}
                     >
@@ -680,7 +680,7 @@ useEffect(() => {
                   )}
 
                   {relatedLeadId || relatedContactId || relatedCompanyId || relatedDealId ? (
-                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-brand-purple font-semibold">
+                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-accent-color font-semibold">
                       <CheckCircle2 className="h-3 w-3" />
                       <span>Linked: {relatedName}</span>
                     </div>
@@ -741,7 +741,7 @@ useEffect(() => {
 
               <div className="pt-4 border-t border-border flex justify-end gap-2 shrink-0">
                 <button type="button" onClick={()=>{setActiveFormType(null);resetForm();}} className="px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
-                {activeFormType!=='email'&&<button type="submit" disabled={submitting} className="px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-white rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-60">{submitting?'Saving…':'Submit Activity'}</button>}
+                {activeFormType!=='email'&&<button type="submit" disabled={submitting} className="px-4 py-2 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-60">{submitting?'Saving…':'Submit Activity'}</button>}
               </div>
             </form>
           </div>
@@ -764,7 +764,7 @@ export default function ActivitiesView({ activityId, onTabChange }: ActivitiesVi
   return (
     <Suspense fallback={
       <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold">
-        <RefreshCw className="size-4 animate-spin text-brand-purple mr-2" /><span>Loading activities...</span>
+        <RefreshCw className="size-4 animate-spin text-accent-color mr-2" /><span>Loading activities...</span>
       </div>
     }>
       <ActivitiesListContent onSelectActivity={setSelectedId} onTabChange={onTabChange} />

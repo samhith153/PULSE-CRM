@@ -71,11 +71,11 @@ export default function ManagerFunnelChart({ stages = [] }: Props) {
   }, [funnelStages, segmentWidth, heights]);
 
   const stageColors = [
-    { fill: 'fill-indigo-100 dark:fill-indigo-950', badge: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20', glow: 'rgba(99,102,241,0.25)' },
+    { fill: 'fill-indigo-100 dark:fill-indigo-950', badge: 'bg-accent-color/10 text-accent-color dark:text-accent-color border border-accent-color/20', glow: 'rgba(99,102,241,0.25)' },
     { fill: 'fill-violet-200 dark:fill-violet-900', badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-300 border border-violet-500/20', glow: 'rgba(139,92,246,0.35)' },
     { fill: 'fill-purple-300 dark:fill-purple-800', badge: 'bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20', glow: 'rgba(168,85,247,0.45)' },
     { fill: 'fill-fuchsia-400 dark:fill-fuchsia-700', badge: 'bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-300 border border-fuchsia-500/20', glow: 'rgba(217,70,239,0.55)' },
-    { fill: 'fill-emerald-400 dark:fill-emerald-700', badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 border border-emerald-500/20', glow: 'rgba(16,185,129,0.55)' },
+    { fill: 'fill-emerald-400 dark:fill-emerald-700', badge: 'bg-status-success/10 text-status-success dark:text-status-success border border-status-success/20', glow: 'rgba(16,185,129,0.55)' },
   ];
 
   const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -85,28 +85,28 @@ export default function ManagerFunnelChart({ stages = [] }: Props) {
 
   if (!data.length) {
     return (
-      <div className="bg-card border border-border/60 rounded-2xl p-6 flex items-center justify-center h-48 text-muted-foreground text-sm font-semibold">
+      <div className="bg-surface-1 border border-border-default/60 rounded-2xl p-6 flex items-center justify-center h-48 text-text-muted text-sm font-semibold">
         No pipeline stage data available
       </div>
     );
   }
 
   return (
-    <div className="bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group">
-      <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-brand-purple/5 blur-3xl pointer-events-none group-hover:bg-brand-purple/8 transition duration-500" />
+    <div className="bg-surface-1/95 backdrop-blur-md border border-border-default/70 hover:border-accent-color/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group">
+      <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-accent-color/5 blur-3xl pointer-events-none group-hover:bg-accent-color/8 transition duration-500" />
 
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 mb-4 border-b border-border/50">
+      <div className="flex items-center justify-between pb-4 mb-4 border-b border-border-default/50">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-brand-purple/10 text-brand-purple border border-brand-purple/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+          <div className="h-9 w-9 rounded-xl bg-accent-color/10 text-accent-color border border-accent-color/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
             <Layers size={18} />
           </div>
           <div>
-            <h4 className="text-sm font-extrabold text-foreground tracking-tight">Pipeline Funnel</h4>
-            <p className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider mt-0.5">Stage Conversion & Drop-offs</p>
+            <h4 className="text-sm font-extrabold text-text-primary tracking-tight">Pipeline Funnel</h4>
+            <p className="text-[10px] text-text-muted uppercase font-extrabold tracking-wider mt-0.5">Stage Conversion & Drop-offs</p>
           </div>
         </div>
-        <div className="text-[10px] text-muted-foreground font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 border border-border/40 cursor-help select-none">
+        <div className="text-[10px] text-text-muted font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 border border-border-default/40 cursor-help select-none">
           <HelpCircle size={11} />
           <span>Relative conversion</span>
         </div>
@@ -182,7 +182,7 @@ export default function ManagerFunnelChart({ stages = [] }: Props) {
             <div className="flex justify-between gap-6 text-slate-400"><span>Value:</span><span className="font-bold text-white tabular-nums">{formatINR(funnelStages[hoveredIndex].value)}</span></div>
             <div className="flex justify-between gap-6 text-slate-400"><span>Relative:</span><span className="font-bold text-white tabular-nums">{funnelStages[hoveredIndex].pctOfFirst}%</span></div>
             {hoveredIndex > 0 && (
-              <div className="flex justify-between gap-6 text-slate-400 border-t border-white/5 pt-1 mt-0.5"><span>Drop-off:</span><span className="font-bold text-rose-400 tabular-nums">−{funnelStages[hoveredIndex].dropOff}%</span></div>
+              <div className="flex justify-between gap-6 text-slate-400 border-t border-white/5 pt-1 mt-0.5"><span>Drop-off:</span><span className="font-bold text-status-danger tabular-nums">−{funnelStages[hoveredIndex].dropOff}%</span></div>
             )}
           </div>
         )}

@@ -40,10 +40,10 @@ function fmtPct(n: number) { return `${Number(n || 0).toFixed(1)}%`; }
 
 function SectionCard({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) {
   return (
-    <section className="bg-card border border-border rounded-2xl p-6">
+    <section className="bg-surface-1 border border-border-default rounded-2xl p-6">
       <div className="flex items-center gap-3 mb-5">
         <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
-          <Icon className="size-4.5 text-brand-purple" />
+          <Icon className="size-4.5 text-accent-color" />
         </div>
         <h2 className="text-[17px] font-bold tracking-tight">{title}</h2>
       </div>
@@ -55,7 +55,7 @@ function SectionCard({ title, icon: Icon, children }: { title: string; icon: any
 function KPICard({ label, value, sub, positive }: { label: string; value: string; sub?: string; positive?: boolean }) {
   return (
     <div className="rounded-xl bg-muted/50 p-4">
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-xs text-text-muted">{label}</p>
       <p className="mt-1 text-[22px] font-extrabold tracking-tight">{value}</p>
       {sub && (
         <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${positive ? 'text-status-success-text' : 'text-status-danger-text'}`}>
@@ -109,7 +109,7 @@ export default function AdminReportsView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+        <Loader2 className="h-8 w-8 text-accent-color animate-spin" />
       </div>
     );
   }
@@ -120,13 +120,13 @@ export default function AdminReportsView() {
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <h1 className="text-[30px] font-extrabold tracking-tight">Reports & Analytics</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Organization-wide performance overview.</p>
+          <p className="mt-1 text-sm text-text-muted">Organization-wide performance overview.</p>
         </div>
         <div className="ml-auto">
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as any)}
-            className="rounded-full bg-card border border-border px-4 py-2 text-[13px] font-semibold"
+            className="rounded-full bg-surface-1 border border-border-default px-4 py-2 text-[13px] font-semibold"
           >
             <option value="week">This Week</option>
             <option value="month">This Month</option>
@@ -222,7 +222,7 @@ export default function AdminReportsView() {
               </div>
             ))}
             {(!salesPerf?.quota_attainment || salesPerf.quota_attainment.length === 0) && (
-              <p className="text-sm text-muted-foreground">No quota data available</p>
+              <p className="text-sm text-text-muted">No quota data available</p>
             )}
           </div>
         </div>
@@ -279,7 +279,7 @@ export default function AdminReportsView() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-muted text-xs text-muted-foreground">
+                  <tr className="bg-muted text-xs text-text-muted">
                     <th className="rounded-l-xl px-4 py-2 text-left font-medium">From</th>
                     <th className="px-4 py-2 text-left font-medium">To</th>
                     <th className="px-4 py-2 text-center font-medium">Count</th>
@@ -288,7 +288,7 @@ export default function AdminReportsView() {
                 </thead>
                 <tbody>
                   {pipeline.stage_conversion.slice(0, 6).map((c, i) => (
-                    <tr key={i} className="border-b border-border last:border-0">
+                    <tr key={i} className="border-b border-border-default last:border-0">
                       <td className="px-4 py-2.5">{c.from_stage}</td>
                       <td className="px-4 py-2.5">{c.to_stage}</td>
                       <td className="px-4 py-2.5 text-center font-semibold">{c.count}</td>
@@ -308,7 +308,7 @@ export default function AdminReportsView() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-muted text-xs text-muted-foreground">
+              <tr className="bg-muted text-xs text-text-muted">
                 <th className="rounded-l-xl px-4 py-2 text-left font-medium">Rank</th>
                 <th className="px-4 py-2 text-left font-medium">Rep</th>
                 <th className="px-4 py-2 text-right font-medium">Revenue</th>
@@ -319,9 +319,9 @@ export default function AdminReportsView() {
             </thead>
             <tbody>
               {teamPerf?.leaderboard?.map(entry => (
-                <tr key={entry.rep_id} className="border-b border-border last:border-0">
+                <tr key={entry.rep_id} className="border-b border-border-default last:border-0">
                   <td className="px-4 py-3">
-                    <span className="grid size-7 place-items-center rounded-full bg-brand-soft/20 text-[11px] font-bold text-brand-purple">
+                    <span className="grid size-7 place-items-center rounded-full bg-brand-soft/20 text-[11px] font-bold text-accent-color">
                       {entry.rank}
                     </span>
                   </td>
@@ -337,7 +337,7 @@ export default function AdminReportsView() {
                 </tr>
               ))}
               {(!teamPerf?.leaderboard || teamPerf.leaderboard.length === 0) && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No team data available</td></tr>
+                <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-text-muted">No team data available</td></tr>
               )}
             </tbody>
           </table>
@@ -348,7 +348,7 @@ export default function AdminReportsView() {
           <div className="mt-5 grid grid-cols-2 gap-4">
             {teamPerf.performance_vs_prior.map(p => (
               <div key={p.metric} className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs text-muted-foreground">{p.metric}</p>
+                <p className="text-xs text-text-muted">{p.metric}</p>
                 <p className="mt-1 text-[22px] font-extrabold">{fmt(Number(p.current))}</p>
                 <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${Number(p.change_pct) >= 0 ? 'text-status-success-text' : 'text-status-danger-text'}`}>
                   {Number(p.change_pct) >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
@@ -372,7 +372,7 @@ export default function AdminReportsView() {
           ].map(a => (
             <div key={a.label} className="rounded-xl bg-muted/50 p-3 text-center">
               <p className="text-[22px] font-extrabold">{a.value}</p>
-              <p className="text-xs text-muted-foreground">{a.label}</p>
+              <p className="text-xs text-text-muted">{a.label}</p>
             </div>
           ))}
         </div>
@@ -469,7 +469,7 @@ export default function AdminReportsView() {
               {leads.lead_aging.map(a => (
                 <div key={a.bucket} className="flex-1 rounded-xl bg-muted/50 p-3 text-center">
                   <p className="text-[20px] font-extrabold">{a.count}</p>
-                  <p className="text-xs text-muted-foreground">{a.bucket}</p>
+                  <p className="text-xs text-text-muted">{a.bucket}</p>
                 </div>
               ))}
             </div>
@@ -516,7 +516,7 @@ export default function AdminReportsView() {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No lost deal data</p>
+              <p className="text-sm text-text-muted">No lost deal data</p>
             )}
           </div>
         </div>
@@ -528,7 +528,7 @@ export default function AdminReportsView() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-muted text-xs text-muted-foreground">
+                  <tr className="bg-muted text-xs text-text-muted">
                     <th className="rounded-l-xl px-4 py-2 text-left font-medium">Deal</th>
                     <th className="px-4 py-2 text-left font-medium">Owner</th>
                     <th className="px-4 py-2 text-left font-medium">Stage</th>
@@ -538,7 +538,7 @@ export default function AdminReportsView() {
                 </thead>
                 <tbody>
                   {deals.at_risk_deals.slice(0, 5).map(d => (
-                    <tr key={d.deal_id} className="border-b border-border last:border-0">
+                    <tr key={d.deal_id} className="border-b border-border-default last:border-0">
                       <td className="px-4 py-2.5 font-semibold">{d.deal_name}</td>
                       <td className="px-4 py-2.5">{d.owner_name}</td>
                       <td className="px-4 py-2.5">{d.stage}</td>

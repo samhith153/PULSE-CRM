@@ -137,7 +137,7 @@ export function SalesReportNew({
             className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
               growthPct >= 0
                 ? 'bg-mint text-mint-foreground'
-                : 'bg-rose-soft text-rose-foreground'
+                : 'bg-status-danger/10 text-rose-foreground'
             }`}
           >
             {growthPct >= 0 ? (

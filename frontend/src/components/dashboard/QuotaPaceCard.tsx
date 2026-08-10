@@ -111,11 +111,11 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-[19px] font-bold tracking-tight">Quota Pace</h2>
-            <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+            <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-text-muted">
               Q3 Target
             </span>
           </div>
-          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
             Revenue &amp; goal tracking
           </p>
         </div>
@@ -125,8 +125,8 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
           <span className={cn(
             "inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[13px] font-bold",
             status === 'success' && "bg-mint text-mint-foreground",
-            status === 'warning' && "bg-lime-soft text-foreground",
-            status === 'danger' && "bg-rose-soft text-rose-foreground"
+            status === 'warning' && "bg-lime-soft text-text-primary",
+            status === 'danger' && "bg-status-danger/10 text-rose-foreground"
           )}>
             {status === 'success' && (
               <span className="size-2 animate-pulse rounded-full bg-mint-foreground" />
@@ -136,10 +136,10 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
           </span>
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="grid size-9 place-items-center rounded-full bg-card ring-1 ring-border hover:bg-secondary transition-colors"
+            className="grid size-9 place-items-center rounded-full bg-surface-1 ring-1 ring-border hover:bg-surface-2 transition-colors"
             title="Toggle details"
           >
-            <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", showDetails && "rotate-180")} />
+            <ChevronDown className={cn("size-4 text-text-muted transition-transform", showDetails && "rotate-180")} />
           </button>
         </div>
       </div>
@@ -150,10 +150,10 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
           <p className="text-[38px] font-extrabold leading-none tracking-tight text-brand tabular-nums">
             {Math.round(pct)}%
           </p>
-          <p className="text-sm font-medium text-muted-foreground">of {formatINR(target)} target</p>
+          <p className="text-sm font-medium text-text-muted">of {formatINR(target)} target</p>
         </div>
         <div className="text-right">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-text-muted">
             Achieved
           </p>
           <p className="text-[17px] font-extrabold tabular-nums">{formatINR(achieved)}</p>
@@ -162,7 +162,7 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
 
       {/* Progress Bar - Design Kit style with gradient */}
       <div className="relative mt-5">
-        <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
+        <div className="h-3 w-full overflow-hidden rounded-full bg-surface-2">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${inView ? fillWidth : 0}%` }}
@@ -176,7 +176,7 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
           style={{ left: `calc(${inView ? fillWidth : 0}% - 10px)` }}
         />
         {/* Scale ticks */}
-        <div className="mt-3 flex justify-between text-[11px] font-semibold text-muted-foreground">
+        <div className="mt-3 flex justify-between text-[11px] font-semibold text-text-muted">
           {["0%", "25%", "50%", "75%", "100%"].map((t) => (
             <span key={t}>{t}</span>
           ))}
@@ -190,9 +190,9 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
           return (
             <div
               key={t.label}
-              className="rounded-2xl bg-card p-4 ring-1 ring-border transition-transform duration-300 hover:-translate-y-1"
+              className="rounded-2xl bg-surface-1 p-4 ring-1 ring-border transition-transform duration-300 hover:-translate-y-1"
             >
-              <p className={cn("flex items-center gap-2 text-[13px] font-semibold text-muted-foreground", t.tone)}>
+              <p className={cn("flex items-center gap-2 text-[13px] font-semibold text-text-muted", t.tone)}>
                 <Icon className="size-4" />
                 {t.label}
               </p>
@@ -210,13 +210,13 @@ export default function QuotaPaceCard({ deals = [], customTarget = 5000000, clas
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.25 }}
-            className="mt-4 pt-4 border-t border-border/60 text-xs space-y-2"
+            className="mt-4 pt-4 border-t border-border-default/60 text-xs space-y-2"
           >
-            <div className="flex items-center justify-between text-muted-foreground font-semibold text-[11px]">
+            <div className="flex items-center justify-between text-text-muted font-semibold text-[11px]">
               <span>Pace Benchmark:</span>
-              <span className="text-foreground font-extrabold">{quota.expectedPacePct}% expected at this point</span>
+              <span className="text-text-primary font-extrabold">{quota.expectedPacePct}% expected at this point</span>
             </div>
-            <div className="flex items-center justify-between text-muted-foreground font-semibold text-[11px]">
+            <div className="flex items-center justify-between text-text-muted font-semibold text-[11px]">
               <span>Target Surplus / Deficit:</span>
               <span className={cn(
                 "font-black",

@@ -66,7 +66,7 @@ function RadialProgressRing({ progress }: { progress: number }) {
         />
         <defs>
           <linearGradient id="forecastRingGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="var(--brand-purple)" />
+            <stop offset="0%" stopColor="var(--accent-color)" />
             <stop offset="100%" stopColor="#a855f7" />
           </linearGradient>
         </defs>
@@ -182,7 +182,7 @@ export default function ForecastView() {
             Interactive projections and confidence tiers modeled dynamically from active pipelines.
           </p>
         </div>
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-6 text-rose-600 dark:text-rose-400">
+        <div className="bg-status-danger/10 border border-status-danger/20 rounded-2xl p-6 text-status-danger dark:text-status-danger">
           <p className="font-extrabold text-sm">Couldn't load forecast data</p>
           <p className="text-xs mt-1 font-medium">{error}</p>
         </div>
@@ -199,7 +199,7 @@ export default function ForecastView() {
         <div>
           <h1 className="text-3xl font-sans text-foreground tracking-tight font-black flex items-center gap-2">
             <span>Sales Forecast</span>
-            <Sparkles size={20} className="text-brand-purple animate-pulse" />
+            <Sparkles size={20} className="text-accent-color animate-pulse" />
           </h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1 font-semibold tracking-wide">
             Interactive projections and confidence tiers modeled dynamically from active pipelines.
@@ -236,14 +236,14 @@ export default function ForecastView() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="col-span-12 md:col-span-7 bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group flex flex-col justify-between"
+          className="col-span-12 md:col-span-7 bg-card/95 backdrop-blur-md border border-border/70 hover:border-accent-color/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group flex flex-col justify-between"
         >
-          <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-brand-purple/5 blur-3xl pointer-events-none group-hover:bg-brand-purple/8 transition duration-500" />
+          <div className="absolute -top-12 -left-12 w-32 h-32 rounded-full bg-accent-color/5 blur-3xl pointer-events-none group-hover:bg-accent-color/8 transition duration-500" />
           
           <div>
             <div className="flex justify-between items-start mb-4">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-brand-purple/10 text-brand-purple border border-brand-purple/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                <div className="h-10 w-10 rounded-xl bg-accent-color/10 text-accent-color border border-accent-color/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
                   <Target size={20} />
                 </div>
                 <div>
@@ -251,7 +251,7 @@ export default function ForecastView() {
                   <h2 className="text-3xl font-black text-foreground mt-0.5 tracking-tight tabular-nums bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">{fmtINR(expectedRevenue)}</h2>
                 </div>
               </div>
-              <span className="text-[9px] font-bold bg-brand-purple/10 text-brand-purple border border-brand-purple/15 px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
+              <span className="text-[9px] font-bold bg-accent-color/10 text-accent-color border border-accent-color/15 px-2.5 py-1 rounded-full uppercase tracking-wider shadow-sm">
                 {quarterLabel} Projected
               </span>
             </div>
@@ -266,7 +266,7 @@ export default function ForecastView() {
 
           <div className="grid grid-cols-2 gap-6 pt-4 border-t border-border/50 mt-6 relative z-10">
             <div className="flex items-start gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 border border-indigo-500/15">
+              <div className="h-8 w-8 rounded-lg bg-accent-color/10 text-accent-color flex items-center justify-center shrink-0 border border-accent-color/15">
                 <Award size={15} />
               </div>
               <div>
@@ -277,7 +277,7 @@ export default function ForecastView() {
               </div>
             </div>
             <div className="flex items-start gap-2.5">
-              <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 border border-emerald-500/15">
+              <div className="h-8 w-8 rounded-lg bg-status-success/10 text-status-success flex items-center justify-center shrink-0 border border-status-success/15">
                 <TrendingUp size={15} />
               </div>
               <div>
@@ -295,9 +295,9 @@ export default function ForecastView() {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
-          className="col-span-12 md:col-span-5 bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group flex flex-col items-center justify-between text-center"
+          className="col-span-12 md:col-span-5 bg-card/95 backdrop-blur-md border border-border/70 hover:border-accent-color/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group flex flex-col items-center justify-between text-center"
         >
-          <div className="absolute -bottom-12 -right-12 w-32 h-32 rounded-full bg-brand-purple/5 blur-3xl pointer-events-none group-hover:bg-brand-purple/8 transition duration-500" />
+          <div className="absolute -bottom-12 -right-12 w-32 h-32 rounded-full bg-accent-color/5 blur-3xl pointer-events-none group-hover:bg-accent-color/8 transition duration-500" />
           
           <div className="w-full flex justify-between items-center text-left mb-2 relative z-10">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">AI Confidence Score</span>
@@ -321,24 +321,24 @@ export default function ForecastView() {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.2 }}
-        className="bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group"
+        className="bg-card/95 backdrop-blur-md border border-border/70 hover:border-accent-color/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group"
       >
-        <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-brand-purple/4 blur-3xl pointer-events-none" />
+        <div className="absolute -top-12 -right-12 w-36 h-36 rounded-full bg-accent-color/4 blur-3xl pointer-events-none" />
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6 pb-4 border-b border-border/50">
           <h3 className="font-extrabold text-foreground text-sm flex items-center">
-            <Calendar className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+            <Calendar className="h-4.5 w-4.5 mr-2 text-accent-color" />
             <span>Monthly Projections Distribution</span>
           </h3>
           <div className="flex flex-wrap items-center gap-4 text-[10px] font-bold text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-brand-blue" /> Expected
+              <span className="size-2.5 rounded-full bg-accent-color" /> Expected
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-indigo-500/30 border border-indigo-500/25" /> Best Case
+              <span className="size-2.5 rounded-full bg-accent-color/30 border border-accent-color/25" /> Best Case
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-3 bg-brand-purple rounded-full" /> Pipeline Target
+              <span className="w-1.5 h-3 bg-accent-color rounded-full" /> Pipeline Target
             </span>
           </div>
         </div>
@@ -358,7 +358,7 @@ export default function ForecastView() {
                 <div className="relative h-7 w-full bg-secondary/60 dark:bg-slate-900/40 rounded-xl overflow-hidden flex items-center px-3 border border-border/40">
                   {/* Best Case bar */}
                   <motion.div 
-                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-indigo-500/10 to-indigo-500/20 border-r border-indigo-500/30 rounded-l-xl"
+                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-indigo-500/10 to-indigo-500/20 border-r border-accent-color/30 rounded-l-xl"
                     initial={{ width: 0 }}
                     whileInView={{ width: `${Math.min((item.bestCase / maxVal) * 100, 100)}%` }}
                     viewport={{ once: true }}
@@ -366,7 +366,7 @@ export default function ForecastView() {
                   />
                   {/* Expected bar */}
                   <motion.div 
-                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-brand-purple/20 to-brand-blue/30 border-r-2 border-brand-blue/60 rounded-l-xl"
+                    className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-accent-color/20 to-accent-color/30 border-r-2 border-accent-color/60 rounded-l-xl"
                     initial={{ width: 0 }}
                     whileInView={{ width: `${Math.min((item.expected / maxVal) * 100, 100)}%` }}
                     viewport={{ once: true }}
@@ -374,7 +374,7 @@ export default function ForecastView() {
                   />
                   {/* Pipeline line marker */}
                   <motion.div 
-                    className="absolute top-0 bottom-0 w-0.75 bg-brand-purple shadow-sm z-10"
+                    className="absolute top-0 bottom-0 w-0.75 bg-accent-color shadow-sm z-10"
                     initial={{ scaleY: 0 }}
                     whileInView={{ scaleY: 1, left: `${Math.min((item.pipeline / maxVal) * 100, 100)}%` }}
                     viewport={{ once: true }}
@@ -382,7 +382,7 @@ export default function ForecastView() {
                     title={`Pipeline coverage: ${fmtINR(item.pipeline)}`}
                   />
                   <span className="z-20 text-[9px] font-black text-foreground/80 flex items-center gap-1.5 select-none bg-background/80 backdrop-blur-sm border border-border/50 px-2 py-0.5 rounded-full shadow-sm">
-                    <span className="size-1.5 rounded-full bg-brand-purple" />
+                    <span className="size-1.5 rounded-full bg-accent-color" />
                     Pipeline: {fmtINR(item.pipeline)}
                   </span>
                 </div>
@@ -397,12 +397,12 @@ export default function ForecastView() {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.3 }}
-        className="bg-card/95 backdrop-blur-md border border-border/70 hover:border-brand-purple/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group"
+        className="bg-card/95 backdrop-blur-md border border-border/70 hover:border-accent-color/30 rounded-2xl p-6 shadow-[0_1px_2px_0_rgba(15,23,42,0.05),0_18px_44px_-20px_rgba(79,70,229,0.18)] hover:shadow-[0_26px_58px_-20px_rgba(79,70,229,0.32)] transition-all duration-300 relative overflow-hidden group"
       >
-        <div className="absolute -bottom-12 -left-12 w-36 h-36 rounded-full bg-brand-purple/4 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-12 -left-12 w-36 h-36 rounded-full bg-accent-color/4 blur-3xl pointer-events-none" />
 
         <h3 className="font-extrabold text-foreground text-sm flex items-center mb-6 pb-4 border-b border-border/50">
-          <TrendingUp className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+          <TrendingUp className="h-4.5 w-4.5 mr-2 text-accent-color" />
           <span>Quarterly Forecast Projections Matrix</span>
         </h3>
 
@@ -430,17 +430,17 @@ export default function ForecastView() {
                   <tr key={idx} className="hover:bg-muted/40 transition-colors duration-150">
                     <td className="py-4 font-black text-sm">{item.quarter}</td>
                     <td className="py-4 text-right tabular-nums text-muted-foreground">{fmtINR(item.quota)}</td>
-                    <td className="py-4 text-right tabular-nums font-black text-brand-purple">{fmtINR(item.committed)}</td>
+                    <td className="py-4 text-right tabular-nums font-black text-accent-color">{fmtINR(item.committed)}</td>
                     <td className="py-4 text-right tabular-nums">{fmtINR(item.bestCase)}</td>
                     <td className="py-4 text-right tabular-nums text-muted-foreground/80">{fmtINR(item.pipeline)}</td>
                     <td className="py-4 text-right">
                       <div className="flex items-center gap-2.5 justify-end">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border select-none ${
                           item.pct >= 100 
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                            ? 'bg-status-success/10 text-status-success dark:text-status-success border-status-success/20' 
                             : item.pct >= 75 
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' 
-                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                            ? 'bg-status-warning/10 text-status-warning dark:text-status-warning border-status-warning/20' 
+                            : 'bg-status-danger/10 text-status-danger dark:text-status-danger border-status-danger/20'
                         }`}>
                           {item.pct}%
                         </span>
@@ -448,10 +448,10 @@ export default function ForecastView() {
                           <motion.div 
                             className={`h-full rounded-full ${
                               item.pct >= 100 
-                                ? 'bg-emerald-500' 
+                                ? 'bg-status-success' 
                                 : item.pct >= 75 
-                                ? 'bg-amber-500' 
-                                : 'bg-rose-500'
+                                ? 'bg-status-warning' 
+                                : 'bg-status-danger'
                             }`}
                             initial={{ width: 0 }}
                             whileInView={{ width: `${Math.min(item.pct, 100)}%` }}

@@ -69,11 +69,11 @@ export default function Widgets({
   ];
 
   const activities = [
-    { name: "Emails Sent", count: 245, change: "+18%", icon: Mail, color: "text-brand-purple", bg: "bg-brand-purple/10 border border-brand-purple/20" },
-    { name: "Calls Made", count: 120, change: "+12%", icon: Phone, color: "text-brand-purple", bg: "bg-brand-purple/10 border border-brand-purple/20" },
-    { name: "Meetings Held", count: 32, change: "+14%", icon: Calendar, color: "text-brand-purple", bg: "bg-brand-purple/10 border border-brand-purple/20" },
-    { name: "Tasks Completed", count: 68, change: "+15%", icon: CheckSquare, color: "text-brand-purple", bg: "bg-brand-purple/10 border border-brand-purple/20" },
-    { name: "Notes Added", count: 56, change: "+20%", icon: FileText, color: "text-brand-purple", bg: "bg-brand-purple/10 border border-brand-purple/20" }
+    { name: "Emails Sent", count: 245, change: "+18%", icon: Mail, color: "text-accent-color", bg: "bg-accent-color/10 border border-accent-color/20" },
+    { name: "Calls Made", count: 120, change: "+12%", icon: Phone, color: "text-accent-color", bg: "bg-accent-color/10 border border-accent-color/20" },
+    { name: "Meetings Held", count: 32, change: "+14%", icon: Calendar, color: "text-accent-color", bg: "bg-accent-color/10 border border-accent-color/20" },
+    { name: "Tasks Completed", count: 68, change: "+15%", icon: CheckSquare, color: "text-accent-color", bg: "bg-accent-color/10 border border-accent-color/20" },
+    { name: "Notes Added", count: 56, change: "+20%", icon: FileText, color: "text-accent-color", bg: "bg-accent-color/10 border border-accent-color/20" }
   ];
 
   const maxRevenue = 1250000;
@@ -81,8 +81,8 @@ export default function Widgets({
   if (loading) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-pulse">
-        <div className="bg-card border border-border rounded-2xl p-5 h-64 lg:col-span-2" />
-        <div className="bg-card border border-border rounded-2xl p-5 h-64" />
+        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 h-64 lg:col-span-2" />
+        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 h-64" />
       </div>
     );
   }
@@ -94,16 +94,16 @@ export default function Widgets({
       
       {/* Team Performance Leaderboard */}
       {showLeaderboard && (
-        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 ${showProductivity ? 'lg:col-span-2' : 'lg:col-span-3'} flex flex-col justify-between`}>
+        <div className={`bg-surface-1 border border-border-default rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 ${showProductivity ? 'lg:col-span-2' : 'lg:col-span-3'} flex flex-col justify-between`}>
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-foreground text-sm">Team performance</h3>
+              <h3 className="font-bold text-text-primary text-sm">Team performance</h3>
               <div className="relative">
-                <select className="appearance-none bg-secondary border border-border text-foreground focus:border-brand-purple rounded-lg px-2.5 py-1 pr-7 text-[10px] font-bold focus:outline-none cursor-pointer">
+                <select className="appearance-none bg-surface-2 border border-border-default text-text-primary focus:border-accent-color rounded-lg px-2.5 py-1 pr-7 text-[10px] font-bold focus:outline-none cursor-pointer">
                   <option>This Month</option>
                   <option>This Quarter</option>
                 </select>
-                <ChevronDown className="absolute right-2 top-2.5 h-3 w-3 text-muted-foreground pointer-events-none" strokeWidth={1.75} />
+                <ChevronDown className="absolute right-2 top-2.5 h-3 w-3 text-text-muted pointer-events-none" strokeWidth={1.75} />
               </div>
             </div>
 
@@ -111,45 +111,45 @@ export default function Widgets({
             <div className="mt-4 overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border text-[9px] uppercase font-bold text-foreground">
+                  <tr className="border-b border-border-default text-[9px] uppercase font-bold text-text-primary">
                     <th className="pb-2 font-bold tracking-wider">Team Member</th>
                     <th className="pb-2 font-bold tracking-wider text-center">Deals Won</th>
                     <th className="pb-2 font-bold tracking-wider">Revenue</th>
                     <th className="pb-2 font-bold tracking-wider text-right">Win Rate</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-[11px] font-semibold text-muted-foreground">
+                <tbody className="divide-y divide-border text-[11px] font-semibold text-text-muted">
                   {teamMembers.map((member, index) => {
                     const barWidth = `${(member.revenueRaw / maxRevenue) * 100}%`;
                     return (
-                      <tr key={index} className="hover:bg-secondary/20 transition-colors">
+                      <tr key={index} className="hover:bg-surface-2/20 transition-colors">
                         {/* Member Info */}
                         <td className="py-2.5 flex items-center space-x-2.5">
-                          <div className="h-6.5 w-6.5 rounded-full overflow-hidden shrink-0 border border-border flex items-center justify-center bg-brand-purple/10 text-brand-purple font-bold text-[9px]">
+                          <div className="h-6.5 w-6.5 rounded-full overflow-hidden shrink-0 border border-border-default flex items-center justify-center bg-accent-color/10 text-accent-color font-bold text-[9px]">
                             {member.avatar ? (
                               <Image src={member.avatar} alt={member.name} width={26} height={26} className="h-full w-full object-cover" unoptimized />
                             ) : (
                               <span>{member.name.split(' ').map(n => n[0]).join('')}</span>
                             )}
                           </div>
-                          <span className="font-bold text-foreground truncate max-w-[120px]">{member.name}</span>
+                          <span className="font-bold text-text-primary truncate max-w-[120px]">{member.name}</span>
                         </td>
                         {/* Deals Won in Tabular Numbers */}
-                        <td className="py-2.5 text-center text-muted-foreground tabular-nums">{member.deals}</td>
+                        <td className="py-2.5 text-center text-text-muted tabular-nums">{member.deals}</td>
                         {/* Revenue with Unified Accent Bar */}
                         <td className="py-2.5 min-w-[180px]">
                           <div className="flex items-center space-x-3">
-                            <span className="w-10 text-foreground tabular-nums">{member.revenue}</span>
-                            <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
+                            <span className="w-10 text-text-primary tabular-nums">{member.revenue}</span>
+                            <div className="flex-1 h-1.5 bg-surface-2 rounded-full overflow-hidden">
                               <div 
-                                className="h-full rounded-full bg-brand-purple" 
+                                className="h-full rounded-full bg-accent-color" 
                                 style={{ width: barWidth }} 
                               />
                             </div>
                           </div>
                         </td>
                         {/* Win Rate in Tabular Numbers */}
-                        <td className="py-2.5 text-right text-foreground tabular-nums">{member.winRate}</td>
+                        <td className="py-2.5 text-right text-text-primary tabular-nums">{member.winRate}</td>
                       </tr>
                     );
                   })}
@@ -159,10 +159,10 @@ export default function Widgets({
           </div>
 
           {/* Action Link - Outline pill style */}
-          <div className="mt-4 pt-3 border-t border-border text-center">
+          <div className="mt-4 pt-3 border-t border-border-default text-center">
             <button 
               onClick={() => onTabChange?.('reports')}
-              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border-default bg-surface-0 hover:bg-surface-2 text-ink px-4 py-2 h-9"
             >
               <span>View full leaderboard</span>
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />
@@ -173,16 +173,16 @@ export default function Widgets({
 
       {/* Activity Overview */}
       {showProductivity && (
-        <div className={`bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 ${showLeaderboard ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col justify-between`}>
+        <div className={`bg-surface-1 border border-border-default rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300 ${showLeaderboard ? 'lg:col-span-1' : 'lg:col-span-3'} flex flex-col justify-between`}>
           <div>
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-foreground text-sm">Activity overview</h3>
+              <h3 className="font-bold text-text-primary text-sm">Activity overview</h3>
               <div className="relative">
-                <select className="appearance-none bg-secondary border border-border text-foreground focus:border-brand-purple rounded-lg px-2.5 py-1 pr-7 text-[10px] font-bold focus:outline-none cursor-pointer">
+                <select className="appearance-none bg-surface-2 border border-border-default text-text-primary focus:border-accent-color rounded-lg px-2.5 py-1 pr-7 text-[10px] font-bold focus:outline-none cursor-pointer">
                   <option>This Week</option>
                   <option>This Month</option>
                 </select>
-                <ChevronDown className="absolute right-2 top-2.5 h-3 w-3 text-muted-foreground pointer-events-none" strokeWidth={1.75} />
+                <ChevronDown className="absolute right-2 top-2.5 h-3 w-3 text-text-muted pointer-events-none" strokeWidth={1.75} />
               </div>
             </div>
 
@@ -191,17 +191,17 @@ export default function Widgets({
               {activities.map((act, index) => {
                 const Icon = act.icon;
                 return (
-                  <div key={index} className="flex items-center justify-between py-1 hover:bg-secondary/50 rounded-lg px-1.5 transition-colors">
+                  <div key={index} className="flex items-center justify-between py-1 hover:bg-surface-2/50 rounded-lg px-1.5 transition-colors">
                     <div className="flex items-center space-x-2.5">
                       <div className={`h-7 w-7 rounded-lg ${act.bg} flex items-center justify-center`}>
                         <Icon className={`h-3.5 w-3.5 ${act.color}`} strokeWidth={1.75} />
                       </div>
-                      <span className="text-[11px] font-semibold text-muted-foreground">{act.name}</span>
+                      <span className="text-[11px] font-semibold text-text-muted">{act.name}</span>
                     </div>
                     
                     <div className="flex items-center space-x-2 text-[11px] font-bold">
-                      <span className="text-foreground tabular-nums">{act.count}</span>
-                      <span className="text-brand-cyan bg-brand-cyan/10 border border-brand-cyan/20 px-1 rounded text-[9px] font-bold tabular-nums">
+                      <span className="text-text-primary tabular-nums">{act.count}</span>
+                      <span className="text-accent-color bg-accent-color/10 border border-accent-color/20 px-1 rounded text-[9px] font-bold tabular-nums">
                         {act.change}
                       </span>
                     </div>
@@ -212,10 +212,10 @@ export default function Widgets({
           </div>
 
           {/* Action Link - Outline pill style */}
-          <div className="mt-4 pt-3 border-t border-border text-center">
+          <div className="mt-4 pt-3 border-t border-border-default text-center">
             <button 
               onClick={() => onTabChange?.('reports')}
-              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+              className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border-default bg-surface-0 hover:bg-surface-2 text-ink px-4 py-2 h-9"
             >
               <span>View all reports</span>
               <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />

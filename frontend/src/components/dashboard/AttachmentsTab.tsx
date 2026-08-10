@@ -124,8 +124,8 @@ export default function AttachmentsTab({ contactId, dealId, companyId }: Attachm
         onDrop={handleDrop}
         className={`relative border-2 border-dashed rounded-2xl p-6 text-center flex flex-col items-center justify-center transition ${
           dragActive
-            ? 'border-brand-purple bg-brand-purple/[0.04]'
-            : 'border-border bg-secondary/20 hover:bg-secondary/40'
+            ? 'border-accent-color bg-accent-color/[0.04]'
+            : 'border-border-default bg-surface-2/20 hover:bg-surface-2/40'
         }`}
       >
         <input
@@ -140,47 +140,47 @@ export default function AttachmentsTab({ contactId, dealId, companyId }: Attachm
           className="cursor-pointer flex flex-col items-center justify-center space-y-2 w-full h-full"
         >
           {uploading ? (
-            <Loader2 className="size-8 text-brand-purple animate-spin" />
+            <Loader2 className="size-8 text-accent-color animate-spin" />
           ) : (
-            <UploadCloud className="size-8 text-muted-foreground" />
+            <UploadCloud className="size-8 text-text-muted" />
           )}
-          <div className="text-xs font-semibold text-foreground">
+          <div className="text-xs font-semibold text-text-primary">
             {uploading ? 'Uploading attachment...' : 'Drag & drop file here or click to browse'}
           </div>
-          <p className="text-[10px] text-muted-foreground/60">PDF, DOCX, CSV, PNG, JPG up to 10MB</p>
+          <p className="text-[10px] text-text-muted/60">PDF, DOCX, CSV, PNG, JPG up to 10MB</p>
         </label>
       </div>
 
       {/* Attachments List */}
       <div className="space-y-2">
-        <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+        <h4 className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
           Attachments ({attachments.length})
         </h4>
 
         {loading ? (
-          <div className="flex items-center justify-center py-6 text-xs text-muted-foreground">
+          <div className="flex items-center justify-center py-6 text-xs text-text-muted">
             <Loader2 className="size-4 mr-2 animate-spin" /> Loading attachments...
           </div>
         ) : attachments.length === 0 ? (
-          <div className="text-center py-6 border border-border/50 rounded-xl text-xs text-muted-foreground font-semibold bg-secondary/10">
+          <div className="text-center py-6 border border-border-default/50 rounded-xl text-xs text-text-muted font-semibold bg-surface-2/10">
             No attachments yet — upload a document to get started
           </div>
         ) : (
-          <div className="divide-y divide-border/40 border border-border/50 rounded-xl overflow-hidden bg-card">
+          <div className="divide-y divide-border/40 border border-border-default/50 rounded-xl overflow-hidden bg-surface-1">
             {attachments.map((file) => (
               <div
                 key={file.id}
-                className="flex items-center justify-between p-3 hover:bg-secondary/30 transition-colors"
+                className="flex items-center justify-between p-3 hover:bg-surface-2/30 transition-colors"
               >
                 <div className="flex items-center space-x-2.5 min-w-0">
-                  <div className="size-8 rounded-lg bg-brand-purple/10 flex items-center justify-center text-brand-purple shrink-0">
+                  <div className="size-8 rounded-lg bg-accent-color/10 flex items-center justify-center text-accent-color shrink-0">
                     <FileText className="size-4.5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold text-foreground truncate max-w-[200px]" title={file.file_name}>
+                    <p className="text-xs font-semibold text-text-primary truncate max-w-[200px]" title={file.file_name}>
                       {file.file_name}
                     </p>
-                    <p className="text-[10px] text-muted-foreground/70">
+                    <p className="text-[10px] text-text-muted/70">
                       {formatSize(file.file_size_bytes)} • {new Date(file.created_at).toLocaleDateString()}
                     </p>
                   </div>
@@ -190,14 +190,14 @@ export default function AttachmentsTab({ contactId, dealId, companyId }: Attachm
                   <a
                     href={getDocumentDownloadUrl(file.id)}
                     download
-                    className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-lg transition"
+                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded-lg transition"
                     title="Download File"
                   >
                     <Download className="size-3.5" />
                   </a>
                   <button
                     onClick={() => handleDelete(file.id, file.file_name)}
-                    className="p-1.5 text-muted-foreground hover:text-status-danger-text hover:bg-status-danger-text/10 rounded-lg transition cursor-pointer"
+                    className="p-1.5 text-text-muted hover:text-status-danger-text hover:bg-status-danger-text/10 rounded-lg transition cursor-pointer"
                     title="Delete Attachment"
                   >
                     <Trash2 className="size-3.5" />
