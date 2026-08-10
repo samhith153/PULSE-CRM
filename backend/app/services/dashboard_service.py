@@ -1563,7 +1563,10 @@ class DashboardService:
             return int(r.scalar_one() or 0)
 
         # -- 1. Total Revenue --------------------------------------------------
-        total_revenue = await _deal_sum(Deal.status == DealStatus.WON.value)
+        total_revenue = await _deal_sum(
+            Deal.status == DealStatus.WON.value,
+            Deal.closed_at >= period_start,
+        )
         prev_revenue = await _deal_sum(
             Deal.status == DealStatus.WON.value,
             Deal.closed_at >= prev_start,
@@ -1578,7 +1581,10 @@ class DashboardService:
         )
 
         # -- 2. Won Deals ------------------------------------------------------
-        won_deals = await _deal_count(Deal.status == DealStatus.WON.value)
+        won_deals = await _deal_count(
+            Deal.status == DealStatus.WON.value,
+            Deal.closed_at >= period_start,
+        )
         prev_won = await _deal_count(
             Deal.status == DealStatus.WON.value,
             Deal.closed_at >= prev_start,
@@ -1593,7 +1599,10 @@ class DashboardService:
         )
 
         # -- 3. Win Rate -------------------------------------------------------
-        lost_deals = await _deal_count(Deal.status == DealStatus.LOST.value)
+        lost_deals = await _deal_count(
+            Deal.status == DealStatus.LOST.value,
+            Deal.closed_at >= period_start,
+        )
         win_rate = self._percentage(won_deals, max(won_deals + lost_deals, 1))
         prev_lost = await _deal_count(
             Deal.status == DealStatus.LOST.value,
@@ -1611,7 +1620,10 @@ class DashboardService:
 
         # -- 4. Average Deal Size ----------------------------------------------
         avg_stmt = select(func.coalesce(func.avg(Deal.amount), 0)).where(
-            *_rep_deals(Deal.status == DealStatus.WON.value)
+            *_rep_deals(
+                Deal.status == DealStatus.WON.value,
+                Deal.closed_at >= period_start,
+            )
         )
         avg_deal_size = Decimal(str((await self.db.execute(avg_stmt)).scalar_one() or 0))
         prev_avg_stmt = select(func.coalesce(func.avg(Deal.amount), 0)).where(
@@ -1681,21 +1693,64 @@ class DashboardService:
             difference_days=avg_cycle - prev_cycle,
         )
 
-        # -- 6. Revenue Over Time (12 months) ----------------------------------
+        # -- 6. Revenue Over Time (adaptive by period) --------------------------
         revenue_trend: list[RepRevenuePoint] = []
-        for offset in range(11, -1, -1):
-            start, end = self._month_bounds(now, offset)
-            m_rev = await _deal_sum(
-                Deal.status == DealStatus.WON.value,
-                Deal.closed_at >= start,
-                Deal.closed_at < end,
-            )
-            revenue_trend.append(RepRevenuePoint(period=start.strftime("%Y-%m"), revenue=m_rev))
+        if period == "week":
+            # Last 4 weeks
+            for offset in range(3, -1, -1):
+                w_start = now - timedelta(weeks=offset + 1)
+                w_start = w_start.replace(hour=0, minute=0, second=0, microsecond=0)
+                w_end = now - timedelta(weeks=offset)
+                w_end = w_end.replace(hour=0, minute=0, second=0, microsecond=0)
+                m_rev = await _deal_sum(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= w_start,
+                    Deal.closed_at < w_end,
+                )
+                revenue_trend.append(RepRevenuePoint(period=w_start.strftime("%b %d"), revenue=m_rev))
+        elif period == "quarter":
+            # Last 4 quarters
+            for offset in range(3, -1, -1):
+                q = ((now.month - 1) // 3) - offset
+                q_year = now.year + (q - 1) // 12
+                q_month = ((q - 1) % 12) + 1
+                q_start = now.replace(year=q_year, month=q_month, day=1, hour=0, minute=0, second=0, microsecond=0)
+                if q_month + 3 > 12:
+                    q_end = now.replace(year=q_year + 1, month=(q_month + 3) - 12, day=1, hour=0, minute=0, second=0, microsecond=0)
+                else:
+                    q_end = now.replace(year=q_year, month=q_month + 3, day=1, hour=0, minute=0, second=0, microsecond=0)
+                m_rev = await _deal_sum(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= q_start,
+                    Deal.closed_at < q_end,
+                )
+                revenue_trend.append(RepRevenuePoint(period=f"Q{((q_month - 1) // 3) + 1} {q_year}", revenue=m_rev))
+        elif period == "year":
+            # Last 4 years
+            for offset in range(3, -1, -1):
+                y_start = now.replace(year=now.year - offset, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+                y_end = now.replace(year=now.year - offset + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+                m_rev = await _deal_sum(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= y_start,
+                    Deal.closed_at < y_end,
+                )
+                revenue_trend.append(RepRevenuePoint(period=str(y_start.year), revenue=m_rev))
+        else:
+            # month (default) — last 12 months
+            for offset in range(11, -1, -1):
+                start, end = self._month_bounds(now, offset)
+                m_rev = await _deal_sum(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= start,
+                    Deal.closed_at < end,
+                )
+                revenue_trend.append(RepRevenuePoint(period=start.strftime("%Y-%m"), revenue=m_rev))
 
         # -- 7. Deals by Stage -------------------------------------------------
         stage_stmt = (
             select(Deal.status, func.count(Deal.id), func.coalesce(func.sum(Deal.amount), 0))
-            .where(*_rep_deals())
+            .where(*_rep_deals(Deal.created_at >= period_start))
             .group_by(Deal.status)
         )
         stage_rows = (await self.db.execute(stage_stmt)).all()
@@ -1722,7 +1777,7 @@ class DashboardService:
             )
             .select_from(Deal)
             .outerjoin(Lead, Lead.id == Deal.lead_id)
-            .where(*_rep_deals())
+            .where(*_rep_deals(Deal.created_at >= period_start))
             .group_by(Lead.source)
             .order_by(func.count(Deal.id).desc())
         )
@@ -1856,11 +1911,11 @@ class DashboardService:
         task_actions = ["task_completed", "task"]
         note_actions = ["note"]
 
-        emails_cur = await _activity_count(email_actions, month_start)
-        calls_cur = await _activity_count(call_actions, month_start)
-        meetings_cur = await _activity_count(meeting_actions, month_start)
-        tasks_cur = await _activity_count(task_actions, month_start)
-        notes_cur = await _activity_count(note_actions, month_start)
+        emails_cur = await _activity_count(email_actions, period_start)
+        calls_cur = await _activity_count(call_actions, period_start)
+        meetings_cur = await _activity_count(meeting_actions, period_start)
+        tasks_cur = await _activity_count(task_actions, period_start)
+        notes_cur = await _activity_count(note_actions, period_start)
 
         emails_prev = await _activity_count(email_actions, last_month_start, last_month_end)
         calls_prev = await _activity_count(call_actions, last_month_start, last_month_end)
@@ -1886,11 +1941,14 @@ class DashboardService:
         pipeline_value = await _deal_sum(
             Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
         )
-        deals_created_this_month = await _deal_count(Deal.created_at >= month_start)
-        deals_lost = await _deal_count(Deal.status == DealStatus.LOST.value)
+        deals_created_this_month = await _deal_count(Deal.created_at >= period_start)
+        deals_lost = await _deal_count(
+            Deal.status == DealStatus.LOST.value,
+            Deal.closed_at >= period_start,
+        )
         activities_logged = await _activity_count(
             list(call_actions + email_actions + meeting_actions + task_actions + note_actions),
-            month_start,
+            period_start,
         )
 
         prev_pipeline = await _deal_sum(
