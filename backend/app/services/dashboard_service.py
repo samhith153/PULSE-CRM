@@ -487,7 +487,7 @@ class DashboardService:
     # Admin Dashboard KPI  (admin-only, cross-org aware)
     # -------------------------------------------------------------------------
 
-    async def admin_kpi(self, organization_id: UUID):  # noqa: C901
+    async def admin_kpi(self, organization_id: UUID, lead_source_period: str = "all"):  # noqa: C901
         """
         Compute all Admin Dashboard KPIs scoped to the caller's organization.
         Returns AdminDashboardResponse.
@@ -759,9 +759,12 @@ class DashboardService:
             )
 
         # -- 10. Lead Source Analytics ----------------------------------------
+        source_filters = list(_base(Lead))
+        if lead_source_period == "year":
+            source_filters.append(Lead.created_at >= year_start)
         source_stmt = (
             select(Lead.source, func.count(Lead.id))
-            .where(*_base(Lead))
+            .where(*source_filters)
             .group_by(Lead.source)
             .order_by(func.count(Lead.id).desc())
         )

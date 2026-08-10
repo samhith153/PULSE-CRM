@@ -606,6 +606,9 @@ export async function getDeals(): Promise<Deal[]> {
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
       createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
+      contact_id: dd.contact_id || null,
+      company_id: dd.company_id || null,
+      contact_name: dd.contact_name || null,
     };
   }) as unknown as Deal[];
 }
@@ -933,8 +936,14 @@ export interface SalesRepDashboardData {
   activity_overview?: { emails_sent: number; calls_made: number; meetings_held: number; tasks_completed: number; notes_added: number } | null;
 }
 
-export async function getAdminDashboard(): Promise<AdminDashboardData> {
-  return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
+export type AdminLeadSourcePeriod = 'all' | 'year';
+
+export async function getAdminDashboard(
+  leadSourcePeriod: AdminLeadSourcePeriod = 'all'
+): Promise<AdminDashboardData> {
+  return apiFetch<AdminDashboardData>(
+    `/api/v1/dashboard/admin${toQuery({ lead_source_period: leadSourcePeriod })}`
+  );
 }
 
 export type ManagerDashboardPeriod =

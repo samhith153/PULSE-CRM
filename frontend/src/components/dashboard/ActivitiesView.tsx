@@ -9,11 +9,11 @@ import {
   Link2, CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { CollapseToggle } from '@/components/ui/CollapseToggle';
 import {
   getCrmActivities, getCrmActivityOwners, downloadCrmActivitiesExport,
   createCrmTask, createCrmCall, createCrmMeeting, createCrmNote, createCrmEmail,
   bulkDeleteCrmActivities, deleteCrmTask, deleteCrmCall, deleteCrmNote,
+  updateCrmTask, updateCrmCall,
   getLeads, getContacts, getCompanies, getDeals,
   type CrmActivity, type CrmActivityOwner, type CrmActivitiesListParams,
   type CreateTaskPayload, type CreateCallPayload,
@@ -22,7 +22,6 @@ import {
 } from '@/utils/api';
 import ActivityDetailView from './ActivityDetailView';
 import CalendarView from './CalendarView';
-import TasksView from './TasksView';
 import { toast } from '@/lib/toast';
 
 
@@ -57,6 +56,76 @@ function fmt(s: string) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ') : '';
 }
 
+function ActivityKanbanBoard({
+  activities,
+  onSelectActivity,
+  onQuickComplete,
+}: {
+  activities: CrmActivity[];
+  onSelectActivity: (id: string) => void;
+  onQuickComplete: (a: CrmActivity) => void;
+}) {
+  const columns: { key: string; label: string; match: (s: string) => boolean; dot: string; headerBg: string }[] = [
+    { key: 'overdue',   label: 'Overdue',   match: s => s?.toLowerCase() === 'overdue', dot: 'bg-[#E2604F]', headerBg: 'bg-[#E2604F]/5' },
+    { key: 'pending',   label: 'Pending',   match: s => ['pending', 'scheduled', 'in_progress'].includes(s?.toLowerCase()), dot: 'bg-[#5B9BD5]', headerBg: 'bg-[#5B9BD5]/5' },
+    { key: 'completed', label: 'Completed', match: s => s?.toLowerCase() === 'completed', dot: 'bg-[#4FB477]', headerBg: 'bg-[#4FB477]/5' },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {columns.map(col => {
+        const items = activities.filter(a => col.match(a.status));
+        return (
+          <div key={col.key} className="bg-card border border-border rounded-xl overflow-hidden shadow-sm flex flex-col">
+            <div className={`flex items-center justify-between px-4 py-3 border-b border-border ${col.headerBg}`}>
+              <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-foreground">
+                <span className={`size-1.5 rounded-full ${col.dot}`} />
+                {col.label}
+              </span>
+              <span className="text-[10px] font-bold text-muted-foreground bg-secondary rounded-full px-2 py-0.5">{items.length}</span>
+            </div>
+            <div className="p-3 space-y-2.5 flex-1 min-h-[120px]">
+              {items.length === 0 ? (
+                <p className="text-[10px] text-muted-foreground/60 text-center py-6 font-semibold select-none">No activities</p>
+              ) : (
+                items.map(a => {
+                  const canClose = col.key !== 'completed' && (a.activity_type === 'task' || a.activity_type === 'call');
+                  return (
+                    <div
+                      key={a.id}
+                      onClick={() => onSelectActivity(a.id)}
+                      className="bg-secondary/20 hover:bg-secondary/40 border border-border/60 hover:border-brand-blue/30 rounded-lg p-3 cursor-pointer transition-all group hover:shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-bold text-foreground group-hover:text-brand-blue transition-colors leading-snug">{a.subject}</p>
+                        {canClose && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onQuickComplete(a); }}
+                            title="Mark as completed"
+                            className="shrink-0 p-1 rounded-md text-muted-foreground/50 hover:text-[#4FB477] hover:bg-[#4FB477]/10 transition-colors cursor-pointer"
+                          >
+                            <CheckCircle2 size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className={`px-2 py-0.5 rounded text-[9px] ${getPriorityColor(a.priority)}`}>{fmt(a.priority)}</span>
+                        <span className="text-[9px] text-muted-foreground font-bold font-mono">
+                          {a.due_date ? new Date(a.due_date).toLocaleDateString() : 'No deadline'}
+                        </span>
+                      </div>
+                      {a.owner_name && <p className="text-[9px] text-muted-foreground mt-1.5">{a.owner_name}</p>}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActivity: (id: string) => void; onTabChange?: (tab: string) => void }) {
   const searchParams = useSearchParams();
 
@@ -76,7 +145,6 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
   const pageSize = 10;
 
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [isTasksCollapsed, setIsTasksCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'logs'>('kanban');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -303,6 +371,17 @@ useEffect(() => {
       toast.success(r.message); setSelectedIds(new Set()); setIsSelectMode(false); fetchActivities();
     } catch { toast.error('Bulk delete failed.'); }
   };
+  const handleQuickComplete = async (a: CrmActivity) => {
+      try {
+        if (a.activity_type === 'task') await updateCrmTask(a.id, { status: 'completed' } as any);
+        else if (a.activity_type === 'call') await updateCrmCall(a.id, { status: 'completed' } as any);
+        else { toast.error('Closing is not supported for this activity type.'); return; }
+        toast.success('Activity marked as completed.');
+        fetchActivities();
+      } catch (err: any) {
+        toast.error(err?.message || 'Failed to close activity.');
+      }
+    };
 
   const handleRowDelete = async (e: React.MouseEvent, a: CrmActivity) => {
     e.stopPropagation();
@@ -336,9 +415,14 @@ useEffect(() => {
     setMeetingEnd(''); setMeetingAgenda(''); setMeetingLoc('');
     setNoteBody(''); setRelatedName(''); setRelatedLeadId(''); setRelatedContactId(''); setRelatedCompanyId(''); setRelatedDealId('');
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); setSubmitting(true);
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const hasLinkedRecord = Boolean(relatedLeadId || relatedContactId || relatedCompanyId || relatedDealId);
+    if (!hasLinkedRecord) {
+      toast.error(`Please link a ${relatedType} before saving this activity.`);
+      return;
+    }
+    setSubmitting(true);
     try {
       if (activeFormType === 'task') {
         await createCrmTask({ subject: formSubject, description: taskDesc, due_date: formDueDate ? new Date(formDueDate).toISOString() : undefined, priority: formPriority, status: formStatus, ...relatedIds() });
@@ -370,11 +454,11 @@ useEffect(() => {
         <div className="flex items-center gap-2">
           {/* Segmented Switch for Kanban Board vs Timeline Logs */}
           <div className="flex border border-border rounded-lg p-0.5 bg-secondary/30 shrink-0 select-none mr-2">
-            <button type="button" onClick={() => setViewMode('kanban')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'kanban' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-              Tasks Board
+            <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'list' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              List
             </button>
-            <button type="button" onClick={() => setViewMode('logs')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'logs' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
-              Activity Logs
+            <button type="button" onClick={() => setViewMode('kanban')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'kanban' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+              Kanban
             </button>
           </div>
 
@@ -419,22 +503,7 @@ useEffect(() => {
         </div>
       </div>
 
-      {viewMode === 'kanban' ? (
-        /* ─── Task Kanban Board (Separated and on Top) ─── */
-        <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <ClipboardList className="h-4 w-4 text-brand-purple" />
-                <span>Workspace Tasks Board</span>
-              </h3>
-              <CollapseToggle isCollapsed={isTasksCollapsed} onToggle={() => setIsTasksCollapsed(!isTasksCollapsed)} />
-            </div>
-            {!isTasksCollapsed && <TasksView isEmbedded={true} />}
-        </div>
-      ) : (
-        /* ─── CRM Activity Logs ─── */
-        <>
-          <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Activity History Logs</h3>
+
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-xl p-4 sm:px-5 py-4 shadow-sm space-y-3">
@@ -489,9 +558,17 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Table */}
+{/* Records */}
       {activeTabType === 'calendar' ? (
         <CalendarView />
+      ) : viewMode === 'kanban' ? (
+        loading ? (
+          <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold bg-card border border-border rounded-xl">
+            <RefreshCw className="size-4 animate-spin text-brand-blue mr-2" /><span>Loading activities...</span>
+          </div>
+        ) : (
+          <ActivityKanbanBoard activities={activities} onSelectActivity={onSelectActivity} onQuickComplete={handleQuickComplete} />
+        )
       ) : (
       <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
         {loading ? (
@@ -581,8 +658,7 @@ useEffect(() => {
           </button>
         </div>
       </div>
-      </>
-      )}
+
 
       {/* Add Activity Modal */}
       {activeFormType && (
@@ -599,8 +675,11 @@ useEffect(() => {
             </div>
             <form onSubmit={handleSubmit} className="space-y-3 overflow-y-auto pr-1 flex-1">
               {/* Related record */}
-              <div className="bg-secondary/20 border border-border/85 rounded-xl p-3 space-y-3">
-                <span className="text-[8px] font-black uppercase text-brand-purple tracking-widest block leading-none font-['Space_Grotesk']">Linked CRM Context</span>
+              <div className="bg-gradient-to-br from-brand-purple/5 to-transparent border border-brand-purple/30 rounded-xl p-3 space-y-3 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-[8px] font-black uppercase text-brand-purple tracking-widest block leading-none font-['Space_Grotesk']">Linked CRM Context</span>
+                  <span className="text-[8px] font-bold uppercase text-rose-500 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-full">Required</span>
+                </div>
                 <div className="grid grid-cols-4 gap-2">
                   {[
                     { id: 'lead', label: 'Lead' },
@@ -625,7 +704,7 @@ useEffect(() => {
 
                 <div className="relative" ref={dropdownRef}>
                   <label className="block text-[8px] font-extrabold text-muted-foreground/80 uppercase">
-                    Search {relatedType.charAt(0).toUpperCase() + relatedType.slice(1)} {activeFormType !== 'email' && activeFormType !== 'note' && <span className="text-rose-500">*</span>}
+                    Search {relatedType.charAt(0).toUpperCase() + relatedType.slice(1)} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative mt-1">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
