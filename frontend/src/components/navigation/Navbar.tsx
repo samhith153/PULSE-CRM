@@ -327,22 +327,24 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
               onClick={onOpenSignUp || onOpenModal}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
-                padding: '9px 20px', borderRadius: 100, border: 'none',
-                background: '#2563EB', color: '#fff',
-                fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                padding: '9px 20px', borderRadius: 9999, border: 'none',
+                background: '#2563EB', color: '#FFFFFF',
+                fontSize: 14, fontWeight: 600, cursor: 'pointer',
                 boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
                 fontFamily: 'inherit', transition: 'all 0.15s ease',
               }}
               onMouseEnter={e => {
                 (e.currentTarget as HTMLElement).style.background = '#1D4ED8';
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
                 (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(37,99,235,0.45)';
               }}
               onMouseLeave={e => {
                 (e.currentTarget as HTMLElement).style.background = '#2563EB';
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
                 (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(37,99,235,0.35)';
               }}
             >
-              Get Started <ArrowRight size={14} />
+              Get Started <ArrowRight size={14} color="#FFFFFF" />
             </button>
           </div>
 
@@ -360,7 +362,7 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
           </button>
         </div>
 
-        {/* Subtle violet underline when dropdown open */}
+        {/* Subtle blue underline when dropdown open */}
         {activeMenu && (
           <div style={{
             position: 'absolute', bottom: -1, left: 0, right: 0, height: 2,
@@ -462,13 +464,14 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
             <button
               onClick={() => { setMobileOpen(false); (onOpenSignUp || onOpenModal)(); }}
               style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                 padding: '14px', borderRadius: 12, border: 'none',
-                background: '#2563EB', fontSize: 15, fontWeight: 700, color: '#fff',
+                background: '#2563EB', fontSize: 15, fontWeight: 600, color: '#FFFFFF',
                 cursor: 'pointer', fontFamily: 'inherit',
                 boxShadow: '0 6px 20px rgba(37,99,235,0.35)',
               }}
             >
-              Get Started Free →
+              Get Started Free <ArrowRight size={14} color="#FFFFFF" />
             </button>
           </div>
         </div>

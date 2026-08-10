@@ -16,14 +16,14 @@ const CATEGORIES = [
     icon: Rocket,
     title: 'Getting Started',
     desc: 'Start quickly and set up Pulse CRM',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
+    color: '#2563EB',
+    bg: '#EFF6FF',
   },
   {
     icon: Code2,
     title: 'Core Concepts',
     desc: 'Understand key features and workflows',
-    color: '#7c3aed',
+    color: '#2563EB',
     bg: '#f0f4ff',
   },
   {
@@ -51,7 +51,7 @@ const CATEGORIES = [
     icon: HelpCircle,
     title: 'FAQ',
     desc: 'Find answers to common questions',
-    color: '#7c3aed',
+    color: '#2563EB',
     bg: '#faf5ff',
   },
 ];
@@ -99,7 +99,7 @@ function DocIllustration() {
         style={{
           position: 'absolute', top: -16, right: -8, zIndex: 10,
           width: 60, height: 60, borderRadius: 16,
-          background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+          background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 10px 28px rgba(124,58,237,0.45)',
         }}
@@ -140,12 +140,12 @@ function DocIllustration() {
             width: 100, borderRight: '1px solid #f1f5f9',
             padding: '12px 10px', background: '#fafafa',
           }}>
-            <div style={{ height: 7, background: '#ede9fe', borderRadius: 3, marginBottom: 9, width: '75%' }} />
+            <div style={{ height: 7, background: '#DBEAFE', borderRadius: 3, marginBottom: 9, width: '75%' }} />
             {[78, 62, 88, 68, 52, 72].map((w, i) => (
               <div key={i} style={{
                 height: 6, borderRadius: 3, marginBottom: 7,
                 width: `${w}%`,
-                background: i === 2 ? '#7c3aed' : '#e2e8f0',
+                background: i === 2 ? '#2563EB' : '#e2e8f0',
               }} />
             ))}
           </div>
@@ -164,7 +164,7 @@ function DocIllustration() {
               marginTop: 12, background: '#1e1b4b', borderRadius: 7,
               padding: '9px 10px',
             }}>
-              {['#7c3aed', '#a5b4fc', '#e2e8f0'].map((c, i) => (
+              {['#2563EB', '#a5b4fc', '#e2e8f0'].map((c, i) => (
                 <div key={i} style={{
                   height: 5, background: c, opacity: 0.75, borderRadius: 3,
                   width: ['68%', '88%', '48%'][i], marginBottom: i < 2 ? 5 : 0,
@@ -175,10 +175,10 @@ function DocIllustration() {
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 4,
               marginTop: 10, padding: '3px 7px',
-              background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 5,
+              background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: 5,
             }}>
-              <div style={{ height: 4, width: 4, borderRadius: '50%', background: '#7c3aed' }} />
-              <div style={{ height: 4, width: 32, background: '#c4b5fd', borderRadius: 3 }} />
+              <div style={{ height: 4, width: 4, borderRadius: '50%', background: '#2563EB' }} />
+              <div style={{ height: 4, width: 32, background: '#93C5FD', borderRadius: 3 }} />
             </div>
           </div>
         </div>
@@ -253,8 +253,8 @@ function CategoryCard({ cat, index }: { cat: typeof CATEGORIES[0]; index: number
       }}>
         <div style={{
           height: 22, width: 22, borderRadius: '50%',
-          border: `1.5px solid ${hovered ? '#7c3aed' : '#d1d5db'}`,
-          background: hovered ? '#7c3aed' : 'transparent',
+          border: `1.5px solid ${hovered ? '#2563EB' : '#d1d5db'}`,
+          background: hovered ? '#2563EB' : 'transparent',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           transition: 'all 0.18s ease',
         }}>
@@ -305,7 +305,7 @@ function QuickStep({
           left: '58%',
           width: '84%',
           height: 0,
-          borderTop: '2px dashed #c4b5fd',
+          borderTop: '2px dashed #93C5FD',
           zIndex: 0,
         }} />
       )}
@@ -318,7 +318,7 @@ function QuickStep({
         {/* Filled purple number circle */}
         <div style={{
           height: 28, width: 28, borderRadius: '50%',
-          background: '#7c3aed',
+          background: '#2563EB',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 12, fontWeight: 800, color: '#fff',
           boxShadow: '0 3px 10px rgba(124,58,237,0.38)',
@@ -330,13 +330,13 @@ function QuickStep({
         {/* Light purple icon circle */}
         <div style={{
           height: 48, width: 48, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
-          border: '1.5px solid #ddd6fe',
+          background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+          border: '1.5px solid #BFDBFE',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 3px 12px rgba(124,58,237,0.12)',
           flexShrink: 0,
         }}>
-          <Icon size={20} color="#7c3aed" strokeWidth={1.7} />
+          <Icon size={20} color="#2563EB" strokeWidth={1.7} />
         </div>
       </div>
 
@@ -381,7 +381,7 @@ export default function DocumentationPage() {
       <section style={{
         marginTop: 64,
         padding: '80px 48px 90px',
-        background: 'linear-gradient(160deg, #f5f3ff 0%, #faf9ff 55%, #fff 100%)',
+        background: 'linear-gradient(160deg, #EFF6FF 0%, #faf9ff 55%, #fff 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}>
@@ -418,15 +418,15 @@ export default function DocumentationPage() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
                 padding: '5px 14px',
-                background: '#f5f3ff',
-                border: '1.5px solid #ede9fe',
+                background: '#EFF6FF',
+                border: '1.5px solid #DBEAFE',
                 borderRadius: 100,
                 marginBottom: 22,
               }}
             >
-              <BookOpen size={12} color="#7c3aed" />
+              <BookOpen size={12} color="#2563EB" />
               <span style={{
-                fontSize: 11, fontWeight: 800, color: '#7c3aed',
+                fontSize: 11, fontWeight: 800, color: '#2563EB',
                 textTransform: 'uppercase', letterSpacing: '0.09em',
               }}>
                 Documentation
@@ -448,7 +448,7 @@ export default function DocumentationPage() {
               Everything you need to{' '}
               <br />build with{' '}
               <span style={{
-                background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)',
+                background: 'linear-gradient(135deg, #2563EB 0%, #9333ea 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
@@ -513,7 +513,7 @@ export default function DocumentationPage() {
                 onClick={handleSearch}
                 style={{
                   padding: '10px 22px',
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
+                  background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
                   color: '#fff', fontSize: 14, fontWeight: 700,
                   borderRadius: 10, border: 'none', cursor: 'pointer',
                   boxShadow: '0 4px 14px rgba(124,58,237,0.35)',
@@ -627,7 +627,7 @@ export default function DocumentationPage() {
                 href="#"
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  fontSize: 13, fontWeight: 700, color: '#7c3aed',
+                  fontSize: 13, fontWeight: 700, color: '#2563EB',
                   textDecoration: 'none',
                   transition: 'opacity 0.15s',
                 }}

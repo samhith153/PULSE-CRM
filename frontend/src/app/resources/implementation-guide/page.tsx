@@ -31,7 +31,7 @@ const WORKFLOW = [
 
 /* ─── Core modules ──────────────────────────────── */
 const MODULES = [
-  { icon: Users,     title: 'Leads',      desc: 'Capture, manage and track all incoming leads.',       color: '#7c3aed', bg: '#f5f3ff' },
+  { icon: Users,     title: 'Leads',      desc: 'Capture, manage and track all incoming leads.',       color: '#2563EB', bg: '#EFF6FF' },
   { icon: User,      title: 'Contacts',   desc: 'Store and manage contact information.',                color: '#2563eb', bg: '#eff6ff' },
   { icon: Building2, title: 'Companies',  desc: 'Organize leads by company accounts.',                  color: '#059669', bg: '#ecfdf5' },
   { icon: Activity,  title: 'Activities', desc: 'Track calls, emails, tasks and meetings.',              color: '#d97706', bg: '#fffbeb' },
@@ -41,7 +41,7 @@ const MODULES = [
 
 /* ─── Pipeline stages for hero illustration ─────── */
 const PIPELINE = [
-  { label: 'New',       count: 12, color: '#7c3aed', bg: '#f5f3ff' },
+  { label: 'New',       count: 12, color: '#2563EB', bg: '#EFF6FF' },
   { label: 'Contacted', count: 8,  color: '#2563eb', bg: '#eff6ff' },
   { label: 'Qualified', count: 5,  color: '#059669', bg: '#ecfdf5' },
   { label: 'Proposal',  count: 3,  color: '#d97706', bg: '#fffbeb' },
@@ -61,7 +61,7 @@ function DashboardIllustration() {
         <div style={{ height: 8, width: 8, borderRadius: '50%', background: '#ffbd2e' }} />
         <div style={{ height: 8, width: 8, borderRadius: '50%', background: '#28c941' }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 8 }}>
-          <div style={{ height: 16, width: 16, borderRadius: 4, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ height: 16, width: 16, borderRadius: 4, background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Activity size={9} color="#fff" />
           </div>
           <span style={{ fontSize: 9, fontWeight: 700, color: '#0f172a' }}>Pulse CRM</span>
@@ -72,8 +72,8 @@ function DashboardIllustration() {
         {/* Sidebar */}
         <div style={{ width: 36, background: '#fafafa', borderRight: '1px solid #f1f5f9', padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
           {[Users, Building2, User, Activity, BarChart3].map((Icon, i) => (
-            <div key={i} style={{ height: 20, width: 20, borderRadius: 5, background: i === 0 ? '#ede9fe' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Icon size={11} color={i === 0 ? '#7c3aed' : '#cbd5e1'} />
+            <div key={i} style={{ height: 20, width: 20, borderRadius: 5, background: i === 0 ? '#DBEAFE' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon size={11} color={i === 0 ? '#2563EB' : '#cbd5e1'} />
             </div>
           ))}
         </div>
@@ -134,7 +134,7 @@ function LeadFlowRow() {
         left: '10%',       /* start after the first badge centre  */
         right: '10%',      /* end before the last badge centre    */
         height: 0,
-        borderTop: '2px dashed #c4b5fd',
+        borderTop: '2px dashed #93C5FD',
         zIndex: 0,
         pointerEvents: 'none',
       }} />
@@ -161,7 +161,7 @@ function LeadFlowRow() {
             {/* Purple number badge — floats above card, centred */}
             <div style={{
               height: 24, width: 24, borderRadius: '50%',
-              background: '#7c3aed',
+              background: '#2563EB',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 10, fontWeight: 800, color: '#fff',
               boxShadow: '0 2px 10px rgba(124,58,237,0.45)',
@@ -185,12 +185,12 @@ function LeadFlowRow() {
               {/* Icon circle */}
               <div style={{
                 height: 56, width: 56, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
-                border: '1.5px solid #ddd6fe',
+                background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                border: '1.5px solid #BFDBFE',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 margin: '0 auto 14px',
               }}>
-                <Icon size={24} color="#7c3aed" strokeWidth={1.6} />
+                <Icon size={24} color="#2563EB" strokeWidth={1.6} />
               </div>
 
               <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 6, letterSpacing: '-0.01em' }}>
@@ -219,13 +219,13 @@ function WorkflowCard({ item, index }: { item: typeof WORKFLOW[0]; index: number
       transition={{ duration: 0.32, delay: index * 0.06 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ background: '#fff', borderRadius: 16, border: `1px solid ${hovered ? '#ddd6fe' : '#eaecef'}`, padding: '20px 16px 18px', cursor: 'pointer', transition: 'all 0.18s ease', transform: hovered ? 'translateY(-3px)' : 'translateY(0)', boxShadow: hovered ? '0 10px 28px rgba(124,58,237,0.10)' : '0 1px 4px rgba(0,0,0,0.04)' }}
+      style={{ background: '#fff', borderRadius: 16, border: `1px solid ${hovered ? '#BFDBFE' : '#eaecef'}`, padding: '20px 16px 18px', cursor: 'pointer', transition: 'all 0.18s ease', transform: hovered ? 'translateY(-3px)' : 'translateY(0)', boxShadow: hovered ? '0 10px 28px rgba(124,58,237,0.10)' : '0 1px 4px rgba(0,0,0,0.04)' }}
     >
-      <div style={{ height: 40, width: 40, borderRadius: 10, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-        <Icon size={18} color="#7c3aed" strokeWidth={1.8} />
+      <div style={{ height: 40, width: 40, borderRadius: 10, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+        <Icon size={18} color="#2563EB" strokeWidth={1.8} />
       </div>
       <p style={{ fontSize: 13, fontWeight: 700, color: '#111827', marginBottom: 5, letterSpacing: '-0.01em' }}>
-        <span style={{ color: '#7c3aed', marginRight: 4 }}>{item.num}.</span>{item.title}
+        <span style={{ color: '#2563EB', marginRight: 4 }}>{item.num}.</span>{item.title}
       </p>
       <p style={{ fontSize: 11.5, color: '#6b7280', lineHeight: 1.55 }}>{item.desc}</p>
     </motion.div>
@@ -264,7 +264,7 @@ export default function ImplementationGuidePage() {
       <section style={{
         marginTop: 64,
         padding: '72px 48px 80px',
-        background: 'linear-gradient(160deg, #f5f3ff 0%, #faf9ff 60%, #fff 100%)',
+        background: 'linear-gradient(160deg, #EFF6FF 0%, #faf9ff 60%, #fff 100%)',
         position: 'relative', overflow: 'hidden',
       }}>
         <div style={{ position: 'absolute', top: -100, right: -100, width: 480, height: 480, background: 'radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -276,16 +276,16 @@ export default function ImplementationGuidePage() {
           <motion.div initial={{ opacity: 0, x: -28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}>
             {/* Badge */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', background: '#f5f3ff', border: '1.5px solid #ede9fe', borderRadius: 100, marginBottom: 22 }}>
-              <Zap size={11} color="#7c3aed" />
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Implementation Guide</span>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', background: '#EFF6FF', border: '1.5px solid #DBEAFE', borderRadius: 100, marginBottom: 22 }}>
+              <Zap size={11} color="#2563EB" />
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Implementation Guide</span>
             </motion.div>
 
             {/* Heading */}
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }}
               style={{ fontSize: 'clamp(34px, 4.2vw, 52px)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: 18 }}>
               How{' '}
-              <span style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span style={{ background: 'linear-gradient(135deg, #2563EB 0%, #9333ea 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Leads
               </span>{' '}
               Work<br />in Pulse CRM
@@ -301,8 +301,8 @@ export default function ImplementationGuidePage() {
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
               style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
               {[{ icon: Zap, label: 'Simple Flow' }, { icon: Target, label: 'Smart Scoring' }, { icon: TrendingUp, label: 'Real Results' }].map(({ icon: Icon, label }) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: '#7c3aed' }}>
-                  <Icon size={13} color="#7c3aed" /> {label}
+                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600, color: '#2563EB' }}>
+                  <Icon size={13} color="#2563EB" /> {label}
                 </div>
               ))}
             </motion.div>

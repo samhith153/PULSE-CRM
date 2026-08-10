@@ -1,161 +1,144 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Menu, Search, X, ArrowUpRight, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
 import { pillVariants } from "./PillButton";
 const promoImage = "/landing/promo-mega.jpg";
 const promoTeams = "/landing/promo-teams.jpg";
-const promoSolutions = "/landing/promo-solutions.jpg";
 const promoResources = "/landing/promo-resources.jpg";
 import { cn } from "@/lib/utils";
 
-const navLinks = ["Platform", "Products", "Solutions", "Pricing", "Resources"];
+const navLinks = ["Platform", "Products", "Pricing", "Resources"];
 
-type MenuItem = { title: string; desc: string };
+type MenuItem = { title: string; desc: string; route?: string };
 type MenuColumn = { heading: string; items: MenuItem[] };
-type Plan = { name: string; desc: string };
 type MenuConfig = {
   columns?: MenuColumn[];
-  plans?: { heading: string; items: Plan[]; link: string };
-  promo: { image?: string; heading: string; desc: string; link: string; cta?: boolean };
+  promo: { image?: string; heading: string; desc: string; link: string; cta?: boolean; route?: string };
 };
 
 const menus: Record<string, MenuConfig> = {
   Platform: {
     columns: [
       {
-        heading: "Capture",
+        heading: "CRM CORE",
         items: [
-          { title: "Lead Inbox", desc: "Every inbound lead, enriched on arrival." },
-          { title: "Form & Web Capture", desc: "Turn any touchpoint into a scored record." },
-          { title: "Enrichment API", desc: "Firmographics attached automatically." },
+          { title: "Lead Management", desc: "Capture, qualify, and manage every lead from one place." },
+          { title: "Contact Management", desc: "Keep customer contacts and communication history organized." },
+          { title: "Company Management", desc: "Manage organizations and customer information in one place." },
         ],
       },
       {
-        heading: "Close",
+        heading: "SALES WORKFLOW",
         items: [
-          { title: "Deal Copilot", desc: "Next-best action for every open opportunity." },
-          { title: "Forecast Studio", desc: "Pipeline math your CRO can actually trust." },
-          { title: "Revenue Signals", desc: "Know which deals are quietly slipping." },
+          { title: "Sales Pipeline", desc: "Track opportunities through every stage of your sales process." },
+          { title: "Deal Management", desc: "Create, manage, and close sales opportunities." },
+          { title: "Tasks & Follow-ups", desc: "Keep sales activities and follow-ups on schedule." },
         ],
       },
     ],
     promo: {
-      image: promoImage,
-      heading: "The 2026 Revenue AI report",
-      desc: "How 1,200 sales teams are scoring pipeline with AI.",
-      link: "Read the report",
+      heading: "Pulse CRM",
+      desc: "Bring leads, contacts, companies, deals, and sales activities together in one workspace.",
+      link: "Explore Pulse CRM →",
     },
   },
   Products: {
     columns: [
       {
-        heading: "For reps",
+        heading: "AI & INTELLIGENCE",
         items: [
-          { title: "Pipeline View", desc: "Visual deal tracking from first touch to close." },
-          { title: "Task & Follow-up Engine", desc: "Never let a warm lead go cold again." },
-          { title: "Rep Mobile App", desc: "Update deals and log calls from anywhere." },
+          { title: "AI Copilot", desc: "Rule-based lead scoring (0–100) + Groq/Llama email analysis.", route: "/product/ai-copilot" },
+          { title: "Email Intelligence", desc: "Gmail OAuth sync, thread logging & AI-powered analysis.", route: "/product/email-intelligence" },
+          { title: "Revenue Analytics", desc: "Live dashboards, pipeline value, rep leaderboards & forecasts.", route: "/product/revenue-analytics" },
+          { title: "Automation", desc: "Next-best-action engine — weighted by score, urgency & reply.", route: "/product/automation" },
         ],
       },
       {
-        heading: "For managers",
+        heading: "PIPELINE & SECURITY",
         items: [
-          { title: "Team Dashboard", desc: "Real-time visibility into every rep's pipeline." },
-          { title: "Coaching Insights", desc: "Spot stalled deals before they slip away." },
-          {
-            title: "Territory & Lead Routing",
-            desc: "Auto-assign leads to the right rep, instantly.",
-          },
+          { title: "Visual Pipeline", desc: "FSM deal stages: New → Qualified → Proposal → Won/Lost.", route: "/product/visual-pipeline" },
+          { title: "Lead Management", desc: "Capture, score, qualify and track every lead in one place.", route: "/product/lead-management" },
+          { title: "Security & RBAC", desc: "3 roles, 33 permissions, JWT auth & bcrypt passwords.", route: "/product/security-rbac" },
         ],
       },
     ],
     promo: {
       image: promoTeams,
-      heading: "Pulse for Teams of 50+",
-      desc: "See how larger sales orgs run their entire pipeline on one platform.",
-      link: "See enterprise features",
-    },
-  },
-  Solutions: {
-    columns: [
-      {
-        heading: "By team size",
-        items: [
-          { title: "Startups & SMB", desc: "Set up in a day, no admin required." },
-          { title: "Growth Teams", desc: "Scale from 5 reps to 50 without switching tools." },
-          { title: "Enterprise", desc: "Custom roles, permissions, and dedicated support." },
-        ],
-      },
-      {
-        heading: "By industry",
-        items: [
-          { title: "Real Estate", desc: "Match leads to listings automatically." },
-          { title: "SaaS & Tech", desc: "Track trials, demos, and expansion revenue." },
-          { title: "Financial Services", desc: "Compliance-ready lead handling built in." },
-        ],
-      },
-    ],
-    promo: {
-      image: promoSolutions,
-      heading: "Why sales teams switch to Pulse",
-      desc: "Real stories from teams who cut their sales cycle by 30%.",
-      link: "Read customer stories",
-    },
-  },
-  Pricing: {
-    plans: {
-      heading: "Plans",
-      items: [
-        { name: "Starter", desc: "For individual reps and small teams." },
-        { name: "Growth", desc: "For scaling sales teams." },
-        { name: "Enterprise", desc: "Custom pricing for large orgs." },
-      ],
-      link: "Compare plans",
-    },
-    promo: {
-      heading: "Try Pulse free for 14 days",
-      desc: "No credit card required. Full access to every feature.",
-      link: "Start free trial",
-      cta: true,
+      heading: "Explore all 7 Products",
+      desc: "AI scoring, email intelligence, visual pipeline, RBAC security and more — all built in.",
+      link: "View all products →",
+      route: "/product/ai-copilot",
     },
   },
   Resources: {
     columns: [
       {
-        heading: "Learn",
+        heading: "LEARN",
         items: [
-          { title: "Help Center", desc: "Guides for getting the most out of Pulse." },
-          { title: "Webinars", desc: "Live sessions with sales leaders and Pulse experts." },
-          { title: "API Docs", desc: "Build custom integrations on top of Pulse." },
+          { title: "Documentation", desc: "Setup guides, architecture overview & configuration", route: "/resources/documentation" },
+          { title: "Implementation Guide", desc: "Docker setup, migrations, seed data & test credentials", route: "/resources/implementation-guide" },
+          { title: "API Reference", desc: "40+ REST endpoints with Swagger UI at /docs and /redoc", route: "/resources/api-reference" },
         ],
       },
       {
-        heading: "Insights",
+        heading: "CONNECT",
         items: [
-          { title: "Sales Blog", desc: "Tactics, benchmarks, and playbooks." },
-          {
-            title: "Revenue Reports",
-            desc: "Original research on what's working in sales right now.",
-          },
-          { title: "Customer Stories", desc: "How real teams use Pulse to close more." },
+          { title: "Blog", desc: "AI scoring deep-dives, CRM architecture & sales strategy", route: "/resources/blog" },
+          { title: "Community", desc: "Connect with developers and sales teams building on Pulse", route: "/resources/community" },
+          { title: "Support", desc: "Get help from our team — bugs, integrations, or setup", route: "/resources/support" },
         ],
       },
     ],
     promo: {
       image: promoResources,
-      heading: "State of Sales AI 2026",
-      desc: "How 1,200 sales teams are using AI to shorten their sales cycle.",
-      link: "Download the report",
+      heading: "Get Support & Resources",
+      desc: "Documentation, community, and help — everything you need to succeed.",
+      link: "View all resources →",
+      route: "/resources/documentation",
     },
   },
 };
 
 export function SiteHeader() {
+  const router = useRouter();
+  const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [dir, setDir] = useState<"left" | "right">("right");
   const prevIndex = useRef(0);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [accordion, setAccordion] = useState<string | null>(null);
+
+  // Close menus automatically on route change
+  useEffect(() => {
+    setOpenMenu(null);
+    setMobileOpen(false);
+  }, [pathname]);
+
+  // Navigation handler for Platform dropdown items
+  const handlePlatformNavigation = (itemTitle: string) => {
+    const platformRoutes: Record<string, string> = {
+      "Lead Management": "/platform/lead-management",
+      "Contact Management": "/platform/contact-management", 
+      "Company Management": "/platform/company-management",
+      "Sales Pipeline": "/platform/sales-pipeline",
+      "Deal Management": "/platform/deal-management",
+      "Tasks & Follow-ups": "/platform/tasks-follow-ups"
+    };
+
+    const targetRoute = platformRoutes[itemTitle];
+    if (targetRoute) {
+      router.push(targetRoute);
+    }
+    setOpenMenu(null);
+  };
+
+  // Handle "Explore Pulse CRM" click
+  const handleExplorePulseCRM = () => {
+    router.push("/?auth=true&role=manager");
+    setOpenMenu(null);
+  };
 
   const openWith = (label: string) => {
     if (!menus[label]) {
@@ -178,6 +161,22 @@ export function SiteHeader() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && openMenu) {
+        setOpenMenu(null);
+      }
+    };
+
+    if (openMenu) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMenu]);
+
   return (
     <header className="sticky top-0 z-50">
       {/* Main nav */}
@@ -194,23 +193,55 @@ export function SiteHeader() {
             scrolled ? "h-14" : "h-18",
           )}
         >
-          <a href="#" className="flex min-w-0 items-center gap-1 text-xl font-bold tracking-tight">
+          <Link href="/" className="flex min-w-0 items-center gap-1 text-xl font-bold tracking-tight">
             Pulse
             <span className="grad-blue-purple mt-2 size-2 shrink-0 rounded-full" />
-          </a>
+          </Link>
 
           <nav className="hidden items-center justify-center gap-1 lg:flex">
-            {navLinks.map((l) => (
-              <button
-                key={l}
-                onMouseEnter={() => openWith(l)}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium transition-colors hover:text-link",
-                  openMenu === l ? "text-link" : "text-ink",
-                )}
-              >
-                {l}
-                {menus[l] && (
+            {navLinks.map((l) => {
+              const hasMenu = !!menus[l];
+              if (!hasMenu) {
+                const isActive = l === "Pricing" ? pathname === "/pricing" : pathname === `/${l.toLowerCase()}`;
+                return (
+                  <Link
+                    key={l}
+                    href={l === "Pricing" ? "/pricing" : `/${l.toLowerCase()}`}
+                    onMouseEnter={() => setOpenMenu(null)}
+                    onClick={() => setOpenMenu(null)}
+                    className={cn(
+                      "inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium transition-colors hover:text-link focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+                      isActive ? "text-link font-semibold" : "text-ink",
+                    )}
+                  >
+                    {l}
+                  </Link>
+                );
+              }
+              return (
+                <button
+                  key={l}
+                  onMouseEnter={() => openWith(l)}
+                  onClick={() => {
+                    if (openMenu === l) {
+                      setOpenMenu(null);
+                    } else {
+                      openWith(l);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setOpenMenu(null);
+                    }
+                  }}
+                  aria-expanded={openMenu === l}
+                  aria-haspopup="true"
+                  className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium transition-colors hover:text-link focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+                    openMenu === l ? "text-link" : "text-ink",
+                  )}
+                >
+                  {l}
                   <ChevronDown
                     size={14}
                     className={cn(
@@ -218,9 +249,9 @@ export function SiteHeader() {
                       openMenu === l && "rotate-180",
                     )}
                   />
-                )}
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -238,12 +269,12 @@ export function SiteHeader() {
             </Link>
             <Link
               href="/signup"
-              className={pillVariants({
-                size: "sm",
-                className: "arrow-nudge hidden sm:inline-flex",
-              })}
+              className="arrow-nudge hidden sm:inline-flex items-center justify-center gap-2 rounded-full text-sm font-semibold h-9 px-4 transition-colors shadow-sm hover:shadow-md"
+              style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#1D4ED8'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#2563EB'; }}
             >
-              Get started <ArrowUpRight size={15} />
+              Get started <ArrowUpRight size={15} color="#FFFFFF" />
             </Link>
             <button
               aria-label="Open menu"
@@ -266,31 +297,6 @@ export function SiteHeader() {
                   dir === "right" ? "panel-slide-right" : "panel-slide-left",
                 )}
               >
-                {active.plans && (
-                  <div className="lg:col-span-2">
-                    <p className="text-xs font-bold tracking-widest text-ink uppercase">
-                      {active.plans.heading}
-                    </p>
-                    <ul className="mt-5 space-y-5">
-                      {active.plans.items.map((p) => (
-                        <li key={p.name}>
-                          <a href="#" className="group block">
-                            <span className="text-sm font-semibold text-link">{p.name}</span>
-                            <span className="mt-1 block text-sm text-muted-foreground">
-                              {p.desc}
-                            </span>
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                    <a
-                      href="#"
-                      className="arrow-nudge mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-link"
-                    >
-                      {active.plans.link} <ArrowRight size={15} />
-                    </a>
-                  </div>
-                )}
                 {(active.columns ?? []).map((col, i) => (
                   <div
                     key={col.heading}
@@ -302,12 +308,43 @@ export function SiteHeader() {
                     <ul className="mt-5 space-y-5">
                       {col.items.map((item) => (
                         <li key={item.title}>
-                          <a href="#" className="group block">
-                            <span className="text-sm font-semibold text-link">{item.title}</span>
-                            <span className="mt-1 block text-sm text-muted-foreground">
-                              {item.desc}
-                            </span>
-                          </a>
+                          {openMenu === "Platform" ? (
+                            <button 
+                              onClick={() => handlePlatformNavigation(item.title)}
+                              className="group block text-left w-full"
+                            >
+                              <span className="text-sm font-semibold text-link group-hover:text-accent-hover">
+                                {item.title}
+                              </span>
+                              <span className="mt-1 block text-sm text-muted-foreground">
+                                {item.desc}
+                              </span>
+                            </button>
+                          ) : item.route ? (
+                            <button
+                              onClick={() => { router.push(item.route!); setOpenMenu(null); }}
+                              className="group block text-left w-full"
+                            >
+                              <span className="text-sm font-semibold text-link group-hover:text-accent-hover">
+                                {item.title}
+                              </span>
+                              <span className="mt-1 block text-sm text-muted-foreground">
+                                {item.desc}
+                              </span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setOpenMenu(null)}
+                              className="group block text-left w-full"
+                            >
+                              <span className="text-sm font-semibold text-link group-hover:text-accent-hover">
+                                {item.title}
+                              </span>
+                              <span className="mt-1 block text-sm text-muted-foreground">
+                                {item.desc}
+                              </span>
+                            </button>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -332,20 +369,34 @@ export function SiteHeader() {
                     {active.promo.cta ? (
                       <Link
                         href="/signup"
-                        className={pillVariants({
-                          size: "sm",
-                          className: "arrow-nudge mt-4",
-                        })}
+                        className="arrow-nudge mt-4 inline-flex items-center justify-center gap-2 rounded-full text-sm font-semibold h-9 px-4 transition-colors shadow-sm"
+                        style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#1D4ED8'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#2563EB'; }}
                       >
-                        {active.promo.link} <ArrowUpRight size={15} />
+                        {active.promo.link} <ArrowUpRight size={15} color="#FFFFFF" />
                       </Link>
-                    ) : (
-                      <a
-                        href="#"
-                        className="arrow-nudge mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-link"
+                    ) : openMenu === "Platform" ? (
+                      <button
+                        onClick={handleExplorePulseCRM}
+                        className="arrow-nudge mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-link hover:text-accent-hover"
                       >
                         {active.promo.link} <ArrowRight size={15} />
-                      </a>
+                      </button>
+                    ) : active.promo.route ? (
+                      <button
+                        onClick={() => { router.push(active.promo.route!); setOpenMenu(null); }}
+                        className="arrow-nudge mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-link hover:text-accent-hover"
+                      >
+                        {active.promo.link} <ArrowRight size={15} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => setOpenMenu(null)}
+                        className="arrow-nudge mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-link hover:text-accent-hover"
+                      >
+                        {active.promo.link} <ArrowRight size={15} />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -358,8 +409,9 @@ export function SiteHeader() {
       {/* Page dim behind mega menu */}
       <div
         aria-hidden
+        onClick={() => setOpenMenu(null)}
         className={cn(
-          "fixed inset-0 z-40 hidden bg-ink/35 transition-opacity duration-300 lg:block",
+          "fixed inset-0 z-40 hidden bg-ink/35 transition-opacity duration-300 lg:block cursor-pointer",
           openMenu ? "opacity-100" : "pointer-events-none opacity-0",
         )}
       />
@@ -368,52 +420,78 @@ export function SiteHeader() {
       {mobileOpen && (
         <div className="menu-in relative z-50 border-b border-border bg-background px-6 py-4 lg:hidden">
           <ul className="divide-y divide-border">
-            {navLinks.map((l) => (
-              <li key={l}>
-                {l === "Platform" ? (
-                  <div className="py-3">
-                    <button
-                      onClick={() => setAccordion((a) => (a === l ? null : l))}
-                      className="flex w-full items-center justify-between text-sm font-medium text-ink"
+            {navLinks.map((l) => {
+              const menuData = menus[l];
+              const isExpandable = menuData && menuData.columns;
+              return (
+                <li key={l}>
+                  {isExpandable ? (
+                    <div className="py-3">
+                      <button
+                        onClick={() => setAccordion((a) => (a === l ? null : l))}
+                        className="flex w-full items-center justify-between text-sm font-medium text-ink"
+                      >
+                        {l}
+                        <ChevronDown
+                          size={16}
+                          className={cn(
+                            "transition-transform duration-200",
+                            accordion === l && "rotate-180",
+                          )}
+                        />
+                      </button>
+                      {accordion === l && (
+                        <div className="mt-3 space-y-4">
+                          {(l === "Platform" ? megaColumns : menuData.columns ?? [])
+                            .flatMap((c) => c.items)
+                            .map((item) => (
+                              <button
+                                key={item.title}
+                                onClick={() => {
+                                  if (l === "Platform") {
+                                    handlePlatformNavigation(item.title);
+                                  } else if (item.route) {
+                                    router.push(item.route);
+                                  }
+                                  setMobileOpen(false);
+                                  setAccordion(null);
+                                }}
+                                className="block w-full text-left"
+                              >
+                                <span className="text-sm font-semibold text-link">{item.title}</span>
+                                <span className="block text-sm text-muted-foreground">
+                                  {item.desc}
+                                </span>
+                              </button>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Link
+                      href={l === "Pricing" ? "/pricing" : `/${l.toLowerCase()}`}
+                      onClick={() => setMobileOpen(false)}
+                      className="block py-3 text-sm font-medium text-ink hover:text-link transition-colors"
                     >
                       {l}
-                      <ChevronDown
-                        size={16}
-                        className={cn(
-                          "transition-transform duration-200",
-                          accordion === l && "rotate-180",
-                        )}
-                      />
-                    </button>
-                    {accordion === l && (
-                      <div className="mt-3 space-y-4">
-                        {megaColumns
-                          .flatMap((c) => c.items)
-                          .map((item) => (
-                            <a key={item.title} href="#" className="block">
-                              <span className="text-sm font-semibold text-link">{item.title}</span>
-                              <span className="block text-sm text-muted-foreground">
-                                {item.desc}
-                              </span>
-                            </a>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <a href="#" className="block py-3 text-sm font-medium text-ink">
-                    {l}
-                  </a>
-                )}
-              </li>
-            ))}
+                    </Link>
+                  )}
+                </li>
+              );
+            })}
           </ul>
           <div className="mt-4 flex flex-col gap-2">
             <Link href="/login" className="text-center text-sm font-medium text-ink py-2 rounded-full border border-border hover:bg-secondary transition-colors">
               Sign in
             </Link>
-            <Link href="/signup" className={pillVariants({ className: "arrow-nudge w-full" })}>
-              Get started <ArrowUpRight size={15} />
+            <Link 
+              href="/signup" 
+              className="arrow-nudge w-full inline-flex items-center justify-center gap-2 rounded-full text-sm font-semibold h-11 px-6 transition-colors"
+              style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#1D4ED8'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#2563EB'; }}
+            >
+              Get started <ArrowUpRight size={15} color="#FFFFFF" />
             </Link>
           </div>
         </div>
@@ -421,3 +499,4 @@ export function SiteHeader() {
     </header>
   );
 }
+

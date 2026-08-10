@@ -11,7 +11,7 @@ const SUPPORT_OPTIONS = [
     description: 'Report bugs and request features on the public repository. Best for technical issues.',
     availability: 'Open source',
     responseTime: 'Community-driven',
-    color: '#7c3aed',
+    color: '#2563EB',
     cta: 'Open Issue',
   },
   {
@@ -74,19 +74,19 @@ export default function SupportPage() {
   return (
     <PageContainer>
       {/* Hero Section */}
-      <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #f5f3ff 0%, #fff 100%)', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #EFF6FF 0%, #fff 100%)', position: 'relative', overflow: 'hidden' }}>
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 0.1 }}
           transition={{ duration: 1 }}
-          style={{ position: 'absolute', top: -100, left: -100, width: 600, height: 600, background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', pointerEvents: 'none' }} />
+          style={{ position: 'absolute', top: -100, left: -100, width: 600, height: 600, background: 'radial-gradient(circle, #2563EB 0%, transparent 70%)', pointerEvents: 'none' }} />
         <div style={{ maxWidth: 1280, margin: '0 auto', textAlign: 'center', position: 'relative' }}>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 100, marginBottom: 20 }}>
-            <Headphones size={13} color="#7c3aed" />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Support</span>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: 100, marginBottom: 20 }}>
+            <Headphones size={13} color="#2563EB" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Support</span>
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -181,7 +181,7 @@ export default function SupportPage() {
             </p>
             <button 
               onClick={handleContactSales}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.5)', fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#2563EB', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.5)', fontFamily: 'inherit' }}>
               Contact Sales <ArrowRight size={16} />
             </button>
           </motion.div>
@@ -198,7 +198,7 @@ export default function SupportPage() {
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '16px 20px', background: 'rgba(255,255,255,0.05)', borderRadius: 12, border: '1px solid rgba(255,255,255,0.1)' }}>
-                <CheckCircle size={18} color="#7c3aed" strokeWidth={2.5} />
+                <CheckCircle size={18} color="#2563EB" strokeWidth={2.5} />
                 <span style={{ fontSize: 14, fontWeight: 600, color: '#e2e8f0' }}>{feature}</span>
               </motion.div>
             ))}
@@ -224,8 +224,8 @@ export default function SupportPage() {
                   transition={{ delay: i * 0.1 }}
                   whileHover={{ y: -4 }}
                   style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 24, background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', textDecoration: 'none', cursor: 'pointer' }}>
-                  <div style={{ height: 48, width: 48, borderRadius: 12, background: '#f5f3ff', border: '1px solid #ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon size={22} color="#7c3aed" />
+                  <div style={{ height: 48, width: 48, borderRadius: 12, background: '#EFF6FF', border: '1px solid #DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={22} color="#2563EB" />
                   </div>
                   <div style={{ textAlign: 'left' }}>
                     <h4 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{resource.title}</h4>

@@ -11,8 +11,8 @@ const PipelineScreenshot = () => (
       <div style={{ display: 'flex', gap: 6, marginBottom: 14, alignItems: 'center' }}>
         {['New', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Won'].map((stage, i) => (
           <React.Fragment key={stage}>
-            <div style={{ flex: 1, textAlign: 'center', padding: '8px 4px', background: i === 2 ? '#f5f3ff' : '#f8fafc', borderRadius: 8, border: `1px solid ${i === 2 ? '#ede9fe' : '#e2e8f0'}` }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: i === 2 ? '#7c3aed' : '#64748b', textTransform: 'uppercase' }}>{stage}</div>
+            <div style={{ flex: 1, textAlign: 'center', padding: '8px 4px', background: i === 2 ? '#EFF6FF' : '#f8fafc', borderRadius: 8, border: `1px solid ${i === 2 ? '#DBEAFE' : '#e2e8f0'}` }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: i === 2 ? '#2563EB' : '#64748b', textTransform: 'uppercase' }}>{stage}</div>
               <div style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', marginTop: 2 }}>{[12, 8, 6, 4, 3, 9][i]}</div>
             </div>
             {i < 5 && <ArrowRight size={10} color="#cbd5e1" style={{ flexShrink: 0 }} />}
@@ -28,7 +28,7 @@ const PipelineScreenshot = () => (
           <div key={i} style={{ padding: '10px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{deal.name}</div>
             <div style={{ fontSize: 10, color: '#64748b' }}>{deal.stage}</div>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#7c3aed', marginTop: 4 }}>Score: {deal.score}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#2563EB', marginTop: 4 }}>Score: {deal.score}</div>
           </div>
         ))}
       </div>
@@ -42,7 +42,7 @@ export default function VisualPipelinePage() {
       <HeroWithScreenshot
         badge="Product · Visual Pipeline"
         badgeIcon={TrendingUp}
-        title={<>FSM-based stages.<br /><span style={{ color: '#7c3aed' }}>Every transition tracked.</span></>}
+        title={<>FSM-based stages.<br /><span style={{ color: '#2563EB' }}>Every transition tracked.</span></>}
         description="Deals follow a strict finite state machine: New → Contacted → Qualified → Proposal Sent → Negotiation → Won / Lost. Every stage change is logged to the activity timeline. Managers see the full history. Reps see only their own deals."
         screenshot={<PipelineScreenshot />}
       />
@@ -59,8 +59,8 @@ export default function VisualPipelinePage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto', marginBottom: 48 }}>
             {[
               { stage: 'New', color: '#e0e7ff', text: '#4338ca', desc: 'Lead created, uncontacted' },
-              { stage: 'Contacted', color: '#ddd6fe', text: '#6d28d9', desc: 'First outreach made' },
-              { stage: 'Qualified', color: '#c4b5fd', text: '#7c3aed', desc: 'Budget/authority confirmed' },
+              { stage: 'Contacted', color: '#BFDBFE', text: '#1D4ED8', desc: 'First outreach made' },
+              { stage: 'Qualified', color: '#93C5FD', text: '#2563EB', desc: 'Budget/authority confirmed' },
               { stage: 'Proposal Sent', color: '#fef3c7', text: '#d97706', desc: 'Proposal delivered' },
               { stage: 'Negotiation', color: '#fed7aa', text: '#ea580c', desc: 'Terms being discussed' },
               { stage: 'Won / Lost', color: '#d1fae5', text: '#059669', desc: 'Deal closed' },

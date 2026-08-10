@@ -58,6 +58,7 @@ export default function DashboardHome() {
     const authFromLanding = params.get('auth') === 'true';
     const roleParam = params.get('role');
     const emailParam = params.get('email');
+    const tabParam = params.get('tab');
     const validRoles = ['representative', 'manager', 'admin', 'sales_rep'] as const;
 
     if (authFromLanding && roleParam && validRoles.includes(roleParam as typeof validRoles[number])) {
@@ -67,6 +68,12 @@ export default function DashboardHome() {
       if (emailParam) localStorage.setItem('pulse-crm-user', emailParam);
       setIsAuthenticated(true);
       setUserRole(mappedRole as 'sales_rep' | 'manager' | 'admin');
+      
+      // Set the active tab if specified in URL
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+      
       window.history.replaceState({}, '', window.location.pathname);
       setIsAuthLoading(false);
       return;

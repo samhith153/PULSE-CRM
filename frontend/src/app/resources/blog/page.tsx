@@ -12,7 +12,7 @@ const FEATURED_POST = {
   readTime: '7 min read',
   category: 'Engineering',
   icon: Sparkles,
-  color: '#7c3aed',
+  color: '#2563EB',
 };
 
 const RECENT_POSTS = [
@@ -74,7 +74,7 @@ const RECENT_POSTS = [
     readTime: '6 min read',
     category: 'AI',
     icon: Sparkles,
-    color: '#7c3aed',
+    color: '#2563EB',
   },
 ];
 
@@ -83,12 +83,12 @@ const CATEGORIES = ['All Posts', 'Engineering', 'AI', 'Security', 'Backend', 'Ar
 export default function BlogPage() {
   return (
     <PageContainer>
-      <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #f5f3ff 0%, #fff 100%)' }}>
+      <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #EFF6FF 0%, #fff 100%)' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', textAlign: 'center' }}>
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 100, marginBottom: 20 }}>
-            <BookOpen size={13} color="#7c3aed" />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Blog</span>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: 100, marginBottom: 20 }}>
+            <BookOpen size={13} color="#2563EB" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.07em' }}>Blog</span>
           </motion.div>
           <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             style={{ fontSize: 'clamp(36px,5vw,56px)', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 16 }}>
@@ -101,7 +101,7 @@ export default function BlogPage() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
             style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
             {CATEGORIES.map((cat, i) => (
-              <button key={cat} style={{ padding: '8px 18px', background: i === 0 ? '#7c3aed' : '#fff', color: i === 0 ? '#fff' : '#64748b', border: `1.5px solid ${i === 0 ? '#7c3aed' : '#e2e8f0'}`, borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button key={cat} style={{ padding: '8px 18px', background: i === 0 ? '#2563EB' : '#fff', color: i === 0 ? '#fff' : '#64748b', border: `1.5px solid ${i === 0 ? '#2563EB' : '#e2e8f0'}`, borderRadius: 100, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 {cat}
               </button>
             ))}
@@ -114,9 +114,9 @@ export default function BlogPage() {
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}
             whileHover={{ y: -4 }}
-            style={{ display: 'grid', gridTemplateColumns: '1.5fr 0.5fr', gap: 40, background: 'linear-gradient(135deg, #f5f3ff 0%, #fff 100%)', borderRadius: 24, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(124,58,237,0.10)', cursor: 'pointer' }}>
+            style={{ display: 'grid', gridTemplateColumns: '1.5fr 0.5fr', gap: 40, background: 'linear-gradient(135deg, #EFF6FF 0%, #fff 100%)', borderRadius: 24, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 8px 24px rgba(124,58,237,0.10)', cursor: 'pointer' }}>
             <div style={{ padding: 48 }}>
-              <span style={{ display: 'inline-block', padding: '6px 14px', background: '#7c3aed', color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 20 }}>Featured</span>
+              <span style={{ display: 'inline-block', padding: '6px 14px', background: '#2563EB', color: '#fff', fontSize: 11, fontWeight: 700, borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 20 }}>Featured</span>
               <h2 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', lineHeight: 1.2, letterSpacing: '-0.02em', marginBottom: 16 }}>{FEATURED_POST.title}</h2>
               <p style={{ fontSize: 16, color: '#475569', lineHeight: 1.7, marginBottom: 24 }}>{FEATURED_POST.excerpt}</p>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -129,12 +129,12 @@ export default function BlogPage() {
                   <span style={{ fontSize: 13, color: '#64748b' }}>{FEATURED_POST.readTime}</span>
                 </div>
               </div>
-              <button style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: '#7c3aed', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: '#2563EB', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Read Article <ArrowRight size={16} />
               </button>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f3ff', padding: 40 }}>
-              <div style={{ height: 80, width: 80, borderRadius: '50%', background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#EFF6FF', padding: 40 }}>
+              <div style={{ height: 80, width: 80, borderRadius: '50%', background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Sparkles size={40} color="#fff" />
               </div>
             </div>
@@ -162,7 +162,7 @@ export default function BlogPage() {
                     </div>
                   </div>
                   <div style={{ padding: 24 }}>
-                    <span style={{ display: 'inline-block', padding: '4px 12px', background: '#f5f3ff', color: '#7c3aed', fontSize: 11, fontWeight: 700, borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>{post.category}</span>
+                    <span style={{ display: 'inline-block', padding: '4px 12px', background: '#EFF6FF', color: '#2563EB', fontSize: 11, fontWeight: 700, borderRadius: 6, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 12 }}>{post.category}</span>
                     <h3 style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', lineHeight: 1.35, marginBottom: 10 }}>{post.title}</h3>
                     <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, marginBottom: 16 }}>{post.excerpt}</p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, paddingTop: 12, borderTop: '1px solid #f1f5f9' }}>

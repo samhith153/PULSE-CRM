@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, createContext, useContext } from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { SiteHeader } from '@/components/landing/SiteHeader';
 import { ArrowRight, CheckCircle, X, Mail, Lock, Loader2, Activity } from 'lucide-react';
 
@@ -243,8 +244,8 @@ export function HeroWithScreenshot({
   screenshot: React.ReactNode;
   onCTA?: () => void;
 }) {
-  const { openModal } = useModal();
-  const handleCTA = onCTA || openModal;
+  const router = useRouter();
+  const handleCTA = onCTA || (() => router.push('/signup'));
 
   return (
     <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #EFF6FF 0%, #fff 100%)', position: 'relative', overflow: 'hidden' }}>
@@ -364,8 +365,8 @@ export function Statistics({ stats }: { stats: Array<{ value: string; label: str
 
 /* ─── CTA Section ──────────────────────────────────── */
 export function CTASection({ title, description, onCTA }: { title: string; description: string; onCTA?: () => void }) {
-  const { openModal } = useModal();
-  const handleCTA = onCTA || openModal;
+  const router = useRouter();
+  const handleCTA = onCTA || (() => router.push('/signup'));
 
   return (
     <section style={{ padding: '100px 48px', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>

@@ -10,7 +10,7 @@ const EmailScreenshot = () => (
       <div style={{ background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #e2e8f0' }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>Gmail Threads</div>
         {['Acme Corp', 'TechNova Ltd', 'Globex Inc'].map((name, i) => (
-          <div key={i} style={{ padding: '10px', background: i === 0 ? '#f5f3ff' : '#f8fafc', borderRadius: 8, marginBottom: 8, border: `1px solid ${i === 0 ? '#ede9fe' : '#e2e8f0'}` }}>
+          <div key={i} style={{ padding: '10px', background: i === 0 ? '#EFF6FF' : '#f8fafc', borderRadius: 8, marginBottom: 8, border: `1px solid ${i === 0 ? '#DBEAFE' : '#e2e8f0'}` }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#0f172a' }}>{name}</div>
             <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{[3, 1, 2][i]} email{[3,1,2][i]>1?'s':''} · synced</div>
           </div>
@@ -18,14 +18,14 @@ const EmailScreenshot = () => (
       </div>
       <div style={{ background: '#fff', borderRadius: 12, padding: '16px', border: '1px solid #e2e8f0' }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>AI Thread Summary</div>
-        <div style={{ background: '#f5f3ff', borderRadius: 8, padding: '10px', marginBottom: 8, border: '1px solid #ede9fe' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#7c3aed', marginBottom: 4 }}>GROQ · LLAMA 3.3-70B</div>
+        <div style={{ background: '#EFF6FF', borderRadius: 8, padding: '10px', marginBottom: 8, border: '1px solid #DBEAFE' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#2563EB', marginBottom: 4 }}>GROQ · LLAMA 3.3-70B</div>
           <div style={{ fontSize: 11, color: '#374151', lineHeight: 1.5 }}>Prospect asked for demo. Positive sentiment. Intent: demo_request</div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           {[
             { label: 'Sentiment', value: 'positive', color: '#059669' },
-            { label: 'Intent', value: 'demo', color: '#7c3aed' },
+            { label: 'Intent', value: 'demo', color: '#2563EB' },
             { label: 'Follow-up', value: '2 days', color: '#2563eb' },
             { label: 'Confidence', value: '0.92', color: '#d97706' },
           ].map((item, i) => (
@@ -46,7 +46,7 @@ export default function EmailIntelligencePage() {
       <HeroWithScreenshot
         badge="Product · Gmail Intelligence"
         badgeIcon={Mail}
-        title={<>Gmail sync + AI<br /><span style={{ color: '#7c3aed' }}>thread analysis.</span></>}
+        title={<>Gmail sync + AI<br /><span style={{ color: '#2563EB' }}>thread analysis.</span></>}
         description="Connect Gmail via OAuth2 and every email thread syncs automatically into Pulse. Groq/Llama 3.3-70B then analyses each thread to extract a one-line summary, sentiment, intent tag, confidence score, action items, a draft reply, and the recommended follow-up timing."
         screenshot={<EmailScreenshot />}
       />
@@ -67,7 +67,7 @@ export default function EmailIntelligencePage() {
                 { label: 'follow_up_timing', example: '"2_days" / "immediate" / "1_week"' },
               ].map((item, i) => (
                 <div key={i} style={{ padding: '10px 14px', background: '#f8fafc', borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                  <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#7c3aed' }}>{item.label}</span>
+                  <span style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: 700, color: '#2563EB' }}>{item.label}</span>
                   <span style={{ fontSize: 12, color: '#64748b' }}> → {item.example}</span>
                 </div>
               ))}
@@ -86,7 +86,7 @@ export default function EmailIntelligencePage() {
                 'Summarisation runs as a separate FastAPI microservice (port 8003)',
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', marginTop: 6, flexShrink: 0 }} />
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563EB', marginTop: 6, flexShrink: 0 }} />
                   <span style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>{item}</span>
                 </div>
               ))}

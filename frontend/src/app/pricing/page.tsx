@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { PageContainer, useModal } from '@/components/shared/PageTemplates';
+import { useRouter } from 'next/navigation';
+import { PageContainer } from '@/components/shared/PageTemplates';
 import { Check, ChevronDown, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -99,7 +100,7 @@ export default function PricingPage() {
 
 function PricingContent() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const { openModal } = useModal();
+  const router = useRouter();
 
   return (
     <div>
@@ -342,7 +343,7 @@ function PricingContent() {
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => plan.cta === 'Contact Sales' ? openModal('signin') : openModal('signup')}
+                  onClick={() => router.push('/signup')}
                   style={{
                     width: '100%',
                     padding: '16px 24px',
@@ -527,7 +528,7 @@ function PricingContent() {
             <motion.button
               whileHover={{ scale: 1.05, y: -2 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => openModal('signup')}
+              onClick={() => router.push('/signup')}
               style={{
                 padding: '16px 32px',
                 background: '#fff',
