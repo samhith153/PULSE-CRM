@@ -30,6 +30,7 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
   const eventSourceRef = useRef<EventSource | null>(null);
   const retryDelayRef = useRef<number>(2000);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const onInvalidateRef = useRef(onInvalidate);
 
   // Keep the callback ref current without triggering effect re-runs
@@ -59,7 +60,12 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
             data?.type === 'LEAD_SCORE_UPDATED' ||
             data?.type === 'DEAL_AT_RISK'
           ) {
-            onInvalidateRef.current?.();
+            // Debounce: coalesce rapid events into a single re-fetch (500ms window)
+            if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+            debounceTimerRef.current = setTimeout(() => {
+              onInvalidateRef.current?.();
+              debounceTimerRef.current = null;
+            }, 500);
           }
         } catch (err) {
           console.error('[useCrmStream] Failed to parse SSE message:', err);
@@ -87,6 +93,10 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
       if (retryTimerRef.current) {
         clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
+      }
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+        debounceTimerRef.current = null;
       }
     };
   }, [enabled]);

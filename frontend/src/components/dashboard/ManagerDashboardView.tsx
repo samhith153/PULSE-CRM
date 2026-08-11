@@ -11,12 +11,14 @@ import {
   CalendarDays,
   ChevronRight,
   Gauge,
+  IndianRupee,
   RefreshCw,
   Target,
   TrendingUp,
   Trophy,
   Users,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   getManagerDashboard,
   ManagerDashboardData,
@@ -87,6 +89,174 @@ const getInitials = (name?: string | null): string => {
     .join('')
     .toUpperCase();
 };
+
+/* -------------------------------------------------------------------------- */
+/* Sparkline (SVG area chart pattern)                                         */
+/* -------------------------------------------------------------------------- */
+
+function Spark({ values, positive }: { values: number[]; positive: boolean }) {
+  if (values.length < 2) return null;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const n = values.length;
+  const coords = values.map((v, i) => ({
+    x: (i / (n - 1)) * 100,
+    y: 34 - ((v - min) / range) * 30 + 2,
+  }));
+
+  let linePath = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    const cpX1 = p0.x + (p1.x - p0.x) / 3;
+    const cpY1 = p0.y;
+    const cpX2 = p0.x + (2 * (p1.x - p0.x)) / 3;
+    const cpY2 = p1.y;
+    linePath += ` C ${cpX1.toFixed(1)} ${cpY1.toFixed(1)}, ${cpX2.toFixed(1)} ${cpY2.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+  }
+
+  const areaPath = `${linePath} L ${coords[n - 1].x.toFixed(1)} 40 L 0 40 Z`;
+  const strokeColor = positive ? 'var(--status-success-text)' : 'var(--status-danger-text)';
+
+  return (
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-8 w-full overflow-visible" aria-hidden>
+      <motion.path
+        d={areaPath}
+        fill={strokeColor}
+        fillOpacity="0.08"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      />
+      <motion.path
+        d={linePath}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth="1.5"
+        vectorEffect="non-scaling-stroke"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      />
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* KPI stat tile                                                              */
+/* -------------------------------------------------------------------------- */
+
+interface KpiTile {
+  title: string;
+  value: string;
+  change: string;
+  isPositive: boolean;
+  values: number[];
+  icon: React.ElementType;
+  targetValue: number;
+  prefix?: string;
+  suffix?: string;
+}
+
+function StatTile({ tile, delay = 0, isHero = false }: { tile: KpiTile; delay?: number; isHero?: boolean }) {
+  const value = useCountUp(tile.targetValue, true, 1000);
+  const Delta = tile.isPositive ? ArrowUpRight : ArrowDownRight;
+
+  const displayVal = tile.targetValue === 0
+    ? tile.value
+    : `${tile.prefix ?? ''}${value.toLocaleString()}${tile.suffix ?? ''}`;
+
+  if (isHero) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
+        className="flex flex-col justify-between rounded-2xl bg-gradient-to-br from-accent-color to-purple-600 p-[var(--space-5)] text-white shadow-lg cursor-pointer sm:col-span-2 xl:col-span-2"
+      >
+        <div className="flex items-center justify-between">
+          <div className="grid size-10 place-items-center rounded-xl bg-white/15">
+            <tile.icon size={18} strokeWidth={2} />
+          </div>
+          <p className="flex items-center gap-1 text-[11px] font-bold text-white/90">
+            <Delta size={12} strokeWidth={2.5} className="shrink-0" />
+            <span>{tile.change}</span>
+          </p>
+        </div>
+        <div className="mt-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/70 leading-none">
+            {tile.title}
+          </p>
+          <p className="mt-2 text-[28px] font-extrabold tracking-tight leading-none tabular-nums">
+            {displayVal}
+          </p>
+          <p className="mt-1.5 text-[10px] text-white/60 font-semibold">vs last month</p>
+        </div>
+        <div className="mt-3">
+          <Spark values={tile.values} positive={tile.isPositive} />
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
+      className="flex flex-col gap-[var(--space-2)] rounded-2xl border border-border-default bg-surface-1 p-[var(--space-4)] shadow-card transition-colors duration-200 cursor-pointer"
+    >
+      <div className="flex items-center justify-between">
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-color">
+          <tile.icon size={16} strokeWidth={2} />
+        </div>
+        <p className={`flex items-center gap-1 text-[11px] font-bold ${tile.isPositive ? 'text-status-success-text' : 'text-status-danger-text'}`}>
+          <Delta size={12} strokeWidth={2.5} className="shrink-0" />
+          <span>{tile.change}</span>
+        </p>
+      </div>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted leading-none">
+        {tile.title}
+      </p>
+      <p className="text-2xl font-semibold text-text-primary tabular-nums leading-none">
+        {displayVal}
+      </p>
+      <span className="text-[10px] text-text-muted/60 font-semibold mt-0.5">vs last month</span>
+      <div className="mt-2">
+        <Spark values={tile.values} positive={tile.isPositive} />
+      </div>
+    </motion.div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* useCountUp hook (simple implementation)                                    */
+/* -------------------------------------------------------------------------- */
+
+function useCountUp(target: number, active: boolean, duration = 1000): number {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (!active || target === 0) {
+      setCurrent(target);
+      return;
+    }
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCurrent(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [target, active, duration]);
+
+  return current;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Main component                                                             */
@@ -343,138 +513,75 @@ export default function ManagerDashboardView({
       </div>
 
       {/* ================================================================== */}
-      {/* KPI CARDS — 5-column grid                                          */}
+      {/* KPI CARDS — with sparklines + gradient hero                        */}
       {/* ================================================================== */}
 
       <div className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-5">
-
-        {/* Team Revenue */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => onTabChange?.('reports')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('reports'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
-              Team Revenue
-            </p>
-            <TrendingUp className="h-4 w-4 text-accent-color" />
-          </div>
-
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
-            {formatCurrency(data.summary.team_revenue)}
-          </p>
-
-          <div className="flex items-center gap-1.5 text-xs text-text-muted">
-            {toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? (
-              <ArrowUpRight className="h-3.5 w-3.5 text-status-success" />
-            ) : (
-              <ArrowDownRight className="h-3.5 w-3.5 text-status-danger" />
-            )}
-            <span className={`font-semibold ${toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? 'text-status-success' : 'text-status-danger'}`}>
-              {formatPercent(data.revenue_stats.monthly_growth_pct)}
-            </span>
-            <span>growth</span>
-          </div>
-        </div>
-
-        {/* Pipeline Value */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => onTabChange?.('pipeline')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('pipeline'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
-              Pipeline Value
-            </p>
-            <BarChart3 className="h-4 w-4 text-accent-color" />
-          </div>
-
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
-            {formatCurrency(data.summary.pipeline_value)}
-          </p>
-
-          <p className="text-[10px] text-text-muted">
-            {data.pipeline_health.total_deals} active deals
-          </p>
-        </div>
-
-        {/* Forecast */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => onTabChange?.('forecast')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('forecast'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
-              Forecast
-            </p>
-            <Gauge className="h-4 w-4 text-accent-color" />
-          </div>
-
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
-            {formatCurrency(data.forecast.projected_revenue)}
-          </p>
-
-          <p className="text-[10px] text-text-muted">
-            {formatPercent(data.forecast.confidence_score)} confidence
-          </p>
-        </div>
-
-        {/* Quota Attainment */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => onTabChange?.('team performance')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
-              Quota Attainment
-            </p>
-            <Target className="h-4 w-4 text-accent-color" />
-          </div>
-
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
-            {formatPercent(data.revenue_stats.achievement_pct)}
-          </p>
-
-          <p className="text-[10px] text-text-muted">
-            Target {formatCurrency(data.revenue_stats.team_target)}
-          </p>
-        </div>
-
-        {/* Win Rate */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => onTabChange?.('team performance')}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
-        >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
-              Win Rate
-            </p>
-            <Trophy className="h-4 w-4 text-accent-color" />
-          </div>
-
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
-            {formatPercent(data.summary.win_rate)}
-          </p>
-
-          <p className="text-[10px] text-text-muted">
-            Conversion {formatPercent(data.summary.conversion_rate)}
-          </p>
-        </div>
+        {(() => {
+          const growthPct = toNumber(data.revenue_stats.monthly_growth_pct);
+          const kpiTiles: KpiTile[] = [
+            {
+              title: 'Team Revenue',
+              value: formatCurrency(data.summary.team_revenue),
+              change: `${growthPct >= 0 ? '+' : ''}${formatPercent(growthPct)}`,
+              isPositive: growthPct >= 0,
+              values: data.monthly_revenue_trend.length > 0
+                ? data.monthly_revenue_trend.map((m) => toNumber(m.revenue))
+                : [4, 6, 5, 8, 9, 11],
+              icon: IndianRupee,
+              targetValue: toNumber(data.summary.team_revenue),
+              prefix: '₹',
+            },
+            {
+              title: 'Pipeline Value',
+              value: formatCurrency(data.summary.pipeline_value),
+              change: `${data.pipeline_health.total_deals} deals`,
+              isPositive: true,
+              values: [12, 15, 14, 18, 20, 22],
+              icon: BarChart3,
+              targetValue: toNumber(data.summary.pipeline_value),
+              prefix: '₹',
+            },
+            {
+              title: 'Forecast',
+              value: formatCurrency(data.forecast.projected_revenue),
+              change: `${formatPercent(data.forecast.confidence_score)} conf.`,
+              isPositive: toNumber(data.forecast.confidence_score) >= 50,
+              values: [8, 10, 9, 12, 14, 16],
+              icon: Gauge,
+              targetValue: toNumber(data.forecast.projected_revenue),
+              prefix: '₹',
+            },
+            {
+              title: 'Quota Attainment',
+              value: formatPercent(data.revenue_stats.achievement_pct),
+              change: `Target ${formatCurrency(data.revenue_stats.team_target)}`,
+              isPositive: toNumber(data.revenue_stats.achievement_pct) >= 70,
+              values: [40, 55, 60, 65, 72, toNumber(data.revenue_stats.achievement_pct)],
+              icon: Target,
+              targetValue: toNumber(data.revenue_stats.achievement_pct),
+              suffix: '%',
+            },
+            {
+              title: 'Win Rate',
+              value: formatPercent(data.summary.win_rate),
+              change: `${formatPercent(data.summary.conversion_rate)} conv.`,
+              isPositive: toNumber(data.summary.win_rate) >= 20,
+              values: [15, 18, 20, 22, 25, toNumber(data.summary.win_rate)],
+              icon: Trophy,
+              targetValue: toNumber(data.summary.win_rate),
+              suffix: '%',
+            },
+          ];
+          return kpiTiles.map((tile, idx) => (
+            <StatTile
+              key={tile.title}
+              tile={tile}
+              delay={idx * 75}
+              isHero={idx === 0}
+            />
+          ));
+        })()}
       </div>
 
       {/* ================================================================== */}
@@ -521,34 +628,31 @@ export default function ManagerDashboardView({
 
           {data.monthly_revenue_trend.length > 0 ? (
             <>
-              <div className="mt-4 flex h-52 items-end gap-2 border-b border-border-default px-2">
-                {data.monthly_revenue_trend.map((month) => {
+              <div className="mt-4 flex h-52 items-end gap-3 border-b border-border-default px-2">
+                {data.monthly_revenue_trend.map((month, idx) => {
                   const revenue = toNumber(month.revenue);
                   const target = toNumber(month.target);
-
-                  const revenueHeight =
-                    revenue > 0
-                      ? Math.max(5, (revenue / revenueTrendMax) * 100)
-                      : 3;
-
-                  const targetHeight =
-                    target > 0
-                      ? Math.max(5, (target / revenueTrendMax) * 100)
-                      : 3;
+                  const revenueHeight = revenue > 0 ? Math.max(8, (revenue / revenueTrendMax) * 100) : 4;
+                  const targetHeight = target > 0 ? Math.max(8, (target / revenueTrendMax) * 100) : 4;
+                  const isLast = idx === data.monthly_revenue_trend.length - 1;
 
                   return (
                     <div
                       key={month.month}
-                      className="flex h-full flex-1 items-end justify-center gap-1"
-                      title={`${month.month} \u2014 Revenue ${formatCurrency(revenue)} \u2014 Target ${formatCurrency(target)}`}
+                      className="group flex h-full flex-1 items-end justify-center gap-1.5"
+                      title={`${month.month} — Revenue ${formatCurrency(revenue)} — Target ${formatCurrency(target)}`}
                     >
-                      <div
-                        className="w-2 rounded-t bg-accent-color"
-                        style={{ height: `${revenueHeight}%` }}
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: `${revenueHeight}%` }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
+                        className={`w-3 rounded-t-lg ${isLast ? 'bg-accent-color shadow-md' : 'bg-accent-color/70'}`}
                       />
-                      <div
-                        className="w-2 rounded-t bg-muted-foreground/20"
-                        style={{ height: `${targetHeight}%` }}
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: `${targetHeight}%` }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 + 0.1 }}
+                        className={`w-3 rounded-t-lg ${isLast ? 'bg-purple-400/60' : 'bg-purple-400/30'}`}
                       />
                     </div>
                   );
@@ -569,7 +673,7 @@ export default function ManagerDashboardView({
                   Revenue
                 </span>
                 <span className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-muted-foreground/20" />
+                  <span className="h-2 w-2 rounded-full bg-purple-400/60" />
                   Target
                 </span>
               </div>
@@ -602,34 +706,47 @@ export default function ManagerDashboardView({
             </button>
           </div>
 
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
-              Expected Revenue
-            </p>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-text-primary tabular-nums">
-              {formatCurrency(data.forecast.projected_revenue)}
-            </p>
-          </div>
-
-          <div className="space-y-[var(--space-3)]">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Confidence</span>
-                <span className="text-xs font-bold text-text-primary">{formatPercent(data.forecast.confidence_score)}</span>
-              </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-accent-color"
-                  style={{ width: `${Math.min(100, Math.max(0, toNumber(data.forecast.confidence_score)))}%` }}
+          <div className="flex items-center gap-4">
+            {/* Confidence Ring */}
+            <div className="relative shrink-0">
+              <svg className="size-20 -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="56" fill="none" stroke="var(--surface-2)" strokeWidth="12" />
+                <motion.circle
+                  cx="80" cy="80" r="56"
+                  fill="none"
+                  stroke="var(--accent-color)"
+                  strokeWidth="12"
+                  strokeDasharray={`${(toNumber(data.forecast.confidence_score) / 100) * (2 * Math.PI * 56)} ${2 * Math.PI * 56}`}
+                  strokeDashoffset={0}
+                  strokeLinecap="round"
+                  initial={{ strokeDasharray: `0 ${2 * Math.PI * 56}` }}
+                  animate={{ strokeDasharray: `${(toNumber(data.forecast.confidence_score) / 100) * (2 * Math.PI * 56)} ${2 * Math.PI * 56}` }}
+                  transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
                 />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-lg font-bold text-text-primary tabular-nums leading-none">
+                  {formatPercent(data.forecast.confidence_score)}
+                </span>
+                <span className="text-[8px] font-bold text-text-muted uppercase tracking-wider">Conf.</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t border-border-default pt-3">
+            <div className="flex-1 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
+                Expected Revenue
+              </p>
+              <p className="text-xl font-bold tracking-tight text-text-primary tabular-nums">
+                {formatCurrency(data.forecast.projected_revenue)}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-border-default">
+            <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Forecast Accuracy</span>
               <span className="text-xs font-bold text-text-primary">{formatPercent(data.forecast.forecast_accuracy)}</span>
             </div>
-
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Quarter Projection</span>
               <span className="text-xs font-bold text-text-primary">{formatCurrency(data.forecast.expected_quarter_revenue)}</span>
@@ -662,31 +779,50 @@ export default function ManagerDashboardView({
         </div>
 
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          {data.pipeline_health.stage_distribution.map((stage) => (
-            <div
-              key={stage.stage}
-              className="rounded-xl border border-border-default bg-surface-2/10 p-[var(--space-3)] transition hover:bg-surface-2/20"
-            >
-              <p className="truncate text-xs font-bold text-text-primary">
-                {stage.stage}
-              </p>
-              <p className="mt-2 text-xl font-bold text-text-primary tabular-nums">
-                {stage.deal_count}
-              </p>
-              <p className="mt-0.5 text-[10px] text-text-muted">
-                {formatCurrency(stage.total_value)}
-              </p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-accent-color"
-                  style={{ width: `${Math.min(100, Math.max(0, toNumber(stage.percentage)))}%` }}
-                />
-              </div>
-              <p className="mt-1 text-[10px] text-text-muted">
-                {formatPercent(stage.percentage)}
-              </p>
-            </div>
-          ))}
+          {data.pipeline_health.stage_distribution.map((stage, idx) => {
+            const stageColors = [
+              'bg-purple-400',
+              'bg-accent-color',
+              'bg-violet-500',
+              'bg-status-warning-text',
+              'bg-status-success-text',
+              'bg-status-danger-text',
+            ];
+            const color = stageColors[idx % stageColors.length];
+            return (
+              <motion.div
+                key={stage.stage}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: idx * 0.05 }}
+                className="rounded-xl border border-border-default bg-surface-2/10 p-[var(--space-3)] transition hover:bg-surface-2/20"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${color}`} />
+                  <p className="truncate text-[11px] font-bold text-text-primary">
+                    {stage.stage}
+                  </p>
+                </div>
+                <p className="mt-2 text-xl font-bold text-text-primary tabular-nums">
+                  {stage.deal_count}
+                </p>
+                <p className="mt-0.5 text-[10px] text-text-muted">
+                  {formatCurrency(stage.total_value)}
+                </p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, Math.max(0, toNumber(stage.percentage)))}%` }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
+                    className={`h-full rounded-full ${color}`}
+                  />
+                </div>
+                <p className="mt-1 text-[10px] text-text-muted">
+                  {formatPercent(stage.percentage)}
+                </p>
+              </motion.div>
+            );
+          })}
         </div>
 
         <div className="grid grid-cols-1 gap-4 border-t border-border-default pt-3 sm:grid-cols-3">
@@ -732,32 +868,47 @@ export default function ManagerDashboardView({
           </div>
 
           <div className="max-h-[300px] overflow-y-auto pr-1 space-y-[var(--space-3)]">
-            {sortedReps.map((rep) => {
+            {sortedReps.map((rep, idx) => {
               const attainment = toNumber(rep.quota_achievement_pct);
+              const rankBadge = idx === 0 ? 'bg-yellow-400/20 text-yellow-600' :
+                               idx === 1 ? 'bg-gray-300/30 text-gray-500' :
+                               idx === 2 ? 'bg-orange-400/20 text-orange-600' :
+                               'bg-surface-2 text-text-muted';
+              const barColor = attainment >= 100 ? 'bg-status-success-text' :
+                              attainment >= 70 ? 'bg-accent-color' :
+                              attainment >= 50 ? 'bg-status-warning-text' :
+                              'bg-status-danger-text';
 
               return (
-                <div key={rep.user_id}>
+                <motion.div
+                  key={rep.user_id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: idx * 0.05 }}
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-2.5">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent-color/10 text-[9px] font-bold text-accent-color border border-accent-color/15">
-                        {getInitials(rep.full_name)}
+                      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold border ${rankBadge}`}>
+                        {idx < 3 ? `#${idx + 1}` : getInitials(rep.full_name)}
                       </span>
                       <div className="min-w-0">
                         <p className="truncate text-xs font-bold text-text-primary">{rep.full_name}</p>
                         <p className="text-[10px] text-text-muted">Revenue {formatCurrency(rep.revenue_generated)}</p>
                       </div>
                     </div>
-                    <span className="shrink-0 text-xs font-bold tabular-nums text-accent-color">
+                    <span className={`shrink-0 text-xs font-bold tabular-nums ${attainment >= 100 ? 'text-status-success-text' : attainment >= 70 ? 'text-accent-color' : 'text-status-warning-text'}`}>
                       {formatPercent(attainment)}
                     </span>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-accent-color"
-                      style={{ width: `${Math.min(100, Math.max(0, attainment))}%` }}
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, Math.max(0, attainment))}%` }}
+                      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
+                      className={`h-full rounded-full ${barColor}`}
                     />
                   </div>
-                </div>
+                </motion.div>
               );
             })}
 

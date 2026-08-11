@@ -1,4 +1,4 @@
-import { motion, type Variants } from "motion/react";
+import { motion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
 
 type Direction = "up" | "down" | "left" | "right" | "none";

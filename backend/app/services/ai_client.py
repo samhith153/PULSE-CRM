@@ -15,6 +15,24 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Shared httpx.AsyncClient — reused across all AIClient instances to
+# avoid TCP connection setup overhead per AI service call.
+_shared_client: httpx.AsyncClient | None = None
+
+
+def _get_shared_client(timeout: float | None = None) -> httpx.AsyncClient:
+    global _shared_client
+    if _shared_client is None or _shared_client.is_closed:
+        _shared_client = httpx.AsyncClient(timeout=timeout or settings.AI_SERVICE_TIMEOUT)
+    return _shared_client
+
+
+async def close_shared_client() -> None:
+    global _shared_client
+    if _shared_client is not None and not _shared_client.is_closed:
+        await _shared_client.aclose()
+        _shared_client = None
+
 
 class AIClient:
     """Thin HTTP client wrapping the AI service endpoints."""
@@ -22,10 +40,10 @@ class AIClient:
     def __init__(self, base_url: Optional[str] = None, timeout: Optional[float] = None) -> None:
         self.base_url = (base_url or settings.AI_SERVICE_URL).rstrip("/")
         self.timeout = timeout or settings.AI_SERVICE_TIMEOUT
-        self._client = httpx.AsyncClient(timeout=self.timeout)
+        self._client = _get_shared_client(self.timeout)
 
     async def close(self) -> None:
-        await self._client.aclose()
+        pass  # Shared client lifecycle is managed at app level
 
     async def _post(self, path: str, payload: dict) -> Optional[dict]:
         """POST JSON to the AI service and return parsed JSON or None on failure."""

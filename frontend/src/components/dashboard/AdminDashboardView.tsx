@@ -99,7 +99,7 @@ interface KpiTile {
   suffix?: string;
 }
 
-function StatTile({ tile, delay = 0 }: { tile: KpiTile; delay?: number }) {
+function StatTile({ tile, delay = 0, isHero = false }: { tile: KpiTile; delay?: number; isHero?: boolean }) {
   const { ref, visible } = useReveal<HTMLDivElement>();
   const value = useCountUp(tile.targetValue, visible, 1000);
   const Delta = tile.isPositive ? ArrowUpRight : ArrowDownRight;
@@ -107,6 +107,41 @@ function StatTile({ tile, delay = 0 }: { tile: KpiTile; delay?: number }) {
   const displayVal = tile.targetValue === 0 
     ? tile.value 
     : `${tile.prefix ?? ''}${value.toLocaleString()}${tile.suffix ?? ''}`;
+
+  if (isHero) {
+    return (
+      <motion.div
+        ref={ref}
+        initial={{ opacity: 0, y: 15 }}
+        animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
+        className="flex flex-col justify-between rounded-2xl bg-gradient-to-br from-accent-color to-purple-600 p-[var(--space-5)] text-white shadow-lg cursor-pointer sm:col-span-2"
+      >
+        <div className="flex items-center justify-between">
+          <div className="grid size-10 place-items-center rounded-xl bg-white/15">
+            <tile.icon size={18} strokeWidth={2} />
+          </div>
+          <p className="flex items-center gap-1 text-[11px] font-bold text-white/90">
+            <Delta size={12} strokeWidth={2.5} className="shrink-0" />
+            <span>{tile.change}</span>
+          </p>
+        </div>
+        <div className="mt-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/70 leading-none">
+            {tile.title}
+          </p>
+          <p className="mt-2 text-[28px] font-extrabold tracking-tight leading-none tabular-nums">
+            {displayVal}
+          </p>
+          <p className="mt-1.5 text-[10px] text-white/60 font-semibold">vs last month</p>
+        </div>
+        <div className="mt-3">
+          <Spark values={tile.values} positive={tile.isPositive} />
+        </div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -604,7 +639,7 @@ export default function AdminDashboardView() {
       {/* KPI tiles */}
       <div className="grid gap-[var(--space-4)] sm:grid-cols-2 lg:grid-cols-4">
         {kpiTiles.map((tile, idx) => (
-          <StatTile key={tile.title} tile={tile} delay={idx * 75} />
+          <StatTile key={tile.title} tile={tile} delay={idx * 75} isHero={idx === 0} />
         ))}
       </div>
 

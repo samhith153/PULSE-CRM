@@ -321,9 +321,44 @@ class DashboardService:
         now = datetime.now(timezone.utc)
         untouched_threshold_days = 7
         untouched_cutoff = now - timedelta(days=untouched_threshold_days)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        tomorrow_start = today_start + timedelta(days=1)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        next_month = month_start.replace(year=month_start.year + 1, month=1) if month_start.month == 12 else month_start.replace(month=month_start.month + 1)
 
-        open_count = await repo.count_open_deals(organization_id, user_id)
-        recent_deals = await repo.recent_open_deals(organization_id, user_id)
+        # Run all independent DB queries concurrently
+        (
+            open_count,
+            recent_deals,
+            latest_activity_rows,
+            calls_summary,
+            active_leads_count,
+            task_rows,
+            task_summary,
+            meeting_rows,
+            priority_rows,
+            at_risk_rows,
+            quota_stats,
+            quota_target_raw,
+            pipeline_rows,
+        ) = await asyncio.gather(
+            repo.count_open_deals(organization_id, user_id),
+            repo.recent_open_deals(organization_id, user_id),
+            repo.latest_deal_activity(organization_id, user_id),
+            repo.calls_today_summary(organization_id, user_id, today_start, tomorrow_start),
+            repo.count_active_leads(organization_id, user_id),
+            repo.open_tasks(organization_id, user_id),
+            repo.task_summary(organization_id, user_id, today_start, tomorrow_start),
+            repo.dashboard_meetings(organization_id, user_id, now),
+            repo.priority_candidates(organization_id, user_id),
+            repo.at_risk_deals(organization_id, user_id),
+            repo.quota_stats(organization_id, user_id, month_start, next_month),
+            repo.user_sales_quota(organization_id, user_id),
+            repo.pipeline_funnel(organization_id, user_id),
+        )
+
+        # --- Post-process results into card objects ---
+
         open_deals = DashboardOpenDealsCard(
             count=open_count,
             recent_deals=[
@@ -338,7 +373,6 @@ class DashboardService:
             ],
         )
 
-        latest_activity_rows = await repo.latest_deal_activity(organization_id, user_id)
         untouched_ids = [
             deal.id for deal, last_activity_at in latest_activity_rows
             if last_activity_at is None or last_activity_at < untouched_cutoff
@@ -349,9 +383,6 @@ class DashboardService:
             deal_ids=untouched_ids,
         )
 
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        tomorrow_start = today_start + timedelta(days=1)
-        calls_summary = await repo.calls_today_summary(organization_id, user_id, today_start, tomorrow_start)
         calls_today = DashboardCallsTodayCard(
             count=calls_summary["total"],
             pending=calls_summary["pending"],
@@ -359,11 +390,8 @@ class DashboardService:
             total=calls_summary["total"],
         )
 
-        my_leads = DashboardLeadsCard(
-            count=await repo.count_active_leads(organization_id, user_id)
-        )
+        my_leads = DashboardLeadsCard(count=active_leads_count)
 
-        task_rows = await repo.open_tasks(organization_id, user_id)
         task_items = [
             DashboardTaskItem(
                 id=row["task"].id,
@@ -375,7 +403,6 @@ class DashboardService:
             )
             for row in task_rows
         ]
-        task_summary = await repo.task_summary(organization_id, user_id, today_start, tomorrow_start)
         tasks = DashboardTasksCard(
             count=len(task_items),
             today=task_summary["today"],
@@ -389,7 +416,6 @@ class DashboardService:
             completion_percentage=self._percentage(task_summary["completed"], task_summary["total"]),
         )
 
-        meeting_rows = await repo.dashboard_meetings(organization_id, user_id, now)
         today_end = now.replace(hour=23, minute=59, second=59, microsecond=999999)
         meeting_items = [
             DashboardMeetingItem(
@@ -409,7 +435,6 @@ class DashboardService:
             upcoming=[item for item in meeting_items if item.start_datetime > today_end],
         )
 
-        priority_rows = await repo.priority_candidates(organization_id, user_id)
         priority_items = []
         priority_weights = {"critical": 35, "high": 25, "medium": 15, "low": 5}
         for row in priority_rows:
@@ -452,7 +477,7 @@ class DashboardService:
         priority_queue = DashboardPriorityQueueCard(items=priority_items[:10])
 
         risk_items = []
-        for row in await repo.at_risk_deals(organization_id, user_id):
+        for row in at_risk_rows:
             deal = row["deal"]
             score = 0
             reasons = []
@@ -493,11 +518,7 @@ class DashboardService:
         risk_items.sort(key=lambda item: item.risk_score, reverse=True)
         deals_at_risk = DashboardDealsAtRiskCard(items=risk_items[:10])
 
-        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        next_month = month_start.replace(year=month_start.year + 1, month=1) if month_start.month == 12 else month_start.replace(month=month_start.month + 1)
-        quota_stats = await repo.quota_stats(organization_id, user_id, month_start, next_month)
         achieved = Decimal(str(quota_stats["achieved"] or 0))
-        quota_target_raw = await repo.user_sales_quota(organization_id, user_id)
         quota_target = Decimal(str(quota_target_raw)) if quota_target_raw is not None else None
         elapsed_days = Decimal(str(now.day))
         days_in_month = Decimal(str((next_month - month_start).days))
@@ -525,7 +546,7 @@ class DashboardService:
                     count=row["count"],
                     conversion_percentage=Decimal(str(row["conversion_percentage"])),
                 )
-                for row in await repo.pipeline_funnel(organization_id, user_id)
+                for row in pipeline_rows
             ]
         )
 
@@ -2752,18 +2773,20 @@ class DashboardService:
 
         # ── Parse Open Tasks ──────────────────────────────────────────────────
         task_rows = res_tasks.scalars().all()
-        open_tasks = [
-            RepTaskItem(
-                id=row.id,
-                title=row.title,
-                due_date=row.created_at.date(),
-                status="pending" if row.created_at >= now else "overdue",
-                source="manual",
-                lead_id=row.lead_id,
-                deal_id=row.deal_id,
+        open_tasks = []
+        for row in task_rows:
+            payload = row.payload or {}
+            open_tasks.append(
+                RepTaskItem(
+                    id=row.id,
+                    title=row.title,
+                    due_date=row.created_at.date(),
+                    status="pending" if row.created_at >= now else "overdue",
+                    source="manual",
+                    lead_id=payload.get("lead_id"),
+                    deal_id=payload.get("deal_id"),
+                )
             )
-            for row in task_rows
-        ]
 
         # ── Parse Priority Queue ──────────────────────────────────────────────
         priority_rows = res_priority_queue.all()
