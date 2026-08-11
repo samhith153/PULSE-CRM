@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
 
 from app.api.deps import CurrentUser, DBSession, require_permission
 from app.schemas.common import PaginatedResponse, StandardResponse
@@ -23,6 +23,25 @@ from app.schemas.pipeline import (
 from app.services.pipeline_service import PipelineService
 
 router = APIRouter()
+
+
+async def _run_assessment_in_background(
+    lead_id: UUID,
+    organization_id: UUID,
+    created_by: UUID,
+) -> None:
+    """Run AI assessment after the response is sent (fire-and-forget)."""
+    from app.database.connection import AsyncSessionFactory
+    from app.services.ai_pipeline import run_lead_assessment
+    async with AsyncSessionFactory() as session:
+        try:
+            await run_lead_assessment(
+                session, lead_id, organization_id, created_by,
+                trigger="deal_stage_changed",
+            )
+            await session.commit()
+        except Exception:
+            await session.rollback()
 
 
 @router.get(
@@ -155,14 +174,23 @@ async def list_stage_deals(
     description="Updates the deal stage, probability, and close state in a single transactional operation.",
     dependencies=[Depends(require_permission("pipeline:update"))],
 )
-async def move_deal(payload: PipelineMoveRequest, current_user: CurrentUser, db: DBSession) -> dict:
+async def move_deal(
+    payload: PipelineMoveRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+    background_tasks: BackgroundTasks,
+) -> dict:
     svc = PipelineService(db)
-    await svc.move_deal(
+    deal = await svc.move_deal(
         current_user.organization_id,
         current_user.id,
         payload.deal_id,
         payload.stage_id,
         payload.close_reason,
     )
-    board = await svc.get_board(current_user.organization_id, current_user.id)
-    return {"success": True, "message": "Deal moved.", "data": board}
+    if deal.lead_id:
+        background_tasks.add_task(
+            _run_assessment_in_background,
+            deal.lead_id, current_user.organization_id, current_user.id,
+        )
+    return {"success": True, "message": "Deal moved."}
