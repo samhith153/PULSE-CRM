@@ -412,10 +412,14 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       setPipelineStages(data as any);
     }).catch(() => {});
 
-    // Periodically refresh recommendations (assessments run in background)
+    // Periodically refresh leads + recommendations (assessments run in background)
     const intervalId = window.setInterval(() => {
-      const ids = leadsRef.current.map(l => l.id).filter(Boolean) as string[];
-      refreshRecommendations(ids);
+      getLeads().then(data => {
+        const mapped = (data ?? []).map(backendToLocal);
+        setLeads(mapped);
+        const ids = mapped.map(l => l.id).filter(Boolean) as string[];
+        refreshRecommendations(ids);
+      }).catch(() => {});
     }, 30000);
     return () => window.clearInterval(intervalId);
   }, []);
@@ -547,6 +551,24 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
         setLeads([newLead, ...leads]);
       }
       setSelectedLeadId(created?.id ?? null);
+      // Poll for score update — background AI assessment takes 5-15s
+      const newId = String(created?.id ?? '');
+      if (newId) {
+        let attempts = 0;
+        const pollId = window.setInterval(async () => {
+          attempts++;
+          if (attempts > 10) { window.clearInterval(pollId); return; }
+          try {
+            const refreshed = await getLeads();
+            const mapped = (refreshed ?? []).map(backendToLocal);
+            setLeads(mapped);
+            const updated = mapped.find(l => String(l.id) === newId);
+            if (updated && updated.score > 0) {
+              window.clearInterval(pollId);
+            }
+          } catch { /* retry next tick */ }
+        }, 3000);
+      }
     } catch (err) {
       console.error("Failed to create lead:", err);
     }
