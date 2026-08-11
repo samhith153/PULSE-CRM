@@ -4,6 +4,7 @@ Dashboard repository queries.
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
@@ -166,7 +167,13 @@ class DashboardRepository:
             .subquery()
         )
         stmt = (
-            select(Deal, Company.name, LeadScore.engagement_score, LeadScore.overall_score, latest_activity.c.last_activity_at)
+            select(
+                Deal,
+                Company.name,
+                LeadScore.engagement_score,
+                LeadScore.overall_score,
+                latest_activity.c.last_activity_at,
+            )
             .outerjoin(Company, Company.id == Deal.company_id)
             .outerjoin(Lead, Lead.id == Deal.lead_id)
             .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
@@ -189,8 +196,6 @@ class DashboardRepository:
             }
             for row in (await self.db.execute(stmt)).all()
         ]
-
-   
 
     async def calls_today_summary(self, organization_id: UUID, user_id: UUID, start: datetime, end: datetime) -> dict[str, int]:
         completed_statuses = ("completed", "connected", "done")
@@ -217,7 +222,9 @@ class DashboardRepository:
             func.coalesce(func.sum(func.cast(Task.status == "completed", Integer)), 0).label("completed"),
             func.coalesce(func.sum(func.cast((Task.due_date >= start) & (Task.due_date < end), Integer)), 0).label("today"),
             func.coalesce(func.sum(func.cast(Task.due_date >= end, Integer)), 0).label("upcoming"),
-            func.coalesce(func.sum(func.cast((Task.due_date < start) & Task.status.notin_(inactive_statuses), Integer)), 0).label("overdue"),
+            func.coalesce(
+                func.sum(func.cast((Task.due_date < start) & Task.status.notin_(inactive_statuses), Integer)), 0
+            ).label("overdue"),
         ).where(
             Task.organization_id == organization_id,
             Task.owner_id == user_id,
@@ -235,13 +242,20 @@ class DashboardRepository:
             ("Proposals", ["proposal_sent", "proposal", "negotiation"]),
             ("Won", ["won", "converted"]),
         ]
-        stmt = select(Lead.status, func.count(Lead.id)).where(
-            Lead.organization_id == organization_id,
-            Lead.owner_id == user_id,
-            Lead.is_active.is_(True),
-            Lead.is_deleted.is_(False),
-        ).group_by(Lead.status)
-        counts = {str(status or "").lower(): int(count or 0) for status, count in (await self.db.execute(stmt)).all()}
+        stmt = (
+            select(Lead.status, func.count(Lead.id))
+            .where(
+                Lead.organization_id == organization_id,
+                Lead.owner_id == user_id,
+                Lead.is_active.is_(True),
+                Lead.is_deleted.is_(False),
+            )
+            .group_by(Lead.status)
+        )
+        counts = {
+            str(status or "").lower(): int(count or 0)
+            for status, count in (await self.db.execute(stmt)).all()
+        }
         denominator = max(sum(counts.get(status, 0) for status in stages[0][1]), 1)
         rows = []
         for label, statuses in stages:
@@ -254,7 +268,6 @@ class DashboardRepository:
             func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0).label("achieved"),
             func.count(Deal.id).label("won_deals"),
         ).where(
-
             Deal.organization_id == organization_id,
             Deal.owner_id == user_id,
             Deal.is_active.is_(True),
@@ -266,9 +279,14 @@ class DashboardRepository:
         row = (await self.db.execute(stmt)).one()
         achieved = row.achieved or 0
         won_deals = int(row.won_deals or 0)
-        return {"achieved": achieved, "won_deals": won_deals, "average_deal_size": (achieved / won_deals) if won_deals else 0}
+        return {
+            "achieved": achieved,
+            "won_deals": won_deals,
+            "average_deal_size": (achieved / won_deals) if won_deals else 0,
+        }
 
     async def user_sales_quota(self, organization_id: UUID, user_id: UUID):
+        """Return the user's assigned monthly sales quota, or None if not set."""
         stmt = select(User.sales_quota).where(
             User.id == user_id,
             User.organization_id == organization_id,
@@ -277,16 +295,17 @@ class DashboardRepository:
         )
         return (await self.db.execute(stmt)).scalar_one_or_none()
 
-
     async def won_revenue_between(
         self,
         organization_id: UUID,
         user_id: UUID,
         start: datetime,
         end: datetime,
-    ):
-        stmt = select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(
-
+    ) -> Decimal:
+        """Return total won deal revenue for a user within [start, end)."""
+        stmt = select(
+            func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)
+        ).where(
             Deal.organization_id == organization_id,
             Deal.owner_id == user_id,
             Deal.is_active.is_(True),
@@ -295,35 +314,15 @@ class DashboardRepository:
             Deal.closed_at >= start,
             Deal.closed_at < end,
         )
-        row = (await self.db.execute(stmt)).one()
-        achieved = row.achieved or 0
-        won_deals = int(row.won_deals or 0)
-        return {"achieved": achieved, "won_deals": won_deals, "average_deal_size": (achieved / won_deals) if won_deals else 0}
+        return Decimal(str((await self.db.execute(stmt)).scalar_one() or 0))
 
-    async def user_sales_quota(self, organization_id: UUID, user_id: UUID):
-        stmt = select(User.sales_quota).where(
-            User.id == user_id,
-            User.organization_id == organization_id,
-            User.is_active.is_(True),
-            User.is_deleted.is_(False),
+    async def unread_email_count(self, organization_id: UUID) -> int:
+        """Return count of unread inbound emails for the organisation."""
+        from app.models.email import Email
+        stmt = select(func.count(Email.id)).where(
+            Email.organization_id == organization_id,
+            Email.is_active.is_(True),
+            Email.is_read.is_(False),
+            Email.direction == "inbound",
         )
-        return (await self.db.execute(stmt)).scalar_one_or_none()
-
-
-    async def won_revenue_between(
-        self,
-        organization_id: UUID,
-        user_id: UUID,
-        start: datetime,
-        end: datetime,
-    ):
-        stmt = select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(
-            Deal.organization_id == organization_id,
-            Deal.owner_id == user_id,
-            Deal.is_active.is_(True),
-            Deal.is_deleted.is_(False),
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= start,
-            Deal.closed_at < end,
-        )
-        return (await self.db.execute(stmt)).scalar_one()
+        return int((await self.db.execute(stmt)).scalar_one() or 0)

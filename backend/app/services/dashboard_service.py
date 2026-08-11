@@ -3,7 +3,7 @@ Dashboard analytics service.
 """
 from __future__ import annotations
 
-import asyncio # added for concurrent execution
+import asyncio
 from datetime import datetime, timedelta, timezone, date
 from decimal import Decimal
 from uuid import UUID
@@ -34,7 +34,7 @@ from app.schemas.dashboard import (
     DashboardTrendPoint,
     DashboardTrendResponse,
     TopSalesRepresentativeResponse,
-    # ── Command Center Schemas ──
+    # -- Command Center Schemas --
     SalesRepCommandDashboardResponse,
     RepDashboardKPIs,
     RepQuotaPace,
@@ -1222,6 +1222,7 @@ class DashboardService:
         manager_id: UUID,
         organization_id: UUID,
         period: str = "quarter",
+        rep_id: UUID | None = None,
     ):  # noqa: C901
         """
         Compute all Manager Dashboard KPIs scoped to the manager's team.
@@ -1248,6 +1249,7 @@ class DashboardService:
         )
 
         now = datetime.now(timezone.utc)
+        manager_scope_ids: list[UUID] | None = None
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_start = (now - timedelta(days=now.weekday())).replace(
             hour=0, minute=0, second=0, microsecond=0
@@ -1255,12 +1257,34 @@ class DashboardService:
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         last_month_start, _ = self._month_bounds(now, 1)
 
+        # -- Compute period_start / prev_period_start from the period param ---
+        if period == "week":
+            period_start = week_start
+            prev_period_start = week_start - timedelta(weeks=1)
+            prev_period_end = week_start
+        elif period == "month":
+            period_start = month_start
+            prev_period_start, prev_period_end = self._month_bounds(now, 1)
+        elif period == "year":
+            period_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            prev_period_start = period_start.replace(year=period_start.year - 1)
+            prev_period_end = period_start
+        else:  # default = quarter
+            current_quarter_month = ((now.month - 1) // 3) * 3 + 1
+            period_start = now.replace(
+                month=current_quarter_month, day=1, hour=0, minute=0, second=0, microsecond=0
+            )
+            # previous quarter = 3 months before current quarter start
+            prev_period_start, _ = self._month_bounds(period_start, 3)
+            prev_period_end = period_start
+
         # -- helpers ----------------------------------------------------------
         def _deal_base(*extra):
             return [
                 Deal.organization_id == organization_id,
                 Deal.is_active.is_(True),
                 Deal.is_deleted.is_(False),
+                *([Deal.owner_id.in_(manager_scope_ids)] if manager_scope_ids is not None else []),
                 *extra,
             ]
 
@@ -1307,27 +1331,34 @@ class DashboardService:
             .where(*_user_base(), _non_admin_user_filter())
         )
         team_rows = (await self.db.execute(team_stmt)).all()
+        if rep_id is not None:
+            team_rows = [row for row in team_rows if row[0] == rep_id]
+            manager_scope_ids = [rep_id] if team_rows else []
         team_member_ids = [r[0] for r in team_rows]
         total_members = len(team_member_ids)
 
-        # -- 1. Team Revenue Won -----------------------------------------------
-        team_revenue_won = await _deal_sum(Deal.status == DealStatus.WON.value)
-        prev_month_won = await _deal_sum(
+        # -- 1. Team Revenue Won (scoped to selected period) ------------------
+        team_revenue_won = await _deal_sum(
             Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= last_month_start,
-            Deal.closed_at < month_start,
+            Deal.closed_at >= period_start,
+            Deal.closed_at < now,
+        )
+        prev_period_won = await _deal_sum(
+            Deal.status == DealStatus.WON.value,
+            Deal.closed_at >= prev_period_start,
+            Deal.closed_at < prev_period_end,
         )
         this_month_won = await _deal_sum(
             Deal.status == DealStatus.WON.value,
             Deal.closed_at >= month_start,
+            Deal.closed_at < now,
         )
-        # Target: heuristic = avg monthly revenue × 1.2 (adjustable)
-        team_target = max(prev_month_won * Decimal("1.2"), Decimal("1"))
+        # Target: heuristic = prev period revenue * 1.2 (adjustable)
+        team_target = max(prev_period_won * Decimal("1.2"), Decimal("1"))
         achievement_pct = self._percentage(int(team_revenue_won), int(team_target))
         monthly_growth = self._percentage(
-            int(this_month_won - prev_month_won), max(int(prev_month_won), 1)
+            int(team_revenue_won - prev_period_won), max(int(prev_period_won), 1)
         )
-
         revenue_stats = ManagerRevenueStats(
             team_revenue_won=team_revenue_won,
             team_target=team_target,
@@ -1427,42 +1458,34 @@ class DashboardService:
             select(
                 User.id,
                 User.full_name,
-                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
+                func.count(Deal.id).label("total_deals"),
                 func.coalesce(
-                    func.sum(
-                        case((Deal.status == DealStatus.WON.value, Deal.amount), else_=0)
-                    ),
+                    func.sum(case((Deal.status == DealStatus.WON.value, func.coalesce(Deal.value, Deal.amount, 0)), else_=0)),
                     0,
-                ),
+                ).label("won_revenue"),
+                func.coalesce(func.sum(case((Deal.status == DealStatus.WON.value, 1), else_=0)), 0).label("won_count"),
             )
             .select_from(User)
             .outerjoin(
                 Deal,
                 (Deal.owner_id == User.id)
                 & Deal.is_active.is_(True)
-                & Deal.is_deleted.is_(False),
+                & Deal.is_deleted.is_(False)
+                & Deal.organization_id == organization_id,
             )
             .where(*_user_base(), _non_admin_user_filter())
             .group_by(User.id, User.full_name)
-            .order_by(
-                func.coalesce(
-                    func.sum(
-                        case((Deal.status == DealStatus.WON.value, Deal.amount), else_=0)
-                    ),
-                    0,
-                ).desc()
-            )
+            .order_by(func.coalesce(func.sum(case((Deal.status == DealStatus.WON.value, func.coalesce(Deal.value, Deal.amount, 0)), else_=0)), 0).desc())
         )
         rep_rows = (await self.db.execute(rep_revenue_stmt)).all()
         rep_quota: list[RepQuotaAttainment] = []
         for rank, row in enumerate(rep_rows, start=1):
-            rev_gen = Decimal(str(row[3] or 0))
-            # Quota target per rep = team_target / max(total_members, 1)
+            rev_gen = Decimal(str(row.won_revenue or 0))
             rep_target = team_target / max(total_members, 1)
             rep_quota.append(
                 RepQuotaAttainment(
-                    user_id=row[0],
-                    full_name=row[1],
+                    user_id=row.id,
+                    full_name=row.full_name,
                     assigned_target=rep_target,
                     revenue_generated=rev_gen,
                     quota_achievement_pct=self._percentage(int(rev_gen), max(int(rep_target), 1)),
@@ -1471,22 +1494,38 @@ class DashboardService:
             )
 
         # -- 5. Already in stage_distribution (pipeline health) ---------------
-
         # -- 6. Monthly Revenue Trend (12 months) -----------------------------
         monthly_revenue_trend: list[ManagerMonthlyRevenue] = []
+        trend_start, _ = self._month_bounds(now, 11)
+        monthly_stmt = (
+            select(
+                func.date_trunc("month", Deal.closed_at).label("month"),
+                func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0).label("revenue"),
+            )
+            .where(
+                *_deal_base(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= trend_start,
+                    Deal.closed_at < now,
+                )
+            )
+            .group_by("month")
+        )
+        monthly_rows = {
+            row.month.strftime("%Y-%m"): Decimal(str(row.revenue or 0))
+            for row in (await self.db.execute(monthly_stmt)).all()
+            if row.month
+        }
         prev_rev = Decimal("0")
         for offset in range(11, -1, -1):
-            start, end = self._month_bounds(now, offset)
-            m_rev = await _deal_sum(
-                Deal.status == DealStatus.WON.value,
-                Deal.closed_at >= start,
-                Deal.closed_at < end,
-            )
+            start, _ = self._month_bounds(now, offset)
+            key = start.strftime("%Y-%m")
+            m_rev = monthly_rows.get(key, Decimal("0"))
             m_target = team_target / 12
             growth = self._percentage(int(m_rev - prev_rev), max(int(prev_rev), 1))
             monthly_revenue_trend.append(
                 ManagerMonthlyRevenue(
-                    month=start.strftime("%Y-%m"),
+                    month=key,
                     revenue=m_rev,
                     target=m_target,
                     growth_pct=growth,
@@ -1494,8 +1533,7 @@ class DashboardService:
             )
             prev_rev = m_rev
 
-        # -- 7. Top 5 Performing Reps -----------------------------------------
-        top_reps: list[ManagerTopRep] = []
+        # -- 7. Top 5 Performing Reps -----------------------------------------        top_reps: list[ManagerTopRep] = []
         for rank, row in enumerate(rep_rows[:5], start=1):
             total_rep_deals = int(row[2] or 1) if row[2] else 1
             won_rev = Decimal(str(row[3] or 0))
@@ -1595,7 +1633,7 @@ class DashboardService:
             alerts.append(
                 ManagerAlert(
                     severity="medium",
-                    message=f"{len(deals_at_risk)} deal(s) at risk — review required.",
+                    message=f"{len(deals_at_risk)} deal(s) at risk � review required.",
                     timestamp=now,
                 )
             )
@@ -1870,11 +1908,9 @@ class DashboardService:
             previous = Decimal(str(previous or 0))
 
             if previous == 0:
-                if current == 0:
-                    return Decimal("0")
-                return None
+                return Decimal("0") if current == 0 else Decimal("100")
 
-            growth_pct=rev_growth if rev_growth is not None else Decimal("0"),
+            return ((current - previous) * Decimal("100")) / previous
 
         async def _activity_count(action_filter, since=None, until=None):
             conds = [
@@ -2572,9 +2608,9 @@ class DashboardService:
             report_templates=report_templates,
             generated_at=now,
         )
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
     # Sales Representative Command Center (Concurrent Fetching via asyncio.gather)
-    # ─────────────────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
 
     async def sales_rep_command_center(
         self,
@@ -2583,14 +2619,14 @@ class DashboardService:
     ) -> SalesRepCommandDashboardResponse:
         """
         Executes all 9 database queries concurrently for the Sales Rep Command Center
-        using asyncio.gather, reducing DB retrieval latency from ~200ms to ~30ms.
+        using the existing dashboard response contract.
         """
         now = datetime.now(timezone.utc)
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         stalled_date = now - timedelta(days=5)
 
-        # ── Query 1: Open Deals Count (KPI 1) ──────────────────────────────────
+        # -- Query 1: Open Deals Count (KPI 1) ----------------------------------
         open_deals_stmt = select(func.count(Deal.id)).where(
             Deal.owner_id == user_id,
             Deal.organization_id == organization_id,
@@ -2599,7 +2635,7 @@ class DashboardService:
             Deal.status == "open",
         )
 
-        # ── Query 2: Untouched Deals Count (KPI 2 - Stalled > 5 days) ──────────
+        # -- Query 2: Untouched Deals Count (KPI 2 - Stalled > 5 days) ----------
         untouched_deals_stmt = select(func.count(Deal.id)).where(
             Deal.owner_id == user_id,
             Deal.organization_id == organization_id,
@@ -2609,7 +2645,7 @@ class DashboardService:
             Deal.updated_at <= stalled_date,
         )
 
-        # ── Query 3: Calls Today Count (KPI 3) ─────────────────────────────────
+        # -- Query 3: Calls Today Count (KPI 3) ---------------------------------
         calls_today_stmt = select(func.count(ActivityTimeline.id)).where(
             ActivityTimeline.organization_id == organization_id,
             ActivityTimeline.created_by == user_id,
@@ -2618,7 +2654,7 @@ class DashboardService:
             ActivityTimeline.created_at >= today_start,
         )
 
-        # ── Query 4: Active Assigned Leads Count (KPI 4) ───────────────────────
+        # -- Query 4: Active Assigned Leads Count (KPI 4) -----------------------
         leads_assigned_stmt = select(func.count(Lead.id)).where(
             Lead.owner_id == user_id,
             Lead.organization_id == organization_id,
@@ -2626,7 +2662,7 @@ class DashboardService:
             Lead.is_deleted.is_(False),
         )
 
-        # ── Query 5: Quota Pace - Closed Won Revenue (Widget 5) ────────────────
+        # -- Query 5: Quota Pace - Closed Won Revenue (Widget 5) ----------------
         closed_won_stmt = select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(
             Deal.owner_id == user_id,
             Deal.organization_id == organization_id,
@@ -2636,10 +2672,10 @@ class DashboardService:
             Deal.closed_at >= month_start,
         )
 
-        # ── Query 6: User Assigned Quota Target (Widget 5) ────────────────────
+        # -- Query 6: User Assigned Quota Target (Widget 5) --------------------
         user_quota_stmt = select(User.sales_quota).where(User.id == user_id)
 
-        # ── Query 7: Open Tasks Today (Widget 1) ──────────────────────────────
+        # -- Query 7: Open Tasks Today (Widget 1) ------------------------------
         open_tasks_stmt = (
             select(ActivityTimeline)
             .where(
@@ -2652,7 +2688,7 @@ class DashboardService:
             .limit(10)
         )
 
-        # ── Query 8: Priority Queue - Leads Joined with AI Score >= 70 (Widget 3)
+        # -- Query 8: Priority Queue - Leads Joined with AI Score >= 70 (Widget 3)
         priority_queue_stmt = (
             select(Lead, LeadScore)
             .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
@@ -2668,7 +2704,7 @@ class DashboardService:
             .limit(5)
         )
 
-        # ── Query 9: Deals at Risk - Stalled, Low Probability, Negative or High Value (Widget 4) ───
+        # -- Query 9: Deals at Risk - Stalled, Low Probability, Negative or High Value (Widget 4) ---
         deals_at_risk_stmt = (
             select(Deal)
             .options(selectinload(Deal.company), selectinload(Deal.owner))
@@ -2689,36 +2725,38 @@ class DashboardService:
             .limit(5)
         )
 
-        # ───────────────────────────────────────────────────────────────────────
-        # CONCURRENT EXECUTION VIA asyncio.gather
-        # ───────────────────────────────────────────────────────────────────────
-        # Provision the session connection up-front. Without this, the 9
-        # concurrent execute() calls race while the first is still checking out
-        # a connection, which raises "concurrent operations are not permitted".
-        await self.db.connection()
-        (
-            res_open_deals,
-            res_untouched,
-            res_calls,
-            res_leads,
-            res_closed_won,
-            res_user_quota,
-            res_tasks,
-            res_priority_queue,
-            res_deals_at_risk,
-        ) = await asyncio.gather(
-            self.db.execute(open_deals_stmt),
-            self.db.execute(untouched_deals_stmt),
-            self.db.execute(calls_today_stmt),
-            self.db.execute(leads_assigned_stmt),
-            self.db.execute(closed_won_stmt),
-            self.db.execute(user_quota_stmt),
-            self.db.execute(open_tasks_stmt),
-            self.db.execute(priority_queue_stmt),
-            self.db.execute(deals_at_risk_stmt),
+        tomorrow_start = today_start + timedelta(days=1)
+        meetings_today_stmt = (
+            select(CalendarEvent)
+            .options(selectinload(CalendarEvent.related_contact))
+            .where(
+                CalendarEvent.owner_id == user_id,
+                CalendarEvent.organization_id == organization_id,
+                CalendarEvent.event_type == "meeting",
+                CalendarEvent.is_active.is_(True),
+                CalendarEvent.is_deleted.is_(False),
+                CalendarEvent.status.in_(["scheduled", "in_progress", "rescheduled"]),
+                CalendarEvent.start_datetime >= today_start,
+                CalendarEvent.start_datetime < tomorrow_start,
+            )
+            .order_by(CalendarEvent.start_datetime.asc())
+            .limit(10)
         )
 
-        # ── Parse KPI Results ─────────────────────────────────────────────────
+        # Execute all queries sequentially to avoid concurrent-operations error on a single AsyncSession.
+        # asyncio.gather on a single session raises "concurrent operations are not permitted".
+        res_open_deals = await self.db.execute(open_deals_stmt)
+        res_untouched = await self.db.execute(untouched_deals_stmt)
+        res_calls = await self.db.execute(calls_today_stmt)
+        res_leads = await self.db.execute(leads_assigned_stmt)
+        res_closed_won = await self.db.execute(closed_won_stmt)
+        res_user_quota = await self.db.execute(user_quota_stmt)
+        res_tasks = await self.db.execute(open_tasks_stmt)
+        res_priority_queue = await self.db.execute(priority_queue_stmt)
+        res_deals_at_risk = await self.db.execute(deals_at_risk_stmt)
+        res_meetings_today = await self.db.execute(meetings_today_stmt)
+
+        # -- Parse KPI Results -------------------------------------------------
         open_deals_count = int(res_open_deals.scalar_one() or 0)
         untouched_deals_count = int(res_untouched.scalar_one() or 0)
         calls_today_count = int(res_calls.scalar_one() or 0)
@@ -2731,7 +2769,7 @@ class DashboardService:
             leads_assigned=leads_assigned_count,
         )
 
-        # ── Parse Quota Pace ──────────────────────────────────────────────────
+        # -- Parse Quota Pace --------------------------------------------------
         closed_won_rev = Decimal(str(res_closed_won.scalar_one() or 0))
         quota_val = res_user_quota.scalar_one_or_none()
         target_quota = Decimal(str(quota_val)) if quota_val else Decimal("50000.00")
@@ -2750,7 +2788,7 @@ class DashboardService:
             pace_status=pace_status,
         )
 
-        # ── Parse Open Tasks ──────────────────────────────────────────────────
+        # -- Parse Open Tasks --------------------------------------------------
         task_rows = res_tasks.scalars().all()
         open_tasks = [
             RepTaskItem(
@@ -2765,7 +2803,7 @@ class DashboardService:
             for row in task_rows
         ]
 
-        # ── Parse Priority Queue ──────────────────────────────────────────────
+        # -- Parse Priority Queue ----------------------------------------------
         priority_rows = res_priority_queue.all()
         priority_queue = []
         for lead, score in priority_rows:
@@ -2784,7 +2822,21 @@ class DashboardService:
                 )
             )
 
-        # ── Parse Deals at Risk ───────────────────────────────────────────────
+        # -- Parse Meetings Today ----------------------------------------------
+        meetings_today = [
+            RepMeetingItem(
+                id=row.id,
+                title=row.title,
+                start_time=row.start_datetime,
+                end_time=row.end_datetime,
+                zoom_link=row.meeting_url,
+                contact_name=row.related_contact.full_name if getattr(row, "related_contact", None) else None,
+                transcript_status="pending",
+            )
+            for row in res_meetings_today.scalars().all()
+        ]
+
+        # -- Parse Deals at Risk -----------------------------------------------
         at_risk_rows = res_deals_at_risk.scalars().all()
         deals_at_risk = []
         for deal in at_risk_rows:
@@ -2802,7 +2854,7 @@ class DashboardService:
                 risk_factors.append(f"Low win probability ({deal_probability}%)")
             if deal_sentiment == "negative":
                 risk_factors.append("Negative buyer sentiment")
-            risk_reason = " · ".join(risk_factors) if risk_factors else "High value opportunity"
+            risk_reason = " � ".join(risk_factors) if risk_factors else "High value opportunity"
 
             deals_at_risk.append(
                 RepDealAtRiskItem(
@@ -2818,13 +2870,18 @@ class DashboardService:
                 )
             )
 
-        # ── Return Unified Response Contract ──────────────────────────────────
+        # -- Return Unified Response Contract ----------------------------------
         return SalesRepCommandDashboardResponse(
             kpis=kpis,
             open_tasks=open_tasks,
-            meetings_today=[],  # Populated from calendar_events when integrated
+            meetings_today=meetings_today,
             priority_queue=priority_queue,
             deals_at_risk=deals_at_risk,
             quota_pace=quota_pace,
             generated_at=now,
         )
+
+
+
+
+
