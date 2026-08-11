@@ -42,21 +42,19 @@ _lead_ai_tasks: set[asyncio.Task] = set()
 
 async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:
     """Run unified assessment pipeline in a fresh DB session, off the request path."""
-    from app.core.concurrency import assessment_semaphore
     from app.database.connection import AsyncSessionFactory
     from app.services.ai_pipeline import run_lead_assessment
 
     try:
-        async with assessment_semaphore:
-            async with AsyncSessionFactory() as db:
-                try:
-                    await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
-                except Exception as exc:
-                    logger.warning(
-                        "Background AI assessment failed for lead %s: %s",
-                        lead_id, exc,
-                    )
-                await db.commit()
+        async with AsyncSessionFactory() as db:
+            try:
+                await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
+            except Exception as exc:
+                logger.warning(
+                    "Background AI assessment failed for lead %s: %s",
+                    lead_id, exc,
+                )
+            await db.commit()
     except Exception as exc:
         logger.warning("Background AI session failed for lead %s: %s", lead_id, exc)
 
@@ -66,6 +64,23 @@ def _enqueue_lead_ai(lead_id: UUID, organization_id: UUID, created_by: UUID, tri
     task = asyncio.create_task(_lead_ai_compute(lead_id, organization_id, created_by, trigger=trigger))
     _lead_ai_tasks.add(task)
     task.add_done_callback(_lead_ai_tasks.discard)
+
+
+# ── Batch lead assessment (for daily batch jobs) ────────────────────────────────
+
+async def _batch_lead_assessment(
+    db: AsyncSession,
+    organization_id: UUID,
+    lead_ids: list[UUID],
+) -> None:
+    """Run unified assessment pipeline for multiple leads in a single transaction."""
+    from app.services.ai_pipeline import run_lead_assessment
+
+    for lead_id in lead_ids:
+        try:
+            await run_lead_assessment(db, lead_id, organization_id, None, trigger="daily_refresh")
+        except Exception as exc:
+            logger.warning("Batch assessment failed for lead %s: %s", lead_id, exc)
 
 
 class LeadService:

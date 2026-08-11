@@ -6,14 +6,44 @@ The AI service never touches the database directly.
 """
 from __future__ import annotations
 
+import ipaddress
 import logging
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 import httpx
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# ── SSRF Protection ──────────────────────────────────────────────────────────
+_ALLOWED_AI_HOSTS: frozenset[str] = frozenset({
+    "localhost", "127.0.0.1", "::1",
+    "pulse-crm-backend.onrender.com",
+})
+_BLOCKED_NETWORKS: frozenset[str] = frozenset({
+    "169.254.169.254",  # AWS metadata
+    "metadata.google.internal",  # GCP metadata
+})
+
+
+def _validate_ai_url(url: str) -> None:
+    """Raise ValueError if the URL targets a blocked or private network."""
+    parsed = urlparse(url)
+    hostname = parsed.hostname or ""
+    if hostname in _BLOCKED_NETWORKS:
+        raise ValueError(f"Blocked metadata endpoint: {hostname}")
+    if hostname not in _ALLOWED_AI_HOSTS:
+        try:
+            addr = ipaddress.ip_address(hostname)
+            if addr.is_private or addr.is_loopback or addr.is_link_local:
+                return  # Allow private/loopback in dev
+            raise ValueError(f"Non-allowlisted host: {hostname}")
+        except ValueError:
+            if settings.ENVIRONMENT != "development":
+                raise ValueError(f"Non-allowlisted host in production: {hostname}")
+
 
 # Shared httpx.AsyncClient — reused across all AIClient instances to
 # avoid TCP connection setup overhead per AI service call.
@@ -23,15 +53,11 @@ _shared_client: httpx.AsyncClient | None = None
 def _get_shared_client(timeout: float | None = None) -> httpx.AsyncClient:
     global _shared_client
     if _shared_client is None or _shared_client.is_closed:
-        _shared_client = httpx.AsyncClient(timeout=timeout or settings.AI_SERVICE_TIMEOUT)
+        _shared_client = httpx.AsyncClient(
+            timeout=timeout or settings.AI_SERVICE_TIMEOUT,
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10, keepalive_expiry=30),
+        )
     return _shared_client
-
-
-async def close_shared_client() -> None:
-    global _shared_client
-    if _shared_client is not None and not _shared_client.is_closed:
-        await _shared_client.aclose()
-        _shared_client = None
 
 
 class AIClient:
@@ -40,6 +66,7 @@ class AIClient:
     def __init__(self, base_url: Optional[str] = None, timeout: Optional[float] = None) -> None:
         self.base_url = (base_url or settings.AI_SERVICE_URL).rstrip("/")
         self.timeout = timeout or settings.AI_SERVICE_TIMEOUT
+        _validate_ai_url(self.base_url)
         self._client = _get_shared_client(self.timeout)
 
     async def close(self) -> None:

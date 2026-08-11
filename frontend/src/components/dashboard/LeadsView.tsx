@@ -4,6 +4,7 @@ import { toast } from '@/lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
+import SkeletonLoader from './SkeletonLoader';
 import { 
   Search, 
   Filter, 
@@ -250,6 +251,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   }, []);
   // Prepopulated state variables
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
   const leadsRef = useRef<Lead[]>([]);
   leadsRef.current = leads;
 
@@ -395,6 +397,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       const ids = mapped.map(l => l.id).filter(Boolean) as string[];
       refreshRecommendations(ids);
     }).finally(() => {
+      setLoading(false);
       onLoaded?.();
     });
     getGmailStatus().then(status => {
@@ -1161,6 +1164,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   }
 
   return (
+    <SkeletonLoader isLoading={loading} layout="table">
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Left Pane (Table, filters, search, headers) */}
       <div className={`col-span-12 ${activeLead && viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
@@ -2608,6 +2612,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
         </div>
       )}
     </div>
+    </SkeletonLoader>
   );
 }
   

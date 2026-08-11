@@ -77,6 +77,16 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 600
     RATE_LIMIT_BURST: int = 200
 
+    # Security headers
+    SECURITY_HEADERS_ENABLED: bool = True
+    HSTS_MAX_AGE: int = 31536000
+
+    # Auth rate limiting (stricter than global)
+    AUTH_RATE_LIMIT_PER_MINUTE: int = 20
+    AUTH_RATE_LIMIT_BURST: int = 10
+    PASSWORD_RESET_RATE_LIMIT_PER_MINUTE: int = 5
+    PASSWORD_RESET_RATE_LIMIT_BURST: int = 3
+
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
 

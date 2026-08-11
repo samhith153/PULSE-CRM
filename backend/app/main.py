@@ -23,7 +23,7 @@ from app.middlewares.exception_handler import (
 )
 from app.middlewares.logging import RequestLoggingMiddleware
 from app.middlewares.private_network import PrivateNetworkAccessMiddleware
-from app.middlewares.rate_limit import RateLimitMiddleware
+from app.middlewares.rate_limit import AuthRateLimitMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
 from app.services.event_worker import EventWorker
@@ -226,6 +226,8 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuthRateLimitMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(
