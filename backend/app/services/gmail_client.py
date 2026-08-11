@@ -18,7 +18,15 @@ from app.models.email import GmailConnection
 
 class TokenCipher:
     def __init__(self) -> None:
-        key_material = settings.GMAIL_TOKEN_ENCRYPTION_KEY or settings.SECRET_KEY
+        key_material = settings.GMAIL_TOKEN_ENCRYPTION_KEY
+        if not key_material:
+            if settings.is_production:
+                raise ServiceUnavailableException(
+                    "GMAIL_TOKEN_ENCRYPTION_KEY must be set in production. "
+                    "Using SECRET_KEY for Gmail token encryption is not allowed."
+                )
+            # Dev-only fallback: use SECRET_KEY so local dev works out of the box.
+            key_material = settings.SECRET_KEY
         digest = hashlib.sha256(key_material.encode()).digest()
         self._fernet = Fernet(base64.urlsafe_b64encode(digest))
 

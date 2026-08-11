@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getContacts, createContact, updateContact, deleteContact } from '@/utils/api';
 import { toast } from '@/lib/toast';
+import SkeletonLoader from './SkeletonLoader';
 import { 
   Contact, 
   Search, 
@@ -142,6 +143,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
       if (!cancelled) {
         setContacts(data as any);
         setLoading(false);
+        onLoaded?.();
         const storedId = localStorage.getItem('pulse-selected-contact-id');
         if (storedId) {
           const match = data.find((c: any) => String(c.id) === storedId);
@@ -295,6 +297,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
   };
 
   return (
+    <SkeletonLoader isLoading={loading} layout="table">
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Contact Table Section */}
       <div className={`col-span-12 ${active && viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
@@ -834,5 +837,6 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
         </div>
       )}
     </div>
+    </SkeletonLoader>
   );
 }

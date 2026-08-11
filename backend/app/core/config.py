@@ -70,12 +70,22 @@ class Settings(BaseSettings):
 
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,https://pulse-crm-eight-pearl.vercel.app,https://pulse-crm-245t.onrender.com"
     CORS_ALLOW_CREDENTIALS: bool = True
-    CORS_ALLOW_METHODS: str = "*"
-    CORS_ALLOW_HEADERS: str = "*"
+    CORS_ALLOW_METHODS: str = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    CORS_ALLOW_HEADERS: str = "Authorization,Content-Type,Accept,Origin,X-Requested-With,X-Request-ID"
+
+    # Security response headers
+    SECURITY_HEADERS_ENABLED: bool = True
+    HSTS_MAX_AGE: int = 31536000
 
     ENABLE_RATE_LIMIT: bool = True
     RATE_LIMIT_PER_MINUTE: int = 600
     RATE_LIMIT_BURST: int = 200
+
+    # Strict per-endpoint limits for auth endpoints (brute-force protection)
+    AUTH_RATE_LIMIT_PER_MINUTE: int = 20
+    AUTH_RATE_LIMIT_BURST: int = 10
+    PASSWORD_RESET_RATE_LIMIT_PER_MINUTE: int = 5
+    PASSWORD_RESET_RATE_LIMIT_BURST: int = 3
 
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
@@ -99,6 +109,8 @@ class Settings(BaseSettings):
         "https://www.googleapis.com/auth/gmail.modify,"
         "https://www.googleapis.com/auth/gmail.send"
     )
+
+    BREVO_WEBHOOK_SECRET: Optional[str] = None
 
     ENABLE_AI: bool = True
     AI_PROVIDER: str = "rule_based"
@@ -159,9 +171,16 @@ class Settings(BaseSettings):
             if not self.SECRET_KEY:
                 missing.append("SECRET_KEY")
             if not self.GMAIL_TOKEN_ENCRYPTION_KEY:
-                missing.append("GMAIL_TOKEN_ENCRYPTION_KEY")
+                missing.append("GMAIL_TOKEN_ENCRYPTION_KEY (required in production; never fall back to SECRET_KEY)")
+            if not self.BREVO_WEBHOOK_SECRET:
+                missing.append("BREVO_WEBHOOK_SECRET (webhook signature verification required in production)")
             if missing:
                 raise ValueError(f"Missing required production secrets: {', '.join(missing)}")
+            # Reject wildcard CORS in production
+            if self.CORS_ALLOW_METHODS == "*":
+                raise ValueError("CORS_ALLOW_METHODS must not be '*' in production")
+            if self.CORS_ALLOW_HEADERS == "*":
+                raise ValueError("CORS_ALLOW_HEADERS must not be '*' in production")
         return self
 
     @property

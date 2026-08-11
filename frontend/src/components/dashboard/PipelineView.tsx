@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR } from '@/utils/api';
 import { toast } from '@/lib/toast';
+import SkeletonLoader from './SkeletonLoader';
 import { 
   Plus, 
   IndianRupee, 
@@ -43,6 +44,7 @@ interface PipelineStage {
 export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([getPipelineStages(), getDeals()]).then(([stagesData, dealsData]) => {
@@ -68,6 +70,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     }).catch(err => {
       console.error("Failed to load pipeline data:", err);
     }).finally(() => {
+      setLoading(false);
       onLoaded?.();
     });
   }, []);
@@ -401,6 +404,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   };
 
   return (
+    <SkeletonLoader isLoading={loading} layout={viewMode === 'list' ? 'table' : 'kanban'}>
     <div className="space-y-6">
       <div className="bg-surface-1 border border-border-default rounded-2xl p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1038,6 +1042,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   </div>
 )}
     </div>
+    </SkeletonLoader>
   );
 }
 

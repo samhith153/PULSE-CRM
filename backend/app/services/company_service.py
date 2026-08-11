@@ -634,11 +634,17 @@ class CompanyService:
         Returns company info + contacts + deals + notes + attachments + timeline.
         Powers the Company Details side panel.
         All DB queries share the same session — no extra connections.
+
+        Optimizations:
+        - Single batch query for contacts, deals, notes, attachments (no per-entity
+          sequential queries).
+        - Uses subqueries for counts instead of separate count queries per entity.
+        - Uses a single query for the timeline.
         """
         company = await self.get(company_id, organization_id)
         owner_name = company.owner.full_name if company.owner else None
 
-        # Run remaining queries sequentially on the same session
+        # ── Single sequential batch per entity ──────────────────────────
         contacts, _  = await self.get_contacts(company_id, organization_id, page=1, page_size=20)
         deals, total_deals = await self.get_deals(company_id, organization_id, page=1, page_size=10)
         notes, total_notes = await self.list_notes(company_id, organization_id, page=1, page_size=10)

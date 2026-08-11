@@ -23,7 +23,7 @@ from app.middlewares.exception_handler import (
 )
 from app.middlewares.logging import RequestLoggingMiddleware
 from app.middlewares.private_network import PrivateNetworkAccessMiddleware
-from app.middlewares.rate_limit import RateLimitMiddleware
+from app.middlewares.rate_limit import AuthRateLimitMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
 from app.services.event_worker import EventWorker
@@ -55,15 +55,21 @@ async def process_event_outbox():
 async def daily_lead_assessment():
     """Daily batch job: reassess leads whose decay changed or who missed scoring.
     Runs via APScheduler cron at 12:00 AM. Uses the same unified pipeline.
+
+    Optimizations:
+    - Batch-fetches email stats for all leads in a single DB query instead of
+      one query per lead (reduces N+1 → 1 query).
+    - Batch-fetches latest inbound timestamps for all leads in a single query.
     """
+    from datetime import datetime, timezone
     from app.services.ai_pipeline import run_lead_assessment
     from app.services.email_analytics import EmailStatsService
     from app.database.connection import AsyncSessionFactory
     from app.models.lead import Lead
     from app.models.lead_score import LeadScore
     from app.models.feature_vector import FeatureVector
-    from app.utils.stage_maps import BUYING_STAGE_SCORES
-    from sqlalchemy import select, text
+    from app.models.email import Email
+    from sqlalchemy import desc, func, select, text
     from uuid import UUID
 
     try:
@@ -77,6 +83,7 @@ async def daily_lead_assessment():
     for org_id in org_ids:
         try:
             async with AsyncSessionFactory() as db:
+                uuid_org = UUID(org_id)
                 # Get active leads with their scores and feature vectors
                 stmt = (
                     select(Lead.id, Lead.status, LeadScore.id.label("score_id"),
@@ -84,13 +91,36 @@ async def daily_lead_assessment():
                     .outerjoin(LeadScore, (LeadScore.lead_id == Lead.id) & (LeadScore.organization_id == Lead.organization_id))
                     .outerjoin(FeatureVector, (FeatureVector.lead_id == Lead.id) & (FeatureVector.organization_id == Lead.organization_id))
                     .where(
-                        Lead.organization_id == UUID(org_id),
+                        Lead.organization_id == uuid_org,
                         Lead.is_active.is_(True),
                         Lead.is_deleted.is_(False),
                     )
                 )
                 result = await db.execute(stmt)
                 leads = result.all()
+
+                lead_ids = [lead_row.id for lead_row in leads]
+
+                # ── Batch email stats (1 query instead of N) ─────────────
+                email_svc = EmailStatsService(db)
+                all_email_stats = await email_svc.batch_get_lead_email_stats(lead_ids, uuid_org)
+
+                # ── Batch latest inbound timestamps (1 query instead of N) ─
+                latest_inbound_stmt = (
+                    select(Email.external_entity_id, func.max(Email.sent_at).label("latest_inbound_at"))
+                    .where(
+                        Email.organization_id == uuid_org,
+                        Email.external_entity_type == "lead",
+                        Email.external_entity_id.in_(lead_ids),
+                        Email.direction == "inbound",
+                        Email.is_active.is_(True),
+                    )
+                    .group_by(Email.external_entity_id)
+                )
+                latest_inbound_result = await db.execute(latest_inbound_stmt)
+                latest_inbound_map = {
+                    row[0]: row[1] for row in latest_inbound_result
+                }
 
                 assessed = 0
                 for lead_row in leads:
@@ -106,11 +136,9 @@ async def daily_lead_assessment():
 
                     if not needs_assessment:
                         # (b) Decay changed: compute current days_since_last_inbound
-                        email_svc = EmailStatsService(db)
-                        stats = await email_svc.get_lead_email_stats(lead_id, UUID(org_id))
-                        last_inbound = stats["last_inbound_at"]
+                        stats = all_email_stats.get(lead_id, {})
+                        last_inbound = stats.get("last_inbound_at")
                         if last_inbound:
-                            from datetime import datetime, timezone
                             now = datetime.now(timezone.utc)
                             if last_inbound.tzinfo is None:
                                 last_inbound = last_inbound.replace(tzinfo=timezone.utc)
@@ -131,29 +159,14 @@ async def daily_lead_assessment():
 
                     if not needs_assessment:
                         # (c) Missed event: latest inbound newer than scored_at
-                        from app.models.email import Email
-                        from sqlalchemy import desc
-                        stmt_latest = (
-                            select(Email.sent_at)
-                            .where(
-                                Email.organization_id == UUID(org_id),
-                                Email.external_entity_type == "lead",
-                                Email.external_entity_id == lead_id,
-                                Email.direction == "inbound",
-                                Email.is_active.is_(True),
-                            )
-                            .order_by(desc(Email.sent_at))
-                            .limit(1)
-                        )
-                        result_latest = await db.execute(stmt_latest)
-                        latest_inbound = result_latest.scalar_one_or_none()
+                        latest_inbound = latest_inbound_map.get(lead_id)
                         if latest_inbound and scored_at and latest_inbound > scored_at:
                             needs_assessment = True
 
                     if needs_assessment:
                         try:
                             await run_lead_assessment(
-                                db, lead_id, UUID(org_id), None,
+                                db, lead_id, uuid_org, None,
                                 trigger="daily_refresh",
                             )
                             assessed += 1
@@ -249,6 +262,8 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuthRateLimitMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
     app.add_middleware(

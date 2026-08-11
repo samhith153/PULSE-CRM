@@ -17,6 +17,12 @@ services:
         generateValue: true
       - key: ENVIRONMENT
         value: production
+      - key: GMAIL_TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      - key: BREVO_WEBHOOK_SECRET
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
       - key: SUMMARIZATION_API_KEY
         sync: false
       - key: ASSISTANT_API_KEY

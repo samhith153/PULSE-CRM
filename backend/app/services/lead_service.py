@@ -66,6 +66,23 @@ def _enqueue_lead_ai(lead_id: UUID, organization_id: UUID, created_by: UUID, tri
     task.add_done_callback(_lead_ai_tasks.discard)
 
 
+# ── Batch lead assessment (for daily batch jobs) ────────────────────────────────
+
+async def _batch_lead_assessment(
+    db: AsyncSession,
+    organization_id: UUID,
+    lead_ids: list[UUID],
+) -> None:
+    """Run unified assessment pipeline for multiple leads in a single transaction."""
+    from app.services.ai_pipeline import run_lead_assessment
+
+    for lead_id in lead_ids:
+        try:
+            await run_lead_assessment(db, lead_id, organization_id, None, trigger="daily_refresh")
+        except Exception as exc:
+            logger.warning("Batch assessment failed for lead %s: %s", lead_id, exc)
+
+
 class LeadService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db

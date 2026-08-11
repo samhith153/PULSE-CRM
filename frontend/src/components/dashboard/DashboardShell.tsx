@@ -46,7 +46,7 @@ import AuditLogsView from '@/components/dashboard/AuditLogsView';
 import HomeView from '@/components/dashboard/HomeView';
 import TasksView from '@/components/dashboard/TasksView';
 import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
-import { clearToken, setToken, EmailComposeTarget } from '@/utils/api';
+import { clearToken, setToken, setRefreshToken, EmailComposeTarget } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardOverview } from '@/hooks/use-dashboard';
 import { useCrmStream } from '@/hooks/use-crm-stream';
@@ -118,14 +118,20 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     const roleParam = params.get('role');
     const emailParam = params.get('email');
     const tokenParam = params.get('token');
+    const refreshTokenParam = params.get('refresh_token');
 
     if (authParam === 'true' && roleParam) {
-      // Store token FIRST so any subsequent API calls have it immediately
-      if (tokenParam) setToken(tokenParam);
+      // Validate token looks like a JWT (three dot-separated base64 segments)
+      if (tokenParam && /^\w+\.\w+\.\w+$/.test(tokenParam)) {
+        setToken(tokenParam);
+      }
+      if (refreshTokenParam && /^\w+\.\w+\.\w+$/.test(refreshTokenParam)) {
+        setRefreshToken(refreshTokenParam);
+      }
       sessionStorage.setItem('pulse-crm-auth', 'true');
       localStorage.setItem('pulse-crm-role', roleParam);
       if (emailParam) localStorage.setItem('pulse-crm-user', emailParam);
-      // Clean URL — remove sensitive token from address bar
+      // Clean URL — remove sensitive tokens from address bar
       window.history.replaceState({}, '', window.location.pathname);
     }
 

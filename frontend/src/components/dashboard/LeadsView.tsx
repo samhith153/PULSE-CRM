@@ -3,6 +3,7 @@
 import { toast } from '@/lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import SkeletonLoader from './SkeletonLoader';
 import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
 import { 
   Search, 
@@ -252,6 +253,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   const [leads, setLeads] = useState<Lead[]>([]);
   const leadsRef = useRef<Lead[]>([]);
   leadsRef.current = leads;
+  const [loading, setLoading] = useState(true);
 
   const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
     if (typeof window !== 'undefined') {
@@ -395,6 +397,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       const ids = mapped.map(l => l.id).filter(Boolean) as string[];
       refreshRecommendations(ids);
     }).finally(() => {
+      setLoading(false);
       onLoaded?.();
     });
     getGmailStatus().then(status => {
@@ -527,14 +530,23 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
     };
     try {
       const created = await createLead(payload);
-      const newLead: Lead = {
-        ...backendToLocal(created),
-        timeline: [
-          { id: Date.now(), type: "creation" as const, title: "Lead Created Manually", desc: `Lead added to database by system user.`, time: "Just now" }
-        ],
-      };
-      setLeads([newLead, ...leads]);
-      setSelectedLeadId(newLead.id);
+      // Re-fetch leads so the server-computed score is available
+      try {
+        const refreshed = await getLeads();
+        const mapped = (refreshed ?? []).map(backendToLocal);
+        setLeads(mapped);
+        const ids = mapped.map(l => l.id).filter(Boolean) as string[];
+        refreshRecommendations(ids);
+      } catch {
+        const newLead: Lead = {
+          ...backendToLocal(created),
+          timeline: [
+            { id: Date.now(), type: "creation" as const, title: "Lead Created Manually", desc: `Lead added to database by system user.`, time: "Just now" }
+          ],
+        };
+        setLeads([newLead, ...leads]);
+      }
+      setSelectedLeadId(created?.id ?? null);
     } catch (err) {
       console.error("Failed to create lead:", err);
     }
@@ -1161,6 +1173,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   }
 
   return (
+    <SkeletonLoader isLoading={loading} layout="table">
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Left Pane (Table, filters, search, headers) */}
       <div className={`col-span-12 ${activeLead && viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
@@ -2608,6 +2621,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
         </div>
       )}
     </div>
+    </SkeletonLoader>
   );
 }
   

@@ -38,6 +38,19 @@ class DealRepository(BaseRepository[Deal]):
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def get_active_by_id_light(self, deal_id: UUID, organization_id: UUID) -> Optional[Deal]:
+        """Lightweight fetch – skips relationship eager-loading (use for writes/moves)."""
+        stmt = (
+            select(Deal)
+            .where(
+                Deal.organization_id == organization_id,
+                Deal.is_deleted.is_(False),
+                Deal.id == deal_id,
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
     async def get_by_lead_id_in_org(self, lead_id: UUID, organization_id: UUID) -> Optional[Deal]:
         stmt = self._base_query(organization_id).where(Deal.lead_id == lead_id)
         result = await self.db.execute(stmt)

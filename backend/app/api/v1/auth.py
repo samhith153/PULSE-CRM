@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.deps import CurrentUser, DBSession
 from app.core.permissions import resolve_permissions_for_user
+from app.core.security import revoke_token
 from app.schemas.auth import (
     ChangePasswordRequest,
     CurrentUserResponse,
@@ -72,13 +73,31 @@ async def login(
 @router.post(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Logout (client-side token invalidation)",
+    summary="Logout and revoke tokens",
     description=(
-        "The server is stateless (JWTs); clients should delete tokens locally. "
-        "This endpoint exists for audit logging and future token revocation (Redis blacklist)."
+        "Revokes the current access and refresh tokens. "
+        "Clients should also delete tokens locally."
     ),
 )
-async def logout(current_user: CurrentUser) -> None:
+async def logout(
+    request: Request,
+    current_user: CurrentUser,
+) -> None:
+    # Revoke the access token from the Authorization header
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        access_token = auth_header[7:]
+        revoke_token(access_token)
+
+    # Also revoke the refresh token if provided in the body
+    try:
+        body = await request.json()
+        refresh_token = body.get("refresh_token")
+        if refresh_token:
+            revoke_token(refresh_token)
+    except Exception:
+        pass  # Body may be empty — that's fine
+
     return None
 
 

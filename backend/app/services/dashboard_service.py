@@ -2641,14 +2641,15 @@ class DashboardService:
 
         # ── Query 7: Open Tasks Today (Widget 1) ──────────────────────────────
         open_tasks_stmt = (
-            select(ActivityTimeline)
+            select(Task)
             .where(
-                ActivityTimeline.organization_id == organization_id,
-                ActivityTimeline.created_by == user_id,
-                ActivityTimeline.is_active.is_(True),
-                ActivityTimeline.action.in_(["task", "task_completed", "meeting", "call"]),
+                Task.organization_id == organization_id,
+                Task.owner_id == user_id,
+                Task.is_deleted.is_(False),
+                Task.completed_at.is_(None),
+                Task.status != "completed",
             )
-            .order_by(ActivityTimeline.created_at.desc())
+            .order_by(Task.due_date.asc().nulls_last())
             .limit(10)
         )
 
@@ -2756,11 +2757,11 @@ class DashboardService:
             RepTaskItem(
                 id=row.id,
                 title=row.title,
-                due_date=row.created_at.date(),
-                status="pending" if row.created_at >= now else "overdue",
+                due_date=row.due_date.date() if row.due_date else now.date(),
+                status="overdue" if row.due_date and row.due_date < now else "pending",
                 source="manual",
-                lead_id=row.lead_id,
-                deal_id=row.deal_id,
+                lead_id=row.related_lead_id,
+                deal_id=row.related_deal_id,
             )
             for row in task_rows
         ]

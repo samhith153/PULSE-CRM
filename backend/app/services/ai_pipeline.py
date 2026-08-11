@@ -159,7 +159,7 @@ async def run_lead_assessment(
     if not lead:
         return None
 
-    # ── Fit data ────────────────────────────────────────────────────────
+    # ── Fit data ────────────────────────────────────────────────
     raw_data: dict = {
         "lead_id": str(lead_id),
         "employees": lead.employee_count,
@@ -168,13 +168,13 @@ async def run_lead_assessment(
         "operational_system": lead.operational_systems,
     }
 
-    # ── Current stage (buying stage) ────────────────────────────────────
+    # ── Current stage (buying stage) ────────────────────────────────
     deal_repo = DealRepository(db)
     deal = await deal_repo.get_by_lead_id_in_org(lead_id, organization_id)
     current_stage = _derive_current_stage(lead, deal)
     raw_data["current_stage"] = current_stage
 
-    # ── Deal value ──────────────────────────────────────────────────────
+    # ── Deal value ──────────────────────────────────────────────
     deal_value = None
     if deal is not None and deal.amount is not None:
         deal_value = float(deal.amount)
@@ -237,7 +237,7 @@ async def run_lead_assessment(
         result.get("overall", {}).get("tier"),
     )
 
-    # ── Persist lead_scores ─────────────────────────────────────────────
+    # ── Persist lead_scores ─────────────────────────────────────
     scores_data = {
         "fit_score": int(round(result["fit"]["score"])),
         "fit_reasons": result["fit"]["reasons"],
@@ -254,8 +254,7 @@ async def run_lead_assessment(
     )
     logger.info("[ASSESS_PIPELINE] Lead scores upserted: id=%s", ls.id if ls else "None")
 
-    # ── Persist ai_recommendation ───────────────────────────────────────
-        # ── Persist ai_recommendation + synchronize workflow ────────────────
+    # ── Persist ai_recommendation ───────────────────────────────
     rec = result.get("recommendation", {})
     logger.info("[ASSESS_PIPELINE] Recommendation: action=%s score=%s", rec.get("action"), rec.get("score"))
     if rec and rec.get("action"):
@@ -293,7 +292,7 @@ async def run_lead_assessment(
             organization_id=organization_id,
             created_by=created_by,
         )
-    # ── Persist feature_vectors (audit only) ────────────────────────────
+    # ── Persist feature_vectors (audit only) ────────────────────────
     fv_repo = FeatureVectorRepository(db)
     fv_features = {
         # Fit scores

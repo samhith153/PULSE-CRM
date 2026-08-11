@@ -30,18 +30,14 @@ async def get_current_user(
 ) -> User:
     """Validate JWT access token and return the authenticated User.
 
-    Accepts the token from the ``Authorization`` header (preferred) **or**
-    from the ``token`` query parameter as a fallback for clients that cannot
-    set custom headers (e.g. the browser ``EventSource`` API used for SSE).
+    Tokens are accepted **only** from the ``Authorization: Bearer <token>`` header.
+    Query-parameter tokens are rejected to prevent token leakage via logs,
+    browser history, and Referer headers.
     """
-    token = None
-    if credentials:
-        token = credentials.credentials
-    else:
-        token = request.query_params.get("token")
-
-    if not token:
+    if not credentials or not credentials.credentials:
         raise UnauthorizedException("Missing Bearer token.")
+
+    token = credentials.credentials
 
     payload = decode_access_token(token)
     user_id = payload.get("sub")

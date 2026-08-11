@@ -22,13 +22,26 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Maximum bytes of the raw body to keep in memory for signature verification.
+_MAX_BODY_BYTES = 1_048_576  # 1 MB
+
 
 def _verify_webhook_signature(raw_body: bytes, signature: str | None) -> bool:
-    """Verify Brevo webhook signature (MD5 of body + secret key)."""
+    """Verify Brevo webhook signature (MD5 of body + secret key).
+
+    In production, BREVO_WEBHOOK_SECRET **must** be set and the signature
+    must be valid.  In development, a missing secret skips verification
+    for convenience.
+    """
     secret = settings.BREVO_WEBHOOK_SECRET
     if not secret:
-        # No secret configured — skip verification (dev mode)
-        logger.warning("BREVO_WEBHOOK_SECRET not set — skipping signature verification")
+        if settings.is_production:
+            logger.error(
+                "BREVO_WEBHOOK_SECRET is not configured — rejecting webhook in production"
+            )
+            return False
+        # Dev-only: skip verification when secret is not set
+        logger.warning("BREVO_WEBHOOK_SECRET not set — skipping signature verification (dev only)")
         return True
     if not signature:
         logger.warning("Brevo webhook missing X-Mailin-signature header")
@@ -54,8 +67,11 @@ async def webhook(
     """
     Receive Brevo event webhook (e.g. email events).
     """
-    # Read raw body first to inspect before parsing JSON
+    # Read raw body — cap size to prevent memory abuse
     raw_body = await request.body()
+    if len(raw_body) > _MAX_BODY_BYTES:
+        logger.warning("Brevo webhook body exceeds %d bytes — rejecting", _MAX_BODY_BYTES)
+        return {"status": "error", "reason": "payload too large"}
 
     if not raw_body or raw_body.strip() == b"":
         logger.warning("Brevo webhook received empty body — ignoring")
@@ -67,35 +83,30 @@ async def webhook(
         logger.warning("Brevo webhook signature verification failed")
         return {"status": "error", "reason": "invalid signature"}
 
-    # Validate content type hint
+    # Validate content type hint (log type only, NOT the body bytes)
     content_type = request.headers.get("content-type", "").lower()
     if "json" not in content_type and "text" not in content_type:
         logger.warning(
-            "Brevo webhook received non-JSON content-type '%s' — body=%r",
+            "Brevo webhook received non-JSON content-type '%s' — discarding body from logs",
             content_type,
-            raw_body[:200],
         )
 
     # Attempt JSON parse
     try:
         payload = await request.json()
-    except Exception as exc:
-        logger.error(
-            "Brevo webhook body is not valid JSON: %s — body=%r",
-            exc,
-            raw_body[:500],
-        )
+    except Exception:
+        # Do NOT log the body or the exception detail — either could contain
+        # sensitive data (PII, credentials, webhook secrets).
+        logger.error("Brevo webhook body is not valid JSON")
         return {
             "status": "error",
             "reason": "invalid JSON payload",
-            "detail": str(exc),
         }
 
     if not isinstance(payload, dict):
         logger.error(
-            "Brevo webhook payload is not a dict — got %s: %r",
+            "Brevo webhook payload is not a dict — got %s",
             type(payload).__name__,
-            payload,
         )
         return {
             "status": "error",

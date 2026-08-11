@@ -3,6 +3,7 @@ Pipeline Service
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import List, Optional, Tuple
@@ -32,6 +33,9 @@ from app.utils.enums import ActivityType, DealStatus, PipelineStageSlug
 
 
 logger = get_logger(__name__)
+
+# ── Background-task set for fire-and-forget assessments ──────────────────────
+_move_assessment_tasks: set[asyncio.Task] = set()
 
 
 DEFAULT_STAGES = [
@@ -323,7 +327,7 @@ class PipelineService:
         stage_id: UUID,
         close_reason: Optional[str] = None,
     ) -> Deal:
-        deal = await self.deal_repo.get_active_by_id(deal_id, organization_id)
+        deal = await self.deal_repo.get_active_by_id_light(deal_id, organization_id)
         if not deal:
             raise NotFoundException("Deal", deal_id)
 
@@ -359,19 +363,10 @@ class PipelineService:
             topic="pipeline",
         )
 
-        # Trigger unified assessment if the deal has a linked lead
+        # Trigger unified assessment as a background task (fire-and-forget)
+        # so the API response is returned immediately.
         if deal.lead_id:
-            try:
-                from app.services.ai_pipeline import run_lead_assessment
-                await run_lead_assessment(
-                    self.db, deal.lead_id, organization_id, created_by,
-                    trigger="deal_stage_changed",
-                )
-            except Exception as exc:
-                logger.warning(
-                    "Failed to run assessment on kanban stage move",
-                    extra={"deal_id": str(deal_id), "error": str(exc)},
-                )
+            _enqueue_move_assessment(deal.lead_id, organization_id, created_by)
         return deal
 
     async def list_deals_by_stage(
@@ -413,3 +408,51 @@ class PipelineService:
         if slug == PipelineStageSlug.LOST.value:
             return "Deal lost"
         return "Deal stage changed"
+
+
+# ---------------------------------------------------------------------------
+# Background helpers – fire-and-forget assessment after deal stage move
+# ---------------------------------------------------------------------------
+
+async def _run_background_assessment(
+    lead_id: UUID,
+    organization_id: UUID,
+    created_by: Optional[UUID],
+) -> None:
+    """Run the unified lead assessment in a fire-and-forget background task."""
+    from app.database.connection import AsyncSessionFactory
+
+    task = asyncio.current_task()
+    try:
+        async with AsyncSessionFactory() as session:
+            from app.services.ai_pipeline import run_lead_assessment
+
+            await run_lead_assessment(
+                session,
+                lead_id,
+                organization_id,
+                created_by,
+                trigger="deal_stage_changed",
+            )
+            await session.commit()
+    except Exception:
+        logger.warning(
+            "Background assessment failed after stage move",
+            extra={"lead_id": str(lead_id)},
+        )
+    finally:
+        _move_assessment_tasks.discard(task)
+
+
+def _enqueue_move_assessment(
+    lead_id: UUID,
+    organization_id: UUID,
+    created_by: Optional[UUID],
+) -> None:
+    """Spawn a non-blocking background task for lead assessment."""
+    loop = asyncio.get_running_loop()
+    task = loop.create_task(
+        _run_background_assessment(lead_id, organization_id, created_by)
+    )
+    _move_assessment_tasks.add(task)
+    task.add_done_callback(_move_assessment_tasks.discard)

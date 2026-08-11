@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { getCompanies, updateCompany, deleteCompany } from '@/utils/api';
 import { toast } from '@/lib/toast';
+import SkeletonLoader from './SkeletonLoader';
 import { 
   Building2, 
   Search, 
@@ -54,6 +55,7 @@ interface Company {
 
 export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = {}) {
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,6 +133,9 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
   useEffect(() => {
     getCompanies().then(data => {
       setCompanies(data as any);
+    }).finally(() => {
+      setLoading(false);
+      onLoaded?.();
     });
   }, []);
 
@@ -230,6 +235,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
   };
 
   return (
+    <SkeletonLoader isLoading={loading} layout="table">
     <div className="grid grid-cols-12 gap-6 items-start">
       {/* Companies List */}
       <div className={`col-span-12 ${active && viewMode !== 'list' ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
@@ -719,6 +725,7 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
         </div>
       )}
     </div>
+    </SkeletonLoader>
   );
 }
 

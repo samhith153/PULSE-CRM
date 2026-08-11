@@ -4,7 +4,9 @@ Uses Groq (free tier) with a knowledge base to answer CRM-related questions.
 """
 from __future__ import annotations
 
+import html
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,29 @@ from app.core.config import settings
 from app.schemas.assistant import AssistantChatRequest, AssistantChatResponse
 
 router = APIRouter(dependencies=[Depends(require_permission("ai:access"))])
+
+# ---------------------------------------------------------------------------
+# Output sanitization — treat ALL LLM output as untrusted
+# ---------------------------------------------------------------------------
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _sanitize_response(text: str) -> str:
+    """Strip any HTML tags the model might emit and unescape entities.
+
+    The frontend renders assistant output as plain React text (auto-escaped),
+    but we enforce text-only at the source so a future markdown/HTML renderer
+    cannot accidentally introduce stored XSS.
+    """
+    # Remove HTML tags entirely
+    text = _TAG_RE.sub("", text)
+    # Decode any HTML entities the model may have produced
+    text = html.unescape(text)
+    # Collapse excessive whitespace while preserving intentional newlines
+    text = re.sub(r"[^\S\n]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 # ---------------------------------------------------------------------------
 # Knowledge base loading (loaded once at import time)
@@ -208,6 +233,10 @@ async def chat(
 
 ## PULSE CRM Knowledge Base
 {kb_str}
+
+IMPORTANT: Respond in plain text only. Do NOT use HTML tags, markdown bold/italic,
+or any markup. Use natural paragraphs and bullet points with plain text formatting.
+Never include <script>, <img>, <a>, or any HTML elements in your response.
 """
 
     try:
@@ -231,6 +260,9 @@ async def chat(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred. Please try again.",
         )
+
+    # Sanitize — strip any HTML/markup the model may have emitted
+    response_text = _sanitize_response(response_text)
 
     suggestions = _get_suggestions(payload.message, response_text)
 

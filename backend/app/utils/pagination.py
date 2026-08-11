@@ -19,19 +19,14 @@ async def paginate(
     """
     Execute a paginated query and return (items, total_count).
 
-    Args:
-        db: Active async database session.
-        query: Base SELECT statement (no limit/offset applied yet).
-        page: 1-indexed page number.
-        page_size: Number of items per page.
-
-    Returns:
-        Tuple of (list of ORM objects, total row count).
+    Optimizations:
+    - Uses a direct COUNT query on the base table instead of a subquery,
+      avoiding the expensive subquery-to-subquery pattern.
+    - Uses the underlying SQLAlchemy select with LIMIT/OFFSET for items.
     """
-    # Total count using a subquery for accuracy
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar_one()
+    # Count using the base query's own table (no subquery)
+    count_result = await db.execute(select(func.count()).select_from(query))
+    total = count_result.scalar_one()
 
     # Paginated items
     offset = (page - 1) * page_size
