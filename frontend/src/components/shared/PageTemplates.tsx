@@ -315,8 +315,8 @@ export function FeatureCards({ features }: { features: Array<{ icon: React.Eleme
                 style={{ padding: 32, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'box-shadow 0.3s' }}>
                 <motion.div
                   whileHover={{ rotate: 10, scale: 1.1 }}
-                  style={{ height: 48, width: 48, borderRadius: 12, background: '#f5f3ff', border: '1px solid #ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <Icon size={22} color="#7c3aed" />
+                  style={{ height: 48, width: 48, borderRadius: 12, background: '#EFF6FF', border: '1px solid #DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <Icon size={22} color="#2563EB" />
                 </motion.div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>{feature.title}</h3>
                 <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>{feature.description}</p>

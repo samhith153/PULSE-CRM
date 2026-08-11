@@ -67,8 +67,9 @@ const menus: Record<string, MenuConfig> = {
       image: promoTeams,
       heading: "Explore all 7 Products",
       desc: "AI scoring, email intelligence, visual pipeline, RBAC security and more — all built in.",
-      link: "View all products →",
-      route: "/product/ai-copilot",
+      link: "Get Started →",
+      cta: true,
+      route: "/signup",
     },
   },
   Resources: {
@@ -136,7 +137,7 @@ export function SiteHeader() {
 
   // Handle "Explore Pulse CRM" click
   const handleExplorePulseCRM = () => {
-    router.push("/?auth=true&role=manager");
+    router.push("/login");
     setOpenMenu(null);
   };
 
@@ -361,7 +362,7 @@ export function SiteHeader() {
                       className="h-32 w-full object-cover"
                     />
                   ) : (
-                    <div className="grad-blue-purple h-32 w-full" />
+                    <div className="h-32 w-full" style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }} />
                   )}
                   <div className="p-5">
                     <p className="text-sm font-semibold text-ink">{active.promo.heading}</p>
