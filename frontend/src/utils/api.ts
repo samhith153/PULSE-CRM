@@ -608,6 +608,7 @@ export async function getDeals(): Promise<Deal[]> {
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
       createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
+      pipeline_stage_id: dd.pipeline_stage_id || null,
     };
   }) as unknown as Deal[];
 }
@@ -846,10 +847,10 @@ export function asNumber(v: Decimal | undefined | null): number {
 
 export function formatINR(v: Decimal | undefined | null): string {
   const n = asNumber(v);
-  if (n >= 1_00_00_000) return `Γé╣${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000) return `Γé╣${(n / 1_00_00_000).toFixed(2)}L`;
-  if (n >= 1000) return `Γé╣${(n / 1000).toFixed(1)}K`;
-  return `Γé╣${n.toLocaleString('en-IN')}`;
+  if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}L`;
+  if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
+  return `₹${n.toLocaleString('en-IN')}`;
 }
 
 export function formatNum(v: Decimal | undefined | null): string {

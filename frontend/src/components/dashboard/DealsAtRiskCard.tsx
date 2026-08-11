@@ -64,7 +64,7 @@ export default function DealsAtRiskCard({
       const owner = d.owner || d.owner_name || 'Unassigned';
       const value = asNumber(d.value ?? d.deal_value ?? 0);
       const reason = d.reason || d.risk_reason || 'No activity > 7 days';
-      const days = d.days_since_last_activity ?? d.daysInactive ?? (Math.floor(Math.random() * 8) + 5);
+      const days = d.days_since_last_activity ?? d.daysInactive ?? 7;
       const probability = typeof d.probability === 'number' ? d.probability : null;
 
       // Severity rating based on value & days

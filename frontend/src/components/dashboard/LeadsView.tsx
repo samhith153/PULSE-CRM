@@ -638,22 +638,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       setConvertingLeadId(null);
     } catch (err) {
       console.error("Failed to convert lead:", err);
-      // Fallback update in case of API issues so UI works smoothly
-      setLeads(leads.map(l => {
-        if (l.id === convertingLeadId) {
-          return {
-            ...l,
-            status: 'Converted' as const,
-            industry: convertForm.industry || l.industry,
-            employee_count: convertForm.employeeCount ? Number(convertForm.employeeCount) : l.employee_count,
-            timeline: [
-              { id: Date.now(), type: 'conversion', title: 'Lead Converted (Offline)', desc: 'Converted to active Account & Deal pipeline opportunity.', time: 'Just now' },
-              ...l.timeline
-            ]
-          };
-        }
-        return l;
-      }));
+      toast.error(err instanceof Error ? err.message : "Failed to convert lead. Please try again.");
       setIsConvertModalOpen(false);
       setConvertingLeadId(null);
     }

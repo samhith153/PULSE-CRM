@@ -51,17 +51,17 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
       const mappedDeals = (Array.isArray(dealsData) ? dealsData : []).map(d => {
         const stageObj = sortedStages.find(s => s.id === d.pipeline_stage_id);
-        const stageName = stageObj ? stageObj.name : 'New';
+        const stageName = stageObj ? stageObj.name : (d.stage || 'New');
         return {
           id: d.id,
-          title: d.name || 'Untitled Deal',
-          company: d.company_name || 'Acme Corp',
-          value: d.amount ? Number(d.amount) : 0,
+          title: d.title || d.name || 'Untitled Deal',
+          company: d.company || d.company_name || '',
+          value: d.value || (d.amount ? Number(d.amount) : 0),
           stage: stageName,
           priority: (d.priority || 'Medium') as Deal['priority'],
-          owner: d.owner_name || 'Unassigned',
-          closeDate: d.expected_close_date || '',
-          createdAt: d.created_at || new Date().toISOString()
+          owner: d.owner || d.owner_name || 'Unassigned',
+          closeDate: d.closeDate || d.expected_close_date || '',
+          createdAt: d.createdAt || d.created_at || new Date().toISOString()
         };
       });
       setDeals(mappedDeals);
@@ -448,7 +448,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
             <button 
               onClick={() => {
-                setForm({ title: '', company: '', value: 10000, stage: stageNames[0] || 'Qualified', priority: 'Medium', owner: '', closeDate: '' });
+                setForm({ title: '', company: '', value: 0, stage: stageNames[0] || 'New', priority: 'Medium', owner: '', closeDate: '' });
                 setIsAddModalOpen(true);
               }}
               className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
