@@ -648,236 +648,109 @@ class DashboardService:
             r = await self.db.execute(stmt)
             return Decimal(str(r.scalar_one() or 0))
 
-        # -- 1. Organizations -------------------------------------------------
-        total_orgs_stmt = select(func.count(Organization.id)).where(
-            Organization.is_active.is_(True),
-            Organization.is_deleted.is_(False),
-        )
-        total_orgs = int((await self.db.execute(total_orgs_stmt)).scalar_one() or 0)
-
-        added_orgs_month = int(
-            (
-                await self.db.execute(
-                    select(func.count(Organization.id)).where(
-                        Organization.is_active.is_(True),
-                        Organization.is_deleted.is_(False),
-                        Organization.created_at >= month_start,
-                    )
-                )
-            ).scalar_one()
-            or 0
-        )
-        prev_orgs_stmt = select(func.count(Organization.id)).where(
-            Organization.is_active.is_(True),
-            Organization.is_deleted.is_(False),
-            Organization.created_at >= last_month_start,
-            Organization.created_at < month_start,
-        )
-        prev_orgs = int((await self.db.execute(prev_orgs_stmt)).scalar_one() or 0)
-        org_growth = self._percentage(added_orgs_month - prev_orgs, max(prev_orgs, 1))
-
-        org_stats = AdminOrganizationStats(
-            total=total_orgs,
-            added_this_month=added_orgs_month,
-            monthly_growth_pct=org_growth,
-        )
-
-        # -- 2. Users ---------------------------------------------------------
         admin_visible_roles = ["manager", "sales_rep", "sales_representative"]
-        total_users = await _count(User)
-        active_users_stmt = (
-            select(func.count(func.distinct(User.id)))
-            .select_from(User)
-            .join(UserRole, UserRole.user_id == User.id)
-            .join(Role, Role.id == UserRole.role_id)
-            .where(
-                User.organization_id == organization_id,
-                User.is_active.is_(True),
-                User.is_deleted.is_(False),
-                Role.name.in_(admin_visible_roles),
+
+        async def _active_users_count():
+            stmt = (
+                select(func.count(func.distinct(User.id)))
+                .select_from(User)
+                .join(UserRole, UserRole.user_id == User.id)
+                .join(Role, Role.id == UserRole.role_id)
+                .where(
+                    User.organization_id == organization_id,
+                    User.is_active.is_(True),
+                    User.is_deleted.is_(False),
+                    Role.name.in_(admin_visible_roles),
+                )
             )
+            return int((await self.db.execute(stmt)).scalar_one() or 0)
+
+        async def _prev_active_users_count():
+            stmt = (
+                select(func.count(func.distinct(User.id)))
+                .select_from(User)
+                .join(UserRole, UserRole.user_id == User.id)
+                .join(Role, Role.id == UserRole.role_id)
+                .where(
+                    User.organization_id == organization_id,
+                    User.is_deleted.is_(False),
+                    Role.name.in_(admin_visible_roles),
+                    User.created_at < month_start,
+                )
+            )
+            return int((await self.db.execute(stmt)).scalar_one() or 0)
+
+        # ── Batch 1: Independent org/user/company/contact queries ─────────
+        (
+            total_orgs, added_orgs_month, prev_orgs,
+            total_users, active_users, new_users_month,
+            total_companies, new_companies_month, prev_companies,
+            total_contacts, new_contacts_month, prev_contacts,
+        ) = await asyncio.gather(
+            _count(Organization, Organization.is_active.is_(True), Organization.is_deleted.is_(False)),
+            _count(Organization, Organization.is_active.is_(True), Organization.is_deleted.is_(False), Organization.created_at >= month_start),
+            _count(Organization, Organization.is_active.is_(True), Organization.is_deleted.is_(False), Organization.created_at >= last_month_start, Organization.created_at < month_start),
+            _count(User),
+            _active_users_count(),
+            _count(User, User.created_at >= month_start),
+            _count(Company),
+            _count(Company, Company.created_at >= month_start),
+            _count(Company, Company.created_at >= last_month_start, Company.created_at < month_start),
+            _count(Contact),
+            _count(Contact, Contact.created_at >= month_start),
+            _count(Contact, Contact.created_at >= last_month_start, Contact.created_at < month_start),
         )
-        active_users = int((await self.db.execute(active_users_stmt)).scalar_one() or 0)
+
+        org_growth = self._percentage(added_orgs_month - prev_orgs, max(prev_orgs, 1))
+        org_stats = AdminOrganizationStats(total=total_orgs, added_this_month=added_orgs_month, monthly_growth_pct=org_growth)
         inactive_users = total_users - active_users
-        new_users_month = await _count(User, User.created_at >= month_start)
+        user_stats = AdminUserStats(total=total_users, active=active_users, inactive=max(inactive_users, 0), new_this_month=new_users_month)
+        company_growth = self._percentage(new_companies_month - prev_companies, max(prev_companies, 1))
+        company_stats = AdminCompanyStats(total=total_companies, added_this_month=new_companies_month, monthly_growth_pct=company_growth)
+        contact_growth = self._percentage(new_contacts_month - prev_contacts, max(prev_contacts, 1))
+        contact_stats = AdminContactStats(total=total_contacts, new_this_month=new_contacts_month, monthly_growth_pct=contact_growth)
 
-        user_stats = AdminUserStats(
-            total=total_users,
-            active=active_users,
-            inactive=max(inactive_users, 0),
-            new_this_month=new_users_month,
-        )
-
-        # -- 3. Companies -----------------------------------------------------
-        total_companies = await _count(Company)
-        new_companies_month = await _count(Company, Company.created_at >= month_start)
-        prev_companies = await _count(
-            Company,
-            Company.created_at >= last_month_start,
-            Company.created_at < month_start,
-        )
-        company_growth = self._percentage(
-            new_companies_month - prev_companies, max(prev_companies, 1)
-        )
-
-        company_stats = AdminCompanyStats(
-            total=total_companies,
-            added_this_month=new_companies_month,
-            monthly_growth_pct=company_growth,
-        )
-
-        # -- 4. Contacts ------------------------------------------------------
-        total_contacts = await _count(Contact)
-        new_contacts_month = await _count(Contact, Contact.created_at >= month_start)
-        prev_contacts = await _count(
-            Contact,
-            Contact.created_at >= last_month_start,
-            Contact.created_at < month_start,
-        )
-        contact_growth = self._percentage(
-            new_contacts_month - prev_contacts, max(prev_contacts, 1)
+        # ── Batch 2: Lead counts, revenue sums, task counts ──────────────
+        (
+            total_leads, new_leads_today, new_leads_month, prev_leads,
+            converted_leads, won_leads,
+            rev_today, rev_week, rev_month, rev_year, prev_month_rev,
+            pending_tasks, overdue_tasks, due_today,
+            prev_active_users,
+        ) = await asyncio.gather(
+            _count(Lead),
+            _count(Lead, Lead.created_at >= today_start),
+            _count(Lead, Lead.created_at >= month_start),
+            _count(Lead, Lead.created_at >= last_month_start, Lead.created_at < month_start),
+            _count(Lead, Lead.status == DealStatus.WON.value),
+            _count(Lead, Lead.status == "won"),
+            _sum_amount(Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= today_start),
+            _sum_amount(Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= week_start),
+            _sum_amount(Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= month_start),
+            _sum_amount(Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= year_start),
+            _sum_amount(Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= last_month_start, Deal.closed_at < month_start),
+            self._count_rows(ActivityTimeline, organization_id, ActivityTimeline.action.in_(["meeting", "call", "task"]), ActivityTimeline.created_at >= now),
+            self._count_rows(ActivityTimeline, organization_id, ActivityTimeline.action.in_(["meeting", "call", "task"]), ActivityTimeline.created_at < now),
+            self._count_rows(ActivityTimeline, organization_id, ActivityTimeline.action.in_(["meeting", "call", "task"]), ActivityTimeline.created_at >= today_start, ActivityTimeline.created_at < today_start + timedelta(days=1)),
+            _prev_active_users_count(),
         )
 
-        contact_stats = AdminContactStats(
-            total=total_contacts,
-            new_this_month=new_contacts_month,
-            monthly_growth_pct=contact_growth,
-        )
-
-        # -- 5 + 6. Leads -----------------------------------------------------
-        total_leads = await _count(Lead)
-        new_leads_today = await _count(Lead, Lead.created_at >= today_start)
-        new_leads_month = await _count(Lead, Lead.created_at >= month_start)
-        prev_leads = await _count(
-            Lead,
-            Lead.created_at >= last_month_start,
-            Lead.created_at < month_start,
-        )
-        lead_growth = self._percentage(
-            new_leads_month - prev_leads, max(prev_leads, 1)
-        )
-        converted_leads = await _count(Lead, Lead.status == DealStatus.WON.value)
-        # also count explicit "won" status
-        won_leads = await _count(Lead, Lead.status == "won")
         total_converted = max(converted_leads, won_leads)
+        lead_growth = self._percentage(new_leads_month - prev_leads, max(prev_leads, 1))
         conversion_rate = self._percentage(total_converted, max(total_leads, 1))
-
-        lead_stats = AdminLeadStats(
-            total=total_leads,
-            new_today=new_leads_today,
-            new_this_month=new_leads_month,
-            monthly_growth_pct=lead_growth,
-            converted=total_converted,
-            conversion_rate=conversion_rate,
-        )
-
-        # -- 7. Revenue -------------------------------------------------------
-        rev_today = await _sum_amount(
-            Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= today_start
-        )
-        rev_week = await _sum_amount(
-            Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= week_start
-        )
-        rev_month = await _sum_amount(
-            Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= month_start
-        )
-        rev_year = await _sum_amount(
-            Deal, Deal.status == DealStatus.WON.value, Deal.closed_at >= year_start
-        )
-        prev_month_rev = await _sum_amount(
-            Deal,
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= last_month_start,
-            Deal.closed_at < month_start,
-        )
-        rev_growth = self._percentage(
-            int(rev_month - prev_month_rev), max(int(prev_month_rev), 1)
-        )
-
-        revenue_stats = AdminRevenueStats(
-            today=rev_today,
-            this_week=rev_week,
-            this_month=rev_month,
-            this_year=rev_year,
-            growth_pct=rev_growth,
-        )
-
-        prev_active_users_stmt = (
-            select(func.count(func.distinct(User.id)))
-            .select_from(User)
-            .join(UserRole, UserRole.user_id == User.id)
-            .join(Role, Role.id == UserRole.role_id)
-            .where(
-                User.organization_id == organization_id,
-                User.is_deleted.is_(False),
-                Role.name.in_(admin_visible_roles),
-                User.created_at < month_start,
-            )
-        )
-        prev_active_users = int((await self.db.execute(prev_active_users_stmt)).scalar_one() or 0)
+        lead_stats = AdminLeadStats(total=total_leads, new_today=new_leads_today, new_this_month=new_leads_month, monthly_growth_pct=lead_growth, converted=total_converted, conversion_rate=conversion_rate)
+        rev_growth = self._percentage(int(rev_month - prev_month_rev), max(int(prev_month_rev), 1))
+        revenue_stats = AdminRevenueStats(today=rev_today, this_week=rev_week, this_month=rev_month, this_year=rev_year, growth_pct=rev_growth)
+        task_stats = AdminTaskStats(pending=pending_tasks, overdue=overdue_tasks, due_today=due_today)
+        summary = AdminDashboardSummary(organizations=org_stats, users=user_stats, companies=company_stats, contacts=contact_stats, leads=lead_stats, revenue=revenue_stats, tasks=task_stats)
         overview = AdminOverviewCards(
-            revenue_month=AdminOverviewMetric(
-                current_value=rev_month,
-                previous_value=prev_month_rev,
-                percentage_change=rev_growth,
-            ),
-            active_users=AdminOverviewMetric(
-                current_value=Decimal(active_users),
-                previous_value=Decimal(prev_active_users),
-                percentage_change=self._percentage(active_users - prev_active_users, max(prev_active_users, 1)),
-            ),
-            companies=AdminOverviewMetric(
-                current_value=Decimal(total_companies),
-                previous_value=Decimal(max(total_companies - new_companies_month + prev_companies, 0)),
-                percentage_change=company_growth,
-            ),
-            new_leads=AdminOverviewMetric(
-                current_value=Decimal(new_leads_month),
-                previous_value=Decimal(prev_leads),
-                percentage_change=lead_growth,
-            ),
+            revenue_month=AdminOverviewMetric(current_value=rev_month, previous_value=prev_month_rev, percentage_change=rev_growth),
+            active_users=AdminOverviewMetric(current_value=Decimal(active_users), previous_value=Decimal(prev_active_users), percentage_change=self._percentage(active_users - prev_active_users, max(prev_active_users, 1))),
+            companies=AdminOverviewMetric(current_value=Decimal(total_companies), previous_value=Decimal(max(total_companies - new_companies_month + prev_companies, 0)), percentage_change=company_growth),
+            new_leads=AdminOverviewMetric(current_value=Decimal(new_leads_month), previous_value=Decimal(prev_leads), percentage_change=lead_growth),
         )
 
-        # -- 8. Tasks (via ActivityTimeline) ----------------------------------
-        # "Tasks" are modelled as activity_timeline_events with action=meeting/call
-        # We treat overdue = past meetings, pending = future, due today = today
-        pending_tasks = await self._count_rows(
-            ActivityTimeline,
-            organization_id,
-            ActivityTimeline.action.in_(["meeting", "call", "task"]),
-            ActivityTimeline.created_at >= now,
-        )
-        overdue_tasks = await self._count_rows(
-            ActivityTimeline,
-            organization_id,
-            ActivityTimeline.action.in_(["meeting", "call", "task"]),
-            ActivityTimeline.created_at < now,
-        )
-        due_today = await self._count_rows(
-            ActivityTimeline,
-            organization_id,
-            ActivityTimeline.action.in_(["meeting", "call", "task"]),
-            ActivityTimeline.created_at >= today_start,
-            ActivityTimeline.created_at < today_start + timedelta(days=1),
-        )
-
-        task_stats = AdminTaskStats(
-            pending=pending_tasks,
-            overdue=overdue_tasks,
-            due_today=due_today,
-        )
-
-        summary = AdminDashboardSummary(
-            organizations=org_stats,
-            users=user_stats,
-            companies=company_stats,
-            contacts=contact_stats,
-            leads=lead_stats,
-            revenue=revenue_stats,
-            tasks=task_stats,
-        )
-
-        # -- 9. Monthly Sales Analytics (12 months) ---------------------------
+        # ── Batch 3: Monthly sales time-series (3 independent queries) ───
         trend_start, _ = self._month_bounds(now, 11)
         lead_month_stmt = (
             select(func.date_trunc("month", Lead.created_at).label("month"), func.count(Lead.id))
@@ -897,9 +770,14 @@ class DashboardService:
             .where(*_base(Lead), Lead.status.in_(["won", "converted"]), Lead.updated_at >= trend_start, Lead.updated_at < next_month)
             .group_by("month")
         )
-        lead_counts = {row[0].strftime("%Y-%m"): int(row[1] or 0) for row in (await self.db.execute(lead_month_stmt)).all() if row[0]}
-        revenue_counts = {row[0].strftime("%Y-%m"): Decimal(str(row[1] or 0)) for row in (await self.db.execute(revenue_month_stmt)).all() if row[0]}
-        converted_counts = {row[0].strftime("%Y-%m"): int(row[1] or 0) for row in (await self.db.execute(converted_month_stmt)).all() if row[0]}
+        lead_month_res, revenue_month_res, converted_month_res = await asyncio.gather(
+            self.db.execute(lead_month_stmt),
+            self.db.execute(revenue_month_stmt),
+            self.db.execute(converted_month_stmt),
+        )
+        lead_counts = {row[0].strftime("%Y-%m"): int(row[1] or 0) for row in lead_month_res.all() if row[0]}
+        revenue_counts = {row[0].strftime("%Y-%m"): Decimal(str(row[1] or 0)) for row in revenue_month_res.all() if row[0]}
+        converted_counts = {row[0].strftime("%Y-%m"): int(row[1] or 0) for row in converted_month_res.all() if row[0]}
         monthly_sales: list[AdminMonthlySalesPoint] = []
         revenue_trend: list[AdminRevenueTrendPoint] = []
         for offset in range(11, -1, -1):
@@ -907,66 +785,27 @@ class DashboardService:
             key = start.strftime("%Y-%m")
             revenue_value = revenue_counts.get(key, Decimal("0"))
             lead_count = lead_counts.get(key, 0)
-            monthly_sales.append(
-                AdminMonthlySalesPoint(
-                    month=key,
-                    leads_created=lead_count,
-                    leads_converted=converted_counts.get(key, 0),
-                    revenue=revenue_value,
-                )
-            )
+            monthly_sales.append(AdminMonthlySalesPoint(month=key, leads_created=lead_count, leads_converted=converted_counts.get(key, 0), revenue=revenue_value))
             revenue_trend.append(AdminRevenueTrendPoint(month=key, revenue=revenue_value, lead_count=lead_count))
 
-        # -- 10. Lead Source Analytics ----------------------------------------
+        # ── Batch 4: Lead analytics + top performers ─────────────────────
         source_stmt = (
             select(Lead.source, func.count(Lead.id))
             .where(*_base(Lead))
             .group_by(Lead.source)
             .order_by(func.count(Lead.id).desc())
         )
-        source_rows = (await self.db.execute(source_stmt)).all()
-        total_leads_for_source = sum(r[1] for r in source_rows) or 1
-        lead_sources = [
-            AdminLeadSourceBreakdown(
-                source=str(r[0] or "Unknown"),
-                count=int(r[1]),
-                percentage=self._percentage(int(r[1]), total_leads_for_source),
-            )
-            for r in source_rows
-        ]
-
-        # -- 11. Lead Funnel --------------------------------------------------
-        funnel_stages = [
-            "new", "contacted", "qualified",
-            "proposal_sent", "negotiation", "won", "lost",
-        ]
+        funnel_stages = ["new", "contacted", "qualified", "proposal_sent", "negotiation", "won", "lost"]
         funnel_stmt = (
             select(Lead.status, func.count(Lead.id))
             .where(*_base(Lead))
             .group_by(Lead.status)
         )
-        funnel_rows = dict((await self.db.execute(funnel_stmt)).all())
-        total_funnel = sum(funnel_rows.values()) or 1
-        lead_funnel = [
-            AdminLeadFunnelStage(
-                stage=stage,
-                count=int(funnel_rows.get(stage, 0)),
-                percentage=self._percentage(
-                    int(funnel_rows.get(stage, 0)), total_funnel
-                ),
-            )
-            for stage in funnel_stages
-        ]
-
-        # -- 12. Top 5 Sales Representatives ---------------------------------
-        won_expr = func.sum(
-            case((Deal.status == DealStatus.WON.value, 1), else_=0)
-        )
+        won_expr = func.sum(case((Deal.status == DealStatus.WON.value, 1), else_=0))
         total_deals_expr = func.count(Deal.id)
         top_reps_stmt = (
             select(
-                User.id,
-                User.full_name,
+                User.id, User.full_name,
                 func.coalesce(total_deals_expr, 0),
                 func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), Decimal("0")),
                 func.coalesce(won_expr, 0),
@@ -974,116 +813,115 @@ class DashboardService:
             .select_from(User)
             .outerjoin(Deal, (Deal.owner_id == User.id) & Deal.is_active.is_(True) & Deal.is_deleted.is_(False))
             .where(
-                User.organization_id == organization_id,
-                User.is_active.is_(True),
-                User.is_deleted.is_(False),
-                User.id.in_(select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.name.in_(admin_visible_roles))),
+                User.organization_id == organization_id, User.is_active.is_(True), User.is_deleted.is_(False),
+                User.id.in_(select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(Role.name.in_(["manager", "sales_rep", "sales_representative"]))),
             )
             .group_by(User.id, User.full_name)
             .order_by(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0).desc())
             .limit(5)
         )
-        top_reps_rows = (await self.db.execute(top_reps_stmt)).all()
-        top_sales_reps = [
-            AdminTopSalesRep(
-                user_id=row[0],
-                full_name=row[1],
-                deals_closed=int(row[4] or 0),
-                revenue=Decimal(str(row[3] or 0)),
-                conversion_rate=self._percentage(int(row[4] or 0), max(int(row[2] or 1), 1)),
-            )
-            for row in top_reps_rows
-        ]
-
-        # -- 13. Top 5 Companies ----------------------------------------------
         top_companies_stmt = (
             select(
-                Company.id,
-                Company.name,
+                Company.id, Company.name,
                 func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
                 func.count(Lead.id.distinct()),
                 func.count(Contact.id.distinct()),
             )
             .select_from(Company)
-            .outerjoin(
-                Deal,
-                (Deal.company_id == Company.id)
-                & Deal.is_active.is_(True)
-                & Deal.is_deleted.is_(False)
-                & (Deal.status == DealStatus.WON.value),
-            )
-            .outerjoin(
-                Lead,
-                (Lead.company_id == Company.id)
-                & Lead.is_active.is_(True)
-                & Lead.is_deleted.is_(False),
-            )
-            .outerjoin(
-                Contact,
-                (Contact.company_id == Company.id)
-                & Contact.is_active.is_(True)
-                & Contact.is_deleted.is_(False),
-            )
-            .where(
-                Company.organization_id == organization_id,
-                Company.is_active.is_(True),
-                Company.is_deleted.is_(False),
-            )
+            .outerjoin(Deal, (Deal.company_id == Company.id) & Deal.is_active.is_(True) & Deal.is_deleted.is_(False) & (Deal.status == DealStatus.WON.value))
+            .outerjoin(Lead, (Lead.company_id == Company.id) & Lead.is_active.is_(True) & Lead.is_deleted.is_(False))
+            .outerjoin(Contact, (Contact.company_id == Company.id) & Contact.is_active.is_(True) & Contact.is_deleted.is_(False))
+            .where(Company.organization_id == organization_id, Company.is_active.is_(True), Company.is_deleted.is_(False))
             .group_by(Company.id, Company.name)
             .order_by(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0).desc())
             .limit(5)
         )
-        top_companies_rows = (await self.db.execute(top_companies_stmt)).all()
-        top_companies = [
-            AdminTopCompany(
-                company_id=row[0],
-                name=row[1],
-                revenue=Decimal(str(row[2] or 0)),
-                lead_count=int(row[3] or 0),
-                contact_count=int(row[4] or 0),
-            )
-            for row in top_companies_rows
-        ]
-
-        # -- 14. Recent Activities (latest 20) --------------------------------
         recent_stmt = (
             select(ActivityTimeline)
-            .where(
-                ActivityTimeline.organization_id == organization_id,
-                ActivityTimeline.is_active.is_(True),
-            )
+            .where(ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True))
             .order_by(ActivityTimeline.created_at.desc())
             .limit(20)
         )
-        recent_rows = (await self.db.execute(recent_stmt)).scalars().all()
-        recent_activities = [
-            AdminRecentActivity(
-                id=row.id,
-                action=row.action,
-                title=row.title,
-                entity_type=row.entity_type,
-                created_at=row.created_at,
-                created_by=row.created_by,
-            )
-            for row in recent_rows
-        ]
-
-        # -- 15. Notifications Summary ----------------------------------------
         high_priority_leads_stmt = (
             select(func.count(Lead.id))
             .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .where(*_base(Lead), LeadScore.overall_score >= 70)
         )
-        high_priority_leads = int((await self.db.execute(high_priority_leads_stmt)).scalar_one() or 0)
 
-        notifications = AdminNotificationSummary(
-            overdue_tasks=overdue_tasks,
-            todays_meetings=due_today,
-            pending_approvals=0,          # no approval workflow yet
-            high_priority_leads=high_priority_leads,
-            system_alerts=0,              # no system-alert model yet
+        source_res, funnel_res, top_reps_res, top_companies_res, recent_res, high_priority_res = await asyncio.gather(
+            self.db.execute(source_stmt),
+            self.db.execute(funnel_stmt),
+            self.db.execute(top_reps_stmt),
+            self.db.execute(top_companies_stmt),
+            self.db.execute(recent_stmt),
+            self.db.execute(high_priority_leads_stmt),
         )
 
+        source_rows = source_res.all()
+        total_leads_for_source = sum(r[1] for r in source_rows) or 1
+        lead_sources = [
+            AdminLeadSourceBreakdown(source=str(r[0] or "Unknown"), count=int(r[1]), percentage=self._percentage(int(r[1]), total_leads_for_source))
+            for r in source_rows
+        ]
+        funnel_rows = dict(funnel_res.all())
+        total_funnel = sum(funnel_rows.values()) or 1
+        lead_funnel = [
+            AdminLeadFunnelStage(stage=stage, count=int(funnel_rows.get(stage, 0)), percentage=self._percentage(int(funnel_rows.get(stage, 0)), total_funnel))
+            for stage in funnel_stages
+        ]
+        top_reps_rows = top_reps_res.all()
+        top_sales_reps = [
+            AdminTopSalesRep(user_id=row[0], full_name=row[1], deals_closed=int(row[4] or 0), revenue=Decimal(str(row[3] or 0)), conversion_rate=self._percentage(int(row[4] or 0), max(int(row[2] or 1), 1)))
+            for row in top_reps_rows
+        ]
+        top_companies_rows = top_companies_res.all()
+        top_companies = [
+            AdminTopCompany(company_id=row[0], name=row[1], revenue=Decimal(str(row[2] or 0)), lead_count=int(row[3] or 0), contact_count=int(row[4] or 0))
+            for row in top_companies_rows
+        ]
+        recent_rows = recent_res.scalars().all()
+        recent_activities = [
+            AdminRecentActivity(id=row.id, action=row.action, title=row.title, entity_type=row.entity_type, created_at=row.created_at, created_by=row.created_by)
+            for row in recent_rows
+        ]
+        high_priority_leads = int(high_priority_res.scalar_one() or 0)
+
+        notifications = AdminNotificationSummary(
+            overdue_tasks=overdue_tasks, todays_meetings=due_today,
+            pending_approvals=0, high_priority_leads=high_priority_leads, system_alerts=0,
+        )
+
+        # ── Batch 5: Data quality ────────────────────────────────────────
+        duplicate_queries = [
+            select(func.count()).select_from(select(Contact.organization_id, func.lower(func.trim(Contact.email))).where(*_base(Contact), Contact.email.is_not(None), func.trim(Contact.email) != "").group_by(Contact.organization_id, func.lower(func.trim(Contact.email))).having(func.count(Contact.id) > 1).subquery()),
+            select(func.count()).select_from(select(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).where(*_base(Contact), Contact.phone.is_not(None), func.regexp_replace(Contact.phone, r"\D+", "", "g") != "").group_by(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).having(func.count(Contact.id) > 1).subquery()),
+            select(func.count()).select_from(select(Lead.organization_id, func.lower(func.trim(Lead.email))).where(*_base(Lead), Lead.email.is_not(None), func.trim(Lead.email) != "").group_by(Lead.organization_id, func.lower(func.trim(Lead.email))).having(func.count(Lead.id) > 1).subquery()),
+            select(func.count()).select_from(select(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).where(*_base(Lead), Lead.phone.is_not(None), func.regexp_replace(Lead.phone, r"\D+", "", "g") != "").group_by(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).having(func.count(Lead.id) > 1).subquery()),
+            select(func.count()).select_from(select(Company.organization_id, func.lower(func.trim(Company.name))).where(*_base(Company)).group_by(Company.organization_id, func.lower(func.trim(Company.name))).having(func.count(Company.id) > 1).subquery()),
+        ]
+        incomplete_fields_stmt = select(func.count(Lead.id)).where(*_base(Lead), or_(Lead.title.is_(None), Lead.title == "", Lead.email.is_(None), Lead.email == ""))
+        orphaned_leads_stmt = (
+            select(func.count(Lead.id))
+            .select_from(Lead)
+            .outerjoin(User, User.id == Lead.owner_id)
+            .outerjoin(Company, Company.id == Lead.company_id)
+            .where(
+                Lead.organization_id == organization_id, Lead.is_active.is_(True), Lead.is_deleted.is_(False),
+                or_((Lead.owner_id.is_not(None)) & (User.id.is_(None)), (Lead.company_id.is_not(None)) & (Company.id.is_(None))),
+            )
+        )
+
+        dup_results = await asyncio.gather(*[self.db.execute(q) for q in duplicate_queries])
+        incomplete_res, orphaned_res = await asyncio.gather(
+            self.db.execute(incomplete_fields_stmt),
+            self.db.execute(orphaned_leads_stmt),
+        )
+        duplicates_detected = sum(int(r.scalar_one() or 0) for r in dup_results)
+        incomplete_fields = int(incomplete_res.scalar_one() or 0)
+        orphaned_leads = int(orphaned_res.scalar_one() or 0)
+        data_quality = AdminDataQuality(duplicates_detected=duplicates_detected, incomplete_fields=incomplete_fields, orphaned_leads=orphaned_leads)
+
+        # ── Batch 6: Audit + integrations + workflows ────────────────────
         role_distribution_stmt = (
             select(Role.name, func.count(func.distinct(User.id)))
             .select_from(User)
@@ -1092,85 +930,66 @@ class DashboardService:
             .where(User.organization_id == organization_id, User.is_active.is_(True), User.is_deleted.is_(False))
             .group_by(Role.name)
         )
-        role_distribution = [
-            AdminRoleDistributionItem(role=str(role).upper(), count=int(count or 0))
-            for role, count in (await self.db.execute(role_distribution_stmt)).all()
-        ]
-
-        org_row = (await self.db.execute(select(Organization).where(Organization.id == organization_id))).scalar_one_or_none()
-        seat_limit = org_row.max_users if org_row else None
-        no_storage_source = "No persisted organization storage usage/limit source exists."
-        license_usage = AdminLicenseUsage(
-            storage_used=None,
-            storage_used_state=AdminMetricAvailability(value=None, available=False, reason=no_storage_source),
-            storage_limit=None,
-            storage_limit_state=AdminMetricAvailability(value=None, available=False, reason=no_storage_source),
-            active_seats=active_users,
-            seat_limit=seat_limit,
-            usage_percentage=self._percentage(active_users, seat_limit) if seat_limit else None,
-        )
-        user_management = AdminUserManagement(
-            active_seats=active_users,
-            invites_pending=None,
-            invites_pending_state=AdminMetricAvailability(value=None, available=False, reason="No persisted invitation table/model exists."),
-            role_distribution=role_distribution,
-        )
-
-        duplicate_queries = [
-            select(func.count()).select_from(select(Contact.organization_id, func.lower(func.trim(Contact.email))).where(*_base(Contact), Contact.email.is_not(None), func.trim(Contact.email) != "").group_by(Contact.organization_id, func.lower(func.trim(Contact.email))).having(func.count(Contact.id) > 1).subquery()),
-            select(func.count()).select_from(select(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).where(*_base(Contact), Contact.phone.is_not(None), func.regexp_replace(Contact.phone, r"\D+", "", "g") != "").group_by(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).having(func.count(Contact.id) > 1).subquery()),
-            select(func.count()).select_from(select(Lead.organization_id, func.lower(func.trim(Lead.email))).where(*_base(Lead), Lead.email.is_not(None), func.trim(Lead.email) != "").group_by(Lead.organization_id, func.lower(func.trim(Lead.email))).having(func.count(Lead.id) > 1).subquery()),
-            select(func.count()).select_from(select(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).where(*_base(Lead), Lead.phone.is_not(None), func.regexp_replace(Lead.phone, r"\D+", "", "g") != "").group_by(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).having(func.count(Lead.id) > 1).subquery()),
-            select(func.count()).select_from(select(Company.organization_id, func.lower(func.trim(Company.name))).where(*_base(Company)).group_by(Company.organization_id, func.lower(func.trim(Company.name))).having(func.count(Company.id) > 1).subquery()),
-        ]
-        duplicates_detected = 0
-        for query in duplicate_queries:
-            duplicates_detected += int((await self.db.execute(query)).scalar_one() or 0)
-        incomplete_fields = int((await self.db.execute(select(func.count(Lead.id)).where(*_base(Lead), or_(Lead.title.is_(None), Lead.title == "", Lead.email.is_(None), Lead.email == "")))).scalar_one() or 0)
-        orphaned_leads_stmt = (
-            select(func.count(Lead.id))
-            .select_from(Lead)
-            .outerjoin(User, User.id == Lead.owner_id)
-            .outerjoin(Company, Company.id == Lead.company_id)
-            .where(
-                Lead.organization_id == organization_id,
-                Lead.is_active.is_(True),
-                Lead.is_deleted.is_(False),
-                or_((Lead.owner_id.is_not(None)) & (User.id.is_(None)), (Lead.company_id.is_not(None)) & (Company.id.is_(None))),
-            )
-        )
-        data_quality = AdminDataQuality(
-            duplicates_detected=duplicates_detected,
-            incomplete_fields=incomplete_fields,
-            orphaned_leads=int((await self.db.execute(orphaned_leads_stmt)).scalar_one() or 0),
-        )
-
-        audit_rows = (await self.db.execute(
+        audit_stmt = (
             select(ActivityTimeline, User.full_name)
             .outerjoin(User, User.id == ActivityTimeline.created_by)
             .where(ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True))
             .order_by(ActivityTimeline.created_at.desc())
             .limit(10)
-        )).all()
+        )
+        unusual_exports_stmt = select(func.count(ActivityTimeline.id)).where(
+            ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True),
+            ActivityTimeline.action.ilike("%export%"), ActivityTimeline.created_at >= now - timedelta(hours=24),
+        )
+        gmail_stmt = select(func.count(GmailConnection.id), func.max(GmailConnection.updated_at)).where(
+            GmailConnection.organization_id == organization_id, GmailConnection.is_active.is_(True),
+        )
+        calendar_stmt = select(func.count(CalendarEvent.id), func.max(CalendarEvent.updated_at)).where(
+            CalendarEvent.organization_id == organization_id, CalendarEvent.is_active.is_(True), CalendarEvent.is_deleted.is_(False),
+        )
+        workflow_stmt = select(WorkflowTask.status, func.count(WorkflowTask.id)).where(
+            WorkflowTask.organization_id == organization_id, WorkflowTask.is_active.is_(True),
+        ).group_by(WorkflowTask.status)
+        scoring_stmt = select(func.count(LeadScore.id)).where(LeadScore.organization_id == organization_id, LeadScore.is_active.is_(True))
+        org_row_stmt = select(Organization).where(Organization.id == organization_id)
+
+        role_res, audit_res, unusual_res, gmail_res, calendar_res, workflow_res, scoring_res, org_res = await asyncio.gather(
+            self.db.execute(role_distribution_stmt),
+            self.db.execute(audit_stmt),
+            self.db.execute(unusual_exports_stmt),
+            self.db.execute(gmail_stmt),
+            self.db.execute(calendar_stmt),
+            self.db.execute(workflow_stmt),
+            self.db.execute(scoring_stmt),
+            self.db.execute(org_row_stmt),
+        )
+
+        role_distribution = [
+            AdminRoleDistributionItem(role=str(role).upper(), count=int(count or 0))
+            for role, count in role_res.all()
+        ]
+        audit_rows = audit_res.all()
         audit_logs = [
             AdminAuditLogItem(
-                event_type=row[0].action,
-                description=row[0].description or row[0].title,
-                performed_by=row[1] or "System",
-                timestamp=row[0].created_at,
+                event_type=row[0].action, description=row[0].description or row[0].title,
+                performed_by=row[1] or "System", timestamp=row[0].created_at,
                 ip_address=(row[0].payload or {}).get("ip_address") if row[0].payload else None,
                 metadata=row[0].payload,
             )
             for row in audit_rows
         ]
-        unusual_exports = int((await self.db.execute(select(func.count(ActivityTimeline.id)).where(ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True), ActivityTimeline.action.ilike("%export%"), ActivityTimeline.created_at >= now - timedelta(hours=24)))).scalar_one() or 0)
-
-        gmail_row = (await self.db.execute(select(func.count(GmailConnection.id), func.max(GmailConnection.updated_at)).where(GmailConnection.organization_id == organization_id, GmailConnection.is_active.is_(True)))).one()
-        calendar_row = (await self.db.execute(select(func.count(CalendarEvent.id), func.max(CalendarEvent.updated_at)).where(CalendarEvent.organization_id == organization_id, CalendarEvent.is_active.is_(True), CalendarEvent.is_deleted.is_(False)))).one()
+        unusual_exports = int(unusual_res.scalar_one() or 0)
+        gmail_row = gmail_res.one()
+        calendar_row = calendar_res.one()
         integrations = [
             AdminIntegrationStatus(integration="Google/Gmail", status="active" if int(gmail_row[0] or 0) else "not_configured", last_sync=gmail_row[1], message=None),
             AdminIntegrationStatus(integration="Calendar", status="active" if int(calendar_row[0] or 0) else "not_configured", last_sync=calendar_row[1], message=None),
         ]
+        workflow_counts = {str(status): int(count or 0) for status, count in workflow_res.all()}
+        scoring_usage = int(scoring_res.scalar_one() or 0)
+        org_row = org_res.scalar_one_or_none()
+        seat_limit = org_row.max_users if org_row else None
+
         system_health = AdminSystemHealth(
             services=[
                 AdminServiceHealthItem(service="API Gateway", status="unknown", message="No persisted API health metric is available."),
@@ -1184,9 +1003,20 @@ class DashboardService:
             warning_logs_24h=None,
             warning_logs_24h_state=AdminMetricAvailability(value=None, available=False, reason="No persisted application log severity table exists."),
         )
-
-        workflow_counts = {str(status): int(count or 0) for status, count in (await self.db.execute(select(WorkflowTask.status, func.count(WorkflowTask.id)).where(WorkflowTask.organization_id == organization_id, WorkflowTask.is_active.is_(True)).group_by(WorkflowTask.status))).all()}
-        scoring_usage = int((await self.db.execute(select(func.count(LeadScore.id)).where(LeadScore.organization_id == organization_id, LeadScore.is_active.is_(True)))).scalar_one() or 0)
+        no_storage_source = "No persisted organization storage usage/limit source exists."
+        license_usage = AdminLicenseUsage(
+            storage_used=None,
+            storage_used_state=AdminMetricAvailability(value=None, available=False, reason=no_storage_source),
+            storage_limit=None,
+            storage_limit_state=AdminMetricAvailability(value=None, available=False, reason=no_storage_source),
+            active_seats=active_users, seat_limit=seat_limit,
+            usage_percentage=self._percentage(active_users, seat_limit) if seat_limit else None,
+        )
+        user_management = AdminUserManagement(
+            active_seats=active_users, invites_pending=None,
+            invites_pending_state=AdminMetricAvailability(value=None, available=False, reason="No persisted invitation table/model exists."),
+            role_distribution=role_distribution,
+        )
         custom_fields = AdminCustomWorkflowStats(
             custom_fields_active=None,
             custom_fields_active_state=AdminMetricAvailability(value=None, available=False, reason="No custom field table/model exists."),
@@ -1205,10 +1035,8 @@ class DashboardService:
             security_status="not_available" if unusual_exports == 0 else "review_exports",
         )
         revenue_lead_summary = AdminRevenueLeadSummary(
-            revenue_year=rev_year,
-            converted_leads=total_converted,
-            contacts=total_contacts,
-            tasks_pending=pending_tasks,
+            revenue_year=rev_year, converted_leads=total_converted,
+            contacts=total_contacts, tasks_pending=pending_tasks,
         )
 
         return AdminDashboardResponse(

@@ -1,55 +1,57 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useDashboardLayout, DashboardLayoutProvider } from '@/components/dashboard/DashboardLayoutContext';
-import QuotaPaceCard from '@/components/dashboard/QuotaPaceCard';
-import FunnelChartCard from '@/components/dashboard/FunnelChartCard';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import StatCards from '@/components/dashboard/StatCards';
-import Charts from '@/components/dashboard/Charts';
-import Widgets from '@/components/dashboard/Widgets';
-import RightPanel from '@/components/dashboard/RightPanel';
 import ReportBuilderModal from '@/components/dashboard/ReportBuilderModal';
-import LeadsView from '@/components/dashboard/LeadsView';
-import CompaniesView from '@/components/dashboard/CompaniesView';
-import ContactsView from '@/components/dashboard/ContactsView';
-import PipelineView from '@/components/dashboard/PipelineView';
-import ActivitiesView from '@/components/dashboard/ActivitiesView';
-import EmailsView from '@/components/dashboard/EmailsView';
-import AIInsightsView from '@/components/dashboard/AIInsightsView';
-import NotificationsView from '@/components/dashboard/NotificationsView';
-import ProfileView from '@/components/dashboard/ProfileView';
-import SettingsView from '@/components/dashboard/SettingsView';
-import ProductsView from '@/components/dashboard/ProductsView';
-import DocumentsView from '@/components/dashboard/DocumentsView';
-import ReportsView from '@/components/dashboard/ReportsView';
-import ManagerReportsView from '@/components/dashboard/ManagerReportsView';
-import AdminReportsView from '@/components/dashboard/AdminReportsView';
-import WorkflowsView from '@/components/dashboard/WorkflowsView';
 import CommandPalette from '@/components/dashboard/CommandPalette';
 import AICopilotChat from '@/components/dashboard/AICopilotChat';
 import DashboardCustomizer from '@/components/dashboard/DashboardCustomizer';
-import ActivityHeatmap from '@/components/dashboard/ActivityHeatmap';
-import CalendarView from '@/components/dashboard/CalendarView';
-import ManagerDashboardView from '@/components/dashboard/ManagerDashboardView';
-import ForecastView from '@/components/dashboard/ForecastView';
-import TeamPerformanceView from '@/components/dashboard/TeamPerformanceView';
-import AdminDashboardView from '@/components/dashboard/AdminDashboardView';
-import SalesRepDashboardView from '@/components/dashboard/SalesRepDashboardView';
-import UsersView from '@/components/dashboard/UsersView';
-import RolesPermissionsView from '@/components/dashboard/RolesPermissionsView';
-import IntegrationsView from '@/components/dashboard/IntegrationsView';
-import AutomationView from '@/components/dashboard/AutomationView';
-import AIModelsView from '@/components/dashboard/AIModelsView';
-import AuditLogsView from '@/components/dashboard/AuditLogsView';
-import HomeView from '@/components/dashboard/HomeView';
-import TasksView from '@/components/dashboard/TasksView';
 import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
 import { clearToken, setToken, EmailComposeTarget } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardOverview } from '@/hooks/use-dashboard';
 import { useCrmStream } from '@/hooks/use-crm-stream';
+
+// ── Lazy-loaded view components (code-split per tab) ──────────────────────
+const HomeView = React.lazy(() => import('@/components/dashboard/HomeView'));
+const LeadsView = React.lazy(() => import('@/components/dashboard/LeadsView'));
+const CompaniesView = React.lazy(() => import('@/components/dashboard/CompaniesView'));
+const ContactsView = React.lazy(() => import('@/components/dashboard/ContactsView'));
+const PipelineView = React.lazy(() => import('@/components/dashboard/PipelineView'));
+const ActivitiesView = React.lazy(() => import('@/components/dashboard/ActivitiesView'));
+const EmailsView = React.lazy(() => import('@/components/dashboard/EmailsView'));
+const AIInsightsView = React.lazy(() => import('@/components/dashboard/AIInsightsView'));
+const NotificationsView = React.lazy(() => import('@/components/dashboard/NotificationsView'));
+const ProfileView = React.lazy(() => import('@/components/dashboard/ProfileView'));
+const SettingsView = React.lazy(() => import('@/components/dashboard/SettingsView'));
+const ProductsView = React.lazy(() => import('@/components/dashboard/ProductsView'));
+const DocumentsView = React.lazy(() => import('@/components/dashboard/DocumentsView'));
+const ReportsView = React.lazy(() => import('@/components/dashboard/ReportsView'));
+const ManagerReportsView = React.lazy(() => import('@/components/dashboard/ManagerReportsView'));
+const AdminReportsView = React.lazy(() => import('@/components/dashboard/AdminReportsView'));
+const WorkflowsView = React.lazy(() => import('@/components/dashboard/WorkflowsView'));
+const ActivityHeatmap = React.lazy(() => import('@/components/dashboard/ActivityHeatmap'));
+const CalendarView = React.lazy(() => import('@/components/dashboard/CalendarView'));
+const ManagerDashboardView = React.lazy(() => import('@/components/dashboard/ManagerDashboardView'));
+const ForecastView = React.lazy(() => import('@/components/dashboard/ForecastView'));
+const TeamPerformanceView = React.lazy(() => import('@/components/dashboard/TeamPerformanceView'));
+const AdminDashboardView = React.lazy(() => import('@/components/dashboard/AdminDashboardView'));
+const SalesRepDashboardView = React.lazy(() => import('@/components/dashboard/SalesRepDashboardView'));
+const UsersView = React.lazy(() => import('@/components/dashboard/UsersView'));
+const RolesPermissionsView = React.lazy(() => import('@/components/dashboard/RolesPermissionsView'));
+const IntegrationsView = React.lazy(() => import('@/components/dashboard/IntegrationsView'));
+const AutomationView = React.lazy(() => import('@/components/dashboard/AutomationView'));
+const AIModelsView = React.lazy(() => import('@/components/dashboard/AIModelsView'));
+const AuditLogsView = React.lazy(() => import('@/components/dashboard/AuditLogsView'));
+const TasksView = React.lazy(() => import('@/components/dashboard/TasksView'));
+const StatCards = React.lazy(() => import('@/components/dashboard/StatCards'));
+const Charts = React.lazy(() => import('@/components/dashboard/Charts'));
+const QuotaPaceCard = React.lazy(() => import('@/components/dashboard/QuotaPaceCard'));
+const FunnelChartCard = React.lazy(() => import('@/components/dashboard/FunnelChartCard'));
+const Widgets = React.lazy(() => import('@/components/dashboard/Widgets'));
+const RightPanel = React.lazy(() => import('@/components/dashboard/RightPanel'));
 
 interface DashboardShellProps {
   requiredRole: 'sales_rep' | 'manager' | 'admin';
@@ -80,9 +82,10 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
   };
 
   // ── Unified dashboard data hook (GET /api/v1/dashboard/me) ──────────────
-  // Returns null gracefully when the backend endpoint is not yet deployed.
-  // Individual widgets continue to use their own API calls as fallback.
-  const { data: dashboardData, refetch: refetchDashboard } = useDashboardOverview();
+  // Only fetch for sales_rep role — manager and admin views make their own calls.
+  const dashboardOverview = useDashboardOverview();
+  const dashboardData = requiredRole === 'sales_rep' ? dashboardOverview.data : null;
+  const refetchDashboard = requiredRole === 'sales_rep' ? dashboardOverview.refetch : () => {};
 
   // ── Real-time SSE stream — invalidates dashboardData on AI events ────────
   useCrmStream({
@@ -245,6 +248,11 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
         {/* ui.md §6: Content padding 2xl (32px) on all sides */}
         <main className="flex-1 overflow-y-auto px-8 py-8 md:px-8 space-y-6">
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-6 w-6 text-accent-color animate-spin" />
+            </div>
+          }>
           {activeTab === 'home' ? (
             requiredRole === 'manager' ? (
               <ManagerDashboardView onTabChange={setActiveTab} />
@@ -481,6 +489,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               </div>
             </>
           )}
+          </Suspense>
         </main>
       </div>
 

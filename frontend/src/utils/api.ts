@@ -36,6 +36,10 @@ export function getAuthHeaders(): Record<string, string> {
 
 let _refreshPromise: Promise<boolean> | null = null;
 
+// ── In-flight GET deduplication ────────────────────────────────────────────
+
+const _inflight = new Map<string, Promise<unknown>>();
+
 async function _tryRefresh(): Promise<boolean> {
   const rt = getRefreshToken();
   if (!rt) return false;
@@ -282,6 +286,23 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit, _retry = tru
     return undefined as T;
   }
 
+  // Deduplicate concurrent identical GET requests
+  const method = options?.method?.toUpperCase() ?? 'GET';
+  if (method === 'GET') {
+    const key = `GET:${endpoint}`;
+    if (_inflight.has(key)) {
+      return _inflight.get(key) as Promise<T>;
+    }
+    const promise = _apiFetchInner<T>(endpoint, options, _retry);
+    _inflight.set(key, promise);
+    promise.finally(() => _inflight.delete(key));
+    return promise;
+  }
+
+  return _apiFetchInner<T>(endpoint, options, _retry);
+}
+
+async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry = true): Promise<T> {
   let res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
