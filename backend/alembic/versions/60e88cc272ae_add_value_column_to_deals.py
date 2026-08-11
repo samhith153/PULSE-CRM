@@ -1,4 +1,4 @@
-"""add_value_column_to_deals
+﻿"""add_value_column_to_deals
 
 Revision ID: 60e88cc272ae
 Revises: 770749af2fcc

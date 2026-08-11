@@ -142,7 +142,7 @@ async def get_redesigned_dashboard(current_user: CurrentUser, db: DBSession) -> 
         "revenue breakdown, lead funnel, top sales reps, top companies, recent "
         "activities, and notification summary. **Admin role required.**"
     ),
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_admin_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
@@ -186,13 +186,18 @@ async def get_manager_dashboard(
     Scoped to the caller's organization_id; team = all users in the same org.
     """
     svc = DashboardService(db)
+
     data = await svc.manager_kpi(
         current_user.id,
         current_user.organization_id,
         period=period,
     )
-    return {"success": True, "message": "Manager KPIs retrieved successfully.", "data": data}
 
+    return {
+        "success": True,
+        "message": "Manager KPIs retrieved successfully.",
+        "data": data,
+    }
 @router.get(
     "/me",
     response_model=StandardResponse[SalesRepCommandDashboardResponse],

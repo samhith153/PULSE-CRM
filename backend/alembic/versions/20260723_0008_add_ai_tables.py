@@ -1,4 +1,4 @@
-"""add ai persistence tables
+﻿"""add ai persistence tables
 
 Revision ID: 20260723_0008
 Revises: 20260723_0007
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 
 revision = "20260723_0008"
-down_revision = None
+down_revision = "20260723_0007"
 branch_labels = None
 depends_on = None
 

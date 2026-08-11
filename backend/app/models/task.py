@@ -1,4 +1,5 @@
 """Task model for rep follow-up work."""
+
 from __future__ import annotations
 
 import uuid

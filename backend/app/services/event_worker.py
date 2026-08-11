@@ -12,7 +12,7 @@ from app.database.connection import AsyncSessionFactory
 from app.models.event_outbox import EventOutbox
 from app.repositories.event_repository import EventRepository
 from app.services.event_bus import EventBus, EventEnvelope, event_bus
-from app.services.event_consumers import EmailProjectionConsumer, LoggingConsumer, TimelineProjectionConsumer, parse_aggregate_uuid
+from app.services.event_consumers import EmailProjectionConsumer, LoggingConsumer, NotificationConsumer, TimelineProjectionConsumer, parse_aggregate_uuid
 
 
 class EventWorker:
@@ -49,6 +49,7 @@ class EventWorker:
         envelope = self._to_envelope(event)
         consumers = [
             TimelineProjectionConsumer(db),
+            NotificationConsumer(db),
             EmailProjectionConsumer(),
             LoggingConsumer(),
         ]
@@ -75,4 +76,5 @@ class EventWorker:
             source=event.source,
             status=event.processing_status,
             created_at=event.created_at or event.occurred_at or datetime.utcnow(),
+            actor_id=event.actor_id,
         )

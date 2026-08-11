@@ -36,15 +36,15 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
   return (
     <div className="fixed inset-0 bg-ink/40 z-50 flex items-center justify-center p-4 modal-backdrop-animate">
       <div 
-        className="bg-card border border-border rounded-xl w-full max-w-md overflow-hidden modal-content-animate"
+        className="bg-surface-1 border border-border-default rounded-xl w-full max-w-md overflow-hidden modal-content-animate"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
-          <h3 className="font-bold text-foreground text-sm">Create Custom Report</h3>
+        <div className="px-5 py-3.5 border-b border-border-default flex justify-between items-center bg-surface-2">
+          <h3 className="font-bold text-text-primary text-sm">Create Custom Report</h3>
           <button 
             onClick={onClose} 
-            className="text-muted-foreground hover:text-muted-foreground p-1 rounded-md hover:bg-slate-150 transition duration-150 cursor-pointer"
+            className="text-text-muted hover:text-text-muted p-1 rounded-md hover:bg-slate-150 transition duration-150 cursor-pointer"
             aria-label="Close modal"
           >
             <X className="h-4.5 w-4.5" strokeWidth={1.75} />
@@ -54,7 +54,7 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           <div>
-            <label className="block text-[10px] font-bold text-foreground uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-bold text-text-primary uppercase tracking-wider mb-1.5">
               Report Title
             </label>
             <input
@@ -63,19 +63,19 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
               placeholder="e.g., Sales Performance Q3"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-border rounded-lg text-xs text-muted-foreground placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent transition duration-200"
+              className="w-full px-3 py-2 border border-border-default rounded-lg text-xs text-text-muted placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent transition duration-200"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[10px] font-bold text-foreground uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-bold text-text-primary uppercase tracking-wider mb-1.5">
                 Metric Category
               </label>
               <select
                 value={metric}
                 onChange={(e) => setMetric(e.target.value)}
-                className="w-full px-3 py-2 border border-border bg-card rounded-lg text-xs text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent cursor-pointer"
+                className="w-full px-3 py-2 border border-border-default bg-surface-1 rounded-lg text-xs text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent cursor-pointer"
               >
                 <option>Sales</option>
                 <option>Pipeline</option>
@@ -85,13 +85,13 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-foreground uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-bold text-text-primary uppercase tracking-wider mb-1.5">
                 Time Range
               </label>
               <select
                 value={range}
                 onChange={(e) => setRange(e.target.value)}
-                className="w-full px-3 py-2 border border-border bg-card rounded-lg text-xs text-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent cursor-pointer"
+                className="w-full px-3 py-2 border border-border-default bg-surface-1 rounded-lg text-xs text-text-muted focus:outline-none focus:ring-2 focus:ring-brand-accent/15 focus:border-brand-accent cursor-pointer"
               >
                 <option>This Week</option>
                 <option>This Month</option>
@@ -102,7 +102,7 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-foreground uppercase tracking-wider mb-1.5">
+            <label className="block text-[10px] font-bold text-text-primary uppercase tracking-wider mb-1.5">
               Visualization Type
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -115,8 +115,8 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
                     onClick={() => setChartType(type)}
                     className={`py-1.5 px-1 text-center rounded-lg text-[10px] font-bold border transition duration-150 cursor-pointer ${
                       isSelected 
-                        ? 'border-brand-accent bg-brand-sidebar-hover/20 text-brand-purple ' 
-                        : 'border-border hover:border-border text-muted-foreground/75'
+                        ? 'border-brand-accent bg-brand-sidebar-hover/20 text-accent-color ' 
+                        : 'border-border-default hover:border-border-default text-text-muted/75'
                     }`}
                   >
                     {type}
@@ -127,17 +127,17 @@ export default function ReportBuilderModal({ isOpen, onClose, onSave }: ReportBu
           </div>
 
           {/* Action buttons with elegant heights, padding, and accent colors */}
-          <div className="pt-4 border-t border-border flex space-x-3 justify-end">
+          <div className="pt-4 border-t border-border-default flex space-x-3 justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground/75 hover:bg-secondary transition duration-150 cursor-pointer"
+              className="px-4 py-1.5 border border-border-default rounded-lg text-xs font-bold text-text-muted/75 hover:bg-surface-2 transition duration-150 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="inline-flex items-center space-x-1 px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-bold  hover: transition duration-150 cursor-pointer"
+              className="inline-flex items-center space-x-1 px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-bold  hover: transition duration-150 cursor-pointer"
             >
               <Check className="h-3.5 w-3.5" strokeWidth={2} />
               <span>Generate Report</span>

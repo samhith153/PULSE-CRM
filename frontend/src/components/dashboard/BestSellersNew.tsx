@@ -62,7 +62,7 @@ const STAGE_CONFIG: Record<
 
   lost: {
     label: 'Lost',
-    className: 'bg-rose-soft',
+    className: 'bg-status-danger/10',
   },
 };
 

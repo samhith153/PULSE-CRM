@@ -22,7 +22,7 @@ import {
 } from '@/utils/api';
 import { cn } from '@/utils/cn';
 
-const COLORS = ['var(--lime)', 'var(--brand-soft)', 'var(--brand)', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#10b981'];
+const COLORS = ['var(--lime)', 'var(--brand-soft)', 'var(--brand)', 'var(--status-warning-text)', 'var(--chart-1)', 'var(--status-danger-text)', 'var(--chart-5)', 'var(--status-success-text)'];
 
 function fmt(n: number) {
   if (n >= 1e7) return `${(n / 1e7).toFixed(1)}Cr`;
@@ -43,7 +43,7 @@ function Delta({ value, negative }: { value: string; negative?: boolean }) {
     <span
       className={cn(
         'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold',
-        negative ? 'bg-rose-soft text-rose-foreground' : 'bg-mint text-mint-foreground',
+        negative ? 'bg-status-danger/10 text-rose-foreground' : 'bg-mint text-mint-foreground',
       )}
     >
       <Icon className="size-3" />
@@ -98,7 +98,7 @@ export default function ManagerReportsView() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
-        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+        <Loader2 className="h-8 w-8 text-accent-color animate-spin" />
       </div>
     );
   }
@@ -118,7 +118,7 @@ export default function ManagerReportsView() {
       <div className="flex flex-wrap items-end gap-3 mb-6">
         <div>
           <h1 className="text-[30px] font-extrabold tracking-tight">Reports</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-text-muted">
             Manager performance overview backed by live data.
           </p>
         </div>
@@ -126,7 +126,7 @@ export default function ManagerReportsView() {
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as any)}
-            className="rounded-full bg-card px-4 py-2.5 text-[13px] font-semibold shadow-[0_1px_3px_rgba(20,20,40,0.08)] border-0"
+            className="rounded-full bg-surface-1 px-4 py-2.5 text-[13px] font-semibold shadow-[0_1px_3px_rgba(20,20,40,0.08)] border-0"
           >
             <option value="week">This Week</option>
             <option value="month">This Month</option>
@@ -140,11 +140,11 @@ export default function ManagerReportsView() {
         {/* ── KPI Cards ────────────────────────────────────────────── */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {/* Total Revenue — highlighted */}
-          <div className="card-surface overflow-hidden bg-brand text-primary-foreground relative p-6 pt-8">
+          <div className="card-surface overflow-hidden bg-brand text-surface-0 relative p-6 pt-8">
             <span className="shimmer" />
             <span className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10" />
             <span className="pointer-events-none absolute -bottom-24 -left-8 size-56 rounded-full bg-white/5" />
-            <p className="relative text-[15px] font-semibold text-primary-foreground/90">Total Revenue</p>
+            <p className="relative text-[15px] font-semibold text-surface-0/90">Total Revenue</p>
             <div className="relative mt-8 flex items-center gap-2">
               <p className="text-[26px] font-extrabold tracking-tight tabular-nums">{fmtCurrency(totalRevenue)}</p>
               <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[11px] font-semibold">
@@ -152,7 +152,7 @@ export default function ManagerReportsView() {
                 {fmtPct(teamWinRate)} win rate
               </span>
             </div>
-            <p className="relative mt-3 text-xs text-primary-foreground/75">
+            <p className="relative mt-3 text-xs text-surface-0/75">
               {pipelineDeals} deals in pipeline
             </p>
           </div>
@@ -164,7 +164,7 @@ export default function ManagerReportsView() {
               <p className="text-[26px] font-extrabold tracking-tight tabular-nums">{fmtCurrency(pipelineValue)}</p>
               <Delta value={`${pipelineDeals} deals`} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 text-xs text-text-muted">
               Across all stages
             </p>
           </div>
@@ -176,7 +176,7 @@ export default function ManagerReportsView() {
               <p className="text-[26px] font-extrabold tracking-tight tabular-nums">{totalLeads.toLocaleString('en-IN')}</p>
               <Delta value={`${fmtPct(leadConversion)} conversion`} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 text-xs text-text-muted">
               Overall conversion rate
             </p>
           </div>
@@ -188,7 +188,7 @@ export default function ManagerReportsView() {
               <p className="text-[26px] font-extrabold tracking-tight tabular-nums">{activityTotal}</p>
               <Delta value={`${completedTasks} completed`} />
             </div>
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-3 text-xs text-text-muted">
               Activities logged
             </p>
           </div>
@@ -198,7 +198,7 @@ export default function ManagerReportsView() {
         <section className="card-surface p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
-              <TrendingUp className="size-4.5 text-brand-purple" />
+              <TrendingUp className="size-4.5 text-accent-color" />
             </div>
             <h2 className="text-[19px] font-bold tracking-tight">Sales Performance</h2>
           </div>
@@ -257,7 +257,7 @@ export default function ManagerReportsView() {
                       className="h-full rounded-full transition-all"
                       style={{
                         width: `${Math.min(Number(q.achievement_pct) || 0, 100)}%`,
-                        background: Number(q.achievement_pct) >= 100 ? '#10b981' : Number(q.achievement_pct) >= 70 ? '#f59e0b' : '#ef4444',
+                        background: Number(q.achievement_pct) >= 100 ? 'var(--status-success-text)' : Number(q.achievement_pct) >= 70 ? 'var(--status-warning-text)' : 'var(--status-danger-text)',
                       }}
                     />
                     <span className="absolute inset-0 flex items-center justify-center text-[11px] font-bold">
@@ -267,7 +267,7 @@ export default function ManagerReportsView() {
                 </div>
               ))}
               {(!salesPerf?.quota_attainment || salesPerf.quota_attainment.length === 0) && (
-                <p className="text-sm text-muted-foreground">No quota data available</p>
+                <p className="text-sm text-text-muted">No quota data available</p>
               )}
             </div>
           </div>
@@ -277,7 +277,7 @@ export default function ManagerReportsView() {
         <section className="card-surface p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
-              <BarChart3 className="size-4.5 text-brand-purple" />
+              <BarChart3 className="size-4.5 text-accent-color" />
             </div>
             <h2 className="text-[19px] font-bold tracking-tight">Pipeline Analytics</h2>
           </div>
@@ -331,7 +331,7 @@ export default function ManagerReportsView() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-muted text-xs text-muted-foreground">
+                    <tr className="bg-muted text-xs text-text-muted">
                       <th className="rounded-l-xl px-4 py-3 text-left font-medium">From</th>
                       <th className="px-4 py-3 text-left font-medium">To</th>
                       <th className="px-4 py-3 text-center font-medium">Count</th>
@@ -340,7 +340,7 @@ export default function ManagerReportsView() {
                   </thead>
                   <tbody>
                     {pipeline.stage_conversion.slice(0, 6).map((c, i) => (
-                      <tr key={i} className="border-b border-border last:border-0">
+                      <tr key={i} className="border-b border-border-default last:border-0">
                         <td className="px-4 py-2.5">{c.from_stage}</td>
                         <td className="px-4 py-2.5">{c.to_stage}</td>
                         <td className="px-4 py-2.5 text-center font-semibold">{c.count}</td>
@@ -358,7 +358,7 @@ export default function ManagerReportsView() {
         <section className="card-surface p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
-              <Users className="size-4.5 text-brand-purple" />
+              <Users className="size-4.5 text-accent-color" />
             </div>
             <h2 className="text-[19px] font-bold tracking-tight">Team Performance</h2>
           </div>
@@ -367,7 +367,7 @@ export default function ManagerReportsView() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-muted text-xs text-muted-foreground">
+                <tr className="bg-muted text-xs text-text-muted">
                   <th className="rounded-l-xl px-4 py-3 text-left font-medium">Rank</th>
                   <th className="px-4 py-3 text-left font-medium">Rep</th>
                   <th className="px-4 py-3 text-right font-medium">Revenue</th>
@@ -378,9 +378,9 @@ export default function ManagerReportsView() {
               </thead>
               <tbody>
                 {teamPerf?.leaderboard?.map(entry => (
-                  <tr key={entry.rep_id} className="border-b border-border last:border-0">
+                  <tr key={entry.rep_id} className="border-b border-border-default last:border-0">
                     <td className="px-4 py-3">
-                      <span className="grid size-7 place-items-center rounded-full bg-brand-soft/20 text-[11px] font-bold text-brand-purple">
+                      <span className="grid size-7 place-items-center rounded-full bg-brand-soft/20 text-[11px] font-bold text-accent-color">
                         {entry.rank}
                       </span>
                     </td>
@@ -389,14 +389,14 @@ export default function ManagerReportsView() {
                     <td className="px-4 py-3 text-center">{entry.deals_won}</td>
                     <td className="px-4 py-3 text-center">{fmtPct(Number(entry.win_rate))}</td>
                     <td className="px-4 py-3 text-right">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${Number(entry.quota_pct) >= 100 ? 'bg-mint text-mint-foreground' : Number(entry.quota_pct) >= 70 ? 'bg-amber-100 text-amber-700' : 'bg-rose-soft text-rose-foreground'}`}>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${Number(entry.quota_pct) >= 100 ? 'bg-mint text-mint-foreground' : Number(entry.quota_pct) >= 70 ? 'bg-status-warning/10 text-status-warning' : 'bg-status-danger/10 text-rose-foreground'}`}>
                         {fmtPct(Number(entry.quota_pct))}
                       </span>
                     </td>
                   </tr>
                 ))}
                 {(!teamPerf?.leaderboard || teamPerf.leaderboard.length === 0) && (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No team data available</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-text-muted">No team data available</td></tr>
                 )}
               </tbody>
             </table>
@@ -407,7 +407,7 @@ export default function ManagerReportsView() {
             <div className="mt-5 grid grid-cols-2 gap-4">
               {teamPerf.performance_vs_prior.map(p => (
                 <div key={p.metric} className="rounded-xl bg-muted/50 p-4">
-                  <p className="text-xs text-muted-foreground">{p.metric}</p>
+                  <p className="text-xs text-text-muted">{p.metric}</p>
                   <p className="mt-1 text-[22px] font-extrabold">{fmt(Number(p.current))}</p>
                   <Delta value={`${fmtPct(Number(p.change_pct))} vs prior`} negative={Number(p.change_pct) < 0} />
                 </div>
@@ -420,7 +420,7 @@ export default function ManagerReportsView() {
         <section className="card-surface p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
-              <Activity className="size-4.5 text-brand-purple" />
+              <Activity className="size-4.5 text-accent-color" />
             </div>
             <h2 className="text-[19px] font-bold tracking-tight">Activity Analytics</h2>
           </div>
@@ -435,7 +435,7 @@ export default function ManagerReportsView() {
             ].map(a => (
               <div key={a.label} className="rounded-xl bg-muted/50 p-3 text-center">
                 <p className="text-[22px] font-extrabold">{a.value}</p>
-                <p className="text-xs text-muted-foreground">{a.label}</p>
+                <p className="text-xs text-text-muted">{a.label}</p>
               </div>
             ))}
           </div>
@@ -451,10 +451,10 @@ export default function ManagerReportsView() {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="calls" fill="#10b981" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="emails" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="meetings" fill="#f59e0b" radius={[2, 2, 0, 0]} />
-                <Bar dataKey="tasks" fill="#06b6d4" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="calls" fill="var(--status-success-text)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="emails" fill="var(--chart-1)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="meetings" fill="var(--status-warning-text)" radius={[2, 2, 0, 0]} />
+                <Bar dataKey="tasks" fill="var(--chart-5)" radius={[2, 2, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -466,13 +466,13 @@ export default function ManagerReportsView() {
                 <p className="text-[22px] font-extrabold text-mint-foreground">{activity.completed_vs_overdue.completed}</p>
                 <p className="text-xs text-mint-foreground/80">Completed</p>
               </div>
-              <div className="rounded-xl bg-rose-soft p-4 text-center">
+              <div className="rounded-xl bg-status-danger/10 p-4 text-center">
                 <p className="text-[22px] font-extrabold text-rose-foreground">{activity.completed_vs_overdue.overdue}</p>
                 <p className="text-xs text-rose-foreground/80">Overdue</p>
               </div>
               <div className="rounded-xl bg-muted/50 p-4 text-center">
                 <p className="text-[22px] font-extrabold">{activity.completed_vs_overdue.pending}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-xs text-text-muted">Pending</p>
               </div>
             </div>
           )}
@@ -482,7 +482,7 @@ export default function ManagerReportsView() {
         <section className="card-surface p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
-              <Zap className="size-4.5 text-brand-purple" />
+              <Zap className="size-4.5 text-accent-color" />
             </div>
             <h2 className="text-[19px] font-bold tracking-tight">Lead Analytics</h2>
           </div>
@@ -539,7 +539,7 @@ export default function ManagerReportsView() {
                 {leads.lead_aging.map(a => (
                   <div key={a.bucket} className="flex-1 rounded-xl bg-muted/50 p-3 text-center">
                     <p className="text-[20px] font-extrabold">{a.count}</p>
-                    <p className="text-xs text-muted-foreground">{a.bucket}</p>
+                    <p className="text-xs text-text-muted">{a.bucket}</p>
                   </div>
                 ))}
               </div>
@@ -551,7 +551,7 @@ export default function ManagerReportsView() {
         <section className="card-surface p-6">
           <div className="flex items-center gap-3 mb-5">
             <div className="grid size-9 place-items-center rounded-xl bg-brand-soft/20">
-              <AlertTriangle className="size-4.5 text-brand-purple" />
+              <AlertTriangle className="size-4.5 text-accent-color" />
             </div>
             <h2 className="text-[19px] font-bold tracking-tight">Deal Analytics</h2>
           </div>
@@ -560,22 +560,22 @@ export default function ManagerReportsView() {
             {/* Deal KPIs */}
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs text-muted-foreground">Won Deals</p>
+                <p className="text-xs text-text-muted">Won Deals</p>
                 <p className="mt-1 text-[22px] font-extrabold tracking-tight">{deals?.total_won || 0}</p>
                 <Delta value={fmtCurrency(deals?.total_won_value || 0)} />
               </div>
               <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs text-muted-foreground">Lost Deals</p>
+                <p className="text-xs text-text-muted">Lost Deals</p>
                 <p className="mt-1 text-[22px] font-extrabold tracking-tight">{deals?.total_lost || 0}</p>
                 <Delta value={fmtCurrency(deals?.total_lost_value || 0)} negative />
               </div>
               <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs text-muted-foreground">Avg Deal Size</p>
+                <p className="text-xs text-text-muted">Avg Deal Size</p>
                 <p className="mt-1 text-[22px] font-extrabold tracking-tight">{fmtCurrency(deals?.avg_deal_size?.current || 0)}</p>
                 <Delta value={`${fmtPct(deals?.avg_deal_size?.change_pct || 0)} change`} negative={Number(deals?.avg_deal_size?.change_pct || 0) < 0} />
               </div>
               <div className="rounded-xl bg-muted/50 p-4">
-                <p className="text-xs text-muted-foreground">Closing Soon</p>
+                <p className="text-xs text-text-muted">Closing Soon</p>
                 <p className="mt-1 text-[22px] font-extrabold tracking-tight">{deals?.deals_closing_soon?.length || 0}</p>
                 <Delta value="Next 14 days" />
               </div>
@@ -609,7 +609,7 @@ export default function ManagerReportsView() {
                   </ResponsiveContainer>
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No lost deal data</p>
+                <p className="text-sm text-text-muted">No lost deal data</p>
               )}
             </div>
           </div>
@@ -621,7 +621,7 @@ export default function ManagerReportsView() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-muted text-xs text-muted-foreground">
+                    <tr className="bg-muted text-xs text-text-muted">
                       <th className="rounded-l-xl px-4 py-3 text-left font-medium">Deal</th>
                       <th className="px-4 py-3 text-left font-medium">Owner</th>
                       <th className="px-4 py-3 text-left font-medium">Stage</th>
@@ -631,12 +631,12 @@ export default function ManagerReportsView() {
                   </thead>
                   <tbody>
                     {deals.at_risk_deals.slice(0, 5).map(d => (
-                      <tr key={d.deal_id} className="border-b border-border last:border-0">
+                      <tr key={d.deal_id} className="border-b border-border-default last:border-0">
                         <td className="px-4 py-2.5 font-semibold">{d.deal_name}</td>
                         <td className="px-4 py-2.5">{d.owner_name}</td>
                         <td className="px-4 py-2.5">{d.stage}</td>
                         <td className="px-4 py-2.5 text-right font-semibold">{fmtCurrency(Number(d.value))}</td>
-                        <td className="px-4 py-2.5 text-rose-600 text-xs font-semibold">{d.risk_reason}</td>
+                        <td className="px-4 py-2.5 text-status-danger-text text-xs font-semibold">{d.risk_reason}</td>
                       </tr>
                     ))}
                   </tbody>

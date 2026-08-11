@@ -37,10 +37,10 @@ const ACTIVITY_TO_EVENT_TYPE: Record<string, EventItem['type']> = {
 };
 
 const TYPE_BADGE: Record<EventItem['type'], string> = {
-  meeting: 'bg-brand-purple/10 text-purple-750 border border-purple-100',
-  call: 'bg-brand-cyan/15 text-emerald-750 border border-brand-cyan/20',
-  task: 'bg-amber-100 text-amber-900 border border-amber-300 shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
-  followup: 'bg-blue-50 text-blue-750 border border-blue-100',
+  meeting: 'bg-accent-color/10 text-accent-color border border-accent-color/20',
+  call: 'bg-accent-color/15 text-status-success-text border border-accent-color/20',
+  task: 'bg-status-warning-bg text-status-warning-text border border-status-warning-text/30 shadow-[0_1px_2px_rgba(0,0,0,0.05)]',
+  followup: 'bg-status-info-text/10 text-status-info-text border border-status-info-text/20',
 };
 
 /**
@@ -383,18 +383,18 @@ export default function CalendarView() {
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
       <div className="col-span-12 lg:col-span-8 space-y-5">
-        <div className="bg-card border border-border rounded-2xl p-5">
+        <div className="bg-surface-1 border border-border-default rounded-2xl p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div>
-              <h2 className="font-sans text-2xl text-foreground font-bold">
+              <h2 className="font-sans text-2xl text-text-primary font-bold">
                 Calendar Schedule
               </h2>
 
-              <p className="text-[11px] text-muted-foreground mt-0.5 font-bold">
+              <p className="text-[11px] text-text-muted mt-0.5 font-bold">
                 Coordinate outbound calls, video demos, priority tasks, and team follow-ups.
               </p>
 
-              <p className="text-[11px] text-brand-purple font-bold mt-2">
+              <p className="text-[11px] text-accent-color font-bold mt-2">
                 {activeView === 'month'
                   ? monthTitle
                   : activeView === 'week'
@@ -412,7 +412,7 @@ export default function CalendarView() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={goToPrevious}
-                  className="p-1.5 border border-border rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="p-1.5 border border-border-default rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary cursor-pointer"
                   title="Previous"
                   type="button"
                 >
@@ -421,10 +421,10 @@ export default function CalendarView() {
 
                 <button
                   onClick={goToToday}
-                  className={`px-2.5 py-1.5 border border-border rounded-lg text-[10px] font-bold cursor-pointer ${
+                  className={`px-2.5 py-1.5 border border-border-default rounded-lg text-[10px] font-bold cursor-pointer ${
                     isShowingToday
-                      ? 'bg-brand-purple text-primary-foreground border-brand-purple'
-                      : 'hover:bg-secondary text-foreground'
+                      ? 'bg-accent-color text-primary-foreground border-accent-color'
+                      : 'hover:bg-surface-2 text-text-primary'
                   }`}
                   type="button"
                 >
@@ -433,7 +433,7 @@ export default function CalendarView() {
 
                 <button
                   onClick={goToNext}
-                  className="p-1.5 border border-border rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                  className="p-1.5 border border-border-default rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary cursor-pointer"
                   title="Next"
                   type="button"
                 >
@@ -441,7 +441,7 @@ export default function CalendarView() {
                 </button>
               </div>
 
-              <div className="flex space-x-1 p-1 bg-secondary border border-border rounded-xl">
+              <div className="flex space-x-1 p-1 bg-surface-2 border border-border-default rounded-xl">
                 {['day', 'week', 'month'].map(view => (
                   <button
                     key={view}
@@ -450,8 +450,8 @@ export default function CalendarView() {
                     }
                     className={`py-1 px-3 rounded-lg font-semibold text-[10px] uppercase transition duration-200 cursor-pointer ${
                       activeView === view
-                        ? 'bg-brand-purple text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
+                        ? 'bg-accent-color text-primary-foreground'
+                        : 'text-text-muted hover:text-text-primary hover:bg-surface-2'
                     }`}
                     type="button"
                   >
@@ -462,7 +462,7 @@ export default function CalendarView() {
 
               <button
                 onClick={() => setIsAddOpen(true)}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
                 type="button"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -472,16 +472,16 @@ export default function CalendarView() {
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-24 text-muted-foreground text-xs font-semibold border-t border-border">
+            <div className="flex items-center justify-center py-24 text-text-muted text-xs font-semibold border-t border-border-default">
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               Loading activities…
             </div>
           ) : error ? (
-            <div className="py-24 text-center text-destructive text-xs font-semibold border-t border-border">
+            <div className="py-24 text-center text-status-danger text-xs font-semibold border-t border-border-default">
               {error}
             </div>
           ) : activeView === 'week' ? (
-            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-foreground border-t border-border pt-4">
+            <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold text-text-primary border-t border-border-default pt-4">
               {weekDays.map((slot, idx) => {
                 const dayEvents = events.filter(
                   event => event.date === slot.iso
@@ -492,8 +492,8 @@ export default function CalendarView() {
                     <div
                       className={`p-2.5 rounded-lg border ${
                         slot.active
-                          ? 'bg-brand-purple/10 border-brand-purple text-brand-purple'
-                          : 'bg-secondary border-border'
+                          ? 'bg-accent-color/10 border-accent-color text-accent-color'
+                          : 'bg-surface-2 border-border-default'
                       }`}
                     >
                       <p className="text-[10px] uppercase font-semibold">
@@ -505,9 +505,9 @@ export default function CalendarView() {
                       </p>
                     </div>
 
-                    <div className="space-y-2.5 min-h-[300px] bg-secondary/20 rounded-lg p-1.5 border border-border">
+                    <div className="space-y-2.5 min-h-[300px] bg-surface-2/20 rounded-lg p-1.5 border border-border-default">
                       {dayEvents.length === 0 ? (
-                        <div className="text-[9px] text-muted-foreground/40 py-5">
+                        <div className="text-[9px] text-text-muted/40 py-5">
                           —
                         </div>
                       ) : (
@@ -518,7 +518,7 @@ export default function CalendarView() {
                             onClick={() => setSelectedEventId(evt.id)}
                             className={`w-full p-2 rounded-lg text-[10px] text-left font-bold cursor-pointer border transition-all hover:-translate-y-0.5 hover:shadow-sm ${
                               selectedEventId === evt.id
-                                ? 'ring-2 ring-brand-purple/40 shadow-sm'
+                                ? 'ring-2 ring-accent-color/40 shadow-sm'
                                 : ''
                             } ${getBadgeColor(evt.type)}`}
                           >
@@ -526,7 +526,7 @@ export default function CalendarView() {
                               {evt.title}
                             </p>
 
-                            <p className="text-[9px] text-muted-foreground font-bold mt-1 tabular-nums">
+                            <p className="text-[9px] text-text-muted font-bold mt-1 tabular-nums">
                               {evt.time}
                             </p>
                           </button>
@@ -538,8 +538,8 @@ export default function CalendarView() {
               })}
             </div>
           ) : activeView === 'month' ? (
-            <div className="border-t border-border pt-4">
-              <div className="grid grid-cols-7 border-l border-t border-border">
+            <div className="border-t border-border-default pt-4">
+              <div className="grid grid-cols-7 border-l border-t border-border-default">
                 {[
                   'MON',
                   'TUE',
@@ -551,7 +551,7 @@ export default function CalendarView() {
                 ].map(day => (
                   <div
                     key={day}
-                    className="py-2 text-center text-[10px] font-bold text-muted-foreground border-r border-b border-border bg-secondary/40"
+                    className="py-2 text-center text-[10px] font-bold text-text-muted border-r border-b border-border-default bg-surface-2/40"
                   >
                     {day}
                   </div>
@@ -565,21 +565,21 @@ export default function CalendarView() {
                   return (
                     <div
                       key={index}
-                      className={`min-h-[120px] p-2 border-r border-b border-border ${
+                      className={`min-h-[120px] p-2 border-r border-b border-border-default ${
                         !day.isCurrentMonth
-                          ? 'bg-secondary/20'
-                          : 'bg-card'
+                          ? 'bg-surface-2/20'
+                          : 'bg-surface-1'
                       } ${
                         day.isToday
-                          ? 'ring-2 ring-inset ring-brand-purple/40'
+                          ? 'ring-2 ring-inset ring-accent-color/40'
                           : ''
                       }`}
                     >
                       <div
                         className={`text-[11px] font-bold mb-2 ${
                           day.isCurrentMonth
-                            ? 'text-foreground'
-                            : 'text-muted-foreground/40'
+                            ? 'text-text-primary'
+                            : 'text-text-muted/40'
                         }`}
                       >
                         {day.date.getDate()}
@@ -593,7 +593,7 @@ export default function CalendarView() {
                             onClick={() => setSelectedEventId(evt.id)}
                             className={`w-full text-left px-1.5 py-1 rounded text-[9px] font-bold truncate cursor-pointer border transition-all hover:shadow-sm ${
                               selectedEventId === evt.id
-                                ? 'ring-2 ring-brand-purple/40'
+                                ? 'ring-2 ring-accent-color/40'
                                 : ''
                             } ${getBadgeColor(evt.type)}`}
                             title={`${evt.title} — ${evt.time}`}
@@ -603,7 +603,7 @@ export default function CalendarView() {
                         ))}
 
                         {dayEvents.length > 4 && (
-                          <div className="text-[9px] text-brand-purple font-bold px-1">
+                          <div className="text-[9px] text-accent-color font-bold px-1">
                             +{dayEvents.length - 4} more
                           </div>
                         )}
@@ -614,9 +614,9 @@ export default function CalendarView() {
               </div>
             </div>
           ) : (
-            <div className="border-t border-border pt-4">
+            <div className="border-t border-border-default pt-4">
               <div className="mb-4">
-                <p className="text-sm font-bold text-foreground">
+                <p className="text-sm font-bold text-text-primary">
                   {currentDate.toLocaleDateString('en-US', {
                     weekday: 'long',
                     month: 'long',
@@ -625,7 +625,7 @@ export default function CalendarView() {
                   })}
                 </p>
 
-                <p className="text-[10px] text-muted-foreground font-semibold mt-1">
+                <p className="text-[10px] text-text-muted font-semibold mt-1">
                   {selectedDayEvents.length}{' '}
                   {selectedDayEvents.length === 1
                     ? 'activity'
@@ -634,14 +634,14 @@ export default function CalendarView() {
               </div>
 
               {selectedDayEvents.length === 0 ? (
-                <div className="py-20 text-center border border-border rounded-xl bg-secondary/20">
-                  <CalendarIcon className="h-8 w-8 mx-auto text-muted-foreground/40 mb-3" />
+                <div className="py-20 text-center border border-border-default rounded-xl bg-surface-2/20">
+                  <CalendarIcon className="h-8 w-8 mx-auto text-text-muted/40 mb-3" />
 
-                  <p className="text-xs font-bold text-foreground">
+                  <p className="text-xs font-bold text-text-primary">
                     No activities scheduled
                   </p>
 
-                  <p className="text-[10px] text-muted-foreground mt-1">
+                  <p className="text-[10px] text-text-muted mt-1">
                     There are no tasks, calls, or meetings scheduled for this day.
                   </p>
                 </div>
@@ -652,14 +652,14 @@ export default function CalendarView() {
                       key={evt.id}
                       type="button"
                       onClick={() => setSelectedEventId(evt.id)}
-                      className={`w-full text-left flex items-stretch border rounded-xl overflow-hidden bg-card hover:bg-secondary/20 transition-all cursor-pointer ${
+                      className={`w-full text-left flex items-stretch border rounded-xl overflow-hidden bg-surface-1 hover:bg-surface-2/20 transition-all cursor-pointer ${
                         selectedEventId === evt.id
-                          ? 'border-brand-purple ring-2 ring-brand-purple/20'
-                          : 'border-border'
+                          ? 'border-accent-color ring-2 ring-accent-color/20'
+                          : 'border-border-default'
                       }`}
                     >
-                      <div className="w-24 shrink-0 bg-secondary/40 flex items-center justify-center border-r border-border">
-                        <span className="text-xs font-bold text-foreground">
+                      <div className="w-24 shrink-0 bg-surface-2/40 flex items-center justify-center border-r border-border-default">
+                        <span className="text-xs font-bold text-text-primary">
                           {evt.time}
                         </span>
                       </div>
@@ -675,17 +675,17 @@ export default function CalendarView() {
                           </span>
                         </div>
 
-                        <h4 className="text-sm font-bold text-foreground">
+                        <h4 className="text-sm font-bold text-text-primary">
                           {evt.title}
                         </h4>
 
                         {evt.details && (
-                          <p className="text-[10px] text-muted-foreground mt-1">
+                          <p className="text-[10px] text-text-muted mt-1">
                             {evt.details}
                           </p>
                         )}
 
-                        <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-3 mt-2 text-[10px] text-text-muted">
                           <span className="flex items-center gap-1">
                             <Users className="h-3 w-3" />
                             {evt.attendees}
@@ -703,17 +703,17 @@ export default function CalendarView() {
         {isAddOpen && (
           <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
             <div
-              className="bg-card border border-border rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+              className="bg-surface-1 border border-border-default rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
               onClick={e => e.stopPropagation()}
             >
-              <div className="px-5 py-3.5 border-b border-border flex justify-between items-center bg-secondary">
-                <h3 className="font-bold text-foreground text-sm">
+              <div className="px-5 py-3.5 border-b border-border-default flex justify-between items-center bg-surface-2">
+                <h3 className="font-bold text-text-primary text-sm">
                   Add Calendar Event
                 </h3>
 
                 <button
                   onClick={() => setIsAddOpen(false)}
-                  className="text-muted-foreground hover:text-foreground p-1 cursor-pointer"
+                  className="text-text-muted hover:text-text-primary p-1 cursor-pointer"
                   type="button"
                 >
                   <X className="h-4.5 w-4.5" />
@@ -722,7 +722,7 @@ export default function CalendarView() {
 
               <form onSubmit={handleAdd} className="p-5 space-y-4">
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                  <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">
                     Event Title
                   </label>
 
@@ -733,13 +733,13 @@ export default function CalendarView() {
                     onChange={e =>
                       setForm({ ...form, title: e.target.value })
                     }
-                    className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                    className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs text-text-primary focus:outline-none"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                    <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">
                       Event Type
                     </label>
 
@@ -751,7 +751,7 @@ export default function CalendarView() {
                           type: e.target.value as EventItem['type'],
                         })
                       }
-                      className="w-full px-2 py-1.5 border border-border bg-card text-foreground rounded-lg text-xs cursor-pointer"
+                      className="w-full px-2 py-1.5 border border-border-default bg-surface-1 text-text-primary rounded-lg text-xs cursor-pointer"
                     >
                       <option value="meeting">meeting</option>
                       <option value="call">call</option>
@@ -761,7 +761,7 @@ export default function CalendarView() {
                   </div>
 
                   <div>
-                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                    <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">
                       Attendees
                     </label>
 
@@ -773,14 +773,14 @@ export default function CalendarView() {
                       onChange={e =>
                         setForm({ ...form, attendees: e.target.value })
                       }
-                      className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                      className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs text-text-primary focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                    <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">
                       Date
                     </label>
 
@@ -791,12 +791,12 @@ export default function CalendarView() {
                       onChange={e =>
                         setForm({ ...form, date: e.target.value })
                       }
-                      className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none cursor-pointer"
+                      className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs text-text-primary focus:outline-none cursor-pointer"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                    <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">
                       Time
                     </label>
 
@@ -808,13 +808,13 @@ export default function CalendarView() {
                       onChange={e =>
                         setForm({ ...form, time: e.target.value })
                       }
-                      className="w-full px-3 py-1.5 border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                      className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs text-text-primary focus:outline-none"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1">
+                  <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">
                     Agenda / Description
                   </label>
 
@@ -825,22 +825,22 @@ export default function CalendarView() {
                     onChange={e =>
                       setForm({ ...form, details: e.target.value })
                     }
-                    className="w-full p-2 border border-border rounded-lg text-xs text-foreground focus:outline-none min-h-[60px]"
+                    className="w-full p-2 border border-border-default rounded-lg text-xs text-text-primary focus:outline-none min-h-[60px]"
                   />
                 </div>
 
-                <div className="pt-3 border-t border-border flex justify-end space-x-2.5">
+                <div className="pt-3 border-t border-border-default flex justify-end space-x-2.5">
                   <button
                     type="button"
                     onClick={() => setIsAddOpen(false)}
-                    className="px-4 py-1.5 border border-border rounded-lg text-xs font-bold text-muted-foreground hover:bg-secondary cursor-pointer"
+                    className="px-4 py-1.5 border border-border-default rounded-lg text-xs font-bold text-text-muted hover:bg-surface-2 cursor-pointer"
                   >
                     Cancel
                   </button>
 
                   <button
                     type="submit"
-                    className="px-4 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer"
+                    className="px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-primary-foreground rounded-lg text-xs font-semibold cursor-pointer"
                   >
                     Save Event
                   </button>
@@ -852,13 +852,13 @@ export default function CalendarView() {
       </div>
 
       <aside className="col-span-12 lg:col-span-4">
-        <div className="bg-card border border-border rounded-2xl p-5 lg:sticky lg:top-5">
+        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 lg:sticky lg:top-5">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-bold text-foreground">
+              <h3 className="text-sm font-bold text-text-primary">
                 Agenda Details
               </h3>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p className="text-[10px] text-text-muted mt-0.5">
                 Select an activity to view its details.
               </p>
             </div>
@@ -867,7 +867,7 @@ export default function CalendarView() {
               <button
                 type="button"
                 onClick={() => setSelectedEventId(null)}
-                className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer"
+                className="p-1.5 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-primary cursor-pointer"
                 title="Clear selection"
               >
                 <X className="h-3.5 w-3.5" />
@@ -888,25 +888,25 @@ export default function CalendarView() {
                   </span>
 
                   {selectedEvent.status && (
-                    <span className="text-[9px] font-bold uppercase text-foreground/70">
+                    <span className="text-[9px] font-bold uppercase text-text-primary/70">
                       {selectedEvent.status}
                     </span>
                   )}
                 </div>
 
-                <h4 className="text-sm font-bold text-foreground leading-snug">
+                <h4 className="text-sm font-bold text-text-primary leading-snug">
                   {selectedEvent.title}
                 </h4>
               </div>
 
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <CalendarIcon className="h-4 w-4 text-brand-purple mt-0.5 shrink-0" />
+                  <CalendarIcon className="h-4 w-4 text-accent-color mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-[9px] uppercase tracking-wide font-bold text-muted-foreground">
+                    <p className="text-[9px] uppercase tracking-wide font-bold text-text-muted">
                       Due date
                     </p>
-                    <p className="text-xs font-semibold text-foreground mt-0.5">
+                    <p className="text-xs font-semibold text-text-primary mt-0.5">
                       {new Date(`${selectedEvent.date}T12:00:00`).toLocaleDateString(
                         'en-US',
                         {
@@ -918,7 +918,7 @@ export default function CalendarView() {
                       )}
                     </p>
                     {selectedEvent.time !== 'No time' && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                      <p className="text-[10px] text-text-muted mt-0.5">
                         {selectedEvent.time}
                       </p>
                     )}
@@ -926,12 +926,12 @@ export default function CalendarView() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Users className="h-4 w-4 text-brand-purple mt-0.5 shrink-0" />
+                  <Users className="h-4 w-4 text-accent-color mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-[9px] uppercase tracking-wide font-bold text-muted-foreground">
+                    <p className="text-[9px] uppercase tracking-wide font-bold text-text-muted">
                       Related record / owner
                     </p>
-                    <p className="text-xs font-semibold text-foreground mt-0.5">
+                    <p className="text-xs font-semibold text-text-primary mt-0.5">
                       {selectedEvent.attendees || 'Not specified'}
                     </p>
                   </div>
@@ -939,12 +939,12 @@ export default function CalendarView() {
 
                 {selectedEvent.priority && (
                   <div className="flex items-start gap-3">
-                    <div className="h-4 w-4 rounded-full border-2 border-brand-purple mt-0.5 shrink-0" />
+                    <div className="h-4 w-4 rounded-full border-2 border-accent-color mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-[9px] uppercase tracking-wide font-bold text-muted-foreground">
+                      <p className="text-[9px] uppercase tracking-wide font-bold text-text-muted">
                         Priority
                       </p>
-                      <p className="text-xs font-semibold text-foreground mt-0.5 capitalize">
+                      <p className="text-xs font-semibold text-text-primary mt-0.5 capitalize">
                         {selectedEvent.priority}
                       </p>
                     </div>
@@ -952,11 +952,11 @@ export default function CalendarView() {
                 )}
 
                 {selectedEvent.details && (
-                  <div className="pt-3 border-t border-border">
-                    <p className="text-[9px] uppercase tracking-wide font-bold text-muted-foreground mb-1.5">
+                  <div className="pt-3 border-t border-border-default">
+                    <p className="text-[9px] uppercase tracking-wide font-bold text-text-muted mb-1.5">
                       Description
                     </p>
-                    <p className="text-xs leading-relaxed text-foreground">
+                    <p className="text-xs leading-relaxed text-text-primary">
                       {selectedEvent.details}
                     </p>
                   </div>
@@ -964,16 +964,16 @@ export default function CalendarView() {
               </div>
             </div>
           ) : (
-            <div className="min-h-[280px] rounded-xl border border-dashed border-border bg-secondary/20 flex flex-col items-center justify-center text-center px-6">
-              <div className="h-10 w-10 rounded-full bg-brand-purple/10 flex items-center justify-center mb-3">
-                <CalendarIcon className="h-5 w-5 text-brand-purple" />
+            <div className="min-h-[280px] rounded-xl border border-dashed border-border-default bg-surface-2/20 flex flex-col items-center justify-center text-center px-6">
+              <div className="h-10 w-10 rounded-full bg-accent-color/10 flex items-center justify-center mb-3">
+                <CalendarIcon className="h-5 w-5 text-accent-color" />
               </div>
 
-              <p className="text-xs font-bold text-foreground">
+              <p className="text-xs font-bold text-text-primary">
                 No activity selected
               </p>
 
-              <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+              <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
                 Click a task, call, meeting, or follow-up in the calendar to
                 view its full details.
               </p>

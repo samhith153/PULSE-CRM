@@ -109,28 +109,28 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
   // Stylings for each stage
   const stageStyles = [
     {
-      fillClass: 'fill-indigo-100 dark:fill-indigo-900',
-      badgeClass: 'bg-[#ECEFFD] dark:bg-[#1E234A] text-indigo-700 dark:text-indigo-300 border border-indigo-500/20',
+      fillClass: 'fill-accent-muted dark:fill-accent-muted',
+      badgeClass: 'bg-surface-2 dark:bg-surface-2 text-accent-color dark:text-accent-color border border-accent-color/20',
       glowColor: 'rgba(99, 102, 241, 0.25)'
     },
     {
-      fillClass: 'fill-indigo-200 dark:fill-indigo-800',
-      badgeClass: 'bg-[#DCE1FC] dark:bg-[#1B1D4B] text-indigo-700 dark:text-indigo-300 border border-indigo-400/25',
+      fillClass: 'fill-accent-muted dark:fill-accent-muted',
+      badgeClass: 'bg-surface-2 dark:bg-surface-2 text-accent-color dark:text-accent-color border border-accent-color/25',
       glowColor: 'rgba(99, 102, 241, 0.35)'
     },
     {
-      fillClass: 'fill-indigo-300 dark:fill-indigo-700',
-      badgeClass: 'bg-[#C5CBEF] dark:bg-[#15174B] text-indigo-800 dark:text-indigo-200 border border-indigo-400/30',
+      fillClass: 'fill-accent-muted dark:fill-accent-muted',
+      badgeClass: 'bg-surface-2 dark:bg-surface-2 text-accent-color dark:text-accent-color border border-accent-color/30',
       glowColor: 'rgba(99, 102, 241, 0.45)'
     },
     {
-      fillClass: 'fill-indigo-500 dark:fill-indigo-600',
-      badgeClass: 'bg-[#4F46E5] text-primary-foreground border border-indigo-400/40 shadow-sm',
+      fillClass: 'fill-accent-color dark:fill-accent-color',
+      badgeClass: 'bg-accent-color text-primary-foreground border border-accent-color/40 shadow-sm',
       glowColor: 'rgba(79, 70, 229, 0.55)'
     },
     {
-      fillClass: 'fill-emerald-500 dark:fill-emerald-500',
-      badgeClass: 'bg-[#10B981] text-primary-foreground border border-emerald-400/40 shadow-sm',
+      fillClass: 'fill-status-success-text dark:fill-status-success-text',
+      badgeClass: 'bg-status-success-text text-primary-foreground border border-status-success-text/40 shadow-sm',
       glowColor: 'rgba(16, 185, 129, 0.55)'
     }
   ];
@@ -302,7 +302,7 @@ export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartC
             {hoveredIndex > 0 && (
               <div className="flex justify-between gap-6 text-muted-foreground select-none border-t border-white/5 pt-1 mt-1">
                 <span>Drop-off rate:</span>
-                <span className="font-bold text-rose-400 tabular-nums">-{funnelStages[hoveredIndex].dropOff}%</span>
+                <span className="font-bold text-status-danger-text tabular-nums">-{funnelStages[hoveredIndex].dropOff}%</span>
               </div>
             )}
           </div>

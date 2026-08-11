@@ -1779,22 +1779,63 @@ class DashboardService:
         now = datetime.now(timezone.utc)
 
         # -- Period windows ----------------------------------------------------
+        # Keep the existing working period behaviour, but make the
+        # previous-period boundaries correct for every selector.
         if period == "week":
             period_start = now - timedelta(days=now.weekday())
-            period_start = period_start.replace(hour=0, minute=0, second=0, microsecond=0)
+            period_start = period_start.replace(
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
             prev_start = period_start - timedelta(weeks=1)
             prev_end = period_start
+
         elif period == "quarter":
-            qm = ((now.month - 1) // 3) * 3 + 1
-            period_start = now.replace(month=qm, day=1, hour=0, minute=0, second=0, microsecond=0)
-            prev_start, prev_end = self._month_bounds(now, 3)
+            current_quarter_month = ((now.month - 1) // 3) * 3 + 1
+
+            period_start = now.replace(
+                month=current_quarter_month,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
+            # Previous quarter = exactly 3 months before current quarter.
+            prev_start, _ = self._month_bounds(period_start, 3)
+            prev_end = period_start
+
         elif period == "year":
-            period_start = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            period_start = now.replace(
+                month=1,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
             prev_start = period_start.replace(year=period_start.year - 1)
             prev_end = period_start
-        else:  # month (default)
-            period_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        else:
+            # Default = month
+            period = "month"
+
+            period_start = now.replace(
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
             prev_start, prev_end = self._month_bounds(now, 1)
+            
 
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         last_month_start, last_month_end = self._month_bounds(now, 1)
@@ -1824,6 +1865,16 @@ class DashboardService:
                 )
             )
             return Decimal(str(r.scalar_one() or 0))
+        def _growth(current, previous):
+            current = Decimal(str(current or 0))
+            previous = Decimal(str(previous or 0))
+
+            if previous == 0:
+                if current == 0:
+                    return Decimal("0")
+                return None
+
+            growth_pct=rev_growth if rev_growth is not None else Decimal("0"),
 
         async def _activity_count(action_filter, since=None, until=None):
             conds = [
@@ -1843,63 +1894,78 @@ class DashboardService:
         total_revenue = await _deal_sum(
             Deal.status == DealStatus.WON.value,
             Deal.closed_at >= period_start,
+            Deal.closed_at < now,
         )
         prev_revenue = await _deal_sum(
             Deal.status == DealStatus.WON.value,
             Deal.closed_at >= prev_start,
             Deal.closed_at < prev_end,
         )
-        rev_growth = self._percentage(int(total_revenue - prev_revenue), max(int(prev_revenue), 1))
+        rev_growth = _growth(total_revenue, prev_revenue)
 
         revenue_stat = RepRevenueStat(
             total=total_revenue,
             previous_period=prev_revenue,
-            growth_pct=rev_growth,
+            growth_pct=rev_growth if rev_growth is not None else Decimal("0"),
         )
 
         # -- 2. Won Deals ------------------------------------------------------
         won_deals = await _deal_count(
             Deal.status == DealStatus.WON.value,
             Deal.closed_at >= period_start,
+            Deal.closed_at < now,
         )
         prev_won = await _deal_count(
             Deal.status == DealStatus.WON.value,
             Deal.closed_at >= prev_start,
             Deal.closed_at < prev_end,
         )
-        won_growth = self._percentage(won_deals - prev_won, max(prev_won, 1))
+        won_growth = _growth(won_deals, prev_won)
 
+       
         won_deals_stat = RepWonDealsStat(
             count=won_deals,
             previous_period=prev_won,
-            growth_pct=won_growth,
+            growth_pct=won_growth if won_growth is not None else Decimal("0"),
         )
 
         # -- 3. Win Rate -------------------------------------------------------
         lost_deals = await _deal_count(
             Deal.status == DealStatus.LOST.value,
             Deal.closed_at >= period_start,
+            Deal.closed_at < now,
         )
-        win_rate = self._percentage(won_deals, max(won_deals + lost_deals, 1))
+        win_rate = self._percentage(
+            won_deals,
+            won_deals + lost_deals
+        )
         prev_lost = await _deal_count(
             Deal.status == DealStatus.LOST.value,
             Deal.closed_at >= prev_start,
             Deal.closed_at < prev_end,
         )
-        prev_win_rate = self._percentage(prev_won, max(prev_won + prev_lost, 1))
+
+        prev_win_rate = self._percentage(
+            prev_won,
+            prev_won + prev_lost
+        )
+
         win_rate_growth = win_rate - prev_win_rate
 
         win_rate_stat = RepWinRateStat(
             win_rate=win_rate,
             previous_win_rate=prev_win_rate,
-            growth_pct=win_rate_growth,
+            growth_pct=win_rate_growth if win_rate_growth is not None else Decimal("0"),
         )
 
         # -- 4. Average Deal Size ----------------------------------------------
-        avg_stmt = select(func.coalesce(func.avg(Deal.amount), 0)).where(
+        avg_stmt = select(
+            func.coalesce(func.avg(Deal.amount), 0)
+        ).where(
             *_rep_deals(
                 Deal.status == DealStatus.WON.value,
                 Deal.closed_at >= period_start,
+                Deal.closed_at < now,
             )
         )
         avg_deal_size = Decimal(str((await self.db.execute(avg_stmt)).scalar_one() or 0))
@@ -1911,12 +1977,12 @@ class DashboardService:
             )
         )
         prev_avg = Decimal(str((await self.db.execute(prev_avg_stmt)).scalar_one() or 0))
-        avg_growth = self._percentage(int(avg_deal_size - prev_avg), max(int(prev_avg), 1))
+        avg_growth = _growth(avg_deal_size, prev_avg)
 
         avg_deal_size_stat = RepAvgDealSizeStat(
             avg_deal_value=avg_deal_size,
             previous_avg=prev_avg,
-            growth_pct=avg_growth,
+            growth_pct=avg_growth if avg_growth is not None else Decimal("0"),
         )
 
         # -- 5. Average Sales Cycle --------------------------------------------
@@ -1938,6 +2004,8 @@ class DashboardService:
                 Deal.is_deleted.is_(False),
                 Deal.status == DealStatus.WON.value,
                 Deal.closed_at.isnot(None),
+                Deal.closed_at >= period_start,
+                Deal.closed_at < now,
             )
         )
         avg_cycle = Decimal(str((await self.db.execute(cycle_stmt)).scalar_one() or 0))
@@ -1970,59 +2038,147 @@ class DashboardService:
             difference_days=avg_cycle - prev_cycle,
         )
 
-        # -- 6. Revenue Over Time (adaptive by period) --------------------------
+
+        # -- 6. Revenue Trend -------------------------------------------------
+        # The chart follows the selected report period.
         revenue_trend: list[RepRevenuePoint] = []
+
         if period == "week":
-            # Last 4 weeks
-            for offset in range(3, -1, -1):
-                w_start = now - timedelta(weeks=offset + 1)
-                w_start = w_start.replace(hour=0, minute=0, second=0, microsecond=0)
-                w_end = now - timedelta(weeks=offset)
-                w_end = w_end.replace(hour=0, minute=0, second=0, microsecond=0)
-                m_rev = await _deal_sum(
-                    Deal.status == DealStatus.WON.value,
-                    Deal.closed_at >= w_start,
-                    Deal.closed_at < w_end,
+            # Last 7 completed/current days.
+            for offset in range(6, -1, -1):
+                day_start = (now - timedelta(days=offset)).replace(
+                    hour=0,
+                    minute=0,
+                    second=0,
+                    microsecond=0,
                 )
-                revenue_trend.append(RepRevenuePoint(period=w_start.strftime("%b %d"), revenue=m_rev))
+                day_end = day_start + timedelta(days=1)
+
+                # Do not allow future time in today's point.
+                effective_end = min(day_end, now)
+
+                day_rev = await _deal_sum(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= day_start,
+                    Deal.closed_at < effective_end,
+                )
+
+                revenue_trend.append(
+                    RepRevenuePoint(
+                        period=day_start.strftime("%a"),
+                        revenue=day_rev,
+                    )
+                )
+
         elif period == "quarter":
-            # Last 4 quarters
+            # Four quarters: current quarter + previous 3.
+            current_quarter_month = ((now.month - 1) // 3) * 3 + 1
+            current_quarter_start = now.replace(
+                month=current_quarter_month,
+                day=1,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
             for offset in range(3, -1, -1):
-                q = ((now.month - 1) // 3) - offset
-                q_year = now.year + (q - 1) // 12
-                q_month = ((q - 1) % 12) + 1
-                q_start = now.replace(year=q_year, month=q_month, day=1, hour=0, minute=0, second=0, microsecond=0)
-                if q_month + 3 > 12:
-                    q_end = now.replace(year=q_year + 1, month=(q_month + 3) - 12, day=1, hour=0, minute=0, second=0, microsecond=0)
-                else:
-                    q_end = now.replace(year=q_year, month=q_month + 3, day=1, hour=0, minute=0, second=0, microsecond=0)
-                m_rev = await _deal_sum(
-                    Deal.status == DealStatus.WON.value,
-                    Deal.closed_at >= q_start,
-                    Deal.closed_at < q_end,
+                quarter_start_month = current_quarter_start.month - (offset * 3)
+                quarter_year = current_quarter_start.year
+
+                while quarter_start_month <= 0:
+                    quarter_start_month += 12
+                    quarter_year -= 1
+
+                quarter_start = datetime(
+                    quarter_year,
+                    quarter_start_month,
+                    1,
+                    tzinfo=timezone.utc,
                 )
-                revenue_trend.append(RepRevenuePoint(period=f"Q{((q_month - 1) // 3) + 1} {q_year}", revenue=m_rev))
+
+                next_month = quarter_start_month + 3
+                next_year = quarter_year
+
+                while next_month > 12:
+                    next_month -= 12
+                    next_year += 1
+
+                quarter_end = datetime(
+                    next_year,
+                    next_month,
+                    1,
+                    tzinfo=timezone.utc,
+                )
+
+                effective_end = min(quarter_end, now)
+
+                quarter_rev = await _deal_sum(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= quarter_start,
+                    Deal.closed_at < effective_end,
+                )
+
+                revenue_trend.append(
+                    RepRevenuePoint(
+                        period=f"Q{((quarter_start.month - 1) // 3) + 1} {quarter_start.year}",
+                        revenue=quarter_rev,
+                    )
+                )
+
         elif period == "year":
-            # Last 4 years
-            for offset in range(3, -1, -1):
-                y_start = now.replace(year=now.year - offset, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-                y_end = now.replace(year=now.year - offset + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
-                m_rev = await _deal_sum(
-                    Deal.status == DealStatus.WON.value,
-                    Deal.closed_at >= y_start,
-                    Deal.closed_at < y_end,
+            # Last 5 years.
+            for offset in range(4, -1, -1):
+                year_value = now.year - offset
+
+                year_start = datetime(
+                    year_value,
+                    1,
+                    1,
+                    tzinfo=timezone.utc,
                 )
-                revenue_trend.append(RepRevenuePoint(period=str(y_start.year), revenue=m_rev))
+
+                year_end = datetime(
+                    year_value + 1,
+                    1,
+                    1,
+                    tzinfo=timezone.utc,
+                )
+
+                effective_end = min(year_end, now)
+
+                year_rev = await _deal_sum(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= year_start,
+                    Deal.closed_at < effective_end,
+                )
+
+                revenue_trend.append(
+                    RepRevenuePoint(
+                        period=str(year_value),
+                        revenue=year_rev,
+                    )
+                )
+
         else:
-            # month (default) — last 12 months
+            # Monthly = existing 12-month behaviour.
             for offset in range(11, -1, -1):
                 start, end = self._month_bounds(now, offset)
+
+                effective_end = min(end, now)
+
                 m_rev = await _deal_sum(
                     Deal.status == DealStatus.WON.value,
                     Deal.closed_at >= start,
-                    Deal.closed_at < end,
+                    Deal.closed_at < effective_end,
                 )
-                revenue_trend.append(RepRevenuePoint(period=start.strftime("%Y-%m"), revenue=m_rev))
+
+                revenue_trend.append(
+                    RepRevenuePoint(
+                        period=start.strftime("%Y-%m"),
+                        revenue=m_rev,
+                    )
+                )
 
         # -- 7. Deals by Stage -------------------------------------------------
         stage_stmt = (
@@ -2188,16 +2344,40 @@ class DashboardService:
         task_actions = ["task_completed", "task"]
         note_actions = ["note"]
 
-        emails_cur = await _activity_count(email_actions, period_start)
-        calls_cur = await _activity_count(call_actions, period_start)
-        meetings_cur = await _activity_count(meeting_actions, period_start)
-        tasks_cur = await _activity_count(task_actions, period_start)
-        notes_cur = await _activity_count(note_actions, period_start)
+        emails_cur = await _activity_count(
+            email_actions,
+            period_start,
+            now,
+        )
 
-        emails_prev = await _activity_count(email_actions, last_month_start, last_month_end)
-        calls_prev = await _activity_count(call_actions, last_month_start, last_month_end)
-        meetings_prev = await _activity_count(meeting_actions, last_month_start, last_month_end)
-        tasks_prev = await _activity_count(task_actions, last_month_start, last_month_end)
+        calls_cur = await _activity_count(
+            call_actions,
+            period_start,
+            now,
+        )
+
+        meetings_cur = await _activity_count(
+            meeting_actions,
+            period_start,
+            now,
+        )
+
+        tasks_cur = await _activity_count(
+            task_actions,
+            period_start,
+            now,
+        )
+
+        notes_cur = await _activity_count(
+            note_actions,
+            period_start,
+            now,
+        )
+
+        emails_prev = await _activity_count(email_actions, prev_start, prev_end)
+        calls_prev = await _activity_count(call_actions, prev_start, prev_end)
+        meetings_prev = await _activity_count(meeting_actions, prev_start, prev_end)
+        tasks_prev = await _activity_count(task_actions, prev_start, prev_end)
 
         activity_overview = RepActivityOverview(
             emails_sent=emails_cur,
@@ -2218,14 +2398,19 @@ class DashboardService:
         pipeline_value = await _deal_sum(
             Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
         )
-        deals_created_this_month = await _deal_count(Deal.created_at >= period_start)
+        deals_created_current = await _deal_count(
+            Deal.created_at >= period_start,
+            Deal.created_at < now,
+        )
         deals_lost = await _deal_count(
             Deal.status == DealStatus.LOST.value,
             Deal.closed_at >= period_start,
+            Deal.closed_at < now,
         )
         activities_logged = await _activity_count(
             list(call_actions + email_actions + meeting_actions + task_actions + note_actions),
             period_start,
+            now,
         )
 
         prev_pipeline = await _deal_sum(
@@ -2243,22 +2428,65 @@ class DashboardService:
             prev_end,
         )
 
+        # Use the selected report period for Key Metrics.
+        deals_created_current = await _deal_count(
+            Deal.created_at >= period_start,
+            Deal.created_at < now,
+        )
+
+        deals_lost_current = await _deal_count(
+            Deal.status == DealStatus.LOST.value,
+            Deal.closed_at >= period_start,
+            Deal.closed_at < now,
+        )
+
+        activities_logged_current = await _activity_count(
+            list(
+                call_actions
+                + email_actions
+                + meeting_actions
+                + task_actions
+                + note_actions
+            ),
+            period_start,
+            now,
+        )
+
         key_metrics = RepKeyMetrics(
             open_deals=open_deals,
             pipeline_value=pipeline_value,
-            deals_created=deals_created_this_month,
-            deals_lost=deals_lost,
-            activities_logged=activities_logged,
-            pipeline_value_growth_pct=self._percentage(
-                int(pipeline_value - prev_pipeline), max(int(prev_pipeline), 1)
+            deals_created=deals_created_current,
+            deals_lost=deals_lost_current,
+            activities_logged=activities_logged_current,
+
+            pipeline_value_growth_pct=(
+                self._percentage(
+                    int(pipeline_value - prev_pipeline),
+                    int(prev_pipeline),
+                )
+                if prev_pipeline
+                else Decimal("0")
             ),
-            deals_created_growth_pct=self._percentage(
-                deals_created_this_month - prev_deals_created, max(prev_deals_created, 1)
+
+            deals_created_growth_pct=(
+                self._percentage(
+                    deals_created_current - prev_deals_created,
+                    prev_deals_created,
+                )
+                if prev_deals_created
+                else Decimal("0")
             ),
-            activities_growth_pct=self._percentage(
-                activities_logged - prev_activities, max(prev_activities, 1)
+
+            activities_growth_pct=(
+                self._percentage(
+                    activities_logged_current - prev_activities,
+                    prev_activities,
+                )
+                if prev_activities
+                else Decimal("0")
             ),
         )
+
 
         # -- 14. Recent Reports (from ActivityTimeline with action=report) -----
         report_stmt = (

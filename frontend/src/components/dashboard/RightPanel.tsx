@@ -26,17 +26,17 @@ interface RightPanelProps {
 const getReportStyles = (title: string, index: number) => {
   const t = title.toLowerCase();
   let Icon = FileSpreadsheet;
-  let bgClass = 'bg-brand-purple/10 text-brand-purple border border-brand-purple/15';
+  let bgClass = 'bg-accent-color/10 text-accent-color border border-accent-color/15';
 
   if (t.includes('funnel') || t.includes('conversion')) {
     Icon = BarChart3;
-    bgClass = 'bg-brand-cyan/10 text-brand-cyan border border-brand-cyan/15';
+    bgClass = 'bg-accent-color/10 text-accent-color border border-accent-color/15';
   } else if (t.includes('projection') || t.includes('forecast') || t.includes('revenue')) {
     Icon = TrendingUp;
-    bgClass = 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/15';
+    bgClass = 'bg-status-success-text/10 text-status-success-text border border-status-success-text/15';
   } else if (t.includes('segment') || t.includes('share') || t.includes('source') || t.includes('size')) {
     Icon = PieChart;
-    bgClass = 'bg-brand-blue/10 text-brand-blue border border-brand-blue/15';
+    bgClass = 'bg-accent-color/10 text-accent-color border border-accent-color/15';
   }
 
   return { Icon, bgClass };
@@ -50,8 +50,8 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
       count: 68,
       desc: "Value: ₹2.12M",
       icon: FolderOpen,
-      color: "text-brand-purple",
-      bg: "bg-brand-purple/10 border border-brand-purple/20"
+      color: "text-accent-color",
+      bg: "bg-accent-color/10 border border-accent-color/20"
     },
     {
       title: "Total pipeline value",
@@ -60,8 +60,8 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
       change: "+22%",
       isPositive: true,
       icon: IndianRupee,
-      color: "text-brand-purple",
-      bg: "bg-brand-purple/10 border border-brand-purple/20"
+      color: "text-accent-color",
+      bg: "bg-accent-color/10 border border-accent-color/20"
     },
     {
       title: "Deals created",
@@ -70,8 +70,8 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
       change: "+15%",
       isPositive: true,
       icon: PlusCircle,
-      color: "text-brand-purple",
-      bg: "bg-brand-purple/10 border border-brand-purple/20"
+      color: "text-accent-color",
+      bg: "bg-accent-color/10 border border-accent-color/20"
     },
     {
       title: "Deals lost",
@@ -80,8 +80,8 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
       change: "-20%",
       isPositive: false,
       icon: MinusCircle,
-      color: "text-brand-purple",
-      bg: "bg-brand-purple/10 border border-brand-purple/20"
+      color: "text-accent-color",
+      bg: "bg-accent-color/10 border border-accent-color/20"
     },
     {
       title: "Activities logged",
@@ -90,16 +90,16 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
       change: "+17%",
       isPositive: true,
       icon: Activity,
-      color: "text-brand-purple",
-      bg: "bg-brand-purple/10 border border-brand-purple/20"
+      color: "text-accent-color",
+      bg: "bg-accent-color/10 border border-accent-color/20"
     }
   ];
 
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6 animate-pulse">
-        <div className="bg-card border border-border rounded-2xl p-5 h-[280px]" />
-        <div className="bg-card border border-border rounded-2xl p-5 h-[280px]" />
+        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 h-[280px]" />
+        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 h-[280px]" />
       </div>
     );
   }
@@ -108,8 +108,8 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
 
       {/* Key Metrics Summary */}
-      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300">
-        <h3 className="font-bold text-foreground text-sm mb-4">Key metrics summary</h3>
+      <div className="bg-surface-1 border border-border-default rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300">
+        <h3 className="font-bold text-text-primary text-sm mb-4">Key metrics summary</h3>
         
         <div className="space-y-2">
           {metrics.map((metric, idx) => {
@@ -117,25 +117,25 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
             return (
               <div 
                 key={idx} 
-                className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition duration-200 border border-transparent hover:border-border"
+                className="flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2.5 transition duration-200 border border-transparent hover:border-border-default"
               >
-                {/* Icon (text-brand-purple, 14px/16px) */}
-                <div className="size-8 rounded-lg bg-background text-brand-purple flex items-center justify-center border border-border shrink-0">
+                {/* Icon (text-accent-color, 14px/16px) */}
+                <div className="size-8 rounded-lg bg-surface-0 text-accent-color flex items-center justify-center border border-border-default shrink-0">
                   <Icon className="h-4 w-4" strokeWidth={2} />
                 </div>
                 
                 {/* Flex-1 Label */}
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-bold text-foreground truncate">{metric.title}</h4>
-                  <p className="text-[10px] text-muted-foreground truncate leading-none mt-0.5">{metric.desc}</p>
+                  <h4 className="text-xs font-bold text-text-primary truncate">{metric.title}</h4>
+                  <p className="text-[10px] text-text-muted truncate leading-none mt-0.5">{metric.desc}</p>
                 </div>
                 
                 {/* Right-aligned Value */}
                 <div className="text-right shrink-0">
-                  <span className="text-xs font-semibold text-foreground tabular-nums block">{metric.count}</span>
+                  <span className="text-xs font-semibold text-text-primary tabular-nums block">{metric.count}</span>
                   {metric.change && (
                     <span className={`inline-flex items-center text-[9px] font-bold tabular-nums ${
-                      metric.isPositive ? 'text-brand-cyan' : 'text-destructive'
+                      metric.isPositive ? 'text-accent-color' : 'text-destructive'
                     }`}>
                       {metric.isPositive ? <TrendingUp className="h-2.5 w-2.5 mr-0.5" strokeWidth={2} /> : <TrendingDown className="h-2.5 w-2.5 mr-0.5" strokeWidth={2} />}
                       {metric.change}
@@ -149,19 +149,19 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
       </div>
 
       {/* Recent Reports */}
-      <div className="bg-card border border-border rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300">
+      <div className="bg-surface-1 border border-border-default rounded-2xl p-5 hover:-translate-y-0.5 hover:shadow-nav transition duration-300">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-foreground text-sm">Recent reports</h3>
+          <h3 className="font-bold text-text-primary text-sm">Recent reports</h3>
           {/* Avatar Stack implied collaboration detail */}
           <div className="flex items-center -space-x-1.5 overflow-hidden select-none" title="3 teammates active on these templates">
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-brand-purple/10 flex items-center justify-center">
-              <span className="text-[8px] font-bold text-brand-purple">S</span>
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-accent-color/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-accent-color">S</span>
             </div>
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-brand-blue/10 flex items-center justify-center">
-              <span className="text-[8px] font-bold text-brand-blue">A</span>
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-accent-color/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-accent-color">A</span>
             </div>
-            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-[#4FB477]/10 flex items-center justify-center">
-              <span className="text-[8px] font-bold text-[#4FB477]">K</span>
+            <div className="inline-block h-4.5 w-4.5 rounded-full ring-2 ring-card overflow-hidden bg-status-success-text/10 flex items-center justify-center">
+              <span className="text-[8px] font-bold text-status-success-text">K</span>
             </div>
           </div>
         </div>
@@ -177,8 +177,8 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, delay: idx * 0.06 }}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl bg-secondary px-3 py-2.5 transition duration-200 border cursor-pointer hover:-translate-y-0.5 hover:shadow-nav hover:bg-secondary/70",
-                  isFirst ? "border-brand-purple/30 bg-brand-purple/5 shadow-[inset_3px_0_0_0_var(--brand-purple)] pl-4" : "border-transparent hover:border-border"
+                  "flex items-center gap-3 rounded-xl bg-surface-2 px-3 py-2.5 transition duration-200 border cursor-pointer hover:-translate-y-0.5 hover:shadow-nav hover:bg-surface-2/70",
+                  isFirst ? "border-accent-color/30 bg-accent-color/5 shadow-[inset_3px_0_0_0_var(--accent-color)] pl-4" : "border-transparent hover:border-border-default"
                 )}
               >
                 <div className={cn("size-8 rounded-lg flex items-center justify-center shrink-0", bgClass)}>
@@ -186,24 +186,24 @@ export default function RightPanel({ onNewReportClick, recentReports, loading = 
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-xs font-bold text-foreground truncate leading-none">{report.title}</h4>
+                    <h4 className="text-xs font-bold text-text-primary truncate leading-none">{report.title}</h4>
                     {isFirst && (
-                      <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-brand-purple text-primary-foreground uppercase tracking-wide leading-none select-none">
+                      <span className="shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-extrabold bg-accent-color text-surface-0 uppercase tracking-wide leading-none select-none">
                         New
                       </span>
                     )}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1 truncate leading-none">{report.time}</p>
+                  <p className="text-[10px] text-text-muted mt-1 truncate leading-none">{report.time}</p>
                 </div>
               </motion.div>
             );
           })}
         </div>
 
-        <div className="mt-4 pt-3 border-t border-border text-center">
+        <div className="mt-4 pt-3 border-t border-border-default text-center">
           <a 
             href="#" 
-            className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border bg-background hover:bg-secondary text-ink px-4 py-2 h-9"
+            className="inline-flex items-center justify-center gap-2 rounded-full text-xs font-bold transition duration-200 cursor-pointer border border-border-default bg-surface-0 hover:bg-surface-2 text-ink px-4 py-2 h-9"
           >
             <span>View all reports</span>
             <ArrowUpRight className="h-3.5 w-3.5" strokeWidth={2} />

@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from '@/lib/toast';
@@ -37,20 +37,76 @@ function toNotification(n: NotificationData): Notification {
   };
 }
 
+let audioCtx: AudioContext | null = null;
+
+function playNotificationSound() {
+  try {
+    if (typeof window === 'undefined') return;
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // Browsers require the context to be resumed after a user gesture.
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    const now = audioCtx.currentTime;
+
+    // Two-tone chime: high then low
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);       // A5
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.3);
+
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1174.66, now + 0.15); // D6
+    gain2.gain.setValueAtTime(0, now);
+    gain2.gain.setValueAtTime(0.25, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.15);
+    osc2.stop(now + 0.5);
+  } catch {
+    // Audio not available ΓÇö silently ignore
+  }
+}
+
 export function useNotifications(pageSize = 20) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
+  const prevUnreadRef = useRef(0);
+  const initialLoadDone = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
       const result = await getNotifications(1, pageSize);
       if (!mounted.current) return;
       setNotifications((result.items || []).map(toNotification));
-      setUnreadCount(result.unread_count || 0);
+      const newCount = result.unread_count || 0;
+      setUnreadCount(newCount);
+
+      // Play sound + show toast when unread count increases (but not on initial load)
+      if (initialLoadDone.current && newCount > prevUnreadRef.current) {
+        playNotificationSound();
+        const newest = result.items?.[0];
+        if (newest) {
+          toast.info(`${newest.title || 'New notification'}${newest.message ? `: ${newest.message}` : ''}`);
+        }
+      }
+      prevUnreadRef.current = newCount;
+      initialLoadDone.current = true;
     } catch {
-      // Silently fail — notifications are non-critical
+      // Silently fail ΓÇö notifications are non-critical
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -59,7 +115,13 @@ export function useNotifications(pageSize = 20) {
   const refreshUnreadCount = useCallback(async () => {
     try {
       const count = await getUnreadNotificationCount();
-      if (mounted.current) setUnreadCount(count);
+      if (mounted.current) {
+        if (initialLoadDone.current && count > prevUnreadRef.current) {
+          playNotificationSound();
+        }
+        prevUnreadRef.current = count;
+        setUnreadCount(count);
+      }
     } catch {
       // Silently fail
     }

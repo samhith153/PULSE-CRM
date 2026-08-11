@@ -210,15 +210,15 @@ export default function UsersView() {
     <div className="space-y-6">
       {showPassword && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4">
-          <div className="bg-card border rounded-xl w-full max-w-md p-6 space-y-4">
-            <h3 className="font-semibold text-foreground text-sm">New Password</h3>
-            <p className="text-xs text-muted-foreground">Copy the temporary password below. The user will need to change it on next login.</p>
-            <div className="bg-secondary border rounded-lg p-3 text-center">
-              <code className="text-sm font-mono font-bold text-brand-purple break-all select-all">{showPassword}</code>
+          <div className="bg-surface-1 border rounded-xl w-full max-w-md p-6 space-y-4">
+            <h3 className="font-semibold text-text-primary text-sm">New Password</h3>
+            <p className="text-xs text-text-muted">Copy the temporary password below. The user will need to change it on next login.</p>
+            <div className="bg-surface-2 border rounded-lg p-3 text-center">
+              <code className="text-sm font-mono font-bold text-accent-color break-all select-all">{showPassword}</code>
             </div>
             <button
               onClick={() => { navigator.clipboard.writeText(showPassword); setShowPassword(null); }}
-              className="w-full px-3.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground text-xs font-bold rounded-lg transition-colors cursor-pointer"
+              className="w-full px-3.5 py-2 bg-accent-color hover:bg-accent-color/90 text-surface-0 text-xs font-bold rounded-lg transition-colors cursor-pointer"
             >
               Copy &amp; Close
             </button>
@@ -228,24 +228,24 @@ export default function UsersView() {
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
+          <h1 className="text-3xl font-sans text-text-primary tracking-tight font-bold">
             User Profiles Management
           </h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
+          <p className="text-xs md:text-sm text-text-muted mt-1 font-medium tracking-wide">
             Provision user configurations, restrict roles authorization mapping, and cycle passwords.
           </p>
         </div>
         <div className="flex items-center space-x-2">
           <button
             onClick={loadUsers}
-            className="inline-flex items-center space-x-1.5 px-3 py-2 border border-border hover:bg-secondary rounded-lg text-xs font-bold text-muted-foreground transition cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3 py-2 border border-border-default hover:bg-surface-2 rounded-lg text-xs font-bold text-text-muted transition cursor-pointer"
           >
             <RefreshCw className="h-4 w-4" />
             <span>Refresh</span>
           </button>
           <button 
             onClick={handleOpenCreate}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-lg text-xs font-semibold transition duration-200 cursor-pointer"
+            className="inline-flex items-center space-x-1.5 px-3.5 py-2 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold transition duration-200 cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Create User</span>
@@ -254,20 +254,20 @@ export default function UsersView() {
       </div>
 
       {/* Active Users */}
-      <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
-        <h3 className="font-semibold text-foreground text-sm flex items-center">
-          <Users className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+      <div className="bg-surface-1 border border-border-default rounded-2xl p-5 space-y-4">
+        <h3 className="font-semibold text-text-primary text-sm flex items-center">
+          <Users className="h-4.5 w-4.5 mr-2 text-accent-color" />
           <span>Active Organization Users</span>
-          {loading && <Loader2 className="h-3.5 w-3.5 ml-2 animate-spin text-muted-foreground" />}
+          {loading && <Loader2 className="h-3.5 w-3.5 ml-2 animate-spin text-text-muted" />}
         </h3>
 
         {loading && users.length === 0 ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground text-xs font-medium">
+          <div className="flex items-center justify-center py-12 text-text-muted text-xs font-medium">
             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
             Loading users...
           </div>
         ) : users.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground text-xs font-medium">
+          <div className="text-center py-12 text-text-muted text-xs font-medium">
             No users found. Create one to get started.
           </div>
         ) : (
@@ -275,7 +275,7 @@ export default function UsersView() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border text-[11px] uppercase font-black tracking-wider text-foreground bg-muted/40">
+                  <tr className="border-b border-border-default text-[11px] uppercase font-black tracking-wider text-text-primary bg-muted/40">
                     <th className="py-2.5">User</th>
                     <th className="py-2.5">Email</th>
                     <th className="py-2.5">Authorization Role</th>
@@ -284,30 +284,30 @@ export default function UsersView() {
                     <th className="py-2.5 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-xs font-semibold text-foreground">
+                <tbody className="divide-y divide-border text-xs font-semibold text-text-primary">
                   {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-secondary transition-colors">
+                    <tr key={user.id} className="hover:bg-surface-2 transition-colors">
                       <td className="py-3 font-semibold">{user.full_name}</td>
-                      <td className="py-3 text-muted-foreground">{user.email}</td>
+                      <td className="py-3 text-text-muted">{user.email}</td>
                       <td className="py-3">
                         {(user.roles || []).length > 0 ? (
-                          <span className="bg-secondary text-foreground px-2 py-0.5 rounded text-[9px] font-semibold">
+                          <span className="bg-surface-2 text-text-primary px-2 py-0.5 rounded text-[9px] font-semibold">
                             {roleNameDisplay(user.roles[0])}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground text-[9px]">No role</span>
+                          <span className="text-text-muted text-[9px]">No role</span>
                         )}
                       </td>
                       <td className="py-3">
                         <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide ${
                           user.is_active 
-                            ? 'bg-brand-cyan/15 text-brand-cyan' 
-                            : 'bg-destructive/10 text-destructive'
+                            ? 'bg-accent-color/15 text-accent-color' 
+                            : 'bg-status-danger/10 text-status-danger'
                         }`}>
                           {user.is_active ? 'Active' : 'Disabled'}
                         </span>
                       </td>
-                      <td className="py-3 text-muted-foreground tabular-nums">
+                      <td className="py-3 text-text-muted tabular-nums">
                         {user.last_login_at 
                           ? new Date(user.last_login_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                           : 'Never'}
@@ -315,15 +315,15 @@ export default function UsersView() {
                       <td className="py-3 text-right space-x-1 whitespace-nowrap">
                         <button 
                           onClick={() => handleOpenEdit(user)}
-                          className="p-1 text-muted-foreground hover:text-brand-purple rounded hover:bg-secondary transition cursor-pointer inline-block"
+                          className="p-1 text-text-muted hover:text-accent-color rounded hover:bg-surface-2 transition cursor-pointer inline-block"
                           title="Edit Profile"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleToggleStatus(user)}
-                          className={`p-1 rounded hover:bg-secondary transition cursor-pointer inline-block ${
-                            user.is_active ? 'text-destructive hover:text-destructive' : 'text-brand-cyan hover:text-brand-cyan'
+                          className={`p-1 rounded hover:bg-surface-2 transition cursor-pointer inline-block ${
+                            user.is_active ? 'text-status-danger hover:text-status-danger' : 'text-accent-color hover:text-accent-color'
                           }`}
                           title={user.is_active ? 'Disable User' : 'Enable User'}
                         >
@@ -331,14 +331,14 @@ export default function UsersView() {
                         </button>
                         <button 
                           onClick={() => handleResetPassword(user)}
-                          className="p-1 text-muted-foreground hover:text-amber-500 rounded hover:bg-secondary transition cursor-pointer inline-block"
+                          className="p-1 text-text-muted hover:text-status-warning rounded hover:bg-surface-2 transition cursor-pointer inline-block"
                           title="Reset Password"
                         >
                           <Key className="h-4 w-4" />
                         </button>
                         <button 
                           onClick={() => handleDeleteUser(user)}
-                          className="p-1 text-muted-foreground hover:text-destructive rounded hover:bg-secondary transition cursor-pointer inline-block"
+                          className="p-1 text-text-muted hover:text-status-danger rounded hover:bg-surface-2 transition cursor-pointer inline-block"
                           title={isAdmin ? 'Permanently Delete' : 'Deactivate User'}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -351,22 +351,22 @@ export default function UsersView() {
             </div>
 
             {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-3 border-t border-border">
-                <span className="text-[10px] text-muted-foreground font-medium">
+              <div className="flex items-center justify-between pt-3 border-t border-border-default">
+                <span className="text-[10px] text-text-muted font-medium">
                   Page {page} of {totalPages} ({total} total)
                 </span>
                 <div className="flex space-x-2">
                   <button
                     disabled={page <= 1}
                     onClick={() => setPage(p => Math.max(1, p - 1))}
-                    className="px-2.5 py-1 text-[10px] font-bold border border-border rounded-lg disabled:opacity-30 hover:bg-secondary transition-colors cursor-pointer"
+                    className="px-2.5 py-1 text-[10px] font-bold border border-border-default rounded-lg disabled:opacity-30 hover:bg-surface-2 transition-colors cursor-pointer"
                   >
                     Previous
                   </button>
                   <button
                     disabled={page >= totalPages}
                     onClick={() => setPage(p => p + 1)}
-                    className="px-2.5 py-1 text-[10px] font-bold border border-border rounded-lg disabled:opacity-30 hover:bg-secondary transition-colors cursor-pointer"
+                    className="px-2.5 py-1 text-[10px] font-bold border border-border-default rounded-lg disabled:opacity-30 hover:bg-surface-2 transition-colors cursor-pointer"
                   >
                     Next
                   </button>
@@ -379,21 +379,21 @@ export default function UsersView() {
 
       {/* Archived Users Section — Admin Only */}
       {isAdmin && (
-        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 space-y-4">
           <button
             onClick={() => setShowArchived(!showArchived)}
             className="w-full flex items-center justify-between text-left cursor-pointer"
           >
-            <h3 className="font-semibold text-foreground text-sm flex items-center">
-              <Archive className="h-4.5 w-4.5 mr-2 text-amber-500" />
+            <h3 className="font-semibold text-text-primary text-sm flex items-center">
+              <Archive className="h-4.5 w-4.5 mr-2 text-status-warning" />
               <span>Archived Users</span>
               {deletedTotal > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-amber-500/10 text-amber-500 rounded text-[9px] font-semibold">
+                <span className="ml-2 px-2 py-0.5 bg-status-warning/10 text-status-warning rounded text-[9px] font-semibold">
                   {deletedTotal}
                 </span>
               )}
             </h3>
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-text-muted">
               {showArchived ? 'Hide' : 'Show'}
             </span>
           </button>
@@ -401,7 +401,7 @@ export default function UsersView() {
           {showArchived && (
             <>
               {deletedUsers.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-xs font-medium">
+                <div className="text-center py-8 text-text-muted text-xs font-medium">
                   No archived users.
                 </div>
               ) : (
@@ -409,7 +409,7 @@ export default function UsersView() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-border text-[11px] uppercase font-black tracking-wider text-foreground bg-muted/40">
+                        <tr className="border-b border-border-default text-[11px] uppercase font-black tracking-wider text-text-primary bg-muted/40">
                           <th className="py-2.5">User</th>
                           <th className="py-2.5">Email</th>
                           <th className="py-2.5">Role</th>
@@ -418,26 +418,26 @@ export default function UsersView() {
                           <th className="py-2.5 text-right">Actions</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-border text-xs font-semibold text-foreground">
+                      <tbody className="divide-y divide-border text-xs font-semibold text-text-primary">
                         {deletedUsers.map((user) => (
-                          <tr key={user.id} className="hover:bg-secondary transition-colors opacity-75">
+                          <tr key={user.id} className="hover:bg-surface-2 transition-colors opacity-75">
                             <td className="py-3 font-semibold">{user.full_name}</td>
-                            <td className="py-3 text-muted-foreground">{user.email}</td>
+                            <td className="py-3 text-text-muted">{user.email}</td>
                             <td className="py-3">
                               {(user.roles || []).length > 0 ? (
-                                <span className="bg-secondary text-foreground px-2 py-0.5 rounded text-[9px] font-semibold">
+                                <span className="bg-surface-2 text-text-primary px-2 py-0.5 rounded text-[9px] font-semibold">
                                   {roleNameDisplay(user.roles[0])}
                                 </span>
                               ) : (
-                                <span className="text-muted-foreground text-[9px]">No role</span>
+                                <span className="text-text-muted text-[9px]">No role</span>
                               )}
                             </td>
                             <td className="py-3">
-                              <span className="px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide bg-amber-500/10 text-amber-500">
+                              <span className="px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide bg-status-warning/10 text-status-warning">
                                 Archived
                               </span>
                             </td>
-                            <td className="py-3 text-muted-foreground tabular-nums">
+                            <td className="py-3 text-text-muted tabular-nums">
                               {user.last_login_at 
                                 ? new Date(user.last_login_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                                 : 'Never'}
@@ -445,14 +445,14 @@ export default function UsersView() {
                             <td className="py-3 text-right space-x-1 whitespace-nowrap">
                               <button 
                                 onClick={() => handleRestoreUser(user)}
-                                className="p-1 text-muted-foreground hover:text-brand-cyan rounded hover:bg-secondary transition cursor-pointer inline-block"
+                                className="p-1 text-text-muted hover:text-accent-color rounded hover:bg-surface-2 transition cursor-pointer inline-block"
                                 title="Restore User"
                               >
                                 <Undo2 className="h-4 w-4" />
                               </button>
                               <button 
                                 onClick={() => handlePermanentDelete(user)}
-                                className="p-1 text-muted-foreground hover:text-destructive rounded hover:bg-secondary transition cursor-pointer inline-block"
+                                className="p-1 text-text-muted hover:text-status-danger rounded hover:bg-surface-2 transition cursor-pointer inline-block"
                                 title="Permanently Delete"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -465,22 +465,22 @@ export default function UsersView() {
                   </div>
 
                   {deletedTotalPages > 1 && (
-                    <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <span className="text-[10px] text-muted-foreground font-medium">
+                    <div className="flex items-center justify-between pt-3 border-t border-border-default">
+                      <span className="text-[10px] text-text-muted font-medium">
                         Page {deletedPage} of {deletedTotalPages} ({deletedTotal} total)
                       </span>
                       <div className="flex space-x-2">
                         <button
                           disabled={deletedPage <= 1}
                           onClick={() => setDeletedPage(p => Math.max(1, p - 1))}
-                          className="px-2.5 py-1 text-[10px] font-bold border border-border rounded-lg disabled:opacity-30 hover:bg-secondary transition-colors cursor-pointer"
+                          className="px-2.5 py-1 text-[10px] font-bold border border-border-default rounded-lg disabled:opacity-30 hover:bg-surface-2 transition-colors cursor-pointer"
                         >
                           Previous
                         </button>
                         <button
                           disabled={deletedPage >= deletedTotalPages}
                           onClick={() => setDeletedPage(p => p + 1)}
-                          className="px-2.5 py-1 text-[10px] font-bold border border-border rounded-lg disabled:opacity-30 hover:bg-secondary transition-colors cursor-pointer"
+                          className="px-2.5 py-1 text-[10px] font-bold border border-border-default rounded-lg disabled:opacity-30 hover:bg-surface-2 transition-colors cursor-pointer"
                         >
                           Next
                         </button>
@@ -496,38 +496,38 @@ export default function UsersView() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-card border border-border rounded-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-5 py-4 bg-secondary border-b border-border flex justify-between items-center">
-              <span className="font-semibold text-foreground text-sm flex items-center">
-                <UserPlus className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+          <div className="bg-surface-1 border border-border-default rounded-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-5 py-4 bg-surface-2 border-b border-border-default flex justify-between items-center">
+              <span className="font-semibold text-text-primary text-sm flex items-center">
+                <UserPlus className="h-4.5 w-4.5 mr-2 text-accent-color" />
                 <span>{modalType === 'create' ? 'Create System User' : 'Modify User Profile'}</span>
               </span>
-              <button onClick={() => setIsModalOpen(false)} className="text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer">
+              <button onClick={() => setIsModalOpen(false)} className="text-text-muted hover:text-text-muted transition-colors cursor-pointer">
                 <X className="h-4.5 w-4.5" />
               </button>
             </div>
 
             <form onSubmit={handleSave} className="p-5 space-y-4">
               <div>
-                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Full Name</label>
+                <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">Full Name</label>
                 <input 
                   type="text" 
                   value={form.full_name} 
                   onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                   placeholder="e.g. John Doe"
-                  className="w-full px-3 py-2 border border-border rounded-lg text-xs bg-secondary text-foreground focus:outline-none focus:border-brand-accent transition-colors"
+                  className="w-full px-3 py-2 border border-border-default rounded-lg text-xs bg-surface-2 text-text-primary focus:outline-none focus:border-brand-accent transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Email Address</label>
+                <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">Email Address</label>
                 <input 
                   type="email" 
                   value={form.email} 
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                   placeholder="e.g. john@pulse.crm"
-                  className="w-full px-3 py-2 border border-border rounded-lg text-xs bg-secondary text-foreground focus:outline-none focus:border-brand-accent transition-colors"
+                  className="w-full px-3 py-2 border border-border-default rounded-lg text-xs bg-surface-2 text-text-primary focus:outline-none focus:border-brand-accent transition-colors"
                   required
                   disabled={modalType === 'edit'}
                 />
@@ -535,13 +535,13 @@ export default function UsersView() {
 
               {modalType === 'create' && (
                 <div>
-                  <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1.5">Password</label>
+                  <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">Password</label>
                   <input 
                     type="text" 
                     value={form.password} 
                     onChange={(e) => setForm({ ...form, password: e.target.value })}
                     placeholder="Min 8 chars, upper, lower, number, special"
-                    className="w-full px-3 py-2 border border-border rounded-lg text-xs bg-secondary text-foreground focus:outline-none focus:border-brand-accent transition-colors"
+                    className="w-full px-3 py-2 border border-border-default rounded-lg text-xs bg-surface-2 text-text-primary focus:outline-none focus:border-brand-accent transition-colors"
                     required
                     minLength={8}
                   />
@@ -549,13 +549,13 @@ export default function UsersView() {
               )}
 
               <div>
-                <label className="block text-[9px] font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">
                   {modalType === 'create' ? 'Authorization Role' : 'Assign New Role (optional)'}
                 </label>
                 <select 
                   value={form.role_id} 
                   onChange={(e) => setForm({ ...form, role_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg text-xs bg-secondary text-foreground focus:outline-none focus:border-brand-accent transition-colors"
+                  className="w-full px-3 py-2 border border-border-default rounded-lg text-xs bg-surface-2 text-text-primary focus:outline-none focus:border-brand-accent transition-colors"
                 >
                   <option value="">{modalType === 'create' ? '— Select Role —' : '— Keep current role —'}</option>
                   {roles.map(r => (
@@ -564,11 +564,11 @@ export default function UsersView() {
                 </select>
               </div>
 
-              <div className="pt-4 border-t border-border flex justify-end space-x-3">
+              <div className="pt-4 border-t border-border-default flex justify-end space-x-3">
                 <button 
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3.5 py-1.5 border border-border hover:bg-secondary text-xs font-bold rounded-lg text-foreground transition-colors cursor-pointer"
+                  className="px-3.5 py-1.5 border border-border-default hover:bg-surface-2 text-xs font-bold rounded-lg text-text-primary transition-colors cursor-pointer"
                   disabled={saving}
                 >
                   Cancel
@@ -576,7 +576,7 @@ export default function UsersView() {
                 <button 
                   type="submit"
                   disabled={saving}
-                  className="px-3.5 py-1.5 bg-brand-purple hover:bg-brand-purple/90 disabled:opacity-50 text-primary-foreground text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center space-x-1"
+                  className="px-3.5 py-1.5 bg-accent-color hover:bg-accent-color/90 disabled:opacity-50 text-surface-0 text-xs font-bold rounded-lg transition-colors cursor-pointer inline-flex items-center space-x-1"
                 >
                   {saving && <Loader2 className="h-3 w-3 animate-spin" />}
                   <span>{saving ? 'Saving...' : 'Save Profile'}</span>

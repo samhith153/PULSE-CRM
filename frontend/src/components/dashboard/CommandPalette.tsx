@@ -403,10 +403,10 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
       aria-modal="true"
       aria-label="Command palette"
     >
-      <div className="bg-card border border-border w-full max-w-md rounded-xl overflow-hidden modal-content-animate flex flex-col max-h-[420px] shadow-float">
+      <div className="bg-surface-1 border border-border-default w-full max-w-md rounded-xl overflow-hidden modal-content-animate flex flex-col max-h-[420px] shadow-float">
         {/* Search header bar */}
-        <div className="relative border-b border-border flex items-center shrink-0">
-          <div className="absolute left-4 text-muted-foreground">
+        <div className="relative border-b border-border-default flex items-center shrink-0">
+          <div className="absolute left-4 text-text-muted">
             <Search className="h-4.5 w-4.5" strokeWidth={2} />
           </div>
           <input
@@ -419,7 +419,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            className="w-full pl-11 pr-20 py-3.5 text-xs text-foreground bg-card placeholder-slate-400 focus:outline-none font-medium"
+            className="w-full pl-11 pr-20 py-3.5 text-xs text-foreground bg-surface-1 placeholder-text-muted focus:outline-none font-medium"
             role="combobox"
             aria-expanded={true}
             aria-controls="command-list"
@@ -429,12 +429,12 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
           {/* Loading Spinner */}
           {isSearching && (
             <div className="absolute right-12 flex items-center pointer-events-none">
-              <div className="h-4 w-4 border-2 border-brand-purple border-t-transparent rounded-full animate-spin"></div>
+              <div className="h-4 w-4 border-2 border-accent-color border-t-transparent rounded-full animate-spin"></div>
             </div>
           )}
 
           <div className="absolute right-4 flex items-center space-x-1.5 pointer-events-none">
-            <span className="text-[9px] font-bold text-muted-foreground bg-secondary border border-border px-1 py-0.5 rounded">ESC</span>
+            <span className="text-[9px] font-bold text-text-muted bg-surface-2 border border-border-default px-1 py-0.5 rounded">ESC</span>
           </div>
         </div>
 
@@ -449,7 +449,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
           {searchError && (
             <div className="py-4 px-3 text-center">
               <p className="text-xs text-destructive font-semibold">{searchError}</p>
-              <p className="text-[10px] text-muted-foreground mt-1">Try a different search term.</p>
+              <p className="text-[10px] text-text-muted mt-1">Try a different search term.</p>
             </div>
           )}
 
@@ -463,7 +463,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
               return (
                 <div key={item.id} role="option" aria-selected={isActive} id={`cmd-${item.id}`}>
                   {showHeader && (
-                    <p className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest px-3 py-1.5 select-none mt-2 first:mt-0">
+                    <p className="text-[9px] font-bold text-text-muted/60 uppercase tracking-widest px-3 py-1.5 select-none mt-2 first:mt-0">
                       {item.category}
                     </p>
                   )}
@@ -472,8 +472,8 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
                     onMouseEnter={() => handleItemHover(idx)}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition duration-150 cmd-item ${
                       isActive
-                        ? 'bg-brand-blue/[0.08] text-brand-blue border-l-3 border-brand-blue pl-2'
-                        : 'text-muted-foreground/75 hover:bg-secondary hover:text-muted-foreground border-l-3 border-transparent'
+                        ? 'bg-accent-color/[0.08] text-accent-color border-l-3 border-accent-color pl-2'
+                        : 'text-text-muted/75 hover:bg-surface-2 hover:text-text-muted border-l-3 border-transparent'
                     }`}
                     role="option"
                     aria-selected={isActive}
@@ -481,14 +481,14 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
                     <div className="flex items-center space-x-3 min-w-0">
                       <div
                         className={`p-1.5 rounded-md ${
-                          isActive ? 'bg-brand-blue/15 text-brand-blue' : 'bg-secondary/80 text-slate-550'
+                          isActive ? 'bg-accent-color/15 text-accent-color' : 'bg-surface-2/80 text-text-muted'
                         }`}
                       >
                         <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold truncate leading-tight">{item.title}</p>
-                        <p className="text-[10px] text-muted-foreground font-semibold truncate mt-0.5 leading-none">
+                        <p className="text-[10px] text-text-muted font-semibold truncate mt-0.5 leading-none">
                           {item.description}
                         </p>
                       </div>
@@ -496,12 +496,12 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
 
                     <div className="flex items-center space-x-2 shrink-0">
                       {item.shortcut && (
-                        <span className="text-[9px] font-bold text-muted-foreground/50 bg-secondary border border-border px-1.5 py-0.5 rounded hidden sm:inline">
+                        <span className="text-[9px] font-bold text-text-muted/50 bg-surface-2 border border-border-default px-1.5 py-0.5 rounded hidden sm:inline">
                           {item.shortcut}
                         </span>
                       )}
                       {isActive && (
-                        <CornerDownLeft className="h-3.5 w-3.5 text-brand-blue animate-pulse shrink-0" strokeWidth={2.25} />
+                        <CornerDownLeft className="h-3.5 w-3.5 text-accent-color animate-pulse shrink-0" strokeWidth={2.25} />
                       )}
                     </div>
                   </button>
@@ -510,7 +510,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
             })
           ) : (
             !searchError && (
-              <div className="py-8 text-center text-xs text-muted-foreground font-semibold">
+              <div className="py-8 text-center text-xs text-text-muted font-semibold">
                 {query.trim() ? (
                   <>No results found matching &ldquo;{query}&rdquo;</>
                 ) : (
@@ -522,16 +522,16 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
         </div>
 
         {/* Footer info bar */}
-        <div className="px-4 py-2 border-t border-border bg-secondary flex items-center justify-between text-[9px] text-muted-foreground font-bold shrink-0">
+        <div className="px-4 py-2 border-t border-border-default bg-surface-2 flex items-center justify-between text-[9px] text-text-muted font-bold shrink-0">
           <div className="flex space-x-3">
             <span className="flex items-center gap-1">
-              <kbd className="bg-card border border-border px-1 py-0.5 rounded">↑↓</kbd> Navigate
+              <kbd className="bg-surface-1 border border-border-default px-1 py-0.5 rounded">↑↓</kbd> Navigate
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="bg-card border border-border px-1 py-0.5 rounded">↵</kbd> Select
+              <kbd className="bg-surface-1 border border-border-default px-1 py-0.5 rounded">↵</kbd> Select
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="bg-card border border-border px-1 py-0.5 rounded">⌘K</kbd> Open
+              <kbd className="bg-surface-1 border border-border-default px-1 py-0.5 rounded">⌘K</kbd> Open
             </span>
           </div>
           <span>Pulse CRM</span>

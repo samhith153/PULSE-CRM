@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deal Model
 Represents an active sales opportunity derived from a lead or created directly.
 """

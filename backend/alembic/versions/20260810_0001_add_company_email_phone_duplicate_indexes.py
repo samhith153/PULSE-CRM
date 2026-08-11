@@ -1,4 +1,6 @@
+
 """add company email and phone duplicate indexes
+
 
 Revision ID: 20260810_0001
 Revises: 20260806_0011

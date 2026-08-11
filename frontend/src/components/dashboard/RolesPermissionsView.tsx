@@ -20,22 +20,22 @@ interface PermissionRow {
 }
 
 const CATEGORY_BG: Record<string, string> = {
-  user: 'bg-blue-50 text-blue-700 border-blue-200/60',
-  org: 'bg-brand-purple/10 text-brand-purple border-purple-200/60',
-  company: 'bg-brand-cyan/15 text-brand-cyan border-cyan-200/60',
-  contact: 'bg-brand-cyan/15 text-brand-cyan border-brand-cyan/25/60',
-  lead: 'bg-amber-50 text-amber-700 border-amber-200/60',
-  deal: 'bg-destructive/10 text-destructive border-destructive/25/60',
-  pipeline: 'bg-brand-purple/10 text-brand-purple border-violet-200/60',
-  activity: 'bg-secondary text-muted-foreground border-orange-200/60',
-  email: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20/60',
-  gmail: 'bg-brand-purple/10 text-brand-purple border-brand-purple/20/60',
-  dashboard: 'bg-secondary text-muted-foreground border-teal-200/60',
-  ai: 'bg-secondary text-muted-foreground border-pink-200/60',
-  webhook: 'bg-secondary text-foreground border-border/60',
-  file: 'bg-secondary text-muted-foreground border-yellow-200/60',
-  report: 'bg-secondary text-muted-foreground border-lime-200/60',
-  system: 'bg-destructive/10 text-destructive border-red-200/60',
+  user: 'bg-accent-color/10 text-accent-color border-accent-color/20',
+  org: 'bg-accent-color/10 text-accent-color border-accent-color/20',
+  company: 'bg-accent-color/15 text-accent-color border-accent-color/20',
+  contact: 'bg-accent-color/15 text-accent-color border-accent-color/25/60',
+  lead: 'bg-status-warning/10 text-status-warning border-status-warning/20',
+  deal: 'bg-status-danger/10 text-status-danger border-destructive/25/60',
+  pipeline: 'bg-accent-color/10 text-accent-color border-accent-color/20',
+  activity: 'bg-surface-2 text-text-muted border-status-warning/20',
+  email: 'bg-accent-color/10 text-accent-color border-accent-color/20/60',
+  gmail: 'bg-accent-color/10 text-accent-color border-accent-color/20/60',
+  dashboard: 'bg-surface-2 text-text-muted border-accent-color/20',
+  ai: 'bg-surface-2 text-text-muted border-accent-color/20',
+  webhook: 'bg-surface-2 text-text-primary border-border-default/60',
+  file: 'bg-surface-2 text-text-muted border-status-warning/20',
+  report: 'bg-surface-2 text-text-muted border-status-success/20',
+  system: 'bg-status-danger/10 text-status-danger border-status-danger/20',
 };
 
 const categoryLabel: Record<string, string> = {
@@ -125,7 +125,7 @@ export default function RolesPermissionsView() {
       setRows(sorted.map(p => ({
         key: p.codename,
         category: p.resource,
-        categoryBg: CATEGORY_BG[p.resource] || 'bg-secondary text-foreground border-border/60',
+        categoryBg: CATEGORY_BG[p.resource] || 'bg-surface-2 text-text-primary border-border-default/60',
         name: p.name,
         description: describePermission(p.codename, p.name),
         codename: p.codename,
@@ -176,17 +176,17 @@ export default function RolesPermissionsView() {
     <div className="space-y-6 font-sans">
       {toast && (
         <div className="fixed bottom-5 right-5 z-50 bg-ink text-primary-foreground px-4 py-3 rounded-xl flex items-center space-x-2.5 text-xs font-bold animate-in fade-in slide-in-from-bottom-2 duration-300 border border-slate-800">
-          <Check className="h-4 w-4 text-brand-cyan" />
+          <Check className="h-4 w-4 text-accent-color" />
           <span>{toast}</span>
         </div>
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-sans text-foreground tracking-tight font-semibold">
+          <h1 className="text-3xl font-sans text-text-primary tracking-tight font-semibold">
             Roles &amp; Permissions
           </h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
+          <p className="text-xs md:text-sm text-text-muted mt-1 font-medium tracking-wide">
             Configure system authorization profiles and manage access bounds across all workspace roles.
           </p>
         </div>
@@ -194,7 +194,7 @@ export default function RolesPermissionsView() {
         <button 
           onClick={handleSave}
           disabled={saving || loading}
-          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-brand-purple hover:bg-brand-purple/90 disabled:opacity-50 text-primary-foreground rounded-xl text-xs font-bold transition duration-200 cursor-pointer hover:shadow-nav self-start sm:self-center"
+          className="inline-flex items-center space-x-2 px-4 py-2.5 bg-accent-color hover:bg-accent-color/90 disabled:opacity-50 text-primary-foreground rounded-xl text-xs font-bold transition duration-200 cursor-pointer hover:shadow-nav self-start sm:self-center"
         >
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           <span>{saving ? 'Saving...' : 'Save Changes'}</span>
@@ -206,41 +206,41 @@ export default function RolesPermissionsView() {
         {roles.map((role) => (
           <div 
             key={role.id}
-            className="bg-card border border-border/90 rounded-2xl p-5  space-y-2 hover:shadow-nav hover:border-border transition duration-300"
+            className="bg-surface-1 border border-border-default/90 rounded-2xl p-5  space-y-2 hover:shadow-nav hover:border-border-default transition duration-300"
           >
             <div className="flex justify-between items-center">
-              <span className="text-sm font-semibold text-foreground">{role.display_name}</span>
-              <span className="text-[10px] font-semibold bg-brand-purple/10 text-brand-purple px-2.5 py-1 rounded-full border border-brand-purple/15">
+              <span className="text-sm font-semibold text-text-primary">{role.display_name}</span>
+              <span className="text-[10px] font-semibold bg-accent-color/10 text-accent-color px-2.5 py-1 rounded-full border border-accent-color/15">
                 {role.name === 'admin' ? 'Full Access' : `${(matrix[role.name] ? Object.values(matrix[role.name]).filter(Boolean).length : 0)} / ${permissions.length} Permissions`}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed font-normal">{role.description || 'No description.'}</p>
+            <p className="text-xs text-text-muted leading-relaxed font-normal">{role.description || 'No description.'}</p>
           </div>
         ))}
       </div>
 
       {/* Permission Matrix Table */}
-      <div className="bg-card border border-border/90 rounded-2xl p-6  space-y-5">
+      <div className="bg-surface-1 border border-border-default/90 rounded-2xl p-6  space-y-5">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-foreground text-base flex items-center">
-            <Shield className="h-5 w-5 mr-2 text-brand-purple" />
+          <h3 className="font-semibold text-text-primary text-base flex items-center">
+            <Shield className="h-5 w-5 mr-2 text-accent-color" />
             <span>Permission Access Matrix</span>
           </h3>
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-text-muted">
             {permissions.length} Total System Policy Rules
           </span>
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-12 text-muted-foreground text-xs font-medium">
+          <div className="flex items-center justify-center py-12 text-text-muted text-xs font-medium">
             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
             Loading permissions...
           </div>
         ) : (
           <div className="overflow-x-auto select-none max-h-[600px] overflow-y-auto">
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-card z-10">
-                <tr className="border-b border-border text-[10px] uppercase font-semibold text-foreground tracking-wider">
+              <thead className="sticky top-0 bg-surface-1 z-10">
+                <tr className="border-b border-border-default text-[10px] uppercase font-semibold text-text-primary tracking-wider">
                   <th className="py-3 px-4">CATEGORY</th>
                   <th className="py-3 px-4">PERMISSION</th>
                   <th className="py-3 px-4">DESCRIPTION</th>
@@ -249,19 +249,19 @@ export default function RolesPermissionsView() {
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border text-xs font-medium text-foreground">
+              <tbody className="divide-y divide-border text-xs font-medium text-text-primary">
                 {rows.map((row) => (
-                  <tr key={row.key} className="hover:bg-secondary/80 transition-colors group">
+                  <tr key={row.key} className="hover:bg-surface-2/80 transition-colors group">
                     <td className="py-3 px-4">
                       <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-semibold border ${row.categoryBg}`}>
                         {categoryLabel[row.category] || row.category}
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="font-bold text-foreground text-xs block">{row.name}</span>
+                      <span className="font-bold text-text-primary text-xs block">{row.name}</span>
                     </td>
                     <td className="py-3 px-4">
-                      <span className="text-muted-foreground text-xs leading-normal block max-w-md">{row.description}</span>
+                      <span className="text-text-muted text-xs leading-normal block max-w-md">{row.description}</span>
                     </td>
                     {roles.map(r => (
                       <td key={r.name} className="py-3 px-4 text-center">
@@ -271,10 +271,10 @@ export default function RolesPermissionsView() {
                           onClick={() => togglePermission(row.codename, r.name)}
                           className={`h-5 w-5 rounded-md border transition flex items-center justify-center mx-auto ${
                             r.name === 'admin'
-                              ? 'border-brand-purple/20 bg-brand-purple/10 text-brand-purple cursor-not-allowed opacity-75'
+                              ? 'border-accent-color/20 bg-accent-color/10 text-accent-color cursor-not-allowed opacity-75'
                               : matrix[r.name]?.[row.codename]
-                                ? 'border-brand-purple bg-brand-purple text-primary-foreground  hover:bg-brand-purple/90 cursor-pointer'
-                                : 'border-border bg-card hover:border-brand-purple/50 cursor-pointer'
+                                ? 'border-accent-color bg-accent-color text-primary-foreground  hover:bg-accent-color/90 cursor-pointer'
+                                : 'border-border-default bg-surface-1 hover:border-accent-color/50 cursor-pointer'
                           }`}
                           title={r.name === 'admin' ? 'Admin access is permanently enabled' : ''}
                         >

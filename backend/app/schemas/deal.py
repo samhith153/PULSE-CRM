@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deal Schemas (Pydantic V2)
 """
 from datetime import date, datetime

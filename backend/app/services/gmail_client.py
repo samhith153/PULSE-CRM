@@ -107,6 +107,11 @@ class GmailClient:
                 json=json,
             )
         if response.status_code >= 400:
+            if response.status_code in (400, 401):
+                raise ValidationException(
+                    "Gmail access token may be expired. Please reconnect Gmail in Integrations settings.",
+                    {"google_status": response.status_code, "body": response.text[:500]},
+                )
             raise ValidationException(
                 "Gmail API request failed.",
                 {"google_status": response.status_code, "body": response.text[:500]},

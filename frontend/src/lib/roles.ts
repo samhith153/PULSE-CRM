@@ -1,5 +1,6 @@
 export type Role = 'representative' | 'manager' | 'admin';
 
+
 export const ROLE_HOME: Record<Role, string> = {
   sales_rep: 'home',
   manager: 'home',

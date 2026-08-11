@@ -1,4 +1,4 @@
-"""
+﻿"""
 Company Repository
 """
 from typing import List, Optional, Tuple
@@ -32,6 +32,29 @@ class CompanyRepository(BaseRepository[Company]):
     ) -> Optional[Company]:
         stmt = self._base_query(organization_id).where(
             Company.name.ilike(name)
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+    async def get_by_name_in_org_include_deleted(
+        self, name: str, organization_id: UUID
+    ) -> Optional[Company]:
+        """Look up a company by name including soft-deleted rows.
+
+        Used during lead conversion to avoid hitting the unique constraint
+        `uq_company_name_per_org` (which counts soft-deleted rows) when a
+        company with the same name was previously soft-deleted.
+        """
+        stmt = (
+            select(Company)
+            .where(
+                Company.organization_id == organization_id,
+                Company.name.ilike(name),
+            )
+            .options(selectinload(Company.owner))
+            .order_by(Company.is_deleted.asc())
+            .limit(1)
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()

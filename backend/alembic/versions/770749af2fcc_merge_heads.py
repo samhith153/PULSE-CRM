@@ -1,4 +1,4 @@
-"""merge heads
+﻿"""merge heads
 
 Revision ID: 770749af2fcc
 Revises: 3eef3c402ed3, e5f9c1d8a7b6

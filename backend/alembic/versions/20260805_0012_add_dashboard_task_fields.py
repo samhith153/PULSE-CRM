@@ -81,4 +81,6 @@ def downgrade() -> None:
     op.drop_column("ai_scores", "tier")
     op.drop_column("deals", "sentiment")
     op.drop_column("deals", "value")
+
     op.drop_column("users", "sales_quota")
+

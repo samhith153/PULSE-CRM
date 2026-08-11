@@ -1,6 +1,6 @@
-"""
+﻿"""
 Global Exception Handler
-Maps domain exceptions → HTTP responses with the standard error envelope.
+Maps domain exceptions ΓåÆ HTTP responses with the standard error envelope.
 """
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -107,10 +107,10 @@ async def pulse_exception_handler(request: Request, exc: PulseCRMException) -> J
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    """Pydantic V2 validation errors → 422 with field-level details."""
+    """Pydantic V2 validation errors ΓåÆ 422 with field-level details."""
     details = [
         ErrorDetail(
-            field=" → ".join(str(loc) for loc in err["loc"]),
+            field=" ΓåÆ ".join(str(loc) for loc in err["loc"]),
             message=err["msg"],
         )
         for err in exc.errors()
@@ -126,7 +126,7 @@ async def validation_exception_handler(
 
 
 async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    """FastAPI HTTPException → standard error envelope."""
+    """FastAPI HTTPException ΓåÆ standard error envelope."""
     logger.warning("HTTPException: %s | detail=%s", exc.status_code, exc.detail)
     detail = exc.detail
     details = []

@@ -83,6 +83,7 @@ from app.api.v1.webhooks         import router as webhooks_router
 from app.api.v1.workflow import router as workflow_router
 from app.api.v1.search import router as search_router
 from app.api.v1.reports import router as reports_router
+from app.api.v1.targets import router as targets_router
 
 # ── Assemble ──────────────────────────────────────────────────────────────────
 api_router = APIRouter()
@@ -131,4 +132,9 @@ api_router.include_router(
     reports_router,
     prefix="/reports",
     tags=["Reports"],
+)
+api_router.include_router(
+    targets_router,
+    prefix="/targets",
+    tags=["Sales Targets"],
 )

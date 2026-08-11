@@ -67,30 +67,30 @@ export default function TeamPerformanceView() {
     : { revenue: 0, calls: 0, meetings: 0, deals: '0', winRate: '0' };
 
   const getStatus = (winRate: number) => {
-    if (winRate >= 70) return { label: 'Top Performer', color: 'bg-brand-cyan/15 text-brand-cyan' };
-    if (winRate >= 60) return { label: 'On Target', color: 'bg-blue-50 text-blue-700' };
-    return { label: 'Nurture Required', color: 'bg-destructive/10 text-destructive' };
+    if (winRate >= 70) return { label: 'Top Performer', color: 'bg-accent-color/15 text-accent-color' };
+    if (winRate >= 60) return { label: 'On Target', color: 'bg-accent-color/10 text-accent-color' };
+    return { label: 'Nurture Required', color: 'bg-status-danger/10 text-status-danger' };
   };
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
+        <h1 className="text-3xl font-sans text-text-primary tracking-tight font-bold">
           Team Performance
         </h1>
-        <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
+        <p className="text-xs md:text-sm text-text-muted mt-1 font-medium tracking-wide">
           Compare revenue attribution, contact metrics, and overall close rates across representatives.
         </p>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-24 text-muted-foreground text-xs font-semibold">
+        <div className="flex items-center justify-center py-24 text-text-muted text-xs font-semibold">
           <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading team performance…
         </div>
       ) : error ? (
-        <div className="py-24 text-center text-destructive text-xs font-semibold">{error}</div>
+        <div className="py-24 text-center text-status-danger text-xs font-semibold">{error}</div>
       ) : reps.length === 0 ? (
-        <div className="py-24 text-center text-muted-foreground text-xs font-semibold">No rep performance data available.</div>
+        <div className="py-24 text-center text-text-muted text-xs font-semibold">No rep performance data available.</div>
       ) : (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -103,25 +103,25 @@ export default function TeamPerformanceView() {
             ].map((item, idx) => {
               const Icon = item.icon;
               return (
-                <div key={idx} className="bg-card border border-border rounded-2xl p-4 space-y-1">
-                  <div className="flex items-center space-x-1.5 text-muted-foreground">
-                    <Icon className="h-3.5 w-3.5 text-brand-purple" />
+                <div key={idx} className="bg-surface-1 border border-border-default rounded-2xl p-4 space-y-1">
+                  <div className="flex items-center space-x-1.5 text-text-muted">
+                    <Icon className="h-3.5 w-3.5 text-accent-color" />
                     <span className="text-[10px] font-semibold uppercase tracking-wide">{item.label}</span>
                   </div>
-                  <h4 className="text-base font-semibold text-foreground">{item.val}</h4>
-                  <span className="text-[9px] text-muted-foreground font-bold block">{item.sub}</span>
+                  <h4 className="text-base font-semibold text-text-primary">{item.val}</h4>
+                  <span className="text-[9px] text-text-muted font-bold block">{item.sub}</span>
                 </div>
               );
             })}
           </div>
 
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <div className="bg-surface-1 border border-border-default rounded-2xl p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-foreground text-sm flex items-center">
-                <Award className="h-4.5 w-4.5 mr-2 text-brand-purple" />
+              <h3 className="font-semibold text-text-primary text-sm flex items-center">
+                <Award className="h-4.5 w-4.5 mr-2 text-accent-color" />
                 <span>Sales Representative Rankings</span>
               </h3>
-              <span className="text-[9px] font-semibold bg-secondary text-foreground px-2 py-1 rounded">
+              <span className="text-[9px] font-semibold bg-surface-2 text-text-primary px-2 py-1 rounded">
                 All Metrics (Current Period)
               </span>
             </div>
@@ -129,7 +129,7 @@ export default function TeamPerformanceView() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border text-[10px] uppercase font-semibold text-foreground">
+                  <tr className="border-b border-border-default text-[10px] uppercase font-semibold text-text-primary">
                     <th className="py-2.5">Rank</th>
                     <th className="py-2.5">Salesperson</th>
                     <th className="py-2.5 text-right">Revenue Won</th>
@@ -140,15 +140,15 @@ export default function TeamPerformanceView() {
                     <th className="py-2.5 text-right">Performance Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border text-xs font-semibold text-foreground">
+                <tbody className="divide-y divide-border text-xs font-semibold text-text-primary">
                   {reps.map((rep) => {
                     const status = getStatus(rep.winRate);
                     return (
-                      <tr key={rep.rank} className="hover:bg-secondary transition-colors">
+                      <tr key={rep.rank} className="hover:bg-surface-2 transition-colors">
                         <td className="py-3">
                           <div className="flex items-center space-x-1">
                             <span className={`h-5 w-5 rounded-full flex items-center justify-center font-semibold ${
-                              rep.rank === 1 ? 'bg-amber-50 text-foreground' : 'bg-secondary text-foreground'
+                              rep.rank === 1 ? 'bg-status-warning/10 text-text-primary' : 'bg-surface-2 text-text-primary'
                             }`}>
                               {rep.rank}
                             </span>
@@ -156,13 +156,13 @@ export default function TeamPerformanceView() {
                         </td>
                         <td className="py-3">
                           <div className="flex items-center space-x-2.5">
-                            <div className="h-6 w-6 rounded-full bg-secondary border border-border flex items-center justify-center text-[9px] font-semibold text-muted-foreground">
+                            <div className="h-6 w-6 rounded-full bg-surface-2 border border-border-default flex items-center justify-center text-[9px] font-semibold text-text-muted">
                               {rep.name.split(' ').map((p) => p[0]).slice(0, 2).join('')}
                             </div>
                             <span className="font-semibold">{rep.name}</span>
                           </div>
                         </td>
-                        <td className="py-3 text-right tabular-nums font-semibold text-foreground">
+                        <td className="py-3 text-right tabular-nums font-semibold text-text-primary">
                           {formatINR(rep.revenue)}
                         </td>
                         <td className="py-3 text-right tabular-nums">{rep.calls}</td>

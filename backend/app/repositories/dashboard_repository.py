@@ -254,6 +254,39 @@ class DashboardRepository:
             func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0).label("achieved"),
             func.count(Deal.id).label("won_deals"),
         ).where(
+
+            Deal.organization_id == organization_id,
+            Deal.owner_id == user_id,
+            Deal.is_active.is_(True),
+            Deal.is_deleted.is_(False),
+            Deal.status == DealStatus.WON.value,
+            Deal.closed_at >= start,
+            Deal.closed_at < end,
+        )
+        row = (await self.db.execute(stmt)).one()
+        achieved = row.achieved or 0
+        won_deals = int(row.won_deals or 0)
+        return {"achieved": achieved, "won_deals": won_deals, "average_deal_size": (achieved / won_deals) if won_deals else 0}
+
+    async def user_sales_quota(self, organization_id: UUID, user_id: UUID):
+        stmt = select(User.sales_quota).where(
+            User.id == user_id,
+            User.organization_id == organization_id,
+            User.is_active.is_(True),
+            User.is_deleted.is_(False),
+        )
+        return (await self.db.execute(stmt)).scalar_one_or_none()
+
+
+    async def won_revenue_between(
+        self,
+        organization_id: UUID,
+        user_id: UUID,
+        start: datetime,
+        end: datetime,
+    ):
+        stmt = select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(
+
             Deal.organization_id == organization_id,
             Deal.owner_id == user_id,
             Deal.is_active.is_(True),

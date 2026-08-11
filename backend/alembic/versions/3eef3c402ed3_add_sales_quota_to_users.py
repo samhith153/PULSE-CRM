@@ -1,4 +1,4 @@
-"""add_sales_quota_to_users
+﻿"""add_sales_quota_to_users
 
 Revision ID: 3eef3c402ed3
 Revises: 8a84c1bc2729

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Lead Management Service
 """
 import asyncio
@@ -6,6 +6,7 @@ from typing import List, Optional, Tuple
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.core.exceptions import BusinessRuleException, ConflictException, DuplicateException, ForbiddenException, NotFoundException
 from app.core.logging import get_logger
@@ -35,7 +36,7 @@ VALID_TRANSITIONS: dict[LeadStatus, list[LeadStatus]] = {
     LeadStatus.LOST: [],
 }
 
-# ── Background-task infrastructure ──────────────────────────────────────
+# ΓöÇΓöÇ Background-task infrastructure ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 _lead_ai_tasks: set[asyncio.Task] = set()
 
 
@@ -76,7 +77,7 @@ class LeadService:
         self.contact_repo = ContactRepository(db)
         self.user_repo = UserRepository(db)
 
-    # ── RBAC helpers ────────────────────────────────────────────────────────
+    # ΓöÇΓöÇ RBAC helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
     def _has_elevated_access(self, user: User) -> bool:
         roles = {ur.role.name for ur in user.user_roles if ur.role}
@@ -320,7 +321,7 @@ class LeadService:
             if existing:
                 raise ConflictException("Lead has already been converted into a deal.")
 
-            # ── Resolve / create Company ──────────────────────────────────────
+            # ΓöÇΓöÇ Resolve / create Company ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             company_id = lead.company_id
             if not company_id and lead.company_name:
                 existing_company = await self.company_repo.get_by_name_in_org(
@@ -329,17 +330,40 @@ class LeadService:
                 if existing_company:
                     company_id = existing_company.id
                 else:
-                    company = await self.company_repo.create(
-                        name=lead.company_name,
-                        industry=industry or lead.industry,
-                        employee_count=employee_count or lead.employee_count,
-                         annual_revenue=str(revenue) if revenue is not None else None,
-                        organization_id=organization_id,
-                        created_by=created_by,
+                    # A company with this name may exist but be soft-deleted
+                    # (invisible to get_by_name_in_org, yet still occupying the
+                    # unique slot uq_company_name_per_org). Reuse it instead of
+                    # hitting an IntegrityError on INSERT.
+                    deleted_company = await self.company_repo.get_by_name_in_org_include_deleted(
+                        lead.company_name, organization_id
                     )
-                    company_id = company.id
+                    if deleted_company:
+                        if deleted_company.is_deleted:
+                            await self.company_repo.update(
+                                deleted_company,
+                                is_deleted=False,
+                                is_active=True,
+                            )
+                        company_id = deleted_company.id
+                    else:
+                        try:
+                            company = await self.company_repo.create(
+                                name=lead.company_name,
+                                industry=industry or lead.industry,
+                                employee_count=employee_count or lead.employee_count,
+                                annual_revenue=str(revenue) if revenue is not None else None,
+                                organization_id=organization_id,
+                                created_by=created_by,
+                            )
+                            company_id = company.id
+                        except IntegrityError:
+                            # Another request created this company concurrently.
+                            # Surface a clear message instead of a raw DB error.
+                            raise DuplicateException(
+                                "Company", "name", lead.company_name
+                            )
 
-            # ── Resolve / create Contact ──────────────────────────────────────
+            # ΓöÇΓöÇ Resolve / create Contact ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             contact_id = lead.contact_id
             if not contact_id and lead.email:
                 existing_contact = await self.contact_repo.get_by_email_in_org(
@@ -360,10 +384,11 @@ class LeadService:
                         company_id=company_id,
                         organization_id=organization_id,
                         created_by=created_by,
+                        owner_id=lead.owner_id or created_by,
                     )
                     contact_id = contact.id
 
-            # ── Find pipeline stage ───────────────────────────────────────────
+            # ΓöÇΓöÇ Find pipeline stage ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             if pipeline_stage_id:
                 stage = await self.pipeline_repo.get_by_id(UUID(pipeline_stage_id))
             else:
@@ -373,7 +398,7 @@ class LeadService:
 
                 stage = (await PipelineService(self.db).ensure_default_stages(organization_id, created_by))[0]
 
-            # ── Create Deal ───────────────────────────────────────────────────
+            # ΓöÇΓöÇ Create Deal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             deal = await self.deal_repo.create(
                 name=lead.title,
                 description=lead.description,
@@ -392,7 +417,7 @@ class LeadService:
             )
             deal = await self.deal_repo.get_active_by_id(deal.id, organization_id)
 
-            # ── Update company with conversion details ────────────────────────
+            # ΓöÇΓöÇ Update company with conversion details ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             if company_id:
                 company = await self.company_repo.get_active_by_id(company_id, organization_id)
                 if company:
@@ -406,7 +431,7 @@ class LeadService:
                     if comp_updates:
                         await self.company_repo.update(company, **comp_updates)
 
-            # ── Mark lead as converted ────────────────────────────────────────
+            # ΓöÇΓöÇ Mark lead as converted ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             lead_updates = {"status": LeadStatus.CONVERTED.value}
             if industry is not None:
                 lead_updates["industry"] = industry

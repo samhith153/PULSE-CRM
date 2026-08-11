@@ -1,5 +1,6 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 type CollapseToggleProps = {
   isCollapsed: boolean;
@@ -11,9 +12,13 @@ export const CollapseToggle: React.FC<CollapseToggleProps> = ({ isCollapsed, onT
     onClick={onToggle}
     aria-expanded={!isCollapsed}
     title={isCollapsed ? 'Expand' : 'Collapse'}
-    className={`inline-flex items-center justify-center bg-transparent border-none p-1 cursor-pointer text-gray-500 hover:text-gray-900 hover:bg-black/5 rounded transition-transform duration-200 ${
-      isCollapsed ? '-rotate-90' : ''
-    }`}
+    className={cn(
+      'inline-flex items-center justify-center',
+      'bg-transparent border-none p-1 cursor-pointer',
+      'text-text-muted hover:text-text-primary hover:bg-surface-hover',
+      'rounded-[12px] transition-transform duration-200',
+      isCollapsed && '-rotate-90'
+    )}
   >
     <ChevronDown size={14} />
   </button>

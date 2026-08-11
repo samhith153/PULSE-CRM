@@ -1,4 +1,4 @@
-import { toast } from '@/lib/toast';
+﻿import { toast } from '@/lib/toast';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
@@ -232,7 +232,7 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
   const token = getToken();
   if (!token) {
     // Return a safe empty value so callers don't crash while unauthenticated.
-    // Array endpoints get [], object endpoints get undefined — components
+    // Array endpoints get [], object endpoints get undefined ΓÇö components
     // that handle empty arrays or undefined data won't error.
     return undefined as T;
   }
@@ -266,6 +266,8 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       toast.error(`Permission denied: ${message}`);
     } else if (res.status === 401) {
       toast.error('Session expired. Please log in again.');
+    } else if (res.status === 429) {
+      toast.error('Too many requests. Please wait a moment and try again.');
     } else if (res.status >= 500) {
       toast.error(`Server error: ${message}`);
     }
@@ -606,6 +608,7 @@ export async function getDeals(): Promise<Deal[]> {
       owner: dd.owner_name || dd.owner || '',
       closeDate: dd.expected_close_date || '',
       createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
+      pipeline_stage_id: dd.pipeline_stage_id || null,
     };
   }) as unknown as Deal[];
 }
@@ -1586,7 +1589,7 @@ export async function bulkUpdateCrmActivities(payload: { ids: string[]; status?:
 }
 
 // =============================================================================
-// LEAD DETAIL PANEL  — real data for Timeline / Emails / Calls / Meetings / Chart
+// LEAD DETAIL PANEL  ΓÇö real data for Timeline / Emails / Calls / Meetings / Chart
 // =============================================================================
 
 export interface LeadTimelineEntry {
@@ -1968,7 +1971,7 @@ export async function searchGlobalCRM(query: string) {
 }
 
 
-// ── Report Types & API Functions ─────────────────────────────────────────────
+// ΓöÇΓöÇ Report Types & API Functions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 export interface ReportParams {
   period?: 'week' | 'month' | 'quarter' | 'year';
@@ -2300,4 +2303,10 @@ export async function getDealAnalyticsReport(params?: ReportParams): Promise<Dea
   return apiFetch<DealAnalyticsReport>(
     `/api/v1/reports/deal-analytics${toQuery({ period: params?.period })}`
   );
+}
+
+export async function recomputeLeadScore(leadId: string): Promise<any> {
+  return apiFetch<any>(`/api/v1/lead-scores/leads/${leadId}/recompute`, {
+    method: 'POST'
+  });
 }
