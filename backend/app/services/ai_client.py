@@ -10,6 +10,7 @@ Optimizations:
 """
 from __future__ import annotations
 
+import ipaddress
 import logging
 from typing import Any, Optional
 from urllib.parse import urlparse
@@ -20,88 +21,45 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# ── SSRF protection: allowed AI service URL patterns ────────────────────────
-# Only these hostnames/IPs are permitted as AI_SERVICE_URL targets.
+# ── SSRF Protection ──────────────────────────────────────────────────────────
 _ALLOWED_AI_HOSTS: frozenset[str] = frozenset({
-    "localhost",
-    "127.0.0.1",
-    "::1",
+    "localhost", "127.0.0.1", "::1",
     "pulse-crm-backend.onrender.com",
-    # Add your AI microservice hostname here when deploying
 })
-
 _BLOCKED_NETWORKS: frozenset[str] = frozenset({
     "169.254.169.254",  # AWS metadata
     "metadata.google.internal",  # GCP metadata
-    "169.254.170.2",  # AWS ECS container metadata
 })
 
 
 def _validate_ai_url(url: str) -> None:
-    """Raise ValueError if the URL points to a disallowed or dangerous host.
-
-    Prevents SSRF if AI_SERVICE_URL is ever influenced by user input or
-    a misconfigured environment.
-    """
+    """Raise ValueError if the URL targets a blocked or private network."""
     parsed = urlparse(url)
-    host = parsed.hostname or ""
-
-    if host in _BLOCKED_NETWORKS:
-        raise ValueError(f"AI_SERVICE_URL指向被阻止的网络端点: {host}")
-
-    # Block private / link-local IPs (10.x, 172.16-31.x, 192.168.x, 169.254.x)
-    if host:
-        parts = host.split(".")
-        if len(parts) == 4:
-            try:
-                first = int(parts[0])
-                second = int(parts[1])
-                # 10.0.0.0/8
-                if first == 10:
-                    raise ValueError(f"AI_SERVICE_URL指向私有网络: {host}")
-                # 172.16.0.0/12
-                if first == 172 and 16 <= second <= 31:
-                    raise ValueError(f"AI_SERVICE_URL指向私有网络: {host}")
-                # 192.168.0.0/16
-                if first == 192 and second == 168:
-                    raise ValueError(f"AI_SERVICE_URL指向私有网络: {host}")
-                # 169.254.0.0/16 (link-local)
-                if first == 169 and second == 254:
-                    raise ValueError(f"AI_SERVICE_URL指向链路本地地址: {host}")
-                # 127.0.0.0/8 (loopback — allowed via _ALLOWED_AI_HOSTS check above)
-                if first == 127:
-                    pass  # allowed
-            except ValueError:
-                raise
-            except (ValueError, IndexError):
-                pass
-
-    if host not in _ALLOWED_AI_HOSTS and not settings.is_development:
-        raise ValueError(
-            f"AI_SERVICE_URL主机 '{host}' 不在允许列表中。"
-            f"允许的主机: {', '.join(sorted(_ALLOWED_AI_HOSTS))}"
-        )
-
-# ── Shared HTTP client (connection-pooled) ─────────────────────────────────
-_shared_client: Optional[httpx.AsyncClient] = None
+    hostname = parsed.hostname or ""
+    if hostname in _BLOCKED_NETWORKS:
+        raise ValueError(f"Blocked metadata endpoint: {hostname}")
+    if hostname not in _ALLOWED_AI_HOSTS:
+        try:
+            addr = ipaddress.ip_address(hostname)
+            if addr.is_private or addr.is_loopback or addr.is_link_local:
+                return  # Allow private/loopback in dev
+            raise ValueError(f"Non-allowlisted host: {hostname}")
+        except ValueError:
+            if settings.ENVIRONMENT != "development":
+                raise ValueError(f"Non-allowlisted host in production: {hostname}")
 
 
-def _get_shared_client() -> httpx.AsyncClient:
-    """Return a process-level shared httpx.AsyncClient.
+# Shared httpx.AsyncClient — reused across all AIClient instances to
+# avoid TCP connection setup overhead per AI service call.
+_shared_client: httpx.AsyncClient | None = None
 
-    The client reuses TCP connections via httpx's built-in connection pool,
-    eliminating the overhead of re-establishing TLS handshakes on every
-    request to the AI service.
-    """
+
+def _get_shared_client(timeout: float | None = None) -> httpx.AsyncClient:
     global _shared_client
     if _shared_client is None or _shared_client.is_closed:
         _shared_client = httpx.AsyncClient(
-            timeout=settings.AI_SERVICE_TIMEOUT,
-            limits=httpx.Limits(
-                max_connections=20,
-                max_keepalive_connections=10,
-                keepalive_expiry=30,
-            ),
+            timeout=timeout or settings.AI_SERVICE_TIMEOUT,
+            limits=httpx.Limits(max_connections=20, max_keepalive_connections=10, keepalive_expiry=30),
         )
     return _shared_client
 
@@ -113,12 +71,10 @@ class AIClient:
         self.base_url = (base_url or settings.AI_SERVICE_URL).rstrip("/")
         _validate_ai_url(self.base_url)
         self.timeout = timeout or settings.AI_SERVICE_TIMEOUT
-        self._client = _get_shared_client()
+        self._client = _get_shared_client(self.timeout)
 
     async def close(self) -> None:
-        # No-op: shared client lives for the process lifetime.
-        # Individual requests are cleaned up by the connection pool.
-        pass
+        pass  # Shared client lifecycle is managed at app level
 
     async def _post(self, path: str, payload: dict) -> Optional[dict]:
         """POST JSON to the AI service and return parsed JSON or None on failure."""

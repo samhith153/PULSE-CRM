@@ -269,23 +269,33 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       return;
     }
 
-    // For normal stages, update backend first.
+    // For normal stages, move card instantly (optimistic update).
+    const originalStage = deals.find(d => d.id === draggedId)?.stage;
+    setDeals(prev =>
+      prev.map(d =>
+        d.id === draggedId
+          ? { ...d, stage: stageName }
+          : d
+      )
+    );
+    setDraggedId(null);
+
     try {
       await updateDealStage(draggedId, stageId);
-
-      setDeals(prev =>
-        prev.map(d =>
-          d.id === draggedId
-            ? { ...d, stage: stageName }
-            : d
-        )
-      );
     } catch (err: any) {
+      // Revert on failure
+      if (originalStage) {
+        setDeals(prev =>
+          prev.map(d =>
+            d.id === draggedId
+              ? { ...d, stage: originalStage }
+              : d
+          )
+        );
+      }
       console.error('Failed to update deal stage:', err);
       toast.error(err?.message || 'Failed to update deal stage.');
     }
-
-    setDraggedId(null);
   };
 
   const confirmStageChange = async () => {
@@ -298,34 +308,38 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
       return;
     }
 
+    const originalStage = deals.find(d => d.id === pendingStageChange.dealId)?.stage;
+    const stageName = pendingStageChange.stageName;
+    const dealId = pendingStageChange.dealId;
+
+    // Move card instantly (optimistic update)
+    setDeals(prev =>
+      prev.map(d =>
+        d.id === dealId
+          ? { ...d, stage: stageName }
+          : d
+      )
+    );
+    toast.success(`Deal moved to ${stageName}.`);
+    setPendingStageChange(null);
+    setCloseReason('');
     setIsSavingStage(true);
 
     try {
-      await updateDealStage(
-        pendingStageChange.dealId,
-        pendingStageChange.stageId,
-        reason
-      );
-
-      setDeals(prev =>
-        prev.map(d =>
-          d.id === pendingStageChange.dealId
-            ? { ...d, stage: pendingStageChange.stageName }
-            : d
-        )
-      );
-
-      toast.success(
-        `Deal moved to ${pendingStageChange.stageName}.`
-      );
-
-      setPendingStageChange(null);
-      setCloseReason('');
+      await updateDealStage(dealId, pendingStageChange.stageId, reason);
     } catch (err: any) {
+      // Revert on failure
+      if (originalStage) {
+        setDeals(prev =>
+          prev.map(d =>
+            d.id === dealId
+              ? { ...d, stage: originalStage }
+              : d
+          )
+        );
+      }
       console.error('Failed to update deal stage:', err);
-      toast.error(
-        err?.message || 'Failed to update deal stage.'
-      );
+      toast.error(err?.message || 'Failed to update deal stage.');
     } finally {
       setIsSavingStage(false);
     }
@@ -404,7 +418,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   };
 
   return (
-    <SkeletonLoader isLoading={loading} layout={viewMode === 'list' ? 'table' : 'kanban'}>
+    <SkeletonLoader isLoading={loading} layout={viewMode === 'kanban' ? 'kanban' : 'table'}>
     <div className="space-y-6">
       <div className="bg-surface-1 border border-border-default rounded-2xl p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -809,22 +823,27 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                             return;
                           }
 
-                          updateDealStage(deal.id, stageId)
-                            .then(() => {
-                              setDeals(prev =>
-                                prev.map(d =>
-                                  d.id === deal.id
-                                    ? { ...d, stage: newStage }
-                                    : d
-                                )
-                              );
-                            })
-                            .catch((err: any) => {
-                              console.error('Failed to update deal stage:', err);
-                              toast.error(
-                                err?.message || 'Failed to update deal stage.'
-                              );
-                            });
+                          // Move card instantly (optimistic update)
+                          const origStage = deal.stage;
+                          setDeals(prev =>
+                            prev.map(d =>
+                              d.id === deal.id
+                                ? { ...d, stage: newStage }
+                                : d
+                            )
+                          );
+                          updateDealStage(deal.id, stageId).catch((err: any) => {
+                            // Revert on failure
+                            setDeals(prev =>
+                              prev.map(d =>
+                                d.id === deal.id
+                                  ? { ...d, stage: origStage }
+                                  : d
+                              )
+                            );
+                            console.error('Failed to update deal stage:', err);
+                            toast.error(err?.message || 'Failed to update deal stage.');
+                          });
                         }}
                         className="bg-transparent text-accent-color focus:outline-none cursor-pointer"
                       >

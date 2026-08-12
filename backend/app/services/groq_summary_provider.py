@@ -2,6 +2,7 @@
 Real, integrated summarisation provider — self-contained, no dependency
 on the standalone ai/summarization test app's config, models, or agent.
 """
+import asyncio
 import json
 from groq import Groq
 
@@ -40,12 +41,13 @@ def _format_thread(emails: list[Email]) -> str:
 class GroqConversationSummaryProvider:
     provider_name = "groq"
 
-    def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult:
+    async def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult:
         if not emails:
             return SummaryResult(summary="No conversation history is available yet.", bullets=[], metadata={"email_count": 0})
 
         thread_text = _format_thread(emails)
-        response = _client.chat.completions.create(
+        response = await asyncio.to_thread(
+            _client.chat.completions.create,
             model=settings.MODEL_NAME or "llama-3.1-8b-instant",
             messages=[{"role": "user", "content": _PROMPT_TEMPLATE.format(thread_text=thread_text)}],
             temperature=0.2,

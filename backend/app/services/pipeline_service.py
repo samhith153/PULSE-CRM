@@ -117,8 +117,10 @@ class PipelineService:
         return await self.ensure_default_stages(organization_id, created_by)
 
     async def get_board(self, organization_id: UUID, created_by: Optional[UUID] = None) -> PipelineBoardResponse:
-        stages = await self.list_stages(organization_id, created_by)
-        stats_rows = await self.repo.get_board_stats(organization_id)
+        stages, stats_rows = await asyncio.gather(
+            self.list_stages(organization_id, created_by),
+            self.repo.get_board_stats(organization_id),
+        )
         stats_map = {stage.id: (stage, deal_count, total_amount) for stage, deal_count, total_amount in stats_rows}
         summary_stages: list[PipelineStageStatsResponse] = []
         for stage in stages:
@@ -327,13 +329,16 @@ class PipelineService:
         stage_id: UUID,
         close_reason: Optional[str] = None,
     ) -> Deal:
-        deal = await self.deal_repo.get_active_by_id_light(deal_id, organization_id)
-        if not deal:
+        deal_result, stage_result = await asyncio.gather(
+            self.deal_repo.get_active_by_id(deal_id, organization_id),
+            self.repo.get_active_by_id(stage_id, organization_id),
+        )
+        if not deal_result:
             raise NotFoundException("Deal", deal_id)
-
-        stage = await self.repo.get_active_by_id(stage_id, organization_id)
-        if not stage:
+        if not stage_result:
             raise NotFoundException("PipelineStage", stage_id)
+        deal = deal_result
+        stage = stage_result
 
         if stage.slug in {PipelineStageSlug.WON.value, PipelineStageSlug.LOST.value} and not close_reason and not deal.close_reason:
             raise BusinessRuleException("A close_reason is required when moving a deal to Won or Lost.")

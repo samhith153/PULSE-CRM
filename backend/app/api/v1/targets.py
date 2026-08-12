@@ -27,7 +27,7 @@ router = APIRouter()
 async def list_targets(
     current_user: CurrentUser,
     db: DBSession,
-    period_type: Optional[str] = Query(None, regex="^(monthly|quarterly|yearly)$"),
+    period_type: Optional[str] = Query(None, pattern="^(monthly|quarterly|yearly)$"),
     rep_id: Optional[UUID] = None,
 ):
     svc = SalesTargetService(db)
@@ -47,7 +47,7 @@ async def list_targets(
 async def get_current_targets(
     current_user: CurrentUser,
     db: DBSession,
-    period_type: str = Query("monthly", regex="^(monthly|quarterly|yearly)$"),
+    period_type: str = Query("monthly", pattern="^(monthly|quarterly|yearly)$"),
 ):
     svc = SalesTargetService(db)
     targets = await svc.get_reps_with_current_targets(

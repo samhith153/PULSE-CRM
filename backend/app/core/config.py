@@ -59,9 +59,9 @@ class Settings(BaseSettings):
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
 
     DATABASE_URL: str
-    DATABASE_POOL_SIZE: int = 3
-    DATABASE_MAX_OVERFLOW: int = 2
-    DATABASE_POOL_TIMEOUT: int = 8
+    DATABASE_POOL_SIZE: int = 15
+    DATABASE_MAX_OVERFLOW: int = 10
+    DATABASE_POOL_TIMEOUT: int = 20
     DATABASE_POOL_RECYCLE: int = 300
 
     SUPABASE_URL: Optional[str] = None
@@ -81,7 +81,7 @@ class Settings(BaseSettings):
     RATE_LIMIT_PER_MINUTE: int = 600
     RATE_LIMIT_BURST: int = 200
 
-    # Strict per-endpoint limits for auth endpoints (brute-force protection)
+    # Auth rate limiting (stricter than global)
     AUTH_RATE_LIMIT_PER_MINUTE: int = 20
     AUTH_RATE_LIMIT_BURST: int = 10
     PASSWORD_RESET_RATE_LIMIT_PER_MINUTE: int = 5
@@ -104,6 +104,8 @@ class Settings(BaseSettings):
     GOOGLE_REDIRECT_URI: Optional[str] = None
     GOOGLE_WEBHOOK_SECRET: Optional[str] = None
     GMAIL_TOKEN_ENCRYPTION_KEY: Optional[str] = None
+    GOOGLE_PROJECT_ID: Optional[str] = None
+    GOOGLE_PUBSUB_TOPIC: Optional[str] = None
     GOOGLE_OAUTH_SCOPES: str = (
         "https://www.googleapis.com/auth/gmail.readonly,"
         "https://www.googleapis.com/auth/gmail.modify,"

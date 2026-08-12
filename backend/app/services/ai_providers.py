@@ -51,7 +51,7 @@ class RecommendationProvider(Protocol):
 
 
 class ConversationSummaryProvider(Protocol):
-    def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult: ...
+    async def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult: ...
 
 
 # -- Feature Extraction ----------------------------------------------------
@@ -268,7 +268,7 @@ class RuleBasedRecommendationProvider:
 class RuleBasedConversationSummaryProvider:
     provider_name = "rule_based"
 
-    def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult:
+    async def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult:
         ordered = sorted(emails, key=lambda item: item.sent_at or item.created_at)
         if not ordered:
             return SummaryResult(summary=prompt or "No conversation history is available yet.", bullets=[], metadata={"email_count": 0})

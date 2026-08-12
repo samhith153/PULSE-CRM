@@ -4,6 +4,7 @@ Uses Groq (free tier) with a knowledge base to answer CRM-related questions.
 """
 from __future__ import annotations
 
+import asyncio
 import html
 import json
 import re
@@ -147,15 +148,22 @@ def _format_knowledge_base() -> str:
     return "\n\n".join(sections)
 
 
+_groq_client: Groq | None = None
+
+
 def _get_client() -> Groq:
-    """Get or create the Groq client."""
+    """Get or create the Groq client (cached singleton)."""
+    global _groq_client
+    if _groq_client is not None:
+        return _groq_client
     api_key = settings.ASSISTANT_API_KEY
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Assistant API key is not configured. Set ASSISTANT_API_KEY in your .env file.",
         )
-    return Groq(api_key=api_key)
+    _groq_client = Groq(api_key=api_key)
+    return _groq_client
 
 
 def _get_suggestions(user_message: str, response_text: str) -> list[str]:
@@ -240,7 +248,8 @@ Never include <script>, <img>, <a>, or any HTML elements in your response.
 """
 
     try:
-        completion = client.chat.completions.create(
+        completion = await asyncio.to_thread(
+            client.chat.completions.create,
             model=settings.ASSISTANT_MODEL,
             messages=[
                 {"role": "system", "content": system_message},

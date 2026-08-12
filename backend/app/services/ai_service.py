@@ -160,7 +160,7 @@ class AIService:
     async def conversation_summary(self, organization_id: UUID, thread_id: str) -> AIConversationSummaryResponse:
         self._ensure_enabled()
         emails = await self.email_repo.list_thread_history(organization_id, thread_id)
-        result = self.summarizer.summarize_emails(emails)
+        result = await self.summarizer.summarize_emails(emails)
         previous = await self.summary_repo.latest_for_thread(organization_id, thread_id)
         await self.summary_repo.create(
             organization_id=organization_id,
@@ -187,7 +187,7 @@ class AIService:
         email = await self.email_repo.get_by_id_in_org(organization_id, email_id)
         if not email:
             raise NotFoundException("Email", email_id)
-        result = self.summarizer.summarize_emails([email])
+        result = await self.summarizer.summarize_emails([email])
         previous = await self.summary_repo.latest_for_email(organization_id, email_id)
         await self.summary_repo.create(
             organization_id=organization_id,
@@ -298,7 +298,7 @@ class AIService:
 
     async def summarize(self, organization_id: UUID, entity_type: str, prompt: str | None = None) -> SummaryResponse:
         self._ensure_enabled()
-        result = self.summarizer.summarize_emails([], prompt)
+        result = await self.summarizer.summarize_emails([], prompt)
         return SummaryResponse(
             entity_type=entity_type,
             entity_id=None,

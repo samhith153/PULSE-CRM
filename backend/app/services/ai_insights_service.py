@@ -7,6 +7,7 @@ RBAC:
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -158,14 +159,24 @@ class AIInsightsService:
         org_id = user.organization_id
         now = datetime.now(timezone.utc)
 
-        # Fetch all components concurrently (sequential for clarity, still fast)
-        raw_actions   = await self.repo.get_immediate_actions(org_id, user_id, team_ids)
-        raw_followups = await self.repo.get_overdue_followups(org_id, user_id, team_ids)
-        health_comps  = await self.repo.get_pipeline_health_components(org_id, user_id, team_ids)
-        daily_raw     = await self.repo.get_daily_summary(org_id, user_id, team_ids)
-        high_value    = await self.repo.get_high_value_deals(org_id, user_id, team_ids)
-        risky         = await self.repo.get_risky_deals(org_id, user_id, team_ids)
-        opp_scores    = await self.repo.get_opportunity_scores(org_id, user_id, team_ids)
+        # Fetch all components concurrently
+        (
+            raw_actions,
+            raw_followups,
+            health_comps,
+            daily_raw,
+            high_value,
+            risky,
+            opp_scores,
+        ) = await asyncio.gather(
+            self.repo.get_immediate_actions(org_id, user_id, team_ids),
+            self.repo.get_overdue_followups(org_id, user_id, team_ids),
+            self.repo.get_pipeline_health_components(org_id, user_id, team_ids),
+            self.repo.get_daily_summary(org_id, user_id, team_ids),
+            self.repo.get_high_value_deals(org_id, user_id, team_ids),
+            self.repo.get_risky_deals(org_id, user_id, team_ids),
+            self.repo.get_opportunity_scores(org_id, user_id, team_ids),
+        )
 
         # Build pipeline health
         pipeline_health = self._compute_health(health_comps)
