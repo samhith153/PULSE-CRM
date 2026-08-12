@@ -48,8 +48,9 @@ async def register(
     db: DBSession,
 ) -> dict:
     client_ip = request.client.host if request.client else ""
+    user_agent = request.headers.get("user-agent", "")
     svc = AuthService(db)
-    tokens = await svc.register(payload, client_ip)
+    tokens = await svc.register(payload, client_ip, user_agent)
     return {"success": True, "message": "Registration successful.", "data": tokens}
 
 
@@ -65,8 +66,9 @@ async def login(
     db: DBSession,
 ) -> dict:
     client_ip = request.client.host if request.client else ""
+    user_agent = request.headers.get("user-agent", "")
     svc = AuthService(db)
-    tokens = await svc.login(payload, client_ip)
+    tokens = await svc.login(payload, client_ip, user_agent)
     return {"success": True, "message": "Login successful.", "data": tokens}
 
 
@@ -82,6 +84,7 @@ async def login(
 async def logout(
     request: Request,
     current_user: CurrentUser,
+    db: DBSession,
 ) -> None:
     # Revoke the access token from the Authorization header
     auth_header = request.headers.get("authorization", "")
@@ -89,14 +92,21 @@ async def logout(
         access_token = auth_header[7:]
         revoke_token(access_token)
 
-    # Also revoke the refresh token if provided in the body
+    # Also revoke the refresh token if provided in the body — server-side,
+    # so it cannot be replayed even in multi-process deployments.
     try:
         body = await request.json()
         refresh_token = body.get("refresh_token")
         if refresh_token:
-            revoke_token(refresh_token)
+            from app.core.security import hash_token
+            from app.services.auth_service import AuthService
+
+            svc = AuthService(db)
+            stored = await svc.refresh_token_repo.get_by_hash(hash_token(refresh_token))
+            if stored and not stored.is_revoked:
+                await svc.refresh_token_repo.revoke(stored)
     except Exception:
-        pass  # Body may be empty — that's fine
+        pass  # Body may be empty or malformed — that's fine
 
     return None
 
@@ -109,10 +119,13 @@ async def logout(
 )
 async def refresh_token(
     payload: RefreshTokenRequest,
+    request: Request,
     db: DBSession,
 ) -> dict:
+    client_ip = request.client.host if request.client else ""
+    user_agent = request.headers.get("user-agent", "")
     svc = AuthService(db)
-    tokens = await svc.refresh_token(payload.refresh_token)
+    tokens = await svc.refresh_token(payload.refresh_token, client_ip, user_agent)
     return {"success": True, "message": "Token refreshed.", "data": tokens}
 
 
@@ -217,7 +230,8 @@ async def login_with_google(
     db: DBSession,
 ) -> dict:
     client_ip = request.client.host if request.client else ""
+    user_agent = request.headers.get("user-agent", "")
     svc = AuthService(db)
-    tokens = await svc.login_with_google(payload.credential, client_ip)
+    tokens = await svc.login_with_google(payload.credential, client_ip, user_agent)
     return {"success": True, "message": "Login successful.", "data": tokens}
 

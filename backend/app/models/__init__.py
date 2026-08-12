@@ -31,3 +31,4 @@ from app.models.crm_note import CrmNote  # noqa: F401
 from app.models.crm_email import CrmEmail  # noqa: F401
 from app.models.workflow import WorkflowTask  # noqa: F401
 from app.models.sales_target import SalesTarget  # noqa: F401
+from app.models.refresh_token import RefreshToken  # noqa: F401

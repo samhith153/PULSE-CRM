@@ -176,9 +176,11 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
     """
     Resolve permissions from the loaded user roles.
 
-    Prefer persisted role-permission assignments when available, but fall back
-    to the built-in role catalog for system roles so access checks remain stable
-    even if the database seed is incomplete.
+    Persisted role-permission assignments are the source of truth: admin edits
+    to a role (including the system roles admin/manager/sales_rep) take effect
+    immediately.  The built-in catalog is only a fallback for roles that have
+    NO persisted permission rows at all (e.g. before the RBAC bootstrap seeds
+    them), so a fresh database is still usable out of the box.
     """
     permissions: set[str] = set()
 
@@ -187,11 +189,19 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         if not role:
             continue
 
-        for role_permission in getattr(role, "role_permissions", []) or []:
-            permission = getattr(role_permission, "permission", None)
-            codename = getattr(permission, "codename", None)
-            if codename:
-                permissions.add(codename)
+        persisted = [
+            getattr(role_permission.permission, "codename", None)
+            for role_permission in getattr(role, "role_permissions", []) or []
+            if getattr(role_permission, "permission", None)
+        ]
+        persisted = [c for c in persisted if c]
+
+        if persisted:
+            # Persisted assignments win — system-role edits via the admin UI
+            # (add or remove) are respected instead of being silently
+            # overwritten by the built-in catalog.
+            permissions.update(persisted)
+            continue
 
         role_name = getattr(role, "name", None)
         try:

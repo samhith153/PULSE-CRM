@@ -52,7 +52,11 @@ class Settings(BaseSettings):
     REDOC_URL: str = "/redoc"
     OPENAPI_URL: str = "/openapi.json"
 
-    SECRET_KEY: str = Field(default_factory=lambda: secrets.token_urlsafe(64))
+    # Empty by default so production validation can detect an unset key.
+    # In development an ephemeral per-process key is generated lazily (see
+    # ``secret_key``) so dev keeps working out of the box; production must
+    # set SECRET_KEY explicitly and fails fast at startup if it doesn't.
+    SECRET_KEY: str = ""
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
@@ -80,6 +84,11 @@ class Settings(BaseSettings):
     ENABLE_RATE_LIMIT: bool = True
     RATE_LIMIT_PER_MINUTE: int = 600
     RATE_LIMIT_BURST: int = 200
+
+    # Comma-separated IPs of trusted reverse proxies.  X-Forwarded-For is only
+    # honored when the direct peer is one of these; otherwise a spoofed header
+    # could bypass rate limits by rotating the IP per request.
+    TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
 
     # Auth rate limiting (stricter than global)
     AUTH_RATE_LIMIT_PER_MINUTE: int = 20
@@ -171,7 +180,7 @@ class Settings(BaseSettings):
         if self.is_production:
             missing = []
             if not self.SECRET_KEY:
-                missing.append("SECRET_KEY")
+                missing.append("SECRET_KEY (must be set explicitly in production; never use the dev ephemeral key)")
             if not self.GMAIL_TOKEN_ENCRYPTION_KEY:
                 missing.append("GMAIL_TOKEN_ENCRYPTION_KEY (required in production; never fall back to SECRET_KEY)")
             if not self.BREVO_WEBHOOK_SECRET:
@@ -184,6 +193,26 @@ class Settings(BaseSettings):
             if self.CORS_ALLOW_HEADERS == "*":
                 raise ValueError("CORS_ALLOW_HEADERS must not be '*' in production")
         return self
+
+    _dev_secret_key: Optional[str] = None
+
+    @property
+    def secret_key(self) -> str:
+        """Stable signing key.
+
+        Returns SECRET_KEY when configured; otherwise (development only) an
+        ephemeral random key for this process.  Production is guaranteed to
+        have SECRET_KEY set by ``_validate_production_secrets``.
+        """
+        if self.SECRET_KEY:
+            return self.SECRET_KEY
+        if self._dev_secret_key is None:
+            self._dev_secret_key = secrets.token_urlsafe(64)
+        return self._dev_secret_key
+
+    @property
+    def trusted_proxy_ips_list(self) -> List[str]:
+        return [ip.strip() for ip in self.TRUSTED_PROXY_IPS.split(",") if ip.strip()]
 
     @property
     def cors_origins_list(self) -> List[str]:

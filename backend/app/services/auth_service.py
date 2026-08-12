@@ -34,6 +34,7 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.repositories.organization_repository import OrganizationRepository
+from app.repositories.refresh_token_repository import RefreshTokenRepository
 from app.repositories.role_repository import RoleRepository
 from app.repositories.user_repository import UserRepository
 from app.schemas.auth import (
@@ -63,10 +64,16 @@ class AuthService:
         self.user_repo = UserRepository(db)
         self.org_repo = OrganizationRepository(db)
         self.role_repo = RoleRepository(db)
+        self.refresh_token_repo = RefreshTokenRepository(db)
         self.email_service = EmailService(db)
         self.events = EventService(db)
 
-    async def register(self, payload: RegisterRequest, client_ip: str = "") -> TokenResponse:
+    async def register(
+        self,
+        payload: RegisterRequest,
+        client_ip: str = "",
+        user_agent: str = "",
+    ) -> TokenResponse:
         """Create a new Organization + Admin user."""
         is_valid, reason = check_password_strength(payload.password)
         if not is_valid:
@@ -120,9 +127,14 @@ class AuthService:
             },
         )
         await self.email_service.send_welcome_email(user, organization_name=org_name)
-        return await self._build_tokens(user)
+        return await self._build_tokens(user, client_ip, user_agent)
 
-    async def login(self, payload: LoginRequest, client_ip: str = "") -> TokenResponse:
+    async def login(
+        self,
+        payload: LoginRequest,
+        client_ip: str = "",
+        user_agent: str = "",
+    ) -> TokenResponse:
         user = await self.user_repo.get_by_email(payload.email.lower())
 
         if not user or not verify_password(payload.password, user.hashed_password):
@@ -138,7 +150,7 @@ class AuthService:
         )
 
         logger.info("User logged in", extra={"user_id": str(user.id)})
-        tokens = await self._build_tokens(user)
+        tokens = await self._build_tokens(user, client_ip, user_agent)
         try:
             async with self.db.begin_nested():
                 await self.events.record_event(
@@ -154,15 +166,82 @@ class AuthService:
             logger.exception("Failed to record login event", extra={"user_id": str(user.id)})
         return tokens
 
-    async def refresh_token(self, refresh_token: str) -> TokenResponse:
+    async def refresh_token(
+        self,
+        refresh_token: str,
+        client_ip: str = "",
+        user_agent: str = "",
+    ) -> TokenResponse:
+        """Rotate a refresh token: validate the presented token against the
+        server-side store, revoke it, and mint a fresh pair.
+
+        Reuse detection: presenting a token that has already been rotated
+        (or a token with no store record) revokes the entire session family
+        for the user, per RFC 6749 §10.4 / OAuth security guidance.
+        """
         payload = decode_refresh_token(refresh_token)
         user_id = UUID(payload["sub"])
+
+        stored = await self.refresh_token_repo.get_by_hash(hash_token(refresh_token))
+
+        if stored is None:
+            # Either a token minted before this feature shipped, or a rotated
+            # token being replayed. Treat as reuse: kill every session for the user.
+            logger.warning(
+                "Refresh token reuse detected (no store record); revoking all sessions",
+                extra={"user_id": str(user_id)},
+            )
+            await self.refresh_token_repo.revoke_all_for_user(user_id)
+            await self.events.record_event(
+                "REFRESH_TOKEN_REUSE_DETECTED",
+                organization_id=None,
+                actor_id=user_id,
+                aggregate_type="user",
+                aggregate_id=str(user_id),
+                source="auth",
+                payload={"user_id": str(user_id), "client_ip": client_ip},
+            )
+            raise UnauthorizedException("Refresh token has been revoked.")
+
+        if stored.is_revoked or stored.is_expired:
+            if stored.replaced_by_hash is not None:
+                # This token was already rotated — replaying it means the
+                # refresh token was stolen. Revoke the whole session family.
+                logger.warning(
+                    "Refresh token reuse detected (rotated token replayed); revoking all sessions",
+                    extra={"user_id": str(user_id)},
+                )
+                await self.refresh_token_repo.revoke_all_for_user(user_id)
+            raise UnauthorizedException("Refresh token has been revoked.")
 
         user = await self.user_repo.get_by_id_with_roles(user_id)
         if not user or not user.is_active:
             raise UnauthorizedException()
 
-        return await self._build_tokens(user)
+        # Rotate: revoke the old token, chained to its replacement.
+        new_token = create_refresh_token(user_id=user.id)
+        await self.refresh_token_repo.revoke(stored, replaced_by_hash=hash_token(new_token))
+        await self.refresh_token_repo.create(
+            user_id=user.id,
+            token_hash=hash_token(new_token),
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            ip_address=client_ip,
+            user_agent=user_agent[:512] if user_agent else None,
+        )
+
+        access_token = create_access_token(
+            user_id=user.id,
+            organization_id=user.organization_id,
+            role=user.primary_role or "sales_rep",
+            permissions=resolve_permissions_for_user(user),
+        )
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=new_token,
+            token_type="bearer",
+            expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        )
 
     async def forgot_password(self, email: str) -> str:
         user = await self.user_repo.get_by_email(email.lower())
@@ -219,7 +298,13 @@ class AuthService:
             password_reset_token=None,
             password_reset_expires_at=None,
         )
-        logger.info("Password reset complete", extra={"user_id": str(user.id)})
+        # Revoke every session: the old password is now compromised.
+        revoked = await self.refresh_token_repo.revoke_all_for_user(user.id)
+        logger.info(
+            "Password reset complete; revoked %d refresh token(s)",
+            revoked,
+            extra={"user_id": str(user.id)},
+        )
         await self.events.record_event(
             "PASSWORD_RESET_COMPLETED",
             organization_id=user.organization_id,
@@ -242,7 +327,15 @@ class AuthService:
             user,
             hashed_password=hash_password(payload.new_password),
         )
-        logger.info("Password changed", extra={"user_id": str(user.id)})
+        # Revoke every session except the current one is not possible (we only
+        # have the access token), so revoke all refresh tokens: the user
+        # re-logs-in on next refresh, which is the safe default.
+        revoked = await self.refresh_token_repo.revoke_all_for_user(user.id)
+        logger.info(
+            "Password changed; revoked %d refresh token(s)",
+            revoked,
+            extra={"user_id": str(user.id)},
+        )
         await self.events.record_event(
             "PASSWORD_CHANGED",
             organization_id=user.organization_id,
@@ -253,8 +346,14 @@ class AuthService:
             payload={"user_id": str(user.id), "email": user.email},
         )
 
-    async def _build_tokens(self, user: User) -> TokenResponse:
-        """Build access + refresh token pair from user entity."""
+    async def _build_tokens(
+        self,
+        user: User,
+        client_ip: str = "",
+        user_agent: str = "",
+    ) -> TokenResponse:
+        """Build access + refresh token pair from user entity and persist the
+        refresh token server-side (hashed) for rotation and revocation."""
         permissions = resolve_permissions_for_user(user)
         role_name = user.primary_role or "sales_rep"
 
@@ -265,6 +364,14 @@ class AuthService:
             permissions=permissions,
         )
         refresh_token = create_refresh_token(user_id=user.id)
+        await self.refresh_token_repo.create(
+            user_id=user.id,
+            token_hash=hash_token(refresh_token),
+            expires_at=datetime.now(timezone.utc)
+            + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
+            ip_address=client_ip,
+            user_agent=user_agent[:512] if user_agent else None,
+        )
 
         return TokenResponse(
             access_token=access_token,
@@ -273,7 +380,12 @@ class AuthService:
             expires_in=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         )
 
-    async def login_with_google(self, credential: str, client_ip: str = "") -> TokenResponse:
+    async def login_with_google(
+        self,
+        credential: str,
+        client_ip: str = "",
+        user_agent: str = "",
+    ) -> TokenResponse:
         """Authenticate user using Google ID Token."""
         if not settings.GOOGLE_CLIENT_ID:
             raise BusinessRuleException("Google Sign-In is not configured on the server.")
@@ -383,5 +495,5 @@ class AuthService:
             except Exception:
                 logger.exception("Failed to record login event", extra={"user_id": str(user.id)})
 
-        return await self._build_tokens(user)
+        return await self._build_tokens(user, client_ip, user_agent)
 

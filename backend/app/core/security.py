@@ -161,7 +161,7 @@ def create_access_token(
             "permissions": permissions,
         },
     )
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.ALGORITHM)
 
 
 def create_refresh_token(user_id: UUID) -> str:
@@ -171,7 +171,7 @@ def create_refresh_token(user_id: UUID) -> str:
         token_type="refresh",
         expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS),
     )
-    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.ALGORITHM)
 
 
 def decode_token(token: str) -> Dict[str, Any]:
@@ -182,7 +182,7 @@ def decode_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(
             token,
-            settings.SECRET_KEY,
+            settings.secret_key,
             algorithms=[settings.ALGORITHM],
         )
         # Check revocation store

@@ -65,11 +65,19 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         )
 
     def _client_key(self, request: Request) -> str:
-        forwarded_for = request.headers.get("x-forwarded-for")
-        if forwarded_for:
-            return forwarded_for.split(",", 1)[0].strip()
-        if request.client:
-            return request.client.host
+        """Client identity for rate limiting.
+
+        X-Forwarded-For is only honored when the direct peer is a trusted
+        proxy; otherwise the header can be spoofed per-request to bypass
+        the limit.
+        """
+        direct_peer = request.client.host if request.client else None
+        if direct_peer in settings.trusted_proxy_ips_list:
+            forwarded_for = request.headers.get("x-forwarded-for")
+            if forwarded_for:
+                return forwarded_for.split(",", 1)[0].strip()
+        if direct_peer:
+            return direct_peer
         return "unknown"
 
     async def dispatch(self, request: Request, call_next) -> Response:
@@ -88,12 +96,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 details=[],
                 request_id=request.headers.get("x-request-id", "system"),
             ).model_dump()
-            response = JSONResponse(status_code=429, content=content)
-            response.headers["Access-Control-Allow-Origin"] = "*"
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "*"
-            response.headers["Access-Control-Allow-Headers"] = "*"
-            return response
+            # CORS headers are applied by CORSMiddleware (registered outermost),
+            # matching the configured origins/credentials — never a bare "*"
+            # combined with credentials, which browsers reject and is unsafe.
+            return JSONResponse(status_code=429, content=content)
 
         response = await call_next(request)
         response.headers["X-RateLimit-Limit"] = str(self.burst)
@@ -136,11 +142,19 @@ class AuthRateLimitMiddleware(BaseHTTPMiddleware):
         )
 
     def _client_key(self, request: Request) -> str:
-        forwarded_for = request.headers.get("x-forwarded-for")
-        if forwarded_for:
-            return forwarded_for.split(",", 1)[0].strip()
-        if request.client:
-            return request.client.host
+        """Client identity for rate limiting.
+
+        X-Forwarded-For is only honored when the direct peer is a trusted
+        proxy; otherwise the header can be spoofed per-request to bypass
+        the limit.
+        """
+        direct_peer = request.client.host if request.client else None
+        if direct_peer in settings.trusted_proxy_ips_list:
+            forwarded_for = request.headers.get("x-forwarded-for")
+            if forwarded_for:
+                return forwarded_for.split(",", 1)[0].strip()
+        if direct_peer:
+            return direct_peer
         return "unknown"
 
     async def dispatch(self, request: Request, call_next) -> Response:

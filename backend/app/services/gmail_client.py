@@ -25,8 +25,8 @@ class TokenCipher:
                     "GMAIL_TOKEN_ENCRYPTION_KEY must be set in production. "
                     "Using SECRET_KEY for Gmail token encryption is not allowed."
                 )
-            # Dev-only fallback: use SECRET_KEY so local dev works out of the box.
-            key_material = settings.SECRET_KEY
+            # Dev-only fallback: use the dev secret so local dev works out of the box.
+            key_material = settings.secret_key
         digest = hashlib.sha256(key_material.encode()).digest()
         self._fernet = Fernet(base64.urlsafe_b64encode(digest))
 

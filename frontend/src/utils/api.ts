@@ -1519,11 +1519,10 @@ export async function getDashboardMe(): Promise<DashboardOverviewData> {
 }
 
 // --- SSE Stream URL ---
-
+// The stream authenticates via the Authorization header (fetch-based SSE),
+// so the URL carries no token — JWTs in query strings leak into logs/history.
 export function getDashboardStreamUrl(): string | null {
-  const token = getToken();
-  if (!token) return null;
-  return `${API_BASE_URL}/api/v1/stream/dashboard?token=${encodeURIComponent(token)}`;
+  return `${API_BASE_URL}/api/v1/stream/dashboard`;
 }
 
 // --- Documents API ---

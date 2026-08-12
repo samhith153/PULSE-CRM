@@ -27,12 +27,21 @@ async def stream_dashboard_events(request: Request):
     dependency which would hold a DB session open for the entire
     stream duration.  Instead it decodes the JWT directly — only the
     user ID is needed to route events.
-    """
-    token = request.query_params.get("token")
-    if not token:
-        from fastapi.responses import JSONResponse
-        return JSONResponse({"detail": "Missing token"}, status_code=401)
 
+    The token must be presented in the ``Authorization: Bearer`` header.
+    Query-string tokens are rejected (never put JWTs in URLs — they leak
+    into access logs, browser history and Referer headers).
+    """
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            {"detail": "Missing Bearer token"},
+            status_code=401,
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    token = auth_header[7:].strip()
     try:
         payload = decode_access_token(token)
         user_id = UUID(payload["sub"])

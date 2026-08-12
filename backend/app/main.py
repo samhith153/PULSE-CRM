@@ -243,6 +243,10 @@ def create_app() -> FastAPI:
     app.add_middleware(AuthRateLimitMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    app.add_middleware(PrivateNetworkAccessMiddleware)
+    # CORSMiddleware registered LAST so it is outermost: rate-limit 429
+    # responses (which bypass inner middlewares) still receive correct,
+    # credentials-aware CORS headers instead of a hand-rolled "*" policy.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
@@ -251,7 +255,6 @@ def create_app() -> FastAPI:
         allow_headers=settings.cors_headers_list,
         expose_headers=["*"],
     )
-    app.add_middleware(PrivateNetworkAccessMiddleware)
 
     app.add_exception_handler(PulseCRMException, pulse_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
