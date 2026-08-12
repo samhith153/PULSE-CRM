@@ -379,7 +379,7 @@ useEffect(() => {
           </div>
 
           <button onClick={() => { setIsSelectMode(!isSelectMode); setSelectedIds(new Set()); }}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'border-border bg-card hover:bg-secondary text-foreground'}`}>
+            className={`inline-flex items-center gap-1.5 px-4 py-2 border rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'border-border bg-card hover:bg-secondary text-foreground'}`}>
             <Check size={13} /><span>Select</span>
           </button>
           <div className="relative">
@@ -407,7 +407,7 @@ useEffect(() => {
             )}
           </div>
           <button onClick={handleExport}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold cursor-pointer shadow-sm">
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold cursor-pointer shadow-sm">
             <Download size={13} /><span>Export</span>
           </button>
           {selectedIds.size > 0 && (
@@ -493,13 +493,15 @@ useEffect(() => {
       {activeTabType === 'calendar' ? (
         <CalendarView />
       ) : (
-      <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+      <div className="space-y-3">
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-xs text-muted-foreground font-semibold">
-            <RefreshCw className="size-4 animate-spin text-accent-color mr-2" /><span>Loading activities...</span>
+          <div className="space-y-3 animate-pulse">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-20 bg-surface-2 border border-border-default/50 rounded-xl" />
+            ))}
           </div>
         ) : activities.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-20 text-center p-6">
+          <div className="flex flex-col items-center justify-center py-20 text-center p-6 bg-card border border-border rounded-xl">
             <div className="h-12 w-12 rounded-full bg-secondary flex items-center justify-center mb-3">
               <Filter className="size-5 text-muted-foreground/60" />
             </div>
@@ -507,54 +509,89 @@ useEffect(() => {
             <p className="text-[10px] text-muted-foreground mt-1">Try adjusting your filters or add a new activity.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto w-full">
-            <table className="w-full text-left border-collapse table-fixed select-none">
-              <thead>
-                <tr className="border-b border-border bg-muted/40 text-[11px] font-black uppercase text-foreground tracking-wider">
-                  {isSelectMode && <th className="py-3 px-3 text-center w-12"><input type="checkbox" onChange={handleSelectAll} checked={selectedIds.size===activities.length&&activities.length>0} className="cursor-pointer size-3.5" /></th>}
-                  <th className="py-3 px-3 text-left w-[42%]">Subject</th>
-                  <th className="py-3 px-3 text-center w-24">Type</th>
-                  <th className="py-3 px-3 text-center w-28">Status</th>
-                  <th className="py-3 px-3 text-center w-28">Priority</th>
-                  <th className="py-3 px-3 text-right w-36">Due Date</th>
-                  <th className="py-3 px-3 text-left w-[20%]">Related Record</th>
-                  <th className="py-3 px-3 w-10"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/40 text-xs font-semibold text-foreground">
-                {activities.map(a => (
-                  <tr key={a.id} onClick={() => onSelectActivity(a.id)} className="group hover:bg-secondary/15 transition-all cursor-pointer">
-                    {isSelectMode && <td className="py-3 px-3 text-center" onClick={e=>e.stopPropagation()}><input type="checkbox" checked={selectedIds.has(a.id)} onChange={()=>handleSelectRow(a.id)} className="cursor-pointer size-3.5" /></td>}
-                    <td className="py-3 px-3 text-left whitespace-normal break-words">
-                      <span className="font-bold text-foreground hover:text-accent-color transition-colors block">{a.subject}</span>
-                      {a.owner_name && <span className="text-[10px] text-muted-foreground">{a.owner_name}</span>}
-                    </td>
-                    <td className="py-3 px-3 text-center capitalize text-[10px] font-bold text-muted-foreground/90 font-mono">{a.activity_type}</td>
-                    <td className="py-3 px-3 text-center whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold ${getStatusColor(a.status)}`}>{fmt(a.status)}</span>
-                    </td>
-                    <td className="py-3 px-3 text-center whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded text-[9px] ${getPriorityColor(a.priority)}`}>{fmt(a.priority)}</span>
-                    </td>
-                    <td className="py-3 px-3 text-right text-muted-foreground/80 font-bold tabular-nums whitespace-nowrap font-mono">
+          <div className="grid grid-cols-1 gap-3">
+            {activities.map(a => (
+              <div
+                key={a.id}
+                onClick={() => onSelectActivity(a.id)}
+                className="group relative p-4 bg-surface-1 hover:bg-surface-hover border border-border-default hover:border-accent-color/20 rounded-xl transition duration-200 cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm"
+              >
+                {/* Left side: Checkbox + Icon + Details */}
+                <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                  {isSelectMode && (
+                    <div className="shrink-0 flex items-center self-center" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(a.id)}
+                        onChange={() => handleSelectRow(a.id)}
+                        className="cursor-pointer size-4 rounded border-border-default text-accent-color focus:ring-accent-color/30"
+                      />
+                    </div>
+                  )}
+
+                  {/* Icon depending on activity type */}
+                  <div className={`size-9 rounded-xl flex items-center justify-center shrink-0 border select-none ${
+                    a.activity_type === 'task' ? 'bg-status-info-bg border-status-info-text/15 text-status-info-text' :
+                    a.activity_type === 'meeting' ? 'bg-status-success-bg border-status-success-text/15 text-status-success-text' :
+                    a.activity_type === 'call' ? 'bg-purple-500/10 border-purple-500/15 text-purple-600' :
+                    a.activity_type === 'email' ? 'bg-amber-500/10 border-amber-500/15 text-amber-600' :
+                    'bg-secondary border-border text-muted-foreground'
+                  }`}>
+                    {a.activity_type === 'task' ? <ClipboardList size={16} /> :
+                     a.activity_type === 'meeting' ? <Calendar size={16} /> :
+                     a.activity_type === 'call' ? <PhoneCall size={16} /> :
+                     a.activity_type === 'email' ? <Mail size={16} /> :
+                     <FileText size={16} />}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-bold text-text-primary text-sm truncate leading-tight group-hover:text-accent-color transition-colors">{a.subject}</h4>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full select-none border ${getStatusColor(a.status)}`}>
+                        {fmt(a.status)}
+                      </span>
+                      {a.priority && (
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full select-none border ${getPriorityColor(a.priority)}`}>
+                          {fmt(a.priority)}
+                        </span>
+                      )}
+                    </div>
+                    {/* Owner description or small info */}
+                    <div className="flex items-center gap-2 text-[10px] text-text-muted mt-1 font-bold">
+                      {a.owner_name && <span>Owner: {a.owner_name}</span>}
+                      {a.related_record_name && (
+                        <>
+                          <span className="text-border-default/80">•</span>
+                          <span className="text-accent-color hover:underline cursor-pointer" onClick={(e) => { e.stopPropagation(); if (a.related_entity_type === 'lead') onTabChange?.('leads'); }}>
+                            Linked: {a.related_record_name}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right side: Due Date & Deletion Controls */}
+                <div className="flex items-center justify-between md:justify-end gap-4 shrink-0 border-t md:border-t-0 border-border-default/40 pt-3 md:pt-0">
+                  <div className="text-right flex flex-col md:items-end select-none font-semibold">
+                    <span className="text-[10px] text-text-muted">Due Date</span>
+                    <span className="text-[11px] text-text-primary tabular-nums">
                       {a.due_date ? new Date(a.due_date).toLocaleDateString() : 'No deadline'}
-                    </td>
-                    <td className="py-3 px-3 text-left truncate text-[10px] font-bold">
-                      {a.related_record_name
-                        ? <span className="text-accent-color hover:underline cursor-pointer">{a.related_record_name}</span>
-                        : <span className="text-muted-foreground/50">—</span>}
-                    </td>
-                    <td className="py-3 px-3 text-center" onClick={e => e.stopPropagation()}>
-                      <button onClick={e => handleRowDelete(e, a)}
-                        className="p-1.5 rounded-md text-muted-foreground/40 hover:text-status-danger-text hover:bg-status-danger-bg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                        title="Delete activity">
-                        <Trash2 size={12} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={e => handleRowDelete(e, a)}
+                      className="p-1.5 rounded-md text-text-muted hover:text-status-danger-text hover:bg-status-danger-bg opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                      title="Delete activity"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

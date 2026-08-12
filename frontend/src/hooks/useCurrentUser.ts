@@ -67,7 +67,7 @@ export function useCurrentUser() {
             toast.error('Unable to load user profile. Please log in again.');
             sessionStorage.removeItem('pulse-crm-auth');
             localStorage.removeItem('pulse-crm-role');
-            window.location.href = 'http://127.0.0.1:8081/login';
+            window.location.href = '/login';
           }
         })
         .finally(() => {

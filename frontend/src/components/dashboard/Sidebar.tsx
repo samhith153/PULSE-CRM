@@ -71,7 +71,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           label: 'Productivity',
           items: [
             { name: 'Activities',   icon: Activity,  tab: 'activities' },
-            { name: 'Calendar',     icon: Calendar,  tab: 'calendar' },
             { name: 'AI Insights',  icon: Sparkles,  tab: 'ai insights' },
           ],
         },
@@ -79,7 +78,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           label: 'Settings',
           items: [
             { name: 'Notifications', icon: Bell,     tab: 'notifications' },
-            { name: 'Settings',      icon: Settings, tab: 'settings' },
           ],
         },
       ];
@@ -104,15 +102,8 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
         {
           label: 'Intelligence',
           items: [
-            { name: 'Reports',    icon: BarChart3, tab: 'reports' },
             { name: 'AI Models',  icon: Cpu,       tab: 'ai models' },
             { name: 'Audit Logs', icon: Activity,  tab: 'audit logs' },
-          ],
-        },
-        {
-          label: 'System',
-          items: [
-            { name: 'Settings', icon: Settings, tab: 'settings' },
           ],
         },
       ];
@@ -143,12 +134,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           items: [
             { name: 'Reports',   icon: BarChart3, tab: 'reports' },
             { name: 'Documents', icon: FileText,  tab: 'documents' },
-          ],
-        },
-        {
-          label: 'Configuration',
-          items: [
-            { name: 'Settings', icon: Settings, tab: 'settings' },
           ],
         },
       ];
@@ -210,7 +195,7 @@ export default function Sidebar({
       </div>
 
       {/* ── Scrollable nav — ui.md §6: md-lg padding ───────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-3 space-y-6">
+      <nav className="flex-1 overflow-y-auto px-3 space-y-3.5">
 
         {/* Home — ui.md §6: icon 20px */}
         <button
@@ -241,14 +226,14 @@ export default function Sidebar({
 
         {/* Sections */}
         {sections.map((section) => (
-          <div key={section.label}>
+          <div key={section.label} className="space-y-1">
             {/* Group label — ui.md §3: 11px/600 uppercase 0.06em spacing */}
             {!collapsed ? (
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted select-none">
+              <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted select-none">
                 {section.label}
               </p>
             ) : (
-              <div className="mx-2 mb-2 h-px bg-border-default" />
+              <div className="mx-2 mb-1 h-px bg-border-default" />
             )}
 
             {section.items.map((item) => {

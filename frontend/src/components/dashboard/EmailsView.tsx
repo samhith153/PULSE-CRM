@@ -201,13 +201,15 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
   const unreadCount = useMemo(() => emails.filter(email => !email.is_read).length, [emails]);
 
   const openEmail = async (email: SyncedEmail) => {
-    setSelectedEmail(email);
+    setEmails(prev => prev.map(e => e.id === email.id ? { ...e, is_read: true } : e));
+    setSelectedEmail({ ...email, is_read: true });
     setEmailSummary(null);
     setIsDetailLoading(true);
     setError(null);
     try {
       const detail = await getEmail(email.id);
       setSelectedEmail(detail);
+      setEmails(prev => prev.map(e => e.id === detail.id ? { ...e, is_read: true } : e));
       if (detail.thread_id && detail.direction === 'inbound') {
         setIsSummaryLoading(true);
         try {
@@ -226,9 +228,91 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
     }
   };
 
+  const handleCloseDetail = () => {
+    setIsEmailModalOpen(false);
+    setSelectedEmail(null);
+    const nextParams = new URLSearchParams(window.location.search);
+    nextParams.delete('emailId');
+    router.replace(`?${nextParams.toString()}`);
+  };
+
   const handleSingleClick = (email: SyncedEmail) => {
     openEmail(email);
     setIsEmailModalOpen(true);
+    const nextParams = new URLSearchParams(window.location.search);
+    nextParams.set('emailId', String(email.id));
+    router.replace(`?${nextParams.toString()}`);
+  };
+
+  const emailIdParam = searchParams.get('emailId');
+
+  useEffect(() => {
+    if (emailIdParam && emails.length > 0) {
+      const match = emails.find(e => String(e.id) === emailIdParam);
+      if (match) {
+        if (!selectedEmail || selectedEmail.id !== match.id) {
+          openEmail(match);
+          setIsEmailModalOpen(true);
+        }
+      } else {
+        // Fetch directly from backend
+        setIsDetailLoading(true);
+        setIsEmailModalOpen(true);
+        getEmail(emailIdParam)
+          .then((detail) => {
+            setSelectedEmail(detail);
+            setEmails(prev => prev.map(e => e.id === detail.id ? { ...e, is_read: true } : e));
+            if (detail.thread_id && detail.direction === 'inbound') {
+              setIsSummaryLoading(true);
+              getEmailSummary(detail.thread_id)
+                .then(summary => setEmailSummary(summary))
+                .catch(() => {})
+                .finally(() => setIsSummaryLoading(false));
+            }
+          })
+          .catch((err) => {
+            setError(err instanceof Error ? err.message : 'Unable to load email.');
+          })
+          .finally(() => {
+            setIsDetailLoading(false);
+          });
+      }
+    }
+  }, [emailIdParam, emails.length]);
+
+  const handleReply = () => {
+    if (!selectedEmail) return;
+    setComposeForm({
+      to: selectedEmail.direction === 'inbound' ? selectedEmail.sender : selectedEmail.receiver || '',
+      name: '',
+      subject: selectedEmail.subject.startsWith('Re:') ? selectedEmail.subject : `Re: ${selectedEmail.subject}`,
+      body: `\n\n--- On ${formatDate(selectedEmail.sent_at)}, ${selectedEmail.sender} wrote:\n> ${selectedEmail.body_preview}`
+    });
+    setIsComposeOpen(true);
+    setIsEmailModalOpen(false);
+  };
+
+  const handleForward = () => {
+    if (!selectedEmail) return;
+    setComposeForm({
+      to: '',
+      name: '',
+      subject: selectedEmail.subject.startsWith('Fwd:') ? selectedEmail.subject : `Fwd: ${selectedEmail.subject}`,
+      body: `\n\n--- Forwarded message ---\nFrom: ${selectedEmail.sender}\nDate: ${formatDate(selectedEmail.sent_at)}\nSubject: ${selectedEmail.subject}\n\n${selectedEmail.body_preview}`
+    });
+    setIsComposeOpen(true);
+    setIsEmailModalOpen(false);
+  };
+
+  const handleToggleUnread = async () => {
+    if (!selectedEmail) return;
+    const nextStatus = !selectedEmail.is_read;
+    setEmails(prev => prev.map(e => e.id === selectedEmail.id ? { ...e, is_read: nextStatus } : e));
+    setSelectedEmail(prev => prev ? { ...prev, is_read: nextStatus } : null);
+    toast.success(`Marked as ${nextStatus ? 'read' : 'unread'}.`);
+    if (!nextStatus) {
+      handleCloseDetail();
+    }
   };
 
   const handleDoubleClick = async (email: SyncedEmail) => {
@@ -323,16 +407,17 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
                 <span className="flex items-center gap-3">
                   <Icon className="h-4.5 w-4.5" />
                   {!isAsideCollapsed && item.label}
-                </span>
-                {!isAsideCollapsed && item.count > 0 && (
-                  <span className="text-[10px] font-semibold bg-accent-color/10 text-accent-color px-2 py-0.5 rounded-full tabular-nums">{item.count}</span>
+                </span>                {!isAsideCollapsed && item.count > 0 && (
+                  <span className="text-[10px] font-semibold bg-accent-color/10 text-accent-color px-2 py-0.5 rounded-full tabular-nums">
+                    {item.count > 9 ? '9+' : item.count}
+                  </span>
                 )}
               </button>
             );
           })}
         </nav>
       </aside>
-
+ 
       <section className="flex-1 min-w-0 flex flex-col border-l border-border-default bg-surface-1">
         <div className="h-12 border-b border-border-default px-4 flex items-center justify-between bg-surface-2 shrink-0 gap-3">
           <div className="relative flex-1">
@@ -343,21 +428,24 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           </button>
         </div>
-
+ 
         {error && <div className="m-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}
-
+ 
         <div className="flex-1 overflow-y-auto divide-y divide-border">
           {isLoading ? (
             <div className="h-full flex items-center justify-center text-text-muted text-xs font-semibold"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading emails...</div>
           ) : emails.length === 0 ? (
             <div className="h-full flex items-center justify-center text-text-muted text-xs font-semibold">No emails found.</div>
           ) : emails.map(email => (
-            <button key={email.id} onClick={() => handleSingleClick(email)} onDoubleClick={() => handleDoubleClick(email)} className={`w-full text-left px-4 py-3.5 hover:bg-surface-2/50 transition-colors ${selectedEmail?.id === email.id ? 'bg-accent-color/5' : !email.is_read ? 'bg-surface-2/50' : ''}`}>
+            <button key={email.id} onClick={() => handleSingleClick(email)} onDoubleClick={() => handleDoubleClick(email)} className={`w-full text-left px-5 py-3.5 hover:bg-surface-2/50 transition-colors relative ${selectedEmail?.id === email.id ? 'bg-accent-color/5' : !email.is_read ? 'bg-surface-1/95' : 'bg-surface-1/40'}`}>
+              {!email.is_read && (
+                <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-color" title="Unread" />
+              )}
               <div className="flex items-center justify-between gap-3">
-                <p className={`truncate text-xs ${!email.is_read ? 'font-semibold text-text-primary' : 'font-bold text-text-muted/80'}`}>{email.direction === 'outbound' ? email.receiver || 'Recipient' : email.sender}</p>
+                <p className={`truncate text-xs ${!email.is_read ? 'font-extrabold text-text-primary' : 'font-semibold text-text-muted/80'}`}>{email.direction === 'outbound' ? email.receiver || 'Recipient' : email.sender}</p>
                 <span className="text-[10px] text-text-muted font-semibold shrink-0">{formatDate(email.sent_at)}</span>
               </div>
-              <p className="text-xs font-semibold text-text-primary truncate mt-1">{email.subject}</p>
+              <p className={`text-xs truncate mt-1 ${!email.is_read ? 'font-extrabold text-text-primary' : 'font-medium text-text-secondary'}`}>{email.subject}</p>
               <p className="text-[11px] text-text-muted font-semibold truncate mt-0.5">{email.body_preview || 'No preview available'}</p>
               <div className="flex items-center gap-2 mt-2 text-[10px] text-text-muted font-semibold">
                 {email.thread_id && <span>Thread {email.thread_id}</span>}
@@ -382,7 +470,7 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
           <div className="flex items-center justify-between border-b border-border-default p-4 bg-surface-2 shrink-0">
             <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">Email Details</h3>
             <button 
-              onClick={() => { setIsEmailModalOpen(false); setSelectedEmail(null); }}
+              onClick={handleCloseDetail}
               className="p-1.5 hover:bg-surface-2 rounded text-text-muted hover:text-text-primary cursor-pointer transition-colors"
             >
               <X className="h-4 w-4" />
@@ -393,6 +481,26 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
               <div className="h-full flex items-center justify-center text-text-muted text-xs font-semibold"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading details...</div>
             ) : (
               <>
+                <div className="flex gap-2 pb-4 border-b border-border-default select-none">
+                  <button 
+                    onClick={handleReply}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-accent-color text-text-on-primary hover:bg-accent-color/90 transition cursor-pointer"
+                  >
+                    Reply
+                  </button>
+                  <button 
+                    onClick={handleForward}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border border-border-default bg-surface-1 hover:bg-surface-hover text-text-primary transition cursor-pointer"
+                  >
+                    Forward
+                  </button>
+                  <button 
+                    onClick={handleToggleUnread}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border border-border-default bg-surface-1 hover:bg-surface-hover text-text-primary transition cursor-pointer ml-auto"
+                  >
+                    Mark as unread
+                  </button>
+                </div>
                 <div>
                   <h3 className="text-base font-semibold text-text-primary leading-tight">{selectedEmail.subject}</h3>
                   <p className="text-[10px] font-semibold text-text-muted mt-1">{formatDate(selectedEmail.sent_at)} - {selectedEmail.is_read ? 'Read' : 'Unread'}</p>
@@ -402,7 +510,14 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
                   <p><span className="font-semibold text-text-primary">To:</span> {selectedEmail.receiver || 'Not provided'}</p>
                   {selectedEmail.thread_id && <p><span className="font-semibold text-text-primary">Thread:</span> {selectedEmail.thread_id}</p>}
                 </div>
-                <div className="text-xs text-text-primary font-semibold leading-relaxed whitespace-pre-line border-b border-border-default pb-6 min-h-[140px]">{selectedEmail.body_preview || 'No message body was provided by the backend response.'}</div>
+                <div 
+                  className="text-xs text-text-primary leading-relaxed border-b border-border-default pb-6 min-h-[140px] font-sans"
+                  dangerouslySetInnerHTML={{ 
+                    __html: selectedEmail.body_preview 
+                      ? selectedEmail.body_preview.replace(/\n/g, '<br/>') 
+                      : 'No message body was provided.' 
+                  }}
+                />
                 {selectedEmail.direction === 'inbound' && (emailSummary || isSummaryLoading) && (
                   <div className="rounded-xl border border-accent-color/20 bg-accent-color/5 p-4 space-y-3">
                     <div className="flex items-center gap-2 text-xs font-semibold text-accent-color">

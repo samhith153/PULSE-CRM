@@ -1,4 +1,4 @@
-﻿"""
+"""
 Dashboard analytics service.
 """
 from __future__ import annotations
@@ -1095,11 +1095,31 @@ class DashboardService:
             role_distribution=role_distribution,
         )
 
+        # Duplicate detection — phone subqueries use a labeled derived table so that
+        # PostgreSQL GROUP BY can reference the expression by name, avoiding the
+        # "column must appear in GROUP BY" error caused by coalesce() vs raw column mismatch.
+        phone_norm_contact = func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")
+        phone_norm_lead = func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")
+
+        contact_phone_sub = (
+            select(Contact.organization_id, phone_norm_contact.label("phone_norm"))
+            .where(*_base(Contact), Contact.phone.is_not(None), phone_norm_contact != "")
+            .group_by(Contact.organization_id, phone_norm_contact)
+            .having(func.count(Contact.id) > 1)
+            .subquery()
+        )
+        lead_phone_sub = (
+            select(Lead.organization_id, phone_norm_lead.label("phone_norm"))
+            .where(*_base(Lead), Lead.phone.is_not(None), phone_norm_lead != "")
+            .group_by(Lead.organization_id, phone_norm_lead)
+            .having(func.count(Lead.id) > 1)
+            .subquery()
+        )
         duplicate_queries = [
             select(func.count()).select_from(select(Contact.organization_id, func.lower(func.trim(Contact.email))).where(*_base(Contact), Contact.email.is_not(None), func.trim(Contact.email) != "").group_by(Contact.organization_id, func.lower(func.trim(Contact.email))).having(func.count(Contact.id) > 1).subquery()),
-            select(func.count()).select_from(select(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).where(*_base(Contact), Contact.phone.is_not(None), func.regexp_replace(Contact.phone, r"\D+", "", "g") != "").group_by(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).having(func.count(Contact.id) > 1).subquery()),
+            select(func.count()).select_from(contact_phone_sub),
             select(func.count()).select_from(select(Lead.organization_id, func.lower(func.trim(Lead.email))).where(*_base(Lead), Lead.email.is_not(None), func.trim(Lead.email) != "").group_by(Lead.organization_id, func.lower(func.trim(Lead.email))).having(func.count(Lead.id) > 1).subquery()),
-            select(func.count()).select_from(select(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).where(*_base(Lead), Lead.phone.is_not(None), func.regexp_replace(Lead.phone, r"\D+", "", "g") != "").group_by(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).having(func.count(Lead.id) > 1).subquery()),
+            select(func.count()).select_from(lead_phone_sub),
             select(func.count()).select_from(select(Company.organization_id, func.lower(func.trim(Company.name))).where(*_base(Company)).group_by(Company.organization_id, func.lower(func.trim(Company.name))).having(func.count(Company.id) > 1).subquery()),
         ]
         duplicates_detected = 0

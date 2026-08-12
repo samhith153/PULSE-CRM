@@ -31,15 +31,17 @@ export function GoogleButton({ label }: { label: string }) {
     <button
       type="button"
       disabled={loading}
+      aria-label={label}
+      aria-busy={loading}
       onClick={() => {
         setLoading(true);
         console.info("[auth] Google OAuth requested");
         setTimeout(() => setLoading(false), 1600);
       }}
-      className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-border bg-background text-sm font-medium text-ink transition-all duration-200 hover:bg-secondary active:scale-[0.985] disabled:opacity-70"
+      className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-border-default bg-surface-1 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent-color focus-visible:ring-offset-2 outline-none active:scale-[0.985] disabled:opacity-70 cursor-pointer"
     >
-      {loading ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}
-      {label}
+      {loading ? <Loader2 size={16} className="animate-spin text-accent-color" /> : <GoogleIcon />}
+      <span>{label}</span>
     </button>
   );
 }

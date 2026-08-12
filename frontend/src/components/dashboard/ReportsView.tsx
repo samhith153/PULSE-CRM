@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Filter,
   Upload,
   Loader2,
 } from 'lucide-react';
@@ -422,79 +421,39 @@ export default function ReportsView() {
     <div className="space-y-5">
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+          <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
             Reports
-          </h2>
-
-          <p className="mt-1 text-sm text-muted-foreground">
+          </h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
             Performance overview backed by live data.
           </p>
         </div>
 
-        <div className="relative flex items-center gap-2">
+        <div className="flex items-center gap-2">
+          {/* Period Select */}
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as ReportPeriod)}
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-accent-color/20 cursor-pointer"
+          >
+            <option value="week">Weekly</option>
+            <option value="month">Monthly</option>
+            <option value="quarter">Quarterly</option>
+            <option value="year">Yearly</option>
+          </select>
 
           {/* Export */}
           <button
             type="button"
             onClick={handleExport}
             disabled={loading || !data}
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold transition shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Upload className="size-4" />
-            Export
+            <Upload className="size-3.5" />
+            <span>Export</span>
           </button>
-
-          {/* Filter */}
-          <button
-            type="button"
-            onClick={() =>
-              setShowFilter(
-                (current) =>
-                  !current
-              )
-            }
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary"
-          >
-            <Filter className="size-4" />
-            Filter
-          </button>
-
-          {/* Filter menu */}
-          {showFilter && (
-            <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-border bg-card p-2 shadow-lg">
-
-              <p className="px-2 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Report Period
-              </p>
-
-              {(
-                Object.keys(
-                  PERIOD_LABELS
-                ) as ReportPeriod[]
-              ).map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => {
-                    setPeriod(value);
-                    setShowFilter(false);
-                  }}
-                  className={`w-full rounded-lg px-2 py-2 text-left text-sm font-medium hover:bg-secondary ${
-                    period === value
-                      ? 'bg-secondary text-brand'
-                      : 'text-foreground'
-                  }`}
-                >
-                  {PERIOD_LABELS[value]}
-                </button>
-              ))}
-
-            </div>
-          )}
-
         </div>
       </div>
 

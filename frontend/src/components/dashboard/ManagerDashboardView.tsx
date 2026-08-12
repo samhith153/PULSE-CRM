@@ -274,19 +274,19 @@ export default function ManagerDashboardView({
       {/* HEADER                                                             */}
       {/* ================================================================== */}
 
-      <div className="flex flex-col gap-[var(--space-4)] lg:flex-row lg:items-end lg:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-3xl font-sans font-bold tracking-tight text-text-primary">
+            <h1 className="text-3xl font-sans font-bold tracking-tight text-foreground">
               Welcome back, Manager
             </h1>
 
-            <span className="rounded-full bg-accent-color/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-color border border-accent-color/15">
+            <span className="rounded-full bg-accent-color/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-color border border-accent-color/15">
               Manager
             </span>
           </div>
 
-          <p className="mt-1 text-xs md:text-sm text-text-muted font-medium tracking-wide">
+          <p className="mt-1 text-xs md:text-sm text-muted-foreground font-medium tracking-wide">
             Sales performance &amp; team command center
           </p>
         </div>
@@ -297,7 +297,7 @@ export default function ManagerDashboardView({
             onChange={(e) =>
               setPeriod(e.target.value as ManagerDashboardPeriod)
             }
-            className="rounded-xl border border-border-default bg-surface-1 px-3 py-2 text-xs font-semibold text-text-primary outline-none focus:ring-1 focus:ring-accent-color/20"
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-accent-color/20 cursor-pointer"
           >
             <option value="week">This Week</option>
             <option value="month">This Month</option>
@@ -305,39 +305,18 @@ export default function ManagerDashboardView({
             <option value="year">This Year</option>
           </select>
 
-          <select
-            value={repId}
-            onChange={(e) => setRepId(e.target.value)}
-            className="rounded-xl border border-border-default bg-surface-1 px-3 py-2 text-xs font-semibold text-text-primary outline-none focus:ring-1 focus:ring-accent-color/20"
-          >
-            <option value="all">All Reps</option>
-
-            {data.rep_quota_attainment.map((rep) => (
-              <option key={rep.user_id} value={rep.user_id}>
-                {rep.full_name}
-              </option>
-            ))}
-          </select>
-
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded-xl border border-border-default bg-surface-1 px-3 py-2 text-xs font-semibold text-text-primary"
-          >
-            All Pipelines
-          </button>
-
           <button
             type="button"
             onClick={loadDashboard}
             disabled={loading}
-            className="inline-flex items-center gap-2 rounded-xl border border-border-default bg-surface-1 px-3 py-2 text-xs font-semibold text-text-primary transition hover:bg-surface-2/40 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
           >
             <RefreshCw
               className={`h-3.5 w-3.5 ${
                 loading ? 'animate-spin' : ''
               }`}
             />
-            Refresh
+            <span>Refresh</span>
           </button>
         </div>
       </div>
@@ -347,34 +326,37 @@ export default function ManagerDashboardView({
       {/* ================================================================== */}
 
       <div className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-5">
-
         {/* Team Revenue */}
         <div
           role="button"
           tabIndex={0}
           onClick={() => onTabChange?.('reports')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('reports'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="relative overflow-hidden bg-primary text-primary-foreground border border-white/10 rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm cursor-pointer hover:bg-primary/90 transition-all"
         >
-          <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
+          <span className="shimmer" />
+          <span className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10" />
+          <span className="pointer-events-none absolute -bottom-24 -left-8 size-56 rounded-full bg-white/5" />
+
+          <div className="relative flex items-center justify-between">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-primary-foreground/90">
               Team Revenue
             </p>
-            <TrendingUp className="h-4 w-4 text-accent-color" />
+            <TrendingUp className="h-4 w-4 text-primary-foreground/80" />
           </div>
 
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
+          <p className="relative text-2xl font-bold tracking-tight text-primary-foreground tabular-nums">
             {formatCurrency(data.summary.team_revenue)}
           </p>
 
-          <div className="flex items-center gap-1.5 text-xs text-text-muted">
-            {toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? (
-              <ArrowUpRight className="h-3.5 w-3.5 text-status-success" />
-            ) : (
-              <ArrowDownRight className="h-3.5 w-3.5 text-status-danger" />
-            )}
-            <span className={`font-semibold ${toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? 'text-status-success' : 'text-status-danger'}`}>
-              {formatPercent(data.revenue_stats.monthly_growth_pct)}
+          <div className="relative flex items-center gap-1.5 text-xs text-primary-foreground/75">
+            <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-foreground/20 text-primary-foreground border border-primary-foreground/10">
+              {toNumber(data.revenue_stats.monthly_growth_pct) >= 0 ? (
+                <ArrowUpRight className="size-3 shrink-0" strokeWidth={2.5} />
+              ) : (
+                <ArrowDownRight className="size-3 shrink-0" strokeWidth={2.5} />
+              )}
+              <span>{formatPercent(data.revenue_stats.monthly_growth_pct)}</span>
             </span>
             <span>growth</span>
           </div>
@@ -386,20 +368,20 @@ export default function ManagerDashboardView({
           tabIndex={0}
           onClick={() => onTabChange?.('pipeline')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('pipeline'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm cursor-pointer hover:bg-surface-hover transition-all"
         >
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
               Pipeline Value
             </p>
             <BarChart3 className="h-4 w-4 text-accent-color" />
           </div>
 
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {formatCurrency(data.summary.pipeline_value)}
           </p>
 
-          <p className="text-[10px] text-text-muted">
+          <p className="text-[10px] text-muted-foreground">
             {data.pipeline_health.total_deals} active deals
           </p>
         </div>
@@ -410,20 +392,20 @@ export default function ManagerDashboardView({
           tabIndex={0}
           onClick={() => onTabChange?.('forecast')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('forecast'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm cursor-pointer hover:bg-surface-hover transition-all"
         >
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
               Forecast
             </p>
             <Gauge className="h-4 w-4 text-accent-color" />
           </div>
 
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {formatCurrency(data.forecast.projected_revenue)}
           </p>
 
-          <p className="text-[10px] text-text-muted">
+          <p className="text-[10px] text-muted-foreground">
             {formatPercent(data.forecast.confidence_score)} confidence
           </p>
         </div>
@@ -434,20 +416,20 @@ export default function ManagerDashboardView({
           tabIndex={0}
           onClick={() => onTabChange?.('team performance')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm cursor-pointer hover:bg-surface-hover transition-all"
         >
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
               Quota Attainment
             </p>
             <Target className="h-4 w-4 text-accent-color" />
           </div>
 
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {formatPercent(data.revenue_stats.achievement_pct)}
           </p>
 
-          <p className="text-[10px] text-text-muted">
+          <p className="text-[10px] text-muted-foreground">
             Target {formatCurrency(data.revenue_stats.team_target)}
           </p>
         </div>
@@ -458,20 +440,20 @@ export default function ManagerDashboardView({
           tabIndex={0}
           onClick={() => onTabChange?.('team performance')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm cursor-pointer hover:bg-surface-hover transition-all"
         >
           <div className="flex items-center justify-between">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
               Win Rate
             </p>
             <Trophy className="h-4 w-4 text-accent-color" />
           </div>
 
-          <p className="text-2xl font-bold tracking-tight text-text-primary tabular-nums">
+          <p className="text-2xl font-bold tracking-tight text-foreground tabular-nums">
             {formatPercent(data.summary.win_rate)}
           </p>
 
-          <p className="text-[10px] text-text-muted">
+          <p className="text-[10px] text-muted-foreground">
             Conversion {formatPercent(data.summary.conversion_rate)}
           </p>
         </div>
@@ -484,13 +466,13 @@ export default function ManagerDashboardView({
       <div className="grid grid-cols-12 gap-[var(--space-4)]">
 
         {/* Revenue vs Target */}
-        <div className="col-span-12 lg:col-span-8 bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
-          <div className="flex items-center justify-between border-b border-border-default pb-2">
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-2">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-accent-color" />
               <div>
-                <h3 className="font-semibold text-text-primary text-sm">Revenue vs Target</h3>
-                <p className="text-[10px] text-text-muted">Monthly team revenue performance</p>
+                <h3 className="font-semibold text-foreground text-sm">Revenue vs Target</h3>
+                <p className="text-[10px] text-muted-foreground">Monthly team revenue performance</p>
               </div>
             </div>
             <button
@@ -504,16 +486,16 @@ export default function ManagerDashboardView({
 
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="text-3xl font-sans font-bold tracking-tight text-text-primary">
+              <p className="text-3xl font-sans font-bold tracking-tight text-foreground">
                 {formatCurrency(data.summary.team_revenue)}
               </p>
-              <p className="mt-1 text-[10px] text-text-muted">Current revenue</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">Current revenue</p>
             </div>
             <div className="text-right">
-              <p className="text-xs font-bold text-text-primary">
+              <p className="text-xs font-bold text-foreground">
                 Target {formatCurrency(data.revenue_stats.team_target)}
               </p>
-              <p className="mt-1 text-[10px] text-text-muted">
+              <p className="mt-1 text-[10px] text-muted-foreground">
                 {formatPercent(data.revenue_stats.achievement_pct)} achieved
               </p>
             </div>
@@ -521,7 +503,7 @@ export default function ManagerDashboardView({
 
           {data.monthly_revenue_trend.length > 0 ? (
             <>
-              <div className="mt-4 flex h-52 items-end gap-2 border-b border-border-default px-2">
+              <div className="mt-4 flex h-52 items-end gap-2 border-b border-border px-2">
                 {data.monthly_revenue_trend.map((month) => {
                   const revenue = toNumber(month.revenue);
                   const target = toNumber(month.target);
@@ -555,7 +537,7 @@ export default function ManagerDashboardView({
                 })}
               </div>
 
-              <div className="mt-2 flex justify-between text-[10px] text-text-muted">
+              <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
                 {data.monthly_revenue_trend.map((month) => (
                   <span key={month.month}>
                     {new Date(`${month.month}-01`).toLocaleDateString('en-US', { month: 'short' })}
@@ -563,7 +545,7 @@ export default function ManagerDashboardView({
                 ))}
               </div>
 
-              <div className="mt-3 flex items-center gap-5 text-xs text-text-muted">
+              <div className="mt-3 flex items-center gap-5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full bg-accent-color" />
                   Revenue
@@ -575,8 +557,8 @@ export default function ManagerDashboardView({
               </div>
             </>
           ) : (
-            <div className="mt-8 flex h-52 items-center justify-center bg-surface-2/10 rounded-xl border border-border-default/50">
-              <p className="text-xs font-semibold text-text-muted">
+            <div className="mt-8 flex h-52 items-center justify-center bg-secondary/10 rounded-xl border border-border/50">
+              <p className="text-xs font-semibold text-muted-foreground">
                 No monthly revenue data available.
               </p>
             </div>
@@ -584,13 +566,13 @@ export default function ManagerDashboardView({
         </div>
 
         {/* Forecast Health */}
-        <div className="col-span-12 lg:col-span-4 bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
-          <div className="flex items-center justify-between border-b border-border-default pb-2">
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-2">
             <div className="flex items-center gap-2">
               <Gauge className="h-4 w-4 text-accent-color" />
               <div>
-                <h3 className="font-semibold text-text-primary text-sm">Forecast Health</h3>
-                <p className="text-[10px] text-text-muted">Current quarter outlook</p>
+                <h3 className="font-semibold text-foreground text-sm">Forecast Health</h3>
+                <p className="text-[10px] text-muted-foreground">Current quarter outlook</p>
               </div>
             </div>
             <button
@@ -603,10 +585,10 @@ export default function ManagerDashboardView({
           </div>
 
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
               Expected Revenue
             </p>
-            <p className="mt-1 text-2xl font-bold tracking-tight text-text-primary tabular-nums">
+            <p className="mt-1 text-2xl font-bold tracking-tight text-foreground tabular-nums">
               {formatCurrency(data.forecast.projected_revenue)}
             </p>
           </div>
@@ -614,8 +596,8 @@ export default function ManagerDashboardView({
           <div className="space-y-[var(--space-3)]">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Confidence</span>
-                <span className="text-xs font-bold text-text-primary">{formatPercent(data.forecast.confidence_score)}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Confidence</span>
+                <span className="text-xs font-bold text-foreground">{formatPercent(data.forecast.confidence_score)}</span>
               </div>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
@@ -625,14 +607,14 @@ export default function ManagerDashboardView({
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t border-border-default pt-3">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Forecast Accuracy</span>
-              <span className="text-xs font-bold text-text-primary">{formatPercent(data.forecast.forecast_accuracy)}</span>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Forecast Accuracy</span>
+              <span className="text-xs font-bold text-foreground">{formatPercent(data.forecast.forecast_accuracy)}</span>
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Quarter Projection</span>
-              <span className="text-xs font-bold text-text-primary">{formatCurrency(data.forecast.expected_quarter_revenue)}</span>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Quarter Projection</span>
+              <span className="text-xs font-bold text-foreground">{formatCurrency(data.forecast.expected_quarter_revenue)}</span>
             </div>
           </div>
         </div>
@@ -642,13 +624,13 @@ export default function ManagerDashboardView({
       {/* PIPELINE HEALTH — full width                                       */}
       {/* ================================================================== */}
 
-      <div className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
-        <div className="flex items-center justify-between border-b border-border-default pb-2">
+      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
+        <div className="flex items-center justify-between border-b border-border pb-2">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-accent-color" />
             <div>
-              <h3 className="font-semibold text-text-primary text-sm">Pipeline Health</h3>
-              <p className="text-[10px] text-text-muted">Deal distribution across pipeline stages</p>
+              <h3 className="font-semibold text-foreground text-sm">Pipeline Health</h3>
+              <p className="text-[10px] text-muted-foreground">Deal distribution across pipeline stages</p>
             </div>
           </div>
           <button
@@ -665,15 +647,15 @@ export default function ManagerDashboardView({
           {data.pipeline_health.stage_distribution.map((stage) => (
             <div
               key={stage.stage}
-              className="rounded-xl border border-border-default bg-surface-2/10 p-[var(--space-3)] transition hover:bg-surface-2/20"
+              className="rounded-xl border border-border bg-secondary/10 p-[var(--space-3)] transition hover:bg-secondary/20"
             >
-              <p className="truncate text-xs font-bold text-text-primary">
+              <p className="truncate text-xs font-bold text-foreground">
                 {stage.stage}
               </p>
-              <p className="mt-2 text-xl font-bold text-text-primary tabular-nums">
+              <p className="mt-2 text-xl font-bold text-foreground tabular-nums">
                 {stage.deal_count}
               </p>
-              <p className="mt-0.5 text-[10px] text-text-muted">
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
                 {formatCurrency(stage.total_value)}
               </p>
               <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
@@ -682,25 +664,25 @@ export default function ManagerDashboardView({
                   style={{ width: `${Math.min(100, Math.max(0, toNumber(stage.percentage)))}%` }}
                 />
               </div>
-              <p className="mt-1 text-[10px] text-text-muted">
+              <p className="mt-1 text-[10px] text-muted-foreground">
                 {formatPercent(stage.percentage)}
               </p>
             </div>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 border-t border-border-default pt-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 border-t border-border pt-3 sm:grid-cols-3">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Active Deals</p>
-            <p className="mt-1 text-lg font-bold text-text-primary">{data.pipeline_health.total_deals}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Active Deals</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{data.pipeline_health.total_deals}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Pipeline Value</p>
-            <p className="mt-1 text-lg font-bold text-text-primary">{formatCurrency(data.pipeline_health.active_pipeline_value)}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Pipeline Value</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{formatCurrency(data.pipeline_health.active_pipeline_value)}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Health Score</p>
-            <p className="mt-1 text-lg font-bold text-text-primary">{formatPercent(data.pipeline_health.health_score)}</p>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Health Score</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{formatPercent(data.pipeline_health.health_score)}</p>
           </div>
         </div>
       </div>
@@ -712,13 +694,13 @@ export default function ManagerDashboardView({
       <div className="grid grid-cols-12 gap-[var(--space-4)]">
 
         {/* Team Performance */}
-        <div className="col-span-12 lg:col-span-8 bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
-          <div className="flex items-center justify-between border-b border-border-default pb-2">
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-2">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-accent-color" />
               <div>
-                <h3 className="font-semibold text-text-primary text-sm">Team Performance</h3>
-                <p className="text-[10px] text-text-muted">Quota attainment across the sales team</p>
+                <h3 className="font-semibold text-foreground text-sm">Team Performance</h3>
+                <p className="text-[10px] text-muted-foreground">Quota attainment across the sales team</p>
               </div>
             </div>
             <button
@@ -743,8 +725,8 @@ export default function ManagerDashboardView({
                         {getInitials(rep.full_name)}
                       </span>
                       <div className="min-w-0">
-                        <p className="truncate text-xs font-bold text-text-primary">{rep.full_name}</p>
-                        <p className="text-[10px] text-text-muted">Revenue {formatCurrency(rep.revenue_generated)}</p>
+                        <p className="truncate text-xs font-bold text-foreground">{rep.full_name}</p>
+                        <p className="text-[10px] text-muted-foreground">Revenue {formatCurrency(rep.revenue_generated)}</p>
                       </div>
                     </div>
                     <span className="shrink-0 text-xs font-bold tabular-nums text-accent-color">
@@ -762,7 +744,7 @@ export default function ManagerDashboardView({
             })}
 
             {sortedReps.length === 0 && (
-              <div className="text-center py-8 text-text-muted text-xs font-semibold bg-surface-2/10 rounded-xl border border-border-default/50">
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
                 No rep data available.
               </div>
             )}
@@ -770,13 +752,13 @@ export default function ManagerDashboardView({
         </div>
 
         {/* Deals At Risk */}
-        <div className="col-span-12 lg:col-span-4 bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
-          <div className="flex items-center justify-between border-b border-border-default pb-2">
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-status-warning" />
               <div>
-                <h3 className="font-semibold text-text-primary text-sm">Deals at Risk</h3>
-                <p className="text-[10px] text-text-muted">High-value opportunities</p>
+                <h3 className="font-semibold text-foreground text-sm">Deals at Risk</h3>
+                <p className="text-[10px] text-muted-foreground">High-value opportunities</p>
               </div>
             </div>
             <button
@@ -793,35 +775,35 @@ export default function ManagerDashboardView({
               <div
                 key={deal.deal_id}
                 onClick={() => onDealClick?.(deal.deal_id)}
-                className="cursor-pointer rounded-xl border border-border-default p-3 transition hover:bg-surface-2/20"
+                className="cursor-pointer rounded-xl border border-border p-3 transition hover:bg-secondary/20"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-xs font-bold text-text-primary">{deal.deal_name}</p>
-                    <p className="mt-0.5 truncate text-[10px] text-text-muted">{deal.company || 'No company'}</p>
+                    <p className="truncate text-xs font-bold text-foreground">{deal.deal_name}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{deal.company || 'No company'}</p>
                   </div>
-                  <p className="shrink-0 text-xs font-bold text-text-primary tabular-nums">{formatCurrency(deal.deal_value)}</p>
+                  <p className="shrink-0 text-xs font-bold text-foreground tabular-nums">{formatCurrency(deal.deal_value)}</p>
                 </div>
 
                 <div className="mt-2 flex items-end justify-between gap-3">
                   <div>
-                    <p className="text-[9px] uppercase tracking-wider text-text-muted/60 font-bold">Owner</p>
-                    <p className="mt-0.5 text-[10px] font-semibold text-text-primary">{deal.owner_name || 'Unassigned'}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Owner</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-foreground">{deal.owner_name || 'Unassigned'}</p>
                   </div>
                   <div className="text-right min-w-0">
-                    <p className="text-[9px] uppercase tracking-wider text-text-muted/60 font-bold">Risk</p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Risk</p>
                     <p className="mt-0.5 text-[10px] font-semibold text-status-warning truncate">{deal.risk_reason}</p>
                   </div>
                 </div>
 
-                <div className="mt-2 flex items-center justify-between border-t border-border-default pt-2">
-                  <span className="text-[10px] text-text-muted">
+                <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-[10px] text-muted-foreground">
                     {deal.days_since_last_activity}d since activity
                   </span>
                   <button
                     type="button"
                     onClick={() => onDealClick?.(deal.deal_id)}
-                    className="rounded-lg border border-border-default px-2 py-1 text-[9px] font-bold text-text-primary hover:bg-surface-2/40 transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-[10px] font-bold cursor-pointer shadow-sm transition"
                   >
                     Open
                   </button>
@@ -830,7 +812,7 @@ export default function ManagerDashboardView({
             ))}
 
             {visibleRisks.length === 0 && (
-              <div className="text-center py-8 text-text-muted text-xs font-semibold bg-surface-2/10 rounded-xl border border-border-default/50">
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
                 <Trophy className="mx-auto h-4 w-4 mb-1" />
                 No deals at risk
               </div>
@@ -846,13 +828,13 @@ export default function ManagerDashboardView({
       <div className="grid grid-cols-12 gap-[var(--space-4)]">
 
         {/* Manager Action Queue */}
-        <div className="col-span-12 lg:col-span-8 bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
-          <div className="flex items-center justify-between border-b border-border-default pb-2">
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-2">
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-accent-color" />
               <div>
-                <h3 className="font-semibold text-text-primary text-sm">Manager Action Queue</h3>
-                <p className="text-[10px] text-text-muted">System-generated items that may need attention</p>
+                <h3 className="font-semibold text-foreground text-sm">Manager Action Queue</h3>
+                <p className="text-[10px] text-muted-foreground">System-generated items that may need attention</p>
               </div>
             </div>
             <button
@@ -874,7 +856,7 @@ export default function ManagerDashboardView({
                   key={`${alert.timestamp}-${index}`}
                   onClick={() => onTabChange?.('activities')}
                   className={[
-                    'cursor-pointer rounded-xl border p-3 transition hover:bg-surface-2/20',
+                    'cursor-pointer rounded-xl border p-3 transition hover:bg-secondary/20',
                     isHigh ? 'border-status-danger/20 bg-status-danger/10' : 'border-status-warning/20 bg-status-warning/10',
                   ].join(' ')}
                 >
@@ -888,8 +870,8 @@ export default function ManagerDashboardView({
                       {isHigh ? <AlertTriangle className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-text-primary leading-5">{alert.message}</p>
-                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-text-muted/60">
+                      <p className="text-xs font-semibold text-foreground leading-5">{alert.message}</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
                         {alert.severity} \u00B7 {formatUpdatedAt(alert.timestamp)}
                       </p>
                     </div>
@@ -899,10 +881,10 @@ export default function ManagerDashboardView({
             })}
 
             {visibleAlerts.length === 0 && (
-              <div className="text-center py-8 text-text-muted text-xs font-semibold bg-surface-2/10 rounded-xl border border-border-default/50">
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
                 <Bell className="mx-auto h-4 w-4 mb-1" />
                 No manager alerts
-                <p className="mt-1 text-[10px] text-text-muted">Everything looks good right now.</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">Everything looks good right now.</p>
               </div>
             )}
           </div>
@@ -911,25 +893,25 @@ export default function ManagerDashboardView({
             <button
               type="button"
               onClick={() => onTabChange?.('pipeline')}
-              className="w-full flex items-center justify-between rounded-xl bg-surface-2/10 border border-border-default/50 px-3 py-2.5 text-left hover:bg-surface-2/20 transition"
+              className="w-full flex items-center justify-between rounded-xl bg-secondary/10 border border-border/50 px-3 py-2.5 text-left hover:bg-secondary/20 transition"
             >
               <div>
-                <p className="text-xs font-bold text-text-primary">{data.deals_at_risk.length} deals require review</p>
-                <p className="mt-0.5 text-[10px] text-text-muted">Open pipeline to review risk</p>
+                <p className="text-xs font-bold text-foreground">{data.deals_at_risk.length} deals require review</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">Open pipeline to review risk</p>
               </div>
-              <ChevronRight className="h-3.5 w-3.5 text-text-muted" />
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
             </button>
           )}
         </div>
 
         {/* Recent Team Activity */}
-        <div className="col-span-12 lg:col-span-4 bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
-          <div className="flex items-center justify-between border-b border-border-default pb-2">
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
+          <div className="flex items-center justify-between border-b border-border pb-2">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-accent-color" />
               <div>
-                <h3 className="font-semibold text-text-primary text-sm">Recent Activity</h3>
-                <p className="text-[10px] text-text-muted">Latest CRM activity</p>
+                <h3 className="font-semibold text-foreground text-sm">Recent Activity</h3>
+                <p className="text-[10px] text-muted-foreground">Latest CRM activity</p>
               </div>
             </div>
             <button
@@ -947,30 +929,30 @@ export default function ManagerDashboardView({
                 key={activity.id}
                 type="button"
                 onClick={() => onTabChange?.('activities')}
-                className="flex w-full items-start gap-2.5 rounded-xl px-2 py-2.5 text-left transition hover:bg-surface-2/20"
+                className="flex w-full items-start gap-2.5 rounded-xl px-2 py-2.5 text-left transition hover:bg-secondary/20"
               >
                 <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-color/10 text-accent-color">
                   <Activity className="h-3 w-3" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-text-primary">{activity.title || activity.action}</p>
-                  <p className="mt-0.5 truncate text-[10px] capitalize text-text-muted">
+                  <p className="truncate text-xs font-bold text-foreground">{activity.title || activity.action}</p>
+                  <p className="mt-0.5 truncate text-[10px] capitalize text-muted-foreground">
                     {activity.action.replace(/_/g, ' ')} \u00B7 {activity.entity_type.replace(/_/g, ' ')}
                   </p>
-                  <p className="mt-0.5 text-[9px] text-text-muted">
+                  <p className="mt-0.5 text-[9px] text-muted-foreground">
                     {formatUpdatedAt(activity.created_at)}
                     {activity.created_by ? ` \u00B7 ${activity.created_by}` : ''}
                   </p>
                 </div>
-                <ChevronRight className="mt-1 h-3 w-3 shrink-0 text-text-muted" />
+                <ChevronRight className="mt-1 h-3 w-3 shrink-0 text-muted-foreground" />
               </button>
             ))}
 
             {visibleActivities.length === 0 && (
-              <div className="text-center py-8 text-text-muted text-xs font-semibold bg-surface-2/10 rounded-xl border border-border-default/50">
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
                 <Activity className="mx-auto h-4 w-4 mb-1" />
                 No recent team activity
-                <p className="mt-1 text-[10px] text-text-muted">New CRM activity will appear here.</p>
+                <p className="mt-1 text-[10px] text-muted-foreground">New CRM activity will appear here.</p>
               </div>
             )}
           </div>
@@ -988,11 +970,11 @@ export default function ManagerDashboardView({
           tabIndex={0}
           onClick={() => onTabChange?.('team performance')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm"
         >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Team Members</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums">{data.team_metrics.total_members}</p>
-          <p className="text-[10px] text-text-muted">{data.team_metrics.active_reps} active reps</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Team Members</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{data.team_metrics.total_members}</p>
+          <p className="text-[10px] text-muted-foreground">{data.team_metrics.active_reps} active reps</p>
         </div>
 
         <div
@@ -1000,11 +982,11 @@ export default function ManagerDashboardView({
           tabIndex={0}
           onClick={() => onTabChange?.('pipeline')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('pipeline'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm"
         >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Avg Deal Size</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums">{formatCurrency(data.team_metrics.avg_deal_size)}</p>
-          <p className="text-[10px] text-text-muted">Across active pipeline</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Avg Deal Size</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{formatCurrency(data.team_metrics.avg_deal_size)}</p>
+          <p className="text-[10px] text-muted-foreground">Across active pipeline</p>
         </div>
 
         <div
@@ -1012,13 +994,13 @@ export default function ManagerDashboardView({
           tabIndex={0}
           onClick={() => onTabChange?.('team performance')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm"
         >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Sales Cycle</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Sales Cycle</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">
             {toNumber(data.team_metrics.avg_sales_cycle_days).toFixed(0)} days
           </p>
-          <p className="text-[10px] text-text-muted">Average team cycle</p>
+          <p className="text-[10px] text-muted-foreground">Average team cycle</p>
         </div>
 
         <div
@@ -1026,11 +1008,11 @@ export default function ManagerDashboardView({
           tabIndex={0}
           onClick={() => onTabChange?.('forecast')}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('forecast'); } }}
-          className="bg-surface-1 border border-border-default rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm"
         >
-          <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted/60">Forecast Accuracy</p>
-          <p className="text-xl font-bold text-text-primary tabular-nums">{formatPercent(data.team_metrics.forecast_accuracy)}</p>
-          <p className="text-[10px] text-text-muted">Current forecast performance</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Forecast Accuracy</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{formatPercent(data.team_metrics.forecast_accuracy)}</p>
+          <p className="text-[10px] text-muted-foreground">Current forecast performance</p>
         </div>
       </div>
     </div>

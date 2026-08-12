@@ -104,21 +104,17 @@ export default function Header({
       </button>
 
       {/* Search — ui.md §6: pill, surface-secondary fill, radius-full */}
-      <div
-        className="flex flex-1 h-10 items-center gap-2 rounded-full border border-border-default bg-surface-2 px-4 shadow-sm cursor-pointer hover:bg-surface-hover transition-all"
+      <button
         onClick={() => onOpenCommandPalette?.()}
+        className="flex flex-1 h-10 items-center gap-2 rounded-full border border-border-default bg-surface-2 px-4 shadow-sm cursor-pointer hover:bg-surface-hover hover:border-accent-color/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-color/20 focus-visible:border-accent-color transition-all text-left"
+        aria-label="Search CRM records"
       >
         <Search size={15} className="shrink-0 text-text-muted" />
-        <input
-          ref={searchInputRef}
-          type="text"
-          placeholder="Search leads, contacts, companies, deals..."
-          readOnly
-          onClick={() => onOpenCommandPalette?.()}
-          className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none cursor-pointer"
-        />
-        <span className="hidden shrink-0 rounded-md bg-surface-1 px-1.5 py-0.5 text-[11px] font-medium text-text-muted sm:inline">⌘K</span>
-      </div>
+        <span className="flex-1 bg-transparent text-xs md:text-sm text-text-muted select-none">
+          Search leads, contacts, companies, deals...
+        </span>
+        <kbd className="hidden shrink-0 rounded-md bg-surface-1 px-1.5 py-0.5 text-[11px] font-semibold text-text-muted border border-border-default sm:inline">⌘K</kbd>
+      </button>
 
       {/* Right cluster */}
       <div className="flex shrink-0 items-center gap-2">
@@ -138,14 +134,6 @@ export default function Header({
             {userRole === 'sales_rep' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
           </span>
         </span>
-
-        {/* New report — ui.md §19: secondary pill button */}
-        <button
-          onClick={onNewReportClick}
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border-default bg-surface-1 px-3 py-1.5 text-xs font-medium text-text-primary shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
-        >
-          <Plus size={13} /> New report
-        </button>
 
         {/* Theme */}
         <button onClick={toggleTheme} className={btn} aria-label="Toggle theme">
@@ -217,9 +205,6 @@ export default function Header({
               <div className="py-1">
                 <button onClick={() => { setShowProfileMenu(false); onTabChange?.('profile'); }} className="flex items-center gap-2 w-full px-4 py-2 text-xs text-text-primary hover:bg-surface-hover cursor-pointer">
                   <User size={14} className="text-text-muted" /> My Profile
-                </button>
-                <button onClick={() => { setShowProfileMenu(false); onTabChange?.('settings'); }} className="flex items-center gap-2 w-full px-4 py-2 text-xs text-text-primary hover:bg-surface-hover cursor-pointer">
-                  <Settings size={14} className="text-text-muted" /> Settings
                 </button>
               </div>
               <div className="border-t border-border-default py-1">

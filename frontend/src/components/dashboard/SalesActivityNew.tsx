@@ -23,9 +23,9 @@ interface DealsBySourceItem {
 }
 
 const SOURCE_COLORS = [
-  'var(--lime)',
-  'var(--brand-soft)',
-  'var(--brand)',
+  'var(--status-success-strong)',
+  'var(--accent-muted)',
+  'var(--accent-color)',
   'var(--status-warning-text)',
   'var(--chart-1)',
   'var(--status-danger-text)',
@@ -77,9 +77,9 @@ export function SalesActivityNew({
     });
 
   return (
-    <section className="card-surface p-5">
+    <section className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
       <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-bold text-foreground">
+        <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
           Deals by Source
         </h3>
 
@@ -91,7 +91,7 @@ export function SalesActivityNew({
                 e.target.value as ReportPeriod
               )
             }
-            className="cursor-pointer appearance-none bg-transparent pr-6 text-[12px] font-semibold text-muted-foreground outline-none"
+            className="cursor-pointer appearance-none bg-transparent pr-6 text-[12px] font-semibold text-muted-foreground outline-none focus:text-foreground"
           >
             <option value="week">
               Weekly
@@ -160,6 +160,7 @@ export function SalesActivityNew({
                     borderRadius: '12px',
                     border: '1px solid var(--border)',
                     background: 'var(--card)',
+                    color: 'var(--foreground)',
                     boxShadow:
                       '0 8px 24px -12px rgba(20,20,40,0.35)',
                   }}
@@ -169,7 +170,7 @@ export function SalesActivityNew({
           )}
 
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pt-2">
-            <p className="text-[34px] font-extrabold tracking-tight">
+            <p className="text-[34px] font-bold tracking-tight text-foreground">
               {totalDeals.toLocaleString('en-IN')}
             </p>
 
@@ -182,7 +183,7 @@ export function SalesActivityNew({
         <ul className="w-[160px] space-y-5">
           {chartData.map((d) => (
             <li key={d.name}>
-              <p className="text-[26px] font-extrabold leading-none tracking-tight">
+              <p className="text-[26px] font-bold leading-none tracking-tight text-foreground">
                 {d.value}
               </p>
 

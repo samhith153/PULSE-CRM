@@ -152,9 +152,9 @@ export function OrdersByCountryNew({
   };
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-border bg-card p-5 shadow-[0_8px_30px_-18px_rgba(20,20,40,0.35)]">
+    <section className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm relative overflow-hidden">
       <div className="flex items-start justify-between">
-        <h3 className="text-[15px] font-bold text-foreground">
+        <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
           Key Metrics
         </h3>
 
@@ -165,7 +165,7 @@ export function OrdersByCountryNew({
             onClick={() =>
               setMenuOpen((open) => !open)
             }
-            className="rounded-md p-1 text-muted-foreground hover:bg-secondary"
+            className="rounded-md p-1 text-muted-foreground hover:bg-secondary cursor-pointer"
           >
             <MoreVertical className="size-4" />
           </button>
@@ -175,7 +175,7 @@ export function OrdersByCountryNew({
               <button
                 type="button"
                 onClick={exportMetrics}
-                className="w-full rounded-md px-3 py-2 text-left text-xs font-medium hover:bg-secondary"
+                className="w-full rounded-md px-3 py-2 text-left text-xs font-medium hover:bg-secondary cursor-pointer text-foreground"
               >
                 Export
               </button>
@@ -187,7 +187,7 @@ export function OrdersByCountryNew({
                   window.location.href =
                     '/dashboard/deals';
                 }}
-                className="w-full rounded-md px-3 py-2 text-left text-xs font-medium hover:bg-secondary"
+                className="w-full rounded-md px-3 py-2 text-left text-xs font-medium hover:bg-secondary cursor-pointer text-foreground"
               >
                 View
               </button>
@@ -202,7 +202,7 @@ export function OrdersByCountryNew({
           className="pointer-events-none absolute inset-x-0 -bottom-6 top-6 opacity-60"
           style={{
             backgroundImage:
-              'radial-gradient(var(--brand-soft) 1.6px, transparent 1.6px)',
+              'radial-gradient(var(--accent-muted) 1.6px, transparent 1.6px)',
             backgroundSize: '14px 14px',
             maskImage:
               'radial-gradient(120% 80% at 40% 50%, black 30%, transparent 75%)',
@@ -213,7 +213,7 @@ export function OrdersByCountryNew({
 
         <div className="relative flex items-start justify-between gap-4">
           <div>
-            <p className="text-[32px] font-extrabold tracking-tight text-brand">
+            <p className="text-[32px] font-bold tracking-tight text-foreground">
               {currency(
                 pipelineValue
               )}
@@ -224,10 +224,10 @@ export function OrdersByCountryNew({
             </p>
 
             <span
-              className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+              className={`mt-2 inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
                 pipelineGrowth >= 0
-                  ? 'bg-mint text-mint-foreground'
-                  : 'bg-status-danger/10 text-rose-foreground'
+                  ? 'bg-status-success-bg text-status-success-text border-status-success-text/20'
+                  : 'bg-status-danger-bg text-status-danger-text border-status-danger-text/20'
               }`}
             >
               {pipelineGrowth >= 0
@@ -240,11 +240,11 @@ export function OrdersByCountryNew({
             </span>
           </div>
 
-          <ul className="w-[200px] shrink-0 space-y-3 rounded-2xl bg-card/90 p-4 shadow-[0_8px_24px_-16px_rgba(20,20,40,0.35)] backdrop-blur">
+          <ul className="w-[200px] shrink-0 space-y-3 rounded-xl border border-border bg-secondary/15 p-4 select-none">
             {metrics.map((m) => (
               <li
                 key={m.label}
-                className="flex items-center gap-3 text-[13px]"
+                className="flex items-center gap-3 text-[13px] text-foreground"
               >
                 <span className="text-base leading-none">
                   {m.icon}
