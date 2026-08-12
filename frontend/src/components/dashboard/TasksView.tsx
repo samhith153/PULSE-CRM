@@ -14,7 +14,7 @@ import {
   List,
   LayoutGrid
 } from 'lucide-react';
-import type { ActivityTimelineItem } from '@/utils/api';
+import { getTasks, type ActivityTimelineItem } from '@/utils/api';
 
 interface Task {
   id: string | number;
@@ -154,7 +154,7 @@ export default function TasksView({ isEmbedded = false }: Props) {
     return () => window.removeEventListener('pulse-open-create-task-modal', handleOpen);
   }, []);
 
-  const handleToggle = (id: number) => {
+  const handleToggle = (id: string | number) => {
     const updated = tasks.map(t => {
       if (t.id === id) {
         const nextStatus = t.status === 'Completed' ? 'Pending' : 'Completed';
@@ -194,7 +194,7 @@ export default function TasksView({ isEmbedded = false }: Props) {
     setSelectedTask(null);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string | number) => {
     const updated = tasks.filter(t => t.id !== id);
     saveTasks(updated);
   };

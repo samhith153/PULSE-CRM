@@ -146,17 +146,17 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
       const mappedDeals = (Array.isArray(dealsData) ? dealsData : []).map(d => {
         const stageObj = sortedStages.find(s => s.id === d.pipeline_stage_id);
-        const stageName = stageObj ? stageObj.name : (d.stage || 'New');
+        const stageName = stageObj ? stageObj.name : (d.status || 'New');
         return {
           id: d.id,
-          title: d.title || d.name || 'Untitled Deal',
-          company: d.company || d.company_name || '',
-          value: d.value || (d.amount ? Number(d.amount) : 0),
+          title: d.name || 'Untitled Deal',
+          company: d.company_name || '',
+          value: d.amount ? Number(d.amount) : 0,
           stage: stageName,
           priority: (d.priority || 'Medium') as Deal['priority'],
-          owner: d.owner || d.owner_name || 'Unassigned',
-          closeDate: d.closeDate || d.expected_close_date || '',
-          createdAt: d.createdAt || d.created_at || new Date().toISOString()
+          owner: d.owner_name || 'Unassigned',
+          closeDate: d.expected_close_date || '',
+          createdAt: d.created_at || new Date().toISOString()
         };
       });
       setDeals(mappedDeals);

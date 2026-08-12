@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { getContacts, createContact, updateContact, deleteContact } from '@/utils/api';
 import { toast } from '@/lib/toast';
@@ -19,7 +19,9 @@ import {
   Check,
   Send,
   PhoneCall,
-  User
+  User,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 
 interface ContactItem {
@@ -104,6 +106,72 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // ── List view state: grid/split vs table, bulk selection, sorting ──
+  const [viewMode, setViewMode] = useState<'default' | 'list'>('default');
+  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
+  const [sortField, setSortField] = useState<'name' | 'company' | 'designation' | 'phone' | 'email'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const toggleViewMode = (mode: 'default' | 'list') => {
+    setViewMode(mode);
+    if (mode === 'list') setSelectedIds(new Set());
+  };
+
+  const sortedContacts = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const av = String(a[sortField] ?? '').toLowerCase();
+      const bv = String(b[sortField] ?? '').toLowerCase();
+      const cmp = av.localeCompare(bv);
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sortField, sortDir]);
+
+  const handleHeaderClick = (field: 'name' | 'company' | 'designation' | 'phone' | 'email') => {
+    if (sortField === field) {
+      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  const handleToggleSelectRow = (id: string | number) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = (list: ContactItem[]) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const allSelected = list.length > 0 && list.every(c => prev.has(c.id));
+      if (allSelected) {
+        list.forEach(c => next.delete(c.id));
+      } else {
+        list.forEach(c => next.add(c.id));
+      }
+      return next;
+    });
+  };
+
+  const handleDeleteSelectedContacts = async () => {
+    const ids = [...selectedIds];
+    setContacts(contacts.filter(c => !selectedIds.has(c.id)));
+    setSelectedIds(new Set());
+    if (selectedId != null && selectedIds.has(selectedId)) {
+      setSelectedId(contacts.find(c => !selectedIds.has(c.id))?.id ?? null);
+    }
+    for (const id of ids) {
+      try {
+        await deleteContact(id);
+      } catch {
+        // Per-item failures are non-fatal; keep the UI in sync regardless.
+      }
+    }
+  };
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -35,7 +35,9 @@ import {
   List,
   ArrowLeft,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 
 // Mapping helpers
