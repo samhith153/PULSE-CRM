@@ -19,7 +19,7 @@ export default function PlatformHero({ feature }: PlatformHeroProps) {
   };
 
   return (
-    <section className="relative min-h-[85vh] pt-24 pb-16 px-6 lg:px-12 bg-gradient-to-br from-white via-blue-50/30 to-blue-50/20 overflow-hidden">
+    <section className="relative py-16 md:py-24 px-6 lg:px-12 bg-gradient-to-br from-white via-blue-50/30 to-blue-50/20 overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/4 via-transparent to-blue-600/3" />
       <motion.div
@@ -43,7 +43,7 @@ export default function PlatformHero({ feature }: PlatformHeroProps) {
           transition={{ duration: 0.5 }}
           className="mb-8"
         >
-          <nav className="text-sm font-medium text-gray-500">
+          <nav className="text-xs font-medium text-gray-500">
             <Link 
               href="/" 
               className="hover:text-blue-600 transition-colors duration-200"
@@ -57,33 +57,33 @@ export default function PlatformHero({ feature }: PlatformHeroProps) {
           </nav>
         </motion.div>
 
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+        <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-10 lg:gap-12 items-center">
           {/* Left: Content */}
           <motion.div
             initial={{ opacity: 0, x: -40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.7, delay: 0.2 }}
-            className="space-y-8"
+            className="space-y-6"
           >
             {/* Eyebrow */}
-            <div className="inline-flex items-center px-4 py-2 rounded-full" style={{ background: '#EFF6FF', border: '1px solid #DBEAFE' }}>
+            <div className="inline-flex items-center px-3.5 py-1.5 rounded-full" style={{ background: '#EFF6FF', border: '1px solid #DBEAFE' }}>
               <span className="text-xs font-bold uppercase tracking-wider" style={{ color: '#2563EB' }}>
                 {feature.eyebrow}
               </span>
             </div>
             
             {/* Heading */}
-            <h1 className="text-5xl lg:text-6xl xl:text-7xl font-black text-gray-900 leading-[1.05] tracking-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight tracking-tight">
               {feature.title}
             </h1>
             
             {/* Description */}
-            <p className="text-xl lg:text-2xl text-gray-600 leading-relaxed max-w-2xl font-medium">
+            <p className="text-base md:text-lg text-gray-600 leading-relaxed max-w-xl font-medium">
               {feature.description}
             </p>
             
             {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
@@ -91,13 +91,13 @@ export default function PlatformHero({ feature }: PlatformHeroProps) {
               >
                 <Link
                   href={feature.primaryAction.href}
-                  className="group inline-flex items-center justify-center gap-3 px-8 py-4 text-white text-base font-bold rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                  style={{ background: '#2563EB', color: '#FFFFFF', border: 'none', fontWeight: 600 }}
+                  className="group inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-white text-sm font-semibold rounded-full transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                  style={{ background: '#2563EB', color: '#FFFFFF', border: 'none' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1D4ED8'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#2563EB'; }}
                 >
                   {feature.primaryAction.text}
-                  <ArrowRight size={18} color="#FFFFFF" className="group-hover:translate-x-0.5 transition-transform duration-200" />
+                  <ArrowRight size={16} color="#FFFFFF" className="group-hover:translate-x-0.5 transition-transform duration-200" />
                 </Link>
               </motion.div>
               
@@ -108,8 +108,8 @@ export default function PlatformHero({ feature }: PlatformHeroProps) {
               >
                 <button
                   onClick={handleLearnMore}
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 text-base font-bold rounded-full transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
-                  style={{ background: '#fff', border: '2px solid #e5e7eb', color: '#374151' }}
+                  className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-semibold rounded-full transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                  style={{ background: '#fff', border: '1.5px solid #e5e7eb', color: '#374151' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#2563EB'; (e.currentTarget as HTMLElement).style.color = '#2563EB'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLElement).style.color = '#374151'; }}
                 >

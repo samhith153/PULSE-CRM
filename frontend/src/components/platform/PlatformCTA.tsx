@@ -28,7 +28,7 @@ export default function PlatformCTA({ feature }: PlatformCTAProps) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm rounded-3xl lg:rounded-4xl border border-white/50 shadow-xl p-8 lg:p-12 text-center relative overflow-hidden"
+          className="bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm rounded-3xl lg:rounded-4xl border border-white/50 shadow-xl p-8 lg:p-10 text-center relative overflow-hidden"
         >
           {/* Background pattern */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 to-blue-600/5 rounded-3xl lg:rounded-4xl" />
@@ -40,7 +40,7 @@ export default function PlatformCTA({ feature }: PlatformCTAProps) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-3xl lg:text-4xl xl:text-5xl font-black mb-4 lg:mb-6 leading-tight tracking-tight"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 leading-tight tracking-tight"
             style={{ color: '#0f172a' }}>
             {feature.ctaTitle}
           </motion.div>
@@ -50,7 +50,7 @@ export default function PlatformCTA({ feature }: PlatformCTAProps) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg lg:text-xl mb-8 lg:mb-10 leading-relaxed max-w-2xl mx-auto"
+            className="text-sm md:text-base mb-6 md:mb-8 leading-relaxed max-w-xl mx-auto"
             style={{ color: '#64748b' }}>
             {feature.ctaDescription}
           </motion.p>
@@ -69,13 +69,13 @@ export default function PlatformCTA({ feature }: PlatformCTAProps) {
               >
                 <Link
                   href={feature.primaryAction.href}
-                  className="group inline-flex items-center justify-center gap-3 px-8 lg:px-10 py-4 lg:py-5 text-white text-base lg:text-lg font-bold rounded-full transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 min-w-[160px]"
-                  style={{ background: '#2563EB', color: '#FFFFFF', border: 'none', fontWeight: 600 }}
+                  className="group inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-white text-sm font-semibold rounded-full transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                  style={{ background: '#2563EB', color: '#FFFFFF', border: 'none' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#1D4ED8'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = '#2563EB'; }}
                 >
                   {feature.primaryAction.text}
-                  <ArrowRight size={20} color="#FFFFFF" className="group-hover:translate-x-0.5 transition-transform duration-200" />
+                  <ArrowRight size={16} color="#FFFFFF" className="group-hover:translate-x-0.5 transition-transform duration-200" />
                 </Link>
               </motion.div>
               
@@ -86,8 +86,8 @@ export default function PlatformCTA({ feature }: PlatformCTAProps) {
               >
                 <button
                   onClick={handleLearnMore}
-                  className="inline-flex items-center justify-center gap-3 px-8 lg:px-10 py-4 lg:py-5 text-base lg:text-lg font-bold rounded-full transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5 min-w-[160px]"
-                  style={{ background: '#fff', border: '2px solid #e5e7eb', color: '#374151' }}
+                  className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 text-sm font-semibold rounded-full transition-all duration-200 shadow-sm hover:shadow-md transform hover:-translate-y-0.5"
+                  style={{ background: '#fff', border: '1.5px solid #e5e7eb', color: '#374151' }}
                   onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#2563EB'; (e.currentTarget as HTMLElement).style.color = '#2563EB'; }}
                   onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLElement).style.color = '#374151'; }}
                 >
