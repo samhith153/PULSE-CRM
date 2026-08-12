@@ -1,1159 +1,2178 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { toast } from '@/lib/toast';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertCircle,
+  AlertTriangle,
+  Check,
   CheckCircle2,
+  ChevronDown,
   Clock3,
+  Lightbulb,
   Loader2,
-  Mail,
   RefreshCw,
+  Search,
+  Send,
   Sparkles,
-  UserRound,
-  Zap,
-  ChevronRight,
+  Trophy,
 } from 'lucide-react';
 
 import {
   getLeads,
+  getDeals,
+  getPipelineStages,
+  fetchBatchRecommendations,
+  fetchEntityTimeline,
   getLeadWorkflow,
-  completeWorkflowTask,
-  getCrmActivities,
-  createCrmTask,
+  formatINR,
   type Lead,
+  type Deal,
+  type BatchRecommendationItem,
+  type LeadWorkflowResponse,
   type WorkflowTaskItem,
-  type LeadRecommendation,
 } from '@/utils/api';
+const REFRESH_MS = 30000;
 
-import {
-  getActivitiesFromStorage,
-  saveActivitiesToStorage,
-  type Activity,
-} from '@/utils/activityDb';
-
-interface WorkflowsViewProps {
-  onLoaded?: () => void;
+function normalize(value: string | null | undefined): string {
+  return (value || '').toLowerCase().trim().replace(/[^a-z]/g, '');
 }
 
-function formatDueDate(value?: string | null): string {
-  if (!value) return 'No deadline';
+function displayStage(
+  deal: Deal | null,
+  lead: Lead | null
+): string {
+  const dealStage = (deal as any)?.stage;
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'No deadline';
+  if (dealStage) {
+    return String(dealStage);
+  }
 
-  return date.toLocaleString([], {
-    day: '2-digit',
+  const raw = lead?.status || 'New Lead';
+
+  return raw
+    .replace(/[_-]+/g, ' ')
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function formatDate(iso?: string | null): string {
+  if (!iso) return '—';
+
+  const d = new Date(iso);
+
+  if (Number.isNaN(d.getTime())) {
+    return '—';
+  }
+
+  return d.toLocaleDateString(undefined, {
     month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
+    day: 'numeric',
   });
 }
 
-function formatDate(value?: string | null): string {
-  if (!value) return '';
+function timeAgo(iso?: string | null): string {
+  if (!iso) return '';
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
+  const then = new Date(iso).getTime();
 
-  return date.toLocaleString([], {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-function priorityClass(priority?: string | null): string {
-  switch ((priority || '').toLowerCase()) {
-    case 'critical':
-      return 'bg-red-500/10 text-red-600 border-red-500/20';
-    case 'high':
-      return 'bg-orange-500/10 text-orange-600 border-orange-500/20';
-    case 'medium':
-      return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-    default:
-      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-  }
-}
-
-function statusClass(status?: string | null): string {
-  switch ((status || '').toLowerCase()) {
-    case 'completed':
-      return 'bg-green-500/10 text-green-600 border-green-500/20';
-    case 'superseded':
-      return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-    case 'in_progress':
-      return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
-    default:
-      return 'bg-amber-500/10 text-amber-600 border-amber-500/20';
-  }
-}
-
-function actionIcon(action?: string | null) {
-  const value = (action || '').toLowerCase();
-
-  if (value.includes('email') || value.includes('mail')) {
-    return <Mail className="h-4 w-4" />;
+  if (Number.isNaN(then)) {
+    return '';
   }
 
-  if (
-    value.includes('research') ||
-    value.includes('review') ||
-    value.includes('prospect')
-  ) {
-    return <UserRound className="h-4 w-4" />;
+  const diff = Math.max(0, Date.now() - then);
+
+  const minutes = Math.floor(diff / 60000);
+
+  if (minutes < 1) {
+    return 'just now';
   }
 
-  return <Zap className="h-4 w-4" />;
+  if (minutes < 60) {
+    return `${minutes}m ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  if (hours < 24) {
+    return `${hours}h ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+
+  if (days < 7) {
+    return `${days}d ago`;
+  }
+
+  return new Date(iso).toLocaleDateString();
 }
 
-function displayLeadName(lead: Lead): string {
-  return (
-    lead.title ||
-    lead.contact_name ||
-    lead.company_name ||
-    lead.contact_email ||
-    'Unnamed Lead'
+function candidateLabel(
+  candidate: Record<string, unknown>
+): string {
+  return String(
+    candidate.name ??
+      candidate.action ??
+      candidate.label ??
+      candidate.title ??
+      'Recommended action'
   );
 }
-function toActivityStatus(status?: string | null): string {
-  switch ((status || '').toLowerCase()) {
-    case 'completed':
-      return 'Completed';
-    case 'in_progress':
-      return 'In Progress';
-    case 'overdue':
-      return 'Overdue';
-    default:
-      return 'Pending';
+
+function candidateScore(
+  candidate: Record<string, unknown>
+): number {
+  const value =
+    candidate.score ??
+    candidate.weight ??
+    candidate.rank ??
+    0;
+
+  return typeof value === 'number'
+    ? value
+    : Number(value) || 0;
+}
+
+function candidatePriority(
+  candidate: Record<string, unknown>
+): 'high' | 'medium' | 'low' | null {
+  const value = String(
+    candidate.priority ??
+      candidate.urgency ??
+      ''
+  ).toLowerCase();
+
+  if (
+    value === 'high' ||
+    value === 'medium' ||
+    value === 'low'
+  ) {
+    return value;
   }
+
+  return null;
 }
 
-function toActivityPriority(priority?: string | null): string {
-  switch ((priority || '').toLowerCase()) {
-    case 'urgent':
-      return 'Urgent';
-    case 'high':
-      return 'High';
-    case 'low':
-      return 'Low';
-    default:
-      return 'Medium';
-  }
+function firstName(lead: Lead): string {
+  return (
+    lead.contact_name ||
+    lead.title ||
+    'Lead'
+  ).split(' ')[0];
 }
 
-function crmTaskToLocalActivity(
-  task: any,
-  lead: Lead,
-): Activity {
-  const description =
-    task.description ||
-    task.details?.description ||
-    '';
-
-  return {
-    id: String(task.id),
-
-    type: 'task',
-
-    subject: task.subject || 'AI Recommended Task',
-
-    status: toActivityStatus(task.status),
-
-    priority: toActivityPriority(task.priority),
-
-    dueDate:
-      task.due_date ||
-      task.due_at ||
-      new Date().toISOString(),
-
-    owner:
-      task.owner_name ||
-      lead.owner_name ||
-      'System',
-
-    relatedRecord: {
-      id: lead.id,
-      name: displayLeadName(lead),
-      type: 'lead',
-    },
-
-    details: {
-      title: task.subject || 'AI Recommended Task',
-      description,
-      assignedTo:
-        task.owner_name ||
-        lead.owner_name ||
-        'System',
-      reminder: '15 mins before',
-      repeat: 'None',
-      attachments: [],
-    },
-
-    timeline: [
-      {
-        action: 'Created',
-        time:
-          task.created_at ||
-          new Date().toISOString(),
-        user:
-          task.owner_name ||
-          'System',
-        desc:
-          'Task created automatically from an AI workflow recommendation.',
-      },
-    ],
-  };
+function workflowTaskDate(
+  task: WorkflowTaskItem
+): string | null {
+  return (
+    task.completed_at ||
+    task.created_at ||
+    null
+  );
 }
+
 export default function WorkflowsView({
   onLoaded,
-}: WorkflowsViewProps = {}) {
+}: {
+  onLoaded?: () => void;
+} = {}) {
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [pipelineStages, setPipelineStages] =
+  useState<any[]>([]);
+
+  const [selectedLeadId, setSelectedLeadId] =
+    useState('');
+
+  const [search, setSearch] =
+    useState('');
+
+  const [pickerOpen, setPickerOpen] =
+    useState(false);
+
+  const [fullWorkflowOpen, setFullWorkflowOpen] =
+    useState(false);
+
+  const [loadingBase, setLoadingBase] =
+    useState(true);
+
+  const [baseError, setBaseError] =
+    useState<string | null>(null);
+
+  const [recItem, setRecItem] = useState<BatchRecommendationItem | null>(null);
+
+  const [activity, setActivity] = useState<ActivityEvent[]>([]);
+
+  const [loadingRec, setLoadingRec] =
+    useState(false);
+
+  type PlannedWorkflowStep = {
+    action_type: string;
+    current_stage?: string | null;
+    reasoning?: string | null;
+    priority?: string | null;
+    score?: number | null;
+    status?: string;
+    // Backend now sends this explicitly. Optional so older API
+    // responses (before this field existed) don't break the type.
+    kind?: 'stage' | 'action';
+  };
 
   const [workflow, setWorkflow] = useState<{
     current_task: WorkflowTaskItem | null;
     history: WorkflowTaskItem[];
+    planned_steps: PlannedWorkflowStep[];
+    total_steps: number;
+    completed_steps: number;
+    progress_percent: number;
   }>({
     current_task: null,
     history: [],
+    planned_steps: [],
+    total_steps: 0,
+    completed_steps: 0,
+    progress_percent: 0,
   });
 
-  const [recommendation, setRecommendation] =
-    useState<LeadRecommendation | null>(null);
+  const [loadingWorkflow, setLoadingWorkflow] =
+    useState(false);
 
-  const [loadingLeads, setLoadingLeads] = useState(true);
-  const [loadingWorkflow, setLoadingWorkflow] = useState(false);
-  const [completing, setCompleting] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
 
   /*
-   * IMPORTANT:
-   * No polling / setInterval here.
-   *
-   * The old workflow page was refreshing automatically every few seconds,
-   * which caused the selected lead/page state to jump around.
+   * ------------------------------------------------------------
+   * BASE CRM DATA
+   * ------------------------------------------------------------
    */
-  const loadLeads = useCallback(async () => {
-    try {
-      setLoadingLeads(true);
-      setError(null);
 
-      const result = await getLeads();
-      const nextLeads = Array.isArray(result) ? result : [];
+  const loadBase = useCallback(
+    async (silent = false) => {
+      if (!silent) {
+        setLoadingBase(true);
+      }
 
-      setLeads(nextLeads);
+      setBaseError(null);
 
-      setSelectedLeadId((previous) => {
-        if (
-          previous &&
-          nextLeads.some((lead) => lead.id === previous)
-        ) {
-          return previous;
+      try {
+        const [leadList, dealList, stageList] =
+          await Promise.all([
+            getLeads(),
+            getDeals(),
+            getPipelineStages(),
+          ]);
+
+        setLeads(leadList || []);
+        setDeals(dealList || []);
+        setPipelineStages(
+          Array.isArray(stageList)
+            ? [...stageList].sort(
+                (a, b) =>
+                  Number(a.sort_order ?? 0) -
+                  Number(b.sort_order ?? 0)
+              )
+            : []
+        );
+
+        setSelectedLeadId((previous) => {
+          if (
+            previous &&
+            leadList?.some(
+              (lead) => lead.id === previous
+            )
+          ) {
+            return previous;
+          }
+
+          return leadList?.[0]?.id || '';
+        });
+      } catch (error) {
+        console.error(
+          'Failed to load workflow leads:',
+          error
+        );
+
+        if (!silent) {
+          setBaseError(
+            'Could not load leads or pipeline data. Try refreshing.'
+          );
         }
-
-        return nextLeads[0]?.id ?? null;
-      });
-
-      onLoaded?.();
-    } catch (err) {
-      console.error('Failed to load workflow leads:', err);
-      setError('Unable to load leads. Please log in again if your session expired.');
-    } finally {
-      setLoadingLeads(false);
-    }
-  }, [onLoaded]);
+      } finally {
+        if (!silent) {
+          setLoadingBase(false);
+          onLoaded?.();
+        }
+      }
+    },
+    [onLoaded]
+  );
 
   useEffect(() => {
-    void loadLeads();
-  }, [loadLeads]);
+    loadBase();
+
+    const interval = window.setInterval(
+      () => loadBase(true),
+      REFRESH_MS
+    );
+
+    return () =>
+      window.clearInterval(interval);
+  }, [loadBase]);
+
+  
+
+  useEffect(() => {
+    const refresh = () =>
+      loadBase(true);
+
+    const visibility = () => {
+      if (
+        document.visibilityState ===
+        'visible'
+      ) {
+        loadBase(true);
+      }
+    };
+
+    window.addEventListener(
+      'pipeline-stage-updated',
+      refresh
+    );
+
+    window.addEventListener(
+      'focus',
+      refresh
+    );
+
+    document.addEventListener(
+      'visibilitychange',
+      visibility
+    );
+
+    return () => {
+      window.removeEventListener(
+        'pipeline-stage-updated',
+        refresh
+      );
+
+      window.removeEventListener(
+        'focus',
+        refresh
+      );
+
+      document.removeEventListener(
+        'visibilitychange',
+        visibility
+      );
+    };
+  }, [loadBase]);
+
+  /*
+   * ------------------------------------------------------------
+   * SELECTED LEAD / DEAL
+   * ------------------------------------------------------------
+   */
 
   const selectedLead = useMemo(
     () =>
-      leads.find((lead) => lead.id === selectedLeadId) ?? null,
+      leads.find(
+        (lead) =>
+          lead.id === selectedLeadId
+      ) || null,
     [leads, selectedLeadId]
   );
 
-  const syncWorkflowTaskToActivity = useCallback(
-  async (
-    task: WorkflowTaskItem | null,
-    lead: Lead | null,
-  ) => {
-    if (!task || !lead) return;
+  const selectedDeal = useMemo(
+    () =>
+      deals.find(
+        (deal) =>
+          deal.lead_id === selectedLeadId
+      ) || null,
+    [deals, selectedLeadId]
+  );
 
-    /*
-     * Only pending/current workflow actions should
-     * become Activities.
-     */
-    if (
-      task.status === 'completed' ||
-      task.status === 'superseded'
-    ) {
+  /*
+   * ------------------------------------------------------------
+   * AI ENTITY
+   * ------------------------------------------------------------
+   */
+
+  const entity = selectedLead
+    ? {
+        type: selectedDeal
+          ? ('deal' as const)
+          : ('lead' as const),
+        id: selectedLead.id,
+      }
+    : null;
+
+  /*
+   * ------------------------------------------------------------
+   * AI RECOMMENDATION
+   * ------------------------------------------------------------
+   */
+
+  useEffect(() => {
+    if (!entity) {
+      setRecItem(null);
       return;
     }
 
-    const marker = `[AI_WORKFLOW_TASK:${task.id}]`;
+    let cancelled = false;
 
-    try {
-      /*
-       * 1. Check the local activity cache first.
-       * This prevents duplicate creation during the
-       * same browser session.
-       */
-      const localActivities =
-        getActivitiesFromStorage();
+    (async () => {
+      setLoadingRec(true);
 
-      const localExists = localActivities.some(
-        (activity) =>
-          activity.type === 'task' &&
-          activity.details?.description?.includes(marker)
-      );
-
-      if (localExists) {
-        return;
-      }
-
-      /*
-       * 2. Check the real backend.
-       *
-       * This protects us even if the Workflow page
-       * is opened again or the browser is refreshed.
-       */
-      const existing =
-        await getCrmActivities({
-          view: 'task',
-          search: marker,
-          page: 1,
-          page_size: 100,
-        });
-
-      if (
-        existing?.data &&
-        existing.data.length > 0
-      ) {
-        /*
-         * Task already exists in the database.
-         * Sync it into local Activities so the
-         * existing Activities UI can display it.
-         */
-        const existingTask = existing.data[0];
-
-        const syncedActivity =
-          crmTaskToLocalActivity(
-            existingTask,
-            lead,
-          );
-
-        const current =
-          getActivitiesFromStorage();
-
-        if (
-          !current.some(
-            (activity) =>
-              activity.id === syncedActivity.id
-          )
-        ) {
-          saveActivitiesToStorage([
-            syncedActivity,
-            ...current,
+      try {
+        const response =
+          await fetchBatchRecommendations([
+            entity.id,
           ]);
 
-          window.dispatchEvent(
-            new CustomEvent(
-              'pulse-crm-activity-created'
-            )
+        if (!cancelled) {
+          setRecItem(
+            response.recommendations?.[
+              entity.id
+            ] ?? null
           );
         }
-
-        return;
-      }
-
-      /*
-       * 3. Create the actual CRM task.
-       */
-      const createdTask =
-        await createCrmTask({
-          subject: task.action_type,
-
-          description: [
-            task.reasoning ||
-              'AI recommended this action for the lead.',
-            '',
-            marker,
-          ].join('\n'),
-
-          due_date: task.due_at,
-
-          priority:
-            (task.priority || 'medium').toLowerCase(),
-
-          status:
-            (task.status || 'pending').toLowerCase(),
-
-          related_entity_type: 'lead',
-
-          related_lead_id: lead.id,
-        });
-
-      /*
-       * 4. Convert the backend task into the
-       * existing Activities page format.
-       */
-      const activity =
-        crmTaskToLocalActivity(
-          createdTask,
-          lead,
+      } catch (error) {
+        console.error(
+          'Failed to load AI recommendation:',
+          error
         );
 
-      const latestActivities =
-        getActivitiesFromStorage();
-
-      /*
-       * Final duplicate protection.
-       */
-      if (
-        latestActivities.some(
-          (item) => item.id === activity.id
-        )
-      ) {
-        return;
+        if (!cancelled) {
+          setRecItem(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingRec(false);
+        }
       }
+    })();
 
-      saveActivitiesToStorage([
-        activity,
-        ...latestActivities,
-      ]);
-
-      /*
-       * Tell ActivitiesView to refresh immediately
-       * if it is currently mounted.
-       */
-      window.dispatchEvent(
-        new CustomEvent(
-          'pulse-crm-activity-created'
-        )
-      );
-
-      console.log(
-        '[Workflow → Activity] Created task:',
-        activity.subject
-      );
-    } catch (error) {
-      /*
-       * Activity creation should NOT break the
-       * Workflow page itself.
-       */
-      console.error(
-        '[Workflow → Activity] Failed to create activity:',
-        error
-      );
-    }
-  },
-  []
-);
+    return () => {
+      cancelled = true;
+    };
+  }, [entity?.type, entity?.id]);
 
   /*
-   * Load only the selected lead's workflow.
-   * Changing another CRM lead does not cause this component to poll/reload.
+   * ------------------------------------------------------------
+   * REAL PERSONALIZED WORKFLOW
+   *
+   * IMPORTANT:
+   *
+   * This is NOT generated from pipeline stages.
+   *
+   * It comes directly from:
+   *
+   *   workflow.history
+   *   +
+   *   workflow.current_task
+   *
+   * Therefore every lead gets its own workflow.
+   * ------------------------------------------------------------
    */
-const loadSelectedLead = useCallback(async (leadId: string) => {
-  try {
-    setLoadingWorkflow(true);
-    setError(null);
-
-    const workflowResult = await getLeadWorkflow(leadId);
-
-    setWorkflow({
-      current_task: workflowResult.current_task,
-      history: workflowResult.history,
-    });
-  } catch (err) {
-    console.error('Failed to load lead workflow:', err);
-
-    setWorkflow({
-      current_task: null,
-      history: [],
-    });
-
-    setError(
-      err instanceof Error
-        ? err.message
-        : 'Unable to load this lead workflow.'
-    );
-  } finally {
-    setLoadingWorkflow(false);
-  }
-}, []);
 
   useEffect(() => {
     if (!selectedLeadId) {
       setWorkflow({
         current_task: null,
         history: [],
+        planned_steps: [],
+        total_steps: 0,
+        completed_steps: 0,
+        progress_percent: 0,
       });
-      setRecommendation(null);
+
       return;
     }
 
-    void loadSelectedLead(selectedLeadId);
-  }, [selectedLeadId, loadSelectedLead]);
+    let cancelled = false;
 
-  useEffect(() => {
-  if (!selectedLead || !workflow.current_task) {
-    return;
-  }
+    (async () => {
+      setLoadingWorkflow(true);
 
-  void syncWorkflowTaskToActivity(
-    workflow.current_task,
-    selectedLead,
-  );
-}, [
-  selectedLead,
-  workflow.current_task,
-  syncWorkflowTaskToActivity,
-]);
+      try {
+        const result =
+          await getLeadWorkflow(
+            selectedLeadId
+          );
 
-  const handleRefresh = async () => {
-    if (!selectedLeadId) return;
+        if (!cancelled) {
+          setWorkflow({
+  current_task:
+    result?.current_task ?? null,
 
-    try {
-      setRefreshing(true);
+  history: Array.isArray(
+    result?.history
+  )
+    ? result.history
+    : [],
 
-      /*
-       * Refresh only this lead.
-       * Do not reload the whole lead list.
-       */
-      await loadSelectedLead(selectedLeadId);
-    } finally {
-      setRefreshing(false);
-    }
-  };
+  planned_steps: Array.isArray(
+    (result as any)?.planned_steps
+  )
+    ? (result as any).planned_steps
+    : [],
 
-const handleComplete = async () => {
-  const task = workflow.current_task;
-  const leadId = selectedLead?.id;
+  total_steps:
+    Number(
+      (result as any)?.total_steps
+    ) || 0,
 
-  if (!task) return;
+  completed_steps:
+    Number(
+      (result as any)?.completed_steps
+    ) || 0,
 
-  if (!leadId) {
-    toast.error('Unable to identify the selected lead.');
-    return;
-  }
+  progress_percent:
+    Number(
+      (result as any)?.progress_percent
+    ) || 0,
+});
+        }
+      } catch (error) {
+        console.error(
+          'Failed to load personalized workflow:',
+          error
+        );
 
-  try {
-    setCompleting(true);
+        if (!cancelled) {
+          setWorkflow({
+            current_task: null,
+            history: [],
+            planned_steps: [],
+            total_steps: 0,
+            completed_steps: 0,
+            progress_percent: 0,
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingWorkflow(false);
+        }
+      }
+    })();
 
-    // Complete the current workflow task
-    await completeWorkflowTask(task.id);
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedLeadId]);
 
-    // Immediately update the UI so the completed task moves to history
-    setWorkflow((prev) => ({
-      current_task: null,
-      history: [
-        ...prev.history.filter((item) => item.id !== task.id),
-        {
-          ...task,
-          status: 'completed',
-          completed_at: new Date().toISOString(),
-        },
-      ],
-    }));
-
-    // Re-fetch using the stable lead UUID.
-    // Do NOT rely on a possibly changed selectedLead state.
-    const updatedWorkflow = await getLeadWorkflow(leadId);
-
-    setWorkflow({
-      current_task: updatedWorkflow.current_task,
-      history: updatedWorkflow.history,
-    });
-  } catch (error) {
-    console.error('Failed to complete workflow task:', error);
-    toast.error('Unable to complete the workflow task.');
-  } finally {
-    setCompleting(false);
-  }
-};
   /*
-   * PERSONALIZED WORKFLOW STRUCTURE
-   *
-   * There are NO fixed CRM stages here.
-   *
-   * Each lead gets:
-   *   1. Lead created
-   *   2. AI assessment
-   *   3. Historical AI actions for that lead
-   *   4. Current AI action
-   *   5. Next AI decision
-   *
-   * The actual action names come from the backend recommendation.
+   * ------------------------------------------------------------
+   * LEAD SEARCH
+   * ------------------------------------------------------------
    */
-  const workflowSteps = useMemo(() => {
-    const steps: Array<{
-      id: string;
-      label: string;
-      description: string;
-      status: 'done' | 'active' | 'upcoming';
-      action?: string;
-    }> = [];
 
-    if (!selectedLead) return steps;
+  const filteredLeads = useMemo(() => {
+    const query =
+      search.trim().toLowerCase();
 
-    steps.push({
-      id: 'lead-created',
-      label: 'Lead created',
-      description: `Lead entered the CRM on ${formatDate(
-        selectedLead.created_at
-      ) || 'the recorded creation date'}.`,
-      status: 'done',
-    });
+    if (!query) {
+      return leads;
+    }
 
-    steps.push({
-      id: 'ai-assessment',
-      label: 'AI assessment',
-      description:
-        'AI evaluates fit, engagement, CRM stage, activity and previous signals.',
-      status:
-        selectedLead.score !== null &&
-        selectedLead.score !== undefined
-          ? 'done'
-          : 'active',
-    });
+    return leads.filter((lead) =>
+      [
+        lead.title,
+        lead.contact_name,
+        lead.company_name,
+        lead.contact_email,
+      ]
+        .filter(Boolean)
+        .some((value) =>
+          String(value)
+            .toLowerCase()
+            .includes(query)
+        )
+    );
+  }, [leads, search]);
+
+  /*
+   * ------------------------------------------------------------
+   * PIPELINE INFORMATION
+   *
+   * Pipeline stage remains separate from workflow.
+   * ------------------------------------------------------------
+   */
+
+  const currentStage =
+    displayStage(
+      selectedDeal,
+      selectedLead
+    );
+
+  const leadHealth =
+    recItem?.current_score ??
+    selectedLead?.score ??
+    null;
+
+  const isWon =
+    normalize(currentStage).includes(
+      'won'
+    );
+
+  const isLost =
+    normalize(currentStage).includes(
+      'lost'
+    );
+
+  const isConverted =
+    Boolean(selectedDeal);
+
+  /*
+   * ------------------------------------------------------------
+   * AI CANDIDATE ACTIONS
+   * ------------------------------------------------------------
+   */
+
+  const rankedActions = useMemo(() => {
+    if (!recItem) {
+      return [];
+    }
+
+    const candidates =
+      (recItem.all_candidates ||
+        []) as Record<
+        string,
+        unknown
+      >[];
+
+    if (candidates.length) {
+      return [...candidates]
+        .sort(
+          (a, b) =>
+            candidateScore(b) -
+            candidateScore(a)
+        )
+        .map((candidate) => ({
+          label:
+            candidateLabel(candidate),
+
+          priority:
+            candidatePriority(candidate),
+
+          score:
+            candidateScore(candidate),
+        }));
+    }
+
+    return recItem.recommended_action
+      ? [
+          {
+            label:
+              recItem.recommended_action,
+            priority: null,
+            score: 0,
+          },
+        ]
+      : [];
+  }, [recItem]);
+
+  /*
+   * ------------------------------------------------------------
+   * CURRENT AI RECOMMENDATION
+   * ------------------------------------------------------------
+   */
+
+  const topAction =
+    workflow.current_task
+      ?.action_type ||
+    rankedActions[0]?.label ||
+    (recItem
+      ? 'Review lead and choose the next best action'
+      : 'Waiting for AI assessment');
+
+  const topPriority =
+    workflow.current_task?.priority
+      ?.toLowerCase() ||
+    rankedActions[0]?.priority ||
+    null;
+
+  /*
+   * ------------------------------------------------------------
+   * RECOVERY DETECTION
+   * ------------------------------------------------------------
+   */
+
+  const recoveryTriggered =
+    useMemo(() => {
+      const reason =
+        `${recItem?.reason || ''} ${
+          recItem?.recommended_action || ''
+        }`.toLowerCase();
+
+      return /(no response|stale|overdue|stalled|disengag|no activity)/.test(
+        reason
+      );
+    }, [recItem]);
 
     /*
-     * History is completely lead-specific.
-     * No hardcoded "Contacted / Qualified / Proposal / Negotiation" stages.
-     */
-    const history = [...workflow.history].reverse();
+    * ------------------------------------------------------------
+    * WORKFLOW PROGRESS
+    *
+    * ONE visual journey per lead:
+    *
+    * Previous CRM stages  -> COMPLETED
+    * Current CRM stage    -> COMPLETED/REACHED
+    * Current AI action    -> CURRENT
+    * Future CRM stages    -> PLANNED
+    *
+    * Example:
+    *
+    * New                 ✓
+    * AI Assessment       ✓
+    * Contact Initiated   ✓
+    * Qualified           ✓
+    * Schedule demo       ⭐ CURRENT
+    * Proposal            ○
+    * Negotiation         ○
+    * Won                 ○
+    *
+    * The AI action is dynamic and comes from the lead's
+    * current workflow task / AI recommendation.
+    *
+    * We do NOT create future AI tasks here.
+    * We only display the current recommendation.
+    * ------------------------------------------------------------
+    */
+  const workflowSteps = useMemo(() => {
+    type WorkflowStep = {
+      id: string;
+      label: string;
+      reasoning: string;
+      status: 'done' | 'current' | 'planned';
+      due_at: string | null;
+      completed_at: string | null;
+      created_at: string | null;
+      current_stage?: string | null;
+      kind: 'stage' | 'action';
+    };
 
-    history.forEach((task, index) => {
-      steps.push({
-        id: `history-${task.id}`,
-        label: task.action_type,
-        description:
-          task.reasoning ||
-          `AI workflow action ${index + 1} for this lead.`,
+    const steps: WorkflowStep[] = [];
+
+    /*
+    * ============================================================
+    * PIPELINE STAGES
+    *
+    * These are ONLY visual stages.
+    * They are NOT workflow tasks.
+    *
+    * Example:
+    * New Lead → Qualified → Proposal → Negotiation → Won
+    * ============================================================
+    */
+
+    const stages = [...pipelineStages]
+      .sort(
+        (a, b) =>
+          Number(a.sort_order ?? 0) -
+          Number(b.sort_order ?? 0)
+      )
+      .map((stage) => ({
+        id: String(
+          stage.id ??
+            stage.name ??
+            stage.label ??
+            stage.stage_name ??
+            ''
+        ),
+        name: String(
+          stage.name ??
+            stage.label ??
+            stage.stage_name ??
+            ''
+        ).trim(),
+      }))
+      .filter((stage) => stage.name)
+      .filter(
+        (stage) =>
+          !normalize(stage.name).includes('lost')
+      );
+
+    /*
+    * ============================================================
+    * COMPLETED AI TASKS
+    *
+    * These belong ONLY to this lead.
+    *
+    * They remain visible as previous recommendations.
+    * ============================================================
+    */
+
+    const completedTasks = [...workflow.history]
+      .filter(
+        (task) =>
+          task.status === 'completed'
+      )
+      .sort(
+        (a, b) =>
+          Number(a.step_order ?? 0) -
+          Number(b.step_order ?? 0)
+      );
+
+    /*
+    * ============================================================
+    * CURRENT AI TASK
+    *
+    * There must be ONLY ONE.
+    * ============================================================
+    */
+
+    const currentTask =
+      workflow.current_task;
+
+    const currentAction =
+      currentTask?.action_type?.trim() || '';
+
+    /*
+    * ============================================================
+    * FIND THE STAGE WHERE THE CURRENT AI ACTION BELONGS
+    *
+    * Example:
+    *
+    * current_stage = "Qualified"
+    * current action = "Send case study or testimonial"
+    *
+    * Therefore:
+    *
+    * ✓ Qualified
+    * ⭐ Send case study or testimonial
+    * ○ Proposal
+    * ○ Negotiation
+    * ○ Won
+    * ============================================================
+    */
+
+    const currentWorkflowStage =
+      normalize(
+        currentTask?.current_stage ||
+          currentStage
+      );
+
+    let currentStageIndex =
+      stages.findIndex(
+        (stage) =>
+          normalize(stage.name) ===
+          currentWorkflowStage
+      );
+
+    /*
+    * If backend does not provide current_stage,
+    * use the latest completed task's stage.
+    */
+    if (currentStageIndex < 0) {
+      const latestStage =
+        [...completedTasks]
+          .reverse()
+          .find(
+            (task) =>
+              task.current_stage
+          )?.current_stage;
+
+      if (latestStage) {
+        currentStageIndex =
+          stages.findIndex(
+            (stage) =>
+              normalize(stage.name) ===
+              normalize(latestStage)
+          );
+      }
+    }
+
+    /*
+    * If still unknown, start at the first stage.
+    */
+    if (currentStageIndex < 0) {
+      currentStageIndex = 0;
+    }
+
+    /*
+    * ============================================================
+    * DUPLICATE PROTECTION
+    * ============================================================
+    */
+
+    const usedLabels =
+      new Set<string>();
+
+    const addStep = (
+      step: WorkflowStep
+    ) => {
+      const key =
+        normalize(step.label);
+
+      if (!key) {
+        return;
+      }
+
+      if (usedLabels.has(key)) {
+        return;
+      }
+
+      usedLabels.add(key);
+      steps.push(step);
+    };
+
+    /*
+    * ============================================================
+    * 1. PREVIOUS PIPELINE STAGES
+    *
+    * Everything before the current workflow stage
+    * is visually completed.
+    * ============================================================
+    */
+
+    stages.forEach(
+      (stage, index) => {
+        if (
+          index <
+          currentStageIndex
+        ) {
+          addStep({
+            id: `stage-${stage.id}`,
+            label: stage.name,
+            reasoning:
+              `CRM pipeline stage completed: ${stage.name}.`,
+            status: 'done',
+            due_at: null,
+            completed_at: null,
+            created_at: null,
+            current_stage:
+              stage.name,
+            kind: 'stage',
+          });
+        }
+      }
+    );
+
+    /*
+    * ============================================================
+    * 2. PREVIOUS AI RECOMMENDATIONS
+    *
+    * Put completed AI actions in their actual order.
+    *
+    * This is what gives:
+    *
+    * ✓ New Lead
+    * ✓ Send introductory email
+    * ✓ Qualified
+    * ⭐ Current recommendation
+    * ============================================================
+    */
+
+    completedTasks.forEach(
+      (task) => {
+        addStep({
+          id: `completed-${task.id}`,
+          label:
+            task.action_type ||
+            'Completed action',
+          reasoning:
+            task.reasoning ||
+            'AI-recommended action completed.',
+          status: 'done',
+          due_at:
+            task.due_at ?? null,
+          completed_at:
+            task.completed_at ?? null,
+          created_at:
+            task.created_at ?? null,
+          current_stage:
+            task.current_stage ?? null,
+          kind: 'action',
+        });
+      }
+    );
+
+    /*
+    * ============================================================
+    * 3. CURRENT STAGE
+    *
+    * Show the CRM stage immediately before the current
+    * AI recommendation.
+    *
+    * Example:
+    *
+    * ✓ Qualified
+    * ⭐ Send case study
+    * ============================================================
+    */
+
+    if (
+      stages[currentStageIndex]
+    ) {
+      addStep({
+        id: `current-stage-${stages[currentStageIndex].id}`,
+        label:
+          stages[currentStageIndex].name,
+        reasoning:
+          `Current CRM pipeline stage: ${stages[currentStageIndex].name}.`,
         status: 'done',
-        action: task.action_type,
-      });
-    });
-
-    if (workflow.current_task) {
-      steps.push({
-        id: `current-${workflow.current_task.id}`,
-        label: workflow.current_task.action_type,
-        description:
-          workflow.current_task.reasoning ||
-          'AI recommended this as the next best action.',
-        status: 'active',
-        action: workflow.current_task.action_type,
-      });
-    } else {
-      steps.push({
-        id: 'next-decision',
-        label: 'AI next-action decision',
-        description:
-          'The workflow is waiting for the next lead event or reassessment.',
-        status: 'upcoming',
+        due_at: null,
+        completed_at: null,
+        created_at: null,
+        current_stage:
+          stages[currentStageIndex].name,
+        kind: 'stage',
       });
     }
 
-    return steps;
-  }, [selectedLead, workflow.history, workflow.current_task]);
+    /*
+    * ============================================================
+    * 4. ONE CURRENT AI RECOMMENDATION
+    *
+    * This is the ONLY active workflow task shown.
+    * ============================================================
+    */
 
-  if (loadingLeads) {
+    if (
+      currentAction &&
+      !isWon &&
+      !isLost
+    ) {
+      addStep({
+        id: `current-action-${
+          currentTask?.id ??
+          selectedLeadId
+        }`,
+        label: currentAction,
+        reasoning:
+          currentTask?.reasoning ||
+          recItem?.reason ||
+          'AI-recommended next best action.',
+        status: 'current',
+        due_at:
+          currentTask?.due_at ??
+          null,
+        completed_at: null,
+        created_at:
+          currentTask?.created_at ??
+          null,
+        current_stage:
+          currentTask?.current_stage ??
+          stages[currentStageIndex]?.name ??
+          null,
+        kind: 'action',
+      });
+    }
+
+    /*
+    * ============================================================
+    * 5. FUTURE PIPELINE STAGES
+    *
+    * These are visual only.
+    *
+    * They must NOT create workflow tasks.
+    * ============================================================
+    */
+
+    stages.forEach(
+      (stage, index) => {
+        if (
+          index >
+          currentStageIndex
+        ) {
+          addStep({
+            id: `future-stage-${stage.id}`,
+            label: stage.name,
+            reasoning:
+              `Future CRM pipeline stage: ${stage.name}.`,
+            status: 'planned',
+            due_at: null,
+            completed_at: null,
+            created_at: null,
+            current_stage:
+              stage.name,
+            kind: 'stage',
+          });
+        }
+      }
+    );
+
+    /*
+    * ============================================================
+    * FINAL SAFETY
+    *
+    * Only ONE current item.
+    * ============================================================
+    */
+
+    let currentFound = false;
+
+    return steps.map(
+      (step) => {
+        if (
+          step.status !== 'current'
+        ) {
+          return step;
+        }
+
+        if (!currentFound) {
+          currentFound = true;
+          return step;
+        }
+
+        return {
+          ...step,
+          status: 'planned',
+        };
+      }
+    );
+  }, [
+    workflow.current_task,
+    workflow.history,
+    pipelineStages,
+    currentStage,
+    selectedLeadId,
+    recItem?.reason,
+    isWon,
+    isLost,
+  ]);
+  const aiActionsCount = useMemo(() => {
+    const completed = workflow.history.filter(
+      (task) =>
+        task.status === 'completed'
+    ).length;
+
+    /*
+    * planned_steps contains the current
+    * task as well, so do NOT add
+    * current_task separately.
+    */
+    const workflowPlan =
+      Array.isArray(
+        workflow.planned_steps
+      )
+        ? workflow.planned_steps
+        : [];
+
+    const uniqueActions =
+      new Set<string>();
+
+    workflowPlan.forEach((step) => {
+      const label = String(
+        step.action_type || ''
+      ).trim();
+
+      if (!label) {
+        return;
+      }
+
+      /*
+      * A stage marker is not an AI task.
+      *
+      * Example:
+      * Qualified -> stage
+      *
+      * Send email -> AI action
+      */
+      const stage = String(
+        step.current_stage || ''
+      ).trim();
+
+      const isStage =
+        Boolean(stage) &&
+        normalize(label) ===
+          normalize(stage);
+
+      if (!isStage) {
+        uniqueActions.add(
+          normalize(label)
+        );
+      }
+    });
+
+    return {
+      completed,
+      total:
+        completed +
+        uniqueActions.size,
+    };
+  }, [
+    workflow.history,
+    workflow.planned_steps,
+  ]);
+
+  const completedCount =
+    aiActionsCount.completed;
+
+  const totalCount =
+    aiActionsCount.total;
+
+  const currentStep =
+    workflowSteps.find(
+      (step) =>
+        step.status === 'current' &&
+        step.kind === 'action'
+    ) || null;
+
+  const progress =
+    totalCount > 0
+      ? Math.round(
+          (completedCount /
+            totalCount) *
+            100
+        )
+      : 0;
+  
+  /*
+ * ------------------------------------------------------------
+ * COMPLETE PIPELINE JOURNEY
+ *
+ * This is ONLY the visual progress structure.
+ *
+ * It is intentionally separate from workflowSteps.
+ *
+ * workflowSteps = personalized AI actions
+ * journeySteps  = complete CRM journey to Deal Won
+ *
+ * Therefore:
+ * - every lead gets the complete journey
+ * - each lead's current position is different
+ * - AI actions remain personalized
+ * ------------------------------------------------------------
+ */
+
+  
+
+  /*
+   * ------------------------------------------------------------
+   * LOADING / ERROR STATES
+   * ------------------------------------------------------------
+   */
+
+  if (loadingBase) {
     return (
       <div className="flex items-center justify-center py-24 text-muted-foreground">
         <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-        Loading AI workflows...
+
+        <span className="text-sm font-semibold">
+          Loading personalized workflow…
+        </span>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-brand-purple" />
-            <h2 className="text-2xl font-bold text-foreground">
-              AI Workflow
-            </h2>
-          </div>
-
-          <p className="mt-1 text-sm text-muted-foreground">
-            A personalized next-action plan generated independently for each
-            lead.
-          </p>
-        </div>
+  if (baseError) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-8 text-center">
+        <p className="text-sm font-semibold text-destructive">
+          {baseError}
+        </p>
 
         <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={refreshing || !selectedLeadId}
-          className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-xs font-semibold hover:bg-muted disabled:opacity-50"
+          onClick={() => loadBase()}
+          className="mt-4 rounded-lg border border-border px-4 py-2 text-xs font-bold hover:bg-secondary"
         >
-          <RefreshCw
-            className={`h-4 w-4 ${
-              refreshing ? 'animate-spin' : ''
-            }`}
-          />
-          Refresh
+          Try again
         </button>
       </div>
+    );
+  }
 
-      {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-600">
-          <AlertCircle className="h-4 w-4 shrink-0" />
-          {error}
-        </div>
-      )}
+  if (!selectedLead) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-10 text-center">
+        <Sparkles className="mx-auto h-8 w-8 text-brand-purple" />
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[280px_1fr]">
-        {/* LEADS */}
-        <div className="rounded-2xl border border-border bg-card">
-          <div className="border-b border-border p-4">
-            <h3 className="text-sm font-bold text-foreground">
-              Leads
-            </h3>
-
-            <p className="mt-1 text-xs text-muted-foreground">
-              Select a lead to view its unique workflow.
-            </p>
-          </div>
-
-          <div className="max-h-[650px] overflow-y-auto p-2">
-            {leads.length === 0 ? (
-              <div className="p-6 text-center text-sm text-muted-foreground">
-                No leads found.
-              </div>
-            ) : (
-              leads.map((lead) => {
-                const active = lead.id === selectedLeadId;
-
-                return (
-                  <button
-                    type="button"
-                    key={lead.id}
-                    onClick={() => setSelectedLeadId(lead.id)}
-                    className={`mb-1 w-full rounded-xl p-3 text-left transition ${
-                      active
-                        ? 'bg-brand-purple/10 ring-1 ring-brand-purple/30'
-                        : 'hover:bg-muted'
-                    }`}
-                  >
-                    <div className="truncate text-sm font-semibold text-foreground">
-                      {displayLeadName(lead)}
-                    </div>
-
-                    <div className="mt-1 truncate text-xs text-muted-foreground">
-                      {lead.company_name ||
-                        lead.contact_email ||
-                        'No company'}
-                    </div>
-
-                    {lead.score !== null &&
-                      lead.score !== undefined && (
-                        <div className="mt-2 text-[11px] text-muted-foreground">
-                          AI Score:{' '}
-                          <strong>{lead.score}</strong>
-                        </div>
-                      )}
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* SELECTED LEAD WORKFLOW */}
-        <div className="min-w-0">
-          {loadingWorkflow ? (
-            <div className="flex items-center justify-center rounded-2xl border border-border bg-card py-24 text-muted-foreground">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Loading personalized workflow...
-            </div>
-          ) : !selectedLead ? (
-            <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
-              Select a lead.
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {/* LEAD HEADER */}
-              <div className="rounded-2xl border border-border bg-card p-6">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      Personalized workflow for
-                    </p>
-
-                    <h3 className="mt-1 text-xl font-bold text-foreground">
-                      {displayLeadName(selectedLead)}
-                    </h3>
-
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {selectedLead.company_name ||
-                        selectedLead.contact_email ||
-                        'CRM lead'}
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-muted px-5 py-3 text-center">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                      AI Score
-                    </div>
-
-                    <div className="mt-1 text-3xl font-bold text-foreground">
-                      {selectedLead.score ?? '—'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* PERSONALIZED STRUCTURE */}
-              <div className="rounded-2xl border border-border bg-card p-6">
-                <div className="mb-5 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-brand-purple" />
-                  <div>
-                    <h3 className="text-sm font-bold text-foreground">
-                      Personalized Workflow Structure
-                    </h3>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      This sequence is generated from this lead's actual AI
-                      actions and history. It is not a fixed sales pipeline.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="relative space-y-3">
-                  {workflowSteps.map((step, index) => (
-                    <div
-                      key={step.id}
-                      className="relative flex gap-3"
-                    >
-                      {index < workflowSteps.length - 1 && (
-                        <span className="absolute left-[13px] top-8 h-[calc(100%+12px)] w-px bg-border" />
-                      )}
-
-                      <div
-                        className={`relative z-10 mt-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
-                          step.status === 'done'
-                            ? 'border-green-500/30 bg-green-500/10 text-green-600'
-                            : step.status === 'active'
-                            ? 'border-brand-purple/30 bg-brand-purple/10 text-brand-purple'
-                            : 'border-border bg-muted text-muted-foreground'
-                        }`}
-                      >
-                        {step.status === 'done' ? (
-                          <CheckCircle2 className="h-4 w-4" />
-                        ) : step.status === 'active' ? (
-                          <Zap className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </div>
-
-                      <div
-                        className={`min-w-0 flex-1 rounded-xl border p-3 ${
-                          step.status === 'active'
-                            ? 'border-brand-purple/30 bg-brand-purple/5'
-                            : 'border-border bg-card'
-                        }`}
-                      >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-foreground">
-                            {step.label}
-                          </p>
-
-                          {step.status === 'active' && (
-                            <span className="rounded-full bg-brand-purple/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-purple">
-                              Current
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                          {step.description}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CURRENT AI ACTION */}
-              <div className="rounded-2xl border border-brand-purple/20 bg-gradient-to-br from-brand-purple/5 to-card p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-brand-purple" />
-                  <h3 className="text-sm font-bold text-foreground">
-                    AI Recommended Next Action
-                  </h3>
-                </div>
-
-                {workflow.current_task ? (
-                  <div>
-                    <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                      <div className="flex gap-3">
-                        <div className="mt-0.5 rounded-lg bg-brand-purple/10 p-2 text-brand-purple">
-                          {actionIcon(
-                            workflow.current_task.action_type
-                          )}
-                        </div>
-
-                        <div>
-                          <h4 className="text-lg font-bold text-foreground">
-                            {workflow.current_task.action_type}
-                          </h4>
-
-                          {workflow.current_task.reasoning && (
-                            <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                              {workflow.current_task.reasoning}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <span
-                        className={`inline-flex w-fit rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase ${priorityClass(
-                          workflow.current_task.priority
-                        )}`}
-                      >
-                        {workflow.current_task.priority || 'medium'}
-                      </span>
-                    </div>
-
-                    <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <Clock3 className="h-3.5 w-3.5" />
-                        Due{' '}
-                        <strong className="text-foreground">
-                          {formatDueDate(
-                            workflow.current_task.due_at
-                          )}
-                        </strong>
-                      </div>
-
-                      {workflow.current_task.current_stage && (
-                        <div className="text-xs text-muted-foreground">
-                          Current CRM stage:{' '}
-                          <strong className="text-foreground">
-                            {workflow.current_task.current_stage}
-                          </strong>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-5">
-                      <button
-                        type="button"
-                        onClick={handleComplete}
-                        disabled={completing}
-                        className="inline-flex items-center gap-2 rounded-lg bg-brand-purple px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-purple/90 disabled:opacity-50"
-                      >
-                        {completing ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="h-4 w-4" />
-                        )}
-
-                        {completing
-                          ? 'Updating workflow...'
-                          : 'Mark action completed'}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="rounded-xl bg-muted/50 p-6 text-center">
-                    <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
-
-                    <p className="mt-2 text-sm font-semibold text-foreground">
-                      No active AI action
-                    </p>
-
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      The AI currently does not have a pending action for
-                      this lead.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-{/* WHY THIS ACTION */}
-{recommendation && (
-  <div className="rounded-2xl border border-border bg-card p-5">
-    <div className="flex items-center gap-2">
-      <Zap className="h-4 w-4 text-brand-purple" />
-
-      <h3 className="text-sm font-bold text-foreground">
-        AI Recommended Next Action
-      </h3>
-    </div>
-
-    {workflow.current_task ? (
-      <div className="mt-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="flex gap-3">
-            <div className="mt-0.5 rounded-lg bg-brand-purple/10 p-2 text-brand-purple">
-              <Zap className="h-4 w-4" />
-            </div>
-
-            <div>
-              <h4 className="text-lg font-bold text-foreground">
-                {workflow.current_task.action_type}
-              </h4>
-
-              {workflow.current_task.reasoning && (
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-                  {workflow.current_task.reasoning}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <span className="rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase text-amber-600">
-            {workflow.current_task.priority || 'medium'}
-          </span>
-        </div>
-
-        <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-border pt-4">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock3 className="h-3.5 w-3.5" />
-
-            Due{' '}
-            <strong className="text-foreground">
-              {new Date(
-                workflow.current_task.due_at
-              ).toLocaleString([], {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </strong>
-          </div>
-
-          {workflow.current_task.current_stage && (
-            <div className="text-xs text-muted-foreground">
-              Current CRM stage:{' '}
-              <strong className="text-foreground">
-                {workflow.current_task.current_stage}
-              </strong>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-5">
-          <button
-            type="button"
-            onClick={handleComplete}
-            disabled={completing}
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-purple px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-purple/90 disabled:opacity-50"
-          >
-            {completing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-4 w-4" />
-            )}
-
-            {completing
-              ? 'Updating workflow...'
-              : 'Mark action completed'}
-          </button>
-        </div>
-      </div>
-    ) : (
-      <div className="mt-4 rounded-xl bg-muted/50 p-6 text-center">
-        <CheckCircle2 className="mx-auto h-8 w-8 text-green-500" />
-
-        <p className="mt-2 text-sm font-semibold text-foreground">
-          No active AI action
+        <p className="mt-3 text-sm font-bold text-foreground">
+          No leads available
         </p>
 
         <p className="mt-1 text-xs text-muted-foreground">
-          The AI currently does not have a pending action for this lead.
+          Create a lead to generate its personalized workflow.
         </p>
       </div>
-    )}
-  </div>
-)}
+    );
+  }
 
-{/* HISTORY */}
-<div className="mt-5 rounded-2xl border border-border bg-card p-5">
-  <div className="flex items-center justify-between">
-    <div>
-      <h3 className="text-sm font-bold text-foreground">
-        Workflow history
-      </h3>
+  /*
+   * ------------------------------------------------------------
+   * STATUS
+   * ------------------------------------------------------------
+   */
 
-      <p className="mt-1 text-xs text-muted-foreground">
-        Previous AI actions for this lead.
-      </p>
-    </div>
+  const statusText =
+    isWon
+      ? 'Won'
+      : isLost
+        ? 'Lost'
+        : recoveryTriggered
+          ? 'Needs Attention'
+          : 'On Track';
 
-    <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
-      {workflow.history.length}
-    </span>
-  </div>
+  const statusClass =
+    isWon
+      ? 'bg-brand-cyan/10 text-brand-cyan'
+      : isLost
+        ? 'bg-destructive/10 text-destructive'
+        : recoveryTriggered
+          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+          : 'bg-brand-cyan/10 text-brand-cyan';
 
-  {workflow.history.length === 0 ? (
-    <div className="mt-5 rounded-xl bg-muted/40 p-6 text-center text-sm text-muted-foreground">
-      No previous workflow actions.
-    </div>
-  ) : (
-    <div className="mt-5 space-y-3">
-      {workflow.history.map((task) => (
-        <div
-          key={task.id}
-          className="flex gap-3 rounded-xl border border-border p-3"
-        >
-          <div className="mt-0.5 text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4" />
+  return (
+    <div className="space-y-4 pb-6">
+      <style>{`
+        @keyframes pulseWorkflowGlow {
+          0%, 100% {
+            box-shadow: 0 0 0 0 rgba(124,58,237,.18);
+          }
+
+          50% {
+            box-shadow: 0 0 0 7px rgba(124,58,237,.08);
+          }
+        }
+
+        .workflow-current {
+          animation:
+            pulseWorkflowGlow
+            2.4s
+            ease-in-out
+            infinite;
+        }
+      `}</style>
+
+      {/* ======================================================
+          PAGE HEADER
+      ====================================================== */}
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand-purple to-brand-blue text-white">
+              <Sparkles className="h-4 w-4" />
+            </span>
+
+            <h2 className="text-xl font-bold text-foreground">
+              Personalized Workflow
+            </h2>
           </div>
 
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold text-foreground">
-                {task.action_type}
-              </span>
-
-              <span className="rounded-md border border-border bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
-                {task.status}
-              </span>
-            </div>
-
-            {task.reasoning && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {task.reasoning}
-              </p>
-            )}
-
-            {task.current_stage && (
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                Stage: {task.current_stage}
-              </p>
-            )}
-
-            {task.completed_at && (
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                Completed:{' '}
-                {new Date(task.completed_at).toLocaleString()}
-              </p>
-            )}
-          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            AI-generated and adaptive action plan for this lead.
+          </p>
         </div>
-      ))}
-    </div>
-  )}
-</div>
-            </div>
-          )}
+
+        {/* Lead search */}
+        <div className="flex items-center gap-2">
+          <div className="relative w-full sm:w-72">
+            <button
+              onClick={() =>
+                setPickerOpen(
+                  (open) => !open
+                )
+              }
+              className="flex w-full items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-left text-xs font-semibold text-foreground shadow-sm transition hover:border-brand-purple/40"
+            >
+              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+
+              <span className="flex-1 truncate">
+                Search leads…
+                {selectedLead
+                  ? ` (${selectedLead.title || firstName(selectedLead)})`
+                  : ''}
+              </span>
+
+              <ChevronDown
+                className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${
+                  pickerOpen
+                    ? 'rotate-180'
+                    : ''
+                }`}
+              />
+            </button>
+
+            {pickerOpen && (
+              <div className="absolute right-0 z-30 mt-1.5 w-full overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+                <div className="flex items-center gap-2 border-b border-border bg-secondary/40 p-2.5">
+                  <Search className="h-3.5 w-3.5 text-muted-foreground" />
+
+                  <input
+                    autoFocus
+                    value={search}
+                    onChange={(event) =>
+                      setSearch(
+                        event.target.value
+                      )
+                    }
+                    placeholder="Search name, company or email…"
+                    className="w-full bg-transparent text-xs text-foreground outline-none"
+                  />
+                </div>
+
+                <div className="max-h-64 overflow-y-auto">
+                  {filteredLeads.length ? (
+                    filteredLeads.map(
+                      (lead) => (
+                        <button
+                          key={lead.id}
+                          onClick={() => {
+                            setSelectedLeadId(
+                              lead.id
+                            );
+
+                            setPickerOpen(
+                              false
+                            );
+
+                            setSearch('');
+                          }}
+                          className={`w-full border-b border-border/60 px-3.5 py-3 text-left transition last:border-0 hover:bg-secondary ${
+                            lead.id ===
+                            selectedLeadId
+                              ? 'bg-brand-purple/5'
+                              : ''
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="truncate text-xs font-bold text-foreground">
+                              {lead.title ||
+                                lead.contact_name ||
+                                'Untitled lead'}
+                            </span>
+
+                            <span className="shrink-0 text-[10px] font-bold text-muted-foreground">
+                              {lead.score ??
+                                '—'}
+                            </span>
+                          </div>
+
+                          <div className="mt-0.5 truncate text-[10px] text-muted-foreground">
+                            {lead.company_name ||
+                              lead.contact_email ||
+                              'No company'}
+                          </div>
+                        </button>
+                      )
+                    )
+                  ) : (
+                    <div className="px-4 py-6 text-center text-xs font-semibold text-muted-foreground">
+                      No leads found.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={() => loadBase()}
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground"
+            title="Refresh"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
         </div>
       </div>
+
+      {/* ======================================================
+          LEAD / DEAL SUMMARY
+      ====================================================== */}
+
+      <section className="rounded-2xl border border-border bg-card px-5 py-4 shadow-sm">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-purple/10 text-lg font-extrabold text-brand-purple">
+              {(
+                selectedLead.title ||
+                selectedLead.contact_name ||
+                'L'
+              )
+                .charAt(0)
+                .toUpperCase()}
+            </div>
+
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="truncate text-base font-bold text-foreground">
+                  {selectedLead.contact_name ||
+                    selectedLead.title ||
+                    'Untitled lead'}
+                </h3>
+
+                {isConverted && (
+                  <span className="rounded-full bg-brand-cyan/10 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-brand-cyan">
+                    Deal
+                  </span>
+                )}
+              </div>
+
+              <p className="truncate text-xs text-muted-foreground">
+                {selectedLead.company_name ||
+                  'No company'}
+
+                {selectedLead.job_title
+                  ? ` · ${selectedLead.job_title}`
+                  : ''}
+              </p>
+
+              <p className="mt-1 truncate text-[10px] text-muted-foreground">
+                {selectedLead.contact_email ||
+                  selectedLead.contact_phone ||
+                  'Contact details unavailable'}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-x-8 gap-y-2 sm:grid-cols-4 xl:min-w-[560px]">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                AI Score
+              </p>
+
+              <p className="mt-0.5 text-lg font-extrabold text-brand-purple">
+                {leadHealth ?? '—'}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Pipeline Stage
+              </p>
+
+              <p className="mt-1 truncate text-xs font-bold text-foreground">
+                {currentStage}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Value
+              </p>
+
+              <p className="mt-1 truncate text-xs font-bold text-foreground">
+                {formatINR(
+                  selectedDeal?.amount ??
+                    selectedLead.estimated_value
+                )}
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                Status
+              </p>
+
+              <span
+                className={`mt-1 inline-flex rounded-full px-2 py-1 text-[9px] font-extrabold uppercase tracking-wide ${statusClass}`}
+              >
+                {statusText}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================
+        WORKFLOW PROGRESS
+    ====================================================== */}
+
+    <section className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">
+            Workflow Progress
+          </p>
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            Personalized AI action path for {firstName(selectedLead)}.
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="text-xs font-extrabold text-brand-purple">
+            {progress}%
+          </span>
+
+          <button
+            type="button"
+            onClick={() => setFullWorkflowOpen(true)}
+            className="hidden sm:inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-[10px] font-bold text-foreground hover:border-brand-purple/40"
+          >
+            View full workflow
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center gap-3 text-[10px] text-muted-foreground">
+        <span className="font-bold text-foreground">
+          {completedCount} of {totalCount} tasks completed
+        </span>
+
+        {currentStep && (
+          <>
+            <span>·</span>
+
+            <span>
+              Current:{' '}
+              <strong className="text-brand-purple">
+                {currentStep.label}
+              </strong>
+            </span>
+          </>
+        )}
+      </div>
+
+      {loadingWorkflow ? (
+        <div className="mt-6 flex items-center justify-center rounded-xl border border-dashed border-border bg-secondary/20 py-8 text-xs font-semibold text-muted-foreground">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+
+          Loading personalized workflow…
+        </div>
+      ) : workflowSteps.length === 0 ? (
+        <div className="mt-6 rounded-xl border border-dashed border-border bg-secondary/20 px-5 py-8 text-center">
+          <Sparkles className="mx-auto h-6 w-6 text-brand-purple" />
+
+          <p className="mt-2 text-sm font-bold text-foreground">
+            Workflow is being generated
+          </p>
+
+          <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-muted-foreground">
+            PULSE will create the personalized action path for this lead.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 overflow-x-auto pb-2">
+          <div
+            className="flex min-w-max items-start"
+            style={{
+              minWidth: `${Math.max(
+                workflowSteps.length * 190,
+                760
+              )}px`,
+            }}
+          >
+            {workflowSteps.map((step, index) => {
+              const done = step.status === 'done';
+              const current = step.status === 'current';
+              const isStage = step.kind === 'stage';
+              const isLast =
+                index === workflowSteps.length - 1;
+
+              return (
+                <React.Fragment key={step.id}>
+                  <div className="flex w-[170px] shrink-0 flex-col items-center text-center">
+                    <div
+                      className={`grid h-10 w-10 place-items-center rounded-full border-2 bg-card transition ${
+                        current
+                          ? 'workflow-current border-brand-purple text-brand-purple'
+                          : done
+                            ? 'border-brand-cyan text-brand-cyan'
+                            : 'border-border text-muted-foreground'
+                      } ${
+                        isStage
+                          ? 'h-9 w-9'
+                          : ''
+                      }`}
+                    >
+                      {done ? (
+                        <Check className="h-5 w-5" />
+                      ) : current ? (
+                        <Sparkles className="h-4 w-4" />
+                      ) : isStage ? (
+                        <Trophy className="h-4 w-4" />
+                      ) : (
+                        <Clock3 className="h-4 w-4" />
+                      )}
+                    </div>
+
+                    <p
+                      className={`mt-2 max-w-[150px] text-[10px] font-bold leading-tight ${
+                        current
+                          ? 'text-brand-purple'
+                          : done
+                            ? 'text-brand-cyan'
+                            : 'text-foreground'
+                      }`}
+                    >
+                      {step.label}
+                    </p>
+
+                    <span
+                      className={`mt-1 rounded-full px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide ${
+                        current
+                          ? 'bg-brand-purple/10 text-brand-purple'
+                          : done
+                            ? 'bg-brand-cyan/10 text-brand-cyan'
+                            : 'bg-secondary text-muted-foreground'
+                      }`}
+                    >
+                      {current
+                        ? 'Current'
+                        : done
+                          ? 'Completed'
+                          : 'Planned'}
+                    </span>
+
+                    {current && step.due_at && (
+                      <span className="mt-1 text-[8px] text-muted-foreground">
+                        Due {formatDate(step.due_at)}
+                      </span>
+                    )}
+                  </div>
+
+                  {!isLast && (
+                    <div className="mt-5 h-px w-[20px] shrink-0 bg-border">
+                      <div
+                        className={`h-px ${
+                          done
+                            ? 'bg-brand-cyan'
+                            : 'bg-border'
+                        }`}
+                      />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </section>
+
+      {/* ======================================================
+          COLLAPSED SUPPORTING SECTIONS
+      ====================================================== */}
+
+      <div className="space-y-2">
+        {/* AI RECOMMENDATION DETAILS */}
+        <details className="group rounded-xl border border-border bg-card shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-purple/10 text-brand-purple">
+              <Sparkles className="h-4 w-4" />
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground">
+                AI Recommendation Details
+              </p>
+
+              <p className="text-[10px] text-muted-foreground">
+                View reasoning, candidate actions and score.
+              </p>
+            </div>
+
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition group-open:rotate-180" />
+          </summary>
+
+          <div className="border-t border-border px-4 py-4">
+            {loadingRec ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+
+                Generating recommendation…
+              </div>
+            ) : rankedActions.length ? (
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {rankedActions
+                  .slice(0, 6)
+                  .map(
+                    (
+                      action,
+                      index
+                    ) => (
+                      <div
+                        key={`${action.label}-${index}`}
+                        className="rounded-xl border border-border bg-secondary/30 p-3"
+                      >
+                        <div className="flex items-start gap-2">
+                          <span
+                            className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-[9px] font-extrabold ${
+                              index === 0
+                                ? 'bg-brand-purple text-white'
+                                : 'bg-brand-purple/10 text-brand-purple'
+                            }`}
+                          >
+                            {index + 1}
+                          </span>
+
+                          <p className="text-[10.5px] font-bold text-foreground">
+                            {action.label}
+                          </p>
+                        </div>
+
+                        {action.priority && (
+                          <p className="mt-2 text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground">
+                            {action.priority}{' '}
+                            priority
+                          </p>
+                        )}
+                      </div>
+                    )
+                  )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No stored AI recommendation is available yet.
+              </p>
+            )}
+          </div>
+        </details>
+
+        {/* RECOVERY WORKFLOW */}
+        <details className="group rounded-xl border border-border bg-card shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+            <span
+              className={`grid h-8 w-8 place-items-center rounded-lg ${
+                recoveryTriggered
+                  ? 'bg-amber-500/10 text-amber-600'
+                  : 'bg-secondary text-muted-foreground'
+              }`}
+            >
+              <AlertTriangle className="h-4 w-4" />
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-xs font-bold text-foreground">
+                  Recovery Workflow
+                </p>
+
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide ${
+                    recoveryTriggered
+                      ? 'bg-amber-500/10 text-amber-600'
+                      : 'bg-secondary text-muted-foreground'
+                  }`}
+                >
+                  {recoveryTriggered
+                    ? 'Triggered'
+                    : 'Not Triggered'}
+                </span>
+              </div>
+
+              <p className="text-[10px] text-muted-foreground">
+                Adaptive path shown when the lead is not progressing on time.
+              </p>
+            </div>
+
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition group-open:rotate-180" />
+          </summary>
+
+          <div className="border-t border-border px-4 py-4">
+            {recoveryTriggered ? (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4">
+                <p className="text-xs font-bold text-foreground">
+                  AI detected a possible stall.
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  The recovery path will be generated from the lead's latest signals and recommendation rather than using a fixed sequence.
+                </p>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No recovery branch is currently required. PULSE will adapt the path when the current action becomes overdue or the recommendation detects stalled engagement.
+              </p>
+            )}
+          </div>
+        </details>
+
+        {/* WORKFLOW HISTORY */}
+        <details className="group rounded-xl border border-border bg-card shadow-sm">
+          <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+            <span className="grid h-8 w-8 place-items-center rounded-lg bg-secondary text-muted-foreground">
+              <Clock3 className="h-4 w-4" />
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-bold text-foreground">
+                Workflow History
+              </p>
+
+              <p className="text-[10px] text-muted-foreground">
+                Completed personalized actions ·{' '}
+                {workflow.history.length}{' '}
+                recorded
+              </p>
+            </div>
+
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition group-open:rotate-180" />
+          </summary>
+
+          <div className="border-t border-border px-4 py-4">
+            {loadingWorkflow ? (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+
+                Loading workflow history…
+              </div>
+            ) : workflow.history.length ? (
+              <div className="space-y-2">
+                {workflow.history.map(
+                  (task) => (
+                    <div
+                      key={task.id}
+                      className="flex items-start gap-3 rounded-lg border border-border/70 bg-secondary/20 px-3 py-2.5"
+                    >
+                      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-cyan/10 text-brand-cyan">
+                        <Check className="h-3.5 w-3.5" />
+                      </span>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10.5px] font-bold text-foreground">
+                          {task.action_type}
+                        </p>
+
+                        <p className="mt-0.5 text-[9.5px] text-muted-foreground">
+                          {task.reasoning ||
+                            'AI-recommended action recorded for this lead.'}
+                        </p>
+                      </div>
+
+                      <span className="shrink-0 text-[9px] text-muted-foreground">
+                        {timeAgo(
+                          task.completed_at ||
+                            task.created_at
+                        )}
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                No completed workflow actions recorded for this lead yet.
+              </p>
+            )}
+          </div>
+        </details>
+      </div>
+
+      {/* ======================================================
+          HOW PULSE WORKS
+      ====================================================== */}
+
+      <section className="rounded-2xl border border-brand-purple/15 bg-brand-purple/[0.035] px-5 py-4">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-brand-purple" />
+
+          <p className="text-xs font-extrabold text-foreground">
+            How PULSE works
+          </p>
+        </div>
+
+        <div className="mt-3 grid gap-3 text-[10px] sm:grid-cols-4">
+          {[
+            [
+              'Analyze',
+              'Lead data, activity and AI signals',
+            ],
+            [
+              'Plan',
+              'Build one personalized workflow',
+            ],
+            [
+              'Execute',
+              'Surface the next best action',
+            ],
+            [
+              'Adapt',
+              'Create a recovery path when stalled',
+            ],
+          ].map(
+            ([title, description], index) => (
+              <div
+                key={title}
+                className="flex gap-2"
+              >
+                <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-card text-[9px] font-extrabold text-brand-purple shadow-sm">
+                  {index + 1}
+                </span>
+
+                <div>
+                  <p className="font-bold text-foreground">
+                    {title}
+                  </p>
+
+                  <p className="mt-0.5 leading-4 text-muted-foreground">
+                    {description}
+                  </p>
+                </div>
+              </div>
+            )
+          )}
+        </div>
+      </section>
+
+      {/* ======================================================
+          FULL WORKFLOW MODAL
+      ====================================================== */}
+
+      {fullWorkflowOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full workflow"
+        >
+          <div className="flex w-full max-w-4xl max-h-[85vh] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between border-b border-border bg-card px-5 py-4">
+              <div>
+                <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-brand-purple">
+                  Full workflow
+                </p>
+
+                <h3 className="mt-1 text-lg font-bold text-foreground">
+                  {selectedLead.contact_name ||
+                    selectedLead.title ||
+                    'Lead'}
+                </h3>
+
+                <p className="text-xs text-muted-foreground">
+                  Personalized actions generated for this lead.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setFullWorkflowOpen(
+                    false
+                  )
+                }
+                className="rounded-lg border border-border px-3 py-2 text-xs font-bold hover:bg-secondary"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              {loadingWorkflow ? (
+                <div className="flex items-center justify-center py-12 text-xs text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+
+                  Loading workflow…
+                </div>
+              ) : workflowSteps.length ? (
+                <div className="rounded-xl border border-border bg-secondary/20 p-5">
+                  <div className="space-y-0">
+                    {workflowSteps.map(
+                      (step, index) => {
+                        const done =
+                          step.status ===
+                          'done';
+
+                        const current =
+                          step.status ===
+                          'current';
+
+                        return (
+                          <div
+                            key={`${step.id}-full`}
+                            className="relative flex gap-4"
+                          >
+                            {index <
+                              workflowSteps.length -
+                                1 && (
+                              <div className="absolute left-5 top-10 bottom-0 w-px bg-border" />
+                            )}
+
+                            <div
+                              className={`relative z-10 grid h-10 w-10 shrink-0 place-items-center rounded-full border-2 bg-card ${
+                                current
+                                  ? 'workflow-current border-brand-purple text-brand-purple'
+                                  : done
+                                    ? 'border-brand-cyan text-brand-cyan'
+                                    : 'border-border text-muted-foreground'
+                              }`}
+                            >
+                              {done ? (
+                                <Check className="h-5 w-5" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                            </div>
+
+                            <div className="pb-7 pt-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p
+                                  className={`text-sm font-bold ${
+                                    current
+                                      ? 'text-brand-purple'
+                                      : 'text-foreground'
+                                  }`}
+                                >
+                                  {step.label}
+                                </p>
+
+                                {current && (
+                                  <span className="rounded-full bg-brand-purple/10 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-brand-purple">
+                                    Current
+                                  </span>
+                                )}
+
+                                {done && (
+                                  <span className="rounded-full bg-brand-cyan/10 px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-brand-cyan">
+                                    Completed
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+                                {step.reasoning}
+                              </p>
+
+                              {done &&
+                                step.completed_at && (
+                                  <p className="mt-1 text-[10px] text-muted-foreground">
+                                    Completed{' '}
+                                    {formatDate(
+                                      step.completed_at
+                                    )}
+                                  </p>
+                                )}
+
+                              {current &&
+                                step.due_at && (
+                                  <p className="mt-1 text-[10px] font-semibold text-brand-purple">
+                                    Due{' '}
+                                    {formatDate(
+                                      step.due_at
+                                    )}
+                                  </p>
+                                )}
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border bg-secondary/20 p-8 text-center">
+                  <Sparkles className="mx-auto h-6 w-6 text-brand-purple" />
+
+                  <p className="mt-2 text-sm font-bold text-foreground">
+                    No workflow tasks yet
+                  </p>
+
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    The personalized workflow will appear when PULSE has an AI recommendation for this lead.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 rounded-xl border border-brand-purple/15 bg-brand-purple/[0.035] p-4">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-brand-purple">
+                  Current AI recommendation
+                </p>
+
+                <p className="mt-1 text-sm font-bold text-foreground">
+                  {topAction}
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                  {workflow.current_task
+                    ?.reasoning ||
+                    recItem?.reason ||
+                    'PULSE will use the latest CRM signals to determine the next best action.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
