@@ -2,11 +2,9 @@
 import React, { useEffect, useCallback } from 'react';
 import { X } from 'lucide-react';
 import ProductDrawer from './drawers/ProductDrawer';
-import SolutionsDrawer from './drawers/SolutionsDrawer';
-import PricingDrawer from './drawers/PricingDrawer';
 import ResourcesDrawer from './drawers/ResourcesDrawer';
 
-type DrawerType = 'product' | 'solutions' | 'pricing' | 'resources' | null;
+type DrawerType = 'product' | 'resources' | null;
 
 interface MegaDrawerProps {
   activeDrawer: DrawerType;
@@ -39,8 +37,6 @@ export default function MegaDrawer({ activeDrawer, onClose, onOpenModal }: MegaD
 
   const drawerLabels: Record<NonNullable<DrawerType>, string> = {
     product: 'Product',
-    solutions: 'Solutions',
-    pricing: 'Pricing',
     resources: 'Resources',
   };
 
@@ -120,8 +116,6 @@ export default function MegaDrawer({ activeDrawer, onClose, onOpenModal }: MegaD
             {/* Drawer content */}
             <div style={{ flex: 1, overflow: 'hidden' }}>
               {activeDrawer === 'product'    && <ProductDrawer   onClose={onClose} onOpenModal={onOpenModal} />}
-              {activeDrawer === 'solutions'  && <SolutionsDrawer onClose={onClose} onOpenModal={onOpenModal} />}
-              {activeDrawer === 'pricing'    && <PricingDrawer   onClose={onClose} onOpenModal={onOpenModal} />}
               {activeDrawer === 'resources'  && <ResourcesDrawer onClose={onClose} onOpenModal={onOpenModal} />}
             </div>
           </div>

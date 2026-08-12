@@ -56,7 +56,7 @@ function AnimCounter({ target, suffix = '' }: { target: number; suffix?: string 
 
 /* ── Quick action cards data ───────────────────────── */
 const ACTIONS = [
-  { icon: MessageCircle, label: 'Ask Questions',  desc: 'Get help from the community.',      color: '#7c3aed', bg: '#f5f3ff', border: '#ede9fe' },
+  { icon: MessageCircle, label: 'Ask Questions',  desc: 'Get help from the community.',      color: '#2563EB', bg: '#EFF6FF', border: '#DBEAFE' },
   { icon: Lightbulb,     label: 'Share Ideas',    desc: 'Suggest new features.',              color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
   { icon: Bug,           label: 'Report Bugs',    desc: 'Help improve Pulse CRM.',            color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
   { icon: BookOpen,      label: 'Browse Guides',  desc: 'Learn best practices.',              color: '#059669', bg: '#ecfdf5', border: '#d1fae5' },
@@ -66,7 +66,7 @@ const ACTIONS = [
 const RESOURCES = [
   { icon: GithubIcon,  label: 'GitHub',        desc: 'Source code & issues',     cta: 'Open Repo',      color: '#0f172a', bg: '#f8fafc', border: '#e2e8f0', href: 'https://github.com' },
   { icon: DiscordIcon,label: 'Discord',       desc: 'Join the discussion',       cta: 'Join Discord',   color: '#5865f2', bg: '#eef0ff', border: '#c7d2fe', href: 'https://discord.com' },
-  { icon: BookOpen,   label: 'Documentation', desc: 'User guides & tutorials',   cta: 'Read Docs',      color: '#7c3aed', bg: '#f5f3ff', border: '#ede9fe', href: '/resources/documentation' },
+  { icon: BookOpen,   label: 'Documentation', desc: 'User guides & tutorials',   cta: 'Read Docs',      color: '#2563EB', bg: '#EFF6FF', border: '#DBEAFE', href: '/resources/documentation' },
 ];
 
 /* ── Stats data ────────────────────────────────────── */
@@ -91,19 +91,19 @@ function CommunityIllustration() {
 
   const arrow = () => (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '0 4px' }}>
-      <div style={{ width: 1, height: 18, borderLeft: '2px dashed #c4b5fd' }} />
-      <div style={{ width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '7px solid #7c3aed' }} />
+      <div style={{ width: 1, height: 18, borderLeft: '2px dashed #93C5FD' }} />
+      <div style={{ width: 0, height: 0, borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '7px solid #2563EB' }} />
     </div>
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0, userSelect: 'none' }}>
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-        {card('You', 'Pulse CRM user', <Users size={17} color="#7c3aed" />, '#7c3aed', '#f5f3ff')}
+        {card('You', 'Pulse CRM user', <Users size={17} color="#2563EB" />, '#2563EB', '#EFF6FF')}
       </motion.div>
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45 }}>{arrow()}</motion.div>
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.5 }}>
-        <div style={{ background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', borderRadius: 16, padding: '16px 24px', boxShadow: '0 12px 32px rgba(124,58,237,0.35)', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', borderRadius: 16, padding: '16px 24px', boxShadow: '0 12px 32px rgba(124,58,237,0.35)', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ height: 38, width: 38, borderRadius: 10, background: 'rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Users size={19} color="#fff" />
           </div>
@@ -131,7 +131,7 @@ export default function CommunityPage() {
     <PageContainer>
 
       {/* ── HERO ────────────────────────────────────── */}
-      <section style={{ marginTop: 64, padding: '80px 48px 88px', background: 'linear-gradient(160deg,#f5f3ff 0%,#faf9ff 55%,#fff 100%)', position: 'relative', overflow: 'hidden' }}>
+      <section style={{ marginTop: 64, padding: '80px 48px 88px', background: 'linear-gradient(160deg,#EFF6FF 0%,#faf9ff 55%,#fff 100%)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: -120, right: -120, width: 500, height: 500, background: 'radial-gradient(circle,rgba(124,58,237,0.07) 0%,transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: -80, left: -60, width: 400, height: 400, background: 'radial-gradient(circle,rgba(139,92,246,0.05) 0%,transparent 65%)', pointerEvents: 'none' }} />
 
@@ -141,15 +141,15 @@ export default function CommunityPage() {
           <motion.div initial={{ opacity: 0, x: -28 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}>
             {/* Badge */}
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', background: '#f5f3ff', border: '1.5px solid #ede9fe', borderRadius: 100, marginBottom: 22 }}>
-              <Users size={12} color="#7c3aed" />
-              <span style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Community</span>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 14px', background: '#EFF6FF', border: '1.5px solid #DBEAFE', borderRadius: 100, marginBottom: 22 }}>
+              <Users size={12} color="#2563EB" />
+              <span style={{ fontSize: 11, fontWeight: 800, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.09em' }}>Community</span>
             </motion.div>
 
             <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.6 }}
               style={{ fontSize: 'clamp(34px,4.2vw,52px)', fontWeight: 900, lineHeight: 1.1, letterSpacing: '-0.03em', color: '#0f172a', marginBottom: 18 }}>
               Join the{' '}
-              <span style={{ background: 'linear-gradient(135deg,#7c3aed 0%,#9333ea 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span style={{ background: 'linear-gradient(135deg,#2563EB 0%,#9333ea 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Pulse CRM
               </span>
               <br />Community
@@ -165,7 +165,7 @@ export default function CommunityPage() {
               <motion.button
                 whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
                 onClick={() => openModal()}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 26px', background: 'linear-gradient(135deg,#7c3aed 0%,#6d28d9 100%)', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.38)', fontFamily: 'inherit' }}>
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 26px', background: 'linear-gradient(135deg,#2563EB 0%,#1D4ED8 100%)', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.38)', fontFamily: 'inherit' }}>
                 Join Community <ArrowRight size={15} />
               </motion.button>
               <motion.a
@@ -232,7 +232,7 @@ export default function CommunityPage() {
       {/* ── COMMUNITY STATS ─────────────────────────── */}
       <section style={{ padding: '0 48px 88px', background: '#fff' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ background: 'linear-gradient(135deg,#f5f3ff 0%,#faf9ff 100%)', borderRadius: 24, border: '1.5px solid #ede9fe', padding: '40px 48px', boxShadow: '0 4px 24px rgba(124,58,237,0.07)' }}>
+          <div style={{ background: 'linear-gradient(135deg,#EFF6FF 0%,#faf9ff 100%)', borderRadius: 24, border: '1.5px solid #DBEAFE', padding: '40px 48px', boxShadow: '0 4px 24px rgba(124,58,237,0.07)' }}>
             <div className="community-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 0 }}>
               {STATS.map((s, i) => (
                 <StatCard key={i} stat={s} index={i} isLast={i === STATS.length - 1} />
@@ -313,7 +313,7 @@ function StatCard({ stat, index, isLast }: { stat: typeof STATS[0]; index: numbe
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.32, delay: index * 0.07 }}
-      style={{ textAlign: 'center', padding: '8px 16px', borderRight: isLast ? 'none' : '1px solid #ede9fe' }}
+      style={{ textAlign: 'center', padding: '8px 16px', borderRight: isLast ? 'none' : '1px solid #DBEAFE' }}
     >
       <p style={{ fontSize: 'clamp(28px,3.5vw,40px)', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em', marginBottom: 4, lineHeight: 1 }}>
         {stat.isDecimal

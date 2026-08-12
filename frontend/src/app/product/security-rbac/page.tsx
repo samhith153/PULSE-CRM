@@ -10,7 +10,7 @@ const SecurityScreenshot = () => (
       <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 16 }}>3 Roles · 33 Permissions</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
         {[
-          { role: 'Admin', perms: 33, color: '#7c3aed' },
+          { role: 'Admin', perms: 33, color: '#2563EB' },
           { role: 'Manager', perms: 30, color: '#2563eb' },
           { role: 'Sales Rep', perms: 18, color: '#059669' },
         ].map((r, i) => (
@@ -28,7 +28,7 @@ const SecurityScreenshot = () => (
         <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 8 }}>PERMISSION FORMAT: resource:action</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {['lead:read', 'lead:create', 'deal:assign', 'company:delete', 'user:manage'].map((p, i) => (
-            <div key={i} style={{ padding: '4px 10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#7c3aed', fontFamily: 'monospace' }}>{p}</div>
+            <div key={i} style={{ padding: '4px 10px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#2563EB', fontFamily: 'monospace' }}>{p}</div>
           ))}
         </div>
       </div>
@@ -42,7 +42,7 @@ export default function SecurityRBACPage() {
       <HeroWithScreenshot
         badge="Product · Security & RBAC"
         badgeIcon={Shield}
-        title={<>3 roles. 33 permissions.<br /><span style={{ color: '#7c3aed' }}>Zero guesswork.</span></>}
+        title={<>3 roles. 33 permissions.<br /><span style={{ color: '#2563EB' }}>Zero guesswork.</span></>}
         description="Pulse uses JWT-based authentication with role-based access control. Every endpoint is protected by permission checks using FastAPI's dependency injection. Passwords are bcrypt-hashed, tokens are short-lived, and every resource supports soft-delete for audit-safe data management."
         screenshot={<SecurityScreenshot />}
       />
@@ -52,7 +52,7 @@ export default function SecurityRBACPage() {
           <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}>
             <h2 style={{ fontSize: 32, fontWeight: 900, color: '#0f172a', marginBottom: 16, letterSpacing: '-0.02em' }}>How RBAC is implemented</h2>
             <p style={{ fontSize: 15, color: '#64748b', lineHeight: 1.7, marginBottom: 20 }}>
-              Every route handler in the FastAPI backend has a <code style={{ background: '#f5f3ff', padding: '2px 6px', borderRadius: 4, fontSize: 13, color: '#7c3aed' }}>require_permission()</code> dependency injected. The permission is checked at the route level — no logic leaks into services or repositories.
+              Every route handler in the FastAPI backend has a <code style={{ background: '#EFF6FF', padding: '2px 6px', borderRadius: 4, fontSize: 13, color: '#2563EB' }}>require_permission()</code> dependency injected. The permission is checked at the route level — no logic leaks into services or repositories.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
@@ -64,7 +64,7 @@ export default function SecurityRBACPage() {
                 'Organization-level multi-tenancy on every resource',
               ].map((item, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#7c3aed', marginTop: 6, flexShrink: 0 }} />
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563EB', marginTop: 6, flexShrink: 0 }} />
                   <span style={{ fontSize: 14, color: '#374151', lineHeight: 1.5 }}>{item}</span>
                 </div>
               ))}

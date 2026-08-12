@@ -10,17 +10,17 @@ const NextActionScreenshot = () => (
       <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 14 }}>Next-Best-Action · Acme Corp</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {[
-          { action: 'Schedule demo', weight: 0.82, factor: 'score', color: '#7c3aed' },
+          { action: 'Schedule demo', weight: 0.82, factor: 'score', color: '#2563EB' },
           { action: 'Send follow-up', weight: 0.64, factor: 'urgency', color: '#2563eb' },
           { action: 'Send proposal', weight: 0.41, factor: 'reply status', color: '#059669' },
         ].map((item, i) => (
-          <div key={i} style={{ padding: '12px', background: i === 0 ? '#f5f3ff' : '#f8fafc', borderRadius: 10, border: `1px solid ${i === 0 ? '#ede9fe' : '#e2e8f0'}` }}>
+          <div key={i} style={{ padding: '12px', background: i === 0 ? '#EFF6FF' : '#f8fafc', borderRadius: 10, border: `1px solid ${i === 0 ? '#DBEAFE' : '#e2e8f0'}` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{item.action}</div>
               <div style={{ fontSize: 12, fontWeight: 800, color: item.color }}>w={item.weight}</div>
             </div>
             <div style={{ fontSize: 11, color: '#64748b' }}>Top factor: <strong>{item.factor}</strong></div>
-            {i === 0 && <div style={{ marginTop: 8, padding: '6px 10px', background: '#7c3aed', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#fff', display: 'inline-block' }}>Recommended ✓</div>}
+            {i === 0 && <div style={{ marginTop: 8, padding: '6px 10px', background: '#2563EB', borderRadius: 6, fontSize: 11, fontWeight: 600, color: '#fff', display: 'inline-block' }}>Recommended ✓</div>}
           </div>
         ))}
       </div>
@@ -34,7 +34,7 @@ export default function AutomationPage() {
       <HeroWithScreenshot
         badge="Product · Next-Best-Action"
         badgeIcon={Zap}
-        title={<>Always know your<br /><span style={{ color: '#7c3aed' }}>next move.</span></>}
+        title={<>Always know your<br /><span style={{ color: '#2563EB' }}>next move.</span></>}
         description="Pulse's recommendation engine scores every possible action for a lead and surfaces the one with the highest weighted priority — based on lead score, urgency, and reply status. No guesswork, no black box."
         screenshot={<NextActionScreenshot />}
       />
@@ -56,19 +56,19 @@ export default function AutomationPage() {
             ].map(({ icon: Icon, title, desc }, i) => (
               <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}
                 style={{ padding: 24, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0' }}>
-                <div style={{ height: 44, width: 44, borderRadius: 12, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
-                  <Icon size={20} color="#7c3aed" />
+                <div style={{ height: 44, width: 44, borderRadius: 12, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
+                  <Icon size={20} color="#2563EB" />
                 </div>
                 <h3 style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{title}</h3>
                 <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6 }}>{desc}</p>
               </motion.div>
             ))}
           </div>
-          <div style={{ background: '#f5f3ff', borderRadius: 16, padding: '28px 32px', border: '1px solid #ede9fe' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed', marginBottom: 12 }}>5 Built-in Actions</div>
+          <div style={{ background: '#EFF6FF', borderRadius: 16, padding: '28px 32px', border: '1px solid #DBEAFE' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#2563EB', marginBottom: 12 }}>5 Built-in Actions</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
               {['Send follow-up', 'Schedule demo', 'Send proposal', 'Mark as stale', 'Escalate to manager'].map((a, i) => (
-                <div key={i} style={{ padding: '8px 16px', background: '#fff', borderRadius: 8, border: '1px solid #ede9fe', fontSize: 13, fontWeight: 600, color: '#7c3aed', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div key={i} style={{ padding: '8px 16px', background: '#fff', borderRadius: 8, border: '1px solid #DBEAFE', fontSize: 13, fontWeight: 600, color: '#2563EB', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <ArrowRight size={13} /> {a}
                 </div>
               ))}

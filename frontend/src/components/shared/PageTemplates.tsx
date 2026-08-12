@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, createContext, useContext } from 'react';
 import { motion } from 'framer-motion';
-import Navbar from '@/components/navigation/Navbar';
+import { useRouter } from 'next/navigation';
+import { SiteHeader } from '@/components/landing/SiteHeader';
 import { ArrowRight, CheckCircle, X, Mail, Lock, Loader2, Activity } from 'lucide-react';
 
 /* ─── Modal Context ──────────────────────────────────── */
@@ -92,11 +93,11 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
           <X size={16} color="#64748b" />
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <div style={{ height: 36, width: 36, borderRadius: 10, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(124,58,237,0.35)' }}>
+          <div style={{ height: 36, width: 36, borderRadius: 10, background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(37,99,235,0.35)' }}>
             <Activity size={17} color="#fff" strokeWidth={2.5} />
           </div>
           <span style={{ fontSize: 18, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Pulse<span style={{ color: '#7c3aed' }}>CRM</span>
+            Pulse<span style={{ color: '#2563EB' }}>CRM</span>
           </span>
         </div>
         <h2 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.02em' }}>{isSignin ? 'Welcome back' : 'Create your account'}</h2>
@@ -113,7 +114,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 22 }}>
           {ROLES.map(r => (
             <button key={r.value} onClick={() => setRole(r.value)}
-              style={{ padding: '9px 4px', borderRadius: 10, border: `2px solid ${role === r.value ? '#7c3aed' : '#e2e8f0'}`, background: role === r.value ? '#f5f3ff' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: role === r.value ? '#7c3aed' : '#64748b', transition: 'all .15s', fontFamily: 'inherit' }}>
+              style={{ padding: '9px 4px', borderRadius: 10, border: `2px solid ${role === r.value ? '#2563EB' : '#e2e8f0'}`, background: role === r.value ? '#EFF6FF' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: role === r.value ? '#2563EB' : '#64748b', transition: 'all .15s', fontFamily: 'inherit' }}>
               {r.label}
             </button>
           ))}
@@ -127,7 +128,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
                   <input type="text" value={name} onChange={e => setName(e.target.value)}
                     placeholder="John Doe" required
                     style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
-                    onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                    onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                     onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
                 </div>
               </div>
@@ -137,7 +138,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
                   <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)}
                     placeholder="Acme Corp" required
                     style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
-                    onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                    onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                     onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
                 </div>
               </div>
@@ -150,7 +151,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="you@company.com" required
                 style={{ width: '100%', padding: '11px 14px 11px 40px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
-                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
             </div>
           </div>
@@ -161,17 +162,17 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
               <input type="password" value={password} onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••" required
                 style={{ width: '100%', padding: '11px 14px 11px 40px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
-                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
             </div>
           </div>
           {isSignin && (
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" style={{ fontSize: 12, fontWeight: 600, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
+              <button type="button" style={{ fontSize: 12, fontWeight: 600, color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
             </div>
           )}
           <button type="submit" disabled={loading}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', background: loading ? '#9b72f0' : '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all .15s', boxShadow: '0 6px 20px rgba(124,58,237,0.35)' }}>
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', background: loading ? '#60A5FA' : '#2563EB', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all .15s', boxShadow: '0 6px 20px rgba(37,99,235,0.35)' }}>
             {loading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> {isSignin ? 'Signing in\u2026' : 'Creating account\u2026'}</> : isSignin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
@@ -182,7 +183,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
         </div>
         <button onClick={() => { setLoading(true); setTimeout(() => { setLoading(false); onClose(); }, 1200); }} disabled={loading}
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '12px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 14, fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', transition: 'all .15s' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#7c3aed'; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#2563EB'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; }}>
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -194,7 +195,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
         </button>
         <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b8', margin: '18px 0 0' }}>
           {isSignin ? "No account? " : "Already have an account? "}
-          <button onClick={switchMode} style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={switchMode} style={{ fontSize: 12, fontWeight: 700, color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
             {isSignin ? 'Sign up free' : 'Sign in'}
           </button>
         </p>
@@ -216,7 +217,7 @@ export function PageContainer({ children }: { children: React.ReactNode }) {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
         style={{ fontFamily: "'Inter',system-ui,sans-serif", background: '#fff', minHeight: '100vh', color: '#0f172a' }}>
-        <Navbar onOpenModal={() => { setModalMode('signin'); setModalOpen(true); }} onOpenSignUp={() => { setModalMode('signup'); setModalOpen(true); }} />
+        <SiteHeader />
         <AuthModal key={modalMode} defaultMode={modalMode} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
         {children}
         <footer style={{ padding: '36px 48px', background: '#0f172a', color: '#475569', textAlign: 'center' }}>
@@ -243,25 +244,25 @@ export function HeroWithScreenshot({
   screenshot: React.ReactNode;
   onCTA?: () => void;
 }) {
-  const { openModal } = useModal();
-  const handleCTA = onCTA || openModal;
+  const router = useRouter();
+  const handleCTA = onCTA || (() => router.push('/signup'));
 
   return (
-    <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #f5f3ff 0%, #fff 100%)', position: 'relative', overflow: 'hidden' }}>
+    <section style={{ marginTop: 64, padding: '80px 48px', background: 'linear-gradient(180deg, #EFF6FF 0%, #fff 100%)', position: 'relative', overflow: 'hidden' }}>
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 0.1 }}
         transition={{ duration: 1 }}
-        style={{ position: 'absolute', top: -100, right: -100, width: 600, height: 600, background: 'radial-gradient(circle, #7c3aed 0%, transparent 70%)', pointerEvents: 'none' }} />
+        style={{ position: 'absolute', top: -100, right: -100, width: 600, height: 600, background: 'radial-gradient(circle, #2563EB 0%, transparent 70%)', pointerEvents: 'none' }} />
       <div style={{ maxWidth: 1280, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center', position: 'relative' }}>
         <motion.div
           initial={{ opacity: 0, x: -30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}>
           {BadgeIcon && (
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 100, marginBottom: 20 }}>
-              <BadgeIcon size={13} color="#7c3aed" />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{badge}</span>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: 100, marginBottom: 20 }}>
+              <BadgeIcon size={13} color="#2563EB" />
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{badge}</span>
             </div>
           )}
           <h1 style={{ fontSize: 'clamp(36px,5vw,56px)', fontWeight: 900, color: '#0f172a', lineHeight: 1.1, letterSpacing: '-0.03em', marginBottom: 20 }}>{title}</h1>
@@ -270,7 +271,7 @@ export function HeroWithScreenshot({
             whileHover={{ scale: 1.05, y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleCTA()}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(124,58,237,0.4)' }}>
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '14px 28px', background: '#2563EB', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(37,99,235,0.4)' }}>
             Start Free Trial <ArrowRight size={16} />
           </motion.button>
         </motion.div>
@@ -310,12 +311,12 @@ export function FeatureCards({ features }: { features: Array<{ icon: React.Eleme
                   hidden: { opacity: 0, y: 30 },
                   visible: { opacity: 1, y: 0 }
                 }}
-                whileHover={{ y: -8, boxShadow: '0 12px 32px rgba(124, 58, 237, 0.15)' }}
+                whileHover={{ y: -8, boxShadow: '0 12px 32px rgba(37, 99, 235, 0.15)' }}
                 style={{ padding: 32, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0', cursor: 'pointer', transition: 'box-shadow 0.3s' }}>
                 <motion.div
                   whileHover={{ rotate: 10, scale: 1.1 }}
-                  style={{ height: 48, width: 48, borderRadius: 12, background: '#f5f3ff', border: '1px solid #ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-                  <Icon size={22} color="#7c3aed" />
+                  style={{ height: 48, width: 48, borderRadius: 12, background: '#EFF6FF', border: '1px solid #DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <Icon size={22} color="#2563EB" />
                 </motion.div>
                 <h3 style={{ fontSize: 17, fontWeight: 700, color: '#0f172a', marginBottom: 10 }}>{feature.title}</h3>
                 <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6 }}>{feature.description}</p>
@@ -331,7 +332,7 @@ export function FeatureCards({ features }: { features: Array<{ icon: React.Eleme
 /* ─── Statistics Section ──────────────────────────── */
 export function Statistics({ stats }: { stats: Array<{ value: string; label: string; description: string }> }) {
   return (
-    <section style={{ padding: '80px 48px', background: 'linear-gradient(135deg, #f5f3ff 0%, #fff 100%)' }}>
+    <section style={{ padding: '80px 48px', background: 'linear-gradient(135deg, #EFF6FF 0%, #fff 100%)' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>
         <motion.div
           initial="hidden"
@@ -350,7 +351,7 @@ export function Statistics({ stats }: { stats: Array<{ value: string; label: str
                 visible: { opacity: 1, scale: 1 }
               }}
               whileHover={{ y: -8 }}
-              style={{ padding: 40, background: '#fff', borderRadius: 20, border: '1px solid #ede9fe', textAlign: 'center', boxShadow: '0 4px 16px rgba(124,58,237,0.08)' }}>
+              style={{ padding: 40, background: '#fff', borderRadius: 20, border: '1px solid #DBEAFE', textAlign: 'center', boxShadow: '0 4px 16px rgba(37,99,235,0.08)' }}>
               <div style={{ fontSize: 48, fontWeight: 900, color: '#0f172a', marginBottom: 12, letterSpacing: '-0.03em' }}>{stat.value}</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{stat.label}</div>
               <div style={{ fontSize: 13, color: '#64748b', lineHeight: 1.5 }}>{stat.description}</div>
@@ -364,11 +365,11 @@ export function Statistics({ stats }: { stats: Array<{ value: string; label: str
 
 /* ─── CTA Section ──────────────────────────────────── */
 export function CTASection({ title, description, onCTA }: { title: string; description: string; onCTA?: () => void }) {
-  const { openModal } = useModal();
-  const handleCTA = onCTA || openModal;
+  const router = useRouter();
+  const handleCTA = onCTA || (() => router.push('/signup'));
 
   return (
-    <section style={{ padding: '100px 48px', background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
+    <section style={{ padding: '100px 48px', background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
         whileInView={{ scale: 1, opacity: 0.1 }}
@@ -396,7 +397,7 @@ export function CTASection({ title, description, onCTA }: { title: string; descr
           whileHover={{ scale: 1.05, y: -2 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => handleCTA()}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 32px', background: '#fff', color: '#7c3aed', fontSize: 16, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 12px 32px rgba(0,0,0,.15)' }}>
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 32px', background: '#fff', color: '#2563EB', fontSize: 16, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 12px 32px rgba(0,0,0,.15)' }}>
           Start Free Trial <ArrowRight size={18} />
         </motion.button>
         <motion.div

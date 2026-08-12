@@ -1,4 +1,4 @@
-export type DrawerType = 'product' | 'solutions' | 'pricing' | 'resources' | null;
+export type DrawerType = 'product' | 'resources' | null;
 
 export interface NavItem {
   id: string;

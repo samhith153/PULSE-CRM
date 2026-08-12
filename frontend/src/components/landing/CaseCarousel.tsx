@@ -19,7 +19,7 @@ const cases = [
   {
     company: "Lumen Software",
     rep: "Priya Nandra, RevOps Lead",
-    stat: "$2.4M added pipeline",
+    stat: "₹2.1Cr added pipeline",
     quote:
       "The recommendations surfaced deals we'd written off. Two of them became our largest renewals.",
   },

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 /* ─── Types ─────────────────────────────────────────── */
-type MenuKey = 'product' | 'solutions' | 'resources' | null;
+type MenuKey = 'platform' | 'product' | 'resources' | null;
 
 interface NavbarProps {
   onOpenModal: () => void;
@@ -17,24 +17,24 @@ interface NavbarProps {
 }
 
 /* ─── Dropdown content definitions ──────────────────── */
+const PLATFORM_ITEMS = [
+  { icon: Target,    label: 'Lead Management',    desc: 'Capture, qualify, and manage every lead from one place',        href: '/platform/lead-management' },
+  { icon: Users,     label: 'Contact Management', desc: 'Keep customer contacts and communication history organized',    href: '/platform/contact-management' },
+  { icon: Building2, label: 'Company Management', desc: 'Manage organizations and customer information in one place',    href: '/platform/company-management' },
+  { icon: Rocket,    label: 'Sales Pipeline',     desc: 'Track opportunities through every stage of your sales process', href: '/platform/sales-pipeline' },
+  { icon: Briefcase, label: 'Deal Management',    desc: 'Create, manage, and close sales opportunities',                href: '/platform/deal-management' },
+  { icon: Activity,  label: 'Tasks & Follow-ups', desc: 'Keep sales activities and follow-ups on schedule',             href: '/platform/tasks-follow-ups' },
+];
+
 const PRODUCT_ITEMS = [
-  { icon: LayoutDashboard, label: 'Visual Pipeline',     desc: 'FSM deal stages: New → Qualified → Proposal → Negotiation → Won',  href: '/product/visual-pipeline' },
-  { icon: Sparkles,        label: 'AI Scoring & Copilot', desc: 'Rule-based lead scoring (0–100) + Groq/Llama email summarization', href: '/product/ai-copilot' },
-  { icon: BarChart2,       label: 'Revenue Analytics',   desc: 'Live dashboards, pipeline value, rep leaderboards & forecasts',    href: '/product/revenue-analytics' },
-  { icon: Mail,            label: 'Email Intelligence',  desc: 'Gmail OAuth sync, thread logging & email-to-deal linking',        href: '/product/email-intelligence' },
-  { icon: Workflow,        label: 'Next-Best-Action',    desc: 'Rule-based recommendation engine — follow-up, demo, proposal',    href: '/product/automation' },
-  { icon: Shield,          label: 'Security & RBAC',     desc: '3 roles, 33 permissions, JWT auth & bcrypt passwords',            href: '/product/security-rbac' },
+  { icon: Sparkles,        label: 'AI Copilot',         desc: 'Rule-based lead scoring (0–100) + Groq/Llama email analysis',  href: '/product/ai-copilot' },
+  { icon: Workflow,        label: 'Automation',         desc: 'Next-best-action engine — weighted by score, urgency & reply', href: '/product/automation' },
+  { icon: Mail,            label: 'Email Intelligence', desc: 'Gmail OAuth sync, thread logging & AI-powered analysis',       href: '/product/email-intelligence' },
+  { icon: Target,          label: 'Lead Management',    desc: 'Capture, score, qualify and track every lead in one place',    href: '/product/lead-management' },
+  { icon: BarChart2,       label: 'Revenue Analytics',  desc: 'Live dashboards, pipeline value, rep leaderboards & forecasts', href: '/product/revenue-analytics' },
+  { icon: Shield,          label: 'Security & RBAC',    desc: '3 roles, 33 permissions, JWT auth & bcrypt passwords',         href: '/product/security-rbac' },
+  { icon: LayoutDashboard, label: 'Visual Pipeline',    desc: 'FSM deal stages: New → Qualified → Proposal → Won/Lost',       href: '/product/visual-pipeline' },
 ];
-
-const SOLUTIONS_ITEMS = [
-  { icon: Users,     label: 'Sales Representatives', desc: 'AI-scored leads, Gmail sync & next-best-action recommendations', href: '/solutions/sales-reps' },
-  { icon: BarChart2, label: 'Sales Managers',        desc: 'Full pipeline visibility, activity timelines & role-scoped dashboards', href: '/solutions/sales-managers' },
-  { icon: Building2, label: 'Enterprise',            desc: 'Multi-tenant RBAC, audit-ready schema & async FastAPI backend',  href: '/solutions/enterprise' },
-  { icon: Rocket,    label: 'Startups',              desc: 'Live in minutes — seed data, JWT auth & 40+ REST endpoints ready', href: '/solutions/startups' },
-  { icon: Briefcase, label: 'Agencies',              desc: 'Multi-org support with per-tenant data isolation',               href: '/solutions/agencies' },
-  { icon: Target,    label: 'RevOps Teams',          desc: 'RBAC, Brevo/SMTP email, webhooks & cross-functional reporting',  href: '/solutions/revops' },
-];
-
 
 const RESOURCES_ITEMS = [
   { icon: BookOpen,       label: 'Documentation',        desc: 'Setup guides, architecture overview & configuration',          href: '/resources/documentation' },
@@ -47,15 +47,15 @@ const RESOURCES_ITEMS = [
 
 type DropdownItem = { icon: React.ElementType; label: string; desc: string; href: string };
 const MENU_DATA: Record<NonNullable<MenuKey>, DropdownItem[]> = {
+  platform:  PLATFORM_ITEMS,
   product:   PRODUCT_ITEMS,
-  solutions: SOLUTIONS_ITEMS,
   resources: RESOURCES_ITEMS,
 };
 
 /* Dropdown nav items (have sub-menus) */
 const NAV_DROPDOWN_ITEMS: { label: string; key: NonNullable<MenuKey> }[] = [
-  { label: 'Product',   key: 'product' },
-  { label: 'Solutions', key: 'solutions' },
+  { label: 'Platform',  key: 'platform' },
+  { label: 'Products',  key: 'product' },
   { label: 'Resources', key: 'resources' },
 ];
 
@@ -100,16 +100,16 @@ function Dropdown({ items, onNavigate }: { items: DropdownItem[]; onNavigate: (h
             fontFamily: "'Inter', system-ui, sans-serif",
             transition: 'background 0.12s ease',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f5f3ff'; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#EFF6FF'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
         >
           <div style={{
             height: 34, width: 34, borderRadius: 9,
-            background: '#f5f3ff', border: '1px solid #ede9fe',
+            background: '#EFF6FF', border: '1px solid #DBEAFE',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0, marginTop: 1,
           }}>
-            <Icon size={15} color="#7c3aed" strokeWidth={2} />
+            <Icon size={15} color="#2563EB" strokeWidth={2} />
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 2, lineHeight: 1.3 }}>{label}</div>
@@ -195,7 +195,7 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
           to   { opacity: 1; transform: translateY(0); }
         }
         .nav-link-btn:hover { background: #f9fafb !important; color: #0f172a !important; }
-        .nav-link-btn.active { background: #f5f3ff !important; color: #7c3aed !important; }
+        .nav-link-btn.active { background: #EFF6FF !important; color: #2563EB !important; }
         .mobile-menu-btn { display: none !important; }
         @media (max-width: 900px) {
           .desktop-nav  { display: none !important; }
@@ -237,14 +237,14 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
             }}
           >
             <div style={{
-              height: 36, width: 36, borderRadius: 10, background: '#7c3aed',
+              height: 36, width: 36, borderRadius: 10, background: '#2563EB',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(124,58,237,0.35)',
+              boxShadow: '0 4px 12px rgba(37,99,235,0.35)',
             }}>
               <Activity size={17} color="#fff" strokeWidth={2.5} />
             </div>
             <span style={{ fontSize: 19, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em' }}>Pulse</span>
-            <span style={{ fontSize: 19, fontWeight: 900, color: '#7c3aed', letterSpacing: '-0.03em', marginLeft: -4 }}>CRM</span>
+            <span style={{ fontSize: 19, fontWeight: 900, color: '#2563EB', letterSpacing: '-0.03em', marginLeft: -4 }}>CRM</span>
             <span className="logo-tagline" style={{ fontSize: 9, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.14em', marginLeft: 4 }}>
               RULE-BASED AI · GROQ/LLAMA
             </span>
@@ -268,16 +268,16 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
                     style={{
                       display: 'flex', alignItems: 'center', gap: 4,
                       padding: '7px 14px', borderRadius: 8, border: 'none',
-                      background: isActive ? '#f5f3ff' : 'transparent',
+                      background: isActive ? '#EFF6FF' : 'transparent',
                       fontSize: 14, fontWeight: 600,
-                      color: isActive ? '#7c3aed' : '#374151',
+                      color: isActive ? '#2563EB' : '#374151',
                       cursor: 'pointer', fontFamily: 'inherit',
                       transition: 'all 0.15s ease', outline: 'none',
                     }}
                   >
                     {item.label}
                     <ChevronDown size={13}
-                      color={isActive ? '#7c3aed' : '#9ca3af'}
+                      color={isActive ? '#2563EB' : '#9ca3af'}
                       style={{ transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }}
                     />
                   </button>
@@ -318,7 +318,7 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
                 color: '#374151', cursor: 'pointer', fontFamily: 'inherit',
                 transition: 'color 0.15s ease',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#7c3aed'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#2563EB'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#374151'; }}
             >
               Log In
@@ -327,22 +327,24 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
               onClick={onOpenSignUp || onOpenModal}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7,
-                padding: '9px 20px', borderRadius: 100, border: 'none',
-                background: '#7c3aed', color: '#fff',
-                fontSize: 14, fontWeight: 700, cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(124,58,237,0.35)',
+                padding: '9px 20px', borderRadius: 9999, border: 'none',
+                background: '#2563EB', color: '#FFFFFF',
+                fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
                 fontFamily: 'inherit', transition: 'all 0.15s ease',
               }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.background = '#6d28d9';
-                (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(124,58,237,0.45)';
+                (e.currentTarget as HTMLElement).style.background = '#1D4ED8';
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
+                (e.currentTarget as HTMLElement).style.boxShadow = '0 6px 20px rgba(37,99,235,0.45)';
               }}
               onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.background = '#7c3aed';
-                (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(124,58,237,0.35)';
+                (e.currentTarget as HTMLElement).style.background = '#2563EB';
+                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 14px rgba(37,99,235,0.35)';
               }}
             >
-              Sign Up <ArrowRight size={14} />
+              Get Started <ArrowRight size={14} color="#FFFFFF" />
             </button>
           </div>
 
@@ -360,11 +362,11 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
           </button>
         </div>
 
-        {/* Subtle violet underline when dropdown open */}
+        {/* Subtle blue underline when dropdown open */}
         {activeMenu && (
           <div style={{
             position: 'absolute', bottom: -1, left: 0, right: 0, height: 2,
-            background: 'linear-gradient(90deg, transparent, #7c3aed 30%, #7c3aed 70%, transparent)',
+            background: 'linear-gradient(90deg, transparent, #2563EB 30%, #2563EB 70%, transparent)',
             opacity: 0.5,
             pointerEvents: 'none',
           }} />
@@ -411,15 +413,15 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
                           textAlign: 'left', fontFamily: 'inherit',
                           transition: 'background 0.12s',
                         }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#f5f3ff'; }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = '#EFF6FF'; }}
                         onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
                       >
                         <div style={{
-                          height: 32, width: 32, borderRadius: 8, background: '#f5f3ff',
-                          border: '1px solid #ede9fe', display: 'flex', alignItems: 'center',
+                          height: 32, width: 32, borderRadius: 8, background: '#EFF6FF',
+                          border: '1px solid #DBEAFE', display: 'flex', alignItems: 'center',
                           justifyContent: 'center', flexShrink: 0,
                         }}>
-                          <Icon size={14} color="#7c3aed" />
+                          <Icon size={14} color="#2563EB" />
                         </div>
                         <div>
                           <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>{label}</div>
@@ -462,13 +464,14 @@ export default function Navbar({ onOpenModal, onOpenSignUp }: NavbarProps) {
             <button
               onClick={() => { setMobileOpen(false); (onOpenSignUp || onOpenModal)(); }}
               style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
                 padding: '14px', borderRadius: 12, border: 'none',
-                background: '#7c3aed', fontSize: 15, fontWeight: 700, color: '#fff',
+                background: '#2563EB', fontSize: 15, fontWeight: 600, color: '#FFFFFF',
                 cursor: 'pointer', fontFamily: 'inherit',
-                boxShadow: '0 6px 20px rgba(124,58,237,0.35)',
+                boxShadow: '0 6px 20px rgba(37,99,235,0.35)',
               }}
             >
-              Sign Up Free →
+              Get Started Free <ArrowRight size={14} color="#FFFFFF" />
             </button>
           </div>
         </div>

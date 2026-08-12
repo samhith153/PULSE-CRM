@@ -9,7 +9,7 @@ const AnalyticsScreenshot = () => (
     <div style={{ background: '#fff', borderRadius: 12, padding: '20px', border: '1px solid #e2e8f0' }}>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
         {[
-          { label: 'Revenue (Q4)', value: '₹98.4L', color: '#7c3aed' },
+          { label: 'Revenue (Q4)', value: '₹98.4L', color: '#2563EB' },
           { label: 'Deals Closed', value: '57', color: '#059669' },
           { label: 'Win Rate', value: '64%', color: '#2563eb' },
           { label: 'Avg Deal Size', value: '₹1.72L', color: '#d97706' },
@@ -22,7 +22,7 @@ const AnalyticsScreenshot = () => (
       </div>
       <div style={{ height: 80, background: '#f8fafc', borderRadius: 10, display: 'flex', alignItems: 'flex-end', gap: 4, padding: '10px' }}>
         {[40, 55, 45, 70, 60, 85, 75, 90].map((h, i) => (
-          <div key={i} style={{ flex: 1, height: `${h}%`, background: '#7c3aed', borderRadius: '4px 4px 0 0', opacity: 0.7 + (i * 0.04) }} />
+          <div key={i} style={{ flex: 1, height: `${h}%`, background: '#2563EB', borderRadius: '4px 4px 0 0', opacity: 0.7 + (i * 0.04) }} />
         ))}
       </div>
     </div>
@@ -35,7 +35,7 @@ export default function RevenueAnalyticsPage() {
       <HeroWithScreenshot
         badge="Product · Revenue Analytics"
         badgeIcon={BarChart2}
-        title={<>Real-time revenue data,<br /><span style={{ color: '#7c3aed' }}>not last week's exports.</span></>}
+        title={<>Real-time revenue data,<br /><span style={{ color: '#2563EB' }}>not last week's exports.</span></>}
         description="Live dashboards with pipeline metrics, funnel analysis, rep leaderboards, and AI forecasting — updated every second."
         screenshot={<AnalyticsScreenshot />}
       />
@@ -48,8 +48,8 @@ export default function RevenueAnalyticsPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.6 }}
-            style={{ background: 'linear-gradient(135deg, #f5f3ff 0%, #fff 100%)', padding: 32, borderRadius: 16, border: '1px solid #ede9fe' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#7c3aed', marginBottom: 16 }}>Rep Leaderboard — Live</div>
+            style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #fff 100%)', padding: 32, borderRadius: 16, border: '1px solid #DBEAFE' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#2563EB', marginBottom: 16 }}>Rep Leaderboard — Live</div>
             {[
               { rank: '🥇', name: 'Alex R.', revenue: '₹24.1L' },
               { rank: '🥈', name: 'Jordan L.', revenue: '₹19.8L' },
@@ -61,7 +61,7 @@ export default function RevenueAnalyticsPage() {
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{rep.name}</div>
                   <div style={{ fontSize: 12, color: '#64748b' }}>Q4 2025</div>
                 </div>
-                <div style={{ fontSize: 16, fontWeight: 900, color: '#7c3aed' }}>{rep.revenue}</div>
+                <div style={{ fontSize: 16, fontWeight: 900, color: '#2563EB' }}>{rep.revenue}</div>
               </div>
             ))}
           </motion.div>
@@ -82,8 +82,8 @@ export default function RevenueAnalyticsPage() {
                 { icon: Target, text: 'Funnel conversion analysis' },
               ].map(({ icon: Icon, text }, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ height: 36, width: 36, borderRadius: 8, background: '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon size={16} color="#7c3aed" />
+                  <div style={{ height: 36, width: 36, borderRadius: 8, background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={16} color="#2563EB" />
                   </div>
                   <span style={{ fontSize: 15, color: '#0f172a', fontWeight: 500 }}>{text}</span>
                 </div>
