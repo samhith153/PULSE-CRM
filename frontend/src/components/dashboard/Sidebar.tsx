@@ -27,6 +27,7 @@ import {
   Zap,
   LayoutDashboard,
   ClipboardList,
+  UserCog,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
@@ -53,6 +54,7 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
         {
           label: 'Sales',
           items: [
+            { name: 'My Team',       icon: UserCog,    tab: 'my team' },
             { name: 'Team Pipeline', icon: Layers,     tab: 'team pipeline' },
             { name: 'Leads',         icon: Users,      tab: 'leads' },
             { name: 'Companies',     icon: Building2,  tab: 'companies' },

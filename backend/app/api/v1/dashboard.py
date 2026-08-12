@@ -189,10 +189,15 @@ async def get_manager_dashboard(
     """
     svc = DashboardService(db)
 
+    # Admins keep the org-wide view; managers are scoped to their assigned reps.
+    is_admin = any(
+        ur.role.name == "admin" for ur in current_user.user_roles if ur.role
+    )
     data = await svc.manager_kpi(
         current_user.id,
         current_user.organization_id,
         period=period,
+        org_wide=is_admin,
     )
 
     return {

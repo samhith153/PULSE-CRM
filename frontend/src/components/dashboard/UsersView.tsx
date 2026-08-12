@@ -1,25 +1,26 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Users, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Key, 
-  UserPlus, 
-  X, 
+import React, { useState, useEffect, useCallback } from 'react';import {
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  Key,
+  UserPlus,
+  X,
   Ban,
   RefreshCw,
   Loader2,
   Archive,
-  Undo2
+  Undo2,
+  UserCog
 } from 'lucide-react';
-import { 
-  UserData, RoleData, 
+import {
+  UserData, RoleData,
   getUsers, createUser, updateUser, deleteUser,
   activateUser, deactivateUser, assignUserRole, resetUserPassword,
-  getRoles, getDeletedUsers, restoreUser, permanentDeleteUser
+  getRoles, getDeletedUsers, restoreUser, permanentDeleteUser,
+  getManagers, assignUserManager
 } from '@/utils/api';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from '@/lib/toast';
@@ -29,6 +30,7 @@ export default function UsersView() {
   const [users, setUsers] = useState<UserData[]>([]);
   const [deletedUsers, setDeletedUsers] = useState<UserData[]>([]);
   const [roles, setRoles] = useState<RoleData[]>([]);
+  const [managers, setManagers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(1);
@@ -41,10 +43,11 @@ export default function UsersView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalType, setModalType] = useState<'create' | 'edit'>('create');
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<UserData | null>(null);
   const [showPassword, setShowPassword] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    full_name: '', email: '', password: '', role_id: '' as string
+    full_name: '', email: '', password: '', role_id: '' as string, manager_id: '' as string
   });
 
   const isAdmin = currentUser?.roles?.includes('admin') ?? false;
@@ -86,14 +89,37 @@ export default function UsersView() {
     }
   }, []);
 
+  const loadManagers = useCallback(async () => {
+    try {
+      setManagers(await getManagers());
+    } catch {
+      setManagers([]);
+    }
+  }, []);
+
   useEffect(() => { loadUsers(); }, [loadUsers]);
   useEffect(() => { loadRoles(); }, [loadRoles]);
+  useEffect(() => { loadManagers(); }, [loadManagers]);
   useEffect(() => { if (showArchived) loadDeletedUsers(); }, [showArchived, loadDeletedUsers]);
+
+  /** Resolve the role name that will apply for the current modal state. */
+  const effectiveRoleName = (): string => {
+    if (form.role_id) {
+      return roles.find(r => r.id === form.role_id)?.name || '';
+    }
+    if (modalType === 'edit' && editingUser) {
+      return editingUser.roles?.[0] || '';
+    }
+    return '';
+  };
+
+  const showManagerSelect = effectiveRoleName() === 'sales_rep';
 
   const handleOpenCreate = () => {
     setModalType('create');
-    setForm({ full_name: '', email: '', password: '', role_id: roles[0]?.id || '' });
+    setForm({ full_name: '', email: '', password: '', role_id: roles[0]?.id || '', manager_id: '' });
     setEditingUserId(null);
+    setEditingUser(null);
     setIsModalOpen(true);
   };
 
@@ -103,9 +129,11 @@ export default function UsersView() {
       full_name: user.full_name,
       email: user.email,
       password: '',
-      role_id: user.roles.length > 0 ? '' : ''
+      role_id: '',
+      manager_id: user.manager_id || ''
     });
     setEditingUserId(user.id);
+    setEditingUser(user);
     setIsModalOpen(true);
   };
 
@@ -117,12 +145,18 @@ export default function UsersView() {
       if (modalType === 'create') {
         const payload: any = { full_name: form.full_name.trim(), email: form.email.trim(), password: form.password };
         if (form.role_id) payload.role_id = form.role_id;
-        await createUser(payload);
+        const created = await createUser(payload);
+        if (effectiveRoleName() === 'sales_rep' && form.manager_id) {
+          await assignUserManager(created.id, form.manager_id);
+        }
         toast.success(`User "${form.full_name}" created successfully.`);
       } else if (modalType === 'edit' && editingUserId) {
         await updateUser(editingUserId, { full_name: form.full_name.trim() });
         if (form.role_id) {
           await assignUserRole(editingUserId, form.role_id);
+        }
+        if (effectiveRoleName() === 'sales_rep' && form.manager_id !== (editingUser?.manager_id ?? '')) {
+          await assignUserManager(editingUserId, form.manager_id || null);
         }
         toast.success(`User "${form.full_name}" updated successfully.`);
       }
@@ -279,6 +313,7 @@ export default function UsersView() {
                     <th className="py-2.5">User</th>
                     <th className="py-2.5">Email</th>
                     <th className="py-2.5">Authorization Role</th>
+                    <th className="py-2.5">Assigned Manager</th>
                     <th className="py-2.5">Status</th>
                     <th className="py-2.5">Last Login</th>
                     <th className="py-2.5 text-right">Actions</th>
@@ -296,6 +331,16 @@ export default function UsersView() {
                           </span>
                         ) : (
                           <span className="text-text-muted text-[9px]">No role</span>
+                        )}
+                      </td>
+                      <td className="py-3">
+                        {user.manager_name ? (
+                          <span className="inline-flex items-center gap-1 bg-accent-color/10 text-accent-color px-2 py-0.5 rounded text-[9px] font-semibold">
+                            <UserCog className="h-3 w-3" />
+                            {user.manager_name}
+                          </span>
+                        ) : (
+                          <span className="text-text-muted text-[9px]">—</span>
                         )}
                       </td>
                       <td className="py-3">
@@ -413,6 +458,7 @@ export default function UsersView() {
                           <th className="py-2.5">User</th>
                           <th className="py-2.5">Email</th>
                           <th className="py-2.5">Role</th>
+                          <th className="py-2.5">Manager</th>
                           <th className="py-2.5">Status</th>
                           <th className="py-2.5">Last Login</th>
                           <th className="py-2.5 text-right">Actions</th>
@@ -430,6 +476,16 @@ export default function UsersView() {
                                 </span>
                               ) : (
                                 <span className="text-text-muted text-[9px]">No role</span>
+                              )}
+                            </td>
+                            <td className="py-3">
+                              {user.manager_name ? (
+                                <span className="inline-flex items-center gap-1 bg-accent-color/10 text-accent-color px-2 py-0.5 rounded text-[9px] font-semibold">
+                                  <UserCog className="h-3 w-3" />
+                                  {user.manager_name}
+                                </span>
+                              ) : (
+                                <span className="text-text-muted text-[9px]">—</span>
                               )}
                             </td>
                             <td className="py-3">
@@ -563,6 +619,29 @@ export default function UsersView() {
                   ))}
                 </select>
               </div>
+
+              {showManagerSelect && (
+                <div>
+                  <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">
+                    Assigned Manager
+                  </label>
+                  <select
+                    value={form.manager_id}
+                    onChange={(e) => setForm({ ...form, manager_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-border-default rounded-lg text-xs bg-surface-2 text-text-primary focus:outline-none focus:border-brand-accent transition-colors"
+                  >
+                    <option value="">— No manager —</option>
+                    {managers.map(m => (
+                      <option key={m.id} value={m.id}>{m.full_name}</option>
+                    ))}
+                  </select>
+                  <p className="mt-1 text-[9px] text-text-muted font-medium">
+                    {modalType === 'create'
+                      ? 'This sales rep will be added to the selected manager\'s team.'
+                      : 'Changing this updates the manager this sales rep reports to.'}
+                  </p>
+                </div>
+              )}
 
               <div className="pt-4 border-t border-border-default flex justify-end space-x-3">
                 <button 

@@ -37,6 +37,7 @@ const CalendarView = React.lazy(() => import('@/components/dashboard/CalendarVie
 const ManagerDashboardView = React.lazy(() => import('@/components/dashboard/ManagerDashboardView'));
 const ForecastView = React.lazy(() => import('@/components/dashboard/ForecastView'));
 const TeamPerformanceView = React.lazy(() => import('@/components/dashboard/TeamPerformanceView'));
+const MyTeamView = React.lazy(() => import('@/components/dashboard/MyTeamView'));
 const AdminDashboardView = React.lazy(() => import('@/components/dashboard/AdminDashboardView'));
 const SalesRepDashboardView = React.lazy(() => import('@/components/dashboard/SalesRepDashboardView'));
 const UsersView = React.lazy(() => import('@/components/dashboard/UsersView'));
@@ -289,6 +290,8 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
             <CalendarView />
           ) : activeTab === 'forecast' ? (
             <ForecastView />
+          ) : activeTab === 'my team' ? (
+            <MyTeamView />
           ) : activeTab === 'team performance' ? (
             <TeamPerformanceView />
           ) : activeTab === 'users' ? (

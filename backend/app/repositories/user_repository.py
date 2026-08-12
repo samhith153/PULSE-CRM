@@ -72,6 +72,46 @@ class UserRepository(BaseRepository[User]):
             )
         return await self.get_paginated(stmt, page, page_size)
 
+    async def list_managers(self, organization_id: UUID) -> List[User]:
+        """List active users holding the 'manager' role (for assignment pickers)."""
+        stmt = (
+            self._base_query()
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(
+                User.organization_id == organization_id,
+                Role.name == "manager",
+                User.is_active.is_(True),
+            )
+            .order_by(User.full_name)
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_team_reps(
+        self,
+        manager_id: UUID,
+        organization_id: UUID,
+    ) -> List[User]:
+        """List sales reps assigned to the given manager (manager team view).
+
+        Filters to users who still hold the sales_rep role so a rep that was
+        promoted to manager/admin drops out of their previous team.
+        """
+        stmt = (
+            self._base_query()
+            .join(UserRole, UserRole.user_id == User.id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(
+                User.organization_id == organization_id,
+                User.manager_id == manager_id,
+                Role.name == "sales_rep",
+            )
+            .order_by(User.full_name)
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
     async def list_deleted_by_organization(
         self,
         organization_id: UUID,

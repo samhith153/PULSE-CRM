@@ -181,6 +181,84 @@ class UserService:
         )
         return updated
 
+    async def assign_manager(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        manager_id: UUID,
+        assigned_by: UUID,
+    ) -> User:
+        """Assign a Sales Representative to a Manager (admin only, enforced at route level)."""
+        user = await self.get_user(user_id, organization_id)
+        role_names = {ur.role.name for ur in user.user_roles if ur.role}
+        if "sales_rep" not in role_names:
+            raise ConflictException(
+                "Only users with the Sales Representative role can be assigned to a manager."
+            )
+        if user.manager_id == manager_id:
+            raise ConflictException("User is already assigned to this manager.")
+        if manager_id == user_id:
+            raise ForbiddenException("A user cannot be assigned to themselves.")
+        if not user.is_active:
+            raise ConflictException("Cannot assign an inactive sales rep to a manager.")
+
+        manager = await self.user_repo.get_by_id_any(manager_id)
+        if not manager or manager.organization_id != organization_id or manager.is_deleted:
+            raise NotFoundException("Manager", manager_id)
+        if not manager.is_active:
+            raise ConflictException("Manager account is inactive.")
+        manager_roles = {ur.role.name for ur in manager.user_roles if ur.role}
+        if "manager" not in manager_roles:
+            raise ConflictException("The assigned user must hold the Manager role.")
+
+        await self.user_repo.update(user, manager_id=manager_id)
+        updated = await self.user_repo.get_by_id_with_roles(user.id)
+        await self.events.record_event(
+            "USER_MANAGER_ASSIGNED",
+            organization_id=organization_id,
+            actor_id=assigned_by,
+            aggregate_type="user",
+            aggregate_id=str(user.id),
+            source="user_service",
+            payload={
+                "user_id": str(user.id),
+                "manager_id": str(manager_id),
+                "assigned_by": str(assigned_by),
+            },
+        )
+        return updated
+
+    async def remove_manager(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        requestor_id: UUID,
+    ) -> User:
+        """Remove the manager assignment from a sales rep (admin only)."""
+        user = await self.get_user(user_id, organization_id)
+        if not user.manager_id:
+            raise ConflictException("User has no assigned manager.")
+        await self.user_repo.update(user, manager_id=None)
+        updated = await self.user_repo.get_by_id_with_roles(user.id)
+        await self.events.record_event(
+            "USER_MANAGER_REMOVED",
+            organization_id=organization_id,
+            actor_id=requestor_id,
+            aggregate_type="user",
+            aggregate_id=str(user.id),
+            source="user_service",
+            payload={"user_id": str(user.id), "requestor_id": str(requestor_id)},
+        )
+        return updated
+
+    async def list_managers(self, organization_id: UUID) -> List[User]:
+        """Active manager-role users in the org (admin assignment picker)."""
+        return await self.user_repo.list_managers(organization_id)
+
+    async def list_my_team(self, manager_id: UUID, organization_id: UUID) -> List[User]:
+        """Sales reps assigned to the given manager — manager-scoped team view."""
+        return await self.user_repo.list_team_reps(manager_id, organization_id)
+
     async def delete_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID, requestor: User) -> None:
         """Role-based delete: admin = hard delete, manager = soft delete (deactivate)."""
         if user_id == requestor_id:

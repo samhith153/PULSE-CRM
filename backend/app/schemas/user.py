@@ -48,6 +48,11 @@ class UserRoleAssignRequest(BaseModel):
     role_id: UUID
 
 
+class ManagerAssignmentRequest(BaseModel):
+    """Assign a Sales Representative to a Manager."""
+    manager_id: UUID = Field(description="ID of the manager user to assign the rep to")
+
+
 class UserResponse(BaseModel):
     id: UUID
     email: str
@@ -61,6 +66,8 @@ class UserResponse(BaseModel):
     is_verified: bool
     is_deleted: bool = False
     roles: List[str] = []
+    manager_id: Optional[UUID] = None
+    manager_name: Optional[str] = None
     last_login_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
@@ -83,6 +90,8 @@ class UserResponse(BaseModel):
             is_verified=user.is_verified,
             is_deleted=getattr(user, 'is_deleted', False),
             roles=role_names,
+            manager_id=user.manager_id,
+            manager_name=user.manager.full_name if getattr(user, 'manager', None) else None,
             last_login_at=user.last_login_at,
             created_at=user.created_at,
             updated_at=user.updated_at,

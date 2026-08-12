@@ -1137,6 +1137,8 @@ export interface UserData {
   is_active: boolean;
   is_verified: boolean;
   roles: string[];
+  manager_id?: string | null;
+  manager_name?: string | null;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
@@ -1181,6 +1183,34 @@ export async function assignUserRole(userId: string, roleId: string): Promise<Us
     method: 'POST',
     body: JSON.stringify({ role_id: roleId })
   });
+}
+
+// --- Manager ↔ Sales Representative hierarchy API ---
+
+/** List active manager-role users in the org (admin assignment picker). */
+export async function getManagers(): Promise<UserData[]> {
+  const res = await apiFetch<any>('/api/v1/users/managers');
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+/** Manager-only: list the sales reps assigned to the calling manager. */
+export async function getMyTeam(): Promise<UserData[]> {
+  const res = await apiFetch<any>('/api/v1/users/my-team');
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+/**
+ * Assign a sales rep to a manager, or pass null to remove the assignment.
+ * Admin only.
+ */
+export async function assignUserManager(userId: string, managerId: string | null): Promise<UserData> {
+  if (managerId) {
+    return apiFetch<UserData>(`/api/v1/users/${userId}/manager`, {
+      method: 'POST',
+      body: JSON.stringify({ manager_id: managerId })
+    });
+  }
+  return apiFetch<UserData>(`/api/v1/users/${userId}/manager`, { method: 'DELETE' });
 }
 
 export async function resetUserPassword(userId: string): Promise<{ new_password: string }> {

@@ -86,8 +86,27 @@ class User(Base, AuditMixin):
     )
 
     # ΓöÇΓöÇ Relationships ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Reporting hierarchy (Admin → Manager → Sales Rep) ───────────────────
+    # Optional manager this user reports to. Sales reps are assigned to a
+    # manager by an Admin; a manager only sees the reps assigned to them.
+    manager_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     organization: Mapped["Organization"] = relationship(
         "Organization", back_populates="users", lazy="select"
+    )
+    manager: Mapped[Optional["User"]] = relationship(
+        "User",
+        remote_side=lambda: [User.id],
+        back_populates="managed_reps",
+        lazy="selectin",
+    )
+    managed_reps: Mapped[List["User"]] = relationship(
+        "User", back_populates="manager", lazy="select"
     )
     user_roles: Mapped[List["UserRole"]] = relationship(
         "UserRole", back_populates="user", lazy="selectin", cascade="all, delete-orphan"

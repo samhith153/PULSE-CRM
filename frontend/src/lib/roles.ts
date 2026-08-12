@@ -14,7 +14,7 @@ export const ROLE_TABS: Record<Role, Set<string>> = {
     'notifications', 'settings', 'profile',
   ]),
   manager: new Set([
-    'home', 'team pipeline', 'leads', 'companies', 'contacts', 'reports',
+    'home', 'my team', 'team pipeline', 'leads', 'companies', 'contacts', 'reports',
     'forecast', 'team performance', 'activities', 'calendar',
     'ai insights', 'integrations', 'notifications', 'settings', 'profile',
   ]),

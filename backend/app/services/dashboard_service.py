@@ -1138,14 +1138,17 @@ class DashboardService:
         organization_id: UUID,
         period: str = "quarter",
         rep_id: UUID | None = None,
+        org_wide: bool = False,
     ):  # noqa: C901
         """
         Compute all Manager Dashboard KPIs scoped to the manager's team.
-        A "team" = all Users whose deals are owned inside the same org,
-        and where the manager's user-id matches deal.created_by or
-        activity.created_by (since PULSE CRM has no explicit manager FK yet).
-        For quota we fall back to organization-level scoping so the manager
-        always sees data even with no explicit hierarchy.
+        A "team" = the Sales Representatives explicitly assigned to this
+        manager via users.manager_id (CRM hierarchy). When no reps have been
+        assigned yet, the dashboard falls back to the manager's own activity
+        so it never leaks other teams' or unassigned reps' data.
+
+        Admins calling with ``org_wide=True`` keep the legacy org-wide view
+        (all non-admin users) — "admins have visibility over all".
         """
         from app.schemas.dashboard import (
             DealAtRisk,
@@ -1218,16 +1221,6 @@ class DashboardService:
                 User.is_deleted.is_(False),
             ]
 
-        def _non_admin_user_filter():
-            """Return a condition that excludes users with the 'admin' role."""
-            admin_user_ids = (
-                select(UserRole.user_id)
-                .join(Role, Role.id == UserRole.role_id)
-                .where(Role.name == "admin")
-                .correlate(User)
-            )
-            return User.id.notin_(admin_user_ids)
-
         async def _deal_count(*extra):
             r = await self.db.execute(
                 select(func.count(Deal.id)).where(*_deal_base(*extra))
@@ -1240,15 +1233,44 @@ class DashboardService:
             )
             return Decimal(str(r.scalar_one() or 0))
 
-        # -- Team members (sales reps + managers, no admins) ------------------
+        # -- Team members: sales reps explicitly assigned to this manager. -----
+        # Hierarchical scoping: a manager sees ONLY the reps assigned to them
+        # (users.manager_id == manager_id). If no reps are assigned yet we fall
+        # back to the manager themself so the dashboard never shows an empty,
+        # misleading org-wide view. Admins (org_wide=True) keep the legacy
+        # org-wide team of all non-admin users.
+        admin_user_ids = (
+            select(UserRole.user_id)
+            .join(Role, Role.id == UserRole.role_id)
+            .where(Role.name == "admin")
+        )
         team_stmt = (
             select(User.id, User.full_name)
-            .where(*_user_base(), _non_admin_user_filter())
+            .where(
+                *_user_base(),
+                User.id.notin_(admin_user_ids) if org_wide else User.manager_id == manager_id,
+            )
         )
         team_rows = (await self.db.execute(team_stmt)).all()
         if rep_id is not None:
             team_rows = [row for row in team_rows if row[0] == rep_id]
             manager_scope_ids = [rep_id] if team_rows else []
+        elif org_wide:
+            # Legacy admin behavior: deals stay org-wide (no owner filter).
+            pass
+        elif team_rows:
+            manager_scope_ids = [r[0] for r in team_rows]
+        else:
+            # No assigned reps yet — scope to the manager's own activity.
+            manager_row = (
+                await self.db.execute(
+                    select(User.id, User.full_name).where(
+                        User.id == manager_id, *_user_base()
+                    )
+                )
+            ).one_or_none()
+            team_rows = [manager_row] if manager_row else []
+            manager_scope_ids = [manager_id] if manager_row else []
         team_member_ids = [r[0] for r in team_rows]
         total_members = len(team_member_ids)
 
@@ -1388,7 +1410,7 @@ class DashboardService:
                 & Deal.is_deleted.is_(False)
                 & Deal.organization_id == organization_id,
             )
-            .where(*_user_base(), _non_admin_user_filter())
+            .where(User.id.in_(team_member_ids), *_user_base())
             .group_by(User.id, User.full_name)
             .order_by(func.coalesce(func.sum(case((Deal.status == DealStatus.WON.value, func.coalesce(Deal.value, Deal.amount, 0)), else_=0)), 0).desc())
         )
@@ -1606,6 +1628,7 @@ class DashboardService:
                 ActivityTimeline.organization_id == organization_id,
                 ActivityTimeline.is_active.is_(True),
                 ActivityTimeline.action.in_(relevant_actions),
+                ActivityTimeline.created_by.in_(team_member_ids),
             )
             .order_by(ActivityTimeline.created_at.desc())
             .limit(30)
@@ -1647,6 +1670,7 @@ class DashboardService:
             Deal.is_deleted.is_(False),
             Deal.status == DealStatus.WON.value,
             Deal.closed_at.isnot(None),
+            *([Deal.owner_id.in_(manager_scope_ids)] if manager_scope_ids is not None else []),
         )
         avg_cycle_days = Decimal(str((await self.db.execute(cycle_stmt)).scalar_one() or 0))
 

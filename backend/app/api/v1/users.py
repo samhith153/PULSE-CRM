@@ -17,9 +17,15 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import CurrentUser, DBSession, require_permission
+from app.api.deps import CurrentUser, DBSession, require_permission, require_role
 from app.schemas.common import PaginatedResponse, StandardResponse
-from app.schemas.user import UserCreateRequest, UserResponse, UserRoleAssignRequest, UserUpdateRequest
+from app.schemas.user import (
+    ManagerAssignmentRequest,
+    UserCreateRequest,
+    UserResponse,
+    UserRoleAssignRequest,
+    UserUpdateRequest,
+)
 from app.services.user_service import UserService
 from app.core.security import hash_password
 from app.repositories.user_repository import UserRepository
@@ -77,6 +83,50 @@ async def list_deleted_users(
         page_size=page_size,
     )
     return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.get(
+    "/managers",
+    response_model=StandardResponse[list[UserResponse]],
+    summary="List managers (for sales-rep assignment)",
+    dependencies=[Depends(require_permission("user:read"))],
+)
+async def list_managers(current_user: CurrentUser, db: DBSession) -> dict:
+    """
+    GET /api/v1/users/managers
+
+    Lists active users holding the Manager role in the caller's organization —
+    used by Admins when assigning Sales Representatives to a manager.
+    """
+    svc = UserService(db)
+    managers = await svc.list_managers(current_user.organization_id)
+    return {
+        "success": True,
+        "message": "Managers retrieved successfully.",
+        "data": [UserResponse.from_orm_with_roles(u) for u in managers],
+    }
+
+
+@router.get(
+    "/my-team",
+    response_model=StandardResponse[list[UserResponse]],
+    summary="My team (sales reps assigned to me)",
+    dependencies=[Depends(require_role("manager"))],
+)
+async def list_my_team(current_user: CurrentUser, db: DBSession) -> dict:
+    """
+    GET /api/v1/users/my-team
+
+    Manager-only. Returns only the Sales Representatives explicitly assigned
+    to the calling manager by an admin — never the whole organization.
+    """
+    svc = UserService(db)
+    reps = await svc.list_my_team(current_user.id, current_user.organization_id)
+    return {
+        "success": True,
+        "message": "Team retrieved successfully.",
+        "data": [UserResponse.from_orm_with_roles(u) for u in reps],
+    }
 
 
 @router.post(
@@ -193,6 +243,62 @@ async def assign_roles(
         user_id, current_user.organization_id, payload.role_id, current_user.id
     )
     return {"success": True, "message": "Role assigned.", "data": UserResponse.from_orm_with_roles(user)}
+
+
+@router.post(
+    "/{user_id}/manager",
+    response_model=StandardResponse[UserResponse],
+    summary="Assign sales rep to a manager",
+    dependencies=[Depends(require_permission("user:manage_roles"))],
+)
+async def assign_manager(
+    user_id: UUID,
+    payload: ManagerAssignmentRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """
+    POST /api/v1/users/{user_id}/manager  {manager_id: UUID}
+
+    Admin only. Assigns the Sales Representative to the given manager.
+    """
+    svc = UserService(db)
+    user = await svc.assign_manager(
+        user_id,
+        current_user.organization_id,
+        payload.manager_id,
+        current_user.id,
+    )
+    return {
+        "success": True,
+        "message": "Manager assigned.",
+        "data": UserResponse.from_orm_with_roles(user),
+    }
+
+
+@router.delete(
+    "/{user_id}/manager",
+    response_model=StandardResponse[UserResponse],
+    summary="Remove manager assignment from a sales rep",
+    dependencies=[Depends(require_permission("user:manage_roles"))],
+)
+async def remove_manager(
+    user_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """
+    DELETE /api/v1/users/{user_id}/manager
+
+    Admin only. Unassigns the Sales Representative from their manager.
+    """
+    svc = UserService(db)
+    user = await svc.remove_manager(user_id, current_user.organization_id, current_user.id)
+    return {
+        "success": True,
+        "message": "Manager assignment removed.",
+        "data": UserResponse.from_orm_with_roles(user),
+    }
 
 
 @router.post(
