@@ -1885,6 +1885,8 @@ export interface SalesRepActionItem {
   deal_id: string | null;
   deal_name: string | null;
   deal_value: number;
+  trend?: string | null;
+  change?: string | null;
 }
 
 export interface SalesRepFollowUpItem {

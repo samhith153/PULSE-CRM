@@ -306,17 +306,19 @@ class SalesRepAIInsightsService:
                 )
             else:
                 reason = f"Lead active with {item.days_inactive} day(s) since last contact."
-            # Derive score from cold data: use deal probability as proxy if no lead_score
-            score = max(0, 100 - item.cold_score)  # invert cold score as engagement proxy
+            # Display the REAL AI lead score (from lead_scores.overall_score),
+            # plus the trend delta so the user sees how engagement improved.
             rising.append(SalesRepActionItem(
                 lead_id=item.lead_id,
                 lead_name=item.lead_name,
                 company=item.company,
-                score=score,
+                score=item.lead_score,
                 reason=reason,
                 deal_id=item.deal_id,
                 deal_name=item.deal_name,
                 deal_value=item.deal_value,
+                trend=item.trend,
+                change=item.change,
             ))
             if len(rising) >= _MAX_CARDS_PER_SECTION:
                 break
@@ -338,13 +340,12 @@ class SalesRepAIInsightsService:
                 reason = item.warning_indicators[0]
             else:
                 reason = f"No activity for {item.days_inactive} day(s)."
-            # Use cold_score-inverted as overall score display
-            score = max(0, 100 - item.cold_score)
+            # Display the REAL AI lead score (from lead_scores.overall_score)
             cold_out.append(SalesRepColdItem(
                 lead_id=item.lead_id,
                 lead_name=item.lead_name,
                 company=item.company,
-                score=score,
+                score=item.lead_score,
                 reason=reason,
                 days_inactive=item.days_inactive,
                 deal_id=item.deal_id,
@@ -384,7 +385,7 @@ class SalesRepAIInsightsService:
             # We don't have historical data, so we use the cold summary
             # to derive a trend indicator.
             cold_summary = await self._going_cold_svc.get_summary(user)
-            cold_pct = cold_summary.averageColdScore / 100.0
+            cold_pct = cold_summary.average_cold_score / 100.0
             # Higher cold score = lower health yesterday (rough estimate)
             prev_score = max(0, score - int(cold_pct * 5))
             trend_label = _pipeline_health_trend_label(score, prev_score)
@@ -392,7 +393,7 @@ class SalesRepAIInsightsService:
         except Exception:
             log.warning("Pipeline health components unavailable, using cold summary fallback")
             cold_summary = await self._going_cold_svc.get_summary(user)
-            score = max(0, int(100 - cold_summary.averageColdScore))
+            score = max(0, int(100 - cold_summary.average_cold_score))
             status = _pipeline_health_status(score)
             trend_label = f"● {status} (based on engagement signals)"
             explanation = "Calculated using engagement activity, response rates, and deal progression."

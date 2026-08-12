@@ -27,6 +27,8 @@ class SalesRepActionItem(BaseModel):
     deal_id: Optional[UUID] = None
     deal_name: Optional[str] = None
     deal_value: float = 0.0
+    trend: Optional[str] = None     # Improving | Stable | Declining (Rising Interest only)
+    change: Optional[str] = None    # e.g. "+12%" (Rising Interest only)
 
 
 class SalesRepFollowUpItem(BaseModel):

@@ -138,12 +138,21 @@ function RisingCard({
       onClick={() => navigateToLead(item.lead_id, onNavigate)}
     >
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-semibold text-text-primary truncate max-w-[60%]">
+        <span className="text-[10px] font-semibold text-text-primary truncate max-w-[55%]">
           {item.lead_name}
         </span>
-        <span className="text-[9px] font-semibold text-accent-color bg-accent-color/15 px-1.5 py-0.5 rounded shrink-0">
-          Score {item.score}
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          {item.trend === 'Improving' && item.change && (
+            <span className="text-[8px] font-bold text-status-success-text bg-status-success/10 px-1 py-0.5 rounded">
+              Engagement ▲ {item.change}
+            </span>
+          )}
+          {item.score > 0 && (
+            <span className="text-[9px] font-semibold text-accent-color bg-accent-color/15 px-1.5 py-0.5 rounded">
+              Score {item.score}
+            </span>
+          )}
+        </div>
       </div>
       <p className="text-[9px] text-text-muted mt-1 font-semibold leading-relaxed line-clamp-2">
         {item.reason}
@@ -169,9 +178,11 @@ function ColdCard({
         <span className="text-[10px] font-semibold text-text-primary truncate max-w-[60%]">
           {item.lead_name}
         </span>
-        <span className="text-[9px] font-semibold text-text-muted bg-surface-2 px-1.5 py-0.5 rounded shrink-0">
-          Score {item.score}
-        </span>
+        {item.score > 0 && (
+          <span className="text-[9px] font-semibold text-text-muted bg-surface-2 px-1.5 py-0.5 rounded shrink-0">
+            Score {item.score}
+          </span>
+        )}
       </div>
       <p className="text-[9px] text-text-muted mt-1 font-semibold leading-relaxed line-clamp-2">
         {item.reason}
