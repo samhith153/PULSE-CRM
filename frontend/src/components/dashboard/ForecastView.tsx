@@ -198,34 +198,12 @@ export default function ForecastView() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-sans text-foreground tracking-tight font-black flex items-center gap-2">
-            <span>Sales Forecast</span>
+            <span>Sales Forecast ({quarterLabel})</span>
             <Sparkles size={20} className="text-accent-color animate-pulse" />
           </h1>
           <p className="text-xs md:text-sm text-muted-foreground mt-1 font-semibold tracking-wide">
             Interactive projections and confidence tiers modeled dynamically from active pipelines.
           </p>
-        </div>
-
-        {/* Tab Selector */}
-        <div className="flex bg-muted/60 dark:bg-muted/30 p-1 rounded-xl border border-border/80 shadow-inner shrink-0 w-fit relative">
-          {['Q3', 'Q4'].map((q) => (
-            <button
-              key={q}
-              onClick={() => setActiveTab(q as any)}
-              className={`relative px-4 py-1.5 rounded-lg text-xs font-bold transition duration-200 cursor-pointer select-none ${
-                activeTab === q ? 'text-slate-900 font-extrabold' : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {activeTab === q && (
-                <motion.div
-                  layoutId="activeQuarterTab"
-                  className="absolute inset-0 bg-white shadow-[0_2px_8px_-2px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.06)] rounded-lg border border-slate-200/80"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-              )}
-              <span className="relative z-10">{q} Projections</span>
-            </button>
-          ))}
         </div>
       </div>
 

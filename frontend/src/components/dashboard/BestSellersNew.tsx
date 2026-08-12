@@ -32,37 +32,37 @@ const STAGE_CONFIG: Record<
 > = {
   lead: {
     label: 'Lead',
-    className: 'bg-brand-soft',
+    className: 'bg-[var(--stage-new)]',
   },
 
   open: {
     label: 'Open',
-    className: 'bg-brand',
+    className: 'bg-[var(--stage-contacted)]',
   },
 
   qualified: {
     label: 'Qualified',
-    className: 'bg-lime',
+    className: 'bg-[var(--stage-qualified)]',
   },
 
   proposal: {
     label: 'Proposal',
-    className: 'bg-brand-soft',
+    className: 'bg-[var(--stage-proposal)]',
   },
 
   negotiation: {
     label: 'Negotiation',
-    className: 'bg-brand',
+    className: 'bg-[var(--stage-negotiation)]',
   },
 
   won: {
     label: 'Won',
-    className: 'bg-lime',
+    className: 'bg-[var(--stage-won)]',
   },
 
   lost: {
     label: 'Lost',
-    className: 'bg-status-danger/10',
+    className: 'bg-[var(--stage-lost)]',
   },
 };
 
@@ -76,7 +76,7 @@ function getStageConfig(stage: string) {
       label:
         stage.charAt(0).toUpperCase() +
         stage.slice(1),
-      className: 'bg-brand-soft',
+      className: 'bg-[var(--stage-new)]',
     }
   );
 }
@@ -123,11 +123,11 @@ export function BestSellersNew({
   );
 
   return (
-    <section className="card-surface p-5">
+    <section className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="text-[15px] font-bold text-foreground">
+          <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
             Deals by Stage
           </h3>
 
@@ -147,28 +147,28 @@ export function BestSellersNew({
 
       {/* Summary */}
       <div className="mt-5 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border border-border/70 bg-background p-4">
+        <div className="rounded-xl border border-border bg-secondary/20 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Total Deals
           </p>
 
-          <p className="mt-2 text-2xl font-extrabold tracking-tight">
+          <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
             {totalDeals}
           </p>
         </div>
 
-        <div className="rounded-xl border border-border/70 bg-background p-4">
+        <div className="rounded-xl border border-border bg-secondary/20 p-4">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             Won Deals
           </p>
 
           <div className="mt-2 flex items-center gap-2">
-            <p className="text-2xl font-extrabold tracking-tight">
+            <p className="mt-2 text-2xl font-bold tracking-tight text-foreground">
               {wonDeals}
             </p>
 
             {wonDeals > 0 ? (
-              <MoveUpRight className="size-4 text-brand" />
+              <MoveUpRight className="size-4 text-status-success-text" />
             ) : (
               <MoveDownRight className="size-4 text-muted-foreground" />
             )}
@@ -293,7 +293,7 @@ export function BestSellersNew({
             </p>
           </div>
 
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-brand">
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-accent-color">
             <TrendingUp className="size-3.5" />
             Live data
           </div>

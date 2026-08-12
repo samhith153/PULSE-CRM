@@ -1,39 +1,33 @@
 'use client';
 
-import { ArrowUpRight, MoveUpRight, MoveDownRight } from 'lucide-react';
+import { MoveUpRight, MoveDownRight } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useCountUp, useReveal } from '@/hooks/use-reveal';
 
-function Delta({ value, negative }: { value: string; negative?: boolean }) {
-  const Icon = negative ? MoveDownRight : MoveUpRight;
+function Delta({ value, variant = 'default' }: { value: string; variant?: 'default' | 'highlight' }) {
+  const isNegative = value.startsWith('-');
+  const Icon = isNegative ? MoveDownRight : MoveUpRight;
+
+  if (variant === 'highlight') {
+    return (
+      <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-foreground/20 text-primary-foreground border border-primary-foreground/10">
+        <Icon className="size-3 shrink-0" strokeWidth={2.5} />
+        <span>{value}</span>
+      </span>
+    );
+  }
+
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold',
-        negative ? 'bg-status-danger/10 text-rose-foreground' : 'bg-mint text-mint-foreground',
+        'inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border',
+        isNegative 
+          ? 'bg-status-danger-bg text-status-danger-text border-status-danger-text/20' 
+          : 'bg-status-success-bg text-status-success-text border-status-success-text/20'
       )}
     >
-      <Icon className="size-3" />
-      {value}
-    </span>
-  );
-}
-
-function NotchBadge({ filled, inView }: { filled: boolean; inView: boolean }) {
-  return (
-    <span className="pointer-events-none absolute right-5 top-5 z-[2] translate-x-1/2 -translate-y-1/2">
-      <span
-        className={cn(
-          'reveal-badge grid size-10 place-items-center rounded-full',
-          inView && 'is-in',
-          filled
-            ? 'bg-surface-1 text-brand ring-1 ring-brand-soft/70'
-            : 'bg-surface-1 text-text-primary ring-1 ring-border',
-        )}
-        style={{ transitionDelay: inView ? '150ms' : '0ms' }}
-      >
-        <ArrowUpRight className="badge-arrow size-[18px]" strokeWidth={2.4} />
-      </span>
+      <Icon className="size-3 shrink-0" strokeWidth={2.5} />
+      <span>{value}</span>
     </span>
   );
 }
@@ -41,26 +35,22 @@ function NotchBadge({ filled, inView }: { filled: boolean; inView: boolean }) {
 type StatCardProps = {
   index: number;
   className?: string;
-  filledBadge?: boolean;
   children: (inView: boolean) => React.ReactNode;
 };
 
-function StatCard({ index, className, filledBadge, children }: StatCardProps) {
+function StatCard({ index, className, children }: StatCardProps) {
   const { ref, inView } = useReveal<HTMLDivElement>();
   return (
     <div
       ref={ref}
-      className="stat-shell relative h-full"
+      className={cn(
+        'reveal bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)] shadow-sm relative h-full',
+        inView && 'is-in',
+        className
+      )}
       style={{ transitionDelay: `${index * 90}ms` }}
     >
-      <div
-        className={cn('stat-card reveal h-full p-5 pt-8', inView && 'is-in', className)}
-        style={{ transitionDelay: `${index * 90}ms` }}
-      >
-        {children(inView)}
-      </div>
-
-      <NotchBadge filled={!!filledBadge} inView={inView} />
+      {children(inView)}
     </div>
   );
 }
@@ -125,15 +115,14 @@ export default function StatCardsNew({
       {/* Total Revenue — highlighted */}
       <StatCard
         index={0}
-        filledBadge
-        className="overflow-hidden bg-brand text-surface-0"
+        className="overflow-hidden bg-primary text-primary-foreground"
       >
         {(inView) => (
           <>
             <span className="shimmer" />
             <span className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10" />
             <span className="pointer-events-none absolute -bottom-24 -left-8 size-56 rounded-full bg-white/5" />
-            <p className="relative text-[15px] font-semibold text-surface-0/90">
+            <p className="relative text-[11px] font-bold uppercase tracking-wider text-primary-foreground/90">
               Total Revenue
             </p>
             <div className="relative mt-8 flex items-center gap-2">
@@ -141,18 +130,11 @@ export default function StatCardsNew({
                 value={revenue}
                 active={inView}
                 format={(n) => currency(n, 2)}
-                className="text-[26px] font-extrabold tracking-tight tabular-nums"
+                className="text-[26px] font-extrabold tracking-tight tabular-nums text-primary-foreground"
               />
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-1 text-[11px] font-semibold">
-                {revenueGrowth >= 0 ? (
-                  <MoveUpRight className="size-3" />
-                ) : (
-                  <MoveDownRight className="size-3" />
-                )}
-                {formatDelta(revenue, revenue - revenueGrowth)}
-              </span>
+              <Delta value={formatDelta(revenue, revenue - revenueGrowth)} variant="highlight" />
             </div>
-            <p className="relative mt-3 text-xs text-surface-0/75">
+            <p className="relative mt-3 text-xs text-primary-foreground/75">
               vs last month {currency(revenue - revenueGrowth, 2)}
             </p>
           </>
@@ -160,20 +142,20 @@ export default function StatCardsNew({
       </StatCard>
 
       {/* Won Deals */}
-      <StatCard index={1} className="card-surface">
+      <StatCard index={1}>
         {(inView) => (
           <>
-            <p className="text-[15px] font-semibold">Won Deals</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Won Deals</p>
             <div className="mt-8 flex items-center gap-2">
               <CountUp
                 value={wonDeals}
                 active={inView}
                 format={(n) => `${Math.round(n)}`}
-                className="text-[26px] font-extrabold tracking-tight tabular-nums"
+                className="text-[26px] font-extrabold tracking-tight tabular-nums text-foreground"
               />
               <Delta value={wonDealsDelta} />
             </div>
-            <p className="mt-3 text-xs text-text-muted">
+            <p className="mt-3 text-xs text-muted-foreground">
               vs last month {Math.max(0, wonDeals - Math.round(dealsGrowth))} deals
             </p>
           </>
@@ -181,20 +163,20 @@ export default function StatCardsNew({
       </StatCard>
 
       {/* Win Rate */}
-      <StatCard index={2} className="card-surface">
+      <StatCard index={2}>
         {(inView) => (
           <>
-            <p className="text-[15px] font-semibold">Win Rate</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Win Rate</p>
             <div className="mt-8 flex items-center gap-2">
               <CountUp
                 value={winRate}
                 active={inView}
                 format={(n) => `${n.toFixed(1)}%`}
-                className="text-[26px] font-extrabold tracking-tight tabular-nums"
+                className="text-[26px] font-extrabold tracking-tight tabular-nums text-foreground"
               />
               <Delta value={winRateDelta} />
             </div>
-            <p className="mt-3 text-xs text-text-muted">
+            <p className="mt-3 text-xs text-muted-foreground">
               vs last month {(winRate - winRateGrowth).toFixed(1)}%
             </p>
           </>
@@ -202,16 +184,16 @@ export default function StatCardsNew({
       </StatCard>
 
       {/* Average Deal Size */}
-      <StatCard index={3} className="card-surface overflow-hidden">
+      <StatCard index={3} className="overflow-hidden">
         {(inView) => (
           <>
-            <p className="text-[15px] font-semibold">Avg Deal Size</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Avg Deal Size</p>
             <div className="mt-8 flex items-center gap-2">
               <CountUp
                 value={avgDealSize}
                 active={inView}
                 format={(n) => currency(n, 0)}
-                className="text-[26px] font-extrabold tracking-tight tabular-nums text-brand"
+                className="text-[26px] font-extrabold tracking-tight tabular-nums text-primary"
               />
               <Delta value={avgDealDelta} />
             </div>
@@ -224,8 +206,8 @@ export default function StatCardsNew({
               >
                 <defs>
                   <linearGradient id="marginFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.3" />
-                    <stop offset="100%" stopColor="var(--lime)" stopOpacity="0.14" />
+                    <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.3" />
+                    <stop offset="100%" stopColor="var(--status-success-strong)" stopOpacity="0.14" />
                   </linearGradient>
                 </defs>
                 <path
@@ -236,7 +218,7 @@ export default function StatCardsNew({
                 <path
                   d="M0 62 C 14 58 22 40 34 42 C 46 44 52 62 64 60 C 76 58 82 30 96 34 C 110 38 114 56 128 52 C 142 48 148 22 162 26 C 176 30 180 50 194 46 C 208 42 214 18 228 22 C 242 26 248 44 262 40 C 276 36 282 14 296 16 C 306 17 312 24 320 20"
                   fill="none"
-                  stroke="var(--brand-deep)"
+                  stroke="var(--primary)"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   vectorEffect="non-scaling-stroke"

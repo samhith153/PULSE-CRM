@@ -1,4 +1,4 @@
-﻿"""
+"""
 Dashboard analytics service.
 """
 from __future__ import annotations
@@ -930,7 +930,80 @@ class DashboardService:
             .where(User.organization_id == organization_id, User.is_active.is_(True), User.is_deleted.is_(False))
             .group_by(Role.name)
         )
-        audit_stmt = (
+        role_distribution = [
+            AdminRoleDistributionItem(role=str(role).upper(), count=int(count or 0))
+            for role, count in (await self.db.execute(role_distribution_stmt)).all()
+        ]
+
+        org_row = (await self.db.execute(select(Organization).where(Organization.id == organization_id))).scalar_one_or_none()
+        seat_limit = org_row.max_users if org_row else None
+        no_storage_source = "No persisted organization storage usage/limit source exists."
+        license_usage = AdminLicenseUsage(
+            storage_used=None,
+            storage_used_state=AdminMetricAvailability(value=None, available=False, reason=no_storage_source),
+            storage_limit=None,
+            storage_limit_state=AdminMetricAvailability(value=None, available=False, reason=no_storage_source),
+            active_seats=active_users,
+            seat_limit=seat_limit,
+            usage_percentage=self._percentage(active_users, seat_limit) if seat_limit else None,
+        )
+        user_management = AdminUserManagement(
+            active_seats=active_users,
+            invites_pending=None,
+            invites_pending_state=AdminMetricAvailability(value=None, available=False, reason="No persisted invitation table/model exists."),
+            role_distribution=role_distribution,
+        )
+
+        # Duplicate detection — phone subqueries use a labeled derived table so that
+        # PostgreSQL GROUP BY can reference the expression by name, avoiding the
+        # "column must appear in GROUP BY" error caused by coalesce() vs raw column mismatch.
+        phone_norm_contact = func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")
+        phone_norm_lead = func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")
+
+        contact_phone_sub = (
+            select(Contact.organization_id, phone_norm_contact.label("phone_norm"))
+            .where(*_base(Contact), Contact.phone.is_not(None), phone_norm_contact != "")
+            .group_by(Contact.organization_id, phone_norm_contact)
+            .having(func.count(Contact.id) > 1)
+            .subquery()
+        )
+        lead_phone_sub = (
+            select(Lead.organization_id, phone_norm_lead.label("phone_norm"))
+            .where(*_base(Lead), Lead.phone.is_not(None), phone_norm_lead != "")
+            .group_by(Lead.organization_id, phone_norm_lead)
+            .having(func.count(Lead.id) > 1)
+            .subquery()
+        )
+        duplicate_queries = [
+            select(func.count()).select_from(select(Contact.organization_id, func.lower(func.trim(Contact.email))).where(*_base(Contact), Contact.email.is_not(None), func.trim(Contact.email) != "").group_by(Contact.organization_id, func.lower(func.trim(Contact.email))).having(func.count(Contact.id) > 1).subquery()),
+            select(func.count()).select_from(contact_phone_sub),
+            select(func.count()).select_from(select(Lead.organization_id, func.lower(func.trim(Lead.email))).where(*_base(Lead), Lead.email.is_not(None), func.trim(Lead.email) != "").group_by(Lead.organization_id, func.lower(func.trim(Lead.email))).having(func.count(Lead.id) > 1).subquery()),
+            select(func.count()).select_from(lead_phone_sub),
+            select(func.count()).select_from(select(Company.organization_id, func.lower(func.trim(Company.name))).where(*_base(Company)).group_by(Company.organization_id, func.lower(func.trim(Company.name))).having(func.count(Company.id) > 1).subquery()),
+        ]
+        duplicates_detected = 0
+        for query in duplicate_queries:
+            duplicates_detected += int((await self.db.execute(query)).scalar_one() or 0)
+        incomplete_fields = int((await self.db.execute(select(func.count(Lead.id)).where(*_base(Lead), or_(Lead.title.is_(None), Lead.title == "", Lead.email.is_(None), Lead.email == "")))).scalar_one() or 0)
+        orphaned_leads_stmt = (
+            select(func.count(Lead.id))
+            .select_from(Lead)
+            .outerjoin(User, User.id == Lead.owner_id)
+            .outerjoin(Company, Company.id == Lead.company_id)
+            .where(
+                Lead.organization_id == organization_id,
+                Lead.is_active.is_(True),
+                Lead.is_deleted.is_(False),
+                or_((Lead.owner_id.is_not(None)) & (User.id.is_(None)), (Lead.company_id.is_not(None)) & (Company.id.is_(None))),
+            )
+        )
+        data_quality = AdminDataQuality(
+            duplicates_detected=duplicates_detected,
+            incomplete_fields=incomplete_fields,
+            orphaned_leads=int((await self.db.execute(orphaned_leads_stmt)).scalar_one() or 0),
+        )
+
+        audit_rows = (await self.db.execute(
             select(ActivityTimeline, User.full_name)
             .outerjoin(User, User.id == ActivityTimeline.created_by)
             .where(ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True))

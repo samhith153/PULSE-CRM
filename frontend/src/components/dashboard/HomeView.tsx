@@ -40,6 +40,7 @@ import {
 } from '@dnd-kit/sortable';
 
 import { getLeads, getDeals, getActivities, formatINR } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import QuotaPaceCard from './QuotaPaceCard';
 import DealsAtRiskCard from './DealsAtRiskCard';
 import PriorityQueueCard from './PriorityQueueCard';
@@ -549,14 +550,20 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
   }, [dashboardData, riskDealsCalculated]);
 
   const handleToggleTask = (id: number) => {
+    let nextStatus = 'Pending';
     const updated = tasks.map(t => {
       if (t.id === id) {
-        const nextStatus = t.status === 'Completed' ? 'Pending' : 'Completed';
+        nextStatus = t.status === 'Completed' ? 'Pending' : 'Completed';
         return { ...t, status: nextStatus as any };
       }
       return t;
     });
     saveTasks(updated);
+    if (nextStatus === 'Completed') {
+      toast.success("Task marked as completed!");
+    } else {
+      toast.info("Task status updated to pending.");
+    }
   };
 
   return (
@@ -696,8 +703,8 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                         icon: AlertCircle,
                         highlight: false,
                         emptyLabel: 'All deals touched',
-                        iconColor: 'text-status-warning',
-                        iconBg: 'bg-status-warning/10 dark:bg-status-warning/10',
+                        iconColor: 'text-status-warning-text',
+                        iconBg: 'bg-status-warning-bg',
                       },
                       {
                         title: 'My Calls Today',
@@ -706,8 +713,8 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                         icon: PhoneCall,
                         highlight: false,
                         emptyLabel: 'No calls logged',
-                        iconColor: 'text-status-success',
-                        iconBg: 'bg-status-success/10 dark:bg-status-success/10',
+                        iconColor: 'text-status-success-text',
+                        iconBg: 'bg-status-success-bg',
                       },
                       {
                         title: 'My Leads',
@@ -716,15 +723,15 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                         icon: Users,
                         highlight: false,
                         emptyLabel: 'No leads assigned',
-                        iconColor: 'text-brand',
-                        iconBg: 'bg-brand-pale',
+                        iconColor: 'text-accent-color',
+                        iconBg: 'bg-accent-muted',
                       },
                     ].map((card, i) => {
                       const Icon = card.icon;
                       return (
                         <div
                           key={i}
-                          className={`relative rounded-2xl p-5 flex flex-col gap-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${
+                          className={`relative rounded-[20px] p-6 flex flex-col gap-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${
                             card.highlight
                               ? 'bg-brand text-white shadow-[0_8px_24px_-8px_var(--brand)]'
                               : 'bg-surface-1 border border-border-default text-text-primary shadow-sm hover:shadow-md'
@@ -736,13 +743,13 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                           )}
 
                           {/* top row: label + icon */}
-                          <div className="flex items-start justify-between gap-3">
-                            <p className={`text-[10px] font-bold uppercase tracking-widest leading-none ${
-                              card.highlight ? 'text-white/75' : 'text-text-muted'
+                          <div className="flex items-center justify-between gap-3">
+                            <p className={`text-[11px] font-semibold uppercase tracking-[0.06em] leading-none ${
+                              card.highlight ? 'text-white/80' : 'text-text-secondary'
                             }`}>
                               {card.title}
                             </p>
-                            <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${card.iconBg}`}>
+                            <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${card.iconBg}`}>
                               <Icon size={16} strokeWidth={2} className={card.iconColor} />
                             </span>
                           </div>
@@ -752,22 +759,22 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                             {statsLoading ? (
                               <div className={`h-8 w-16 rounded-lg animate-pulse ${card.highlight ? 'bg-white/20' : 'bg-surface-2'}`} />
                             ) : card.value === null || card.value === 0 ? (
-                              <span className={`inline-block text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${
+                              <span className={`inline-block text-[11px] font-bold px-2.5 py-1 rounded-lg border ${
                                 card.highlight
-                                  ? 'bg-white/15 border-white/25 text-white/80'
-                                  : 'bg-surface-2 border-border-default text-text-muted'
+                                  ? 'bg-white/15 border-white/25 text-white/90'
+                                  : 'bg-surface-2 border-border-default text-text-secondary'
                               }`}>
                                 {card.emptyLabel}
                               </span>
                             ) : (
                               <div>
-                                <h3 className={`text-3xl font-extrabold tracking-tight tabular-nums leading-none ${
+                                <h3 className={`text-2xl sm:text-[30px] font-bold tracking-tight tabular-nums leading-none ${
                                   card.highlight ? 'text-white' : 'text-text-primary'
                                 }`}>
                                   {card.value}
                                 </h3>
-                                <p className={`mt-1.5 text-xs leading-snug ${
-                                  card.highlight ? 'text-white/65' : 'text-text-muted'
+                                <p className={`mt-2 text-[11px] leading-none font-semibold ${
+                                  card.highlight ? 'text-white/70' : 'text-text-secondary'
                                 }`}>
                                   {card.sub}
                                 </p>
@@ -838,15 +845,33 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
 
                         {/* Scrollable Container */}
                         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1.5">
-                          {sortedTasks.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full py-20 text-center select-none">
+                          {tasksLoading ? (
+                            <div className="space-y-2.5 py-2">
+                              {Array.from({ length: 4 }).map((_, idx) => (
+                                <div key={idx} className="flex items-center justify-between py-2 px-3 border border-border-default/40 rounded-xl animate-pulse">
+                                  <div className="flex items-center gap-3 w-[60%]">
+                                    <div className="h-3.5 w-3.5 rounded-full bg-surface-2 shrink-0" />
+                                    <div className="h-3 w-full rounded bg-surface-2" />
+                                  </div>
+                                  <div className="h-3 w-12 rounded bg-surface-2" />
+                                </div>
+                              ))}
+                            </div>
+                          ) : sortedTasks.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-full py-16 text-center select-none">
                               <div className="h-12 w-12 rounded-full bg-accent-color/10 flex items-center justify-center mb-3">
                                 <CheckCircle2 className="size-6 text-accent-color" />
                               </div>
                               <p className="text-xs font-bold text-text-primary">All Caught Up!</p>
-                              <p className="text-[11px] text-text-muted max-w-[200px] mt-1">
+                              <p className="text-[11px] text-text-secondary max-w-[200px] mt-1">
                                 No open tasks found. You have completed all manual follow-ups.
                               </p>
+                              <button
+                                onClick={initializeDefaultTasks}
+                                className="mt-3 inline-flex items-center justify-center px-3 py-1.5 border border-border-default hover:bg-surface-2 rounded-xl text-[11px] font-bold text-text-primary transition active:scale-95 cursor-pointer"
+                              >
+                                Restore Demo Tasks
+                              </button>
                             </div>
                           ) : (
                             <table className="w-full text-left border-collapse table-fixed">
@@ -975,14 +1000,20 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                         {/* Scrollable Container */}
                         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1.5">
                           {sortedMeetings.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center h-full py-20 text-center select-none">
+                            <div className="flex flex-col items-center justify-center h-full py-16 text-center select-none">
                               <div className="h-12 w-12 rounded-full bg-accent-color/10 flex items-center justify-center mb-3">
                                 <Calendar className="size-6 text-accent-color" />
                               </div>
                               <p className="text-xs font-bold text-text-primary">No Meetings Scheduled</p>
-                              <p className="text-[11px] text-text-muted max-w-[200px] mt-1">
+                              <p className="text-[11px] text-text-secondary max-w-[200px] mt-1">
                                 Your agenda is empty today. Schedule meetings to stay connected.
                               </p>
+                              <button
+                                onClick={() => onTabChange('calendar')}
+                                className="mt-3 inline-flex items-center justify-center px-3 py-1.5 border border-border-default hover:bg-surface-2 rounded-xl text-[11px] font-bold text-text-primary transition active:scale-95 cursor-pointer"
+                              >
+                                Schedule Meeting
+                              </button>
                             </div>
                           ) : (
                             <table className="w-full text-left border-collapse table-fixed">

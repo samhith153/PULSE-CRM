@@ -172,7 +172,7 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
           <div className="h-8 w-8 rounded-[12px] bg-accent-muted text-accent-color border border-accent-color/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
             <stat.icon size={16} strokeWidth={2} />
           </div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted leading-none">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-secondary leading-none">
             {stat.title}
           </p>
         </div>
@@ -203,7 +203,7 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
         <div className="flex-1">
           <Spark points={stat.points} positive={stat.isPositive} />
         </div>
-        <span className="text-[9px] font-semibold text-text-muted shrink-0">vs last week</span>
+        <span className="text-[9px] font-semibold text-text-secondary shrink-0">vs last week</span>
       </div>
     </motion.div>
   );

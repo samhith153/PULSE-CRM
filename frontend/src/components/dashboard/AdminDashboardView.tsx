@@ -33,9 +33,10 @@ import {
 } from '@/utils/api';
 import { useReveal, useCountUp } from '@/hooks/use-reveal';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/utils/cn';
 
-/* ΓöÇΓöÇ Sparkline (same Area-chart pattern as StatCards) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
-function Spark({ values, positive }: { values: number[]; positive: boolean }) {
+/* ── Sparkline (same Area-chart pattern as StatCards) ─────────────────── */
+function Spark({ values, positive, highlighted }: { values: number[]; positive: boolean; highlighted?: boolean }) {
   if (values.length < 2) return null;
   const max   = Math.max(...values, 1);
   const min   = Math.min(...values, 0);
@@ -59,14 +60,14 @@ function Spark({ values, positive }: { values: number[]; positive: boolean }) {
   }
 
   const areaPath = `${linePath} L ${coords[n-1].x.toFixed(1)} 40 L 0 40 Z`;
-  const strokeColor = positive ? 'var(--accent-color)' : 'var(--destructive)';
+  const strokeColor = highlighted ? '#FFFFFF' : (positive ? 'var(--accent-color)' : 'var(--destructive)');
 
   return (
     <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-8 w-full overflow-visible" aria-hidden>
       <motion.path 
         d={areaPath} 
         fill={strokeColor} 
-        fillOpacity="0.08" 
+        fillOpacity={highlighted ? "0.15" : "0.08"} 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -86,7 +87,7 @@ function Spark({ values, positive }: { values: number[]; positive: boolean }) {
 }
 
 
-/* ΓöÇΓöÇ KPI stat tile (spec ┬º4 pattern) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+/* ── KPI stat tile (spec §4 pattern) ─────────────────────────────────── */
 interface KpiTile {
   title: string;
   value: string;
@@ -99,10 +100,11 @@ interface KpiTile {
   suffix?: string;
 }
 
-function StatTile({ tile, delay = 0, isHero = false }: { tile: KpiTile; delay?: number; isHero?: boolean }) {
+function StatTile({ tile, index = 0, delay = 0, isHero = false }: { tile: KpiTile; index?: number; delay?: number; isHero?: boolean }) {
   const { ref, visible } = useReveal<HTMLDivElement>();
   const value = useCountUp(tile.targetValue, visible, 1000);
   const Delta = tile.isPositive ? ArrowUpRight : ArrowDownRight;
+  const isHighlighted = index === 0;
 
   const displayVal = tile.targetValue === 0 
     ? tile.value 
@@ -148,28 +150,70 @@ function StatTile({ tile, delay = 0, isHero = false }: { tile: KpiTile; delay?: 
       ref={ref}
       initial={{ opacity: 0, y: 15 }}
       animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
-      whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
+      whileHover={{ y: -4 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className="flex flex-col gap-[var(--space-2)] rounded-2xl border border-border-default bg-surface-1 p-[var(--space-4)] shadow-card transition-colors duration-200 cursor-pointer"
+      className={cn(
+        "relative flex flex-col gap-[var(--space-2)] rounded-2xl border p-[var(--space-4)] shadow-sm cursor-pointer transition-all duration-200",
+        isHighlighted 
+          ? "overflow-hidden bg-accent-color" 
+          : "bg-card border-border text-foreground hover:bg-surface-hover"
+      )}
     >
-      <div className="flex items-center justify-between">
-        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-color">
+      {isHighlighted && (
+        <>
+          <span className="shimmer" />
+          <span className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10" />
+          <span className="pointer-events-none absolute -bottom-24 -left-8 size-56 rounded-full bg-white/5" />
+        </>
+      )}
+
+      <div className="relative flex items-center justify-between">
+        <div className={cn(
+          "grid size-9 shrink-0 place-items-center rounded-xl",
+          isHighlighted ? "bg-white/10 text-white" : "bg-secondary text-accent-color"
+        )}>
           <tile.icon size={16} strokeWidth={2} />
         </div>
-        <p className={`flex items-center gap-1 text-[11px] font-bold ${tile.isPositive ? 'text-accent-color' : 'text-destructive'}`}>
-          <Delta size={12} strokeWidth={2.5} className="shrink-0" />
-          <span>{tile.change}</span>
-        </p>
+        
+        {isHighlighted ? (
+          <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/20 text-white border border-white/10">
+            <Delta size={12} strokeWidth={2.5} className="shrink-0" />
+            <span>{tile.change}</span>
+          </span>
+        ) : (
+          <p className={cn(
+            "flex items-center gap-1 text-[11px] font-bold",
+            tile.isPositive ? "text-accent-color" : "text-destructive"
+          )}>
+            <Delta size={12} strokeWidth={2.5} className="shrink-0" />
+            <span>{tile.change}</span>
+          </p>
+        )}
       </div>
-      <p className="text-[10px] font-semibold uppercase tracking-widest text-text-muted leading-none">
+
+      <p className={cn(
+        "relative text-[10px] font-semibold uppercase tracking-widest leading-none",
+        isHighlighted ? "text-white/90" : "text-muted-foreground"
+      )}>
         {tile.title}
       </p>
-      <p className="text-2xl font-semibold text-text-primary tabular-nums leading-none">
+
+      <p className={cn(
+        "relative text-2xl font-bold tracking-tight tabular-nums leading-none",
+        isHighlighted ? "text-white" : "text-foreground"
+      )}>
         {displayVal}
       </p>
-      <span className="text-[10px] text-text-muted/60 font-semibold mt-0.5">vs last month</span>
-      <div className="mt-2">
-        <Spark values={tile.values} positive={tile.isPositive} />
+
+      <span className={cn(
+        "relative text-[10px] font-semibold mt-0.5",
+        isHighlighted ? "text-white/70" : "text-muted-foreground/60"
+      )}>
+        vs last month
+      </span>
+
+      <div className="relative mt-2">
+        <Spark values={tile.values} positive={tile.isPositive} highlighted={isHighlighted} />
       </div>
     </motion.div>
   );
@@ -235,7 +279,7 @@ function RevenueChart({
             onClick={() => setActiveMetric(activeMetric === 'revenue' ? 'both' : 'revenue')}
             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
               activeMetric === 'leads'
-                ? 'opacity-40 bg-transparent border-border-default text-text-muted'
+                ? 'opacity-40 bg-transparent border-border text-muted-foreground'
                 : 'bg-accent-color/10 border-accent-color/30 text-accent-color shadow-sm'
             }`}
           >
@@ -247,7 +291,7 @@ function RevenueChart({
             onClick={() => setActiveMetric(activeMetric === 'leads' ? 'both' : 'leads')}
             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
               activeMetric === 'revenue'
-                ? 'opacity-40 bg-transparent border-border-default text-text-muted'
+                ? 'opacity-40 bg-transparent border-border text-muted-foreground'
                 : 'bg-status-success-bg border-status-success-text/30 text-status-success-text shadow-sm'
             }`}
           >
@@ -260,7 +304,7 @@ function RevenueChart({
           <motion.span
             initial={{ opacity: 0, x: 6 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-[11px] font-bold text-text-muted px-2 py-0.5 rounded-lg bg-surface-2 border border-border-default"
+            className="text-[11px] font-bold text-muted-foreground px-2 py-0.5 rounded-lg bg-secondary border border-border"
           >
             {new Date(`${monthly[hovered].month}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
           </motion.span>
@@ -628,10 +672,10 @@ export default function AdminDashboardView() {
 
       {/* Page title */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-text-primary md:text-[2.75rem]">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.75rem]">
           Admin overview
         </h1>
-        <p className="mt-1.5 text-sm text-text-muted leading-relaxed">
+        <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
           Organization health, revenue performance, lead funnel, and top performers.
         </p>
       </div>
@@ -639,24 +683,24 @@ export default function AdminDashboardView() {
       {/* KPI tiles */}
       <div className="grid gap-[var(--space-4)] sm:grid-cols-2 lg:grid-cols-4">
         {kpiTiles.map((tile, idx) => (
-          <StatTile key={tile.title} tile={tile} delay={idx * 75} isHero={idx === 0} />
+          <StatTile key={tile.title} tile={tile} index={idx} delay={idx * 75} />
         ))}
       </div>
 
       {/* Revenue chart + Lead Sources */}
       <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
         {/* Revenue over time */}
-        <div className="rounded-2xl border border-border-default bg-surface-1 p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
+        <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md transition duration-200">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold tracking-tight text-text-primary">
+              <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
                 Revenue &amp; leads over time
               </h2>
-              <p className="mt-0.5 text-sm text-text-muted truncate">
+              <p className="mt-0.5 text-sm text-muted-foreground truncate">
                 Closed-won revenue vs lead volume
               </p>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border-default bg-surface-0 px-3 py-1.5 text-xs text-text-muted">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs text-muted-foreground">
               This year <ChevronDown size={13} />
             </span>
           </div>
@@ -664,7 +708,7 @@ export default function AdminDashboardView() {
           <RevenueChart monthly={monthly} visible={chartVisible} />
 
           {/* Summary row */}
-          <div className="mt-5 grid grid-cols-2 gap-[var(--space-3)] border-t border-border-default pt-[var(--space-4)] sm:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-[var(--space-3)] border-t border-border pt-[var(--space-4)] sm:grid-cols-4">
             {[
               { label: 'Revenue (yr)',   value: formatINR(s.revenue.this_year) },
               { label: 'Converted leads', value: formatNum(s.leads.converted) },
@@ -672,27 +716,27 @@ export default function AdminDashboardView() {
               { label: 'Tasks pending',  value: formatNum(s.tasks.pending) },
             ].map((item) => (
               <div key={item.label} className="flex flex-col gap-0.5">
-                <span className="text-xs font-medium text-text-muted">{item.label}</span>
-                <span className="text-sm font-semibold text-text-primary tabular-nums">{item.value}</span>
+                <span className="text-xs font-medium text-muted-foreground">{item.label}</span>
+                <span className="text-sm font-semibold text-foreground tabular-nums">{item.value}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Lead sources donut */}
-        <div className="rounded-2xl border border-border-default bg-surface-1 p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
+        <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md transition duration-200">
           <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
-            <h2 className="truncate text-base font-semibold tracking-tight text-text-primary">
+            <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
               Lead sources
             </h2>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border-default bg-surface-0 px-3 py-1.5 text-xs text-text-muted">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs text-muted-foreground">
               All time <ChevronDown size={13} />
             </span>
           </div>
           {sourceData.length > 0 ? (
             <DonutChart data={sourceData} />
           ) : (
-            <p className="py-8 text-center text-sm text-text-muted">No lead source data yet.</p>
+            <p className="py-8 text-center text-sm text-muted-foreground">No lead source data yet.</p>
           )}
         </div>
       </div>
@@ -700,10 +744,10 @@ export default function AdminDashboardView() {
       {/* Admin Operations & Systems Command Center */}
       <div className="space-y-6 mt-8">
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-text-primary">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
             System Administration &amp; Control Center
           </h2>
-          <p className="mt-1.5 text-sm text-text-muted">
+          <p className="mt-1.5 text-sm text-muted-foreground">
             Monitor CRM health, data cleanliness, security events, seat licensing, and custom workflows.
           </p>
         </div>
@@ -711,11 +755,11 @@ export default function AdminDashboardView() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {/* Card 1: User & Role Management */}
           <motion.div
-            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-            className="flex flex-col gap-4 rounded-2xl border border-border-default bg-surface-1 p-6 shadow-card transition-all cursor-pointer"
+            whileHover={{ y: -4 }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-surface-2 text-accent-color">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-accent-color">
                 <UserCheck size={18} />
               </div>
               <span className="rounded-full bg-accent-color/10 px-2.5 py-0.5 text-[10px] font-semibold text-accent-color uppercase tracking-wider">
@@ -723,22 +767,22 @@ export default function AdminDashboardView() {
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">User &amp; Role Management</h3>
-              <p className="text-[11px] text-text-muted mt-0.5">Active seats and role mapping</p>
+              <h3 className="text-sm font-semibold text-foreground">User &amp; Role Management</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Active seats and role mapping</p>
             </div>
             
             <div className="space-y-3 mt-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-text-muted font-medium">Active Seats</span>
-                <span className="font-semibold text-text-primary tabular-nums">{s.users.active} / {s.users.total || 10}</span>
+                <span className="text-muted-foreground font-medium">Active Seats</span>
+                <span className="font-semibold text-foreground tabular-nums">{s.users.active} / {s.users.total || 10}</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-surface-2 overflow-hidden">
+              <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                 <div 
                   className="h-full rounded-full bg-accent-color transition-all duration-500"
                   style={{ width: `${Math.min(100, (s.users.active / (s.users.total || 10)) * 100)}%` }}
                 />
               </div>
-              <div className="border-t border-border-default/40 pt-3 flex justify-between items-center text-[10px] text-text-muted/80">
+              <div className="border-t border-border/40 pt-3 flex justify-between items-center text-[10px] text-muted-foreground/80">
                 <span>Invites Pending: <strong className="text-accent-color font-semibold">3</strong></span>
                 <span>Roles: Admin (1), Mgr (2), Rep (3)</span>
               </div>
@@ -747,11 +791,11 @@ export default function AdminDashboardView() {
 
           {/* Card 2: System Health */}
           <motion.div
-            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-            className="flex flex-col gap-4 rounded-2xl border border-border-default bg-surface-1 p-6 shadow-card transition-all cursor-pointer"
+            whileHover={{ y: -4 }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-surface-2 text-accent-color">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-accent-color">
                 <Activity size={18} />
               </div>
               <div className="flex items-center gap-1.5 rounded-full bg-accent-color/10 px-2.5 py-0.5 text-[10px] font-semibold text-accent-color uppercase tracking-wider">
@@ -763,25 +807,25 @@ export default function AdminDashboardView() {
               </div>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">System Health</h3>
-              <p className="text-[11px] text-text-muted mt-0.5">Uptime &amp; backend error logs</p>
+              <h3 className="text-sm font-semibold text-foreground">System Health</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Uptime &amp; backend error logs</p>
             </div>
             
             <div className="space-y-2.5 text-xs mt-1">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">API Gateway</span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">API Gateway</span>
                 <span className="font-semibold text-accent-color">Operational</span>
               </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">Async Workers</span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Async Workers</span>
                 <span className="font-semibold text-accent-color">100% Load OK</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-muted">Telephony API</span>
+                <span className="text-muted-foreground">Telephony API</span>
                 <span className="font-semibold text-status-warning-text">Degraded (110ms)</span>
               </div>
-              <div className="border-t border-border-default/40 mt-1.5 pt-3 flex items-center justify-between text-[10px] text-text-muted/80">
-                <span>Logs (24h): <strong className="text-text-primary">0 Critical</strong></span>
+              <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center justify-between text-[10px] text-muted-foreground/80">
+                <span>Logs (24h): <strong className="text-foreground">0 Critical</strong></span>
                 <span className="text-status-warning-text font-semibold">2 Warnings</span>
               </div>
             </div>
@@ -789,11 +833,11 @@ export default function AdminDashboardView() {
 
           {/* Card 3: Data Quality */}
           <motion.div
-            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-            className="flex flex-col gap-4 rounded-2xl border border-border-default bg-surface-1 p-6 shadow-card transition-all cursor-pointer"
+            whileHover={{ y: -4 }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-surface-2 text-status-success-text">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-success-text">
                 <Database size={18} />
               </div>
               <span className="rounded-full bg-status-success-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-success-text uppercase tracking-wider">
@@ -801,25 +845,25 @@ export default function AdminDashboardView() {
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">Data Quality</h3>
-              <p className="text-[11px] text-text-muted mt-0.5">Duplicate records &amp; missing fields</p>
+              <h3 className="text-sm font-semibold text-foreground">Data Quality</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Duplicate records &amp; missing fields</p>
             </div>
             
             <div className="space-y-2.5 text-xs mt-1">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">Duplicates Detected</span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Duplicates Detected</span>
                 <span className="font-semibold text-status-warning-text tabular-nums">14 contacts</span>
               </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">Incomplete Fields</span>
-                <span className="font-semibold text-text-primary tabular-nums">32 fields</span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Incomplete Fields</span>
+                <span className="font-semibold text-foreground tabular-nums">32 fields</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-muted">Orphaned Leads</span>
+                <span className="text-muted-foreground">Orphaned Leads</span>
                 <span className="font-semibold text-destructive tabular-nums">18 leads</span>
               </div>
-              <div className="border-t border-border-default/40 mt-1.5 pt-3 flex items-center justify-between text-[10px]">
-                <span className="text-text-muted">Check interval: <strong className="text-text-primary">Daily</strong></span>
+              <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center justify-between text-[10px]">
+                <span className="text-muted-foreground">Check interval: <strong className="text-foreground">Daily</strong></span>
                 <span className="text-accent-color hover:underline font-semibold flex items-center gap-0.5">Deduplicate &rarr;</span>
               </div>
             </div>
@@ -827,11 +871,11 @@ export default function AdminDashboardView() {
 
           {/* Card 4: License & Seat Usage */}
           <motion.div
-            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-            className="flex flex-col gap-4 rounded-2xl border border-border-default bg-surface-1 p-6 shadow-card transition-all cursor-pointer"
+            whileHover={{ y: -4 }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-surface-2 text-status-warning-text">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-warning-text">
                 <CreditCard size={18} />
               </div>
               <span className="rounded-full bg-status-warning-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-warning-text uppercase tracking-wider">
@@ -839,23 +883,23 @@ export default function AdminDashboardView() {
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">License &amp; Seat Usage</h3>
-              <p className="text-[11px] text-text-muted mt-0.5">Seat purchases and storage limits</p>
+              <h3 className="text-sm font-semibold text-foreground">License &amp; Seat Usage</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Seat purchases and storage limits</p>
             </div>
             
             <div className="space-y-3 mt-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-text-muted font-medium">Storage Used</span>
-                <span className="font-semibold text-text-primary tabular-nums">4.2 GB / 10 GB</span>
+                <span className="text-muted-foreground font-medium">Storage Used</span>
+                <span className="font-semibold text-foreground tabular-nums">4.2 GB / 10 GB</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-surface-2 overflow-hidden">
+              <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                 <div 
                   className="h-full rounded-full bg-status-warning-text"
                   style={{ width: '42%' }}
                 />
               </div>
-              <div className="border-t border-border-default/40 pt-3 flex justify-between items-center text-[10px] text-text-muted/80">
-                <span>Seats: <strong className="text-text-primary">{s.users.active} / {s.users.total || 10} used</strong></span>
+              <div className="border-t border-border/40 pt-3 flex justify-between items-center text-[10px] text-muted-foreground/80">
+                <span>Seats: <strong className="text-foreground">{s.users.active} / {s.users.total || 10} used</strong></span>
                 <span className="text-destructive font-semibold flex items-center gap-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping"></span>
                   Nearing Limit
@@ -866,11 +910,11 @@ export default function AdminDashboardView() {
 
           {/* Card 6: Audit Log (Wider grid span for clean layout) */}
           <motion.div
-            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-            className="flex flex-col gap-4 rounded-2xl border border-border-default bg-surface-1 p-6 shadow-card transition-all cursor-pointer sm:col-span-2 lg:col-span-2"
+            whileHover={{ y: -4 }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer sm:col-span-2 lg:col-span-2"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-surface-2 text-status-danger-text">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-danger-text">
                 <ShieldCheck size={18} />
               </div>
               <span className="rounded-full bg-status-danger-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-danger-text uppercase tracking-wider">
@@ -878,41 +922,41 @@ export default function AdminDashboardView() {
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">Audit Log</h3>
-              <p className="text-[11px] text-text-muted mt-0.5">Administrative actions and data compliance logs</p>
+              <h3 className="text-sm font-semibold text-foreground">Audit Log</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Administrative actions and data compliance logs</p>
             </div>
             
             <div className="space-y-3 mt-1 text-xs">
-              <div className="flex items-center justify-between gap-4 border-b border-border-default/40 pb-2">
+              <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-2">
                 <div className="min-w-0 flex items-center gap-3">
                   <span className="font-semibold text-status-danger-text bg-status-danger-bg px-2 py-0.5 rounded text-[10px]">EXPORT</span>
-                  <p className="truncate text-text-primary font-medium"><strong className="text-text-primary">Admin</strong> exported 50 leads to CSV</p>
+                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">Admin</strong> exported 50 leads to CSV</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[10px] text-text-muted font-medium">20m ago</p>
-                  <p className="text-[9px] text-text-muted/60">IP: 192.168.1.45</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">20m ago</p>
+                  <p className="text-[9px] text-muted-foreground/60">IP: 192.168.1.45</p>
                 </div>
               </div>
               
-              <div className="flex items-center justify-between gap-4 border-b border-border-default/40 pb-2">
+              <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-2">
                 <div className="min-w-0 flex items-center gap-3">
                   <span className="font-semibold text-accent-color bg-accent-color/10 px-2 py-0.5 rounded text-[10px]">ROLE_UPD</span>
-                  <p className="truncate text-text-primary font-medium"><strong className="text-text-primary">Sarah.J</strong> updated role of Mike.C to Manager</p>
+                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">Sarah.J</strong> updated role of Mike.C to Manager</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[10px] text-text-muted font-medium">2h ago</p>
-                  <p className="text-[9px] text-text-muted/60">Console Admin</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">2h ago</p>
+                  <p className="text-[9px] text-muted-foreground/60">Console Admin</p>
                 </div>
               </div>
               
               <div className="flex items-center justify-between gap-4">
                 <div className="min-w-0 flex items-center gap-3">
                   <span className="font-semibold text-status-warning-text bg-status-warning-bg px-2 py-0.5 rounded text-[10px]">BULK_DEL</span>
-                  <p className="truncate text-text-primary font-medium"><strong className="text-text-primary">System</strong> bulk-deleted 18 dead leads</p>
+                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">System</strong> bulk-deleted 18 dead leads</p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[10px] text-text-muted font-medium">5h ago</p>
-                  <p className="text-[9px] text-text-muted/60">Clean sweep job</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">5h ago</p>
+                  <p className="text-[9px] text-muted-foreground/60">Clean sweep job</p>
                 </div>
               </div>
             </div>
@@ -920,11 +964,11 @@ export default function AdminDashboardView() {
 
           {/* Card 5: Integration Status */}
           <motion.div
-            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-            className="flex flex-col gap-4 rounded-2xl border border-border-default bg-surface-1 p-6 shadow-card transition-all cursor-pointer"
+            whileHover={{ y: -4 }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-surface-2 text-status-info-text">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-info-text">
                 <Plug size={18} />
               </div>
               <span className="rounded-full bg-status-info-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-info-text uppercase tracking-wider">
@@ -932,33 +976,33 @@ export default function AdminDashboardView() {
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">Integration Status</h3>
-              <p className="text-[11px] text-text-muted mt-0.5">Third-party connections &amp; syncs</p>
+              <h3 className="text-sm font-semibold text-foreground">Integration Status</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Third-party connections &amp; syncs</p>
             </div>
             
             <div className="space-y-2.5 text-xs mt-1">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">Email Sync</span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Email Sync</span>
                 <span className="font-medium text-accent-color flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-accent-color"></span>
                   Active (3m ago)
                 </span>
               </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">WhatsApp Business</span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">WhatsApp Business</span>
                 <span className="font-medium text-accent-color flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-accent-color"></span>
                   Synced (12m ago)
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-muted">HubSpot Sync</span>
+                <span className="text-muted-foreground">HubSpot Sync</span>
                 <span className="font-semibold text-destructive flex items-center gap-1.5">
                   <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse"></span>
                   Failed (Auth)
                 </span>
               </div>
-              <div className="border-t border-border-default/40 mt-1.5 pt-3 text-[10px] text-destructive/80 font-medium">
+              <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-destructive/80 font-medium">
                 Action: Reconnect HubSpot Integration
               </div>
             </div>
@@ -966,11 +1010,11 @@ export default function AdminDashboardView() {
 
           {/* Card 7: Custom Field & Workflow Usage */}
           <motion.div
-            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-            className="flex flex-col gap-4 rounded-2xl border border-border-default bg-surface-1 p-6 shadow-card transition-all cursor-pointer"
+            whileHover={{ y: -4 }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-surface-2 text-priority-high">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-priority-high">
                 <Zap size={18} />
               </div>
               <span className="rounded-full bg-priority-high-bg px-2.5 py-0.5 text-[10px] font-semibold text-priority-high uppercase tracking-wider">
@@ -978,24 +1022,24 @@ export default function AdminDashboardView() {
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">Custom Fields &amp; Workflows</h3>
-              <p className="text-[11px] text-text-muted mt-0.5">Automation and custom schema utility</p>
+              <h3 className="text-sm font-semibold text-foreground">Custom Fields &amp; Workflows</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Automation and custom schema utility</p>
             </div>
             
             <div className="space-y-2.5 text-xs mt-1">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">Custom Fields</span>
-                <span className="font-semibold text-text-primary">14 active <span className="text-text-muted/60 font-normal text-[10px] ml-1">(8 idle)</span></span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Custom Fields</span>
+                <span className="font-semibold text-foreground">14 active <span className="text-muted-foreground/60 font-normal text-[10px] ml-1">(8 idle)</span></span>
               </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">Automations</span>
-                <span className="font-semibold text-text-primary">6 active <span className="text-text-muted/60 font-normal text-[10px] ml-1">(2 idle)</span></span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Automations</span>
+                <span className="font-semibold text-foreground">6 active <span className="text-muted-foreground/60 font-normal text-[10px] ml-1">(2 idle)</span></span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-muted">Lead Scoring</span>
+                <span className="text-muted-foreground">Lead Scoring</span>
                 <span className="font-semibold text-accent-color">92% Utilized</span>
               </div>
-              <div className="border-t border-border-default/40 mt-1.5 pt-3 text-[10px] text-status-warning-text/90 font-medium">
+              <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-status-warning-text/90 font-medium">
                 Tip: Archive 8 unused fields to save system load.
               </div>
             </div>
@@ -1003,11 +1047,11 @@ export default function AdminDashboardView() {
 
           {/* Card 8: Security Alerts */}
           <motion.div
-            whileHover={{ y: -4, boxShadow: 'var(--shadow-card-hover)' }}
-            className="flex flex-col gap-4 rounded-2xl border border-border-default bg-surface-1 p-6 shadow-card transition-all cursor-pointer"
+            whileHover={{ y: -4 }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
-              <div className="grid size-9 place-items-center rounded-xl bg-surface-2 text-status-warning-text">
+              <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-warning-text">
                 <ShieldAlert size={18} />
               </div>
               <span className="rounded-full bg-status-success-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-success-text uppercase tracking-wider">
@@ -1015,24 +1059,24 @@ export default function AdminDashboardView() {
               </span>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">Security Alerts</h3>
-              <p className="text-[11px] text-text-muted mt-0.5">Threat detection &amp; credential tracking</p>
+              <h3 className="text-sm font-semibold text-foreground">Security Alerts</h3>
+              <p className="text-[11px] text-muted-foreground mt-0.5">Threat detection &amp; credential tracking</p>
             </div>
             
             <div className="space-y-2.5 text-xs mt-1">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">Failed Logins (24h)</span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">Failed Logins (24h)</span>
                 <span className="font-semibold text-status-success-text">0 attempts</span>
               </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border-default/40">
-                <span className="text-text-muted">API Key Usage</span>
-                <span className="font-semibold text-text-primary">2 active keys</span>
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                <span className="text-muted-foreground">API Key Usage</span>
+                <span className="font-semibold text-foreground">2 active keys</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-text-muted">Unusual Exports</span>
+                <span className="text-muted-foreground">Unusual Exports</span>
                 <span className="font-semibold text-status-success-text">None</span>
               </div>
-              <div className="border-t border-border-default/40 mt-1.5 pt-3 flex items-center gap-1.5 text-[10px] text-text-muted">
+              <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center gap-1.5 text-[10px] text-muted-foreground">
                 <span className="h-1.5 w-1.5 rounded-full bg-status-success-text animate-pulse"></span>
                 Threat monitoring online
               </div>
@@ -1042,9 +1086,9 @@ export default function AdminDashboardView() {
       </div>
 
       {/* Top companies table */}
-      <div className="rounded-2xl border border-border-default bg-surface-1 p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
+      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md transition duration-200">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-base font-semibold tracking-tight text-text-primary">Top companies</h2>
+          <h2 className="text-base font-semibold tracking-tight text-foreground">Top companies</h2>
           <span className="text-xs font-medium text-accent-color cursor-pointer hover:underline">
             View all &rarr;
           </span>
@@ -1053,9 +1097,9 @@ export default function AdminDashboardView() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-border-default">
+              <tr className="border-b border-border">
                 {['Company', 'Revenue', 'Leads', 'Contacts', ''].map((h) => (
-                  <th key={h} className="pb-[var(--space-2)] px-[var(--space-3)] text-[10px] font-semibold uppercase tracking-widest text-text-muted pr-4 last:pr-0">
+                  <th key={h} className="pb-[var(--space-2)] px-[var(--space-3)] text-[10px] font-semibold uppercase tracking-widest text-muted-foreground pr-4 last:pr-0">
                     {h}
                   </th>
                 ))}
@@ -1064,29 +1108,29 @@ export default function AdminDashboardView() {
             <tbody className="divide-y divide-border">
               {topCompanies.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-6 text-center text-sm text-text-muted">
+                  <td colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
                     No company data available yet.
                   </td>
                 </tr>
               )}
               {topCompanies.map((row, idx) => (
-                <tr key={row.company_id || idx} className="group transition-colors hover:bg-surface-2/50">
+                <tr key={row.company_id || idx} className="group transition-colors hover:bg-secondary/50">
                   <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4">
                     <div className="flex items-center gap-2.5">
-                      <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-surface-2 text-accent-color text-xs font-semibold">
+                      <div className="grid size-8 shrink-0 place-items-center rounded-xl bg-secondary text-accent-color text-xs font-semibold">
                         {row.name.charAt(0)}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-text-primary">{row.name}</p>
-                        <p className="text-[10px] text-text-muted">Top account</p>
+                        <p className="truncate text-sm font-medium text-foreground">{row.name}</p>
+                        <p className="text-[10px] text-muted-foreground">Top account</p>
                       </div>
                     </div>
                   </td>
-                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm font-semibold text-text-primary tabular-nums">{formatINR(row.revenue)}</td>
-                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm text-text-primary tabular-nums">{formatNum(row.lead_count)}</td>
-                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm text-text-primary tabular-nums">{formatNum(row.contact_count)}</td>
+                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm font-semibold text-foreground tabular-nums">{formatINR(row.revenue)}</td>
+                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm text-foreground tabular-nums">{formatNum(row.lead_count)}</td>
+                  <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm text-foreground tabular-nums">{formatNum(row.contact_count)}</td>
                   <td className="py-[var(--space-2)] px-[var(--space-3)] text-right">
-                    <button className="inline-flex size-7 items-center justify-center rounded-full bg-surface-2 text-text-muted hover:bg-accent-color hover:text-surface-0 transition-colors cursor-pointer">
+                    <button className="inline-flex size-7 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-accent-color hover:text-white transition-colors cursor-pointer">
                       <ArrowRight size={13} />
                     </button>
                   </td>

@@ -182,6 +182,8 @@
   --purple-700: #2F46E0;
   --purple-900: #1E3A8A;
   --accent-dim: var(--accent-muted);
+  --quota-card-bg: linear-gradient(135deg, rgba(59, 130, 246, 0.04) 0%, #FFFFFF 100%);
+  --quota-card-border: rgba(59, 130, 246, 0.15);
 }
 
 [data-theme="dark"],
@@ -333,6 +335,8 @@
   --purple-600: #60A5FA;
   --purple-700: #93BBFD;
   --purple-900: #DBEAFE;
+  --quota-card-bg: linear-gradient(135deg, rgba(96, 165, 250, 0.08) 0%, var(--surface-2) 100%);
+  --quota-card-border: rgba(96, 165, 250, 0.2);
 }
 
 @theme inline {
@@ -347,6 +351,7 @@
   --color-border-subtle:  var(--border-subtle);
   --color-border-default: var(--border-default);
   --color-border-strong:  var(--border-strong);
+  --color-quota-card-border: var(--quota-card-border);
 
   /* ── Text tokens ── */
   --color-text-primary:   var(--text-primary);
@@ -1872,6 +1877,10 @@ a:hover { color: var(--accent-hover); }
   }
 }
 
+@utility animate-shimmer-fast {
+  animation: shimmer-sweep 1.8s ease-in-out infinite;
+}
+
 /* ── Wire dot ── */
 @keyframes wire-run {
   0% { left: 0; opacity: 0; }
@@ -1961,4 +1970,15 @@ a:hover { color: var(--accent-hover); }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+@utility bg-quota-card-bg {
+  background: var(--quota-card-bg);
+}
+
+.overflow-hidden.rounded-xl:not(aside):not(aside *), .overflow-hidden.rounded-2xl:not(aside):not(aside *) {
+    background-color: var(--color-blue-600) !important;
+    box-shadow: var(--shadow-card) !important;
+    border: 1px solid var(--border-default) !important;
+    transition: box-shadow .22s cubic-bezier(.16, 1, .3, 1) !important;
 }

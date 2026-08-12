@@ -110,8 +110,11 @@ async def get_unread_count(current_user: CurrentUser, db: DBSession) -> dict:
 )
 async def get_email(email_id: UUID, current_user: CurrentUser, db: DBSession) -> dict:
     service = EmailService(db)
-    email = await service.get_by_id_response(current_user.organization_id, email_id)
-    return {"success": True, "message": "OK", "data": email}
+    db_email = await service.get_email(current_user.organization_id, email_id)
+    db_email.is_read = True
+    await db.commit()
+    email_response = EmailDetailResponse.model_validate(db_email)
+    return {"success": True, "message": "OK", "data": email_response}
 
 
 @router.patch(

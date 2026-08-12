@@ -93,20 +93,6 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     onInvalidate: refetchDashboard,
   });
 
-  const [isFabOpen, setIsFabOpen] = useState(false);
-  const fabRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (fabRef.current && !fabRef.current.contains(event.target as Node)) {
-        setIsFabOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-
   // Layout Customization States
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
   const { settings: layoutSettings, toggleSetting, resetLayout } = useDashboardLayout();
@@ -511,63 +497,6 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
         setActiveTab={setActiveTab}
         onNewReportClick={() => setIsReportModalOpen(true)}
       />
-
-      {/* Floating Quick Actions FAB */}
-      <div className="fixed bottom-6 right-22 z-50 flex flex-col items-end" ref={fabRef}>
-        <AnimatePresence>
-          {isFabOpen && (
-            <motion.div
-              initial={{ opacity: 0, y: 12, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 12, scale: 0.95 }}
-              transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className="mb-3 bg-popover border border-border-default shadow-float rounded-2xl p-2 w-48 flex flex-col gap-0.5"
-            >
-              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 py-1.5 border-b border-border-default/60 mb-1 select-none">Quick Actions</p>
-              
-              <button
-                onClick={() => { setIsFabOpen(false); setActiveTab('leads'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
-              >
-                <Plus size={14} className="text-accent-color" />
-                <span>New Lead</span>
-              </button>
-              
-              <button
-                onClick={() => { setIsFabOpen(false); setActiveTab('tasks'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
-              >
-                <Plus size={14} className="text-accent-color" />
-                <span>New Task</span>
-              </button>
-
-              <button
-                onClick={() => { setIsFabOpen(false); setActiveTab('calendar'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
-              >
-                <Plus size={14} className="text-status-success" />
-                <span>New Meeting</span>
-              </button>
-
-              <button
-                onClick={() => { setIsFabOpen(false); alert('New Invoice action triggered: Invoice layout will open shortly.'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
-              >
-                <Plus size={14} className="text-status-warning" />
-                <span>New Invoice</span>
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <button
-          onClick={() => setIsFabOpen(!isFabOpen)}
-          className="h-14 w-14 rounded-full bg-ink text-primary-foreground border border-border-default shadow-float flex items-center justify-center hover:scale-105 active:scale-95 transition duration-200 cursor-pointer group"
-          aria-label="Quick Actions"
-        >
-          <Plus size={24} className={`transition-transform duration-300 ${isFabOpen ? 'rotate-45' : ''}`} />
-        </button>
-      </div>
 
       <AICopilotChat />
 

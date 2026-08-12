@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import SkeletonLoader from './SkeletonLoader';
@@ -20,6 +20,99 @@ import {
   SlidersHorizontal,
   ChevronDown,
 } from 'lucide-react';
+
+function StageDropdown({ 
+  value, 
+  onChange, 
+  stages,
+  className = ""
+}: { 
+  value: string; 
+  onChange: (val: string) => void; 
+  stages: string[];
+  className?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!isOpen) {
+      if (e.key === 'ArrowDown' || e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setIsOpen(true);
+        setFocusedIndex(stages.indexOf(value));
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev + 1) % stages.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev - 1 + stages.length) % stages.length);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (focusedIndex >= 0 && focusedIndex < stages.length) {
+        onChange(stages[focusedIndex]);
+        setIsOpen(false);
+      }
+    } else if (e.key === 'Escape') {
+      setIsOpen(false);
+    }
+  };
+
+  return (
+    <div className={`relative inline-block text-left w-full ${className}`} ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        onKeyDown={handleKeyDown}
+        className="w-full flex items-center justify-between gap-1.5 px-2 py-1 border border-border-default rounded-md text-[10px] bg-surface-1 text-text-primary hover:bg-surface-hover transition-colors cursor-pointer outline-none focus:ring-1 focus:ring-accent-color/30"
+      >
+        <span className="truncate font-semibold">{value}</span>
+        <ChevronDown size={10} className={`text-text-secondary shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+      {isOpen && (
+        <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-surface-1 border border-border-default rounded-xl shadow-lg p-1 max-h-48 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
+          {stages.map((st, idx) => {
+            const isSelected = st === value;
+            const isFocused = idx === focusedIndex;
+            return (
+              <button
+                key={st}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onChange(st);
+                  setIsOpen(false);
+                }}
+                onMouseEnter={() => setFocusedIndex(idx)}
+                className={`w-full text-left px-2 py-1 rounded-lg text-[10px] font-semibold transition-colors block truncate cursor-pointer ${
+                  isSelected ? "bg-accent-color/10 text-accent-color font-bold" : 
+                  isFocused ? "bg-surface-2 text-text-primary" : "text-text-primary hover:bg-surface-2"
+                }`}
+              >
+                {st}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Deal {
   id: number | string;
@@ -122,6 +215,77 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearchIndex, setActiveSearchIndex] = useState(-1);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [ownerSearchQuery, setOwnerSearchQuery] = useState('');
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return deals.filter(d => 
+      d.title.toLowerCase().includes(q) || 
+      d.company.toLowerCase().includes(q) || 
+      (d.owner || '').toLowerCase().includes(q)
+    );
+  }, [deals, searchQuery]);
+
+  const highlightMatch = (text: string, query: string) => {
+    if (!query.trim()) return text;
+    const parts = text.split(new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi'));
+    return (
+      <>
+        {parts.map((part, i) => 
+          part.toLowerCase() === query.toLowerCase() ? (
+            <mark key={i} className="bg-accent-color/20 text-accent-color font-bold rounded-sm px-0.5">{part}</mark>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getAvatarBgColor = (name: string) => {
+    const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const colors = [
+      'bg-blue-500 text-white font-bold',
+      'bg-green-500 text-white font-bold',
+      'bg-yellow-500 text-slate-800 font-bold',
+      'bg-purple-500 text-white font-bold',
+      'bg-pink-500 text-white font-bold',
+      'bg-indigo-500 text-white font-bold',
+      'bg-teal-500 text-white font-bold',
+    ];
+    return colors[hash % colors.length];
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (!showSearchDropdown || searchResults.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveSearchIndex(prev => (prev + 1) % searchResults.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveSearchIndex(prev => (prev - 1 + searchResults.length) % searchResults.length);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeSearchIndex >= 0 && activeSearchIndex < searchResults.length) {
+        const selected = searchResults[activeSearchIndex];
+        setSelectedDeal(selected);
+        setIsEditModalOpen(true);
+        setShowSearchDropdown(false);
+        setSearchQuery('');
+      }
+    } else if (e.key === 'Escape') {
+      setShowSearchDropdown(false);
+    }
+  };
+
   const [priorityFilter, setPriorityFilter] = useState('All');
   const [ownerFilter, setOwnerFilter] = useState('All');
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
@@ -487,9 +651,57 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               type="text" 
               placeholder="Search deals by title, company, owner..." 
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 border border-border-default rounded-lg text-xs text-text-primary placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent-color/20 bg-surface-2/15"
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowSearchDropdown(true);
+                setActiveSearchIndex(-1);
+              }}
+              onFocus={() => setShowSearchDropdown(true)}
+              onKeyDown={handleSearchKeyDown}
+              className="w-full pl-8 pr-3 py-1.5 border border-border-default rounded-lg text-xs text-text-primary placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent-color focus:border-accent-color bg-surface-2/15 transition-all"
             />
+            {/* Search Dropdown Overlay */}
+            {showSearchDropdown && searchResults.length > 0 && (
+              <>
+                <div 
+                  className="fixed inset-0 z-35" 
+                  onClick={() => setShowSearchDropdown(false)} 
+                />
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-40 bg-surface-1 border border-border-default rounded-xl shadow-lg p-1.5 max-h-60 overflow-y-auto custom-scrollbar flex flex-col gap-0.5">
+                  {searchResults.map((deal, idx) => {
+                    const isActive = idx === activeSearchIndex;
+                    return (
+                      <button
+                        key={deal.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDeal(deal);
+                          setIsEditModalOpen(true);
+                          setShowSearchDropdown(false);
+                          setSearchQuery('');
+                        }}
+                        onMouseEnter={() => setActiveSearchIndex(idx)}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs flex justify-between items-center transition cursor-pointer ${
+                          isActive ? 'bg-surface-2 text-accent-color font-semibold' : 'text-text-primary hover:bg-surface-2/60'
+                        }`}
+                      >
+                        <div className="min-w-0 pr-2">
+                          <p className="font-bold truncate select-none">
+                            {highlightMatch(deal.title, searchQuery)}
+                          </p>
+                          <p className="text-[10px] text-text-secondary mt-0.5 truncate select-none">
+                            Company: <span className="font-semibold text-text-primary">{highlightMatch(deal.company, searchQuery)}</span> · Owner: <span className="font-semibold text-text-primary">{highlightMatch(deal.owner || 'Unassigned', searchQuery)}</span>
+                          </p>
+                        </div>
+                        <span className="text-[10px] font-bold text-accent-color shrink-0 tabular-nums bg-accent-muted px-2 py-0.5 rounded-md border border-accent-color/10">
+                          {formatINR(deal.value)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -537,26 +749,60 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 <ChevronDown className={`h-3 w-3 transition-transform ${isOwnerDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               {isOwnerDropdownOpen && (
-                <div className="absolute right-0 top-full mt-1.5 z-30 bg-surface-1 border border-border-default rounded-xl shadow-lg p-1.5 min-w-[180px] max-h-60 overflow-y-auto">
-                  <button
-                    onClick={() => { setOwnerFilter('All'); setIsOwnerDropdownOpen(false); }}
-                    className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer mb-0.5 ${
-                      ownerFilter === 'All' ? 'bg-accent-color/10 text-accent-color font-bold' : 'text-text-primary hover:bg-surface-2'
-                    }`}
-                  >
-                    All Owners
-                  </button>
-                  {uniqueOwners.map(own => (
+                <div className="absolute right-0 top-full mt-1.5 z-30 bg-surface-1 border border-border-default rounded-xl shadow-lg p-2 min-w-[200px] w-56 flex flex-col gap-2">
+                  {/* Internal Search input */}
+                  <div className="relative" onClick={e => e.stopPropagation()}>
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-text-secondary" />
+                    <input
+                      type="text"
+                      placeholder="Search owners..."
+                      value={ownerSearchQuery}
+                      onChange={(e) => setOwnerSearchQuery(e.target.value)}
+                      className="w-full pl-7 pr-2.5 py-1 border border-border-default rounded-lg text-[10px] text-text-primary focus:outline-none focus:ring-1 focus:ring-accent-color/30 bg-surface-2/20"
+                    />
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 pr-0.5">
                     <button
-                      key={own}
-                      onClick={() => { setOwnerFilter(own); setIsOwnerDropdownOpen(false); }}
-                      className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                        ownerFilter === own ? 'bg-accent-color/10 text-accent-color font-bold' : 'text-text-primary hover:bg-surface-2'
+                      type="button"
+                      onClick={() => { 
+                        setOwnerFilter('All'); 
+                        setIsOwnerDropdownOpen(false); 
+                        setOwnerSearchQuery('');
+                      }}
+                      className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-2 ${
+                        ownerFilter === 'All' ? 'bg-accent-color/10 text-accent-color font-bold' : 'text-text-primary hover:bg-surface-2'
                       }`}
                     >
-                      {own}
+                      <div className="size-5 rounded-full bg-accent-muted text-accent-color flex items-center justify-center text-[8px] font-extrabold shrink-0 border border-accent-color/10">
+                        ALL
+                      </div>
+                      <span className="truncate">All Owners</span>
                     </button>
-                  ))}
+                    
+                    {uniqueOwners
+                      .filter(own => own.toLowerCase().includes(ownerSearchQuery.toLowerCase()))
+                      .map(own => (
+                        <button
+                          key={own}
+                          type="button"
+                          onClick={() => { 
+                            setOwnerFilter(own); 
+                            setIsOwnerDropdownOpen(false); 
+                            setOwnerSearchQuery('');
+                          }}
+                          className={`w-full text-left px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-2 ${
+                            ownerFilter === own ? 'bg-accent-color/10 text-accent-color font-bold' : 'text-text-primary hover:bg-surface-2'
+                          }`}
+                        >
+                          <div className={`size-5 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0 border border-black/5 select-none ${getAvatarBgColor(own)}`}>
+                            {getInitials(own)}
+                          </div>
+                          <span className="truncate flex-1">{own}</span>
+                        </button>
+                      ))
+                    }
+                  </div>
                 </div>
               )}
             </div>
@@ -802,13 +1048,10 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
                     <div className="mt-2 flex justify-between items-center text-[9px] font-semibold text-text-muted border-t border-border-default pt-1.5">
                       <span>Shift Stage:</span>
-                      <select 
+                      <StageDropdown
                         value={deal.stage}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => {
-                          e.stopPropagation();
-
-                          const newStage = e.target.value;
+                        stages={stageNames}
+                        onChange={(newStage) => {
                           const stageId = stageIdByName[newStage];
 
                           if (!stageId) return;
@@ -845,12 +1088,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                             toast.error(err?.message || 'Failed to update deal stage.');
                           });
                         }}
-                        className="bg-transparent text-accent-color focus:outline-none cursor-pointer"
-                      >
-                        {stageNames.map(st => (
-                          <option key={st} value={st}>{st}</option>
-                        ))}
-                      </select>
+                        className="w-28 shrink-0"
+                      />
                     </div>
                   </div>
                 ))}
@@ -886,9 +1125,11 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 </div>
                 <div>
                   <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">Stage</label>
-                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-border-default bg-surface-0 text-text-primary rounded-lg text-xs cursor-pointer">
-                    {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
-                  </select>
+                  <StageDropdown
+                    value={form.stage}
+                    stages={stageNames}
+                    onChange={(val) => setForm({...form, stage: val})}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -939,9 +1180,11 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 </div>
                 <div>
                   <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">Stage</label>
-                  <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})} className="w-full px-2 py-1.5 border border-border-default bg-surface-0 text-text-primary rounded-lg text-xs cursor-pointer">
-                    {stageNames.map(st => <option key={st} value={st}>{st}</option>)}
-                  </select>
+                  <StageDropdown
+                    value={form.stage}
+                    stages={stageNames}
+                    onChange={(val) => setForm({...form, stage: val})}
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
