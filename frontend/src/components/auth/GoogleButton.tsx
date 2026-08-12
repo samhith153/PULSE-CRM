@@ -24,18 +24,40 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleButton({ label }: { label: string }) {
+interface GoogleButtonProps {
+  label: string;
+}
+
+export function GoogleButton({ label }: GoogleButtonProps) {
   const [loading, setLoading] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      // Get Google OAuth authorization URL from backend
+      const response = await fetch('http://localhost:8000/api/v1/auth/google/auth-url');
+      const result = await response.json();
+      
+      if (result.success && result.data.auth_url) {
+        // Save state for verification after callback
+        sessionStorage.setItem('google_oauth_state', result.data.state);
+        // Redirect to Google OAuth
+        window.location.href = result.data.auth_url;
+      } else {
+        console.error('[auth] Failed to get Google auth URL');
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('[auth] Google OAuth error:', error);
+      setLoading(false);
+    }
+  };
 
   return (
     <button
       type="button"
       disabled={loading}
-      onClick={() => {
-        setLoading(true);
-        console.info("[auth] Google OAuth requested");
-        setTimeout(() => setLoading(false), 1600);
-      }}
+      onClick={handleGoogleLogin}
       className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-border bg-background text-sm font-medium text-ink transition-all duration-200 hover:bg-secondary active:scale-[0.985] disabled:opacity-70"
     >
       {loading ? <Loader2 size={16} className="animate-spin" /> : <GoogleIcon />}

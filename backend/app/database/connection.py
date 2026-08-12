@@ -36,6 +36,8 @@ connect_args = {}
 # Disable asyncpg prepared statement cache — required for pgbouncer
 # transaction/statement pooling (e.g. Supabase pooler on port 6543).
 connect_args["statement_cache_size"] = 0
+# Disable server-side cursors to avoid transaction issues with pgbouncer
+connect_args["server_settings"] = {"jit": "off"}
 if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
     connect_args["ssl"] = ssl_context
 
@@ -48,6 +50,7 @@ engine = create_async_engine(
     max_overflow=settings.DATABASE_MAX_OVERFLOW,
     pool_recycle=settings.DATABASE_POOL_RECYCLE,
     pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+    isolation_level="AUTOCOMMIT",  # Use AUTOCOMMIT mode for pgbouncer transaction pooling
 )
 AsyncSessionFactory = async_sessionmaker(
     bind=engine,

@@ -100,6 +100,12 @@ class GoogleLoginRequest(BaseModel):
     credential: str = Field(description="Google Identity Services credential/ID token")
 
 
+class GoogleCallbackRequest(BaseModel):
+    code: str = Field(description="Authorization code from Google OAuth")
+    state: str = Field(description="CSRF state token")
+
+
 class AuthConfigResponse(BaseModel):
     google_client_id: Optional[str] = None
+    google_redirect_uri: Optional[str] = None
 

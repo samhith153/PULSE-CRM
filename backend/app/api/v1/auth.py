@@ -12,6 +12,7 @@ GET  /api/v1/auth/me
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.deps import CurrentUser, DBSession
+from app.core.exceptions import ForbiddenException, UnauthorizedException
 from app.core.permissions import resolve_permissions_for_user
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -23,10 +24,12 @@ from app.schemas.auth import (
     ResetPasswordRequest,
     TokenResponse,
     GoogleLoginRequest,
+    GoogleCallbackRequest,
     AuthConfigResponse,
 )
 from app.schemas.common import StandardResponse
 from app.services.auth_service import AuthService
+from app.services.google_oauth_service import GoogleOAuthService
 
 router = APIRouter()
 
@@ -178,11 +181,14 @@ async def get_me(current_user: CurrentUser) -> dict:
     "/config",
     response_model=StandardResponse[AuthConfigResponse],
     summary="Get public auth configurations",
-    description="Returns public configuration details needed for authentication, such as the Google Client ID.",
+    description="Returns public configuration details needed for authentication.",
 )
 async def get_auth_config() -> dict:
     from app.core.config import settings
-    response = AuthConfigResponse(google_client_id=settings.GOOGLE_CLIENT_ID)
+    response = AuthConfigResponse(
+        google_client_id=settings.GOOGLE_CLIENT_ID,
+        google_redirect_uri=settings.GOOGLE_AUTH_REDIRECT_URI,
+    )
     return {"success": True, "message": "OK", "data": response}
 
 
@@ -202,3 +208,98 @@ async def login_with_google(
     tokens = await svc.login_with_google(payload.credential, client_ip)
     return {"success": True, "message": "Login successful.", "data": tokens}
 
+
+
+# ── Google OAuth 2.0 Flow (Existing Users Only) ──────────────────────────────
+
+@router.get(
+    "/google/auth-url",
+    response_model=StandardResponse[dict],
+    summary="Get Google OAuth authorization URL",
+    description="Generate Google OAuth URL for existing users authentication.",
+)
+async def get_google_auth_url(db: DBSession) -> dict:
+    """
+    Returns the Google OAuth authorization URL and state for CSRF protection.
+    Frontend should redirect user to this URL to initiate Google login.
+    """
+    svc = GoogleOAuthService(db)
+    auth_url, state = svc.generate_auth_url()
+    return {
+        "success": True,
+        "message": "Google auth URL generated.",
+        "data": {"auth_url": auth_url, "state": state},
+    }
+
+
+@router.get(
+    "/google/callback",
+    summary="Google OAuth callback",
+    description="Handle Google OAuth callback. Authenticates existing users only with their assigned roles.",
+)
+async def google_oauth_callback(
+    code: str,
+    state: str,
+    request: Request,
+    db: DBSession,
+) -> dict:
+    """
+    Google OAuth callback endpoint.
+    
+    IMPORTANT: Only existing users can authenticate via this endpoint.
+    Users must be created by admin first.
+    
+    Flow:
+    1. Validate CSRF state
+    2. Exchange authorization code for Google tokens
+    3. Get user info from Google
+    4. Find user in database by email
+    5. If user exists: link Google account and authenticate with existing role
+    6. If user doesn't exist: reject with error message
+    
+    Query params:
+        code: Authorization code from Google
+        state: CSRF state token
+        
+    Returns:
+        Redirect to frontend with tokens or error
+    """
+    from fastapi.responses import RedirectResponse
+    from app.core.config import settings
+
+    client_ip = request.client.host if request.client else ""
+    svc = GoogleOAuthService(db)
+
+    try:
+        # Exchange code for tokens and user info
+        google_data = await svc.exchange_code_for_tokens(code, state)
+
+        # Authenticate user and assign ADMIN role
+        tokens = await svc.authenticate_admin_user(
+            google_data["user_info"], client_ip
+        )
+
+        # Redirect to frontend with tokens
+        frontend_url = settings.FRONTEND_URL or "http://localhost:3000"
+        redirect_url = (
+            f"{frontend_url}/auth/google/callback"
+            f"?access_token={tokens['access_token']}"
+            f"&refresh_token={tokens['refresh_token']}"
+        )
+        return RedirectResponse(url=redirect_url, status_code=302)
+
+    except UnauthorizedException as e:
+        # Invalid state or Google error
+        frontend_url = settings.FRONTEND_URL or "http://localhost:3000"
+        error_url = f"{frontend_url}/auth/google/error?message={str(e)}"
+        return RedirectResponse(url=error_url, status_code=302)
+
+    except Exception as e:
+        # Unexpected error
+        from app.core.logging import get_logger
+        logger = get_logger(__name__)
+        logger.error("Google OAuth callback error", extra={"error": str(e)})
+        
+        frontend_url = settings.FRONTEND_URL or "http://localhost:3000"
+        error_url = f"{frontend_url}/auth/google/error?message=Authentication failed. Please try again."
+        return RedirectResponse(url=error_url, status_code=302)
