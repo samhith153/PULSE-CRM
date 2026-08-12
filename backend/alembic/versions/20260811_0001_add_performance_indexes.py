@@ -106,11 +106,11 @@ def upgrade() -> None:
         postgresql_where="is_active = true",
     )
 
-    # ── activity_timeline ────────────────────────────────────────────────────
+    # ── activity_timeline_events ────────────────────────────────────────────
     # Entity-type + entity-id timeline queries
     op.create_index(
         "ix_activity_timeline_org_entity",
-        "activity_timeline",
+        "activity_timeline_events",
         ["organization_id", "entity_type", "entity_id"],
         unique=False,
         postgresql_where="is_active = true",
@@ -118,7 +118,7 @@ def upgrade() -> None:
     # Created-by + action (activity overview per rep)
     op.create_index(
         "ix_activity_timeline_org_created_by_action",
-        "activity_timeline",
+        "activity_timeline_events",
         ["organization_id", "created_by", "action"],
         unique=False,
         postgresql_where="is_active = true",
@@ -137,8 +137,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_index("ix_lead_scores_org_lead", table_name="lead_scores")
-    op.drop_index("ix_activity_timeline_org_created_by_action", table_name="activity_timeline")
-    op.drop_index("ix_activity_timeline_org_entity", table_name="activity_timeline")
+    op.drop_index("ix_activity_timeline_org_created_by_action", table_name="activity_timeline_events")
+    op.drop_index("ix_activity_timeline_org_entity", table_name="activity_timeline_events")
     op.drop_index("ix_emails_org_thread", table_name="emails")
     op.drop_index("ix_emails_org_entity", table_name="emails")
     op.drop_index("ix_emails_org_unread_inbound", table_name="emails")

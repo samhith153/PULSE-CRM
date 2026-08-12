@@ -629,12 +629,18 @@ class DashboardService:
         last_month_start, _ = self._month_bounds(now, 1)
 
         def _base(model):
-            """Base where-clause for a tenanted, non-deleted, active model."""
-            return [
-                model.organization_id == organization_id,
+            """Base where-clause for a tenanted, non-deleted, active model.
+
+            Organization is the tenant root and has no organization_id column,
+            so only apply the tenant filter when the model actually has one.
+            """
+            criteria = [
                 model.is_active.is_(True),
                 model.is_deleted.is_(False),
             ]
+            if hasattr(model, "organization_id"):
+                criteria.insert(0, model.organization_id == organization_id)
+            return criteria
 
         async def _count(model, *extra):
             stmt = select(func.count(model.id)).where(*_base(model), *extra)
@@ -891,37 +897,7 @@ class DashboardService:
             pending_approvals=0, high_priority_leads=high_priority_leads, system_alerts=0,
         )
 
-        # ── Batch 5: Data quality ────────────────────────────────────────
-        duplicate_queries = [
-            select(func.count()).select_from(select(Contact.organization_id, func.lower(func.trim(Contact.email))).where(*_base(Contact), Contact.email.is_not(None), func.trim(Contact.email) != "").group_by(Contact.organization_id, func.lower(func.trim(Contact.email))).having(func.count(Contact.id) > 1).subquery()),
-            select(func.count()).select_from(select(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).where(*_base(Contact), Contact.phone.is_not(None), func.regexp_replace(Contact.phone, r"\D+", "", "g") != "").group_by(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).having(func.count(Contact.id) > 1).subquery()),
-            select(func.count()).select_from(select(Lead.organization_id, func.lower(func.trim(Lead.email))).where(*_base(Lead), Lead.email.is_not(None), func.trim(Lead.email) != "").group_by(Lead.organization_id, func.lower(func.trim(Lead.email))).having(func.count(Lead.id) > 1).subquery()),
-            select(func.count()).select_from(select(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).where(*_base(Lead), Lead.phone.is_not(None), func.regexp_replace(Lead.phone, r"\D+", "", "g") != "").group_by(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).having(func.count(Lead.id) > 1).subquery()),
-            select(func.count()).select_from(select(Company.organization_id, func.lower(func.trim(Company.name))).where(*_base(Company)).group_by(Company.organization_id, func.lower(func.trim(Company.name))).having(func.count(Company.id) > 1).subquery()),
-        ]
-        incomplete_fields_stmt = select(func.count(Lead.id)).where(*_base(Lead), or_(Lead.title.is_(None), Lead.title == "", Lead.email.is_(None), Lead.email == ""))
-        orphaned_leads_stmt = (
-            select(func.count(Lead.id))
-            .select_from(Lead)
-            .outerjoin(User, User.id == Lead.owner_id)
-            .outerjoin(Company, Company.id == Lead.company_id)
-            .where(
-                Lead.organization_id == organization_id, Lead.is_active.is_(True), Lead.is_deleted.is_(False),
-                or_((Lead.owner_id.is_not(None)) & (User.id.is_(None)), (Lead.company_id.is_not(None)) & (Company.id.is_(None))),
-            )
-        )
-
-        dup_results = await asyncio.gather(*[self.db.execute(q) for q in duplicate_queries])
-        incomplete_res, orphaned_res = await asyncio.gather(
-            self.db.execute(incomplete_fields_stmt),
-            self.db.execute(orphaned_leads_stmt),
-        )
-        duplicates_detected = sum(int(r.scalar_one() or 0) for r in dup_results)
-        incomplete_fields = int(incomplete_res.scalar_one() or 0)
-        orphaned_leads = int(orphaned_res.scalar_one() or 0)
-        data_quality = AdminDataQuality(duplicates_detected=duplicates_detected, incomplete_fields=incomplete_fields, orphaned_leads=orphaned_leads)
-
-        # ── Batch 6: Audit + integrations + workflows ────────────────────
+        # ── Batch 5: Audit + integrations + workflows ────────────────────
         role_distribution_stmt = (
             select(Role.name, func.count(func.distinct(User.id)))
             .select_from(User)
@@ -1016,6 +992,16 @@ class DashboardService:
         workflow_stmt = select(WorkflowTask.status, func.count(WorkflowTask.id)).where(
             WorkflowTask.organization_id == organization_id, WorkflowTask.is_active.is_(True),
         ).group_by(WorkflowTask.status)
+        audit_stmt = (
+            select(ActivityTimeline, User.full_name)
+            .outerjoin(User, User.id == ActivityTimeline.created_by)
+            .where(
+                ActivityTimeline.organization_id == organization_id,
+                ActivityTimeline.is_active.is_(True),
+            )
+            .order_by(ActivityTimeline.created_at.desc())
+            .limit(50)
+        )
         scoring_stmt = select(func.count(LeadScore.id)).where(LeadScore.organization_id == organization_id, LeadScore.is_active.is_(True))
         org_row_stmt = select(Organization).where(Organization.id == organization_id)
 
@@ -1408,7 +1394,7 @@ class DashboardService:
                 (Deal.owner_id == User.id)
                 & Deal.is_active.is_(True)
                 & Deal.is_deleted.is_(False)
-                & Deal.organization_id == organization_id,
+                & (Deal.organization_id == organization_id),
             )
             .where(User.id.in_(team_member_ids), *_user_base())
             .group_by(User.id, User.full_name)
@@ -1470,7 +1456,8 @@ class DashboardService:
             )
             prev_rev = m_rev
 
-        # -- 7. Top 5 Performing Reps -----------------------------------------        top_reps: list[ManagerTopRep] = []
+        # -- 7. Top 5 Performing Reps -----------------------------------------
+        top_reps: list[ManagerTopRep] = []
         for rank, row in enumerate(rep_rows[:5], start=1):
             total_rep_deals = int(row[2] or 1) if row[2] else 1
             won_rev = Decimal(str(row[3] or 0))
