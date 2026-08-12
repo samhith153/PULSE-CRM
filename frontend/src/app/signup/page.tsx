@@ -195,19 +195,15 @@ export default function SignUpPage() {
           </div>
         </form>
 
-        <div className="rise-in mt-5 flex flex-col items-center justify-center gap-4" style={{ animationDelay: '420ms' }}>
-          <p className="text-sm text-text-secondary">
-            Already have an account?{' '}
-            <Link href="/login" className="font-semibold text-link hover:underline">
-              Sign in
-            </Link>
-          </p>
-
-          <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary/80 select-none border-t border-border-default/50 pt-4 w-full">
-            <ShieldCheck size={14} className="text-status-success-text" />
-            <span>Secure, SSL encrypted registration</span>
-          </div>
-        </div>
+        <p
+          className="rise-in mt-5 text-center text-sm text-muted-foreground"
+          style={{ animationDelay: '420ms' }}
+        >
+          Already have an account?{' '}
+          <Link href="/login" className="font-semibold text-link hover:underline">
+            Sign in
+          </Link>
+        </p>
 
         <p
           className="rise-in mt-8 text-center text-xs leading-relaxed text-text-secondary/80"
@@ -223,6 +219,11 @@ export default function SignUpPage() {
           </a>
           .
         </p>
+
+        <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary/80 select-none border-t border-border-default/50 pt-4 w-full">
+          <ShieldCheck size={14} className="text-status-success-text" />
+          <span>Secure, SSL encrypted connection</span>
+        </div>
       </div>
     </AuthShell>
   );

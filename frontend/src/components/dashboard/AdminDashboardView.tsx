@@ -150,28 +150,12 @@ function StatTile({ tile, index = 0, delay = 0, isHero = false }: { tile: KpiTil
       ref={ref}
       initial={{ opacity: 0, y: 15 }}
       animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
-      whileHover={{ y: -4 }}
+      whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className={cn(
-        "relative flex flex-col gap-[var(--space-2)] rounded-2xl border p-[var(--space-4)] shadow-sm cursor-pointer transition-all duration-200",
-        isHighlighted 
-          ? "overflow-hidden bg-accent-color" 
-          : "bg-card border-border text-foreground hover:bg-surface-hover"
-      )}
+      className="flex flex-col gap-[var(--space-2)] rounded-2xl border border-border bg-card p-[var(--space-4)] shadow-sm transition-colors duration-200 cursor-pointer"
     >
-      {isHighlighted && (
-        <>
-          <span className="shimmer" />
-          <span className="pointer-events-none absolute -right-10 -top-16 size-48 rounded-full bg-white/10" />
-          <span className="pointer-events-none absolute -bottom-24 -left-8 size-56 rounded-full bg-white/5" />
-        </>
-      )}
-
-      <div className="relative flex items-center justify-between">
-        <div className={cn(
-          "grid size-9 shrink-0 place-items-center rounded-xl",
-          isHighlighted ? "bg-white/10 text-white" : "bg-secondary text-accent-color"
-        )}>
+      <div className="flex items-center justify-between">
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary text-accent-color">
           <tile.icon size={16} strokeWidth={2} />
         </div>
         
@@ -190,30 +174,15 @@ function StatTile({ tile, index = 0, delay = 0, isHero = false }: { tile: KpiTil
           </p>
         )}
       </div>
-
-      <p className={cn(
-        "relative text-[10px] font-semibold uppercase tracking-widest leading-none",
-        isHighlighted ? "text-white/90" : "text-muted-foreground"
-      )}>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-none">
         {tile.title}
       </p>
-
-      <p className={cn(
-        "relative text-2xl font-bold tracking-tight tabular-nums leading-none",
-        isHighlighted ? "text-white" : "text-foreground"
-      )}>
+      <p className="text-2xl font-semibold text-foreground tabular-nums leading-none">
         {displayVal}
       </p>
-
-      <span className={cn(
-        "relative text-[10px] font-semibold mt-0.5",
-        isHighlighted ? "text-white/70" : "text-muted-foreground/60"
-      )}>
-        vs last month
-      </span>
-
-      <div className="relative mt-2">
-        <Spark values={tile.values} positive={tile.isPositive} highlighted={isHighlighted} />
+      <span className="text-[10px] text-muted-foreground/60 font-semibold mt-0.5">vs last month</span>
+      <div className="mt-2">
+        <Spark values={tile.values} positive={tile.isPositive} />
       </div>
     </motion.div>
   );
@@ -230,7 +199,7 @@ function RevenueChart({
   const [hovered, setHovered] = useState<number | null>(null);
   const [activeMetric, setActiveMetric] = useState<'both' | 'revenue' | 'leads'>('both');
   const n = monthly.length;
-  if (n === 0) return <div className="h-48 flex items-center justify-center text-sm text-text-muted">No data yet.</div>;
+  if (n === 0) return <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">No data yet.</div>;
 
   const revenues = monthly.map((m) => asNumber(m.revenue));
   const leads    = monthly.map((m) => m.leads_created);
@@ -448,7 +417,7 @@ function RevenueChart({
         </svg>
 
         {/* X-axis month labels */}
-        <div className="mt-1.5 flex justify-between text-[10px] text-text-muted font-medium px-0.5">
+        <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground font-medium px-0.5">
           {monthly.map((m) => (
             <span key={m.month}>
               {new Date(`${m.month}-01`).toLocaleDateString('en-IN', { month: 'short', timeZone: 'UTC' })}
@@ -464,9 +433,9 @@ function RevenueChart({
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 6, scale: 0.95 }}
               transition={{ duration: 0.12 }}
-              className="absolute -top-2 left-1/2 -translate-x-1/2 bg-popover/95 backdrop-blur-md border border-border-default/80 rounded-2xl shadow-xl p-3.5 z-20 min-w-[180px] pointer-events-none"
+              className="absolute -top-2 left-1/2 -translate-x-1/2 bg-popover/95 backdrop-blur-md border border-border/80 rounded-2xl shadow-xl p-3.5 z-20 min-w-[180px] pointer-events-none"
             >
-              <p className="text-[10px] uppercase font-black text-text-muted tracking-wider mb-2">
+              <p className="text-[10px] uppercase font-black text-muted-foreground tracking-wider mb-2">
                 {new Date(`${monthly[hovered].month}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric', timeZone: 'UTC' })}
               </p>
               <div className="space-y-1.5">
@@ -474,18 +443,18 @@ function RevenueChart({
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
                       <span className="size-2 rounded-full bg-accent-color shrink-0" />
-                      <span className="text-[11px] font-semibold text-text-muted">Revenue</span>
+                      <span className="text-[11px] font-semibold text-muted-foreground">Revenue</span>
                     </div>
-                    <span className="text-[11px] font-black text-text-primary tabular-nums">{formatINR(asNumber(monthly[hovered].revenue))}</span>
+                    <span className="text-[11px] font-black text-foreground tabular-nums">{formatINR(asNumber(monthly[hovered].revenue))}</span>
                   </div>
                 )}
                 {showLead && (
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-1.5">
                       <span className="size-2 rounded-full bg-status-success-text shrink-0" />
-                      <span className="text-[11px] font-semibold text-text-muted">Leads</span>
+                      <span className="text-[11px] font-semibold text-muted-foreground">Leads</span>
                     </div>
-                    <span className="text-[11px] font-black text-text-primary tabular-nums">{monthly[hovered].leads_created.toLocaleString()}</span>
+                    <span className="text-[11px] font-black text-foreground tabular-nums">{monthly[hovered].leads_created.toLocaleString()}</span>
                   </div>
                 )}
               </div>
@@ -545,10 +514,10 @@ function DonutChart({
           ))}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-          <span className="text-xl font-bold text-text-primary tabular-nums leading-none">
+          <span className="text-xl font-bold text-foreground tabular-nums leading-none">
             {hovered !== null ? `${segments[hovered].pct}%` : `100%`}
           </span>
-          <span className="mt-1 text-[9px] font-bold text-text-muted uppercase tracking-wider leading-none">
+          <span className="mt-1 text-[9px] font-bold text-muted-foreground uppercase tracking-wider leading-none">
             {hovered !== null ? segments[hovered].name : 'Sources'}
           </span>
         </div>
@@ -557,15 +526,15 @@ function DonutChart({
         {segments.map((seg, i) => (
           <div
             key={i}
-            className={`flex items-center justify-between rounded-lg py-[var(--space-1)] px-[var(--space-2)] transition-colors cursor-pointer ${hovered === i ? 'bg-surface-2' : ''}`}
+            className={`flex items-center justify-between rounded-lg py-[var(--space-1)] px-[var(--space-2)] transition-colors cursor-pointer ${hovered === i ? 'bg-secondary' : ''}`}
             onMouseEnter={() => setHovered(i)}
             onMouseLeave={() => setHovered(null)}
           >
             <div className="flex items-center gap-2">
               <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: seg.color }} />
-              <span className="text-xs text-text-muted">{seg.name}</span>
+              <span className="text-xs text-muted-foreground">{seg.name}</span>
             </div>
-            <span className="text-xs font-semibold text-text-primary tabular-nums">{seg.pct}%</span>
+            <span className="text-xs font-semibold text-foreground tabular-nums">{seg.pct}%</span>
           </div>
         ))}
       </div>
@@ -592,15 +561,15 @@ export default function AdminDashboardView() {
   if (loading) {
     return (
       <div className="space-y-[var(--space-5)] animate-pulse">
-        <div className="h-8 w-56 rounded-xl bg-surface-2" />
+        <div className="h-8 w-56 rounded-xl bg-secondary" />
         <div className="grid gap-[var(--space-4)] sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-36 rounded-2xl border border-border-default bg-surface-1" />
+            <div key={i} className="h-36 rounded-2xl border border-border bg-card" />
           ))}
         </div>
         <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
-          <div className="h-80 rounded-2xl border border-border-default bg-surface-1" />
-          <div className="h-80 rounded-2xl border border-border-default bg-surface-1" />
+          <div className="h-80 rounded-2xl border border-border bg-card" />
+          <div className="h-80 rounded-2xl border border-border bg-card" />
         </div>
       </div>
     );
@@ -690,7 +659,7 @@ export default function AdminDashboardView() {
       {/* Revenue chart + Lead Sources */}
       <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
         {/* Revenue over time */}
-        <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md transition duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <div className="min-w-0">
               <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
@@ -700,7 +669,7 @@ export default function AdminDashboardView() {
                 Closed-won revenue vs lead volume
               </p>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
               This year <ChevronDown size={13} />
             </span>
           </div>
@@ -724,12 +693,12 @@ export default function AdminDashboardView() {
         </div>
 
         {/* Lead sources donut */}
-        <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md transition duration-200">
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
           <div className="mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
             <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
               Lead sources
             </h2>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-secondary px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
               All time <ChevronDown size={13} />
             </span>
           </div>
@@ -755,8 +724,8 @@ export default function AdminDashboardView() {
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {/* Card 1: User & Role Management */}
           <motion.div
-            whileHover={{ y: -4 }}
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-accent-color">
@@ -791,8 +760,8 @@ export default function AdminDashboardView() {
 
           {/* Card 2: System Health */}
           <motion.div
-            whileHover={{ y: -4 }}
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-accent-color">
@@ -833,8 +802,8 @@ export default function AdminDashboardView() {
 
           {/* Card 3: Data Quality */}
           <motion.div
-            whileHover={{ y: -4 }}
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-success-text">
@@ -871,8 +840,8 @@ export default function AdminDashboardView() {
 
           {/* Card 4: License & Seat Usage */}
           <motion.div
-            whileHover={{ y: -4 }}
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-warning-text">
@@ -910,8 +879,8 @@ export default function AdminDashboardView() {
 
           {/* Card 6: Audit Log (Wider grid span for clean layout) */}
           <motion.div
-            whileHover={{ y: -4 }}
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer sm:col-span-2 lg:col-span-2"
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all cursor-pointer sm:col-span-2 lg:col-span-2"
           >
             <div className="flex items-center justify-between">
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-danger-text">
@@ -964,8 +933,8 @@ export default function AdminDashboardView() {
 
           {/* Card 5: Integration Status */}
           <motion.div
-            whileHover={{ y: -4 }}
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-info-text">
@@ -1010,8 +979,8 @@ export default function AdminDashboardView() {
 
           {/* Card 7: Custom Field & Workflow Usage */}
           <motion.div
-            whileHover={{ y: -4 }}
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-priority-high">
@@ -1047,8 +1016,8 @@ export default function AdminDashboardView() {
 
           {/* Card 8: Security Alerts */}
           <motion.div
-            whileHover={{ y: -4 }}
-            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm hover:bg-surface-hover transition-all cursor-pointer"
+            whileHover={{ y: -4, boxShadow: 'var(--shadow-sm-hover)' }}
+            className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-warning-text">
@@ -1086,7 +1055,7 @@ export default function AdminDashboardView() {
       </div>
 
       {/* Top companies table */}
-      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] shadow-sm hover:shadow-md transition duration-200">
+      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-semibold tracking-tight text-foreground">Top companies</h2>
           <span className="text-xs font-medium text-accent-color cursor-pointer hover:underline">
@@ -1130,7 +1099,7 @@ export default function AdminDashboardView() {
                   <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm text-foreground tabular-nums">{formatNum(row.lead_count)}</td>
                   <td className="py-[var(--space-2)] px-[var(--space-3)] pr-4 text-sm text-foreground tabular-nums">{formatNum(row.contact_count)}</td>
                   <td className="py-[var(--space-2)] px-[var(--space-3)] text-right">
-                    <button className="inline-flex size-7 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-accent-color hover:text-white transition-colors cursor-pointer">
+                    <button className="inline-flex size-7 items-center justify-center rounded-full bg-secondary text-muted-foreground hover:bg-accent-color hover:text-surface-0 transition-colors cursor-pointer">
                       <ArrowRight size={13} />
                     </button>
                   </td>

@@ -50,8 +50,11 @@ export default function SkeletonLoader({
     return null;
   }
 
+  // GLASS & SHINING DESIGN SYSTEM TOKENS
   const shimmerClass = "absolute inset-0 -translate-x-full animate-shimmer-fast bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-white/10";
   const bgCardClass = "bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-white/30 dark:border-slate-800/30 rounded-xl shadow-sm relative overflow-hidden animate-pulse";
+  
+  // Placeholders
   const linePrimary = "bg-slate-250/50 dark:bg-slate-700/40 rounded";
   const lineSecondary = "bg-slate-150/50 dark:bg-slate-800/30 rounded";
   const lineAccent = "bg-brand-accent/15 dark:bg-brand-accent/5 rounded";

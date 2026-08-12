@@ -154,7 +154,7 @@ export default function LoginPage() {
           </div>
           <div className="rise-in" style={{ animationDelay: '300ms' }}>
             <div className="mb-1.5 flex justify-end">
-              <a href="#" className="text-xs font-medium text-link hover:underline">
+              <a href="#" className="text-xs font-semibold text-link hover:underline">
                 Forgot password?
               </a>
             </div>
@@ -195,18 +195,19 @@ export default function LoginPage() {
           </div>
         </form>
 
-        <div className="rise-in mt-5 flex flex-col items-center justify-center gap-4" style={{ animationDelay: '380ms' }}>
-          <p className="text-sm text-text-secondary">
-            Don&apos;t have an account?{' '}
-            <Link href="/signup" className="font-semibold text-link hover:underline">
-              Sign up
-            </Link>
-          </p>
+        <p
+          className="rise-in mt-5 text-center text-sm text-muted-foreground"
+          style={{ animationDelay: '380ms' }}
+        >
+          Don&apos;t have an account?{' '}
+          <Link href="/signup" className="font-semibold text-link hover:underline">
+            Sign up
+          </Link>
+        </p>
 
-          <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary/80 select-none border-t border-border-default/50 pt-4 w-full">
-            <ShieldCheck size={14} className="text-status-success-text" />
-            <span>Secure, SSL encrypted connection</span>
-          </div>
+        <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary/80 select-none border-t border-border-default/50 pt-4 w-full">
+          <ShieldCheck size={14} className="text-status-success-text" />
+          <span>Secure, SSL encrypted connection</span>
         </div>
       </div>
     </AuthShell>

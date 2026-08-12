@@ -1976,9 +1976,3 @@ a:hover { color: var(--accent-hover); }
   background: var(--quota-card-bg);
 }
 
-.overflow-hidden.rounded-xl:not(aside):not(aside *), .overflow-hidden.rounded-2xl:not(aside):not(aside *) {
-    background-color: var(--color-blue-600) !important;
-    box-shadow: var(--shadow-card) !important;
-    border: 1px solid var(--border-default) !important;
-    transition: box-shadow .22s cubic-bezier(.16, 1, .3, 1) !important;
-}

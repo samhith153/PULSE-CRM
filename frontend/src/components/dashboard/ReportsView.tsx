@@ -422,27 +422,18 @@ export default function ReportsView() {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
         <div>
           <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
             Reports
           </h1>
+
           <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
             Performance overview backed by live data.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Period Select */}
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as ReportPeriod)}
-            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-accent-color/20 cursor-pointer"
-          >
-            <option value="week">Weekly</option>
-            <option value="month">Monthly</option>
-            <option value="quarter">Quarterly</option>
-            <option value="year">Yearly</option>
-          </select>
 
           {/* Export */}
           <button
@@ -452,7 +443,7 @@ export default function ReportsView() {
             className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold transition shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Upload className="size-3.5" />
-            <span>Export</span>
+            Export
           </button>
         </div>
       </div>
