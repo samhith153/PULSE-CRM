@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, Trash2, FileText, Download, UploadCloud, X, Calendar, User, Eye } from 'lucide-react';
+import { getDocuments, uploadDocument, deleteDocument, getDocumentDownloadUrl, getAuthHeaders } from '@/utils/api';
 
 interface DocumentItem {
   id: string;
   name: string;
-  type: 'SLA' | 'Proposal' | 'Contract' | 'NDA';
+  type: 'SLA' | 'Proposal' | 'Contract' | 'NDA' | string;
   size: string;
   fileSize?: number;
   associatedDeal: string;

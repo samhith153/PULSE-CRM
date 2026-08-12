@@ -1,4 +1,4 @@
-﻿"""
+"""
 Meeting repository backed by calendar_events.
 """
 from __future__ import annotations

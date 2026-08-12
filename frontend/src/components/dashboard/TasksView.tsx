@@ -17,7 +17,7 @@ import {
 import type { ActivityTimelineItem } from '@/utils/api';
 
 interface Task {
-  id: number;
+  id: string | number;
   title: string;
   deadline: string;
   priority: 'High' | 'Medium' | 'Low';
@@ -94,6 +94,27 @@ export default function TasksView({ isEmbedded = false }: Props) {
   });
 
   useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      const apiTasks = await getTasks();
+      if (Array.isArray(apiTasks) && apiTasks.length > 0) {
+        const formatted: Task[] = apiTasks.map((t: any) => ({
+          id: t.id,
+          title: t.title || t.name || 'Untitled Task',
+          deadline: t.due_date ? new Date(t.due_date).toISOString().split('T')[0] : '2026-08-10',
+          priority: t.priority === 'high' ? 'High' : t.priority === 'low' ? 'Low' : 'Medium',
+          status: t.status === 'completed' ? 'Completed' : t.status === 'in_progress' ? 'In Progress' : 'Pending'
+        }));
+        setTasks(formatted);
+        return;
+      }
+    } catch (err) {
+      console.error('Error fetching API tasks, loading local cache:', err);
+    }
+
     const saved = localStorage.getItem('pulse-crm-manual-tasks');
     if (saved) {
       try {
@@ -104,7 +125,7 @@ export default function TasksView({ isEmbedded = false }: Props) {
     } else {
       initializeDefaultTasks();
     }
-  }, []);
+  };
 
   const initializeDefaultTasks = () => {
     const defaults: Task[] = [

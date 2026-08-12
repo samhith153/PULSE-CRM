@@ -703,9 +703,18 @@ async def get_activity_analytics(
     current_user: CurrentUser, db: DBSession,
     period: str = Query(default="quarter", pattern="^(week|month|quarter|year)$"),
 ) -> dict:
+    """
+    Replaced the original N+1 loop (4 queries × N users) with 4 single GROUP BY
+    queries that aggregate all reps in one pass each.  Total DB round-trips:
+      - 5 org-level totals  →  1 query each
+      - 4 per-rep aggregates →  1 query each (replaces N×4)
+      - 1 task status summary
+    = 10 fixed queries regardless of team size.
+    """
     org_id = current_user.organization_id
     start, _ = _period_bounds(period)
 
+    # ── Org-level totals (5 queries, one per activity type) ──────────────────
     call_q = await db.execute(select(func.count(CrmCall.id)).where(
         CrmCall.organization_id == org_id, CrmCall.is_active.is_(True), CrmCall.created_at >= start))
     email_q = await db.execute(select(func.count(CrmEmail.id)).where(
@@ -725,53 +734,79 @@ async def get_activity_analytics(
     n = int(note_q.scalar() or 0)
     activity_summary = ActivitySummary(calls=c, emails=e, meetings=m, tasks=t, notes=n, total=c + e + m + t + n)
 
-    stmt = select(User.id, User.full_name).where(
-        User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False))
-    result = await db.execute(stmt)
-    all_users = {str(r[0]): r[1] for r in result.all()}
+    # ── Per-rep aggregates — 4 GROUP BY queries instead of 4×N ───────────────
+    # Calls per rep
+    calls_by_rep_q = await db.execute(
+        select(CrmCall.owner_id, func.count(CrmCall.id).label("cnt"))
+        .where(CrmCall.organization_id == org_id, CrmCall.is_active.is_(True), CrmCall.created_at >= start)
+        .group_by(CrmCall.owner_id)
+    )
+    calls_map: dict[str, int] = {str(r.owner_id): int(r.cnt or 0) for r in calls_by_rep_q.all() if r.owner_id}
 
-    activity_by_rep = []
-    for uid, name in all_users.items():
-        _cv_q = await db.execute(select(func.count(CrmCall.id)).where(
-            CrmCall.organization_id == org_id, CrmCall.owner_id == UUID(uid),
-            CrmCall.is_active.is_(True), CrmCall.created_at >= start))
-        cv = int(_cv_q.scalar() or 0)
-        _ev_q = await db.execute(select(func.count(CrmEmail.id)).where(
-            CrmEmail.organization_id == org_id, CrmEmail.owner_id == UUID(uid),
-            CrmEmail.is_active.is_(True), CrmEmail.created_at >= start))
-        ev = int(_ev_q.scalar() or 0)
-        _mv_q = await db.execute(select(func.count(Meeting.id)).where(
-            Meeting.organization_id == org_id, Meeting.owner_id == UUID(uid),
-            Meeting.is_active.is_(True), Meeting.created_at >= start))
-        mv = int(_mv_q.scalar() or 0)
-        _tv_q = await db.execute(select(func.count(CrmTask.id)).where(
-            CrmTask.organization_id == org_id, CrmTask.owner_id == UUID(uid),
-            CrmTask.is_active.is_(True), CrmTask.created_at >= start))
-        tv = int(_tv_q.scalar() or 0)
-        if cv + ev + mv + tv > 0:
+    # Emails (CRM) per rep
+    emails_by_rep_q = await db.execute(
+        select(CrmEmail.owner_id, func.count(CrmEmail.id).label("cnt"))
+        .where(CrmEmail.organization_id == org_id, CrmEmail.is_active.is_(True), CrmEmail.created_at >= start)
+        .group_by(CrmEmail.owner_id)
+    )
+    emails_map: dict[str, int] = {str(r.owner_id): int(r.cnt or 0) for r in emails_by_rep_q.all() if r.owner_id}
+
+    # Meetings per rep
+    meetings_by_rep_q = await db.execute(
+        select(Meeting.owner_id, func.count(Meeting.id).label("cnt"))
+        .where(Meeting.organization_id == org_id, Meeting.is_active.is_(True), Meeting.created_at >= start)
+        .group_by(Meeting.owner_id)
+    )
+    meetings_map: dict[str, int] = {str(r.owner_id): int(r.cnt or 0) for r in meetings_by_rep_q.all() if r.owner_id}
+
+    # Tasks per rep
+    tasks_by_rep_q = await db.execute(
+        select(CrmTask.owner_id, func.count(CrmTask.id).label("cnt"))
+        .where(CrmTask.organization_id == org_id, CrmTask.is_active.is_(True), CrmTask.created_at >= start)
+        .group_by(CrmTask.owner_id)
+    )
+    tasks_map: dict[str, int] = {str(r.owner_id): int(r.cnt or 0) for r in tasks_by_rep_q.all() if r.owner_id}
+
+    # All users in org — single query
+    users_q = await db.execute(
+        select(User.id, User.full_name)
+        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False))
+    )
+    activity_by_rep: list[ActivityByRep] = []
+    for user_id_val, name in users_q.all():
+        uid = str(user_id_val)
+        cv = calls_map.get(uid, 0)
+        ev = emails_map.get(uid, 0)
+        mv = meetings_map.get(uid, 0)
+        tv = tasks_map.get(uid, 0)
+        total_rep = cv + ev + mv + tv
+        if total_rep > 0:
             activity_by_rep.append(ActivityByRep(
                 rep_id=uid, rep_name=name or "Unknown",
-                calls=cv, emails=ev, meetings=mv, tasks=tv, total=cv + ev + mv + tv,
+                calls=cv, emails=ev, meetings=mv, tasks=tv, total=total_rep,
             ))
     activity_by_rep.sort(key=lambda x: -x.total)
 
-    _comp_q = await db.execute(select(func.count(CrmTask.id)).where(
-        CrmTask.organization_id == org_id, CrmTask.status == "completed", CrmTask.is_active.is_(True)))
-    comp = int(_comp_q.scalar() or 0)
-    _ov_q = await db.execute(select(func.count(CrmTask.id)).where(
-        CrmTask.organization_id == org_id, CrmTask.status == "overdue", CrmTask.is_active.is_(True)))
-    ov = int(_ov_q.scalar() or 0)
-    _pen_q = await db.execute(select(func.count(CrmTask.id)).where(
-        CrmTask.organization_id == org_id, CrmTask.status.in_(["pending", "in_progress"]),
-        CrmTask.is_active.is_(True)))
-    pen = int(_pen_q.scalar() or 0)
-    total_tasks = comp + ov + pen
+    # ── Task status summary (1 aggregated query) ──────────────────────────────
+    task_status_q = await db.execute(
+        select(CrmTask.status, func.count(CrmTask.id).label("cnt"))
+        .where(CrmTask.organization_id == org_id, CrmTask.is_active.is_(True))
+        .group_by(CrmTask.status)
+    )
+    status_counts: dict[str, int] = {str(r.status or ""): int(r.cnt or 0) for r in task_status_q.all()}
+    comp = status_counts.get("completed", 0)
+    ov = status_counts.get("overdue", 0)
+    pen = sum(v for k, v in status_counts.items() if k in ("pending", "in_progress"))
+    total_tasks_all = comp + ov + pen
     completed_vs_overdue = CompletedVsOverdue(
-        completed=comp, overdue=ov, pending=pen, completion_rate=_pct(comp, total_tasks),
+        completed=comp, overdue=ov, pending=pen,
+        completion_rate=_pct(comp, total_tasks_all),
     )
 
     report = ActivityAnalyticsReport(
-        activity_summary=activity_summary, activity_by_rep=activity_by_rep, completed_vs_overdue=completed_vs_overdue,
+        activity_summary=activity_summary,
+        activity_by_rep=activity_by_rep,
+        completed_vs_overdue=completed_vs_overdue,
     )
     return {"success": True, "message": "OK", "data": report}
 

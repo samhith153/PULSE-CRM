@@ -44,7 +44,6 @@ const securityHeaders = [
     ].join('; '),
   },
 ];
-
 const nextConfig: NextConfig = {
   // Skip type-check during CI/Vercel build (types checked separately)
   typescript: {

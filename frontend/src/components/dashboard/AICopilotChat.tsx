@@ -212,8 +212,8 @@ Sales Manager, Pulse CRM`;
           {/* Header */}
           <div className="bg-gradient-to-r from-accent-color to-accent-color/90 p-4 flex items-center justify-between text-white border-b border-border-default shrink-0">
             <div className="flex items-center space-x-2.5">
-              <div className="h-9.5 w-9.5 rounded-xl bg-white/10 flex items-center justify-center">
-                <Sparkles className="h-5.5 w-5.5 text-white" />
+              <div className="h-9.5 w-9.5 rounded-xl bg-card/15 flex items-center justify-center">
+                <Sparkles className="h-5.5 w-5.5 text-primary-foreground" />
               </div>
               <div>
                 <h3 className="text-sm font-semibold tracking-wide text-white">PulseAI Copilot</h3>
@@ -225,7 +225,7 @@ Sales Manager, Pulse CRM`;
             </div>
             <button 
               onClick={() => setIsOpen(false)}
-              className="text-white/80 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+              className="text-primary-foreground/80 hover:text-primary-foreground transition-colors p-1 rounded-lg hover:bg-card/10"
             >
               <X className="h-4.5 w-4.5" />
             </button>

@@ -1,7 +1,9 @@
-﻿"""
+"""
 Dashboard routes.
 """
 from __future__ import annotations
+
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
@@ -142,7 +144,7 @@ async def get_redesigned_dashboard(current_user: CurrentUser, db: DBSession) -> 
         "revenue breakdown, lead funnel, top sales reps, top companies, recent "
         "activities, and notification summary. **Admin role required.**"
     ),
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_admin_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
@@ -277,7 +279,7 @@ async def get_sales_rep_dashboard(
         "forecast accuracy, sales velocity, and dynamic insights. "
         "**Manager or Admin role required.**"
     ),
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_manager_forecast(
@@ -293,7 +295,7 @@ async def get_manager_forecast(
 
     Secured: JWT required + manager / admin role.
     All data is scoped to the caller's organization_id.
-    Zero values are returned when no forecast data exists — never 500.
+    Zero values are returned when no forecast data exists -- never 500.
     """
     controller = ForecastController(db)
     data = await controller.get_manager_forecast(
@@ -307,23 +309,23 @@ async def get_manager_forecast(
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Forecast sub-endpoints
 # All require manager or admin role and are scoped to the caller's org.
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 @router.get(
     "/manager/forecast/monthly",
     response_model=StandardResponse[list[MonthlyForecastPoint]],
     summary="Monthly Forecast Breakdown",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_monthly(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/monthly — last 6 months breakdown."""
+    """GET /api/v1/dashboard/manager/forecast/monthly -- last 6 months breakdown."""
     from app.services.forecast_service import ForecastService
     svc = ForecastService(db)
     from datetime import datetime, timezone
@@ -336,14 +338,14 @@ async def get_forecast_monthly(
     "/manager/forecast/quarterly",
     response_model=StandardResponse[list[QuarterlyProjectionRow]],
     summary="Quarterly Projection Matrix",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_quarterly(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/quarterly — 4-quarter matrix."""
+    """GET /api/v1/dashboard/manager/forecast/quarterly -- 4-quarter matrix."""
     from app.services.forecast_service import ForecastService
     svc = ForecastService(db)
     from datetime import datetime, timezone
@@ -356,14 +358,14 @@ async def get_forecast_quarterly(
     "/manager/forecast/accuracy",
     response_model=StandardResponse[ForecastAccuracyStats],
     summary="Forecast Accuracy",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_accuracy(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/accuracy — current vs prev month accuracy."""
+    """GET /api/v1/dashboard/manager/forecast/accuracy -- current vs prev month accuracy."""
     from app.repositories.forecast_repository import ForecastRepository
     from app.services.forecast_service import ForecastService
     from datetime import datetime, timezone
@@ -390,7 +392,7 @@ async def get_forecast_accuracy(
     "/manager/forecast/revenue-trend",
     response_model=StandardResponse[list[ForecastTrendPoint]],
     summary="Revenue Forecast Trend",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_revenue_trend(
@@ -398,7 +400,7 @@ async def get_forecast_revenue_trend(
     db: DBSession,
     period: str = Query(default="monthly", description="monthly | quarterly | yearly"),
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/revenue-trend — trend by period."""
+    """GET /api/v1/dashboard/manager/forecast/revenue-trend -- trend by period."""
     from app.services.forecast_service import ForecastService
     from datetime import datetime, timezone
     svc = ForecastService(db)
@@ -411,14 +413,14 @@ async def get_forecast_revenue_trend(
     "/manager/forecast/insights",
     response_model=StandardResponse[list[ForecastInsight]],
     summary="Forecast Insights",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_insights(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/insights — rule-based AI insights."""
+    """GET /api/v1/dashboard/manager/forecast/insights -- rule-based AI insights."""
     controller = ForecastController(db)
     data = await controller.get_manager_forecast(
         organization_id=current_user.organization_id, period="monthly"
@@ -430,14 +432,14 @@ async def get_forecast_insights(
     "/manager/forecast/risks",
     response_model=StandardResponse[list[ForecastRisk]],
     summary="Forecast Risks",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_risks(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/risks — aging, overdue, low-prob deals."""
+    """GET /api/v1/dashboard/manager/forecast/risks -- aging, overdue, low-prob deals."""
     from app.repositories.forecast_repository import ForecastRepository
     from app.services.forecast_service import ForecastService
     repo = ForecastRepository(db)
@@ -451,16 +453,18 @@ async def get_forecast_risks(
     "/manager/forecast/recommendations",
     response_model=StandardResponse[list[ForecastRecommendation]],
     summary="Forecast Recommendations",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_recommendations(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/recommendations — rule-based actions."""
+    """GET /api/v1/dashboard/manager/forecast/recommendations -- rule-based actions."""
     controller = ForecastController(db)
     data = await controller.get_manager_forecast(
         organization_id=current_user.organization_id, period="monthly"
     )
     return {"success": True, "message": "OK", "data": data.forecast_recommendations}
+
+

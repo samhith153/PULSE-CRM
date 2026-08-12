@@ -1194,6 +1194,72 @@ export async function changePassword(currentPassword: string, newPassword: strin
   });
 }
 
+// --- Assistant AI API ---
+export async function sendAssistantChatMessage(message: string, context?: Record<string, any>): Promise<{ response: string; role?: string }> {
+  return apiFetch<{ response: string; role?: string }>('/api/v1/assistant/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message, context: context || {} })
+  });
+}
+
+// --- Tasks API ---
+export async function getTasks(params?: { status?: string; lead_id?: string; deal_id?: string }): Promise<any[]> {
+  const query = new URLSearchParams();
+  if (params?.status) query.append('status', params.status);
+  if (params?.lead_id) query.append('lead_id', params.lead_id);
+  if (params?.deal_id) query.append('deal_id', params.deal_id);
+  const qStr = query.toString();
+  const res = await apiFetch<any>(`/api/v1/tasks${qStr ? `?${qStr}` : ''}`);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+export async function createTask(taskData: any): Promise<any> {
+  return apiFetch('/api/v1/tasks', {
+    method: 'POST',
+    body: JSON.stringify(taskData)
+  });
+}
+
+export async function updateTask(taskId: string, taskData: any): Promise<any> {
+  return apiFetch(`/api/v1/tasks/${taskId}`, {
+    method: 'PUT',
+    body: JSON.stringify(taskData)
+  });
+}
+
+export async function deleteTask(taskId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/tasks/${taskId}`, { method: 'DELETE' });
+}
+
+// --- Calendar & Meetings API ---
+export async function getCalendarEvents(start?: string, end?: string): Promise<any[]> {
+  const query = new URLSearchParams();
+  if (start) query.append('start', start);
+  if (end) query.append('end', end);
+  const qStr = query.toString();
+  const res = await apiFetch<any>(`/api/v1/calendar/events${qStr ? `?${qStr}` : ''}`);
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+export async function createCalendarEvent(eventData: any): Promise<any> {
+  return apiFetch('/api/v1/calendar/events', {
+    method: 'POST',
+    body: JSON.stringify(eventData)
+  });
+}
+
+export async function getMeetings(): Promise<any[]> {
+  const res = await apiFetch<any>('/api/v1/meetings');
+  return Array.isArray(res) ? res : (res?.data ?? []);
+}
+
+export async function createMeeting(meetingData: any): Promise<any> {
+  return apiFetch('/api/v1/meetings', {
+    method: 'POST',
+    body: JSON.stringify(meetingData)
+  });
+}
+
 // --- Roles & Permissions API ---
 
 export interface RoleData {

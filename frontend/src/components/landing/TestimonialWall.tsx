@@ -149,13 +149,13 @@ function WallCard({ t }: { t: Wall }) {
 }
 
 export function TestimonialWall() {
-  const head = useReveal<HTMLDivElement>(0.15);
-  const wall = useReveal<HTMLDivElement>(0.05);
+  const { ref: headRef, visible: headVisible } = useReveal<HTMLDivElement>(0.15);
+  const { ref: wallRef, visible: wallVisible } = useReveal<HTMLDivElement>(0.05);
 
   return (
     <section className="overflow-hidden bg-surface-warm py-24 md:py-32">
       <div className="mx-auto grid max-w-7xl gap-16 px-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-start lg:gap-12">
-        <div ref={head.ref} className="reveal lg:sticky lg:top-28" data-visible={head.visible}>
+        <div ref={headRef} className="reveal lg:sticky lg:top-28" data-visible={headVisible}>
           <h2 className="text-3xl leading-tight font-bold tracking-tight text-ink md:text-[2.75rem]">
             Trusted around the world
           </h2>
@@ -171,7 +171,7 @@ export function TestimonialWall() {
               <figure
                 key={q.name}
                 className="reveal"
-                data-visible={head.visible}
+                data-visible={headVisible}
                 style={{ transitionDelay: `${160 + i * 180}ms` }}
               >
                 <span className="block text-3xl leading-none text-muted-foreground/50">“</span>
@@ -191,9 +191,9 @@ export function TestimonialWall() {
         </div>
 
         <div
-          ref={wall.ref}
+          ref={wallRef}
           className="reveal group relative h-[560px] overflow-hidden md:h-[720px] [mask-image:linear-gradient(to_bottom,transparent,black_10%,black_88%,transparent)]"
-          data-visible={wall.visible}
+          data-visible={wallVisible}
         >
           <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
             {columns.slice(0, 3).map((col, ci) => {

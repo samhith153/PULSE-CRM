@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export function prefersReducedMotion() {
   if (typeof window === "undefined") return false;

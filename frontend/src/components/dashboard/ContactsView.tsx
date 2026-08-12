@@ -19,9 +19,7 @@ import {
   Check,
   Send,
   PhoneCall,
-  User,
-  LayoutGrid,
-  List
+  User
 } from 'lucide-react';
 
 interface ContactItem {
@@ -60,65 +58,6 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
 
-  const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('pulse-crm-view-mode-contacts') as any) || 'default';
-    }
-    return 'default';
-  });
-
-  const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
-  const [sortField, setSortField] = useState<string>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-
-  const toggleViewMode = (mode: 'default' | 'list') => {
-    setViewMode(mode);
-    localStorage.setItem('pulse-crm-view-mode-contacts', mode);
-  };
-
-  const handleToggleSelectAll = (items: any[]) => {
-    if (selectedIds.size === items.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(items.map(item => item.id)));
-    }
-  };
-
-  const handleToggleSelectRow = (id: string | number) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) {
-      next.delete(id);
-    } else {
-      next.add(id);
-    }
-    setSelectedIds(next);
-  };
-
-  const handleHeaderClick = (field: string) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
-
-  const handleDeleteSelectedContacts = async () => {
-    if (!window.confirm(`Are you sure you want to delete the ${selectedIds.size} selected contact(s)?`)) return;
-    try {
-      for (const id of Array.from(selectedIds)) {
-        await deleteContact(id);
-      }
-      setContacts(prev => prev.filter(c => !selectedIds.has(c.id)));
-      setSelectedIds(new Set());
-      setSelectedId(null);
-      toast.success("Selected contacts deleted successfully.");
-    } catch (e: any) {
-      console.error(e);
-      toast.error(e?.message || "Failed to delete selected contacts.");
-    }
-  };
-
   const [selectedId, setSelectedId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeHistoryTab, setActiveHistoryTab] = useState<'timeline' | 'calls' | 'meetings' | 'emails'>('timeline');
@@ -154,40 +93,17 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
         }
       }
     }).catch(() => {
-      if (!cancelled) {
-        setLoading(false);
-        onLoaded?.();
-        toast.error('Failed to load contacts');
-      }
+      if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => {
-    const handleOpen = () => {
-      setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
-      setIsAddModalOpen(true);
-    };
-    window.addEventListener('pulse-open-create-contact-modal', handleOpen);
-    return () => window.removeEventListener('pulse-open-create-contact-modal', handleOpen);
-  }, []);
-
-  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : null;
+  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : (contacts.length > 0 ? contacts[0] : null);
 
   const filtered = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     c.company.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  const sortedContacts = React.useMemo(() => {
-    return [...filtered].sort((a: any, b: any) => {
-      let valA = (a[sortField] || '').toString().toLowerCase();
-      let valB = (b[sortField] || '').toString().toLowerCase();
-      if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
-      if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [filtered, sortField, sortOrder]);
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -229,7 +145,6 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
       setIsAddModalOpen(false);
       setForm({ name: '', company: '', designation: '', phone: '', email: '', notes: '' });
     } catch {
-      toast.error('Failed to save contact');
     }
   };
 
@@ -260,15 +175,14 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
       } : c));
       setIsEditModalOpen(false);
     } catch {
-      toast.error('Failed to save contact');
     }
   };
 
   const handleDelete = (id: number | string) => {
     const remaining = contacts.filter(c => c.id !== id);
-    setContacts(remaining);
-    if (selectedId === id) {
-      setSelectedId(null);
+    if (remaining.length > 0) {
+      setContacts(remaining);
+      setSelectedId(remaining[0].id);
     }
   };
 

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Dashboard and Analytics Schemas
 """
 from datetime import datetime, date

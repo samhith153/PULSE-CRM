@@ -23,6 +23,7 @@ class DealRepository(BaseRepository[Deal]):
             select(Deal)
             .where(
                 Deal.organization_id == organization_id,
+                Deal.is_active.is_(True),
                 Deal.is_deleted.is_(False),
             )
             .options(
@@ -98,7 +99,6 @@ class DealRepository(BaseRepository[Deal]):
                     Deal.name.ilike(term),
                     Deal.description.ilike(term),
                     Deal.notes.ilike(term),
-                    Deal.currency.ilike(term),
                 )
             )
 

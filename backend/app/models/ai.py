@@ -1,4 +1,4 @@
-﻿"""AI persistence models for scores, recommendations, and summaries."""
+"""AI persistence models for scores, recommendations, and summaries."""
 from __future__ import annotations
 
 import uuid

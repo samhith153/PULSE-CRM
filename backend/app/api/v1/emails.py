@@ -8,7 +8,8 @@ from typing import Any, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import func, select, update
 
 from app.api.deps import CurrentUser, DBSession, require_permission
 from app.core.logging import get_logger
@@ -22,6 +23,16 @@ from app.services.ai_client import AIClient
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+
+class EmailReadStatusRequest(BaseModel):
+    is_read: bool = True
+
+
+class EmailReadStatusResponse(BaseModel):
+    id: UUID
+    is_read: bool
+    unread_count: int
 
 
 @router.get(
@@ -74,6 +85,24 @@ async def list_emails(
 
 
 @router.get(
+    "/unread-count",
+    response_model=StandardResponse[dict],
+    summary="Get unread email count",
+    description="Returns the count of unread inbound emails for the current organisation. Reflects real-time database state.",
+    dependencies=[Depends(require_permission("email:read"))],
+)
+async def get_unread_count(current_user: CurrentUser, db: DBSession) -> dict:
+    stmt = select(func.count(Email.id)).where(
+        Email.organization_id == current_user.organization_id,
+        Email.is_active.is_(True),
+        Email.is_read.is_(False),
+        Email.direction == EmailDirection.INBOUND.value,
+    )
+    count = int((await db.execute(stmt)).scalar_one() or 0)
+    return {"success": True, "message": "OK", "data": {"unread_count": count}}
+
+
+@router.get(
     "/{email_id}",
     response_model=StandardResponse[EmailDetailResponse],
     summary="Get an email by id",
@@ -83,6 +112,59 @@ async def get_email(email_id: UUID, current_user: CurrentUser, db: DBSession) ->
     service = EmailService(db)
     email = await service.get_by_id_response(current_user.organization_id, email_id)
     return {"success": True, "message": "OK", "data": email}
+
+
+@router.patch(
+    "/{email_id}/read",
+    response_model=StandardResponse[EmailReadStatusResponse],
+    summary="Mark an email as read or unread",
+    description=(
+        "Persists the read/unread state to the database. "
+        "Returns the updated state and the current unread count for the organisation."
+    ),
+    dependencies=[Depends(require_permission("email:read"))],
+)
+async def mark_email_read(
+    email_id: UUID,
+    payload: EmailReadStatusRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    # Fetch and validate ownership
+    stmt = select(Email).where(
+        Email.id == email_id,
+        Email.organization_id == current_user.organization_id,
+        Email.is_active.is_(True),
+    )
+    result = await db.execute(stmt)
+    email = result.scalar_one_or_none()
+    if not email:
+        from app.core.exceptions import NotFoundException
+        raise NotFoundException("Email", email_id)
+
+    # Persist the new read state
+    await db.execute(
+        update(Email)
+        .where(Email.id == email_id, Email.organization_id == current_user.organization_id)
+        .values(is_read=payload.is_read)
+    )
+    await db.flush()
+
+    # Return up-to-date unread count so the frontend can update its badge
+    unread_stmt = select(func.count(Email.id)).where(
+        Email.organization_id == current_user.organization_id,
+        Email.is_active.is_(True),
+        Email.is_read.is_(False),
+        Email.direction == EmailDirection.INBOUND.value,
+    )
+    unread_count = int((await db.execute(unread_stmt)).scalar_one() or 0)
+
+    data = EmailReadStatusResponse(
+        id=email_id,
+        is_read=payload.is_read,
+        unread_count=unread_count,
+    )
+    return {"success": True, "message": "Email read status updated.", "data": data}
 
 
 @router.get(

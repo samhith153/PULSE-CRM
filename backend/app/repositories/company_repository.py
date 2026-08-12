@@ -36,6 +36,7 @@ class CompanyRepository(BaseRepository[Company]):
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
+
     async def get_by_name_in_org_include_deleted(
         self, name: str, organization_id: UUID
     ) -> Optional[Company]:
