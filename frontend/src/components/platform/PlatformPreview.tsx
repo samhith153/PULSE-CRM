@@ -33,7 +33,7 @@ export default function PlatformPreview({ type }: PlatformPreviewProps) {
   };
 
   return (
-    <div className="p-4 md:p-5 bg-gradient-to-br from-gray-50/50 to-white min-h-[380px] lg:min-h-[400px]">
+    <div className="p-3 md:p-4 bg-gradient-to-br from-gray-50/50 to-white min-h-[300px] lg:min-h-[320px]">
       {renderPreview()}
     </div>
   );
@@ -73,21 +73,21 @@ function LeadsPreview() {
   };
 
   return (
-    <div className="p-4 bg-gray-50/80 min-h-[340px] rounded-2xl">
-      <div className="bg-white rounded-xl border border-gray-200/80 overflow-hidden shadow-sm">
-        <div className="px-4 py-3 border-b border-gray-100 bg-white">
+    <div className="p-2 bg-gray-50/80 rounded-xl">
+      <div className="bg-white rounded-lg border border-gray-200/80 overflow-hidden shadow-sm">
+        <div className="px-3 py-1.5 border-b border-gray-100 bg-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Target size={15} className="text-purple-600" />
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 bg-purple-100 rounded-md flex items-center justify-center">
+                <Target size={13} className="text-purple-600" />
               </div>
               <div>
-                <h3 className="font-bold text-gray-900 text-sm">Lead Management</h3>
-                <p className="text-xs text-gray-500">Manage and track your sales leads</p>
+                <h3 className="font-bold text-gray-900 text-[12px] leading-tight">Lead Management</h3>
+                <p className="text-[10px] text-gray-500 leading-none">Manage and track your sales leads</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold border border-purple-200">
+            <div className="flex items-center">
+              <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold border border-purple-200">
                 {leads.length} Active
               </span>
             </div>
@@ -96,45 +96,45 @@ function LeadsPreview() {
         
         <div className="divide-y divide-gray-100">
           {leads.map((lead, idx) => (
-            <div key={idx} className="px-4 py-3 hover:bg-gray-50/50 transition-colors">
+            <div key={idx} className="px-3 py-1.5 hover:bg-gray-50/50 transition-colors">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2.5 mb-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center flex-shrink-0 border border-purple-200">
-                      <User size={14} className="text-purple-600" />
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="w-7 h-7 bg-gradient-to-br from-purple-100 to-purple-200 rounded-full flex items-center justify-center flex-shrink-0 border border-purple-200">
+                      <User size={12} className="text-purple-600" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-gray-900 text-xs truncate">{lead.name}</div>
-                      <div className="text-[11px] text-gray-500 truncate">{lead.company}</div>
+                      <div className="font-semibold text-gray-900 text-[11px] truncate leading-tight">{lead.name}</div>
+                      <div className="text-[10px] text-gray-500 truncate leading-none">{lead.company}</div>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold border ${getScoreColor(lead.score)}`}>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className={`text-[8.5px] px-1 py-0.2 rounded-full font-semibold border ${getScoreColor(lead.score)}`}>
                       Score {lead.score}
                     </span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold border ${getStatusColor(lead.status)}`}>
+                    <span className={`text-[8.5px] px-1 py-0.2 rounded-full font-semibold border ${getStatusColor(lead.status)}`}>
                       {lead.status}
                     </span>
-                    <span className="text-[10px] text-gray-400">Owner: {lead.owner}</span>
+                    <span className="text-[9px] text-gray-400">Owner: {lead.owner}</span>
                   </div>
                 </div>
                 
                 <div className="text-right ml-4 flex-shrink-0">
-                  <div className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold border mb-1.5 ${getPriorityColor(lead.priority)}`}>
+                  <div className={`text-[8.5px] px-1 py-0.2 rounded-full font-semibold border mb-1 ${getPriorityColor(lead.priority)}`}>
                     {lead.priority} priority
                   </div>
-                  <div className="text-[10px] text-gray-400">{lead.lastActivity}</div>
+                  <div className="text-[9px] text-gray-400 leading-none">{lead.lastActivity}</div>
                 </div>
               </div>
             </div>
           ))}
         </div>
         
-        <div className="px-4 py-2.5 bg-gray-50/50 border-t border-gray-100">
-          <button className="text-xs text-purple-600 hover:text-purple-700 font-semibold flex items-center gap-1 transition-colors">
+        <div className="px-3 py-1.5 bg-gray-50/50 border-t border-gray-100">
+          <button className="text-[11px] text-purple-600 hover:text-purple-700 font-semibold flex items-center gap-0.5 transition-colors">
             View all leads
-            <ArrowRight size={12} />
+            <ArrowRight size={10} />
           </button>
         </div>
       </div>
@@ -159,20 +159,20 @@ function ContactsPreview() {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
+    <div className="bg-white rounded-lg border border-gray-200/60 overflow-hidden shadow-sm">
+      <div className="px-3 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-purple-100 rounded-lg flex items-center justify-center border border-blue-200/50">
-              <Users size={16} className="text-blue-600" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-blue-100 to-purple-100 rounded-md flex items-center justify-center border border-blue-200/50">
+              <Users size={14} className="text-blue-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">Contact Management</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Organize customer relationships and communication</p>
+              <h3 className="font-bold text-gray-900 text-[12px] leading-tight">Contact Management</h3>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">Organize customer relationships</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-semibold border border-blue-200">
+          <div className="flex items-center">
+            <span className="text-[9px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full font-semibold border border-blue-200">
               {contacts.length} Contacts
             </span>
           </div>
@@ -181,43 +181,43 @@ function ContactsPreview() {
       
       <div className="divide-y divide-gray-50">
         {contacts.map((contact, idx) => (
-          <div key={idx} className="px-4 py-3 hover:bg-gray-50/30 transition-colors group">
+          <div key={idx} className="px-3.5 py-1.5 hover:bg-gray-50/30 transition-colors group">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-9 h-9 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0 border border-blue-200/50 group-hover:from-blue-200 group-hover:to-blue-300 transition-all">
-                  <User size={15} className="text-blue-600" />
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-7 h-7 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0 border border-blue-200/50 group-hover:from-blue-200 group-hover:to-blue-300 transition-all">
+                  <User size={12} className="text-blue-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-gray-900 text-xs truncate">{contact.name}</div>
-                  <div className="text-[11px] text-gray-500 truncate mb-1">{contact.company}</div>
-                  <div className="flex items-center gap-3 text-[10px] text-gray-400">
-                    <div className="flex items-center gap-1">
-                      <Mail size={10} className="text-gray-400" />
-                      <span className="truncate max-w-[120px]">{contact.email}</span>
+                  <div className="font-semibold text-gray-900 text-[11px] truncate leading-tight">{contact.name}</div>
+                  <div className="text-[10px] text-gray-500 truncate leading-none mb-0.5">{contact.company}</div>
+                  <div className="flex items-center gap-2 text-[9px] text-gray-400">
+                    <div className="flex items-center gap-0.5">
+                      <Mail size={8} className="text-gray-400" />
+                      <span className="truncate max-w-[100px]">{contact.email}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Phone size={10} className="text-gray-400" />
+                    <div className="flex items-center gap-0.5">
+                      <Phone size={8} className="text-gray-400" />
                       <span>{contact.phone}</span>
                     </div>
                   </div>
                 </div>
               </div>
               
-              <div className="text-right ml-4 flex-shrink-0 space-y-1">
-                <div className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${getStatusColor(contact.status)}`}>
+              <div className="text-right ml-4 flex-shrink-0 space-y-0.5">
+                <div className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-semibold border ${getStatusColor(contact.status)}`}>
                   {contact.status}
                 </div>
-                <div className="text-[10px] text-gray-400">Owner: <span className="text-gray-600 font-medium">{contact.owner}</span></div>
+                <div className="text-[9px] text-gray-400">Owner: <span className="text-gray-600 font-medium">{contact.owner}</span></div>
               </div>
             </div>
           </div>
         ))}
       </div>
       
-      <div className="px-4 py-2.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
-        <button className="text-xs text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1.5 transition-colors group">
+      <div className="px-3.5 py-1.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
+        <button className="text-[11px] text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors group">
           <span>View all contacts</span>
-          <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
     </div>
@@ -240,20 +240,20 @@ function CompaniesPreview() {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
+    <div className="bg-white rounded-lg border border-gray-200/60 overflow-hidden shadow-sm">
+      <div className="px-3 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center border border-green-200/50">
-              <Building2 size={16} className="text-green-600" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-green-100 to-emerald-100 rounded-md flex items-center justify-center border border-green-200/50">
+              <Building2 size={14} className="text-green-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">Company Management</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Centralize account relationships and opportunities</p>
+              <h3 className="font-bold text-gray-900 text-[12px] leading-tight">Company Management</h3>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">Centralize account relationships</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold border border-green-200">
+          <div className="flex items-center">
+            <span className="text-[9px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-semibold border border-green-200">
               {companies.length} Companies
             </span>
           </div>
@@ -262,27 +262,27 @@ function CompaniesPreview() {
       
       <div className="divide-y divide-gray-50">
         {companies.map((company, idx) => (
-          <div key={idx} className="px-4 py-3 hover:bg-gray-50/30 transition-colors group">
+          <div key={idx} className="px-3.5 py-1.5 hover:bg-gray-50/30 transition-colors group">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-9 h-9 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center flex-shrink-0 border border-green-200/50 group-hover:from-green-200 group-hover:to-green-300 transition-all">
-                  <Building2 size={15} className="text-green-600" />
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-7 h-7 bg-gradient-to-br from-green-100 to-green-200 rounded-lg flex items-center justify-center flex-shrink-0 border border-green-200/50 group-hover:from-green-200 group-hover:to-green-300 transition-all">
+                  <Building2 size={12} className="text-green-600" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-gray-900 text-xs truncate">{company.name}</div>
-                  <div className="text-[11px] text-gray-500 truncate mb-1">{company.industry}</div>
-                  <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                  <div className="font-semibold text-gray-900 text-[11px] truncate leading-tight">{company.name}</div>
+                  <div className="text-[10px] text-gray-500 truncate leading-none mb-0.5">{company.industry}</div>
+                  <div className="flex items-center gap-2 text-[9px] text-gray-400">
                     <span>{company.contacts} contacts</span>
-                    <span>{company.deals} open deals</span>
-                    <span>Owner: <span className="text-gray-600 font-medium">{company.owner}</span></span>
+                    <span>{company.deals} open</span>
+                    <span>Owner: <span className="text-gray-600">{company.owner}</span></span>
                   </div>
                 </div>
               </div>
               
               <div className="text-right ml-4 flex-shrink-0">
-                <div className={`text-sm mb-0.5 ${getValueColor(company.value)}`}>{company.value}</div>
-                <div className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium border border-gray-200">
-                  Account Value
+                <div className={`text-xs mb-0.5 ${getValueColor(company.value)}`}>{company.value}</div>
+                <div className="text-[8px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded-full font-medium border border-gray-200">
+                  Value
                 </div>
               </div>
             </div>
@@ -290,10 +290,10 @@ function CompaniesPreview() {
         ))}
       </div>
       
-      <div className="px-4 py-2.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
-        <button className="text-xs text-green-600 hover:text-green-700 font-semibold flex items-center gap-1.5 transition-colors group">
+      <div className="px-3.5 py-1.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
+        <button className="text-[11px] text-green-600 hover:text-green-700 font-semibold flex items-center gap-1 transition-colors group">
           <span>View all companies</span>
-          <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
     </div>
@@ -323,64 +323,64 @@ function PipelinePreview() {
   const totalValue = deals.reduce((sum, deal) => sum + deal.value, 0);
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
+    <div className="bg-white rounded-lg border border-gray-200/60 overflow-hidden shadow-sm">
+      <div className="px-3 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-lg flex items-center justify-center border border-purple-200/50">
-              <TrendingUp size={16} className="text-purple-600" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-md flex items-center justify-center border border-purple-200/50">
+              <TrendingUp size={14} className="text-purple-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">Sales Pipeline</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Track opportunities through every sales stage</p>
+              <h3 className="font-bold text-gray-900 text-[12px] leading-tight">Sales Pipeline</h3>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">Track opportunities stage-by-stage</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-semibold border border-purple-200">
-              ₹{(totalValue / 100000).toFixed(1)}L total value
+          <div className="flex items-center">
+            <span className="text-[9px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-semibold border border-purple-200">
+              ₹{(totalValue / 100000).toFixed(1)}L
             </span>
           </div>
         </div>
       </div>
       
-      <div className="p-4">
+      <div className="p-3">
         {/* Stage indicators */}
-        <div className="grid grid-cols-5 gap-1.5 mb-4">
+        <div className="grid grid-cols-5 gap-1 mb-3">
           {stages.map((stage, idx) => {
             const stageDeals = deals.filter(deal => deal.stage === stage);
             const stageValue = stageDeals.reduce((sum, deal) => sum + deal.value, 0);
             return (
               <div key={idx} className="text-center">
-                <div className="text-[10px] font-semibold text-gray-600 mb-1">{stage}</div>
-                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div className="text-[9px] font-semibold text-gray-600 mb-0.5 leading-none">{stage}</div>
+                <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
                   <div 
                     className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-500"
                     style={{ width: `${Math.max(20, (stageValue / totalValue) * 100)}%` }}
                   />
                 </div>
-                <div className="text-[9px] text-gray-400 mt-0.5">{stageDeals.length} deals</div>
+                <div className="text-[8px] text-gray-400 mt-0.5 leading-none">{stageDeals.length} d</div>
               </div>
             );
           })}
         </div>
         
         {/* Deal cards */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {deals.map((deal) => (
-            <div key={deal.id} className="group p-3 border border-gray-100 rounded-lg hover:bg-gray-50/50 hover:border-purple-200 transition-all">
+            <div key={deal.id} className="group p-2 border border-gray-100 rounded-md hover:bg-gray-50/50 hover:border-purple-200 transition-all">
               <div className="flex justify-between items-start">
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 text-xs truncate">{deal.name}</div>
-                  <div className="text-[11px] text-gray-500 truncate">{deal.company}</div>
-                  <div className="flex items-center gap-2 mt-1.5">
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium border ${getStageColor(deal.stage)}`}>
+                  <div className="font-semibold text-gray-900 text-[11px] truncate leading-tight">{deal.name}</div>
+                  <div className="text-[10px] text-gray-500 truncate leading-none mt-0.5">{deal.company}</div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className={`text-[8px] px-1 py-0.2 rounded-full font-medium border ${getStageColor(deal.stage)}`}>
                       {deal.stage}
                     </span>
-                    <span className="text-[10px] text-gray-400">{deal.probability}% probability</span>
+                    <span className="text-[9px] text-gray-400">{deal.probability}% prob</span>
                   </div>
                 </div>
                 <div className="text-right ml-4 flex-shrink-0">
-                  <div className="font-bold text-gray-900 text-xs">₹{(deal.value / 100000).toFixed(2)}L</div>
+                  <div className="font-bold text-gray-900 text-[11px]">₹{(deal.value / 100000).toFixed(1)}L</div>
                 </div>
               </div>
             </div>
@@ -388,10 +388,10 @@ function PipelinePreview() {
         </div>
       </div>
       
-      <div className="px-4 py-2.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
-        <button className="text-xs text-purple-600 hover:text-purple-700 font-semibold flex items-center gap-1.5 transition-colors group">
+      <div className="px-3.5 py-1.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
+        <button className="text-[11px] text-purple-600 hover:text-purple-700 font-semibold flex items-center gap-1 transition-colors group">
           <span>View full pipeline</span>
-          <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
     </div>
@@ -422,21 +422,21 @@ function DealsPreview() {
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
+    <div className="bg-white rounded-lg border border-gray-200/60 overflow-hidden shadow-sm">
+      <div className="px-3 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg flex items-center justify-center border border-orange-200/50">
-              <Briefcase size={16} className="text-orange-600" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-orange-100 to-red-100 rounded-md flex items-center justify-center border border-orange-200/50">
+              <Briefcase size={14} className="text-orange-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">Deal Management</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Track opportunities from prospect to close</p>
+              <h3 className="font-bold text-gray-900 text-[12px] leading-tight">Deal Management</h3>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">Track opportunities to close</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full font-semibold border border-orange-200">
-              {deals.length} Active Deals
+          <div className="flex items-center">
+            <span className="text-[9px] bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-semibold border border-orange-200">
+              {deals.length} Active
             </span>
           </div>
         </div>
@@ -444,35 +444,35 @@ function DealsPreview() {
       
       <div className="divide-y divide-gray-50">
         {deals.map((deal, idx) => (
-          <div key={idx} className="px-4 py-3 hover:bg-gray-50/30 transition-colors group">
+          <div key={idx} className="px-3.5 py-1.5 hover:bg-gray-50/30 transition-colors group">
             <div className="flex items-center justify-between">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2.5 mb-2">
-                  <div className="w-8 h-8 bg-gradient-to-br from-orange-100 to-orange-200 rounded-lg flex items-center justify-center flex-shrink-0 border border-orange-200/50 group-hover:from-orange-200 group-hover:to-orange-300 transition-all">
-                    <Briefcase size={14} className="text-orange-600" />
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-7 h-7 bg-gradient-to-br from-orange-100 to-orange-200 rounded-md flex items-center justify-center flex-shrink-0 border border-orange-200/50 group-hover:from-orange-200 group-hover:to-orange-300 transition-all">
+                    <Briefcase size={12} className="text-orange-600" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="font-semibold text-gray-900 text-xs truncate">{deal.name}</div>
-                    <div className="text-[11px] text-gray-500 truncate">{deal.company}</div>
+                    <div className="font-semibold text-gray-900 text-[11px] truncate leading-tight">{deal.name}</div>
+                    <div className="text-[10px] text-gray-500 truncate leading-none">{deal.company}</div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3 flex-wrap text-[10px]">
-                  <span className="font-bold text-green-600 text-xs">₹{(deal.value / 100000).toFixed(2)}L</span>
-                  <span className={`px-1.5 py-0.5 rounded-full font-semibold border ${getStageColor(deal.stage)}`}>
+                <div className="flex items-center gap-2 flex-wrap text-[9px]">
+                  <span className="font-bold text-green-600 text-[10px]">₹{(deal.value / 100000).toFixed(1)}L</span>
+                  <span className={`px-1 py-0.2 rounded-full font-semibold border ${getStageColor(deal.stage)}`}>
                     {deal.stage}
                   </span>
                   <span className={`font-semibold ${getProbabilityColor(deal.probability)}`}>
-                    {deal.probability}% probability
+                    {deal.probability}% prob
                   </span>
-                  <span className="text-gray-400">Owner: <span className="text-gray-600 font-medium">{deal.owner}</span></span>
+                  <span className="text-gray-400">Owner: <span className="text-gray-600">{deal.owner}</span></span>
                 </div>
               </div>
               
               <div className="text-right ml-4 flex-shrink-0">
-                <div className="text-xs font-semibold text-gray-900 mb-0.5">Close: {deal.closeDate}</div>
-                <div className="text-[9px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full font-medium border border-gray-200">
-                  Expected Close
+                <div className="text-[10px] font-semibold text-gray-900 mb-0.5">Close: {deal.closeDate.split('-').slice(1).join('/')}</div>
+                <div className="text-[8px] bg-gray-100 text-gray-500 px-1 py-0.2 rounded-full font-medium border border-gray-200">
+                  Expected
                 </div>
               </div>
             </div>
@@ -480,10 +480,10 @@ function DealsPreview() {
         ))}
       </div>
       
-      <div className="px-4 py-2.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
-        <button className="text-xs text-orange-600 hover:text-orange-700 font-semibold flex items-center gap-1.5 transition-colors group">
+      <div className="px-3.5 py-1.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
+        <button className="text-[11px] text-orange-600 hover:text-orange-700 font-semibold flex items-center gap-1 transition-colors group">
           <span>View all deals</span>
-          <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
     </div>
@@ -518,35 +518,35 @@ function TasksPreview() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'Call': return <Phone size={14} className="text-green-600" />;
-      case 'Email': return <Mail size={14} className="text-blue-600" />;
-      case 'Meeting': return <Calendar size={14} className="text-purple-600" />;
-      default: return <CheckSquare size={14} className="text-gray-600" />;
+      case 'Call': return <Phone size={12} className="text-green-600" />;
+      case 'Email': return <Mail size={12} className="text-blue-600" />;
+      case 'Meeting': return <Calendar size={12} className="text-purple-600" />;
+      default: return <CheckSquare size={12} className="text-gray-600" />;
     }
   };
 
   const overdueTasks = tasks.filter(task => new Date(task.dueDate) < new Date()).length;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200/60 overflow-hidden shadow-sm">
-      <div className="px-4 py-3 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
+    <div className="bg-white rounded-lg border border-gray-200/60 overflow-hidden shadow-sm">
+      <div className="px-3 py-2 border-b border-gray-100 bg-gradient-to-r from-white to-gray-50/50">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center border border-indigo-200/50">
-              <CheckSquare size={16} className="text-indigo-600" />
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-md flex items-center justify-center border border-indigo-200/50">
+              <CheckSquare size={14} className="text-indigo-600" />
             </div>
             <div>
-              <h3 className="font-bold text-gray-900 text-sm">Tasks & Follow-ups</h3>
-              <p className="text-xs text-gray-500 mt-0.5">Keep sales activities on track and organized</p>
+              <h3 className="font-bold text-gray-900 text-[12px] leading-tight">Tasks & Follow-ups</h3>
+              <p className="text-[10px] text-gray-500 leading-none mt-0.5">Keep sales activities organized</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             {overdueTasks > 0 && (
-              <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold border border-red-200 mr-1.5">
+              <span className="text-[9px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-semibold border border-red-200 mr-1">
                 {overdueTasks} overdue
               </span>
             )}
-            <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-semibold border border-indigo-200">
+            <span className="text-[9px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-semibold border border-indigo-200">
               {tasks.length} Active
             </span>
           </div>
@@ -555,40 +555,39 @@ function TasksPreview() {
       
       <div className="divide-y divide-gray-50">
         {tasks.map((task, idx) => (
-          <div key={idx} className="px-4 py-3 hover:bg-gray-50/30 transition-colors group">
+          <div key={idx} className="px-3.5 py-1.5 hover:bg-gray-50/30 transition-colors group">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className="w-8 h-8 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-lg flex items-center justify-center flex-shrink-0 border border-indigo-200/50 group-hover:from-indigo-200 group-hover:to-indigo-300 transition-all">
+              <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                <div className="w-7 h-7 bg-gradient-to-br from-indigo-100 to-indigo-200 rounded-md flex items-center justify-center flex-shrink-0 border border-indigo-200/50 group-hover:from-indigo-200 group-hover:to-indigo-300 transition-all">
                   {getTypeIcon(task.type)}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="font-semibold text-gray-900 text-xs truncate">{task.title}</div>
-                  <div className="text-[11px] text-gray-500 truncate mb-1">Related: {task.deal}</div>
-                  <div className="flex items-center gap-3 flex-wrap text-[10px] text-gray-400">
-                    <span>Due: <span className="font-medium text-gray-600">{task.dueDate}</span></span>
+                  <div className="font-semibold text-gray-900 text-[11px] truncate leading-tight">{task.title}</div>
+                  <div className="text-[10px] text-gray-500 truncate leading-none mb-0.5">Related: {task.deal}</div>
+                  <div className="flex items-center gap-2 text-[9px] text-gray-400">
+                    <span>Due: <span className="font-medium text-gray-600">{task.dueDate.split('-').slice(1).join('/')}</span></span>
                     <span>Owner: <span className="font-medium text-gray-600">{task.owner}</span></span>
                   </div>
                 </div>
               </div>
               
-              <div className="text-right ml-4 flex-shrink-0 space-y-1">
-                <div className={`text-[10px] px-2 py-0.5 rounded-full font-semibold border ${getPriorityColor(task.priority)}`}>
+              <div className="text-right ml-4 flex-shrink-0 space-y-0.5">
+                <div className={`text-[8.5px] px-1.5 py-0.2 rounded-full font-semibold border ${getPriorityColor(task.priority)}`}>
                   {task.priority} Priority
                 </div>
-                <div className={`text-[10px] px-2 py-0.5 font-medium border rounded-full ${getStatusColor(task.status)}`}>
+                <div className={`text-[8.5px] px-1.5 py-0.2 font-medium border rounded-full ${getStatusColor(task.status)}`}>
                   {task.status}
                 </div>
-                <div className="text-[9px] text-gray-400">{task.type}</div>
               </div>
             </div>
           </div>
         ))}
       </div>
       
-      <div className="px-4 py-2.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
-        <button className="text-xs text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1.5 transition-colors group">
+      <div className="px-3.5 py-1.5 bg-gradient-to-r from-gray-50/30 to-white border-t border-gray-100">
+        <button className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold flex items-center gap-1 transition-colors group">
           <span>View all tasks</span>
-          <ArrowRight size={12} className="group-hover:translate-x-0.5 transition-transform" />
+          <ArrowRight size={10} className="group-hover:translate-x-0.5 transition-transform" />
         </button>
       </div>
     </div>
