@@ -125,7 +125,7 @@ class AuthService:
     async def login(self, payload: LoginRequest, client_ip: str = "") -> TokenResponse:
         user = await self.user_repo.get_by_email(payload.email.lower())
 
-        if not user or not verify_password(payload.password, user.hashed_password):
+        if not user or not verify_password(payload.password, user.hashed_password or ""):
             raise InvalidCredentialsException()
 
         if not user.is_active:
@@ -231,7 +231,7 @@ class AuthService:
         )
 
     async def change_password(self, user: User, payload: ChangePasswordRequest) -> None:
-        if not verify_password(payload.current_password, user.hashed_password):
+        if not verify_password(payload.current_password, user.hashed_password or ""):
             raise InvalidCredentialsException()
 
         is_valid, reason = check_password_strength(payload.new_password)

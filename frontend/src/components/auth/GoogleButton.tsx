@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
+import { getGoogleAuthUrl } from "@/utils/api";
 
 function GoogleIcon() {
   return (
@@ -27,17 +28,30 @@ function GoogleIcon() {
 export function GoogleButton({ label }: { label: string }) {
   const [loading, setLoading] = useState(false);
 
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      // Get Google OAuth authorization URL from backend
+      const { auth_url, state } = await getGoogleAuthUrl();
+
+      // Save state for verification after callback
+      sessionStorage.setItem('google_oauth_state', state);
+
+      // Redirect to Google OAuth
+      window.location.href = auth_url;
+    } catch (err) {
+      console.error('[auth] Google OAuth error:', err);
+      setLoading(false);
+    }
+  };
+
   return (
     <button
       type="button"
       disabled={loading}
       aria-label={label}
       aria-busy={loading}
-      onClick={() => {
-        setLoading(true);
-        console.info("[auth] Google OAuth requested");
-        setTimeout(() => setLoading(false), 1600);
-      }}
+      onClick={handleGoogleLogin}
       className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-border-default bg-surface-1 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent-color focus-visible:ring-offset-2 outline-none active:scale-[0.985] disabled:opacity-70 cursor-pointer"
     >
       {loading ? <Loader2 size={16} className="animate-spin text-accent-color" /> : <GoogleIcon />}

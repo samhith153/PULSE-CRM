@@ -262,6 +262,21 @@ export async function getAuthConfig(): Promise<{ google_client_id: string | null
   return json.data ?? json;
 }
 
+export async function getGoogleAuthUrl(): Promise<{ auth_url: string; state: string }> {
+  // Same-origin request: next.config.ts rewrites /api/v1/* to the backend,
+  // so this works from localhost, the LAN address, or any device with no CORS.
+  const res = await fetch(`/api/v1/auth/google/auth-url`);
+  if (!res.ok) {
+    throw new Error(`Failed to load Google auth URL (${res.status})`);
+  }
+  const json = await res.json();
+  const data = json.data ?? json;
+  if (!data?.auth_url) {
+    throw new Error('Google auth is not configured. Please set GOOGLE_CLIENT_ID on the server.');
+  }
+  return { auth_url: data.auth_url, state: data.state };
+}
+
 export async function loginWithGoogle(credential: string): Promise<{ access_token: string; refresh_token: string }> {
   const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
     method: 'POST',
