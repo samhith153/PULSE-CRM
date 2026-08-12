@@ -1003,13 +1003,6 @@ class DashboardService:
             orphaned_leads=int((await self.db.execute(orphaned_leads_stmt)).scalar_one() or 0),
         )
 
-        audit_rows = (await self.db.execute(
-            select(ActivityTimeline, User.full_name)
-            .outerjoin(User, User.id == ActivityTimeline.created_by)
-            .where(ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True))
-            .order_by(ActivityTimeline.created_at.desc())
-            .limit(10)
-        )
         unusual_exports_stmt = select(func.count(ActivityTimeline.id)).where(
             ActivityTimeline.organization_id == organization_id, ActivityTimeline.is_active.is_(True),
             ActivityTimeline.action.ilike("%export%"), ActivityTimeline.created_at >= now - timedelta(hours=24),
