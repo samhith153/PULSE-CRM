@@ -11,7 +11,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, func, or_, select, Numeric
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -109,6 +109,65 @@ class DailyPrioritiesRepository:
             .subquery("email_cnt")
         )
 
+    def _rising_interest_sub(self, organization_id: UUID, now: datetime):
+        """
+        Compute a dynamic rising-interest velocity score per entity.
+        Compares activity count in recent 7-day window vs prior 7-day window.
+        A ratio > 1.0 means engagement is accelerating (rising).
+        """
+        recent_start = now - timedelta(days=7)
+        prior_start = now - timedelta(days=14)
+
+        recent_act = (
+            select(
+                ActivityTimeline.entity_id,
+                func.count(ActivityTimeline.id).label("recent_cnt"),
+            )
+            .where(
+                ActivityTimeline.organization_id == organization_id,
+                ActivityTimeline.created_at >= recent_start,
+            )
+            .group_by(ActivityTimeline.entity_id)
+            .subquery("recent_act")
+        )
+
+        prior_act = (
+            select(
+                ActivityTimeline.entity_id,
+                func.count(ActivityTimeline.id).label("prior_cnt"),
+            )
+            .where(
+                ActivityTimeline.organization_id == organization_id,
+                ActivityTimeline.created_at >= prior_start,
+                ActivityTimeline.created_at < recent_start,
+            )
+            .group_by(ActivityTimeline.entity_id)
+            .subquery("prior_act")
+        )
+
+        ratio_expr = case(
+            (func.coalesce(prior_act.c.prior_cnt, 0) == 0,
+             case((func.coalesce(recent_act.c.recent_cnt, 0) > 0, 2.0), else_=0.0)),
+            else_=func.cast(recent_act.c.recent_cnt, Numeric) / func.cast(prior_act.c.prior_cnt, Numeric),
+        )
+
+        rising_score = func.least(func.greatest(ratio_expr * 40, 0), 100)
+
+        return (
+            select(
+                recent_act.c.entity_id,
+                recent_act.c.recent_cnt,
+                prior_act.c.prior_cnt,
+                rising_score.label("rising_interest_score"),
+            )
+            .select_from(
+                recent_act.outerjoin(
+                    prior_act, prior_act.c.entity_id == recent_act.c.entity_id
+                )
+            )
+            .subquery("rising_interest")
+        )
+
     # ── Main enriched query for all leads/deals ───────────────────────────────
 
     async def fetch_priority_candidates(
@@ -133,6 +192,7 @@ class DailyPrioritiesRepository:
         open_tasks = self._open_task_sub(organization_id)
         mtg_today  = self._today_meeting_sub(organization_id, today_start, today_end)
         email_cnt  = self._email_sub(organization_id)
+        rising_int = self._rising_interest_sub(organization_id, now)
 
         owner_alias = aliased(User, name="owner_u")
 
@@ -159,6 +219,7 @@ class DailyPrioritiesRepository:
                 func.coalesce(mtg_today.c.meetings_today, 0).label("meetings_today"),
                 func.coalesce(email_cnt.c.email_count, 0).label("email_count"),
                 func.coalesce(email_cnt.c.email_replies, 0).label("email_replies"),
+                func.coalesce(rising_int.c.rising_interest_score, 0).label("rising_interest_score"),
             )
             .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .outerjoin(owner_alias,  owner_alias.id   == Lead.owner_id)
@@ -169,6 +230,7 @@ class DailyPrioritiesRepository:
             .outerjoin(open_tasks,   open_tasks.c.entity_id == Lead.id)
             .outerjoin(mtg_today,    mtg_today.c.entity_id  == Lead.id)
             .outerjoin(email_cnt,    email_cnt.c.external_entity_id == Lead.id)
+            .outerjoin(rising_int,    rising_int.c.entity_id == Lead.id)
             .where(
                 Lead.organization_id == organization_id,
                 Lead.is_active.is_(True),
