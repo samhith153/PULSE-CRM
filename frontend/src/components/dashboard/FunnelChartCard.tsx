@@ -1,312 +1,170 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Layers, HelpCircle } from 'lucide-react';
 
 interface FunnelChartCardProps {
   leads?: any[];
   deals?: any[];
+  className?: string;
 }
 
-export default function FunnelChartCard({ leads = [], deals = [] }: FunnelChartCardProps) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+/* ──────────────────────────────────────────────────────────────────
+   Funnel stage colours (light → dark, top → bottom)
+────────────────────────────────────────────────────────────────── */
+const STAGE_FILLS = [
+  '#6C63FF',   // New Leads    — deep violet
+  '#7B74FF',   // Contacted    — violet
+  '#8A8BFF',   // Qualified    — blue-violet
+  '#99AAFF',   // Proposals    — periwinkle
+  '#4BD08B',   // Won          — green
+];
 
-  // Calculate funnel stage values from real CRM data
-  const funnelData = useMemo(() => {
+export default function FunnelChartCard({ leads = [], deals = [], className = '' }: FunnelChartCardProps) {
+  /* ── Compute stage data ── */
+  const stages = useMemo(() => {
     const activeLeads = leads.filter(l => l.status !== 'Lost' && l.status !== 'Converted');
-    
-    // 1. New Leads
-    const newLeads = activeLeads.filter(l => l.status === 'new').length;
-    // 2. Contacted
-    const contactedLeads = activeLeads.filter(l => l.status === 'contacted').length;
-    // 3. Qualified
-    const qualifiedDeals = deals.filter(d => d.stage === 'Qualified').length;
-    const qualifiedLeads = activeLeads.filter(l => l.status === 'qualified').length;
-    const qualifiedCount = qualifiedDeals + qualifiedLeads;
-    // 4. Proposals
-    const proposalDeals = deals.filter(d => d.stage === 'Proposal' || d.stage === 'Negotiation').length;
-    const proposalLeads = activeLeads.filter(l => l.status === 'proposal_sent' || l.status === 'negotiation').length;
-    const proposalsCount = proposalDeals + proposalLeads;
-    // 5. Won
-    const wonDeals = deals.filter(d => d.stage === 'Won' || d.stage === 'Closed Won' || d.stage === 'Closed').length;
-    const wonLeads = leads.filter(l => l.status === 'won').length;
-    const wonCount = wonDeals + wonLeads;
+    const newLeads    = activeLeads.filter(l => l.status === 'new').length;
+    const contacted   = activeLeads.filter(l => l.status === 'contacted').length;
+    const qualified   = deals.filter(d => d.stage === 'Qualified').length + activeLeads.filter(l => l.status === 'qualified').length;
+    const proposals   = deals.filter(d => d.stage === 'Proposal' || d.stage === 'Negotiation').length + activeLeads.filter(l => l.status === 'proposal_sent').length;
+    const won         = deals.filter(d => d.stage === 'Won' || d.status === 'Closed Won').length + leads.filter(l => l.status === 'won').length;
 
-    // Sanitize with default baseline ratios if no database items exist (e.g. fresh environment)
-    // but ensure we show real ratios when database has entries
-    const hasData = (newLeads + contactedLeads + qualifiedCount + proposalsCount + wonCount) > 0;
-    
-    const baseNew = hasData ? newLeads : 120;
-    const baseContacted = hasData ? contactedLeads : 84;
-    const baseQualified = hasData ? qualifiedCount : 52;
-    const baseProposals = hasData ? proposalsCount : 31;
-    const baseWon = hasData ? wonCount : 18;
+    const hasRealData = (newLeads + contacted + qualified + proposals + won) > 0;
 
-    return [
-      { stage: 'New Leads', count: baseNew },
-      { stage: 'Contacted', count: baseContacted },
-      { stage: 'Qualified', count: baseQualified },
-      { stage: 'Proposals', count: baseProposals },
-      { stage: 'Won', count: baseWon }
-    ];
+    const raw = hasRealData
+      ? [newLeads, contacted, qualified, proposals, won]
+      : [120, 84, 52, 31, 18];
+
+    const names = ['New Leads', 'Contacted', 'Qualified', 'Proposals', 'Won'];
+    const top   = raw[0] || 1;
+
+    return names.map((name, i) => ({
+      name,
+      count: raw[i],
+      pct: Math.round((raw[i] / top) * 100),
+    }));
   }, [leads, deals]);
 
-  // Compute conversion percentages
-  const maxVal = funnelData[0]?.count || 1;
-  
-  const funnelStages = useMemo(() => {
-    return funnelData.map((item, idx) => {
-      const pctOfFirst = Math.round((item.count / maxVal) * 100);
-      
-      let dropOff = 0;
-      if (idx > 0) {
-        const prevCount = funnelData[idx - 1].count;
-        dropOff = prevCount > 0 ? Math.max(0, 100 - Math.round((item.count / prevCount) * 100)) : 0;
-      }
+  /* ── SVG funnel geometry ──
+     Each stage is a symmetric trapezoid.
+     maxW = full card width track, minW = narrowest (Won).
+     We produce 5 stacked trapezoids — each sharing top edge with prev bottom.
+  ── */
+  const SVG_W  = 220;   // viewBox width for the funnel shape
+  const SVG_H  = 250;   // viewBox height
+  const ROWS   = stages.length;
+  const ROW_H  = SVG_H / ROWS;  // 50 per row
+  const MAX_HW = SVG_W / 2;     // half-width at top  = 110
+  const MIN_HW = 28;            // half-width at bottom
 
-      return {
-        ...item,
-        pctOfFirst,
-        dropOff
-      };
-    });
-  }, [funnelData, maxVal]);
+  function halfWidth(i: number) {
+    // linearly taper from MAX_HW at i=0 to MIN_HW at i=ROWS-1
+    return MAX_HW - (MAX_HW - MIN_HW) * (i / (ROWS - 1));
+  }
 
-  // S-Curve heights for rendering organic wave transitions
-  // Center is y = 120, total height = 240, width = 1000
-  const segmentWidth = 200;
-  const heights = [200, 155, 115, 85, 60, 42];
-
-  const paths = useMemo(() => {
-    return funnelStages.map((_, i) => {
-      const xStart = i * segmentWidth;
-      const xEnd = (i + 1) * segmentWidth;
-      const hStart = heights[i];
-      const hEnd = heights[i + 1];
-
-      // Center vertically in 280-tall viewBox (leave 40px top for counts, 40px bottom for labels)
-      const centerY = 140;
-      const yTopStart = centerY - hStart / 2;
-      const yBottomStart = centerY + hStart / 2;
-      const yTopEnd = centerY - hEnd / 2;
-      const yBottomEnd = centerY + hEnd / 2;
-
-      // Cubic Bezier spline curves for S-curve wave-like taper
-      const d = `
-        M ${xStart} ${yTopStart}
-        C ${xStart + 100} ${yTopStart}, ${xEnd - 100} ${yTopEnd}, ${xEnd} ${yTopEnd}
-        L ${xEnd} ${yBottomEnd}
-        C ${xEnd - 100} ${yBottomEnd}, ${xStart + 100} ${yBottomStart}, ${xStart} ${yBottomStart}
-        Z
-      `;
-      return d.trim();
-    });
-  }, [funnelStages]);
-
-
-  // Stylings for each stage
-  const stageStyles = [
-    {
-      fillClass: 'fill-accent-muted dark:fill-accent-muted',
-      badgeClass: 'bg-surface-2 dark:bg-surface-2 text-accent-color dark:text-accent-color border border-accent-color/20',
-      glowColor: 'rgba(99, 102, 241, 0.25)'
-    },
-    {
-      fillClass: 'fill-accent-muted dark:fill-accent-muted',
-      badgeClass: 'bg-surface-2 dark:bg-surface-2 text-accent-color dark:text-accent-color border border-accent-color/25',
-      glowColor: 'rgba(99, 102, 241, 0.35)'
-    },
-    {
-      fillClass: 'fill-accent-muted dark:fill-accent-muted',
-      badgeClass: 'bg-surface-2 dark:bg-surface-2 text-accent-color dark:text-accent-color border border-accent-color/30',
-      glowColor: 'rgba(99, 102, 241, 0.45)'
-    },
-    {
-      fillClass: 'fill-accent-color dark:fill-accent-color',
-      badgeClass: 'bg-accent-color text-primary-foreground border border-accent-color/40 shadow-sm',
-      glowColor: 'rgba(79, 70, 229, 0.55)'
-    },
-    {
-      fillClass: 'fill-status-success-text dark:fill-status-success-text',
-      badgeClass: 'bg-status-success-text text-primary-foreground border border-status-success-text/40 shadow-sm',
-      glowColor: 'rgba(16, 185, 129, 0.55)'
-    }
-  ];
-
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    setTooltipPos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
-    });
-  };
+  const paths = stages.map((_, i) => {
+    const y1 = i * ROW_H;
+    const y2 = (i + 1) * ROW_H;
+    const hw1 = halfWidth(i);
+    const hw2 = halfWidth(i + 1);
+    const cx  = SVG_W / 2;
+    return `M ${cx - hw1} ${y1} L ${cx + hw1} ${y1} L ${cx + hw2} ${y2} L ${cx - hw2} ${y2} Z`;
+  });
 
   return (
-    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 w-full relative overflow-hidden group">
-      {/* Background ambient radial aura pulse */}
-      <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
+    <div className={`bg-card border border-border rounded-2xl p-5 shadow-sm ${className}`}>
 
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3.5 mb-3.5 border-b border-border/60 relative">
-        <div className="flex items-center space-x-3">
-          <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
-            <Layers size={18} />
-          </div>
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <span className="grid size-9 place-items-center rounded-xl bg-accent-color/10 border border-accent-color/15">
+            <Layers className="size-4 text-accent-color" strokeWidth={2} />
+          </span>
           <div>
-            <h4 className="text-sm font-extrabold text-foreground tracking-tight">Pipeline Funnel Analysis</h4>
-            <p className="text-[10px] text-muted-foreground uppercase font-extrabold tracking-wider mt-0.5">Conversion & Drop-offs</p>
+            <h2 className="text-[15px] font-bold text-foreground leading-tight">Pipeline Funnel Analysis</h2>
+            <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground mt-0.5">
+              Conversion &amp; Drop-Offs
+            </p>
           </div>
         </div>
-        <div className="text-[10px] text-muted-foreground font-bold flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/60 border border-border/40 cursor-help select-none">
-          <HelpCircle size={12} />
-          <span>Top Relative Conversion</span>
-        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
+          <HelpCircle className="size-3" />
+          Top Relative Conversion
+        </span>
       </div>
 
-      <div className="relative w-full select-none">
-        <svg 
-          viewBox="0 0 1000 280" 
-          className="w-full h-auto cursor-pointer"
-          style={{ overflow: 'visible' }}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={() => setHoveredIndex(null)}
-        >
-          {/* Funnel segments */}
-          {funnelStages.map((stage, idx) => {
-            const isHovered = hoveredIndex === idx;
-            const style = stageStyles[idx];
-            const d = paths[idx];
+      {/* ── Main layout: stage rows ── */}
+      <div className="flex items-stretch gap-4">
 
-            return (
-              <g 
-                key={idx}
-                onMouseEnter={() => setHoveredIndex(idx)}
-                className="transition-all duration-300"
+        {/* Stage labels column */}
+        <div className="flex flex-col justify-around w-[90px] shrink-0">
+          {stages.map((s, i) => (
+            <div key={s.name} className="flex items-center h-[50px]">
+              <span
+                className="text-[11px] font-semibold text-foreground truncate"
+                style={{ color: i === ROWS - 1 ? '#4BD08B' : undefined }}
               >
-                {/* Segment Path */}
-                <motion.path
-                  d={d}
-                  className={`transition-all duration-300 ${style.fillClass}`}
-                  style={{
-                    filter: isHovered 
-                      ? `drop-shadow(0px 8px 16px ${style.glowColor})`
-                      : 'none',
-                    transformOrigin: `${idx * 200 + 100}px 140px`
-                  }}
-                  animate={{
-                    scale: isHovered ? 1.025 : 1,
-                  }}
-                  initial={{ pathLength: 0, opacity: 0 }}
-                  whileInView={{ pathLength: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{
-                    pathLength: { delay: idx * 0.15, duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-                    opacity: { delay: idx * 0.15, duration: 0.3 }
-                  }}
-                />
-
-                {/* Count value text (Top) */}
-                <motion.text
-                  x={idx * 200 + 100}
-                  y={22}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize="14"
-                  fontWeight="800"
-                  fontFamily="sans-serif"
-                  fill="currentColor"
-                  className="fill-foreground select-none tabular-nums"
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.15 + 0.3, duration: 0.4 }}
-                >
-                  {stage.count}
-                </motion.text>
-
-                {/* Stage label text (Bottom) */}
-                <motion.text
-                  x={idx * 200 + 100}
-                  y={258}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize="9"
-                  fontWeight="700"
-                  fontFamily="sans-serif"
-                  className="fill-muted-foreground select-none"
-                  style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.15 + 0.3, duration: 0.4 }}
-                >
-                  {stage.stage}
-                </motion.text>
-              </g>
-            );
-          })}
-        </svg>
-
-        {/* Floating pill percentage badges — positioned in SVG coordinate space mapped to % */}
-        <div className="absolute pointer-events-none" style={{ inset: 0 }}>
-          {funnelStages.map((stage, idx) => {
-            const leftPercent = idx * 20 + 10;
-            // Segments centered at y=140 in a 280-tall viewBox → 50% vertically
-            const topPercent = 50;
-            const style = stageStyles[idx];
-            return (
-              <div 
-                key={idx}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none"
-                style={{ 
-                  left: `${leftPercent}%`, 
-                  top: `${topPercent}%`
-                }}
-              >
-                <motion.span 
-                  className={`px-3 py-1 rounded-full text-[10px] font-bold select-none shadow-sm ${style.badgeClass}`}
-                  initial={{ scale: 0, opacity: 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.15 + 0.4, type: 'spring', stiffness: 120 }}
-                >
-                  {stage.pctOfFirst}%
-                </motion.span>
-              </div>
-            );
-          })}
+                {s.name}
+              </span>
+            </div>
+          ))}
         </div>
 
-        {/* Hover Tooltip */}
-        {hoveredIndex !== null && (
-          <div 
-            className="absolute z-20 bg-ink text-primary-foreground dark:bg-card dark:border dark:border-border text-xs rounded-xl p-3 shadow-float pointer-events-none flex flex-col gap-1.5 animate-in fade-in zoom-in-95 duration-150"
-            style={{ 
-              left: hoveredIndex * 200 + 100 - 80, // Offset to align with center
-              top: tooltipPos.y > 100 ? tooltipPos.y - 120 : tooltipPos.y + 20
-            }}
+        {/* SVG funnel */}
+        <div className="flex-1 min-w-0">
+          <svg
+            viewBox={`0 0 ${SVG_W} ${SVG_H}`}
+            className="w-full h-auto"
+            style={{ maxHeight: 260 }}
+            preserveAspectRatio="xMidYMid meet"
           >
-            <div className="font-extrabold text-[11px] uppercase tracking-wider border-b border-white/10 pb-1 mb-1 text-primary-foreground dark:text-foreground">
-              {funnelStages[hoveredIndex].stage}
+            {paths.map((d, i) => (
+              <motion.path
+                key={i}
+                d={d}
+                fill={STAGE_FILLS[i]}
+                fillOpacity={0.9}
+                initial={{ opacity: 0, scaleX: 0 }}
+                animate={{ opacity: 1, scaleX: 1 }}
+                transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: i * 0.08 }}
+                style={{ transformOrigin: `${SVG_W / 2}px center` }}
+              />
+            ))}
+            {/* Connector dots on right edge */}
+            {stages.map((_, i) => {
+              const cx = SVG_W / 2;
+              const hw = halfWidth(i);
+              const y  = i * ROW_H + ROW_H / 2;
+              return (
+                <circle
+                  key={`dot-${i}`}
+                  cx={cx + hw - 2}
+                  cy={y}
+                  r={3}
+                  fill="white"
+                  fillOpacity={0.7}
+                />
+              );
+            })}
+          </svg>
+        </div>
+
+        {/* Count + % column */}
+        <div className="flex flex-col justify-around w-[70px] shrink-0 text-right">
+          {stages.map((s, i) => (
+            <div key={s.name} className="flex flex-col items-end justify-center h-[50px]">
+              <span className="text-[13px] font-extrabold text-foreground tabular-nums">{s.count}</span>
+              <span
+                className="text-[11px] font-bold tabular-nums"
+                style={{ color: STAGE_FILLS[i] }}
+              >
+                {s.pct}%
+              </span>
             </div>
-            <div className="flex justify-between gap-6 text-muted-foreground select-none">
-              <span>Count:</span>
-              <span className="font-bold text-primary-foreground dark:text-foreground tabular-nums">{funnelStages[hoveredIndex].count}</span>
-            </div>
-            <div className="flex justify-between gap-6 text-muted-foreground select-none">
-              <span>Convert Rate:</span>
-              <span className="font-bold text-primary-foreground dark:text-foreground tabular-nums">{funnelStages[hoveredIndex].pctOfFirst}%</span>
-            </div>
-            {hoveredIndex > 0 && (
-              <div className="flex justify-between gap-6 text-muted-foreground select-none border-t border-white/5 pt-1 mt-1">
-                <span>Drop-off rate:</span>
-                <span className="font-bold text-status-danger-text tabular-nums">-{funnelStages[hoveredIndex].dropOff}%</span>
-              </div>
-            )}
-          </div>
-        )}
+          ))}
+        </div>
       </div>
     </div>
   );
