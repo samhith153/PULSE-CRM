@@ -530,7 +530,7 @@ function DonutChart({
 }
 
 /* ΓöÇΓöÇ Main component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
-export default function AdminDashboardView() {
+export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSignal?: number } = {}) {
   const [data, setData]       = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -538,11 +538,15 @@ export default function AdminDashboardView() {
 
   useEffect(() => {
     let cancelled = false;
+    // Silent background re-fetch on tab re-activation (refreshSignal > 0):
+    // keep showing existing data instead of flashing the skeleton.
+    if (data === null) setLoading(true);
     getAdminDashboard()
       .then((d) => { if (!cancelled) { setData(d); setLoading(false); } })
       .catch((e) => { if (!cancelled) { setError(e?.message ?? 'Failed to load'); setLoading(false); } });
     return () => { cancelled = true; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
 
   /* ΓöÇΓöÇ Skeleton ΓöÇΓöÇ */
   if (loading) {

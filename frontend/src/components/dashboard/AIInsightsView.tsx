@@ -300,8 +300,9 @@ function useSalesRepAIInsights() {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetch = useCallback(async () => {
-    setLoading(true);
+  const fetch = useCallback(async (silent = false) => {
+    // Keep showing existing data during a silent background refresh
+    if (!silent || data === null) setLoading(true);
     setError(null);
     try {
       const result = await getSalesRepAIInsights();
@@ -312,7 +313,7 @@ function useSalesRepAIInsights() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [data]);
 
   useEffect(() => {
     fetch();
@@ -324,11 +325,18 @@ function useSalesRepAIInsights() {
 // ── Main component ────────────────────────────────────────────────────────────
 interface AIInsightsViewProps {
   onTabChange?: (tab: string) => void;
+  refreshSignal?: number;
 }
 
-export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}) {
+export default function AIInsightsView({ onTabChange, refreshSignal = 0 }: AIInsightsViewProps = {}) {
   const { data, loading, error, refresh, lastUpdated } = useSalesRepAIInsights();
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+
+  // Silent background refresh when the tab becomes active again (data stays visible)
+  useEffect(() => {
+    if (refreshSignal > 0) refresh(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
 
   const handleToggle = (id: string) => {
     setCheckedIds((prev) => {
@@ -376,7 +384,7 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
           </div>
         </div>
         <button
-          onClick={refresh}
+          onClick={() => refresh()}
           disabled={loading}
           className="shrink-0 flex items-center gap-1.5 text-[10px] font-semibold text-text-muted hover:text-text-primary transition px-2 py-1 rounded-lg hover:bg-surface-2"
           title="Refresh AI insights"
@@ -392,7 +400,7 @@ export default function AIInsightsView({ onTabChange }: AIInsightsViewProps = {}
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span className="font-semibold">{error}</span>
           <button
-            onClick={refresh}
+            onClick={() => refresh()}
             className="ml-auto text-[10px] font-bold underline hover:no-underline"
           >
             Retry

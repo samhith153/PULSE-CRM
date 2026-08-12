@@ -326,6 +326,10 @@ class DashboardService:
         month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         next_month = month_start.replace(year=month_start.year + 1, month=1) if month_start.month == 12 else month_start.replace(month=month_start.month + 1)
 
+        # Provision the session connection up-front so the concurrent gather below
+        # uses an already-checked-out connection (asyncpg race guard).
+        await self.db.connection()
+
         # Run all independent DB queries concurrently
         (
             open_count,
@@ -657,6 +661,11 @@ class DashboardService:
             )
             r = await self.db.execute(stmt)
             return int(r.scalar_one() or 0)
+
+        # Provision the session connection up-front so every asyncio.gather below
+        # uses an already-checked-out connection. Without this, the first execute()
+        # races the checkout and asyncpg raises "another operation is in progress".
+        await self.db.connection()
 
         admin_visible_roles = ["manager", "sales_rep", "sales_representative"]
 

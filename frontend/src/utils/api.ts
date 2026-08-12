@@ -40,6 +40,25 @@ let _refreshPromise: Promise<boolean> | null = null;
 
 const _inflight = new Map<string, Promise<unknown>>();
 
+// ── Short-TTL GET response cache (dashboard-heavy endpoints only) ──────────
+// Dashboard/AI views unmount on tab switch and re-fetch on every mount.
+// A short cache makes returning to home/AI insights feel instant while still
+// refreshing within the TTL window.
+
+const _getCache = new Map<string, { t: number; p: Promise<unknown> }>();
+const _CACHE_TTL_MS = 60_000;
+
+function cachedGet<T>(endpoint: string, ttlMs = _CACHE_TTL_MS): Promise<T> {
+  const hit = _getCache.get(endpoint);
+  if (hit && Date.now() - hit.t < ttlMs) return hit.p as Promise<T>;
+  const p = apiFetch<T>(endpoint);
+  _getCache.set(endpoint, { t: Date.now(), p });
+  p.catch(() => {
+    if (_getCache.get(endpoint)?.p === p) _getCache.delete(endpoint);
+  });
+  return p;
+}
+
 async function _tryRefresh(): Promise<boolean> {
   const rt = getRefreshToken();
   if (!rt) return false;
@@ -1022,7 +1041,7 @@ export interface SalesRepDashboardData {
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
-  return apiFetch<AdminDashboardData>('/api/v1/dashboard/admin');
+  return cachedGet<AdminDashboardData>('/api/v1/dashboard/admin');
 }
 
 export type ManagerDashboardPeriod =
@@ -1039,7 +1058,7 @@ export interface ManagerDashboardFilters {
 export async function getManagerDashboard(
   filters: ManagerDashboardFilters = {}
 ): Promise<ManagerDashboardData> {
-  return apiFetch<ManagerDashboardData>(
+  return cachedGet<ManagerDashboardData>(
     `/api/v1/dashboard/manager${toQuery({
       period: filters.period ?? 'quarter',
       rep_id: filters.repId,
@@ -1048,7 +1067,7 @@ export async function getManagerDashboard(
 }
 
 export async function getSalesRepDashboard(period: 'week' | 'month' | 'quarter' | 'year' = 'month'): Promise<SalesRepDashboardData> {
-  return apiFetch<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
+  return cachedGet<SalesRepDashboardData>(`/api/v1/dashboard/sales-rep${toQuery({ period })}`);
 }
 
 export async function getCurrentUser(): Promise<any> {
@@ -1954,7 +1973,7 @@ export interface SalesRepAIInsightsData {
 }
 
 export async function getSalesRepAIInsights(): Promise<SalesRepAIInsightsData> {
-  return apiFetch<SalesRepAIInsightsData>('/api/v1/ai-insights/sales-rep');
+  return cachedGet<SalesRepAIInsightsData>('/api/v1/ai-insights/sales-rep');
 }
 
 // =============================================================================
