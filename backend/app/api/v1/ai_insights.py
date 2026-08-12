@@ -63,6 +63,8 @@ from app.schemas.ai_insights import (
     NotificationAlert,
     OpportunityScoreItem,
     PipelineHealthResponse,
+    RisingInterestItem,
+    RisingInterestResponse,
     RiskItem,
     SentimentItem,
     SentimentListResponse,
@@ -262,6 +264,84 @@ async def get_opportunities(
     raw = await repo.get_opportunity_scores(current_user.organization_id, user_id, team_ids, limit=limit)
     data = [OpportunityScoreItem(**o) for o in raw]
     return {"success": True, "message": "Opportunity scores retrieved.", "data": data}
+
+
+# ── Rising Interest (dynamic, trend-based) ─────────────────────────────────────
+
+@router.get(
+    "/rising-interest",
+    response_model=StandardResponse[RisingInterestResponse],
+    summary="Rising Interest — dynamic trend-based lead interest scores",
+    description=(
+        "Computes a 0-100 rising-interest score for each lead by analysing "
+        "engagement velocity over a rolling 7-day vs prior-7-day window. "
+        "Replaces the previous hardcoded score>=80 cutoff. "
+        "Returns score, trend label (Surging/Rising/Stable/Declining), "
+        "factor breakdown, and human-readable reasons."
+    ),
+    tags=["AI Insights"],
+)
+async def get_rising_interest(
+    current_user: CurrentUser,
+    db: DBSession,
+    limit: int = Query(default=15, ge=1, le=50),
+) -> dict:
+    from app.services.ai_insights_service import AIInsightsService
+    from app.services.rising_interest_service import RisingInterestService
+
+    svc = AIInsightsService(db)
+    user_id, team_ids = await svc._scope(current_user)
+
+    ri_service = RisingInterestService(db)
+    raw_items = await ri_service.get_rising_interest_for_leads(
+        current_user.organization_id, user_id, team_ids, limit=limit
+    )
+
+    items = [RisingInterestItem(**item) for item in raw_items]
+    rising_count = sum(1 for i in items if i.trend in ("Surging", "Rising"))
+
+    data = RisingInterestResponse(
+        total_leads_analyzed=len(items),
+        rising_count=rising_count,
+        items=items,
+    )
+    return {"success": True, "message": "Rising interest scores retrieved.", "data": data}
+
+
+@router.get(
+    "/rising-interest/{entity_type}/{entity_id}",
+    response_model=StandardResponse[dict],
+    summary="Rising Interest — single lead/deal detail",
+    description=(
+        "Returns the full rising-interest breakdown for a single lead or deal, "
+        "including all factor scores and reasons."
+    ),
+    tags=["AI Insights"],
+)
+async def get_rising_interest_detail(
+    entity_type: str,
+    entity_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    from app.services.rising_interest_service import RisingInterestService
+
+    if entity_type not in ("lead", "deal"):
+        return {"success": False, "message": "entity_type must be 'lead' or 'deal'.", "data": None}
+
+    ri_service = RisingInterestService(db)
+    result = await ri_service.get_rising_interest(
+        current_user.organization_id, entity_type, entity_id
+    )
+
+    data = {
+        "lead_id": result.get("lead_id"),
+        "score": result.get("score"),
+        "trend": result.get("trend"),
+        "factors": result.get("factors", {}),
+        "reasons": result.get("reasons", []),
+    }
+    return {"success": True, "message": "Rising interest detail retrieved.", "data": data}
 
 
 # ── High-value deals ──────────────────────────────────────────────────────────

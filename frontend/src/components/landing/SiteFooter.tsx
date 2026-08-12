@@ -1,4 +1,4 @@
-import { Github, Linkedin, Twitter, Youtube } from "lucide-react";
+import { Link2 } from "lucide-react";
 
 const groups = [
   { title: "Product", links: ["Lead Scoring", "AI Copilot", "Automation", "Insights", "Pricing"] },
@@ -7,7 +7,12 @@ const groups = [
   { title: "Legal", links: ["Privacy", "Terms", "Security", "DPA", "Cookies"] },
 ];
 
-const socials = [Twitter, Linkedin, Github, Youtube];
+const socials = [
+  { name: "Twitter", icon: Link2 },
+  { name: "LinkedIn", icon: Link2 },
+  { name: "GitHub", icon: Link2 },
+  { name: "YouTube", icon: Link2 },
+];
 
 export function SiteFooter() {
   return (
@@ -52,14 +57,14 @@ export function SiteFooter() {
             </span>
           </div>
           <div className="flex shrink-0 gap-2">
-            {socials.map((Icon, i) => (
+            {socials.map((social) => (
               <a
-                key={i}
+                key={social.name}
                 href="#"
-                aria-label="Social link"
+                aria-label={social.name}
                 className="grid size-9 place-items-center rounded-full border border-primary-foreground/15 text-primary-foreground/70 transition-all duration-200 hover:-translate-y-0.5 hover:text-primary-foreground"
               >
-                <Icon size={15} />
+                <social.icon size={15} />
               </a>
             ))}
           </div>

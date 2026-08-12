@@ -93,16 +93,16 @@ export default function IntegrationsView() {
       )}
 
       {gmailError && (
-        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-foreground rounded-xl px-4 py-3 text-xs font-bold flex items-start gap-2">
-          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
-          <span className="text-amber-850 dark:text-amber-300">{gmailError}</span>
+        <div className="bg-status-warning/10 dark:bg-status-warning/10 border border-status-warning/20 dark:border-status-warning/20 text-text-primary rounded-xl px-4 py-3 text-xs font-bold flex items-start gap-2">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-status-warning dark:text-status-warning" />
+          <span className="text-status-warning dark:text-status-warning">{gmailError}</span>
         </div>
       )}
 
-      <div className="border border-border/80 rounded-2xl bg-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-border/80 bg-secondary/30">
-          <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Active Integrations</h3>
-          <p className="text-[10px] text-muted-foreground mt-0.5">Manage connected data-sources and external synchronization channels.</p>
+      <div className="border border-border-default/80 rounded-2xl bg-surface-1 overflow-hidden">
+        <div className="px-5 py-4 border-b border-border-default/80 bg-surface-2/30">
+          <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">Active Integrations</h3>
+          <p className="text-[10px] text-text-muted mt-0.5">Manage connected data-sources and external synchronization channels.</p>
         </div>
 
         <div className="divide-y divide-border/60">
@@ -110,33 +110,33 @@ export default function IntegrationsView() {
             const Icon = item.icon;
             const isGmail = item.id === 'gmail';
             return (
-              <div key={item.id} className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-secondary/10 transition-colors">
+              <div key={item.id} className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:bg-surface-2/10 transition-colors">
                 <div className="flex items-start space-x-3.5 min-w-0 flex-1">
-                  <div className="h-9.5 w-9.5 rounded-xl bg-secondary border border-border flex items-center justify-center text-brand-purple shrink-0">
+                  <div className="h-9.5 w-9.5 rounded-xl bg-surface-2 border border-border-default flex items-center justify-center text-accent-color shrink-0">
                     <Icon className="h-4.5 w-4.5" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="text-xs font-bold text-foreground">{item.name}</h4>
-                      <span className="text-[9px] bg-secondary border border-border text-muted-foreground px-1.5 py-0.5 rounded-md font-semibold">{item.provider}</span>
+                      <h4 className="text-xs font-bold text-text-primary">{item.name}</h4>
+                      <span className="text-[9px] bg-surface-2 border border-border-default text-text-muted px-1.5 py-0.5 rounded-md font-semibold">{item.provider}</span>
                       
                       {/* Connection status badge */}
                       <span className={`inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[9px] font-bold ${
                         item.status === 'Connected' 
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                          ? 'bg-status-success/10 text-status-success dark:text-status-success border border-status-success/20' 
                           : item.status === 'Configure'
-                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-                          : 'bg-secondary text-muted-foreground border border-border'
+                          ? 'bg-status-warning/10 text-status-warning dark:text-status-warning border border-status-warning/20'
+                          : 'bg-surface-2 text-text-muted border border-border-default'
                       }`}>
                         <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                          item.status === 'Connected' ? 'bg-emerald-500' : item.status === 'Configure' ? 'bg-amber-500' : 'bg-slate-400'
+                          item.status === 'Connected' ? 'bg-status-success' : item.status === 'Configure' ? 'bg-status-warning' : 'bg-slate-400'
                         }`} />
                         <span>{isGmail && isLoadingGmail ? 'Checking...' : item.status}</span>
                       </span>
                     </div>
-                    <p className="text-[11px] text-muted-foreground mt-1 font-semibold leading-relaxed">{item.description}</p>
+                    <p className="text-[11px] text-text-muted mt-1 font-semibold leading-relaxed">{item.description}</p>
                     {isGmail && gmailConnection && (
-                      <p className="text-[10px] text-brand-purple font-extrabold mt-1.5 bg-brand-purple/5 border border-brand-purple/10 px-2 py-0.5 rounded inline-block max-w-full truncate">
+                      <p className="text-[10px] text-accent-color font-extrabold mt-1.5 bg-accent-color/5 border border-accent-color/10 px-2 py-0.5 rounded inline-block max-w-full truncate">
                         Active Account: {gmailConnection.email_address} ({gmailConnection.sync_status})
                       </p>
                     )}
@@ -151,8 +151,8 @@ export default function IntegrationsView() {
                         disabled={isLoadingGmail} 
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer disabled:opacity-60 flex items-center space-x-1.5 ${
                           gmailConnection?.is_active 
-                            ? 'bg-destructive/10 hover:bg-rose-100 dark:hover:bg-rose-950/20 text-destructive border border-destructive/20' 
-                            : 'bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground shadow-sm'
+                            ? 'bg-destructive/10 hover:bg-status-danger/10 dark:hover:bg-status-danger/10 text-status-danger border border-destructive/20' 
+                            : 'bg-accent-color hover:bg-accent-color/90 text-primary-foreground shadow-sm'
                         }`}
                       >
                         {isLoadingGmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : gmailConnection?.is_active ? 'Disconnect' : 'Connect'}
@@ -160,17 +160,17 @@ export default function IntegrationsView() {
                       <button 
                         onClick={loadGmailStatus} 
                         disabled={isLoadingGmail} 
-                        className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition cursor-pointer disabled:opacity-60 bg-card" 
+                        className="p-1.5 border border-border-default hover:bg-surface-2 rounded-lg text-text-muted hover:text-text-primary transition cursor-pointer disabled:opacity-60 bg-surface-1" 
                         title="Refresh status"
                       >
                         <RefreshCw className={`h-4 w-4 ${isLoadingGmail ? 'animate-spin' : ''}`} />
                       </button>
                     </>
                   ) : (
-                    <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-secondary/80 text-muted-foreground cursor-not-allowed border border-border/50">Coming Soon</button>
+                    <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-2/80 text-text-muted cursor-not-allowed border border-border-default/50">Coming Soon</button>
                   )}
                   {item.status !== 'Disconnected' && (
-                    <button className="p-1.5 border border-border hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground transition cursor-pointer bg-card">
+                    <button className="p-1.5 border border-border-default hover:bg-surface-2 rounded-lg text-text-muted hover:text-text-primary transition cursor-pointer bg-surface-1">
                       <Settings className="h-4 w-4" />
                     </button>
                   )}

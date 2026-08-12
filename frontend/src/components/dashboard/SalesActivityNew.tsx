@@ -26,10 +26,10 @@ const SOURCE_COLORS = [
   'var(--lime)',
   'var(--brand-soft)',
   'var(--brand)',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#06b6d4',
+  'var(--status-warning-text)',
+  'var(--chart-1)',
+  'var(--status-danger-text)',
+  'var(--chart-5)',
 ];
 
 type ReportPeriod =

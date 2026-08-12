@@ -16,6 +16,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 from app.core.config import settings
+from app.schemas.common import ErrorResponse
 
 
 class _TokenBucket:
@@ -81,17 +82,127 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         bucket = self._buckets[key]
 
         if not bucket.take():
-            return JSONResponse(
-                status_code=429,
-                content={
-                    "error_code": "RATE_LIMIT_EXCEEDED",
-                    "message": "Too many requests. Please slow down.",
-                    "details": [],
-                    "request_id": request.headers.get("x-request-id", "system"),
-                },
-            )
+            content = ErrorResponse(
+                error_code="RATE_LIMIT_EXCEEDED",
+                message="Too many requests. Please slow down.",
+                details=[],
+                request_id=request.headers.get("x-request-id", "system"),
+            ).model_dump()
+            response = JSONResponse(status_code=429, content=content)
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "*"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            return response
 
         response = await call_next(request)
         response.headers["X-RateLimit-Limit"] = str(self.burst)
         response.headers["X-RateLimit-Remaining"] = str(bucket.remaining)
+        return response
+
+
+# ── Strict auth rate limiter ──────────────────────────────────────────────────
+
+# Paths that receive brute-force protection (stricter limits).
+_AUTH_PATHS: frozenset[str] = frozenset({
+    "/api/v1/auth/login",
+    "/api/v1/auth/refresh",
+    "/api/v1/auth/google",
+})
+
+_PASSWORD_RESET_PATHS: frozenset[str] = frozenset({
+    "/api/v1/auth/forgot-password",
+    "/api/v1/auth/reset-password",
+})
+
+
+class AuthRateLimitMiddleware(BaseHTTPMiddleware):
+    """Separate, stricter token-bucket for auth endpoints (login, refresh, password reset).
+
+    Prevents credential-stuffing / brute-force attacks independently of the
+    global rate limit applied to all other routes.
+    """
+
+    def __init__(self, app) -> None:
+        super().__init__(app)
+        self.enabled = settings.ENABLE_RATE_LIMIT
+        self._buckets: dict[str, _TokenBucket] = defaultdict(
+            lambda: _TokenBucket(settings.AUTH_RATE_LIMIT_BURST,
+                                 settings.AUTH_RATE_LIMIT_PER_MINUTE / 60.0)
+        )
+        self._pw_buckets: dict[str, _TokenBucket] = defaultdict(
+            lambda: _TokenBucket(settings.PASSWORD_RESET_RATE_LIMIT_BURST,
+                                 settings.PASSWORD_RESET_RATE_LIMIT_PER_MINUTE / 60.0)
+        )
+
+    def _client_key(self, request: Request) -> str:
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            return forwarded_for.split(",", 1)[0].strip()
+        if request.client:
+            return request.client.host
+        return "unknown"
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if not self.enabled:
+            return await call_next(request)
+
+        path = request.url.path.rstrip("/")
+        key = self._client_key(request)
+
+        bucket: _TokenBucket | None = None
+        if path in _AUTH_PATHS:
+            bucket = self._buckets[key]
+        elif path in _PASSWORD_RESET_PATHS:
+            bucket = self._pw_buckets[key]
+
+        if bucket is not None and not bucket.take():
+            content = ErrorResponse(
+                error_code="AUTH_RATE_LIMIT_EXCEEDED",
+                message="Too many authentication attempts. Please wait before retrying.",
+                details=[],
+                request_id=request.headers.get("x-request-id", "system"),
+            ).model_dump()
+            response = JSONResponse(status_code=429, content=content)
+            response.headers["Retry-After"] = "60"
+            return response
+
+        return await call_next(request)
+
+
+# ── Security headers ──────────────────────────────────────────────────────────
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Adds hardened security response headers to every response."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        if not settings.SECURITY_HEADERS_ENABLED:
+            return response
+
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+
+        # HSTS only over HTTPS (skip localhost / http dev servers)
+        if request.url.scheme == "https":
+            response.headers["Strict-Transport-Security"] = (
+                f"max-age={settings.HSTS_MAX_AGE}; includeSubDomains"
+            )
+
+        # Content-Security-Policy — applied to API responses (JSON) for defense-in-depth
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self'; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none'"
+        )
+
         return response

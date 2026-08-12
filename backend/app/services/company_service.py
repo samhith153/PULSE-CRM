@@ -43,12 +43,21 @@ class CompanyService:
         organization_id: UUID,
         created_by: UUID,
     ) -> Company:
-        existing = await self.repo.get_by_name_in_org(payload.name, organization_id)
+        data = payload.model_dump(exclude_none=True)
+        data["name"] = data["name"].strip()
+        if data.get("email"):
+            data["email"] = data["email"].strip().lower()
+
+        existing = await self.repo.get_by_name_in_org(data["name"], organization_id)
         if existing:
-            raise DuplicateException("Company", "name", payload.name)
+            raise DuplicateException("Company", "name", data["name"])
+        if data.get("email") and await self.repo.get_by_email_in_org(data["email"], organization_id):
+            raise DuplicateException("Company", "email", data["email"])
+        if data.get("phone") and await self.repo.get_by_phone_in_org(data["phone"], organization_id):
+            raise DuplicateException("Company", "phone", data["phone"])
 
         company = await self.repo.create(
-            **payload.model_dump(exclude_none=True),
+            **data,
             organization_id=organization_id,
             created_by=created_by,
         )
@@ -81,10 +90,23 @@ class CompanyService:
         company = await self.get(company_id, organization_id)
         update_data = payload.model_dump(exclude_none=True)
 
+        if "name" in update_data:
+            update_data["name"] = update_data["name"].strip()
+        if "email" in update_data and update_data["email"]:
+            update_data["email"] = update_data["email"].strip().lower()
+
         if "name" in update_data and update_data["name"] != company.name:
             existing = await self.repo.get_by_name_in_org(update_data["name"], organization_id)
             if existing and existing.id != company_id:
                 raise DuplicateException("Company", "name", update_data["name"])
+        if "email" in update_data and update_data["email"] != company.email:
+            existing = await self.repo.get_by_email_in_org(update_data["email"], organization_id)
+            if existing and existing.id != company_id:
+                raise DuplicateException("Company", "email", update_data["email"])
+        if "phone" in update_data and update_data["phone"] != company.phone:
+            existing = await self.repo.get_by_phone_in_org(update_data["phone"], organization_id)
+            if existing and existing.id != company_id:
+                raise DuplicateException("Company", "phone", update_data["phone"])
 
         await self.repo.update(company, **update_data)
         if update_data:

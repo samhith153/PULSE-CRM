@@ -36,11 +36,12 @@ class EventEnvelope:
     event_type: str
     topic: str
     title: str
-    description: str | None = None
-    payload: dict[str, Any] = field(default_factory=dict)
-    source: str | None = None
-    status: str | None = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    description: str | None
+    payload: dict | None
+    source: str | None
+    status: str
+    created_at: datetime
+    actor_id: UUID | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -70,35 +71,44 @@ class EventBus:
     """
 
     def __init__(self) -> None:
-        # SSE subscribers: channel_name -> set of asyncio.Queue
-        self._subscribers: dict[str, set[asyncio.Queue]] = defaultdict(set)
-
+        self._consumers: dict[str, list[EventConsumer]] = defaultdict(list)
+        self._queue: asyncio.Queue[EventEnvelope] = asyncio.Queue()
+        self._subscribers: dict[str, set[asyncio.Queue[EventEnvelope]]] = defaultdict(set)
         # Pending envelopes waiting to be dispatched to persistent consumers
         self._pending: list[EventEnvelope] = []
-
         # Persistent consumers registered at startup
-        self._consumers: list[EventConsumer] = []
+        self._persistent_consumers: list[EventConsumer] = []
 
-    # ------------------------------------------------------------------
-    # SSE subscription API (used by stream.py)
-    # ------------------------------------------------------------------
+    async def subscribe(
+        self,
+        topic: str,
+    ) -> asyncio.Queue[EventEnvelope]:
+        subscriber: asyncio.Queue[EventEnvelope] = asyncio.Queue()
+        self._subscribers[topic].add(subscriber)
+        return subscriber
 
-    async def subscribe(self, channel: str) -> asyncio.Queue:
-        """Create and register a new queue for the given channel."""
-        q: asyncio.Queue = asyncio.Queue(maxsize=100)
-        self._subscribers[channel].add(q)
-        logger.debug(
-            "EventBus: subscribed to channel '%s' (total=%d)",
-            channel, len(self._subscribers[channel]),
-        )
-        return q
+    async def unsubscribe(
+        self,
+        topic: str,
+        subscriber: asyncio.Queue[EventEnvelope],
+    ) -> None:
+        subscribers = self._subscribers.get(topic)
+        if not subscribers:
+            return
+        subscribers.discard(subscriber)
+        if not subscribers:
+            self._subscribers.pop(topic, None)
 
-    async def unsubscribe(self, channel: str, queue: asyncio.Queue) -> None:
-        """Remove a subscriber queue from the channel."""
-        self._subscribers[channel].discard(queue)
-        if not self._subscribers[channel]:
-            self._subscribers.pop(channel, None)
-        logger.debug("EventBus: unsubscribed from channel '%s'", channel)
+    def register(self, topic: str, consumer: EventConsumer) -> None:
+        if consumer not in self._consumers[topic]:
+            self._consumers[topic].append(consumer)
+
+    def register_consumer(self, consumer: EventConsumer) -> None:
+        self._persistent_consumers.append(consumer)
+
+    def enqueue(self, envelope: EventEnvelope) -> None:
+        """Enqueue an envelope to be dispatched on the next dispatch_once() call."""
+        self._pending.append(envelope)
 
     async def publish(self, channel: str, event: Any) -> None:
         """Broadcast an event dict to all SSE subscribers on the given channel."""
@@ -113,25 +123,13 @@ class EventBus:
 
     def subscriber_count(self, channel: str) -> int:
         return len(self._subscribers.get(channel, set()))
-
-    # ------------------------------------------------------------------
-    # Consumer dispatch API (used by EventWorker)
-    # ------------------------------------------------------------------
-
-    def register_consumer(self, consumer: EventConsumer) -> None:
-        self._consumers.append(consumer)
-
-    def enqueue(self, envelope: EventEnvelope) -> None:
-        """Enqueue an envelope to be dispatched on the next dispatch_once() call."""
-        self._pending.append(envelope)
-
     async def dispatch_once(self) -> None:
         """Fan-out all pending envelopes to registered consumers and clear the queue."""
         if not self._pending:
             return
         batch, self._pending = self._pending, []
         for envelope in batch:
-            for consumer in self._consumers:
+            for consumer in self._persistent_consumers:
                 try:
                     await consumer.handle(envelope)
                 except Exception as exc:
@@ -141,9 +139,10 @@ class EventBus:
                     )
 
 
-# ---------------------------------------------------------------------------
-# Module-level singleton
-# ---------------------------------------------------------------------------
+class LoggingEventConsumer(EventConsumer):
+    async def handle(self, event: EventEnvelope) -> None:
+        logger.info("In-process event dispatched", extra={"event_id": str(event.event_id), "event_type": event.event_type})
+
 
 event_bus = EventBus()
 

@@ -59,9 +59,9 @@ class Settings(BaseSettings):
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
 
     DATABASE_URL: str
-    DATABASE_POOL_SIZE: int = 3
-    DATABASE_MAX_OVERFLOW: int = 2
-    DATABASE_POOL_TIMEOUT: int = 8
+    DATABASE_POOL_SIZE: int = 5
+    DATABASE_MAX_OVERFLOW: int = 3
+    DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 300
 
     SUPABASE_URL: Optional[str] = None
@@ -75,7 +75,17 @@ class Settings(BaseSettings):
 
     ENABLE_RATE_LIMIT: bool = True
     RATE_LIMIT_PER_MINUTE: int = 600
-    RATE_LIMIT_BURST: int = 120
+    RATE_LIMIT_BURST: int = 200
+
+    # Security headers
+    SECURITY_HEADERS_ENABLED: bool = True
+    HSTS_MAX_AGE: int = 31536000
+
+    # Auth rate limiting (stricter than global)
+    AUTH_RATE_LIMIT_PER_MINUTE: int = 20
+    AUTH_RATE_LIMIT_BURST: int = 10
+    PASSWORD_RESET_RATE_LIMIT_PER_MINUTE: int = 5
+    PASSWORD_RESET_RATE_LIMIT_BURST: int = 3
 
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
@@ -92,13 +102,17 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = None
+    GOOGLE_AUTH_REDIRECT_URI: Optional[str] = "http://localhost:8000/api/v1/auth/google/callback"
     GOOGLE_WEBHOOK_SECRET: Optional[str] = None
     GMAIL_TOKEN_ENCRYPTION_KEY: Optional[str] = None
+    GOOGLE_PROJECT_ID: Optional[str] = None
+    GOOGLE_PUBSUB_TOPIC: Optional[str] = None
     GOOGLE_OAUTH_SCOPES: str = (
         "https://www.googleapis.com/auth/gmail.readonly,"
         "https://www.googleapis.com/auth/gmail.modify,"
         "https://www.googleapis.com/auth/gmail.send"
     )
+    FRONTEND_URL: str = "http://localhost:3000"
 
     ENABLE_AI: bool = True
     AI_PROVIDER: str = "rule_based"

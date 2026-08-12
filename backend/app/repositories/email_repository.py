@@ -45,6 +45,30 @@ class GmailConnectionRepository(BaseRepository[GmailConnection]):
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
+    async def list_all_active(self) -> List[GmailConnection]:
+        stmt = select(GmailConnection).where(
+            GmailConnection.is_active.is_(True),
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def deactivate_by_email(self, organization_id: UUID, email_address: str) -> int:
+        """Deactivate all active connections for a given email in an org.
+        Returns the number of deactivated rows.
+        """
+        from sqlalchemy import update
+        stmt = (
+            update(GmailConnection)
+            .where(
+                GmailConnection.organization_id == organization_id,
+                GmailConnection.email_address == email_address,
+                GmailConnection.is_active.is_(True),
+            )
+            .values(is_active=False)
+        )
+        result = await self.db.execute(stmt)
+        return result.rowcount
+
 
 class EmailRepository(BaseRepository[Email]):
     def __init__(self, db: AsyncSession) -> None:
@@ -155,6 +179,73 @@ class EmailRepository(BaseRepository[Email]):
 
         result = await self.db.execute(stmt)
 
+        return result.scalar_one_or_none()
+
+    async def get_outbound_by_thread(
+        self, organization_id: UUID, thread_id: str,
+    ) -> Optional[Email]:
+        stmt = (
+            self._base_query(organization_id)
+            .where(
+                Email.thread_id == thread_id,
+                Email.direction == EmailDirection.OUTBOUND.value,
+            )
+            .order_by(desc(Email.sent_at))
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_raw_message_id_local(
+        self, local_part: str,
+    ) -> Optional[Email]:
+        """Search for an outbound email whose raw_payload Message-ID header
+        contains the given local part (the part before '@')."""
+        pattern = f"%{local_part}%"
+        stmt = (
+            select(Email)
+            .where(
+                Email.is_active.is_(True),
+                Email.direction == EmailDirection.OUTBOUND.value,
+                Email.raw_payload.cast(String).ilike(pattern),
+            )
+            .order_by(desc(Email.sent_at))
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_message_id_global(
+        self, local_part: str,
+    ) -> Optional[Email]:
+        """Broader search: match the local part anywhere in the raw_payload text."""
+        pattern = f"%{local_part}%"
+        stmt = (
+            select(Email)
+            .where(
+                Email.is_active.is_(True),
+                Email.raw_payload.cast(String).ilike(pattern),
+            )
+            .order_by(desc(Email.sent_at))
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_latest_outbound_by_subject_and_participants(
+        self,
+        organization_id: UUID,
+        normalized_subject: str,
+        from_email: str,
+    ) -> Optional[Email]:
+        """Find the latest outbound email matching a normalized subject and sender."""
+        stmt = (
+            self._base_query(organization_id)
+            .where(
+                Email.direction == EmailDirection.OUTBOUND.value,
+                Email.subject.ilike(f"%{normalized_subject}%"),
+                Email.sender.ilike(f"%{from_email}%"),
+            )
+            .order_by(desc(Email.sent_at))
+        )
+        result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
     async def save(self):

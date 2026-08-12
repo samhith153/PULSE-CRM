@@ -1,7 +1,8 @@
-import { toast } from '@/lib/toast';
+﻿import { toast } from '@/lib/toast';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
+const REFRESH_TOKEN_KEY = 'pulse-crm-refresh-token';
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -12,13 +13,61 @@ export function setToken(token: string): void {
   sessionStorage.setItem(TOKEN_KEY, token);
 }
 
+export function getRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return sessionStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+export function setRefreshToken(token: string): void {
+  sessionStorage.setItem(REFRESH_TOKEN_KEY, token);
+}
+
 export function clearToken(): void {
   sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
 export function getAuthHeaders(): Record<string, string> {
   const token = getToken();
   return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
+// ── Silent token refresh (deduplicated) ─────────────────────────────────────
+
+let _refreshPromise: Promise<boolean> | null = null;
+
+// ── In-flight GET deduplication ────────────────────────────────────────────
+
+const _inflight = new Map<string, Promise<unknown>>();
+
+async function _tryRefresh(): Promise<boolean> {
+  const rt = getRefreshToken();
+  if (!rt) return false;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: rt }),
+    });
+    if (!res.ok) return false;
+    const json = await res.json();
+    const data = json.data ?? json;
+    if (data?.access_token) {
+      setToken(data.access_token);
+      if (data.refresh_token) setRefreshToken(data.refresh_token);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+async function refreshIfNeeded(): Promise<boolean> {
+  if (!_refreshPromise) {
+    _refreshPromise = _tryRefresh().finally(() => { _refreshPromise = null; });
+  }
+  return _refreshPromise;
 }
 
 export interface Lead {
@@ -57,6 +106,7 @@ export interface Lead {
   contact_email: string | null;
   contact_phone: string | null;
   owner_name: string | null;
+  owner_avatar_url?: string | null;
 }
 
 export interface Contact {
@@ -163,7 +213,9 @@ export async function register(fullName: string, email: string, password: string
     throw new Error(message);
   }
   const json = await res.json();
-  return json.data;
+  const data = json.data ?? json;
+  if (data?.refresh_token) setRefreshToken(data.refresh_token);
+  return data;
 }
 
 export async function login(email: string, password: string): Promise<{ access_token: string; refresh_token: string; token_type?: string; expires_in?: number }> {
@@ -177,7 +229,9 @@ export async function login(email: string, password: string): Promise<{ access_t
     throw new Error((err as any).message || `Login failed (${res.status})`);
   }
   const json = await res.json();
-  return json.data ?? json;
+  const data = json.data ?? json;
+  if (data?.refresh_token) setRefreshToken(data.refresh_token);
+  return data;
 }
 
 export async function getAuthConfig(): Promise<{ google_client_id: string | null }> {
@@ -200,7 +254,9 @@ export async function loginWithGoogle(credential: string): Promise<{ access_toke
     throw new Error((err as any).message || `Google Sign-In failed (${res.status})`);
   }
   const json = await res.json();
-  return json.data ?? json;
+  const data = json.data ?? json;
+  if (data?.refresh_token) setRefreshToken(data.refresh_token);
+  return data;
 }
 
 export async function resetPassword(token: string, newPassword: string): Promise<void> {
@@ -224,19 +280,30 @@ export function resolveImageUrl(url: string | null | undefined): string {
 }
 
 
-async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  // Guard: skip the network call entirely if no auth token is available.
-  // This prevents a flood of 401s from components mounting before the auth
-  // guard in DashboardShell has finished running.
+async function apiFetch<T>(endpoint: string, options?: RequestInit, _retry = true): Promise<T> {
   const token = getToken();
   if (!token) {
-    // Return a safe empty value so callers don't crash while unauthenticated.
-    // Array endpoints get [], object endpoints get undefined — components
-    // that handle empty arrays or undefined data won't error.
     return undefined as T;
   }
 
-  const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+  // Deduplicate concurrent identical GET requests
+  const method = options?.method?.toUpperCase() ?? 'GET';
+  if (method === 'GET') {
+    const key = `GET:${endpoint}`;
+    if (_inflight.has(key)) {
+      return _inflight.get(key) as Promise<T>;
+    }
+    const promise = _apiFetchInner<T>(endpoint, options, _retry);
+    _inflight.set(key, promise);
+    promise.finally(() => _inflight.delete(key));
+    return promise;
+  }
+
+  return _apiFetchInner<T>(endpoint, options, _retry);
+}
+
+async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry = true): Promise<T> {
+  let res = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -244,6 +311,28 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       ...(options?.headers || {})
     }
   });
+
+  // On 401, attempt a single silent refresh then retry
+  if (res.status === 401 && _retry) {
+    const refreshed = await refreshIfNeeded();
+    if (refreshed) {
+      res = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+          ...(options?.headers || {})
+        }
+      });
+    }
+    if (!refreshed || res.status === 401) {
+      clearToken();
+      sessionStorage.removeItem('pulse-crm-auth');
+      toast.error('Session expired. Please log in again.');
+      window.location.href = '/login';
+      throw new Error('Session expired');
+    }
+  }
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
     try {
@@ -260,11 +349,10 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit): Promise<T> 
       }
     } catch {
     }
-    // Show toast for permission errors so users get immediate feedback
     if (res.status === 403) {
       toast.error(`Permission denied: ${message}`);
-    } else if (res.status === 401) {
-      toast.error('Session expired. Please log in again.');
+    } else if (res.status === 429) {
+      toast.error('Too many requests. Please wait a moment and try again.');
     } else if (res.status >= 500) {
       toast.error(`Server error: ${message}`);
     }
@@ -349,8 +437,8 @@ export interface WorkflowTask {
 }
 
 export interface LeadWorkflowResponse {
-  current_task: WorkflowTask | null;
-  history: WorkflowTask[];
+  current_task: WorkflowTaskItem | null;
+  history: WorkflowTaskItem[];
 }
 
 /**
@@ -386,10 +474,7 @@ export interface WorkflowTaskItem {
   updated_at?: string;
 }
 
-export interface LeadWorkflowResponse {
-  current_task: WorkflowTaskItem | null;
-  history: WorkflowTaskItem[];
-}
+
 
 /**
  * Fetch the workflow for one lead.
@@ -400,7 +485,7 @@ export interface LeadWorkflowResponse {
 export async function getLeadWorkflow(
   leadId: string
 ): Promise<LeadWorkflowResponse> {
-  const result = await apiFetch(
+  const result = await apiFetch<any>(
     `/api/v1/workflows/leads/${leadId}`
   );
 
@@ -430,7 +515,7 @@ export async function getLeadWorkflow(
 export async function completeWorkflowTask(
   taskId: string
 ): Promise<WorkflowTaskItem> {
-  const result = await apiFetch(
+  const result = await apiFetch<any>(
     `/api/v1/workflows/tasks/${taskId}/complete`,
     {
       method: 'POST',
@@ -617,6 +702,7 @@ export async function getDeals(): Promise<Deal[]> {
       owner: ownerDisplay,
       closeDate: dd.expected_close_date || '',
       createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
+      pipeline_stage_id: dd.pipeline_stage_id || null,
     };
   }) as unknown as Deal[];
 }
@@ -941,6 +1027,7 @@ export interface SalesRepDashboardData {
   deals_by_stage: { stage: string; count: number; percentage: Decimal; conversion_rate: Decimal }[];
   deals_by_source: { source: string; count: number; percentage: Decimal; revenue: Decimal }[];
   key_metrics: { open_deals: number; pipeline_value: Decimal; deals_created: number; deals_lost: number; activities_logged: number; pipeline_value_growth_pct: Decimal; deals_created_growth_pct: Decimal; activities_growth_pct: Decimal };
+  activity_overview?: { emails_sent: number; calls_made: number; meetings_held: number; tasks_completed: number; notes_added: number } | null;
 }
 
 export async function getAdminDashboard(): Promise<AdminDashboardData> {
@@ -1530,7 +1617,7 @@ export async function bulkUpdateCrmActivities(payload: { ids: string[]; status?:
 }
 
 // =============================================================================
-// LEAD DETAIL PANEL  — real data for Timeline / Emails / Calls / Meetings / Chart
+// LEAD DETAIL PANEL  ΓÇö real data for Timeline / Emails / Calls / Meetings / Chart
 // =============================================================================
 
 export interface LeadTimelineEntry {
@@ -1737,16 +1824,22 @@ export interface EmailComposeTarget {
   requestId: number;
 }
 
-// =============================================================================
-// CRM EMAIL ACTIVITY
-// =============================================================================
-
-export async function createCrmEmail(payload: CrmActivityPayload & {
+export interface CreateEmailPayload {
+  subject: string;
   body?: string;
   direction?: string;
   recipient_email?: string;
   recipient_name?: string;
-}): Promise<any> {
+  priority?: string;
+  status?: string;
+  related_entity_type?: string;
+  related_lead_id?: string;
+  related_contact_id?: string;
+  related_company_id?: string;
+  related_deal_id?: string;
+}
+
+export async function createCrmEmail(payload: CreateEmailPayload): Promise<any> {
   return apiFetch('/api/v1/crm-activities/emails', {
     method: 'POST',
     body: JSON.stringify(payload)
@@ -1906,7 +1999,7 @@ export async function searchGlobalCRM(query: string) {
 }
 
 
-// ── Report Types & API Functions ─────────────────────────────────────────────
+// ΓöÇΓöÇ Report Types & API Functions ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 
 export interface ReportParams {
   period?: 'week' | 'month' | 'quarter' | 'year';
@@ -2238,4 +2331,10 @@ export async function getDealAnalyticsReport(params?: ReportParams): Promise<Dea
   return apiFetch<DealAnalyticsReport>(
     `/api/v1/reports/deal-analytics${toQuery({ period: params?.period })}`
   );
+}
+
+export async function recomputeLeadScore(leadId: string): Promise<any> {
+  return apiFetch<any>(`/api/v1/lead-scores/leads/${leadId}/recompute`, {
+    method: 'POST'
+  });
 }

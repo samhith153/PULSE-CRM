@@ -79,8 +79,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             setRelatedEmail(found.contact_email);
           }
           const extraLogs: any[] = [];
-          if (found.timeline) {
-            found.timeline.forEach((t: any) => {
+          if ((found as any).timeline) {
+            (found as any).timeline.forEach((t: any) => {
               extraLogs.push({ action: t.title, time: t.time || new Date().toISOString(), user: 'System', desc: t.desc, type: 'timeline' });
             });
           }
@@ -97,8 +97,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
         if (found) {
           if (found.email) setRelatedEmail(found.email);
           const extraLogs: any[] = [];
-          if (found.timeline) {
-            found.timeline.forEach((t: any) => {
+          if ((found as any).timeline) {
+            (found as any).timeline.forEach((t: any) => {
               extraLogs.push({ action: t.title, time: t.time || new Date().toISOString(), user: 'System', desc: '', type: 'timeline' });
             });
           }
@@ -161,8 +161,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   if (!activity) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center select-none bg-card border border-border rounded-xl p-6 m-6">
-        <div className="h-14 w-14 rounded-full bg-rose-500/10 flex items-center justify-center mb-4">
-          <Trash2 className="size-6 text-rose-500" />
+        <div className="h-14 w-14 rounded-full bg-status-danger-bg flex items-center justify-center mb-4">
+          <Trash2 className="size-6 text-status-danger-text" />
         </div>
         <h3 className="text-sm font-bold text-foreground font-['Space_Grotesk']">Activity Not Found</h3>
         <p className="text-[11px] text-muted-foreground max-w-sm mt-1 leading-relaxed">
@@ -170,7 +170,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
         </p>
         <button
           onClick={() => onBack ? onBack() : router.push('/activities')}
-          className="mt-4 px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-white rounded-lg text-xs font-semibold cursor-pointer"
+          className="mt-4 px-4 py-2 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-xs font-semibold cursor-pointer"
         >
           Return to Activities
         </button>
@@ -243,8 +243,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
         priority: 'high',
         status: 'pending',
         related_entity_type: activity?.related_entity_type || undefined,
-        related_lead_id: activity?.related_entity_type === 'lead' ? activity.related_record_id : undefined,
-        related_contact_id: activity?.related_entity_type === 'contact' ? activity.related_record_id : undefined,
+        related_lead_id: activity?.related_entity_type === 'lead' ? (activity.related_record_id || undefined) : undefined,
+        related_contact_id: activity?.related_entity_type === 'contact' ? (activity.related_record_id || undefined) : undefined,
       });
       toast.success("Task created from AI recommendation!");
     } catch (err: any) {
@@ -255,30 +255,30 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
   // Color mappings
   const getPriorityBadgeClass = (p: string) => {
     switch (p) {
-      case 'Urgent': return 'bg-[#E2604F]/15 text-[#E2604F] border border-[#E2604F]/25';
-      case 'High': return 'bg-[#E8A33D]/15 text-[#E8A33D] border border-[#E8A33D]/25';
-      case 'Medium': return 'bg-[#5B9BD5]/15 text-[#5B9BD5] border border-[#5B9BD5]/25';
+      case 'Urgent': return 'bg-status-danger-bg text-status-danger-text border border-status-danger-text/25';
+      case 'High': return 'bg-priority-high-bg text-priority-high border border-priority-high/25';
+      case 'Medium': return 'bg-status-info-bg text-status-info-text border border-status-info-text/25';
       default: return 'bg-secondary text-muted-foreground border border-border/80';
     }
   };
 
   const getStatusBadgeClass = (s: string) => {
     switch (s) {
-      case 'Completed': return 'bg-[#4FB477]/15 text-[#4FB477] border border-[#4FB477]/25';
-      case 'Overdue': return 'bg-[#E2604F]/15 text-[#E2604F] border border-[#E2604F]/25';
-      case 'In Progress': return 'bg-[#5B9BD5]/15 text-[#5B9BD5] border border-[#5B9BD5]/25';
-      case 'Scheduled': return 'bg-brand-purple/15 text-brand-purple border border-brand-purple/25';
+      case 'Completed': return 'bg-status-success-bg text-status-success-text border border-status-success-text/25';
+      case 'Overdue': return 'bg-status-danger-bg text-status-danger-text border border-status-danger-text/25';
+      case 'In Progress': return 'bg-status-info-bg text-status-info-text border border-status-info-text/25';
+      case 'Scheduled': return 'bg-accent-color/15 text-accent-color border border-accent-color/25';
       default: return 'bg-secondary text-muted-foreground border border-border/80';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'task': return { bg: 'bg-brand-purple/15', text: 'text-brand-purple', border: 'border-brand-purple/25', icon: ClipboardList };
-      case 'meeting': return { bg: 'bg-[#5B9BD5]/15', text: 'text-[#5B9BD5]', border: 'border-[#5B9BD5]/25', icon: Calendar };
-      case 'call': return { bg: 'bg-[#4FB477]/15', text: 'text-[#4FB477]', border: 'border-[#4FB477]/25', icon: PhoneCall };
-      case 'email': return { bg: 'bg-[#E8A33D]/15', text: 'text-[#E8A33D]', border: 'border-[#E8A33D]/25', icon: Mail };
-      default: return { bg: 'bg-emerald-500/15', text: 'text-emerald-500', border: 'border-emerald-500/25', icon: FileText };
+      case 'task': return { bg: 'bg-accent-color/15', text: 'text-accent-color', border: 'border-accent-color/25', icon: ClipboardList };
+      case 'meeting': return { bg: 'bg-status-info-bg', text: 'text-status-info-text', border: 'border-status-info-text/25', icon: Calendar };
+      case 'call': return { bg: 'bg-status-success-bg', text: 'text-status-success-text', border: 'border-status-success-text/25', icon: PhoneCall };
+      case 'email': return { bg: 'bg-priority-high-bg', text: 'text-priority-high', border: 'border-priority-high/25', icon: Mail };
+      default: return { bg: 'bg-status-success-bg', text: 'text-status-success-text', border: 'border-status-success-text/25', icon: FileText };
     }
   };
 
@@ -312,7 +312,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                 type="text" 
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                className="mt-1.5 bg-secondary/30 border border-border rounded-lg px-2.5 py-1 text-base font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20 w-80 sm:w-[450px]"
+                className="mt-1.5 bg-secondary/30 border border-border rounded-lg px-2.5 py-1 text-base font-bold text-foreground focus:outline-none focus:ring-1 focus:ring-accent-color/20 w-80 sm:w-[450px]"
               />
             ) : (
               <h2 className="text-xl font-bold tracking-tight text-foreground mt-1.5 truncate max-w-sm sm:max-w-md md:max-w-lg font-['Space_Grotesk']">{activity.subject}</h2>
@@ -326,7 +326,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             <>
               <button 
                 onClick={handleSave}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#4FB477] hover:bg-[#4FB477]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-status-success-text hover:bg-status-success-text/90 text-text-on-primary rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Save size={13} />
                 <span>Save</span>
@@ -356,7 +356,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                       window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: relatedEmail } }));
                     }, 150);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-brand-purple rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-accent-color rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
                   title={`Email ${relatedEmail}`}
                 >
                   <Mail size={13} />
@@ -372,7 +372,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
               </button>
               <button 
                 onClick={handleDelete}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#E2604F] hover:bg-[#E2604F]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-status-danger-text hover:bg-status-danger-text/90 text-text-on-primary rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Trash2 size={13} />
                 <span>Delete</span>
@@ -394,7 +394,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
               onClick={() => setActiveTab('overview')}
               className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition duration-200 cursor-pointer ${
                 activeTab === 'overview' 
-                  ? 'bg-brand-purple text-white shadow-sm font-black' 
+                  ? 'bg-accent-color text-white shadow-sm font-black' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
               }`}
             >
@@ -404,7 +404,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
               onClick={() => setActiveTab('timeline')}
               className={`py-1.5 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider transition duration-200 cursor-pointer ${
                 activeTab === 'timeline' 
-                  ? 'bg-brand-purple text-white shadow-sm font-black' 
+                  ? 'bg-accent-color text-white shadow-sm font-black' 
                   : 'text-muted-foreground hover:text-foreground hover:bg-card/40'
               }`}
             >
@@ -418,7 +418,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
               {/* Card 1: Key Metadata Fields */}
               <div className="bg-card border border-border rounded-[10px] p-5 shadow-sm space-y-6">
                 <h3 className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5 select-none font-['Space_Grotesk']">
-                  <ClipboardList className="h-4 w-4 text-brand-purple" />
+                  <ClipboardList className="h-4 w-4 text-accent-color" />
                   <span>Activity Context Specs</span>
                 </h3>
 
@@ -508,7 +508,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                             router.push(`/${activity.related_entity_type}s`);
                           }
                         }}
-                        className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-brand-purple hover:underline text-left cursor-pointer"
+                        className="mt-1 inline-flex items-center gap-1.5 text-xs font-bold text-accent-color hover:underline text-left cursor-pointer"
                       >
                         <Link2 size={12} />
                         <span>{activity.related_record_name || activity.related_entity_type} ({activity.related_entity_type})</span>
@@ -520,7 +520,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                   <div className="border-b-0 pb-0">
                     <span className="block text-[9px] font-bold text-muted-foreground uppercase tracking-wider font-['Space_Grotesk']">Owner / Assigned To</span>
                     <p className="text-xs font-bold text-foreground mt-1.5 flex items-center gap-1.5">
-                      <span className="size-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-extrabold text-brand-purple border border-brand-purple/20">
+                      <span className="size-5 rounded-full bg-secondary flex items-center justify-center text-[10px] font-extrabold text-accent-color border border-accent-color/20">
                         {(activity.owner_name || '?').charAt(0)}
                       </span>
                       <span>{activity.owner_name || 'Unassigned'}</span>
@@ -536,10 +536,10 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       rows={3}
-                      className="mt-2 w-full bg-secondary/30 border border-border rounded-lg p-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-brand-purple/20"
+                      className="mt-2 w-full bg-secondary/30 border border-border rounded-lg p-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-accent-color/20"
                     />
                   ) : (
-                    <p className="text-xs font-medium leading-relaxed bg-secondary/15 rounded-lg border border-border/40 p-3 mt-2 select-text whitespace-pre-wrap text-foreground/80 border-l-2 border-l-brand-purple">
+                    <p className="text-xs font-medium leading-relaxed bg-secondary/15 rounded-lg border border-border/40 p-3 mt-2 select-text whitespace-pre-wrap text-foreground/80 border-l-2 border-l-accent-color">
                       {notes || 'No description notes logged for this activity.'}
                     </p>
                   )}
@@ -559,7 +559,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                     <p className="text-[10px] text-muted-foreground mt-0.5">Automated customer summary &amp; recommended next actions.</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="inline-flex items-center gap-1 bg-brand-purple/15 text-brand-purple border border-brand-purple/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase select-none">
+                    <div className="inline-flex items-center gap-1 bg-accent-color/15 text-accent-color border border-accent-color/20 px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase select-none">
                       <Sparkles className="size-2.5 animate-pulse" />
                       <span>AI Insights</span>
                     </div>
@@ -575,7 +575,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                   <div className="mt-4 pt-4 border-t border-border/40 animate-in slide-in-from-top-1 duration-200">
                     {aiGenerating ? (
                       <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground font-semibold">
-                        <Sparkles className="size-4 animate-spin text-brand-purple" />
+                        <Sparkles className="size-4 animate-spin text-accent-color" />
                         <span>AI is compiling interaction insights...</span>
                       </div>
                     ) : aiInsights ? (
@@ -589,7 +589,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                           <div>
                             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider font-['Space_Grotesk']">Customer Sentiment</span>
                             <div className="mt-1">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/15">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-status-success-bg text-status-success-text border border-status-success-text/15">
                                 {aiInsights.sentiment}
                               </span>
                             </div>
@@ -603,12 +603,12 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
 
                         <div className="bg-secondary/40 border border-border rounded-xl p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                           <div className="min-w-0">
-                            <span className="text-[8px] font-black uppercase text-brand-purple tracking-widest block leading-none">Next Best Action Recommendation</span>
+                            <span className="text-[8px] font-black uppercase text-accent-color tracking-widest block leading-none">Next Best Action Recommendation</span>
                             <p className="text-xs font-bold text-foreground mt-1 truncate leading-none">{aiInsights.nextAction}</p>
                           </div>
                           <button
                             onClick={handleCreateTaskFromAI}
-                            className="px-3 py-1.5 bg-brand-purple hover:bg-brand-purple/90 text-white rounded-lg text-[10px] font-bold shrink-0 transition-colors cursor-pointer"
+                            className="px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-[10px] font-bold shrink-0 transition-colors cursor-pointer"
                           >
                             + Create Task
                           </button>
@@ -628,9 +628,9 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
             /* Timeline History Tab - uses mergedTimeline */
             <div className="bg-card border border-border rounded-[10px] p-5 shadow-sm space-y-5 animate-in fade-in duration-300">
               <h3 className="font-bold text-foreground text-xs uppercase tracking-wider flex items-center gap-1.5 select-none font-['Space_Grotesk']">
-                <Clock className="h-4 w-4 text-brand-purple" />
+                <Clock className="h-4 w-4 text-accent-color" />
                 <span>Lifecycle History Log</span>
-                <span className="ml-auto px-2 py-0.5 bg-brand-purple/10 text-brand-purple rounded-full text-[9px] font-bold">{mergedTimeline.length} events</span>
+                <span className="ml-auto px-2 py-0.5 bg-accent-color/10 text-accent-color rounded-full text-[9px] font-bold">{mergedTimeline.length} events</span>
               </h3>
 
               {/* Type filter pills */}
@@ -651,7 +651,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                       onClick={() => setTimelineFilter(key)}
                       className={`px-2.5 py-1 rounded-full text-[9px] font-bold border transition cursor-pointer ${
                         timelineFilter === key
-                          ? 'bg-brand-purple text-white border-brand-purple shadow-sm'
+                          ? 'bg-accent-color text-white border-accent-color shadow-sm'
                           : 'bg-secondary text-muted-foreground border-border hover:text-foreground hover:border-foreground/20'
                       }`}
                     >
@@ -661,7 +661,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                 })}
               </div>
 
-              <div className="relative border-l-2 border-brand-purple/20 ml-3 space-y-5">
+              <div className="relative border-l-2 border-accent-color/20 ml-3 space-y-5">
                 {mergedTimeline.filter(e => timelineFilter === 'all' || e.type === timelineFilter).length === 0 ? (
                   <p className="text-xs text-muted-foreground py-4 text-center font-semibold select-none">No lifecycle events logged yet.</p>
                 ) : (
@@ -669,18 +669,18 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
                     .map((log, index) => {
                       const typeColors: Record<string, string> = {
-                        email: 'bg-brand-purple',
-                        call: 'bg-emerald-500',
-                        meeting: 'bg-blue-500',
-                        timeline: 'bg-amber-500',
+                        email: 'bg-accent-color',
+                        call: 'bg-status-success-text',
+                        meeting: 'bg-status-info-text',
+                        timeline: 'bg-status-warning-text',
                       };
                       const typeBadge: Record<string, string> = {
-                        email: 'bg-brand-purple/10 text-brand-purple',
-                        call: 'bg-emerald-500/10 text-emerald-600',
-                        meeting: 'bg-blue-500/10 text-blue-600',
-                        timeline: 'bg-amber-500/10 text-amber-600',
+                        email: 'bg-accent-color/10 text-accent-color',
+                        call: 'bg-status-success-bg text-status-success-text',
+                        meeting: 'bg-status-info-bg text-status-info-text',
+                        timeline: 'bg-status-warning-bg text-status-warning-text',
                       };
-                      const dotColor = typeColors[log.type] ?? 'bg-brand-purple';
+                      const dotColor = typeColors[log.type] ?? 'bg-accent-color';
                       const badgeColor = typeBadge[log.type] ?? 'bg-secondary text-muted-foreground';
                       return (
                         <div key={index} className="relative pl-8 animate-in slide-in-from-left-1 duration-200 group">
@@ -701,7 +701,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                               </span>
                             </div>
                             {log.desc && <p className="text-[10px] text-muted-foreground font-semibold leading-relaxed">{log.desc}</p>}
-                            <p className="text-[9px] text-brand-purple font-extrabold mt-1">by {log.user}</p>
+                            <p className="text-[9px] text-accent-color font-extrabold mt-1">by {log.user}</p>
                           </div>
                         </div>
                       );
@@ -716,8 +716,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
         {/* Right Side: Sidebar Context and Settings Log */}
         <div className="col-span-12 lg:col-span-4 space-y-5 pt-[46px]">
           <ContextPanel 
-            contactName={activity.related_entity_type === 'contact' ? activity.related_record_name : undefined}
-            companyName={activity.related_entity_type === 'company' ? activity.related_record_name : undefined}
+            contactName={activity.related_entity_type === 'contact' ? (activity.related_record_name || undefined) : undefined}
+            companyName={activity.related_entity_type === 'company' ? (activity.related_record_name || undefined) : undefined}
             onTabChange={onTabChange}
           />
 
@@ -728,7 +728,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
               className="w-full flex justify-between items-center text-xs font-bold text-foreground uppercase tracking-wider cursor-pointer font-['Space_Grotesk']"
             >
               <span className="flex items-center gap-1.5">
-                <Compass size={14} className="text-brand-purple" />
+                <Compass size={14} className="text-accent-color" />
                 System Details Log
               </span>
               {isDetailsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}

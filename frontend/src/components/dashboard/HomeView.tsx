@@ -113,16 +113,16 @@ function SortableCardWrapper({
       ref={setNodeRef}
       style={style}
       className={`${colSpanClass} transition-shadow duration-200 ${
-        isDragging ? 'shadow-lg ring-2 ring-brand-purple/20' : ''
+        isDragging ? 'shadow-lg ring-2 ring-accent-color/20' : ''
       }`}
     >
       {isEditMode && (
-        <div className="absolute top-2 right-2 z-30 flex items-center gap-1.5 bg-background/90 dark:bg-slate-900/90 backdrop-blur-xs px-2 py-1 rounded-lg border border-border shadow-md animate-in fade-in duration-150 select-none">
+        <div className="absolute top-2 right-2 z-30 flex items-center gap-1.5 bg-surface-0/90 dark:bg-slate-900/90 backdrop-blur-xs px-2 py-1 rounded-lg border border-border-default shadow-md animate-in fade-in duration-150 select-none">
           {/* Drag Handle */}
           <div
             {...attributes}
             {...listeners}
-            className="p-1 hover:bg-secondary dark:hover:bg-slate-800 rounded text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+            className="p-1 hover:bg-surface-2 dark:hover:bg-slate-800 rounded text-text-muted hover:text-text-primary cursor-grab active:cursor-grabbing"
             title="Drag to reorder"
           >
             <GripVertical size={13} />
@@ -132,7 +132,7 @@ function SortableCardWrapper({
           {id !== 'stats' && (
             <button
               onClick={onToggleSize}
-              className="p-1 hover:bg-secondary dark:hover:bg-slate-800 rounded text-muted-foreground hover:text-foreground cursor-pointer"
+              className="p-1 hover:bg-surface-2 dark:hover:bg-slate-800 rounded text-text-muted hover:text-text-primary cursor-pointer"
               title={size === 'full' ? 'Make half width' : 'Make full width'}
             >
               {size === 'full' ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
@@ -142,7 +142,7 @@ function SortableCardWrapper({
           {/* Hide Button */}
           <button
             onClick={onHide}
-            className="p-1 hover:bg-destructive/10 rounded text-muted-foreground hover:text-destructive cursor-pointer"
+            className="p-1 hover:bg-destructive/10 rounded text-text-muted hover:text-destructive cursor-pointer"
             title="Hide card"
           >
             <X size={13} />
@@ -150,7 +150,7 @@ function SortableCardWrapper({
         </div>
       )}
       
-      <div className={`h-full ${isEditMode ? 'border border-dashed border-brand-purple/45 rounded-2xl' : ''}`}>
+      <div className={`h-full ${isEditMode ? 'border border-dashed border-accent-color/45 rounded-2xl' : ''}`}>
         {children}
       </div>
     </div>
@@ -560,7 +560,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
   };
 
   return (
-    <div className="flex flex-col gap-[var(--space-5)] text-foreground font-sans">
+    <div className="flex flex-col gap-[var(--space-5)] text-text-primary font-sans">
       <style dangerouslySetInnerHTML={{ __html: `
         .custom-scrollbar::-webkit-scrollbar {
           width: 5px;
@@ -585,13 +585,13 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
       ` }} />
 
       {/* Welcome Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-[var(--space-2)] border-b border-border/80 pb-[var(--space-2)]">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-[var(--space-2)] border-b border-border-default/80 pb-[var(--space-2)]">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-[2.25rem] capitalize flex items-center gap-2">
+          <h1 className="text-3xl font-extrabold tracking-tight text-text-primary md:text-[2.25rem] capitalize flex items-center gap-2">
             <span>Welcome,</span>
             <span className="text-brand">{userName}</span>
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground font-medium">
+          <p className="mt-1 text-sm text-text-muted font-medium">
             Here's a snapshot of your agenda and performance metrics.
           </p>
         </div>
@@ -601,13 +601,13 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer select-none ${
               isEditMode
                 ? 'bg-brand text-primary-foreground border-transparent shadow-sm'
-                : 'bg-secondary/35 hover:bg-secondary border-border text-muted-foreground hover:text-foreground'
+                : 'bg-surface-2/35 hover:bg-surface-2 border-border-default text-text-muted hover:text-text-primary'
             }`}
           >
             <Settings2 size={13} className={isEditMode ? 'animate-spin' : ''} />
             <span>{isEditMode ? 'Save Layout' : 'Customize Layout'}</span>
           </button>
-          <div className="flex items-center gap-2 bg-secondary/35 border border-border px-3 py-1.5 rounded-full text-xs font-semibold text-muted-foreground select-none">
+          <div className="flex items-center gap-2 bg-surface-2/35 border border-border-default px-3 py-1.5 rounded-full text-xs font-semibold text-text-muted select-none">
             <Calendar size={13} className="text-brand" />
             <span className="capitalize">{userName}'s Home</span>
           </div>
@@ -616,10 +616,10 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
 
       {/* Editor Control Panel Toolbar */}
       {isEditMode && (
-        <div className="bg-secondary/40 border border-brand-purple/20 rounded-2xl p-[var(--space-4)] flex flex-col md:flex-row md:items-center md:justify-between gap-[var(--space-4)] animate-in fade-in duration-300">
+        <div className="bg-surface-2/40 border border-accent-color/20 rounded-2xl p-[var(--space-4)] flex flex-col md:flex-row md:items-center md:justify-between gap-[var(--space-4)] animate-in fade-in duration-300">
           <div>
-            <h4 className="text-xs font-extrabold text-foreground uppercase tracking-wider">Dashboard Customizer Active</h4>
-            <p className="text-[11px] text-muted-foreground mt-1">
+            <h4 className="text-xs font-extrabold text-text-primary uppercase tracking-wider">Dashboard Customizer Active</h4>
+            <p className="text-[11px] text-text-muted mt-1">
               Drag cards using the handle to reorder, toggle sizes, or hide cards. Select hidden cards below to add them back.
             </p>
           </div>
@@ -627,7 +627,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
             {/* Hidden items restore list */}
             {hidden.length > 0 && (
               <div className="flex items-center gap-1.5 mr-2">
-                <span className="text-[10px] text-muted-foreground font-bold uppercase">Add back:</span>
+                <span className="text-[10px] text-text-muted font-bold uppercase">Add back:</span>
                 {hidden.map((id) => {
                   const labelMap: Record<string, string> = {
                     stats: 'KPI Cards',
@@ -643,7 +643,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     <button
                       key={id}
                       onClick={() => handleShowCard(id)}
-                      className="px-2.5 py-1 bg-brand-purple/10 text-brand-purple hover:bg-brand-purple hover:text-primary-foreground border border-brand-purple/20 hover:border-transparent rounded-lg text-[10px] font-bold transition-all cursor-pointer"
+                      className="px-2.5 py-1 bg-accent-color/10 text-accent-color hover:bg-accent-color hover:text-primary-foreground border border-accent-color/20 hover:border-transparent rounded-lg text-[10px] font-bold transition-all cursor-pointer"
                     >
                       + {labelMap[id] || id}
                     </button>
@@ -653,7 +653,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
             )}
             <button
               onClick={handleResetLayout}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-border-default bg-surface-1 hover:bg-surface-2 text-text-primary rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm"
             >
               <RotateCcw size={12} />
               <span>Reset Layout</span>
@@ -696,8 +696,8 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                         icon: AlertCircle,
                         highlight: false,
                         emptyLabel: 'All deals touched',
-                        iconColor: 'text-amber-500',
-                        iconBg: 'bg-amber-50 dark:bg-amber-500/10',
+                        iconColor: 'text-status-warning',
+                        iconBg: 'bg-status-warning/10 dark:bg-status-warning/10',
                       },
                       {
                         title: 'My Calls Today',
@@ -706,8 +706,8 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                         icon: PhoneCall,
                         highlight: false,
                         emptyLabel: 'No calls logged',
-                        iconColor: 'text-emerald-500',
-                        iconBg: 'bg-emerald-50 dark:bg-emerald-500/10',
+                        iconColor: 'text-status-success',
+                        iconBg: 'bg-status-success/10 dark:bg-status-success/10',
                       },
                       {
                         title: 'My Leads',
@@ -727,7 +727,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                           className={`relative rounded-2xl p-5 flex flex-col gap-4 overflow-hidden transition-all duration-200 hover:-translate-y-0.5 ${
                             card.highlight
                               ? 'bg-brand text-white shadow-[0_8px_24px_-8px_var(--brand)]'
-                              : 'bg-card border border-border text-foreground shadow-sm hover:shadow-md'
+                              : 'bg-surface-1 border border-border-default text-text-primary shadow-sm hover:shadow-md'
                           }`}
                         >
                           {/* decorative circle on highlight card */}
@@ -738,7 +738,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                           {/* top row: label + icon */}
                           <div className="flex items-start justify-between gap-3">
                             <p className={`text-[10px] font-bold uppercase tracking-widest leading-none ${
-                              card.highlight ? 'text-white/75' : 'text-muted-foreground'
+                              card.highlight ? 'text-white/75' : 'text-text-muted'
                             }`}>
                               {card.title}
                             </p>
@@ -750,24 +750,24 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                           {/* value */}
                           <div>
                             {statsLoading ? (
-                              <div className={`h-8 w-16 rounded-lg animate-pulse ${card.highlight ? 'bg-white/20' : 'bg-secondary'}`} />
+                              <div className={`h-8 w-16 rounded-lg animate-pulse ${card.highlight ? 'bg-white/20' : 'bg-surface-2'}`} />
                             ) : card.value === null || card.value === 0 ? (
                               <span className={`inline-block text-[11px] font-semibold px-2.5 py-1 rounded-lg border ${
                                 card.highlight
                                   ? 'bg-white/15 border-white/25 text-white/80'
-                                  : 'bg-secondary border-border text-muted-foreground'
+                                  : 'bg-surface-2 border-border-default text-text-muted'
                               }`}>
                                 {card.emptyLabel}
                               </span>
                             ) : (
                               <div>
                                 <h3 className={`text-3xl font-extrabold tracking-tight tabular-nums leading-none ${
-                                  card.highlight ? 'text-white' : 'text-foreground'
+                                  card.highlight ? 'text-white' : 'text-text-primary'
                                 }`}>
                                   {card.value}
                                 </h3>
                                 <p className={`mt-1.5 text-xs leading-snug ${
-                                  card.highlight ? 'text-white/65' : 'text-muted-foreground'
+                                  card.highlight ? 'text-white/65' : 'text-text-muted'
                                 }`}>
                                   {card.sub}
                                 </p>
@@ -790,24 +790,24 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                 cardContent = (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-[var(--space-4)] items-stretch">
                     {/* Left Column — My Open Tasks */}
-                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
+                    <div className="bg-surface-1/95 backdrop-blur-md border border-border-default/80 dark:border-border-default/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
                       {/* Ambient light aura */}
                       <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
 
                       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
                         {/* Header / Title / Refresh */}
-                        <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border/60 h-10 shrink-0">
+                        <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border-default/60 h-10 shrink-0">
                           <div className="flex items-center gap-2.5">
                             <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
                               <CheckCircle2 size={16} />
                             </div>
-                            <h3 className="font-extrabold text-foreground text-sm flex items-center gap-1.5 select-none tracking-tight">
+                            <h3 className="font-extrabold text-text-primary text-sm flex items-center gap-1.5 select-none tracking-tight">
                               <span>My Open Tasks</span>
                             </h3>
                             <button 
                               onClick={loadTasks}
                               disabled={tasksLoading}
-                              className="p-1.5 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-colors active:scale-95 disabled:opacity-50 shrink-0"
+                              className="p-1.5 hover:bg-surface-2 rounded-lg text-text-muted hover:text-text-primary cursor-pointer transition-colors active:scale-95 disabled:opacity-50 shrink-0"
                               title="Refresh Tasks"
                             >
                               <RefreshCw size={13} className={tasksLoading ? "animate-spin" : ""} />
@@ -815,12 +815,12 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                           </div>
 
                           {/* Sort Control Dropdown */}
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 select-none">
-                            <span className="text-[10px] text-muted-foreground font-bold uppercase">Sort:</span>
+                          <div className="flex items-center gap-1.5 text-xs text-text-muted shrink-0 select-none">
+                            <span className="text-[10px] text-text-muted font-bold uppercase">Sort:</span>
                             <select 
                               value={taskSortField}
                               onChange={(e) => handleTaskSort(e.target.value as any)}
-                              className="bg-secondary/40 border border-border rounded-lg px-2 py-1 text-[11px] font-semibold text-foreground focus:outline-none cursor-pointer hover:bg-secondary/70 transition-colors"
+                              className="bg-surface-2/40 border border-border-default rounded-lg px-2 py-1 text-[11px] font-semibold text-text-primary focus:outline-none cursor-pointer hover:bg-surface-2/70 transition-colors"
                             >
                               <option value="title">Subject</option>
                               <option value="deadline">Due Date</option>
@@ -828,7 +828,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                             </select>
                             <button 
                               onClick={() => setTaskSortOrder(taskSortOrder === 'asc' ? 'desc' : 'asc')}
-                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                              className="p-1 border border-border-default bg-surface-2/20 hover:bg-surface-2 rounded-lg text-text-muted hover:text-text-primary cursor-pointer transition-all"
                               title={taskSortOrder === 'asc' ? "Sort Descending" : "Sort Ascending"}
                             >
                               <ArrowUpDown size={11} />
@@ -840,44 +840,44 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1.5">
                           {sortedTasks.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full py-20 text-center select-none">
-                              <div className="h-12 w-12 rounded-full bg-brand-purple/10 flex items-center justify-center mb-3">
-                                <CheckCircle2 className="size-6 text-brand-purple" />
+                              <div className="h-12 w-12 rounded-full bg-accent-color/10 flex items-center justify-center mb-3">
+                                <CheckCircle2 className="size-6 text-accent-color" />
                               </div>
-                              <p className="text-xs font-bold text-foreground">All Caught Up!</p>
-                              <p className="text-[11px] text-muted-foreground max-w-[200px] mt-1">
+                              <p className="text-xs font-bold text-text-primary">All Caught Up!</p>
+                              <p className="text-[11px] text-text-muted max-w-[200px] mt-1">
                                 No open tasks found. You have completed all manual follow-ups.
                               </p>
                             </div>
                           ) : (
                             <table className="w-full text-left border-collapse table-fixed">
                               <thead>
-                                <tr className="border-b border-border/40 text-[9px] uppercase font-bold text-muted-foreground/75 tracking-wider select-none">
+                                <tr className="border-b border-border-default/40 text-[9px] uppercase font-bold text-text-muted/75 tracking-wider select-none">
                                   <th className="pb-[var(--space-2)] px-[var(--space-3)] text-left w-[42%]">Subject</th>
                                   <th className="pb-[var(--space-2)] px-[var(--space-3)] text-center w-[13%]">Fit Score</th>
                                   <th className="pb-[var(--space-2)] px-[var(--space-3)] text-right w-[22%]">Due Date</th>
                                   <th className="pb-[var(--space-2)] px-[var(--space-3)] text-right w-[23%]">Status</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-border/30 text-xs font-semibold text-foreground">
+                              <tbody className="divide-y divide-border/30 text-xs font-semibold text-text-primary">
                                 {sortedTasks.map((task) => {
                                   const score = task.fitScore ?? null;
                                   const scoreColor = score === null ? '' :
-                                    score >= 75 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
-                                    score >= 50 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
-                                    'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20';
+                                    score >= 75 ? 'bg-status-success/10 text-status-success dark:text-status-success border-status-success/20' :
+                                    score >= 50 ? 'bg-status-warning/10 text-status-warning dark:text-status-warning border-status-warning/20' :
+                                    'bg-status-danger/10 text-status-danger dark:text-status-danger border-status-danger/20';
                                   return (
-                                  <tr key={task.id} className="hover:bg-secondary/15 transition-colors">
+                                  <tr key={task.id} className="hover:bg-surface-2/15 transition-colors">
                                     <td className="py-[var(--space-2)] px-[var(--space-3)] text-left overflow-hidden max-w-0">
                                       <div className="flex items-center gap-2 min-w-0">
                                         <button 
                                           onClick={() => handleToggleTask(task.id)}
-                                          className="text-muted-foreground hover:text-brand-purple transition-all shrink-0 cursor-pointer"
+                                          className="text-text-muted hover:text-accent-color transition-all shrink-0 cursor-pointer"
                                           title="Mark Complete"
                                         >
-                                          <Circle className="size-4 text-muted-foreground/60 hover:text-brand-purple" />
+                                          <Circle className="size-4 text-text-muted/60 hover:text-accent-color" />
                                         </button>
                                         <span 
-                                          className="truncate block font-semibold text-foreground text-xs" 
+                                          className="truncate block font-semibold text-text-primary text-xs" 
                                           title={task.title}
                                         >
                                           {task.title}
@@ -894,11 +894,11 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                                           {score}
                                         </span>
                                       ) : (
-                                        <span className="text-muted-foreground/40 text-[10px]">—</span>
+                                        <span className="text-text-muted/40 text-[10px]">—</span>
                                       )}
                                     </td>
                                     <td 
-                                      className="py-[var(--space-2)] px-[var(--space-3)] text-right text-muted-foreground whitespace-nowrap text-xs font-semibold" 
+                                      className="py-[var(--space-2)] px-[var(--space-3)] text-right text-text-muted whitespace-nowrap text-xs font-semibold" 
                                       title={task.deadline}
                                     >
                                       {task.deadline}
@@ -906,10 +906,10 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                                     <td className="py-[var(--space-2)] px-[var(--space-3)] text-right whitespace-nowrap">
                                       <span 
                                         className={`px-2 py-0.5 rounded text-[10px] font-bold inline-block border ${
-                                          task.status === 'Overdue' ? 'bg-rose-500/10 text-rose-500 border-rose-500/15' :
-                                          task.status === 'Completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/15' :
-                                          task.status === 'In Progress' ? 'bg-brand-cyan/10 text-brand-cyan border-brand-cyan/15' :
-                                          'bg-brand-purple/10 text-brand-purple border-brand-purple/15'
+                                          task.status === 'Overdue' ? 'bg-status-danger/10 text-status-danger border-status-danger/15' :
+                                          task.status === 'Completed' ? 'bg-status-success/10 text-status-success border-status-success/15' :
+                                          task.status === 'In Progress' ? 'bg-accent-color/10 text-accent-color border-accent-color/15' :
+                                          'bg-accent-color/10 text-accent-color border-accent-color/15'
                                         }`}
                                         title={task.status}
                                       >
@@ -924,10 +924,10 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                           )}
                         </div>
                       </div>
-                      <div className="pt-[var(--space-2)] border-t border-border mt-[var(--space-2)] text-right shrink-0">
+                      <div className="pt-[var(--space-2)] border-t border-border-default mt-[var(--space-2)] text-right shrink-0">
                         <button 
                           onClick={() => onTabChange('workflows')}
-                          className="text-xs text-brand-purple hover:text-brand-purple/85 font-semibold cursor-pointer select-none"
+                          className="text-xs text-accent-color hover:text-accent-color/85 font-semibold cursor-pointer select-none"
                         >
                           Manage Tasks under Workflow &rarr;
                         </button>
@@ -935,36 +935,36 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                     </div>
 
                     {/* Right Column — My Meetings */}
-                    <div className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
+                    <div className="bg-surface-1/95 backdrop-blur-md border border-border-default/80 dark:border-border-default/60 hover:border-primary/30 rounded-[22px] p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 flex flex-col justify-between h-[450px] relative overflow-hidden group">
                       {/* Ambient light aura */}
                       <div className="absolute -top-14 -right-14 w-40 h-40 rounded-full bg-primary/5 blur-3xl pointer-events-none group-hover:bg-primary/10 transition-all duration-500" />
 
                       <div className="flex-1 flex flex-col min-w-0 min-h-0 relative">
                         {/* Header / Title / Sort */}
-                        <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border/60 h-10 shrink-0">
+                        <div className="flex items-center justify-between pb-3 mb-3.5 border-b border-border-default/60 h-10 shrink-0">
                           <div className="flex items-center gap-2.5">
-                            <div className="h-8 w-8 rounded-xl bg-brand-blue/10 text-brand-blue border border-brand-blue/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+                            <div className="h-8 w-8 rounded-xl bg-accent-color/10 text-accent-color border border-accent-color/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
                               <Calendar size={16} />
                             </div>
-                            <h3 className="font-extrabold text-foreground text-sm flex items-center gap-1.5 select-none tracking-tight">
+                            <h3 className="font-extrabold text-text-primary text-sm flex items-center gap-1.5 select-none tracking-tight">
                               <span>My Meetings</span>
                             </h3>
                           </div>
 
                           {/* Sort Control Dropdown */}
-                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0 select-none">
-                            <span className="text-[10px] text-muted-foreground font-bold uppercase">Sort:</span>
+                          <div className="flex items-center gap-1.5 text-xs text-text-muted shrink-0 select-none">
+                            <span className="text-[10px] text-text-muted font-bold uppercase">Sort:</span>
                             <select 
                               value={meetingSortField}
                               onChange={(e) => handleMeetingSort(e.target.value as any)}
-                              className="bg-secondary/40 border border-border rounded-lg px-2 py-1 text-[11px] font-semibold text-foreground focus:outline-none cursor-pointer hover:bg-secondary/70 transition-colors"
+                              className="bg-surface-2/40 border border-border-default rounded-lg px-2 py-1 text-[11px] font-semibold text-text-primary focus:outline-none cursor-pointer hover:bg-surface-2/70 transition-colors"
                             >
                               <option value="title">Title</option>
                               <option value="from">From Time</option>
                             </select>
                             <button 
                               onClick={() => setMeetingSortOrder(meetingSortOrder === 'asc' ? 'desc' : 'asc')}
-                              className="p-1 border border-border bg-secondary/20 hover:bg-secondary rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all"
+                              className="p-1 border border-border-default bg-surface-2/20 hover:bg-surface-2 rounded-lg text-text-muted hover:text-text-primary cursor-pointer transition-all"
                               title={meetingSortOrder === 'asc' ? "Sort Descending" : "Sort Ascending"}
                             >
                               <ArrowUpDown size={11} />
@@ -976,24 +976,24 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1.5">
                           {sortedMeetings.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full py-20 text-center select-none">
-                              <div className="h-12 w-12 rounded-full bg-brand-blue/10 flex items-center justify-center mb-3">
-                                <Calendar className="size-6 text-brand-blue" />
+                              <div className="h-12 w-12 rounded-full bg-accent-color/10 flex items-center justify-center mb-3">
+                                <Calendar className="size-6 text-accent-color" />
                               </div>
-                              <p className="text-xs font-bold text-foreground">No Meetings Scheduled</p>
-                              <p className="text-[11px] text-muted-foreground max-w-[200px] mt-1">
+                              <p className="text-xs font-bold text-text-primary">No Meetings Scheduled</p>
+                              <p className="text-[11px] text-text-muted max-w-[200px] mt-1">
                                 Your agenda is empty today. Schedule meetings to stay connected.
                               </p>
                             </div>
                           ) : (
                             <table className="w-full text-left border-collapse table-fixed">
                               <thead>
-                                <tr className="border-b border-border/40 text-[9px] uppercase font-bold text-muted-foreground/75 tracking-wider select-none">
+                                <tr className="border-b border-border-default/40 text-[9px] uppercase font-bold text-text-muted/75 tracking-wider select-none">
                                   <th className="pb-[var(--space-2)] px-[var(--space-3)] text-left w-[46%]">Title</th>
                                   <th className="pb-[var(--space-2)] px-[var(--space-3)] text-right w-[27%]">From</th>
                                   <th className="pb-[var(--space-2)] px-[var(--space-3)] text-right w-[27%]">To</th>
                                 </tr>
                               </thead>
-                              <tbody className="divide-y divide-border/30 text-xs font-semibold text-foreground">
+                              <tbody className="divide-y divide-border/30 text-xs font-semibold text-text-primary">
                                 {sortedMeetings.map((meeting) => {
                                   const formatParts = (str: string) => {
                                     if (!str) return { date: '', time: '' };
@@ -1010,28 +1010,28 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                                   const toVal = formatParts(meeting.to);
 
                                   return (
-                                    <tr key={meeting.id} className="hover:bg-secondary/15 transition-colors">
+                                    <tr key={meeting.id} className="hover:bg-surface-2/15 transition-colors">
                                       <td className="py-[var(--space-2)] px-[var(--space-3)] text-left overflow-hidden max-w-0">
                                         <span 
-                                          className="truncate block text-xs font-bold text-foreground" 
+                                          className="truncate block text-xs font-bold text-text-primary" 
                                           title={meeting.title}
                                         >
                                           {meeting.title}
                                         </span>
                                         {fromVal.date && (
-                                          <span className="text-[10px] text-muted-foreground mt-0.5 block font-semibold">
+                                          <span className="text-[10px] text-text-muted mt-0.5 block font-semibold">
                                             {fromVal.date}
                                           </span>
                                         )}
                                       </td>
                                       <td 
-                                        className="py-[var(--space-2)] px-[var(--space-3)] text-right text-muted-foreground whitespace-nowrap text-xs font-semibold" 
+                                        className="py-[var(--space-2)] px-[var(--space-3)] text-right text-text-muted whitespace-nowrap text-xs font-semibold" 
                                         title={meeting.from}
                                       >
                                         {fromVal.time}
                                       </td>
                                       <td 
-                                        className="py-[var(--space-2)] px-[var(--space-3)] text-right text-muted-foreground whitespace-nowrap text-xs font-semibold" 
+                                        className="py-[var(--space-2)] px-[var(--space-3)] text-right text-text-muted whitespace-nowrap text-xs font-semibold" 
                                         title={meeting.to}
                                       >
                                         {toVal.time}
@@ -1044,10 +1044,10 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                           )}
                         </div>
                       </div>
-                      <div className="pt-[var(--space-2)] border-t border-border mt-[var(--space-2)] text-right shrink-0">
+                      <div className="pt-[var(--space-2)] border-t border-border-default mt-[var(--space-2)] text-right shrink-0">
                         <button 
                           onClick={() => onTabChange('calendar')}
-                          className="text-xs text-brand-blue hover:text-brand-blue/85 font-semibold cursor-pointer select-none"
+                          className="text-xs text-accent-color hover:text-accent-color/85 font-semibold cursor-pointer select-none"
                         >
                           Open Interactive Calendar &rarr;
                         </button>

@@ -1,55 +1,57 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useDashboardLayout, DashboardLayoutProvider } from '@/components/dashboard/DashboardLayoutContext';
-import QuotaPaceCard from '@/components/dashboard/QuotaPaceCard';
-import FunnelChartCard from '@/components/dashboard/FunnelChartCard';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import StatCards from '@/components/dashboard/StatCards';
-import Charts from '@/components/dashboard/Charts';
-import Widgets from '@/components/dashboard/Widgets';
-import RightPanel from '@/components/dashboard/RightPanel';
 import ReportBuilderModal from '@/components/dashboard/ReportBuilderModal';
-import LeadsView from '@/components/dashboard/LeadsView';
-import CompaniesView from '@/components/dashboard/CompaniesView';
-import ContactsView from '@/components/dashboard/ContactsView';
-import PipelineView from '@/components/dashboard/PipelineView';
-import ActivitiesView from '@/components/dashboard/ActivitiesView';
-import EmailsView from '@/components/dashboard/EmailsView';
-import AIInsightsView from '@/components/dashboard/AIInsightsView';
-import NotificationsView from '@/components/dashboard/NotificationsView';
-import ProfileView from '@/components/dashboard/ProfileView';
-import SettingsView from '@/components/dashboard/SettingsView';
-import ProductsView from '@/components/dashboard/ProductsView';
-import DocumentsView from '@/components/dashboard/DocumentsView';
-import ReportsView from '@/components/dashboard/ReportsView';
-import ManagerReportsView from '@/components/dashboard/ManagerReportsView';
-import AdminReportsView from '@/components/dashboard/AdminReportsView';
-import WorkflowsView from '@/components/dashboard/WorkflowsView';
 import CommandPalette from '@/components/dashboard/CommandPalette';
 import AICopilotChat from '@/components/dashboard/AICopilotChat';
 import DashboardCustomizer from '@/components/dashboard/DashboardCustomizer';
-import ActivityHeatmap from '@/components/dashboard/ActivityHeatmap';
-import CalendarView from '@/components/dashboard/CalendarView';
-import ManagerDashboardView from '@/components/dashboard/ManagerDashboardView';
-import ForecastView from '@/components/dashboard/ForecastView';
-import TeamPerformanceView from '@/components/dashboard/TeamPerformanceView';
-import AdminDashboardView from '@/components/dashboard/AdminDashboardView';
-import SalesRepDashboardView from '@/components/dashboard/SalesRepDashboardView';
-import UsersView from '@/components/dashboard/UsersView';
-import RolesPermissionsView from '@/components/dashboard/RolesPermissionsView';
-import IntegrationsView from '@/components/dashboard/IntegrationsView';
-import AutomationView from '@/components/dashboard/AutomationView';
-import AIModelsView from '@/components/dashboard/AIModelsView';
-import AuditLogsView from '@/components/dashboard/AuditLogsView';
-import HomeView from '@/components/dashboard/HomeView';
-import TasksView from '@/components/dashboard/TasksView';
 import { Calendar, ChevronDown, Settings2, Loader2, Plus } from 'lucide-react';
 import { clearToken, setToken, EmailComposeTarget } from '@/utils/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardOverview } from '@/hooks/use-dashboard';
 import { useCrmStream } from '@/hooks/use-crm-stream';
+
+// ── Lazy-loaded view components (code-split per tab) ──────────────────────
+const HomeView = React.lazy(() => import('@/components/dashboard/HomeView'));
+const LeadsView = React.lazy(() => import('@/components/dashboard/LeadsView'));
+const CompaniesView = React.lazy(() => import('@/components/dashboard/CompaniesView'));
+const ContactsView = React.lazy(() => import('@/components/dashboard/ContactsView'));
+const PipelineView = React.lazy(() => import('@/components/dashboard/PipelineView'));
+const ActivitiesView = React.lazy(() => import('@/components/dashboard/ActivitiesView'));
+const EmailsView = React.lazy(() => import('@/components/dashboard/EmailsView'));
+const AIInsightsView = React.lazy(() => import('@/components/dashboard/AIInsightsView'));
+const NotificationsView = React.lazy(() => import('@/components/dashboard/NotificationsView'));
+const ProfileView = React.lazy(() => import('@/components/dashboard/ProfileView'));
+const SettingsView = React.lazy(() => import('@/components/dashboard/SettingsView'));
+const ProductsView = React.lazy(() => import('@/components/dashboard/ProductsView'));
+const DocumentsView = React.lazy(() => import('@/components/dashboard/DocumentsView'));
+const ReportsView = React.lazy(() => import('@/components/dashboard/ReportsView'));
+const ManagerReportsView = React.lazy(() => import('@/components/dashboard/ManagerReportsView'));
+const AdminReportsView = React.lazy(() => import('@/components/dashboard/AdminReportsView'));
+const WorkflowsView = React.lazy(() => import('@/components/dashboard/WorkflowsView'));
+const ActivityHeatmap = React.lazy(() => import('@/components/dashboard/ActivityHeatmap'));
+const CalendarView = React.lazy(() => import('@/components/dashboard/CalendarView'));
+const ManagerDashboardView = React.lazy(() => import('@/components/dashboard/ManagerDashboardView'));
+const ForecastView = React.lazy(() => import('@/components/dashboard/ForecastView'));
+const TeamPerformanceView = React.lazy(() => import('@/components/dashboard/TeamPerformanceView'));
+const AdminDashboardView = React.lazy(() => import('@/components/dashboard/AdminDashboardView'));
+const SalesRepDashboardView = React.lazy(() => import('@/components/dashboard/SalesRepDashboardView'));
+const UsersView = React.lazy(() => import('@/components/dashboard/UsersView'));
+const RolesPermissionsView = React.lazy(() => import('@/components/dashboard/RolesPermissionsView'));
+const IntegrationsView = React.lazy(() => import('@/components/dashboard/IntegrationsView'));
+const AutomationView = React.lazy(() => import('@/components/dashboard/AutomationView'));
+const AIModelsView = React.lazy(() => import('@/components/dashboard/AIModelsView'));
+const AuditLogsView = React.lazy(() => import('@/components/dashboard/AuditLogsView'));
+const TasksView = React.lazy(() => import('@/components/dashboard/TasksView'));
+const StatCards = React.lazy(() => import('@/components/dashboard/StatCards'));
+const Charts = React.lazy(() => import('@/components/dashboard/Charts'));
+const QuotaPaceCard = React.lazy(() => import('@/components/dashboard/QuotaPaceCard'));
+const FunnelChartCard = React.lazy(() => import('@/components/dashboard/FunnelChartCard'));
+const Widgets = React.lazy(() => import('@/components/dashboard/Widgets'));
+const RightPanel = React.lazy(() => import('@/components/dashboard/RightPanel'));
 
 interface DashboardShellProps {
   requiredRole: 'sales_rep' | 'manager' | 'admin';
@@ -80,9 +82,10 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
   };
 
   // ── Unified dashboard data hook (GET /api/v1/dashboard/me) ──────────────
-  // Returns null gracefully when the backend endpoint is not yet deployed.
-  // Individual widgets continue to use their own API calls as fallback.
-  const { data: dashboardData, refetch: refetchDashboard } = useDashboardOverview();
+  // Only fetch for sales_rep role — manager and admin views make their own calls.
+  const dashboardOverview = useDashboardOverview();
+  const dashboardData = requiredRole === 'sales_rep' ? dashboardOverview.data : null;
+  const refetchDashboard = requiredRole === 'sales_rep' ? dashboardOverview.refetch : () => {};
 
   // ── Real-time SSE stream — invalidates dashboardData on AI events ────────
   useCrmStream({
@@ -208,23 +211,18 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     window.location.href = '/login';
   };
 
-  const mapRoleForLegacyComponent = (r: 'sales_rep' | 'manager' | 'admin'): 'representative' | 'manager' | 'admin' => {
-    if (r === 'sales_rep') return 'representative';
-    return r;
-  };
-
-  const legacyRole = mapRoleForLegacyComponent(requiredRole);
+  const legacyRole = requiredRole;
 
   if (!authorized) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 text-brand-purple animate-spin" />
+      <div className="min-h-screen w-full flex items-center justify-center bg-surface-0">
+        <Loader2 className="h-8 w-8 text-accent-color animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex bg-background h-screen overflow-hidden font-sans antialiased">
+    <div className="flex bg-surface-0 h-screen overflow-hidden font-sans antialiased">
       {/* Sidebar navigation */}
       <Sidebar 
         activeTab={activeTab} 
@@ -248,8 +246,13 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           userRole={legacyRole}
         />
 
-        {/* Dashboard inner scroll view */}
-        <main className="flex-1 overflow-y-auto px-4 py-8 md:px-6 space-y-6">
+        {/* ui.md §6: Content padding 2xl (32px) on all sides */}
+        <main className="flex-1 overflow-y-auto px-8 py-8 md:px-8 space-y-6">
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-6 w-6 text-accent-color animate-spin" />
+            </div>
+          }>
           {activeTab === 'home' ? (
             requiredRole === 'manager' ? (
               <ManagerDashboardView onTabChange={setActiveTab} />
@@ -319,23 +322,23 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               {/* Page heading */}
               <div className="grid grid-cols-[minmax(0,1fr)] items-end gap-4 lg:flex lg:justify-between">
                 <div className="min-w-0">
-                  <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.5rem]">
+                  <h1 className="text-3xl font-bold tracking-tight text-text-primary md:text-[2.5rem]">
                     Reports &amp; analytics
                   </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="mt-2 text-sm text-text-muted">
                     Track performance, analyze trends, and make data-driven decisions.
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2 self-start md:self-auto">
-                  <button className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-secondary cursor-pointer">
-                    <Calendar size={14} className="text-muted-foreground" />
+                  <button className="inline-flex items-center gap-2 rounded-full border border-border-default bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-surface-2 cursor-pointer">
+                    <Calendar size={14} className="text-text-muted" />
                     <span className="tabular-nums">May 12 – May 18, 2026</span>
                   </button>
                   <button
                     onClick={() => setIsCustomizerOpen(true)}
-                    className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-secondary cursor-pointer"
+                    className="inline-flex items-center gap-2 rounded-full border border-border-default bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-surface-2 cursor-pointer"
                   >
-                    <Settings2 size={14} className="text-muted-foreground" />
+                    <Settings2 size={14} className="text-text-muted" />
                     <span>Customize layout</span>
                   </button>
                 </div>
@@ -384,15 +387,15 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
               </div>
               {/* Report Builder Control Panel */}
-              <div className="bg-card border border-border rounded-2xl p-5 hover:shadow-nav transition duration-300 mt-6">
-                <div className="flex items-center justify-between mb-4 border-b border-border pb-2">
+              <div className="bg-surface-1 border border-border-default rounded-2xl p-5 hover:shadow-nav transition duration-300 mt-6">
+                <div className="flex items-center justify-between mb-4 border-b border-border-default pb-2">
                   <div>
-                    <h3 className="font-semibold text-foreground text-sm">Report builder</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                    <h3 className="font-semibold text-text-primary text-sm">Report builder</h3>
+                    <p className="text-xs text-text-muted mt-0.5 leading-relaxed">
                       Configure template, metrics, and grouping to dynamically compile custom reports.
                     </p>
                   </div>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-purple/10 text-brand-purple uppercase tracking-wider">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-accent-color/10 text-accent-color uppercase tracking-wider">
                     Customizer
                   </span>
                 </div>
@@ -400,49 +403,49 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div>
-                      <label className="block text-[11px] font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">
                         Report Template
                       </label>
                       <div className="relative">
                         <select
                           value={reportType}
                           onChange={(e) => setReportType(e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
+                          className="w-full px-2.5 py-1.5 border border-border-default bg-background rounded-lg text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
                         >
                           <option value="Sales Funnel">Sales Funnel Analysis</option>
                           <option value="Lead Conversion">Lead Conversion Rate</option>
                           <option value="Activity Log">Rep Activity Metrics</option>
                           <option value="Revenue Projection">Revenue Forecast Q3</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted-foreground">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-text-muted">
                           <ChevronDown className="h-3 w-3" strokeWidth={2} />
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">
                         Primary Metric
                       </label>
                       <div className="relative">
                         <select
                           value={primaryMetric}
                           onChange={(e) => setPrimaryMetric(e.target.value)}
-                          className="w-full px-2.5 py-1.5 border border-border bg-background rounded-lg text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
+                          className="w-full px-2.5 py-1.5 border border-border-default bg-background rounded-lg text-xs text-text-primary focus:outline-none focus:ring-2 focus:ring-ring/30 transition duration-200 cursor-pointer appearance-none pr-8 font-medium"
                         >
                           <option value="Deal Value">Deal Value (INR)</option>
                           <option value="Lead Score">AI Lead Score</option>
                           <option value="Conversion Rate">Conversion Rate (%)</option>
                           <option value="Task Count">Total Activities</option>
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-muted-foreground">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-text-muted">
                           <ChevronDown className="h-3 w-3" strokeWidth={2} />
                         </div>
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-semibold text-foreground uppercase tracking-wider mb-1.5">
+                      <label className="block text-[11px] font-semibold text-text-primary uppercase tracking-wider mb-1.5">
                         Group By
                       </label>
                       <div className="grid grid-cols-3 gap-1.5">
@@ -455,8 +458,8 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                               onClick={() => setGroupBy(group)}
                               className={`py-1.5 rounded-lg text-xs font-semibold border transition duration-200 cursor-pointer ${
                                 isActiveGroup
-                                  ? 'border-brand-purple bg-brand-purple/10 text-brand-purple'
-                                  : 'border-border hover:border-brand-purple/50 text-muted-foreground hover:bg-secondary'
+                                  ? 'border-accent-color bg-accent-color/10 text-accent-color'
+                                  : 'border-border-default hover:border-accent-color/50 text-text-muted hover:bg-surface-2'
                               }`}
                             >
                               {group}
@@ -467,10 +470,10 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-secondary border border-border rounded-xl p-3.5 mt-2">
-                    <div className="flex items-center gap-2 text-xs text-foreground font-medium overflow-hidden w-full sm:w-auto">
-                      <span className="text-muted-foreground font-semibold uppercase tracking-wider text-[11px] shrink-0">Output:</span>
-                      <span className="font-mono bg-background px-2.5 py-1 rounded border border-border text-brand-purple font-semibold truncate max-w-full sm:max-w-md">
+                  <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-2 border border-border-default rounded-xl p-3.5 mt-2">
+                    <div className="flex items-center gap-2 text-xs text-text-primary font-medium overflow-hidden w-full sm:w-auto">
+                      <span className="text-text-muted font-semibold uppercase tracking-wider text-[11px] shrink-0">Output:</span>
+                      <span className="font-mono bg-background px-2.5 py-1 rounded border border-border-default text-accent-color font-semibold truncate max-w-full sm:max-w-md">
                         {`${reportType.toLowerCase().replace(/\s+/g, '_')}_by_${groupBy.toLowerCase()}.csv`}
                       </span>
                     </div>
@@ -486,6 +489,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               </div>
             </>
           )}
+          </Suspense>
         </main>
       </div>
 
@@ -511,39 +515,39 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 12, scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className="mb-3 bg-popover border border-border shadow-float rounded-2xl p-2 w-48 flex flex-col gap-0.5"
+              className="mb-3 bg-popover border border-border-default shadow-float rounded-2xl p-2 w-48 flex flex-col gap-0.5"
             >
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest px-3 py-1.5 border-b border-border/60 mb-1 select-none">Quick Actions</p>
+              <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest px-3 py-1.5 border-b border-border-default/60 mb-1 select-none">Quick Actions</p>
               
               <button
                 onClick={() => { setIsFabOpen(false); setActiveTab('leads'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
               >
-                <Plus size={14} className="text-brand-blue" />
+                <Plus size={14} className="text-accent-color" />
                 <span>New Lead</span>
               </button>
               
               <button
                 onClick={() => { setIsFabOpen(false); setActiveTab('tasks'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
               >
-                <Plus size={14} className="text-brand-purple" />
+                <Plus size={14} className="text-accent-color" />
                 <span>New Task</span>
               </button>
 
               <button
                 onClick={() => { setIsFabOpen(false); setActiveTab('calendar'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
               >
-                <Plus size={14} className="text-emerald-500" />
+                <Plus size={14} className="text-status-success" />
                 <span>New Meeting</span>
               </button>
 
               <button
                 onClick={() => { setIsFabOpen(false); alert('New Invoice action triggered: Invoice layout will open shortly.'); }}
-                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-foreground hover:bg-secondary rounded-xl text-left cursor-pointer transition-colors"
+                className="flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-text-primary hover:bg-surface-2 rounded-xl text-left cursor-pointer transition-colors"
               >
-                <Plus size={14} className="text-amber-500" />
+                <Plus size={14} className="text-status-warning" />
                 <span>New Invoice</span>
               </button>
             </motion.div>
@@ -552,7 +556,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
         <button
           onClick={() => setIsFabOpen(!isFabOpen)}
-          className="h-14 w-14 rounded-full bg-ink text-primary-foreground border border-border shadow-float flex items-center justify-center hover:scale-105 active:scale-95 transition duration-200 cursor-pointer group"
+          className="h-14 w-14 rounded-full bg-ink text-primary-foreground border border-border-default shadow-float flex items-center justify-center hover:scale-105 active:scale-95 transition duration-200 cursor-pointer group"
           aria-label="Quick Actions"
         >
           <Plus size={24} className={`transition-transform duration-300 ${isFabOpen ? 'rotate-45' : ''}`} />

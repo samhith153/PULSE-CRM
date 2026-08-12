@@ -5,15 +5,15 @@ import { _setAddToast, toast as toastModule, type ToastItem, type ToastType } fr
 import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
 
 const ICONS: Record<ToastType, React.ReactNode> = {
-  success: <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
-  error: <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />,
-  info: <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />,
+  success: <CheckCircle className="h-4 w-4 text-status-success-text" />,
+  error: <AlertCircle className="h-4 w-4 text-status-danger-text" />,
+  info: <Info className="h-4 w-4 text-status-info-text" />,
 };
 
 const BORDER_COLORS: Record<ToastType, string> = {
-  success: 'border-l-emerald-500',
-  error: 'border-l-rose-500',
-  info: 'border-l-blue-500',
+  success: 'border-l-status-success-text',
+  error: 'border-l-status-danger-text',
+  info: 'border-l-status-info-text',
 };
 
 let nextId = 1;

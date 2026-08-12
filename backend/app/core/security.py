@@ -3,9 +3,11 @@ Security Utilities
 - JWT creation / verification
 - Password hashing / verification via bcrypt directly
 - Secure token generation (password-reset, email verify)
+- Token revocation store (in-memory; survives per-process lifetime)
 """
 import hashlib
 import secrets
+import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 from uuid import UUID
@@ -41,6 +43,59 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         )
     except Exception:
         return False
+
+
+# ── Token Revocation Store ──────────────────────────────────────────────────
+# In-memory set of revoked JWT JTIs.  Survives for the process lifetime.
+# For multi-process deployments, swap this with Redis-backed storage.
+
+class _TokenRevocationStore:
+    """Thread-safe in-memory store for revoked token JTIs."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._revoked: set[str] = set()
+
+    def revoke(self, jti: str) -> None:
+        with self._lock:
+            self._revoked.add(jti)
+
+    def is_revoked(self, jti: str) -> bool:
+        with self._lock:
+            return jti in self._revoked
+
+    def __len__(self) -> int:
+        with self._lock:
+            return len(self._revoked)
+
+
+revoked_tokens = _TokenRevocationStore()
+
+
+def revoke_token(token: str) -> bool:
+    """Add a token's JTI to the revocation store. Returns True if successful."""
+    try:
+        payload = decode_token(token)
+        jti = payload.get("jti")
+        if jti:
+            revoked_tokens.revoke(jti)
+            logger.info("Token revoked", extra={"jti": jti})
+            return True
+    except Exception:
+        logger.warning("Failed to revoke token")
+    return False
+
+
+def check_token_revoked(token: str) -> bool:
+    """Return True if the token has been revoked."""
+    try:
+        payload = decode_token(token)
+        jti = payload.get("jti")
+        if jti and revoked_tokens.is_revoked(jti):
+            return True
+    except Exception:
+        pass
+    return False
 
 
 def check_password_strength(password: str) -> tuple[bool, str]:
@@ -130,6 +185,10 @@ def decode_token(token: str) -> Dict[str, Any]:
             settings.SECRET_KEY,
             algorithms=[settings.ALGORITHM],
         )
+        # Check revocation store
+        jti = payload.get("jti")
+        if jti and revoked_tokens.is_revoked(jti):
+            raise InvalidTokenException("Token has been revoked")
         return payload
     except JWTError as exc:
         # Distinguish expired vs. invalid

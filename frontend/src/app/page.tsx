@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -51,22 +51,29 @@ export default function DashboardHome() {
   const router = useRouter();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'representative' | 'manager' | 'admin'>('manager');
+  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('manager');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const authFromLanding = params.get('auth') === 'true';
     const roleParam = params.get('role');
     const emailParam = params.get('email');
+    const tabParam = params.get('tab');
     const validRoles = ['representative', 'manager', 'admin', 'sales_rep'] as const;
 
     if (authFromLanding && roleParam && validRoles.includes(roleParam as typeof validRoles[number])) {
       sessionStorage.setItem('pulse-crm-auth', 'true');
-      const mappedRole = roleParam === 'sales_rep' ? 'representative' : roleParam;
+      const mappedRole = roleParam === 'representative' ? 'sales_rep' : roleParam;
       localStorage.setItem('pulse-crm-role', mappedRole);
       if (emailParam) localStorage.setItem('pulse-crm-user', emailParam);
       setIsAuthenticated(true);
-      setUserRole(mappedRole as 'representative' | 'manager' | 'admin');
+      setUserRole(mappedRole as 'sales_rep' | 'manager' | 'admin');
+      
+      // Set the active tab if specified in URL
+      if (tabParam) {
+        setActiveTab(tabParam);
+      }
+      
       window.history.replaceState({}, '', window.location.pathname);
       setIsAuthLoading(false);
       return;
@@ -82,21 +89,21 @@ export default function DashboardHome() {
 
     setIsAuthenticated(true);
     let savedRole = localStorage.getItem('pulse-crm-role');
-    if (savedRole === 'sales_rep') {
-      savedRole = 'representative';
-      localStorage.setItem('pulse-crm-role', 'representative');
+    if (savedRole === 'representative') {
+      savedRole = 'sales_rep';
+      localStorage.setItem('pulse-crm-role', 'sales_rep');
     }
-    const legacyRoles = ['representative', 'manager', 'admin'] as const;
+    const legacyRoles = ['sales_rep', 'manager', 'admin'] as const;
     if (savedRole && legacyRoles.includes(savedRole as typeof legacyRoles[number])) {
-      setUserRole(savedRole as 'representative' | 'manager' | 'admin');
+      setUserRole(savedRole as 'sales_rep' | 'manager' | 'admin');
     }
     setIsAuthLoading(false);
   }, [router]);
 
   const handleLogin = (role: string) => {
-    const mappedRole = role === 'sales_rep' ? 'representative' : role;
+    const mappedRole = role === 'representative' ? 'sales_rep' : role;
     setIsAuthenticated(true);
-    setUserRole(mappedRole as 'representative' | 'manager' | 'admin');
+    setUserRole(mappedRole as 'sales_rep' | 'manager' | 'admin');
   };
 
   const handleSignOut = () => {
@@ -319,7 +326,7 @@ export default function DashboardHome() {
                     <div className="flex items-center space-x-2 shrink-0 self-start md:self-auto">
                       <button className="inline-flex items-center gap-1.5 bg-background border border-border hover:bg-secondary hover:shadow-nav hover:-translate-y-0.5 px-4 py-1.5 rounded-full text-xs font-bold text-foreground transition-all duration-200 cursor-pointer">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
-                        <span className="tabular-nums">May 12 – May 18, 2025</span>
+                        <span className="tabular-nums">May 12 ΓÇô May 18, 2025</span>
                       </button>
 
                       <button 

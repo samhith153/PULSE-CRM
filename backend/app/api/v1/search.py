@@ -1,4 +1,4 @@
-"""
+﻿"""
 Global Search Route
 GET /api/v1/search
 """
@@ -44,11 +44,11 @@ async def global_search(
 
     for lead in leads:
         title = lead.title or lead.email or str(lead.id)
-        company = lead.company_name or "—"
+        company = lead.company_name or "ΓÇö"
         results.append({
             "id": f"lead_{lead.id}",
             "title": title,
-            "description": f"Lead • {company}",
+            "description": f"Lead ΓÇó {company}",
             "category": "Search Results",
             "type": "leads",
             "db_id": str(lead.id)
@@ -70,7 +70,7 @@ async def global_search(
         results.append({
             "id": f"contact_{contact.id}",
             "title": name,
-            "description": f"Contact • {contact.email}",
+            "description": f"Contact ΓÇó {contact.email}",
             "category": "Search Results",
             "type": "contacts",
             "db_id": str(contact.id)
@@ -107,7 +107,7 @@ async def global_search(
         results.append({
             "id": f"deal_{deal.id}",
             "title": deal.name,
-            "description": f"Deal • {deal.status or 'open'}",
+            "description": f"Deal ΓÇó {deal.status or 'open'}",
             "category": "Search Results",
             "type": "deals",
             "db_id": str(deal.id)

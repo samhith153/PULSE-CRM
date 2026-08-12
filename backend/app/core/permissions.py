@@ -65,6 +65,12 @@ class Permission(str, Enum):
     WEBHOOK_MANAGE = "webhook:manage"
     FILE_UPLOAD = "file:upload"
 
+    TEAM_PERFORMANCE_VIEW = "team_performance:view"
+    TEAM_PERFORMANCE_EXPORT = "team_performance:export"
+
+    NOTIFICATION_READ = "notification:read"
+    NOTIFICATION_MANAGE = "notification:manage"
+
     REPORT_VIEW = "report:view"
     REPORT_EXPORT = "report:export"
 
@@ -123,6 +129,10 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.FILE_UPLOAD,
         Permission.REPORT_VIEW,
         Permission.REPORT_EXPORT,
+        Permission.TEAM_PERFORMANCE_VIEW,
+        Permission.TEAM_PERFORMANCE_EXPORT,
+        Permission.NOTIFICATION_READ,
+        Permission.NOTIFICATION_MANAGE,
     },
     Role.SALES_REP: {
         Permission.USER_READ,
@@ -148,6 +158,8 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
         Permission.REPORT_VIEW,
+        Permission.TEAM_PERFORMANCE_VIEW,
+        Permission.NOTIFICATION_READ,
     },
 }
 

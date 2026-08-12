@@ -18,10 +18,10 @@ interface Product {
 export default function ProductsView({ onLoaded }: { onLoaded?: () => void } = {}) {
   useEffect(() => { onLoaded?.(); }, []);
   const [products, setProducts] = useState<Product[]>([
-    { id: 1, name: "Enterprise Database Cloud License", sku: "DB-CLD-ENT", category: "Software Licensing", categoryBg: "bg-blue-50 text-blue-700 border-blue-200/60", price: 15000, status: "Active", dealsCount: 14, description: "Full relational database cloud hosting license with auto-scale capacity." },
-    { id: 2, name: "HIPAA Security Compliance SLA Add-on", sku: "SEC-HIPAA-SLA", category: "Compliance & Security", categoryBg: "bg-brand-purple/10 text-brand-purple border-purple-200/60", price: 4500, status: "Active", dealsCount: 8, description: "End-to-end encryption audit pipeline log sync for health enterprise." },
-    { id: 3, name: "Real-time AI Co-pilot Seat (Annual)", sku: "AI-COP-SEAT", category: "SaaS Subscription", categoryBg: "bg-brand-cyan/15 text-brand-cyan border-cyan-200/60", price: 1200, status: "Active", dealsCount: 22, description: "Access key to real-time sync suggestions and leads scorer pipeline." },
-    { id: 4, name: "Professional Services Migration (Day Rate)", sku: "MIG-PROF-SRV", category: "Professional Services", categoryBg: "bg-amber-50 text-amber-700 border-amber-200/60", price: 2500, status: "Active", dealsCount: 5, description: "Dedicated database architecture integration specialist consultancy." },
+    { id: 1, name: "Enterprise Database Cloud License", sku: "DB-CLD-ENT", category: "Software Licensing", categoryBg: "bg-accent-color/10 text-accent-color border-accent-color/20", price: 15000, status: "Active", dealsCount: 14, description: "Full relational database cloud hosting license with auto-scale capacity." },
+    { id: 2, name: "HIPAA Security Compliance SLA Add-on", sku: "SEC-HIPAA-SLA", category: "Compliance & Security", categoryBg: "bg-accent-color/10 text-accent-color border-accent-color/20", price: 4500, status: "Active", dealsCount: 8, description: "End-to-end encryption audit pipeline log sync for health enterprise." },
+    { id: 3, name: "Real-time AI Co-pilot Seat (Annual)", sku: "AI-COP-SEAT", category: "SaaS Subscription", categoryBg: "bg-accent-color/15 text-accent-color border-accent-color/20", price: 1200, status: "Active", dealsCount: 22, description: "Access key to real-time sync suggestions and leads scorer pipeline." },
+    { id: 4, name: "Professional Services Migration (Day Rate)", sku: "MIG-PROF-SRV", category: "Professional Services", categoryBg: "bg-status-warning/10 text-status-warning border-status-warning/20", price: 2500, status: "Active", dealsCount: 5, description: "Dedicated database architecture integration specialist consultancy." },
     { id: 5, name: "SSO Identity Integration Gateway", sku: "GW-SSO-OAUTH", category: "Infrastructure", categoryBg: "bg-secondary text-foreground border-border/60", price: 6000, status: "Archived", dealsCount: 0, description: "Legacy SAML integration engine gateway module." }
   ]);
 
@@ -34,10 +34,10 @@ export default function ProductsView({ onLoaded }: { onLoaded?: () => void } = {
 
   const getCategoryBg = (cat: string) => {
     switch (cat) {
-      case 'Software Licensing': return 'bg-blue-50 text-blue-700 border-blue-200/60';
-      case 'Compliance & Security': return 'bg-brand-purple/10 text-brand-purple border-purple-200/60';
-      case 'SaaS Subscription': return 'bg-brand-cyan/15 text-brand-cyan border-cyan-200/60';
-      case 'Professional Services': return 'bg-amber-50 text-amber-700 border-amber-200/60';
+      case 'Software Licensing': return 'bg-accent-color/10 text-accent-color border-accent-color/20';
+      case 'Compliance & Security': return 'bg-accent-color/10 text-accent-color border-accent-color/20';
+      case 'SaaS Subscription': return 'bg-accent-color/15 text-accent-color border-accent-color/20';
+      case 'Professional Services': return 'bg-status-warning/10 text-status-warning border-status-warning/20';
       default: return 'bg-secondary text-foreground border-border/60';
     }
   };
@@ -87,7 +87,7 @@ export default function ProductsView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
           <button 
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-bold transition duration-200 cursor-pointer hover:shadow-nav self-start sm:self-center"
+            className="inline-flex items-center space-x-2 px-4 py-2.5 bg-accent-color hover:bg-accent-color/90 text-primary-foreground rounded-xl text-xs font-bold transition duration-200 cursor-pointer hover:shadow-nav self-start sm:self-center"
           >
             <Plus className="h-4 w-4" strokeWidth={2.5} />
             <span>Add Product</span>
@@ -143,7 +143,7 @@ export default function ProductsView({ onLoaded }: { onLoaded?: () => void } = {
                     {/* Product Name & Description */}
                     <td className="py-4 px-4 max-w-xs">
                       <div className="flex items-center space-x-2.5">
-                        <div className="h-8 w-8 rounded-lg bg-brand-purple/10 text-brand-purple flex items-center justify-center shrink-0">
+                        <div className="h-8 w-8 rounded-lg bg-accent-color/10 text-accent-color flex items-center justify-center shrink-0">
                           <Package className="h-4 w-4" />
                         </div>
                         <div className="min-w-0">
@@ -188,7 +188,7 @@ export default function ProductsView({ onLoaded }: { onLoaded?: () => void } = {
                     <td className="py-4 px-4">
                       <span className={`px-2.5 py-1 rounded-md text-[10px] font-semibold border inline-block ${
                         product.status === 'Active' 
-                          ? 'bg-brand-cyan/15 text-brand-cyan border-brand-cyan/25/60' 
+                          ? 'bg-accent-color/15 text-accent-color border-accent-color/25/60' 
                           : 'bg-secondary text-muted-foreground border-border'
                       }`}>
                         {product.status}
@@ -266,7 +266,7 @@ export default function ProductsView({ onLoaded }: { onLoaded?: () => void } = {
               </div>
               <div className="pt-4 border-t border-border flex justify-end space-x-3">
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-2 border border-border rounded-xl text-xs font-bold text-muted-foreground hover:bg-secondary cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-brand-purple hover:bg-brand-purple/90 text-primary-foreground rounded-xl text-xs font-bold  cursor-pointer">Add Product</button>
+                <button type="submit" className="px-4 py-2 bg-accent-color hover:bg-accent-color/90 text-primary-foreground rounded-xl text-xs font-bold  cursor-pointer">Add Product</button>
               </div>
             </form>
           </div>

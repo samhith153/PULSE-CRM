@@ -18,7 +18,7 @@ import {
   formatINR,
   SalesRepDashboardData,
 } from '@/utils/api';
-import { useCountUp } from '@/hooks/use-reveal';
+import { useCountUp, useReveal } from '@/hooks/use-reveal';
 
 /* ─── Types ────────────────────────────────────────────────────────── */
 
@@ -87,7 +87,7 @@ function Spark({
   const areaPath =
     `${linePath} L ${coords[n - 1].x.toFixed(1)},40 L ${coords[0].x.toFixed(1)},40 Z`;
 
-  const strokeColor = positive ? 'var(--brand-cyan)' : 'var(--destructive)';
+  const strokeColor = positive ? 'var(--status-success-text)' : 'var(--status-danger-text)';
   const fillColor = strokeColor;
 
   return (
@@ -133,7 +133,8 @@ function Spark({
 
 /* ─── Single stat tile ──────────────────────────────────────────────── */
 function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
-  const { ref, value, visible } = useCountUp(stat.targetValue, 1000);
+  const { ref, visible } = useReveal<HTMLDivElement>();
+  const value = useCountUp(stat.targetValue, visible, 1000);
   const [showDelta, setShowDelta] = useState(false);
 
   useEffect(() => {
@@ -159,7 +160,8 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
       animate={visible ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
       whileHover={{ y: -4 }}
       transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
-      className="bg-card/95 backdrop-blur-md border border-border/80 dark:border-border/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 relative overflow-hidden group cursor-pointer flex flex-col justify-between"
+      /* ui.md §8: StandardCard — white surface, radius-lg, shadow-card */
+      className="bg-surface-1 border border-border-default rounded-[20px] p-6 shadow-card hover:shadow-hover transition duration-200 relative overflow-hidden group cursor-pointer flex flex-col justify-between"
     >
       {/* Background ambient radial aura pulse */}
       <div className="absolute -top-12 -right-12 w-32 h-32 rounded-full bg-primary/5 blur-2xl pointer-events-none group-hover:bg-primary/10 transition duration-500" />
@@ -167,20 +169,20 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
       {/* Row 1 — Icon + Label */}
       <div className="flex items-center justify-between pb-2 border-b border-border/40">
         <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-xl bg-primary/10 text-primary border border-primary/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
+          <div className="h-8 w-8 rounded-[12px] bg-accent-muted text-accent-color border border-accent-color/15 flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform">
             <stat.icon size={16} strokeWidth={2} />
           </div>
-          <p className="text-[11px] font-extrabold uppercase tracking-wider text-muted-foreground leading-none">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted leading-none">
             {stat.title}
           </p>
         </div>
 
-        {/* Trend pill badge */}
+        {/* ui.md §9: Trend badge — pill, success/danger colors */}
         {stat.change !== '—' && (
-          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+          <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
             stat.isPositive 
-              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
-              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+              ? 'bg-status-success-bg text-status-success-text border-status-success-text/20' 
+              : 'bg-status-danger-bg text-status-danger-text border-status-danger-text/20'
           }`}>
             <Delta size={9} className="shrink-0" strokeWidth={3} />
             <span>{stat.change}</span>
@@ -190,7 +192,8 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
 
       {/* Row 2 — Main Value */}
       <div className="my-2">
-        <p className="text-2xl sm:text-3xl font-black leading-none text-foreground tracking-tight tabular-nums truncate" title={displayValue}>
+        {/* ui.md §9: Metric — 26-30px/700, tabular-nums */}
+        <p className="text-[26px] sm:text-[30px] font-bold leading-none text-text-primary tracking-tight tabular-nums truncate" title={displayValue}>
           {displayValue}
         </p>
       </div>
@@ -200,7 +203,7 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
         <div className="flex-1">
           <Spark points={stat.points} positive={stat.isPositive} />
         </div>
-        <span className="text-[9px] font-bold text-muted-foreground/60 shrink-0">vs last week</span>
+        <span className="text-[9px] font-semibold text-text-muted shrink-0">vs last week</span>
       </div>
     </motion.div>
   );
@@ -209,7 +212,7 @@ function StatTile({ stat, delay = 0 }: { stat: Stat; delay?: number }) {
 /* ─── Skeleton card ─────────────────────────────────────────────────── */
 function SkeletonTile() {
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-5 md:p-6 animate-pulse">
+    <div className="flex flex-col gap-3 rounded-[20px] border border-border-default bg-surface-1 p-5 md:p-6 animate-pulse">
       <div className="flex items-center gap-2">
         <div className="size-4 rounded bg-secondary" />
         <div className="h-2.5 w-20 rounded bg-secondary" />
@@ -358,8 +361,8 @@ export default function StatCards({
 
   if (showSkeleton) {
     return (
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, i) => (
+      <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonTile key={i} />
         ))}
       </div>

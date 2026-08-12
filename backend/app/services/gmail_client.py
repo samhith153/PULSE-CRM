@@ -94,6 +94,19 @@ class GmailClient:
             params["pageToken"] = page_token
         return await self._get("history", access_token, params=params)
 
+    async def watch(self, access_token: str, topic_name: str, label_ids: list[str] | None = None) -> dict[str, Any]:
+        """Start watching for new messages via Pub/Sub."""
+        body: dict[str, Any] = {"topicName": topic_name, "labelFilterBehavior": "INCLUDE"}
+        if label_ids:
+            body["labelIds"] = label_ids
+        else:
+            body["labelIds"] = ["INBOX"]
+        return await self._post("watch", access_token, json=body)
+
+    async def stop(self, access_token: str) -> dict[str, Any]:
+        """Stop watching for new messages."""
+        return await self._post("stop", access_token, json={})
+
     async def get_message(self, access_token: str, message_id: str) -> dict[str, Any]:
         return await self._get(f"messages/{message_id}", access_token, params={"format": "full"})
 
@@ -109,6 +122,11 @@ class GmailClient:
                 json=json,
             )
         if response.status_code >= 400:
+            if response.status_code in (400, 401):
+                raise ValidationException(
+                    "Gmail access token may be expired. Please reconnect Gmail in Integrations settings.",
+                    {"google_status": response.status_code, "body": response.text[:500]},
+                )
             raise ValidationException(
                 "Gmail API request failed.",
                 {"google_status": response.status_code, "body": response.text[:500]},
