@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Menu, Search, X, ArrowUpRight, ArrowRight } from "lucide-react";
+import {
+  ChevronDown, Menu, Search, X, ArrowUpRight, ArrowRight,
+  UserRound, UsersRound, Building2, GitBranch, Briefcase, CalendarClock,
+  Sparkles, Mail, BarChart3, Cpu, GitMerge, ShieldCheck,
+  FileText, Terminal, Code2, PenTool, Globe, HelpCircle
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { pillVariants } from "./PillButton";
+import { motion, AnimatePresence } from "framer-motion";
 const promoImage = "/landing/promo-mega.jpg";
 const promoTeams = "/landing/promo-teams.jpg";
 const promoResources = "/landing/promo-resources.jpg";
@@ -10,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const navLinks = ["Platform", "Products", "Pricing", "Resources"];
 
-type MenuItem = { title: string; desc: string; route?: string };
+type MenuItem = { title: string; desc: string; route?: string; icon: React.ElementType };
 type MenuColumn = { heading: string; items: MenuItem[] };
 type MenuConfig = {
   columns?: MenuColumn[];
@@ -23,17 +29,17 @@ const menus: Record<string, MenuConfig> = {
       {
         heading: "CRM CORE",
         items: [
-          { title: "Lead Management", desc: "Capture, qualify, and manage every lead from one place." },
-          { title: "Contact Management", desc: "Keep customer contacts and communication history organized." },
-          { title: "Company Management", desc: "Manage organizations and customer information in one place." },
+          { title: "Lead Management", desc: "Capture, qualify, and manage every lead from one place.", icon: UserRound },
+          { title: "Contact Management", desc: "Keep customer contacts and communication history organized.", icon: UsersRound },
+          { title: "Company Management", desc: "Manage organizations and customer information in one place.", icon: Building2 },
         ],
       },
       {
         heading: "SALES WORKFLOW",
         items: [
-          { title: "Sales Pipeline", desc: "Track opportunities through every stage of your sales process." },
-          { title: "Deal Management", desc: "Create, manage, and close sales opportunities." },
-          { title: "Tasks & Follow-ups", desc: "Keep sales activities and follow-ups on schedule." },
+          { title: "Sales Pipeline", desc: "Track opportunities through every stage of your sales process.", icon: GitBranch },
+          { title: "Deal Management", desc: "Create, manage, and close sales opportunities.", icon: Briefcase },
+          { title: "Tasks & Follow-ups", desc: "Keep sales activities and follow-ups on schedule.", icon: CalendarClock },
         ],
       },
     ],
@@ -48,18 +54,18 @@ const menus: Record<string, MenuConfig> = {
       {
         heading: "AI & INTELLIGENCE",
         items: [
-          { title: "AI Copilot", desc: "Rule-based lead scoring (0–100) + Groq/Llama email analysis.", route: "/product/ai-copilot" },
-          { title: "Email Intelligence", desc: "Gmail OAuth sync, thread logging & AI-powered analysis.", route: "/product/email-intelligence" },
-          { title: "Revenue Analytics", desc: "Live dashboards, pipeline value, rep leaderboards & forecasts.", route: "/product/revenue-analytics" },
-          { title: "Automation", desc: "Next-best-action engine — weighted by score, urgency & reply.", route: "/product/automation" },
+          { title: "AI Copilot", desc: "Rule-based lead scoring (0–100) + Groq/Llama email analysis.", route: "/product/ai-copilot", icon: Sparkles },
+          { title: "Email Intelligence", desc: "Gmail OAuth sync, thread logging & AI-powered analysis.", route: "/product/email-intelligence", icon: Mail },
+          { title: "Revenue Analytics", desc: "Live dashboards, pipeline value, rep leaderboards & forecasts.", route: "/product/revenue-analytics", icon: BarChart3 },
+          { title: "Automation", desc: "Next-best-action engine — weighted by score, urgency & reply.", route: "/product/automation", icon: Cpu },
         ],
       },
       {
         heading: "PIPELINE & SECURITY",
         items: [
-          { title: "Visual Pipeline", desc: "FSM deal stages: New → Qualified → Proposal → Won/Lost.", route: "/product/visual-pipeline" },
-          { title: "Lead Management", desc: "Capture, score, qualify and track every lead in one place.", route: "/product/lead-management" },
-          { title: "Security & RBAC", desc: "3 roles, 33 permissions, JWT auth & bcrypt passwords.", route: "/product/security-rbac" },
+          { title: "Visual Pipeline", desc: "FSM deal stages: New → Qualified → Proposal → Won/Lost.", route: "/product/visual-pipeline", icon: GitMerge },
+          { title: "Lead Management", desc: "Capture, score, qualify and track every lead in one place.", route: "/product/lead-management", icon: UserRound },
+          { title: "Security & RBAC", desc: "3 roles, 33 permissions, JWT auth & bcrypt passwords.", route: "/product/security-rbac", icon: ShieldCheck },
         ],
       },
     ],
@@ -77,17 +83,17 @@ const menus: Record<string, MenuConfig> = {
       {
         heading: "LEARN",
         items: [
-          { title: "Documentation", desc: "Setup guides, architecture overview & configuration", route: "/resources/documentation" },
-          { title: "Implementation Guide", desc: "Docker setup, migrations, seed data & test credentials", route: "/resources/implementation-guide" },
-          { title: "API Reference", desc: "40+ REST endpoints with Swagger UI at /docs and /redoc", route: "/resources/api-reference" },
+          { title: "Documentation", desc: "Setup guides, architecture overview & configuration", route: "/resources/documentation", icon: FileText },
+          { title: "Implementation Guide", desc: "Docker setup, migrations, seed data & test credentials", route: "/resources/implementation-guide", icon: Terminal },
+          { title: "API Reference", desc: "40+ REST endpoints with Swagger UI at /docs and /redoc", route: "/resources/api-reference", icon: Code2 },
         ],
       },
       {
         heading: "CONNECT",
         items: [
-          { title: "Blog", desc: "AI scoring deep-dives, CRM architecture & sales strategy", route: "/resources/blog" },
-          { title: "Community", desc: "Connect with developers and sales teams building on Pulse", route: "/resources/community" },
-          { title: "Support", desc: "Get help from our team — bugs, integrations, or setup", route: "/resources/support" },
+          { title: "Blog", desc: "AI scoring deep-dives, CRM architecture & sales strategy", route: "/resources/blog", icon: PenTool },
+          { title: "Community", desc: "Connect with developers and sales teams building on Pulse", route: "/resources/community", icon: Globe },
+          { title: "Support", desc: "Get help from our team — bugs, integrations, or setup", route: "/resources/support", icon: HelpCircle },
         ],
       },
     ],
@@ -288,123 +294,162 @@ export function SiteHeader() {
         </div>
 
         {/* Mega menu */}
-        {active && (
-          <div className="absolute inset-x-0 top-full hidden justify-center px-6 pt-3 lg:flex">
-            <div className="menu-in w-full max-w-6xl overflow-hidden rounded-4xl border border-border bg-background p-8 shadow-float">
-              <div
-                key={openMenu}
-                className={cn(
-                  "grid gap-10 lg:grid-cols-[1fr_1fr_0.9fr]",
-                  dir === "right" ? "panel-slide-right" : "panel-slide-left",
-                )}
-              >
-                {(active.columns ?? []).map((col, i) => (
-                  <div
-                    key={col.heading}
-                    className={cn(i === 1 && "lg:border-l lg:border-border lg:pl-10")}
+        <AnimatePresence>
+          {active && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="absolute inset-x-0 top-full hidden justify-center px-6 pt-3 lg:flex"
+              onMouseEnter={() => setOpenMenu(openMenu)}
+              onMouseLeave={() => setOpenMenu(null)}
+            >
+              <div className="w-full max-w-6xl overflow-hidden rounded-4xl border border-border bg-background p-8 shadow-float min-h-[440px] flex flex-col justify-between">
+                <motion.div
+                  key={openMenu}
+                  initial="hidden"
+                  animate="visible"
+                  variants={{
+                    hidden: { opacity: 0 },
+                    visible: {
+                      opacity: 1,
+                      transition: {
+                        staggerChildren: 0.03
+                      }
+                    }
+                  }}
+                  className="grid gap-10 lg:grid-cols-[1fr_1fr_0.9fr] flex-1"
+                >
+                  {(active.columns ?? []).map((col, i) => (
+                    <div
+                      key={col.heading}
+                      className={cn("flex flex-col h-full", i === 1 && "lg:border-l lg:border-border lg:pl-10")}
+                    >
+                      <p className="text-xs font-bold tracking-widest text-ink uppercase">
+                        {col.heading}
+                      </p>
+                      <ul className="mt-4 space-y-1.5 flex-1">
+                        {col.items.map((item) => {
+                          const IconComponent = item.icon;
+                          const childContent = (
+                            <div className="group flex items-center gap-4 rounded-2xl p-3 text-left w-full transition-all duration-200 hover:bg-secondary/45">
+                              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary/80 transition-all duration-200 group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-105 group-hover:translate-y-[-1px]">
+                                <IconComponent className="size-5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <span className="block text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                                  {item.title}
+                                </span>
+                                <span className="mt-1 block text-xs/normal text-muted-foreground max-w-[260px] line-clamp-2">
+                                  {item.desc}
+                                </span>
+                              </div>
+                            </div>
+                          );
+
+                          return (
+                            <motion.li
+                              key={item.title}
+                              variants={{
+                                hidden: { opacity: 0, y: 5 },
+                                visible: { opacity: 1, y: 0, transition: { duration: 0.2, ease: "easeOut" } }
+                              }}
+                              className="list-none"
+                            >
+                              {openMenu === "Platform" ? (
+                                <button 
+                                  onClick={() => handlePlatformNavigation(item.title)}
+                                  className="block w-full"
+                                >
+                                  {childContent}
+                                </button>
+                              ) : item.route ? (
+                                <button
+                                  onClick={() => { router.push(item.route!); setOpenMenu(null); }}
+                                  className="block w-full"
+                                >
+                                  {childContent}
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setOpenMenu(null)}
+                                  className="block w-full"
+                                >
+                                  {childContent}
+                                </button>
+                              )}
+                            </motion.li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                  <motion.div
+                    variants={{
+                      hidden: { opacity: 0, x: 8 },
+                      visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: "easeOut", delay: 0.08 } }
+                    }}
+                    className="flex flex-col h-full overflow-hidden rounded-3xl bg-secondary/30 border border-border/50"
                   >
-                    <p className="text-xs font-bold tracking-widest text-ink uppercase">
-                      {col.heading}
-                    </p>
-                    <ul className="mt-5 space-y-5">
-                      {col.items.map((item) => (
-                        <li key={item.title}>
-                          {openMenu === "Platform" ? (
-                            <button 
-                              onClick={() => handlePlatformNavigation(item.title)}
-                              className="group block text-left w-full"
-                            >
-                              <span className="text-sm font-semibold text-link group-hover:text-accent-hover">
-                                {item.title}
-                              </span>
-                              <span className="mt-1 block text-sm text-muted-foreground">
-                                {item.desc}
-                              </span>
-                            </button>
-                          ) : item.route ? (
-                            <button
-                              onClick={() => { router.push(item.route!); setOpenMenu(null); }}
-                              className="group block text-left w-full"
-                            >
-                              <span className="text-sm font-semibold text-link group-hover:text-accent-hover">
-                                {item.title}
-                              </span>
-                              <span className="mt-1 block text-sm text-muted-foreground">
-                                {item.desc}
-                              </span>
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setOpenMenu(null)}
-                              className="group block text-left w-full"
-                            >
-                              <span className="text-sm font-semibold text-link group-hover:text-accent-hover">
-                                {item.title}
-                              </span>
-                              <span className="mt-1 block text-sm text-muted-foreground">
-                                {item.desc}
-                              </span>
-                            </button>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-                <div className="overflow-hidden rounded-3xl bg-surface-warm">
-                  {active.promo.image ? (
-                    <img
-                      src={active.promo.image}
-                      alt={active.promo.heading}
-                      loading="lazy"
-                      width={800}
-                      height={600}
-                      className="h-32 w-full object-cover"
-                    />
-                  ) : (
-                    <div className="h-32 w-full" style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }} />
-                  )}
-                  <div className="p-5">
-                    <p className="text-sm font-semibold text-ink">{active.promo.heading}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{active.promo.desc}</p>
-                    {active.promo.cta ? (
-                      <Link
-                        href="/signup"
-                        className="arrow-nudge mt-4 inline-flex items-center justify-center gap-2 rounded-full text-sm font-semibold h-9 px-4 transition-colors shadow-sm"
-                        style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}
-                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#1D4ED8'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#2563EB'; }}
-                      >
-                        {active.promo.link} <ArrowUpRight size={15} color="#FFFFFF" />
-                      </Link>
-                    ) : openMenu === "Platform" ? (
-                      <button
-                        onClick={handleExplorePulseCRM}
-                        className="arrow-nudge mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-link hover:text-accent-hover"
-                      >
-                        {active.promo.link} <ArrowRight size={15} />
-                      </button>
-                    ) : active.promo.route ? (
-                      <button
-                        onClick={() => { router.push(active.promo.route!); setOpenMenu(null); }}
-                        className="arrow-nudge mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-link hover:text-accent-hover"
-                      >
-                        {active.promo.link} <ArrowRight size={15} />
-                      </button>
+                    {active.promo.image ? (
+                      <img
+                        src={active.promo.image}
+                        alt={active.promo.heading}
+                        loading="lazy"
+                        width={800}
+                        height={600}
+                        className="h-32 w-full object-cover shrink-0"
+                      />
                     ) : (
-                      <button
-                        onClick={() => setOpenMenu(null)}
-                        className="arrow-nudge mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-link hover:text-accent-hover"
-                      >
-                        {active.promo.link} <ArrowRight size={15} />
-                      </button>
+                      <div className="h-32 w-full shrink-0" style={{ background: 'linear-gradient(135deg, #2563EB, #1D4ED8)' }} />
                     )}
-                  </div>
-                </div>
+                    <div className="p-6 flex-1 flex flex-col justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-ink">{active.promo.heading}</p>
+                        <p className="mt-1.5 text-xs text-muted-foreground leading-normal max-w-[260px]">{active.promo.desc}</p>
+                      </div>
+                      <div className="mt-4 shrink-0">
+                        {active.promo.cta ? (
+                          <Link
+                            href="/signup"
+                            className="arrow-nudge inline-flex items-center justify-center gap-2 rounded-full text-xs font-semibold h-9 px-4 transition-colors shadow-sm"
+                            style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#1D4ED8'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#2563EB'; }}
+                          >
+                            {active.promo.link} <ArrowUpRight size={14} color="#FFFFFF" />
+                          </Link>
+                        ) : openMenu === "Platform" ? (
+                          <button
+                            onClick={handleExplorePulseCRM}
+                            className="arrow-nudge inline-flex items-center gap-1.5 text-xs font-medium text-link hover:text-accent-hover"
+                          >
+                            {active.promo.link} <ArrowRight size={14} />
+                          </button>
+                        ) : active.promo.route ? (
+                          <button
+                            onClick={() => { router.push(active.promo.route!); setOpenMenu(null); }}
+                            className="arrow-nudge inline-flex items-center gap-1.5 text-xs font-medium text-link hover:text-accent-hover"
+                          >
+                            {active.promo.link} <ArrowRight size={14} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setOpenMenu(null)}
+                            className="arrow-nudge inline-flex items-center gap-1.5 text-xs font-medium text-link hover:text-accent-hover"
+                          >
+                            {active.promo.link} <ArrowRight size={14} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
               </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Page dim behind mega menu */}
@@ -442,29 +487,39 @@ export function SiteHeader() {
                         />
                       </button>
                       {accordion === l && (
-                        <div className="mt-3 space-y-4">
+                        <div className="mt-3 space-y-2">
                           {(l === "Platform" ? megaColumns : menuData.columns ?? [])
                             .flatMap((c) => c.items)
-                            .map((item) => (
-                              <button
-                                key={item.title}
-                                onClick={() => {
-                                  if (l === "Platform") {
-                                    handlePlatformNavigation(item.title);
-                                  } else if (item.route) {
-                                    router.push(item.route);
-                                  }
-                                  setMobileOpen(false);
-                                  setAccordion(null);
-                                }}
-                                className="block w-full text-left"
-                              >
-                                <span className="text-sm font-semibold text-link">{item.title}</span>
-                                <span className="block text-sm text-muted-foreground">
-                                  {item.desc}
-                                </span>
-                              </button>
-                            ))}
+                            .map((item) => {
+                              const IconComponent = item.icon;
+                              return (
+                                <button
+                                  key={item.title}
+                                  onClick={() => {
+                                    if (l === "Platform") {
+                                      handlePlatformNavigation(item.title);
+                                    } else if (item.route) {
+                                      router.push(item.route);
+                                    }
+                                    setMobileOpen(false);
+                                    setAccordion(null);
+                                  }}
+                                  className="flex items-center gap-3.5 py-2 w-full text-left group"
+                                >
+                                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/5 text-primary/80">
+                                    <IconComponent className="size-5" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <span className="block text-sm font-semibold text-link group-hover:text-primary transition-colors">
+                                      {item.title}
+                                    </span>
+                                    <span className="block text-xs text-muted-foreground mt-0.5 max-w-[280px] line-clamp-1">
+                                      {item.desc}
+                                    </span>
+                                  </div>
+                                </button>
+                              );
+                            })}
                         </div>
                       )}
                     </div>
