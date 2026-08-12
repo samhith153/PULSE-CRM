@@ -5,7 +5,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import SkeletonLoader from './SkeletonLoader';
 import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
-import SkeletonLoader from './SkeletonLoader';
 import { 
   Search, 
   Filter, 
@@ -255,7 +254,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   const [loading, setLoading] = useState(true);
   const leadsRef = useRef<Lead[]>([]);
   leadsRef.current = leads;
-  const [loading, setLoading] = useState(true);
 
   const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
     if (typeof window !== 'undefined') {
