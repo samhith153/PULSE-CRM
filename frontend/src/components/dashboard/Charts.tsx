@@ -43,7 +43,7 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
     { name: "Won", count: 23, bg: "bg-accent-color/40" }
   ];
 
-  const maxStageCount = Math.max(...pipelineStages.map((s) => s.count));
+  const maxStageCount = Math.max(...funnelData.map((s) => s.count));
 
   // Source chart percentages — ui.md §2 data-viz palette
   const sources = [
@@ -258,8 +258,8 @@ export default function Charts({ loading = false, empty = false }: ChartsProps) 
 
             {/* Funnel Layout */}
             <ul className="mt-5 space-y-3.5">
-              {pipelineStages.map((stage, index) => {
-                const convPct = Math.round((stage.count / pipelineStages[0].count) * 100);
+              {funnelData.map((stage, index) => {
+                const convPct = Math.round((stage.count / funnelData[0].count) * 100);
                 return (
                   <li key={stage.name} className="grid grid-cols-[5.5rem_minmax(0,1fr)_1.5rem] items-center gap-2 group/item">
                     <div className="min-w-0">

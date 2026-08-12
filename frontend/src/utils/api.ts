@@ -401,6 +401,29 @@ export async function deleteLead(leadId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/leads/${leadId}`, { method: 'DELETE' });
 }
 
+// --- Recycle Bin (admin-only purge of soft-deleted leads) ---
+
+/** List soft-deleted (archived) leads — admin only. */
+export async function getDeletedLeads(
+  page = 1,
+  pageSize = 20,
+  search?: string
+): Promise<PaginatedResult<Lead>> {
+  return apiFetch<PaginatedResult<Lead>>(
+    `/api/v1/leads/deleted${toQuery({ page, page_size: pageSize, search })}`
+  );
+}
+
+/** Permanently delete one soft-deleted lead — admin only. */
+export async function permanentlyDeleteLead(leadId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/leads/${leadId}/permanent`, { method: 'DELETE' });
+}
+
+/** Permanently delete ALL soft-deleted leads in the org — admin only. */
+export async function purgeDeletedLeads(): Promise<{ purged: number }> {
+  return apiFetch<{ purged: number }>('/api/v1/leads/purge-deleted', { method: 'POST' });
+}
+
 export interface LeadRecommendation {
   entity_type: string;
   entity_id: string | null;
@@ -990,7 +1013,7 @@ export interface ManagerDashboardData {
     health_score: Decimal;
     stage_distribution: { stage: string; deal_count: number; total_value: Decimal; percentage: Decimal }[];
   };
-  rep_quota_attainment: { user_id: string; full_name: string; assigned_target: Decimal; revenue_generated: Decimal; quota_achievement_pct: Decimal; rank: number }[];
+  rep_quota_attainment: { user_id: string; full_name: string; assigned_target: Decimal | null; revenue_generated: Decimal; quota_achievement_pct: Decimal; rank: number }[];
   monthly_revenue_trend: { month: string; revenue: Decimal; target: Decimal; growth_pct: Decimal }[];
   top_reps: { user_id: string; full_name: string; revenue: Decimal; deals_closed: number; conversion_rate: Decimal; quota_achievement_pct: Decimal }[];
   deals_at_risk: { deal_id: string; deal_name: string; company: string | null; owner_name: string | null; deal_value: Decimal; risk_reason: string; days_since_last_activity: number }[];
@@ -1211,6 +1234,61 @@ export async function assignUserManager(userId: string, managerId: string | null
     });
   }
   return apiFetch<UserData>(`/api/v1/users/${userId}/manager`, { method: 'DELETE' });
+}
+
+// --- Sales Target API (manager assigns per-rep targets) ---
+
+export interface SalesTargetData {
+  id: string | null;
+  rep_id: string;
+  rep_name: string;
+  rep_email: string;
+  target_type: string;
+  target_amount: number;
+  period_type: string;
+  period_start: string;
+  period_end: string;
+  notes?: string | null;
+  actual_amount?: number;
+  achievement_pct?: number;
+  remaining?: number;
+  status?: string;
+  created_at?: string;
+}
+
+export interface SalesTargetCreatePayload {
+  rep_id: string;
+  target_type: string;
+  target_amount: number;
+  period_type: string;
+  period_start: string;
+  period_end: string;
+  notes?: string;
+}
+
+/** Current-period targets for the visible reps (admins: all, managers: their team). */
+export async function getCurrentTargets(periodType: string = 'monthly'): Promise<SalesTargetData[]> {
+  const res = await apiFetch<any>(`/api/v1/targets/current${toQuery({ period_type: periodType })}`);
+  const data = Array.isArray(res) ? res : (res?.targets ?? []);
+  return data;
+}
+
+export async function createSalesTarget(payload: SalesTargetCreatePayload): Promise<SalesTargetData> {
+  return apiFetch<SalesTargetData>('/api/v1/targets', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateSalesTarget(targetId: string, payload: { target_amount?: number; notes?: string }): Promise<SalesTargetData> {
+  return apiFetch<SalesTargetData>(`/api/v1/targets/${targetId}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function deleteSalesTarget(targetId: string): Promise<void> {
+  await apiFetch<void>(`/api/v1/targets/${targetId}`, { method: 'DELETE' });
 }
 
 export async function resetUserPassword(userId: string): Promise<{ new_password: string }> {

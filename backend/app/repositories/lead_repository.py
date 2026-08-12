@@ -89,3 +89,54 @@ class LeadRepository(BaseRepository[Lead]):
             )
         stmt = stmt.order_by(Lead.created_at.desc())
         return await self.get_paginated(stmt, page, page_size)
+
+    async def list_deleted_by_org(
+        self,
+        organization_id: UUID,
+        search: Optional[str],
+        page: int,
+        page_size: int,
+    ) -> Tuple[List[Lead], int]:
+        """List soft-deleted (archived) leads for the org, most recent first."""
+        stmt = (
+            select(Lead)
+            .options(
+                selectinload(Lead.company),
+                selectinload(Lead.contact),
+                selectinload(Lead.owner),
+                selectinload(Lead.lead_score),
+            )
+            .where(
+                Lead.organization_id == organization_id,
+                Lead.is_deleted == True,
+            )
+        )
+        if search:
+            term = f"%{search.lower()}%"
+            stmt = stmt.where(
+                or_(
+                    Lead.title.ilike(term),
+                    Lead.description.ilike(term),
+                    Lead.email.ilike(term),
+                    Lead.phone.ilike(term),
+                )
+            )
+        stmt = stmt.order_by(Lead.updated_at.desc())
+        return await self.get_paginated(stmt, page, page_size)
+
+    async def get_deleted_by_id(self, lead_id: UUID, organization_id: UUID) -> Optional[Lead]:
+        stmt = (
+            select(Lead)
+            .options(
+                selectinload(Lead.company),
+                selectinload(Lead.contact),
+                selectinload(Lead.owner),
+            )
+            .where(
+                Lead.id == lead_id,
+                Lead.organization_id == organization_id,
+                Lead.is_deleted == True,
+            )
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()

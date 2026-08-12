@@ -510,7 +510,7 @@ ManagerPipelineHealth.model_rebuild()
 class RepQuotaAttainment(BaseModel):
     user_id: UUID
     full_name: str
-    assigned_target: Decimal
+    assigned_target: Optional[Decimal] = None
     revenue_generated: Decimal
     quota_achievement_pct: Decimal
     rank: int

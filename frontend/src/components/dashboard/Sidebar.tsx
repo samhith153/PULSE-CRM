@@ -28,6 +28,8 @@ import {
   LayoutDashboard,
   ClipboardList,
   UserCog,
+  Target,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
@@ -55,6 +57,7 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           label: 'Sales',
           items: [
             { name: 'My Team',       icon: UserCog,    tab: 'my team' },
+            { name: 'Targets',       icon: Target,     tab: 'targets' },
             { name: 'Team Pipeline', icon: Layers,     tab: 'team pipeline' },
             { name: 'Leads',         icon: Users,      tab: 'leads' },
             { name: 'Companies',     icon: Building2,  tab: 'companies' },
@@ -89,8 +92,15 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
         {
           label: 'People',
           items: [
+            { name: 'Teams',             icon: UserCog, tab: 'teams' },
             { name: 'Users',             icon: Users,  tab: 'users' },
             { name: 'Roles & Perms',     icon: Shield, tab: 'roles & permissions' },
+          ],
+        },
+        {
+          label: 'Data',
+          items: [
+            { name: 'Recycle Bin',       icon: Trash2, tab: 'recycle bin' },
           ],
         },
         {

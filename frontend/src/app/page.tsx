@@ -36,6 +36,9 @@ import SalesRepDashboardView from '@/components/dashboard/SalesRepDashboardView'
 import HomeView from '@/components/dashboard/HomeView';
 import TasksView from '@/components/dashboard/TasksView';
 import UsersView from '@/components/dashboard/UsersView';
+import TeamsView from '@/components/dashboard/TeamsView';
+import TargetsView from '@/components/dashboard/TargetsView';
+import RecycleBinView from '@/components/dashboard/RecycleBinView';
 import RolesPermissionsView from '@/components/dashboard/RolesPermissionsView';
 import IntegrationsView from '@/components/dashboard/IntegrationsView';
 import AutomationView from '@/components/dashboard/AutomationView';
@@ -293,6 +296,10 @@ export default function DashboardHome() {
                 <ForecastView />
               ) : activeTab === 'team performance' ? (
                 <TeamPerformanceView />
+              ) : activeTab === 'targets' ? (
+                <TargetsView />
+              ) : activeTab === 'teams' ? (
+                <TeamsView />
               ) : activeTab === 'users' ? (
                 <UsersView />
               ) : activeTab === 'roles & permissions' ? (
@@ -305,6 +312,8 @@ export default function DashboardHome() {
                 <AIModelsView />
               ) : activeTab === 'audit logs' ? (
                 <AuditLogsView />
+              ) : activeTab === 'recycle bin' ? (
+                <RecycleBinView />
               ) : activeTab === 'dashboard' && userRole === 'manager' ? (
                 <ManagerDashboardView onTabChange={setActiveTab} />
               ) : activeTab === 'dashboard' && userRole === 'admin' ? (

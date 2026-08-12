@@ -23,6 +23,7 @@ from app.models.calendar_event import CalendarEvent
 from app.models.event_outbox import EventOutbox
 from app.models.task import Task
 from app.models.workflow import WorkflowTask
+from app.models.sales_target import SalesTarget
 from app.models.user import User, UserRole
 from app.models.role import Role
 from app.repositories.pipeline_repository import PipelineRepository
@@ -44,6 +45,7 @@ from app.schemas.dashboard import (
     RepDealAtRiskItem,
 )
 from app.services.pipeline_service import PipelineService
+from app.services.sales_target_service import _current_period_dates
 from app.utils.enums import DealStatus
 
 
@@ -1401,15 +1403,57 @@ class DashboardService:
             .order_by(func.coalesce(func.sum(case((Deal.status == DealStatus.WON.value, func.coalesce(Deal.value, Deal.amount, 0)), else_=0)), 0).desc())
         )
         rep_rows = (await self.db.execute(rep_revenue_stmt)).all()
+
+        # -- 4b. Real assigned targets + month-to-date won revenue ------------
+        # Surface the target each manager actually assigned to the rep
+        # (sales_targets, current month) instead of a heuristic split, so the
+        # quota attainment matches what the rep sees on their own dashboard.
+        # Reps without an assigned target emit assigned_target=None (frontend
+        # shows "No target set"); the heuristic split is only used to compute a
+        # non-zero attainment % for ranking purposes.
+        target_period_start, _ = _current_period_dates("monthly", ref_date=now.date())
+        assigned_stmt = select(
+            SalesTarget.rep_id, SalesTarget.target_amount
+        ).where(
+            SalesTarget.organization_id == organization_id,
+            SalesTarget.rep_id.in_(team_member_ids),
+            SalesTarget.period_type == "monthly",
+            SalesTarget.period_start == target_period_start,
+            SalesTarget.is_active.is_(True),
+        )
+        assigned_targets: dict[UUID, Decimal] = {
+            rep_id: Decimal(str(amount))
+            for rep_id, amount in (await self.db.execute(assigned_stmt)).all()
+        }
+        month_won_stmt = select(
+            Deal.owner_id,
+            func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
+        ).where(
+            Deal.owner_id.in_(team_member_ids),
+            Deal.organization_id == organization_id,
+            Deal.is_active.is_(True),
+            Deal.is_deleted.is_(False),
+            Deal.status == DealStatus.WON.value,
+            Deal.closed_at >= month_start,
+        ).group_by(Deal.owner_id)
+        month_won: dict[UUID, Decimal] = {
+            rep_id: Decimal(str(amount))
+            for rep_id, amount in (await self.db.execute(month_won_stmt)).all()
+        }
+
+        fallback_rep_target = team_target / max(total_members, 1)
         rep_quota: list[RepQuotaAttainment] = []
         for rank, row in enumerate(rep_rows, start=1):
-            rev_gen = Decimal(str(row.won_revenue or 0))
-            rep_target = team_target / max(total_members, 1)
+            rev_gen = month_won.get(row.id, Decimal("0"))
+            assigned_target = assigned_targets.get(row.id)
+            rep_target = (
+                assigned_target if assigned_target is not None else fallback_rep_target
+            )
             rep_quota.append(
                 RepQuotaAttainment(
                     user_id=row.id,
                     full_name=row.full_name,
-                    assigned_target=rep_target,
+                    assigned_target=assigned_target,
                     revenue_generated=rev_gen,
                     quota_achievement_pct=self._percentage(int(rev_gen), max(int(rep_target), 1)),
                     rank=rank,
@@ -1475,7 +1519,7 @@ class DashboardService:
                 Deal.is_deleted.is_(False),
             )
             total_rep_count = int((await self.db.execute(total_rep_count_stmt)).scalar_one() or 0)
-            rep_target_val = team_target / max(total_members, 1)
+            rep_target_val = assigned_targets.get(row[0], fallback_rep_target)
             top_reps.append(
                 ManagerTopRep(
                     user_id=row[0],
@@ -2601,6 +2645,19 @@ class DashboardService:
         # -- Query 6: User Assigned Quota Target (Widget 5) --------------------
         user_quota_stmt = select(User.sales_quota).where(User.id == user_id)
 
+        # -- Query 6b: Current-period target set by the manager (if any) -------
+        # Manager-assigned targets from the sales_targets table take priority
+        # over the static users.sales_quota value so rep dashboards reflect the
+        # target the manager actually set.
+        target_period_start, _ = _current_period_dates("monthly")
+        rep_target_stmt = select(SalesTarget.target_amount).where(
+            SalesTarget.organization_id == organization_id,
+            SalesTarget.rep_id == user_id,
+            SalesTarget.period_type == "monthly",
+            SalesTarget.period_start == target_period_start,
+            SalesTarget.is_active.is_(True),
+        )
+
         # -- Query 7: Open Tasks Today (Widget 1) ------------------------------
         open_tasks_stmt = (
             select(Task)
@@ -2678,6 +2735,7 @@ class DashboardService:
         res_leads = await self.db.execute(leads_assigned_stmt)
         res_closed_won = await self.db.execute(closed_won_stmt)
         res_user_quota = await self.db.execute(user_quota_stmt)
+        res_rep_target = await self.db.execute(rep_target_stmt)
         res_tasks = await self.db.execute(open_tasks_stmt)
         res_priority_queue = await self.db.execute(priority_queue_stmt)
         res_deals_at_risk = await self.db.execute(deals_at_risk_stmt)
@@ -2699,7 +2757,12 @@ class DashboardService:
         # -- Parse Quota Pace --------------------------------------------------
         closed_won_rev = Decimal(str(res_closed_won.scalar_one() or 0))
         quota_val = res_user_quota.scalar_one_or_none()
-        target_quota = Decimal(str(quota_val)) if quota_val else Decimal("50000.00")
+        assigned_target = res_rep_target.scalar_one_or_none()
+        target_quota = (
+            Decimal(str(assigned_target))
+            if assigned_target is not None
+            else (Decimal(str(quota_val)) if quota_val else Decimal("50000.00"))
+        )
         
         attained_pct = self._percentage(int(closed_won_rev), max(int(target_quota), 1))
         pace_status = (

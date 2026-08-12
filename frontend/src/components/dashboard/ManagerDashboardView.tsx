@@ -866,7 +866,7 @@ export default function ManagerDashboardView({
               <Users className="h-4 w-4 text-accent-color" />
               <div>
                 <h3 className="font-semibold text-foreground text-sm">Team Performance</h3>
-                <p className="text-[10px] text-muted-foreground">Quota attainment across the sales team</p>
+                <p className="text-[10px] text-muted-foreground">Assigned target vs month-to-date attainment</p>
               </div>
             </div>
             <button
@@ -905,7 +905,15 @@ export default function ManagerDashboardView({
                       </span>
                       <div className="min-w-0">
                         <p className="truncate text-xs font-bold text-foreground">{rep.full_name}</p>
-                        <p className="text-[10px] text-muted-foreground">Revenue {formatCurrency(rep.revenue_generated)}</p>
+                        <p className="truncate text-[10px] text-muted-foreground">
+                          Won {formatCurrency(rep.revenue_generated)}
+                          <span className="mx-1 text-muted-foreground/40">·</span>
+                          {rep.assigned_target != null ? (
+                            <span className="font-semibold text-foreground/80">Target {formatCurrency(rep.assigned_target)}</span>
+                          ) : (
+                            <span className="font-medium italic text-muted-foreground/70">No target set</span>
+                          )}
+                        </p>
                       </div>
                     </div>
                     <span className={`shrink-0 text-xs font-bold tabular-nums ${attainment >= 100 ? 'text-status-success-text' : attainment >= 70 ? 'text-accent-color' : 'text-status-warning-text'}`}>

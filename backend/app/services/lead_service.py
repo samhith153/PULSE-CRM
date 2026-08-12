@@ -316,6 +316,61 @@ class LeadService:
             await self.repo.delete(lead)
             logger.info("Lead hard-deleted", extra={"lead_id": str(lead_id)})
 
+    # ------------------------------------------------------------------
+    # Recycle bin (admin-only): permanently remove soft-deleted leads
+    # ------------------------------------------------------------------
+
+    def _assert_admin(self, user: User) -> None:
+        """Only admins may permanently purge soft-deleted data.
+
+        Check the full role set (not just ``primary_role``) so the guard is
+        independent of role ordering on the user record.
+        """
+        if "admin" not in {r.name for r in user.roles}:
+            raise ForbiddenException("Only admins can permanently delete soft-deleted leads.")
+
+    async def list_deleted(
+        self,
+        user: User,
+        search: Optional[str],
+        page: int,
+        page_size: int,
+    ) -> Tuple[List[Lead], int]:
+        """List soft-deleted leads in the org (admin only)."""
+        self._assert_admin(user)
+        return await self.repo.list_deleted_by_org(
+            user.organization_id, search, page, page_size
+        )
+
+    async def hard_delete(self, lead_id: UUID, user: User) -> None:
+        """Permanently delete a single soft-deleted lead (admin only)."""
+        self._assert_admin(user)
+        lead = await self.repo.get_deleted_by_id(lead_id, user.organization_id)
+        if not lead:
+            raise NotFoundException("Lead", lead_id)
+        await self.repo.delete(lead)
+        logger.info("Lead permanently deleted (admin)", extra={"lead_id": str(lead_id)})
+
+    async def purge_deleted(self, user: User) -> int:
+        """Permanently delete ALL soft-deleted leads in the org (admin only).
+
+        Always refetch page 1: deleting rows shifts the remaining rows up, so an
+        offset-based ``page += 1`` would skip every other batch of 100.
+        """
+        self._assert_admin(user)
+        count = 0
+        while True:
+            leads, _ = await self.repo.list_deleted_by_org(
+                user.organization_id, None, 1, 100
+            )
+            if not leads:
+                break
+            for lead in leads:
+                await self.repo.delete(lead)
+                count += 1
+        logger.info("Purged %d soft-deleted leads (admin)", count)
+        return count
+
     async def convert_to_deal(
         self,
         lead_id: UUID,

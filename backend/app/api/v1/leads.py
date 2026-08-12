@@ -63,6 +63,60 @@ async def list_leads(
     return {"success": True, "message": "OK", "data": paginated}
 
 
+@router.get(
+    "/deleted",
+    response_model=StandardResponse[PaginatedResponse[LeadResponse]],
+    summary="List soft-deleted (archived) leads — admin only",
+    dependencies=[Depends(require_permission("lead:read"))],
+)
+async def list_deleted_leads(
+    current_user: CurrentUser,
+    db: DBSession,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    search: Optional[str] = Query(default=None),
+) -> dict:
+    svc = LeadService(db)
+    leads, total = await svc.list_deleted(current_user, search, page, page_size)
+    paginated = PaginatedResponse.create(
+        data=[LeadResponse.from_lead(l) for l in leads],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.delete(
+    "/{lead_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete a soft-deleted lead — admin only",
+    dependencies=[Depends(require_permission("lead:delete"))],
+)
+async def hard_delete_lead(
+    lead_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> None:
+    svc = LeadService(db)
+    await svc.hard_delete(lead_id, current_user)
+
+
+@router.post(
+    "/purge-deleted",
+    response_model=StandardResponse[dict],
+    summary="Permanently delete ALL soft-deleted leads — admin only",
+    dependencies=[Depends(require_permission("lead:delete"))],
+)
+async def purge_deleted_leads(
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    svc = LeadService(db)
+    count = await svc.purge_deleted(current_user)
+    return {"success": True, "message": f"Purged {count} soft-deleted lead(s).", "data": {"purged": count}}
+
+
 @router.post(
     "",
     response_model=StandardResponse[LeadResponse],

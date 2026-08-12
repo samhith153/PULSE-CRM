@@ -10,6 +10,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import DuplicateException, NotFoundException, ForbiddenException
@@ -106,7 +107,7 @@ class SalesTargetService:
         return SalesTargetResponse(
             id=target.id,
             rep_id=target.rep_id,
-            rep_name=f"{target.rep.first_name} {target.rep.last_name}".strip() if target.rep else "Unknown",
+            rep_name=(target.rep.full_name or "").strip() if target.rep else "Unknown",
             rep_email=target.rep.email if target.rep else "",
             target_type=target.target_type,
             target_amount=target_amt,
@@ -129,8 +130,11 @@ class SalesTargetService:
         *,
         period_type: Optional[str] = None,
         rep_id: Optional[UUID] = None,
+        team_rep_ids: Optional[List[UUID]] = None,
     ) -> List[SalesTargetResponse]:
         targets = await self.repo.list_by_org(organization_id, period_type=period_type, rep_id=rep_id)
+        if team_rep_ids is not None:
+            targets = [t for t in targets if t.rep_id in team_rep_ids]
         if not targets:
             return []
         actuals = await self._get_reps_with_actuals(
@@ -146,10 +150,22 @@ class SalesTargetService:
         organization_id: UUID,
         period_type: str = "monthly",
         ref_date: Optional[date] = None,
+        viewer_id: Optional[UUID] = None,
+        viewer_role: Optional[str] = None,
     ) -> List[SalesTargetResponse]:
-        """Return all reps with their current-period target (or empty target if not set)."""
+        """Return all reps with their current-period target (or empty target if not set).
+
+        Scoping: admins see every sales rep in the org, managers see only the reps
+        assigned to them, sales reps see only themselves.
+        """
+        manager_id = viewer_id if viewer_role == "manager" else None
+        rep_user_id = viewer_id if viewer_role == "sales_rep" else None
         start, end = _current_period_dates(period_type, ref_date)
-        pairs = await self.repo.get_reps_with_targets(organization_id, period_type, start)
+        pairs = await self.repo.get_reps_with_targets(
+            organization_id, period_type, start,
+            manager_id=manager_id,
+            rep_user_id=rep_user_id,
+        )
         actuals = await self._get_reps_with_actuals(organization_id, start, end, [t for _, t in pairs if t])
 
         responses = []
@@ -160,7 +176,7 @@ class SalesTargetService:
                 responses.append(SalesTargetResponse(
                     id=None,
                     rep_id=rep.id,
-                    rep_name=f"{rep.first_name} {rep.last_name}".strip(),
+                    rep_name=(rep.full_name or "").strip(),
                     rep_email=rep.email,
                     target_type="revenue",
                     target_amount=Decimal("0"),
@@ -180,13 +196,43 @@ class SalesTargetService:
         organization_id: UUID,
         created_by: UUID,
         payload: SalesTargetCreate,
+        viewer_id: Optional[UUID] = None,
+        viewer_role: Optional[str] = None,
     ) -> SalesTargetResponse:
+        if viewer_role not in ("manager", "admin"):
+            raise ForbiddenException("Only managers and admins can assign targets.")
+        if viewer_role == "manager":
+            rep = await self.db.get(User, payload.rep_id)
+            if not rep or rep.manager_id != viewer_id:
+                raise ForbiddenException("You can only assign targets to sales reps on your team.")
+
         existing = await self.repo.get_active_by_rep_and_period(
             organization_id, payload.rep_id, payload.period_type, payload.period_start
         )
         if existing:
             raise DuplicateException("SalesTarget", "period", f"{payload.period_type} starting {payload.period_start}")
 
+        try:
+            return await self._insert_target(
+                organization_id, created_by, payload, viewer_id, viewer_role
+            )
+        except IntegrityError as exc:
+            # Race: two concurrent creates for the same rep+period. The unique
+            # constraint fires instead of the check above -> surface a clean 409.
+            await self.db.rollback()
+            raise DuplicateException(
+                "SalesTarget", "period",
+                f"{payload.period_type} starting {payload.period_start}",
+            ) from exc
+
+    async def _insert_target(
+        self,
+        organization_id: UUID,
+        created_by: UUID,
+        payload: SalesTargetCreate,
+        viewer_id: Optional[UUID] = None,
+        viewer_role: Optional[str] = None,
+    ) -> SalesTargetResponse:
         target = SalesTarget(
             organization_id=organization_id,
             created_by=created_by,
@@ -216,10 +262,19 @@ class SalesTargetService:
         target_id: UUID,
         organization_id: UUID,
         payload: SalesTargetUpdate,
+        viewer_id: Optional[UUID] = None,
+        viewer_role: Optional[str] = None,
     ) -> SalesTargetResponse:
         target = await self.repo.get_by_id_and_org(target_id, organization_id)
         if not target:
             raise NotFoundException("SalesTarget", target_id)
+
+        if viewer_role not in ("manager", "admin"):
+            raise ForbiddenException("Only managers and admins can update targets.")
+        if viewer_role == "manager" and target.rep_id:
+            rep = await self.db.get(User, target.rep_id)
+            if not rep or rep.manager_id != viewer_id:
+                raise ForbiddenException("You can only update targets for sales reps on your team.")
 
         if payload.target_amount is not None:
             target.target_amount = payload.target_amount
@@ -239,10 +294,22 @@ class SalesTargetService:
         self,
         target_id: UUID,
         organization_id: UUID,
+        viewer_id: Optional[UUID] = None,
+        viewer_role: Optional[str] = None,
     ) -> None:
         target = await self.repo.get_by_id_and_org(target_id, organization_id)
         if not target:
             raise NotFoundException("SalesTarget", target_id)
-        target.is_active = False
+
+        if viewer_role not in ("manager", "admin"):
+            raise ForbiddenException("Only managers and admins can delete targets.")
+        if viewer_role == "manager" and target.rep_id:
+            rep = await self.db.get(User, target.rep_id)
+            if not rep or rep.manager_id != viewer_id:
+                raise ForbiddenException("You can only delete targets for sales reps on your team.")
+
+        # Hard-delete so a new target for the same rep+period can be created
+        # (the uq_target_rep_period unique constraint would otherwise block it).
+        await self.db.delete(target)
         await self.db.flush()
         logger.info("Target deleted: id=%s", target_id)

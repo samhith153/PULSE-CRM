@@ -41,6 +41,9 @@ const MyTeamView = React.lazy(() => import('@/components/dashboard/MyTeamView'))
 const AdminDashboardView = React.lazy(() => import('@/components/dashboard/AdminDashboardView'));
 const SalesRepDashboardView = React.lazy(() => import('@/components/dashboard/SalesRepDashboardView'));
 const UsersView = React.lazy(() => import('@/components/dashboard/UsersView'));
+const TeamsView = React.lazy(() => import('@/components/dashboard/TeamsView'));
+const TargetsView = React.lazy(() => import('@/components/dashboard/TargetsView'));
+const RecycleBinView = React.lazy(() => import('@/components/dashboard/RecycleBinView'));
 const RolesPermissionsView = React.lazy(() => import('@/components/dashboard/RolesPermissionsView'));
 const IntegrationsView = React.lazy(() => import('@/components/dashboard/IntegrationsView'));
 const AutomationView = React.lazy(() => import('@/components/dashboard/AutomationView'));
@@ -294,6 +297,10 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
             <MyTeamView />
           ) : activeTab === 'team performance' ? (
             <TeamPerformanceView />
+          ) : activeTab === 'targets' ? (
+            <TargetsView />
+          ) : activeTab === 'teams' ? (
+            <TeamsView />
           ) : activeTab === 'users' ? (
             <UsersView />
           ) : activeTab === 'roles & permissions' ? (
@@ -306,6 +313,8 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
             <AIModelsView />
           ) : activeTab === 'audit logs' ? (
             <AuditLogsView />
+          ) : activeTab === 'recycle bin' ? (
+            <RecycleBinView />
           ) : activeTab === 'dashboard' && requiredRole === 'manager' ? (
             <ManagerDashboardView onTabChange={setActiveTab} />
           ) : activeTab === 'dashboard' && requiredRole === 'admin' ? (

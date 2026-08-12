@@ -69,9 +69,20 @@ class SalesTargetRepository(BaseRepository[SalesTarget]):
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def get_reps_in_org(self, organization_id: UUID) -> List[User]:
-        """Return active sales reps in the organization (not admins)."""
-        from app.models.role import Role, UserRole
+    async def get_reps_in_org(
+        self,
+        organization_id: UUID,
+        *,
+        manager_id: Optional[UUID] = None,
+        rep_user_id: Optional[UUID] = None,
+    ) -> List[User]:
+        """Return active sales reps in the organization (not managers/admins).
+
+        Scope: all reps by default (admin), only the reps assigned to the given
+        manager when ``manager_id`` is set, only one rep when ``rep_user_id`` is set.
+        """
+        from app.models.role import Role
+        from app.models.user import UserRole
 
         stmt = (
             select(User)
@@ -81,10 +92,14 @@ class SalesTargetRepository(BaseRepository[SalesTarget]):
                 User.organization_id == organization_id,
                 User.is_active.is_(True),
                 User.is_deleted.is_(False),
-                Role.name.in_(["sales_rep", "manager"]),
+                Role.name.in_(["sales_rep", "sales_representative"]),
             )
             .order_by(User.full_name)
         )
+        if manager_id is not None:
+            stmt = stmt.where(User.manager_id == manager_id)
+        if rep_user_id is not None:
+            stmt = stmt.where(User.id == rep_user_id)
         result = await self.db.execute(stmt)
         return list(result.scalars().all())
 
@@ -93,9 +108,16 @@ class SalesTargetRepository(BaseRepository[SalesTarget]):
         organization_id: UUID,
         period_type: str,
         period_start: date,
+        *,
+        manager_id: Optional[UUID] = None,
+        rep_user_id: Optional[UUID] = None,
     ) -> List[Tuple[User, Optional[SalesTarget]]]:
         """Return all reps paired with their target for a given period (if set)."""
-        reps = await self.get_reps_in_org(organization_id)
+        reps = await self.get_reps_in_org(
+            organization_id,
+            manager_id=manager_id,
+            rep_user_id=rep_user_id,
+        )
         targets_map: dict[UUID, SalesTarget] = {}
         if reps:
             rep_ids = [r.id for r in reps]

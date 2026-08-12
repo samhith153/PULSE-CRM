@@ -26,7 +26,7 @@ class SalesTargetUpdate(BaseModel):
 
 
 class SalesTargetResponse(BaseModel):
-    id: UUID
+    id: Optional[UUID] = None  # None when the rep has no target set yet
     rep_id: UUID
     rep_name: str
     rep_email: str

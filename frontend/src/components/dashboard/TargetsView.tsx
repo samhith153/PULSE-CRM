@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
@@ -10,6 +10,7 @@ import {
   IndianRupee,
   BarChart3,
   Zap,
+  X,
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
 import {
@@ -21,8 +22,9 @@ import {
   getUsers,
   UserData,
 } from '@/utils/api';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
-/* ΓöÇΓöÇ Helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+/* ── Helpers ─────────────────────────────────────────────────────────── */
 
 function getPeriodDates(
   periodType: string,
@@ -68,7 +70,7 @@ function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'INR',
     maximumFractionDigits: 0,
-  }).format(value);
+  }).format(value || 0);
 }
 
 function getInitials(name: string): string {
@@ -106,11 +108,11 @@ const STATUS_STYLES: Record<string, { bg: string; text: string; dot: string }> =
   not_started: { bg: 'bg-slate-50', text: 'text-slate-500', dot: 'bg-slate-400' },
 };
 
+// Backend-supported target types (revenue | deals | activities).
 const TARGET_TYPES = [
   { value: 'revenue', label: 'Revenue' },
   { value: 'deals', label: 'Deals Closed' },
-  { value: 'calls', label: 'Outbound Calls' },
-  { value: 'meetings', label: 'Meetings Set' },
+  { value: 'activities', label: 'Activities' },
 ];
 
 const PERIOD_OPTIONS = [
@@ -119,7 +121,7 @@ const PERIOD_OPTIONS = [
   { value: 'yearly', label: 'Yearly' },
 ];
 
-/* ΓöÇΓöÇ Component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+/* ── Component ──────────────────────────────────────────────────────── */
 
 interface ModalState {
   open: boolean;
@@ -130,6 +132,7 @@ interface ModalState {
 }
 
 export default function TargetsView() {
+  const { user: currentUser } = useCurrentUser();
   const [periodType, setPeriodType] = useState('monthly');
   const [targets, setTargets] = useState<SalesTargetData[]>([]);
   const [reps, setReps] = useState<UserData[]>([]);
@@ -162,23 +165,31 @@ export default function TargetsView() {
     loadTargets();
   }, [loadTargets]);
 
+  // Rep list for the assign modal: sales reps only; managers see just their team.
   useEffect(() => {
     getUsers(1, 100)
       .then((res) => {
         const data = Array.isArray(res) ? res : (res.data ?? []);
-        setReps(data);
+        const isManager = currentUser?.roles?.includes('manager');
+        let eligible = data.filter((u: UserData) =>
+          (u.roles || []).some((r) => r === 'sales_rep' || r === 'sales_representative')
+        );
+        if (isManager) {
+          eligible = eligible.filter((u: UserData) => u.manager_id === currentUser?.id);
+        }
+        setReps(eligible);
       })
       .catch(() => {});
-  }, []);
+  }, [currentUser]);
 
-  /* ΓöÇΓöÇ Derived metrics ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+  /* ── Derived metrics ───────────────────────────────────────────────── */
 
   const teamTarget = targets.reduce((s, t) => s + (t.target_amount || 0), 0);
   const teamActual = targets.reduce((s, t) => s + (t.actual_amount || 0), 0);
   const teamProgress = teamTarget > 0 ? Math.round((teamActual / teamTarget) * 100) : 0;
-  const repsWithTargets = targets.length;
+  const repsWithTargets = targets.filter((t) => t.id).length;
 
-  /* ΓöÇΓöÇ Modal handlers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+  /* ── Modal handlers ────────────────────────────────────────────────── */
 
   function openCreateModal() {
     setEditingTarget(null);
@@ -235,8 +246,8 @@ export default function TargetsView() {
       }
       closeModal();
       loadTargets();
-    } catch {
-      toast.error('Failed to save target.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to save target.');
     } finally {
       setSaving(false);
     }
@@ -251,14 +262,14 @@ export default function TargetsView() {
       await deleteSalesTarget(target.id);
       toast.success('Target deleted.');
       loadTargets();
-    } catch {
-      toast.error('Failed to delete target.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to delete target.');
     } finally {
       setDeleting(null);
     }
   }
 
-  /* ΓöÇΓöÇ Status helpers ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+  /* ── Status helpers ────────────────────────────────────────────────── */
 
   function getStatusInfo(status: string) {
     const s = STATUS_STYLES[status] ?? STATUS_STYLES.not_started;
@@ -266,25 +277,25 @@ export default function TargetsView() {
     return { ...s, label };
   }
 
-  /* ΓöÇΓöÇ Render ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+  /* ── Render ────────────────────────────────────────────────────────── */
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
+          <h1 className="text-3xl font-sans text-text-primary tracking-tight font-bold">
             Sales Targets
           </h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
-            Set and track revenue targets for each sales representative.
+          <p className="text-xs md:text-sm text-text-muted mt-1 font-medium tracking-wide">
+            Set and track revenue targets for each sales representative on your team.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <select
             value={periodType}
             onChange={(e) => setPeriodType(e.target.value)}
-            className="bg-card border border-border/60 rounded-xl px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/30"
+            className="bg-surface-2 border border-border-default rounded-lg px-3 py-2 text-xs font-semibold text-text-primary focus:outline-none focus:border-accent-color transition-colors cursor-pointer"
           >
             {PERIOD_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -294,7 +305,9 @@ export default function TargetsView() {
           </select>
           <button
             onClick={openCreateModal}
-            className="inline-flex items-center gap-2 bg-brand-purple text-white px-4 py-2 rounded-xl text-xs font-semibold hover:bg-brand-purple/90 transition-colors cursor-pointer"
+            disabled={reps.length === 0}
+            className="inline-flex items-center gap-2 bg-accent-color text-surface-0 px-4 py-2 rounded-lg text-xs font-semibold hover:bg-accent-color/90 transition-colors disabled:opacity-50 cursor-pointer"
+            title={reps.length === 0 ? 'No sales reps assigned to you yet' : undefined}
           >
             <Plus className="h-3.5 w-3.5" />
             Set Target
@@ -309,42 +322,42 @@ export default function TargetsView() {
             label: 'Team Target',
             value: formatCurrency(teamTarget),
             icon: Target,
-            color: 'text-brand-purple',
+            color: 'text-accent-color',
           },
           {
             label: 'Achieved',
             value: formatCurrency(teamActual),
             icon: IndianRupee,
-            color: 'text-emerald-600',
+            color: 'text-status-success-text',
           },
           {
             label: 'Team Progress',
             value: `${teamProgress}%`,
             icon: BarChart3,
-            color: 'text-blue-600',
+            color: 'text-accent-color',
             progress: true,
           },
           {
             label: 'Reps with Targets',
             value: String(repsWithTargets),
             icon: Zap,
-            color: 'text-amber-600',
+            color: 'text-status-warning',
           },
         ].map((card, idx) => {
           const Icon = card.icon;
           return (
-            <div key={idx} className="bg-card border border-border/60 rounded-2xl p-4 space-y-2">
-              <div className="flex items-center space-x-1.5 text-muted-foreground">
+            <div key={idx} className="bg-surface-1 border border-border-default rounded-2xl p-4 space-y-2">
+              <div className="flex items-center space-x-1.5 text-text-muted">
                 <Icon className={`h-3.5 w-3.5 ${card.color}`} />
                 <span className="text-[10px] font-semibold uppercase tracking-wide">
                   {card.label}
                 </span>
               </div>
-              <h4 className="text-lg font-bold text-foreground">{card.value}</h4>
+              <h4 className="text-lg font-bold text-text-primary tabular-nums">{card.value}</h4>
               {card.progress && (
-                <div className="w-full bg-secondary rounded-full h-2">
+                <div className="w-full bg-surface-2 rounded-full h-2">
                   <div
-                    className="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                    className="bg-accent-color h-2 rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(teamProgress, 100)}%` }}
                   />
                 </div>
@@ -355,55 +368,44 @@ export default function TargetsView() {
       </div>
 
       {/* Table */}
-      <div className="bg-card border border-border/60 rounded-2xl overflow-hidden">
+      <div className="bg-surface-1 border border-border-default rounded-2xl overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center py-24 text-muted-foreground text-xs font-semibold">
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading targetsΓÇª
+          <div className="flex items-center justify-center py-24 text-text-muted text-xs font-semibold">
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading targets…
           </div>
         ) : targets.length === 0 ? (
-          <div className="py-24 text-center text-muted-foreground text-xs font-semibold">
-            No targets set for this period. Click &quot;Set Target&quot; to create one.
+          <div className="py-24 text-center">
+            <div className="h-12 w-12 mx-auto rounded-full bg-surface-2 border border-border-default flex items-center justify-center mb-3">
+              <Target className="h-5 w-5 text-text-muted" />
+            </div>
+            <p className="text-xs font-semibold text-text-primary">No targets set for this period</p>
+            <p className="text-[10px] text-text-muted font-medium mt-1">
+              Click &quot;Set Target&quot; to assign a revenue target to a sales rep.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left">
+            <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="border-b border-border/60 bg-secondary/30">
-                  <th className="py-3 px-5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Rep
-                  </th>
-                  <th className="py-3 px-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Target Type
-                  </th>
-                  <th className="py-3 px-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground text-right">
-                    Target
-                  </th>
-                  <th className="py-3 px-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground text-right">
-                    Actual
-                  </th>
-                  <th className="py-3 px-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Achieved
-                  </th>
-                  <th className="py-3 px-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                    Status
-                  </th>
-                  <th className="py-3 px-4 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground text-right">
-                    Actions
-                  </th>
+                <tr className="border-b border-border-default text-[11px] uppercase font-black tracking-wider text-text-primary bg-muted/40">
+                  <th className="py-2.5 px-5">Rep</th>
+                  <th className="py-2.5 px-4">Target Type</th>
+                  <th className="py-2.5 px-4 text-right">Target</th>
+                  <th className="py-2.5 px-4 text-right">Actual</th>
+                  <th className="py-2.5 px-4">Achieved</th>
+                  <th className="py-2.5 px-4">Status</th>
+                  <th className="py-2.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="text-[13px] text-foreground">
+              <tbody className="divide-y divide-border text-xs font-semibold text-text-primary">
                 {targets.map((t) => {
                   const avatar = getAvatarColor(t.rep_name);
                   const initials = getInitials(t.rep_name);
                   const pct = t.achievement_pct ?? 0;
-                  const status = getStatusInfo(t.status);
+                  const status = getStatusInfo(t.status ?? 'not_started');
 
                   return (
-                    <tr
-                      key={t.id ?? t.rep_id}
-                      className="border-b border-border/60 hover:bg-secondary/50 transition-colors"
-                    >
+                    <tr key={t.id ?? t.rep_id} className="hover:bg-surface-2 transition-colors">
                       {/* REP */}
                       <td className="py-3 px-5">
                         <div className="flex items-center gap-3">
@@ -414,10 +416,10 @@ export default function TargetsView() {
                             {initials}
                           </div>
                           <div className="min-w-0">
-                            <div className="font-semibold text-foreground whitespace-nowrap">
+                            <div className="font-semibold text-text-primary whitespace-nowrap">
                               {t.rep_name}
                             </div>
-                            <div className="text-[11px] text-muted-foreground truncate">
+                            <div className="text-[11px] text-text-muted truncate">
                               {t.rep_email}
                             </div>
                           </div>
@@ -426,7 +428,7 @@ export default function TargetsView() {
 
                       {/* TARGET TYPE */}
                       <td className="py-3 px-4">
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
                           {t.target_type.replace(/_/g, ' ')}
                         </span>
                       </td>
@@ -437,21 +439,21 @@ export default function TargetsView() {
                       </td>
 
                       {/* ACTUAL */}
-                      <td className="py-3 px-4 text-right font-semibold tabular-nums text-foreground">
-                        {formatCurrency(t.actual_amount)}
+                      <td className="py-3 px-4 text-right font-semibold tabular-nums text-text-primary">
+                        {formatCurrency(t.actual_amount ?? 0)}
                       </td>
 
                       {/* ACHIEVED */}
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-2 min-w-[120px]">
-                          <div className="flex-1 bg-secondary rounded-full h-2">
+                          <div className="flex-1 bg-surface-2 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full transition-all duration-500 ${
                                 pct >= 100
-                                  ? 'bg-emerald-500'
+                                  ? 'bg-status-success-text'
                                   : pct >= 70
-                                  ? 'bg-blue-500'
-                                  : 'bg-red-500'
+                                  ? 'bg-accent-color'
+                                  : 'bg-status-danger-text'
                               }`}
                               style={{ width: `${Math.min(pct, 100)}%` }}
                             />
@@ -477,23 +479,25 @@ export default function TargetsView() {
                         <div className="inline-flex items-center gap-1">
                           <button
                             onClick={() => openEditModal(t)}
-                            className="p-1.5 text-muted-foreground hover:text-brand-purple hover:bg-brand-purple/10 rounded-md transition-all duration-150 cursor-pointer"
-                            title="Edit Target"
+                            className="p-1.5 text-text-muted hover:text-accent-color hover:bg-surface-2 rounded-md transition-all duration-150 cursor-pointer"
+                            title={t.id ? 'Edit Target' : 'Set Target'}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            onClick={() => handleDelete(t)}
-                            disabled={deleting === t.id}
-                            className="p-1.5 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-150 disabled:opacity-50 cursor-pointer"
-                            title="Delete Target"
-                          >
-                            {deleting === t.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-3.5 w-3.5" />
-                            )}
-                          </button>
+                          {t.id && (
+                            <button
+                              onClick={() => handleDelete(t)}
+                              disabled={deleting === t.id}
+                              className="p-1.5 text-text-muted hover:text-status-danger hover:bg-status-danger/10 rounded-md transition-all duration-150 disabled:opacity-50 cursor-pointer"
+                              title="Delete Target"
+                            >
+                              {deleting === t.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" />
+                              )}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -507,33 +511,33 @@ export default function TargetsView() {
 
       {/* Modal */}
       {modal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
-          <div className="relative bg-card border border-border/60 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 space-y-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ink/50 backdrop-blur-sm" onClick={closeModal} />
+          <div className="relative bg-surface-1 border border-border-default rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-foreground">
+              <h3 className="text-sm font-bold text-text-primary">
                 {editingTarget ? 'Edit Target' : 'Set New Target'}
               </h3>
               <button
                 onClick={closeModal}
-                className="p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors cursor-pointer"
+                className="p-1 text-text-muted hover:text-text-primary rounded-md transition-colors cursor-pointer"
               >
-                Γ£ò
+                <X className="h-4 w-4" />
               </button>
             </div>
 
             {/* Rep Select */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
                 Sales Rep
               </label>
               <select
                 value={modal.repId}
                 onChange={(e) => setModal((m) => ({ ...m, repId: e.target.value }))}
                 disabled={!!editingTarget}
-                className="w-full bg-secondary border border-border/60 rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/30 disabled:opacity-60"
+                className="w-full bg-surface-2 border border-border-default rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-color disabled:opacity-60 transition-colors cursor-pointer"
               >
-                <option value="">Select a repΓÇª</option>
+                <option value="">Select a rep…</option>
                 {reps.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.full_name}
@@ -544,14 +548,14 @@ export default function TargetsView() {
 
             {/* Target Type */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
                 Target Type
               </label>
               <select
                 value={modal.targetType}
                 onChange={(e) => setModal((m) => ({ ...m, targetType: e.target.value }))}
                 disabled={!!editingTarget}
-                className="w-full bg-secondary border border-border/60 rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-brand-purple/30 disabled:opacity-60"
+                className="w-full bg-surface-2 border border-border-default rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:border-accent-color disabled:opacity-60 transition-colors cursor-pointer"
               >
                 {TARGET_TYPES.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -563,11 +567,11 @@ export default function TargetsView() {
 
             {/* Amount */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
                 Target Amount (₹)
               </label>
               <div className="relative">
-                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
                 <input
                   type="number"
                   min="0"
@@ -575,22 +579,22 @@ export default function TargetsView() {
                   value={modal.amount}
                   onChange={(e) => setModal((m) => ({ ...m, amount: e.target.value }))}
                   placeholder="e.g. 500000"
-                  className="w-full bg-secondary border border-border/60 rounded-xl pl-9 pr-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-purple/30"
+                  className="w-full bg-surface-2 border border-border-default rounded-lg pl-9 pr-3 py-2 text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-color transition-colors"
                 />
               </div>
             </div>
 
             {/* Notes */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
                 Notes
               </label>
               <textarea
                 value={modal.notes}
                 onChange={(e) => setModal((m) => ({ ...m, notes: e.target.value }))}
                 rows={3}
-                placeholder="Optional notesΓÇª"
-                className="w-full bg-secondary border border-border/60 rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-brand-purple/30 resize-none"
+                placeholder="Optional notes…"
+                className="w-full bg-surface-2 border border-border-default rounded-lg px-3 py-2 text-xs text-text-primary placeholder:text-text-muted/60 focus:outline-none focus:border-accent-color transition-colors resize-none"
               />
             </div>
 
@@ -598,14 +602,14 @@ export default function TargetsView() {
             <div className="flex items-center justify-end gap-3 pt-2">
               <button
                 onClick={closeModal}
-                className="px-4 py-2 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-text-muted hover:text-text-primary transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="inline-flex items-center gap-2 bg-brand-purple text-white px-5 py-2 rounded-xl text-xs font-semibold hover:bg-brand-purple/90 transition-colors disabled:opacity-60 cursor-pointer"
+                className="inline-flex items-center gap-2 bg-accent-color text-surface-0 px-5 py-2 rounded-lg text-xs font-semibold hover:bg-accent-color/90 transition-colors disabled:opacity-60 cursor-pointer"
               >
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 {editingTarget ? 'Update Target' : 'Create Target'}
