@@ -865,3 +865,28 @@ class SummaryDashboardKPIs(BaseModel):
     positive_trends: int
     negative_trends: int
     pending_recommendations: int
+
+
+# ── Rising Interest (dynamic trend-based score) ──────────────────────────────
+
+class RisingInterestItem(BaseModel):
+    """A single lead's dynamic rising interest score with explanation."""
+    id: UUID
+    lead_id: Optional[str] = None
+    lead_name: str
+    deal_name: Optional[str] = None
+    rising_interest_score: float
+    trend: str
+    reason: str
+    reasons: list[str] = Field(default_factory=list)
+    factors: dict[str, float] = Field(default_factory=dict)
+    lead_score: int = 0
+    deal_value: float = 0.0
+    owner_name: Optional[str] = None
+
+
+class RisingInterestResponse(BaseModel):
+    """Response payload for the rising interest endpoint."""
+    total_leads_analyzed: int
+    rising_count: int
+    items: list[RisingInterestItem]

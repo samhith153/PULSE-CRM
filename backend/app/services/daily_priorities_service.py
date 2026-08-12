@@ -44,7 +44,13 @@ from app.schemas.ai_insights import (
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 _HIGH_VALUE_THRESHOLD   = 500_000   # ₹5L
-_RISING_INTEREST_SCORE  = 80        # lead.score considered "rising interest"
+# NOTE: _RISING_INTEREST_SCORE = 80 was the OLD hardcoded cutoff.
+# Rising interest is now computed dynamically by the RisingInterestService,
+# which calls the ai-service over HTTP to get a trend/velocity-based score.
+# The constant below is retained only as a fallback when the AI service
+# is unavailable (e.g. network errors), and as a minimum threshold for
+# the rising_interest_score factor in the priority formula.
+_RISING_INTEREST_FALLBACK_SCORE = 80
 _COLD_THRESHOLD         = 80        # cold_score at which going-cold boosts priority
 _INACTIVE_DAYS_COLD     = 14
 
@@ -133,8 +139,11 @@ class DailyPrioritiesService:
 
         # ── Factor 4: Rising interest (15%) ──────────────────────────────
         lead_score = int(row.get("lead_score") or 0)
-        if lead_score >= _RISING_INTEREST_SCORE:
-            rising_raw = min((lead_score - _RISING_INTEREST_SCORE) / 20.0 * 100.0, 100.0)
+        dynamic_rising = row.get("rising_interest_score")
+        if dynamic_rising is not None:
+            rising_raw = float(dynamic_rising)
+        elif lead_score >= _RISING_INTEREST_FALLBACK_SCORE:
+            rising_raw = min((lead_score - _RISING_INTEREST_FALLBACK_SCORE) / 20.0 * 100.0, 100.0)
         else:
             rising_raw = max(0.0, lead_score * 0.5)
 
@@ -247,12 +256,13 @@ class DailyPrioritiesService:
                 f"Deal closes in {days_until_close} day(s) — send revised proposal and confirm decision.",
             )
 
-        # Rising interest lead
-        if lead_score >= _RISING_INTEREST_SCORE:
+        # Rising interest lead (dynamic)
+        dynamic_rising = priority_score
+        if lead_score >= _RISING_INTEREST_FALLBACK_SCORE or dynamic_rising >= 50:
             if email_count > 0 and email_replies == 0:
                 return (
                     "Customer Engagement",
-                    f"High-interest lead ({lead_score} score) hasn't replied to email — schedule a direct call.",
+                    f"High-interest lead (score {lead_score}) hasn't replied to email — schedule a direct call.",
                 )
             return (
                 "Demo",
@@ -327,8 +337,12 @@ class DailyPrioritiesService:
             reasons.append(f"High-value deal ₹{int(float(row.get('deal_amount') or 0)):,}")
         if days_until_close is not None and days_until_close <= 7:
             reasons.append(f"Closing in {days_until_close} day(s)")
-        if int(row.get("lead_score") or 0) >= _RISING_INTEREST_SCORE:
-            reasons.append(f"Rising interest (score {row['lead_score']})")
+        if int(row.get("lead_score") or 0) >= _RISING_INTEREST_FALLBACK_SCORE or row.get("rising_interest_score", 0) >= 50:
+            ri_score = row.get("rising_interest_score")
+            if ri_score is not None:
+                reasons.append(f"Rising interest (trend score {ri_score:.0f})")
+            else:
+                reasons.append(f"Rising interest (score {row['lead_score']})")
         last_at_days = (
             max(0, (now - last_at).days) if last_at else 999
         )
