@@ -110,7 +110,7 @@ export default function DealsAtRiskCard({
 
   return (
     <div
-      className={`bg-card/90 backdrop-blur-md border border-status-warning-text/20 dark:border-status-warning-text/25 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-status-warning-text/5 transition duration-300 flex flex-col justify-between relative overflow-hidden group ${className}`}
+      className={`bg-card/90 backdrop-blur-md border border-status-warning-text/20 dark:border-status-warning-text/25 rounded-[20px] p-5 shadow-sm hover:shadow-xl hover:shadow-status-warning-text/5 transition duration-300 flex flex-col justify-between relative overflow-hidden group h-full min-h-[420px] ${className}`}
     >
       {/* Background ambient warm amber aura pulse */}
       <div className="absolute -top-12 -left-12 w-36 h-36 rounded-full bg-status-warning-text/8 blur-3xl pointer-events-none group-hover:bg-status-warning-text/12 transition duration-500" />
@@ -138,7 +138,7 @@ export default function DealsAtRiskCard({
                   </span>
                 )}
               </div>
-              <p className="text-[10px] text-muted-foreground font-medium">{subtitle}</p>
+              <p className="text-[10px] text-text-secondary font-medium">{subtitle}</p>
             </div>
           </div>
 
@@ -187,7 +187,7 @@ export default function DealsAtRiskCard({
               </button>
             </div>
 
-            <span className="text-[10px] text-muted-foreground/70 font-semibold hidden sm:inline">
+            <span className="text-[10px] text-text-secondary font-semibold hidden sm:inline">
               Sorted by urgency
             </span>
           </div>
@@ -205,7 +205,7 @@ export default function DealsAtRiskCard({
                 <ShieldCheck size={24} />
               </div>
               <p className="text-xs font-bold text-foreground">All deals are healthy!</p>
-              <p className="text-[10px] text-muted-foreground max-w-[200px]">
+              <p className="text-[10px] text-text-secondary max-w-[200px]">
                 No deals currently match risk escalation criteria. Great job!
               </p>
             </motion.div>
@@ -246,11 +246,11 @@ export default function DealsAtRiskCard({
                             </span>
                           )}
                         </div>
-                        <p className="text-[10px] text-muted-foreground font-semibold truncate mt-0.5">
+                        <p className="text-[10px] text-text-secondary font-semibold truncate mt-0.5">
                           {deal.company}
                         </p>
                         {deal.probability !== null && (
-                          <p className="text-[9px] text-muted-foreground/70 font-medium tabular-nums truncate mt-0.5">
+                          <p className="text-[9px] text-text-secondary font-medium tabular-nums truncate mt-0.5">
                             {deal.days}d stalled · {deal.probability}% probability · {formatINR(deal.value)}
                           </p>
                         )}
@@ -260,7 +260,7 @@ export default function DealsAtRiskCard({
                         <span className="text-xs font-black text-foreground tabular-nums block">
                           {formatINR(deal.value)}
                         </span>
-                        <div className="flex items-center justify-end gap-1 text-[9px] text-muted-foreground/80 mt-0.5">
+                        <div className="flex items-center justify-end gap-1 text-[9px] text-text-secondary mt-0.5">
                           <Clock size={10} />
                           <span>{deal.days}d inactive</span>
                         </div>
@@ -268,16 +268,16 @@ export default function DealsAtRiskCard({
                     </div>
 
                     {/* Bottom Row: Risk reason & Owner Nudge */}
-                    <div className="mt-2.5 pt-2 border-t border-border/40 flex items-center justify-between gap-2 text-[10px]">
+                    <div className="mt-2.5 pt-2 border-t border-border/40 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between text-[10px]">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <UserCheck size={11} className="text-muted-foreground/70 shrink-0" />
-                        <span className="text-muted-foreground font-bold truncate">
+                        <UserCheck size={11} className="text-text-secondary shrink-0" />
+                        <span className="text-text-secondary font-bold truncate">
                           {deal.owner}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-status-warning-text/12 text-status-warning-text dark:text-status-warning-text border border-status-warning-text/20 truncate max-w-[130px]">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto shrink-0">
+                        <span className="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider bg-status-warning-text/10 text-status-warning-text dark:text-status-warning-text border border-status-warning-text/20 truncate max-w-[150px]">
                           {deal.reason}
                         </span>
 
@@ -285,10 +285,10 @@ export default function DealsAtRiskCard({
                         <button
                           onClick={(e) => handleNudge(e, deal)}
                           title={`Send alert to ${deal.owner}`}
-                          className={`px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 transition ${
+                          className={`px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 transition shrink-0 cursor-pointer ${
                             isNudged
-                              ? 'bg-status-success-text/15 text-status-success-text border border-status-success-text/30'
-                              : 'bg-card border border-border/80 hover:border-status-warning-text/50 text-foreground hover:text-status-warning-text hover:bg-status-warning-text/10'
+                              ? 'bg-status-success-bg text-status-success-text border border-status-success-text/25'
+                              : 'bg-surface-1 border border-border-default hover:border-status-warning-text/50 text-text-primary hover:text-status-warning-text hover:bg-status-warning-text/10'
                           }`}
                         >
                           {isNudged ? (
@@ -320,7 +320,7 @@ export default function DealsAtRiskCard({
                             <Sparkles size={12} />
                             <span>AI Recommended Action:</span>
                           </div>
-                          <p className="text-[10px] text-muted-foreground font-medium bg-card/60 p-2 rounded-lg border border-border/50">
+                          <p className="text-[10px] text-text-secondary font-medium bg-card/60 p-2 rounded-lg border border-border/50">
                             Schedule an immediate follow-up with {deal.owner} or offer an executive discount incentive to prevent deal churn.
                           </p>
 

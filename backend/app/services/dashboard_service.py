@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone, date
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import case, func, select, or_
+from sqlalchemy import and_, case, func, select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -648,6 +648,16 @@ class DashboardService:
             r = await self.db.execute(stmt)
             return Decimal(str(r.scalar_one() or 0))
 
+        async def _org_count(*extra):
+            """Count organizations (no organization_id filter — Organization IS the org)."""
+            stmt = select(func.count(Organization.id)).where(
+                Organization.is_active.is_(True),
+                Organization.is_deleted.is_(False),
+                *extra,
+            )
+            r = await self.db.execute(stmt)
+            return int(r.scalar_one() or 0)
+
         admin_visible_roles = ["manager", "sales_rep", "sales_representative"]
 
         async def _active_users_count():
@@ -687,9 +697,9 @@ class DashboardService:
             total_companies, new_companies_month, prev_companies,
             total_contacts, new_contacts_month, prev_contacts,
         ) = await asyncio.gather(
-            _count(Organization, Organization.is_active.is_(True), Organization.is_deleted.is_(False)),
-            _count(Organization, Organization.is_active.is_(True), Organization.is_deleted.is_(False), Organization.created_at >= month_start),
-            _count(Organization, Organization.is_active.is_(True), Organization.is_deleted.is_(False), Organization.created_at >= last_month_start, Organization.created_at < month_start),
+            _org_count(),
+            _org_count(Organization.created_at >= month_start),
+            _org_count(Organization.created_at >= last_month_start, Organization.created_at < month_start),
             _count(User),
             _active_users_count(),
             _count(User, User.created_at >= month_start),
@@ -892,12 +902,36 @@ class DashboardService:
         )
 
         # ── Batch 5: Data quality ────────────────────────────────────────
+        # NOTE: each normalized "key" expression is built ONCE and reused in both the
+        # SELECT list and the GROUP BY clause. Constructing the same expression twice
+        # makes SQLAlchemy emit different $N bind positions in each clause, which
+        # PostgreSQL treats as different expressions (asyncpg GroupingError) and
+        # previously crashed the admin dashboard with a 500.
+        contact_email_key = func.lower(func.trim(Contact.email))
+        contact_phone_key = func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")
+        lead_email_key = func.lower(func.trim(Lead.email))
+        lead_phone_key = func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")
+        company_name_key = func.lower(func.trim(Company.name))
+
+        def _duplicate_count_query(model, key_expr, has_value_filter):
+            """Count records sharing the same normalized key (group size > 1)."""
+            filters = [*_base(model)]
+            if has_value_filter is not None:
+                filters.append(has_value_filter)
+            return select(func.count()).select_from(
+                select(model.organization_id, key_expr)
+                .where(*filters)
+                .group_by(model.organization_id, key_expr)
+                .having(func.count(model.id) > 1)
+                .subquery()
+            )
+
         duplicate_queries = [
-            select(func.count()).select_from(select(Contact.organization_id, func.lower(func.trim(Contact.email))).where(*_base(Contact), Contact.email.is_not(None), func.trim(Contact.email) != "").group_by(Contact.organization_id, func.lower(func.trim(Contact.email))).having(func.count(Contact.id) > 1).subquery()),
-            select(func.count()).select_from(select(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).where(*_base(Contact), Contact.phone.is_not(None), func.regexp_replace(Contact.phone, r"\D+", "", "g") != "").group_by(Contact.organization_id, func.regexp_replace(func.coalesce(Contact.phone, ""), r"\D+", "", "g")).having(func.count(Contact.id) > 1).subquery()),
-            select(func.count()).select_from(select(Lead.organization_id, func.lower(func.trim(Lead.email))).where(*_base(Lead), Lead.email.is_not(None), func.trim(Lead.email) != "").group_by(Lead.organization_id, func.lower(func.trim(Lead.email))).having(func.count(Lead.id) > 1).subquery()),
-            select(func.count()).select_from(select(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).where(*_base(Lead), Lead.phone.is_not(None), func.regexp_replace(Lead.phone, r"\D+", "", "g") != "").group_by(Lead.organization_id, func.regexp_replace(func.coalesce(Lead.phone, ""), r"\D+", "", "g")).having(func.count(Lead.id) > 1).subquery()),
-            select(func.count()).select_from(select(Company.organization_id, func.lower(func.trim(Company.name))).where(*_base(Company)).group_by(Company.organization_id, func.lower(func.trim(Company.name))).having(func.count(Company.id) > 1).subquery()),
+            _duplicate_count_query(Contact, contact_email_key, and_(Contact.email.is_not(None), contact_email_key != "")),
+            _duplicate_count_query(Contact, contact_phone_key, and_(Contact.phone.is_not(None), contact_phone_key != "")),
+            _duplicate_count_query(Lead, lead_email_key, and_(Lead.email.is_not(None), lead_email_key != "")),
+            _duplicate_count_query(Lead, lead_phone_key, and_(Lead.phone.is_not(None), lead_phone_key != "")),
+            _duplicate_count_query(Company, company_name_key, None),
         ]
         incomplete_fields_stmt = select(func.count(Lead.id)).where(*_base(Lead), or_(Lead.title.is_(None), Lead.title == "", Lead.email.is_(None), Lead.email == ""))
         orphaned_leads_stmt = (

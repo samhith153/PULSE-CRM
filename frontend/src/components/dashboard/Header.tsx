@@ -105,7 +105,7 @@ export default function Header({
 
       {/* Search — ui.md §6: pill, surface-secondary fill, radius-full */}
       <div
-        className="flex flex-1 h-10 items-center gap-2 rounded-full border border-border-default bg-surface-2 px-4 shadow-sm cursor-pointer hover:bg-surface-hover transition-all"
+        className="flex flex-1 h-10 items-center gap-2 rounded-full border border-border-default bg-surface-2 px-4 shadow-sm cursor-pointer hover:bg-surface-hover hover:border-accent-color/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-color/20 focus-visible:border-accent-color transition-all"
         onClick={() => onOpenCommandPalette?.()}
       >
         <Search size={15} className="shrink-0 text-text-muted" />
@@ -117,7 +117,7 @@ export default function Header({
           onClick={() => onOpenCommandPalette?.()}
           className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none cursor-pointer"
         />
-        <span className="hidden shrink-0 rounded-md bg-surface-1 px-1.5 py-0.5 text-[11px] font-medium text-text-muted sm:inline">⌘K</span>
+        <span className="hidden shrink-0 rounded-md bg-surface-1 px-1.5 py-0.5 text-[11px] font-semibold text-text-muted border border-border-default sm:inline">⌘K</span>
       </div>
 
       {/* Right cluster */}

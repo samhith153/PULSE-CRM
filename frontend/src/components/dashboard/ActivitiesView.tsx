@@ -379,7 +379,7 @@ useEffect(() => {
           </div>
 
           <button onClick={() => { setIsSelectMode(!isSelectMode); setSelectedIds(new Set()); }}
-            className={`inline-flex items-center gap-1.5 px-3.5 py-2 border rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'border-border bg-card hover:bg-secondary text-foreground'}`}>
+            className={`inline-flex items-center gap-1.5 px-4 py-2 border rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'border-border bg-card hover:bg-secondary text-foreground'}`}>
             <Check size={13} /><span>Select</span>
           </button>
           <div className="relative">
@@ -407,7 +407,7 @@ useEffect(() => {
             )}
           </div>
           <button onClick={handleExport}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold cursor-pointer shadow-sm">
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold cursor-pointer shadow-sm">
             <Download size={13} /><span>Export</span>
           </button>
           {selectedIds.size > 0 && (

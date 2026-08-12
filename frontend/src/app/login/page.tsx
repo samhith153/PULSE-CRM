@@ -7,6 +7,7 @@ import { AuthField } from '@/components/auth/AuthField';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { login, setToken, getCurrentUser } from '@/utils/api';
 import Link from 'next/link';
+import { ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -73,7 +74,7 @@ export default function LoginPage() {
         </div>
 
         {errors.general && (
-          <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-xs font-medium text-red-700">
+          <div className="mb-3 rounded-lg bg-status-danger-bg border border-status-danger-text/25 px-4 py-2.5 text-xs font-semibold text-status-danger-text">
             {errors.general}
           </div>
         )}
@@ -91,7 +92,7 @@ export default function LoginPage() {
           </div>
           <div className="rise-in" style={{ animationDelay: '300ms' }}>
             <div className="mb-1.5 flex justify-end">
-              <a href="#" className="text-xs font-medium text-link hover:underline">
+              <a href="#" className="text-xs font-semibold text-link hover:underline">
                 Forgot password?
               </a>
             </div>
@@ -115,10 +116,15 @@ export default function LoginPage() {
           style={{ animationDelay: '380ms' }}
         >
           Don&apos;t have an account?{' '}
-          <Link href="/signup" className="font-medium text-link hover:underline">
+          <Link href="/signup" className="font-semibold text-link hover:underline">
             Sign up
           </Link>
         </p>
+
+        <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary/80 select-none border-t border-border-default/50 pt-4 w-full">
+          <ShieldCheck size={14} className="text-status-success-text" />
+          <span>Secure, SSL encrypted connection</span>
+        </div>
       </div>
     </AuthShell>
   );

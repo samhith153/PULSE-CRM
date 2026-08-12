@@ -422,28 +422,28 @@ export default function ReportsView() {
     <div className="space-y-5">
 
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight text-foreground">
+          <h1 className="text-3xl font-sans text-foreground tracking-tight font-bold">
             Reports
-          </h2>
+          </h1>
 
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-xs md:text-sm text-muted-foreground mt-1 font-medium tracking-wide">
             Performance overview backed by live data.
           </p>
         </div>
 
-        <div className="relative flex items-center gap-2">
+        <div className="flex items-center gap-2">
 
           {/* Export */}
           <button
             type="button"
             onClick={handleExport}
             disabled={loading || !data}
-            className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold transition shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Upload className="size-4" />
+            <Upload className="size-3.5" />
             Export
           </button>
 

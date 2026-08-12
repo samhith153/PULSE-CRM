@@ -1,16 +1,17 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { Zap } from "lucide-react";
 import { AuthVisual } from "./AuthVisual";
 
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-surface-warm lg:grid lg:grid-cols-[minmax(0,47fr)_minmax(0,53fr)]">
       <div className="flex flex-col px-6 py-8 sm:px-10 lg:px-14 lg:py-10">
-        <Link href="/" className="rise-in inline-flex w-fit items-center gap-2">
-          <span className="grid size-8 place-items-center rounded-full bg-ink text-xs font-bold text-background">
-            P
-          </span>
-          <span className="text-sm font-semibold tracking-tight text-ink">Pulse CRM</span>
+        <Link href="/" className="rise-in inline-flex w-fit items-center gap-2.5">
+          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-color text-text-on-primary shadow-[0_8px_18px_-8px_var(--accent-color)]">
+            <Zap size={18} strokeWidth={2.6} />
+          </div>
+          <span className="text-lg font-bold tracking-tight text-text-primary animate-pulse-subtle">Pulse CRM</span>
         </Link>
 
         <div className="mesh-hero relative mt-6 h-24 overflow-hidden rounded-2xl lg:hidden">

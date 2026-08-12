@@ -7,6 +7,7 @@ import { AuthField } from '@/components/auth/AuthField';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { register, setToken, getCurrentUser } from '@/utils/api';
 import Link from 'next/link';
+import { ShieldCheck } from 'lucide-react';
 
 function strengthOf(pw: string) {
   let score = 0;
@@ -90,7 +91,7 @@ export default function SignUpPage() {
         </div>
 
         {errors.general && (
-          <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-xs font-medium text-red-700">
+          <div className="mb-3 rounded-lg bg-status-danger-bg border border-status-danger-text/25 px-4 py-2.5 text-xs font-semibold text-status-danger-text">
             {errors.general}
           </div>
         )}
@@ -130,7 +131,7 @@ export default function SignUpPage() {
                   <span
                     key={i}
                     className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                      strength.level >= i ? 'bg-ink' : 'bg-border'
+                      strength.level >= i ? 'bg-accent-color' : 'bg-border-default'
                     }`}
                   />
                 ))}
@@ -151,7 +152,7 @@ export default function SignUpPage() {
           style={{ animationDelay: '420ms' }}
         >
           Already have an account?{' '}
-          <Link href="/login" className="font-medium text-link hover:underline">
+          <Link href="/login" className="font-semibold text-link hover:underline">
             Sign in
           </Link>
         </p>
@@ -170,6 +171,11 @@ export default function SignUpPage() {
           </a>
           .
         </p>
+
+        <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary/80 select-none border-t border-border-default/50 pt-4 w-full">
+          <ShieldCheck size={14} className="text-status-success-text" />
+          <span>Secure, SSL encrypted connection</span>
+        </div>
       </div>
     </AuthShell>
   );
