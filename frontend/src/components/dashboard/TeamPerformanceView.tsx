@@ -14,7 +14,7 @@ import {
   Star,
   Loader2,
 } from 'lucide-react';
-import { getAdminDashboard, asNumber, formatINR, formatPct, AdminDashboardData } from '@/utils/api';
+import { getManagerDashboard, asNumber, formatINR, ManagerDashboardData } from '@/utils/api';
 
 interface RepRow {
   rank: number;
@@ -35,10 +35,10 @@ export default function TeamPerformanceView() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    getAdminDashboard()
-      .then((d: AdminDashboardData) => {
+    getManagerDashboard()
+      .then((d: ManagerDashboardData) => {
         if (cancelled) return;
-        const rows: RepRow[] = (d?.top_sales_reps ?? []).map((r, i) => ({
+        const rows: RepRow[] = (d?.top_reps ?? []).map((r, i) => ({
           rank: i + 1,
           name: r.full_name,
           revenue: asNumber(r.revenue),
