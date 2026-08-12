@@ -284,7 +284,7 @@ async def get_sales_rep_dashboard(
         "forecast accuracy, sales velocity, and dynamic insights. "
         "**Manager or Admin role required.**"
     ),
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_manager_forecast(
@@ -323,7 +323,7 @@ async def get_manager_forecast(
     "/manager/forecast/monthly",
     response_model=StandardResponse[list[MonthlyForecastPoint]],
     summary="Monthly Forecast Breakdown",
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_monthly(
@@ -343,7 +343,7 @@ async def get_forecast_monthly(
     "/manager/forecast/quarterly",
     response_model=StandardResponse[list[QuarterlyProjectionRow]],
     summary="Quarterly Projection Matrix",
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_quarterly(
@@ -363,7 +363,7 @@ async def get_forecast_quarterly(
     "/manager/forecast/accuracy",
     response_model=StandardResponse[ForecastAccuracyStats],
     summary="Forecast Accuracy",
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_accuracy(
@@ -397,7 +397,7 @@ async def get_forecast_accuracy(
     "/manager/forecast/revenue-trend",
     response_model=StandardResponse[list[ForecastTrendPoint]],
     summary="Revenue Forecast Trend",
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_revenue_trend(
@@ -418,7 +418,7 @@ async def get_forecast_revenue_trend(
     "/manager/forecast/insights",
     response_model=StandardResponse[list[ForecastInsight]],
     summary="Forecast Insights",
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_insights(
@@ -437,7 +437,7 @@ async def get_forecast_insights(
     "/manager/forecast/risks",
     response_model=StandardResponse[list[ForecastRisk]],
     summary="Forecast Risks",
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_risks(
@@ -458,7 +458,7 @@ async def get_forecast_risks(
     "/manager/forecast/recommendations",
     response_model=StandardResponse[list[ForecastRecommendation]],
     summary="Forecast Recommendations",
-    dependencies=[Depends(require_role("admin"))],
+    dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
 async def get_forecast_recommendations(
