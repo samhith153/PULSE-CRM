@@ -67,3 +67,4 @@ mypy>=1.13.0
 groq>=0.6.0
 python-dotenv>=1.0.0
 alembic>=1.13
+supabase>=2.0.0
