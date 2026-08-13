@@ -2,33 +2,45 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Zap } from "lucide-react";
 import { AuthVisual } from "./AuthVisual";
+import Antigravity from "@/components/ui/Antigravity";
 
 export function AuthShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-surface-warm lg:grid lg:grid-cols-[minmax(0,47fr)_minmax(0,53fr)]">
-      <div className="flex flex-col px-6 py-8 sm:px-10 lg:px-14 lg:py-10">
-        <Link href="/" className="rise-in inline-flex w-fit items-center gap-2.5">
-          <div className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-color text-text-on-primary shadow-[0_8px_18px_-8px_var(--accent-color)]">
-            <Zap size={18} strokeWidth={2.6} />
-          </div>
-          <span className="text-lg font-bold tracking-tight text-text-primary animate-pulse-subtle">Pulse CRM</span>
-        </Link>
-
-        <div className="mesh-hero relative mt-6 h-24 overflow-hidden rounded-2xl lg:hidden">
-          <div aria-hidden className="pointer-events-none absolute inset-0">
-            <div className="mesh-blob drift-a -top-16 -left-8 size-64 bg-brand-purple" />
-            <div className="mesh-blob drift-b top-0 left-1/2 size-56 bg-brand-cyan" />
-          </div>
-        </div>
-
-        <div className="flex flex-1 items-center justify-center py-10">
-          <div className="w-full max-w-[400px]">{children}</div>
-        </div>
+    <div className="relative min-h-screen bg-surface-warm flex flex-col justify-center items-center px-4 sm:px-6 py-12 overflow-hidden">
+      {/* Antigravity background spanning the entire screen */}
+      <div className="pointer-events-none absolute inset-0 z-0">
+        <Antigravity
+          count={250}
+          magnetRadius={10}
+          ringRadius={9}
+          waveSpeed={0.4}
+          waveAmplitude={1}
+          particleSize={1.5}
+          lerpSpeed={0.05}
+          color="#131ed7"
+          autoAnimate
+          particleVariance={1}
+          rotationSpeed={0.1}
+          depthFactor={1}
+          pulseSpeed={3}
+          particleShape="capsule"
+          fieldStrength={10}
+        />
       </div>
 
-      <div className="hidden lg:block">
-        <div className="sticky top-0 h-screen overflow-hidden">
-          <AuthVisual />
+      <div className="relative z-10 flex flex-col w-full max-w-[400px]">
+        <div className="flex justify-center mb-6">
+          <Link href="/" className="rise-in inline-flex items-center gap-2.5">
+            <div className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-color text-text-on-primary shadow-[0_8px_18px_-8px_var(--accent-color)]">
+              <Zap size={18} strokeWidth={2.6} />
+            </div>
+            <span className="text-lg font-bold tracking-tight text-text-primary animate-pulse-subtle">Pulse CRM</span>
+          </Link>
+        </div>
+
+        {/* Card sitting nicely above the background */}
+        <div className="w-full rounded-3xl bg-white/92 p-7 shadow-xl border border-gray-100/50 backdrop-blur-sm">
+          {children}
         </div>
       </div>
     </div>
