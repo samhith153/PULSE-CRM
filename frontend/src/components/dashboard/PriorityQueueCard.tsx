@@ -69,8 +69,9 @@ export default function PriorityQueueCard({
 
   const tierColor = (tier?: string) => {
     if (tier === 'Hot') return 'bg-status-danger';
-    if (tier === 'Warm') return 'bg-status-warning/90';
-    return 'bg-muted-foreground/50';
+    if (tier === 'Warm') return 'bg-status-warning';
+    if (tier === 'Nurture') return 'bg-status-success';
+    return 'bg-accent-color';
   };
 
   return (
