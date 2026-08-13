@@ -82,7 +82,8 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
         {
           label: 'Settings',
           items: [
-            { name: 'Notifications', icon: Bell,     tab: 'notifications' },
+            { name: 'Settings',      icon: Settings,   tab: 'settings' },
+            { name: 'Notifications', icon: Bell,       tab: 'notifications' },
           ],
         },
       ];
@@ -118,6 +119,13 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
             { name: 'Audit Logs', icon: Activity,  tab: 'audit logs' },
           ],
         },
+        {
+          label: 'Settings',
+          items: [
+            { name: 'Settings',      icon: Settings,  tab: 'settings' },
+            { name: 'Notifications', icon: Bell,      tab: 'notifications' },
+          ],
+        },
       ];
 
     case 'sales_rep':
@@ -146,6 +154,13 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           items: [
             { name: 'Reports',   icon: BarChart3, tab: 'reports' },
             { name: 'Documents', icon: FileText,  tab: 'documents' },
+          ],
+        },
+        {
+          label: 'Settings',
+          items: [
+            { name: 'Settings',      icon: Settings,  tab: 'settings' },
+            { name: 'Notifications', icon: Bell,      tab: 'notifications' },
           ],
         },
       ];
