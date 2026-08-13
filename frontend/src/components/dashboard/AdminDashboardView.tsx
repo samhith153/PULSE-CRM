@@ -114,14 +114,14 @@ function Spark({ values, positive }: { values: number[]; positive: boolean }) {
   }
 
   const areaPath = `${linePath} L ${coords[n-1].x.toFixed(1)} 40 L 0 40 Z`;
-  const strokeColor = highlighted ? '#FFFFFF' : (positive ? 'var(--accent-color)' : 'var(--destructive)');
+  const strokeColor = positive ? 'var(--accent-color)' : 'var(--destructive)';
 
   return (
     <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-8 w-full overflow-visible" aria-hidden>
       <motion.path 
         d={areaPath} 
         fill={strokeColor} 
-        fillOpacity={highlighted ? "0.15" : "0.08"} 
+        fillOpacity="0.08" 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6 }}
@@ -638,8 +638,8 @@ function DonutChart({
   );
 }
 
-/* -- Main component -- */
-export default function AdminDashboardView() {
+/* ── Main component ── */
+export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSignal?: number } = {}) {
   const [data, setData]       = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -652,15 +652,15 @@ export default function AdminDashboardView() {
 
   useEffect(() => {
     let cancelled = false;
-    // Only show the full-page skeleton on the very first load; refetches
-    // triggered by the Lead Sources filter just show a small inline spinner.
-    if (!data) setLoading(true);
-    else setSourceLoading(true);
-    getAdminDashboard(leadSourcePeriod)
-      .then((d) => { if (!cancelled) { setData(d); setLoading(false); setSourceLoading(false); } })
-      .catch((e) => { if (!cancelled) { setError(e?.message ?? 'Failed to load'); setLoading(false); setSourceLoading(false); } });
+    // Silent background re-fetch on tab re-activation (refreshSignal > 0):
+    // keep showing existing data instead of flashing the skeleton.
+    if (data === null) setLoading(true);
+    getAdminDashboard()
+      .then((d) => { if (!cancelled) { setData(d); setLoading(false); } })
+      .catch((e) => { if (!cancelled) { setError(e?.message ?? 'Failed to load'); setLoading(false); } });
     return () => { cancelled = true; };
-  }, [leadSourcePeriod]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
 
   useEffect(() => {
     let cancelled = false;

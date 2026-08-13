@@ -64,6 +64,14 @@ def _get_shared_client(timeout: float | None = None) -> httpx.AsyncClient:
     return _shared_client
 
 
+async def close_shared_client() -> None:
+    """Close the shared httpx client at app shutdown (called by main.py lifespan)."""
+    global _shared_client
+    if _shared_client is not None and not _shared_client.is_closed:
+        await _shared_client.aclose()
+    _shared_client = None
+
+
 class AIClient:
     """Thin HTTP client wrapping the AI service endpoints."""
 

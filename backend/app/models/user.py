@@ -36,11 +36,15 @@ class User(Base, AuditMixin):
         String(255), nullable=False, index=True
     )
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    hashed_password: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     job_title: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     sales_quota: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+
+    # ── OAuth Integration ──────────────────────────────────────────────────────
+    google_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    auth_provider: Mapped[str] = mapped_column(String(50), default="password", nullable=False)
 
     # ΓöÇΓöÇ Tenancy ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     organization_id: Mapped[uuid.UUID] = mapped_column(

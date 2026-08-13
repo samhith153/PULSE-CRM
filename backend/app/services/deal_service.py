@@ -218,14 +218,11 @@ class DealService:
 
         # Trigger unified assessment if stage changed and deal has a linked lead
         if deal.lead_id and "pipeline_stage_id" in update_data:
-            try:
-                from app.services.ai_pipeline import run_lead_assessment
-                await run_lead_assessment(
-                    self.db, deal.lead_id, user.organization_id, deal.created_by,
-                    trigger="deal_stage_changed",
-                )
-            except Exception as e:
-                logger.warning("Failed to run assessment on deal stage change", extra={"deal_id": str(deal_id), "error": str(e)})
+            from app.services.lead_service import _enqueue_lead_ai
+            _enqueue_lead_ai(
+                deal.lead_id, user.organization_id, deal.created_by,
+                trigger="deal_stage_changed",
+            )
 
         return await self.get(deal_id, user)
 

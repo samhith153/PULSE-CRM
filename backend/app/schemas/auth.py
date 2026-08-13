@@ -102,4 +102,5 @@ class GoogleLoginRequest(BaseModel):
 
 class AuthConfigResponse(BaseModel):
     google_client_id: Optional[str] = None
+    google_redirect_uri: Optional[str] = None
 

@@ -89,6 +89,19 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [];
   },
+
+  // Proxy API calls through the frontend origin (same-origin).
+  // This eliminates CORS / hostname issues entirely: the Google auth
+  // button (and any relative /api/v1 call) works from localhost, the
+  // LAN address, or any device without a single "Failed to fetch".
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: `${backendUrl}/api/v1/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

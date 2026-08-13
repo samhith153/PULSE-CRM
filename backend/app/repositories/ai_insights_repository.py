@@ -27,7 +27,7 @@ from app.utils.enums import DealStatus
 
 
 # ── thresholds (no hardcoded business values — all configurable here) ─────────
-HIGH_VALUE_LEAD_SCORE     = 90
+HIGH_VALUE_LEAD_SCORE     = 70   # immediate actions: leads scoring >70 qualify
 HIGH_VALUE_DEAL_AMOUNT    = Decimal("100_000")
 HIGH_PROB_THRESHOLD       = 80
 NO_ACTIVITY_DAYS          = 3

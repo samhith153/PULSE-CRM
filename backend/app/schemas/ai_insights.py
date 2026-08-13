@@ -166,6 +166,7 @@ class ColdLeadItem(BaseModel):
     company: Optional[str] = None
     industry: Optional[str] = None
     pipeline_stage: Optional[str] = None
+    lead_score: int = 0                     # real AI lead score 0–100
     cold_score: int                         # 0–100
     risk: str                               # Critical | High Risk | Medium Risk | Low Risk | Healthy
     days_inactive: int

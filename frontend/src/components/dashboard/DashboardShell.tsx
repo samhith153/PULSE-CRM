@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useDashboardLayout, DashboardLayoutProvider } from '@/components/dashboard/DashboardLayoutContext';
@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboardOverview } from '@/hooks/use-dashboard';
 import { useCrmStream } from '@/hooks/use-crm-stream';
 
-// ── Lazy-loaded view components (code-split per tab) ──────────────────────
+// â”€â”€ Lazy-loaded view components (code-split per tab) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const HomeView = React.lazy(() => import('@/components/dashboard/HomeView'));
 const LeadsView = React.lazy(() => import('@/components/dashboard/LeadsView'));
 const CompaniesView = React.lazy(() => import('@/components/dashboard/CompaniesView'));
@@ -68,6 +68,12 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [dashboardSubTab, setDashboardSubTab] = useState('overview');
+
+  // Keep-alive: views already visited stay mounted (hidden) so tab switches
+  // don't tear down + refetch everything. refreshSignal bumps on each switch
+  // so dashboard-ish views can silently re-fetch their data in the background.
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set([defaultTab]));
+  const [refreshSignal, setRefreshSignal] = useState(0);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [reportType, setReportType] = useState('Sales Funnel');
@@ -85,13 +91,13 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     setActiveTab('emails');
   };
 
-  // ── Unified dashboard data hook (GET /api/v1/dashboard/me) ──────────────
-  // Only fetch for sales_rep role — manager and admin views make their own calls.
+  // â”€â”€ Unified dashboard data hook (GET /api/v1/dashboard/me) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Only fetch for sales_rep role â€” manager and admin views make their own calls.
   const dashboardOverview = useDashboardOverview();
   const dashboardData = requiredRole === 'sales_rep' ? dashboardOverview.data : null;
   const refetchDashboard = requiredRole === 'sales_rep' ? dashboardOverview.refetch : () => {};
 
-  // ── Real-time SSE stream — invalidates dashboardData on AI events ────────
+  // â”€â”€ Real-time SSE stream â€” invalidates dashboardData on AI events â”€â”€â”€â”€â”€â”€â”€â”€
   useCrmStream({
     enabled: authorized,
     onInvalidate: refetchDashboard,
@@ -104,7 +110,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
   // Auth & Role Protection Guard
   useEffect(() => {
     // Accept auth passed via query params from the landing page redirect.
-    // The token is included because sessionStorage does NOT cross origins —
+    // The token is included because sessionStorage does NOT cross origins â€”
     // landing page (8081) and dashboard (3000) are separate storage scopes.
     const params = new URLSearchParams(window.location.search);
     const authParam = params.get('auth');
@@ -124,7 +130,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
       sessionStorage.setItem('pulse-crm-auth', 'true');
       localStorage.setItem('pulse-crm-role', roleParam);
       if (emailParam) localStorage.setItem('pulse-crm-user', emailParam);
-      // Clean URL — remove sensitive tokens from address bar
+      // Clean URL — remove sensitive token from address bar
       window.history.replaceState({}, '', window.location.pathname);
     }
 
@@ -137,7 +143,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
       return;
     }
 
-    // Role mismatch — redirect to the correct dashboard
+    // Role mismatch â€” redirect to the correct dashboard
     if (role !== requiredRole) {
       let correctPath = '/dashboard';
       if (role === 'admin') correctPath = '/dashboard/admin';
@@ -148,6 +154,17 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
     setAuthorized(true);
   }, [requiredRole]);
+
+  // Keep visited tabs mounted + notify active views to refresh in background
+  useEffect(() => {
+    setVisitedTabs(prev => {
+      if (prev.has(activeTab)) return prev;
+      const next = new Set(prev);
+      next.add(activeTab);
+      return next;
+    });
+    setRefreshSignal(s => s + 1);
+  }, [activeTab]);
 
 // The DashboardLayoutContext now handles persistence.
 // No localStorage sync needed here.
@@ -242,84 +259,80 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           userRole={legacyRole}
         />
 
-        {/* ui.md §6: Content padding 2xl (32px) on all sides */}
+        {/* ui.md Â§6: Content padding 2xl (32px) on all sides */}
         <main className="flex-1 overflow-y-auto px-8 py-8 md:px-8 space-y-6">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-6 w-6 text-accent-color animate-spin" />
-            </div>
-          }>
-          {activeTab === 'home' ? (
+          {/* Keep-alive: every visited tab stays mounted (hidden when inactive),
+              so tab switches never tear down state or refetch everything. */}
+          {Array.from(visitedTabs).map((tab) => (
+            <div key={tab} className={tab === activeTab ? '' : 'hidden'}>
+              <Suspense fallback={
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="h-6 w-6 text-accent-color animate-spin" />
+                </div>
+              }>
+          {tab === 'home' ? (
             requiredRole === 'manager' ? (
-              <ManagerDashboardView onTabChange={setActiveTab} />
+              <ManagerDashboardView onTabChange={setActiveTab} refreshSignal={refreshSignal} />
             ) : requiredRole === 'admin' ? (
-              <AdminDashboardView />
+              <AdminDashboardView refreshSignal={refreshSignal} />
             ) : (
               <HomeView onTabChange={setActiveTab} dashboardData={dashboardData ?? undefined} />
             )
-          ) : activeTab === 'leads' ? (
+          ) : tab === 'leads' ? (
             <LeadsView onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
-          ) : activeTab === 'contacts' ? (
+          ) : tab === 'contacts' ? (
             <ContactsView onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
-          ) : activeTab === 'companies' ? (
+          ) : tab === 'companies' ? (
             <CompaniesView />
-          ) : activeTab === 'tasks' ? (
+          ) : tab === 'tasks' ? (
             <TasksView />
-          ) : (activeTab === 'deals' || activeTab === 'pipeline' || activeTab === 'team pipeline') ? (
+          ) : (tab === 'deals' || tab === 'pipeline' || tab === 'team pipeline') ? (
             <PipelineView />
-          ) : activeTab === 'products' ? (
+          ) : tab === 'products' ? (
             <ProductsView />
-          ) : activeTab === 'activities' ? (
+          ) : tab === 'activities' ? (
             <ActivitiesView activityId={activityId} onTabChange={setActiveTab} onComposeEmail={openEmailCompose} />
-          ) : activeTab === 'emails' ? (
+          ) : tab === 'emails' ? (
             <EmailsView onTabChange={setActiveTab} composeTarget={composeTarget} onComposeConsumed={() => setComposeTarget(null)} />
-          ) : activeTab === 'documents' ? (
+          ) : tab === 'documents' ? (
             <DocumentsView />
-          ) : activeTab === 'reports' ? (
+          ) : tab === 'reports' ? (
             requiredRole === 'manager' ? <ManagerReportsView /> :
             requiredRole === 'admin' ? <AdminReportsView /> :
             <ReportsView />
-          ) : activeTab === 'workflows' ? (
+          ) : tab === 'workflows' ? (
             <WorkflowsView />
-          ) : activeTab === 'ai insights' ? (
-            <AIInsightsView />
-          ) : activeTab === 'settings' ? (
+          ) : tab === 'ai insights' ? (
+            <AIInsightsView refreshSignal={refreshSignal} />
+          ) : tab === 'settings' ? (
             <SettingsView userRole={legacyRole} />
-          ) : activeTab === 'profile' ? (
+          ) : tab === 'profile' ? (
             <ProfileView userRole={legacyRole} />
-          ) : activeTab === 'notifications' ? (
+          ) : tab === 'notifications' ? (
             <NotificationsView />
-          ) : activeTab === 'calendar' ? (
+          ) : tab === 'calendar' ? (
             <CalendarView />
-          ) : activeTab === 'forecast' ? (
+          ) : tab === 'forecast' ? (
             <ForecastView />
-          ) : activeTab === 'my team' ? (
-            <MyTeamView />
-          ) : activeTab === 'team performance' ? (
+          ) : tab === 'team performance' ? (
             <TeamPerformanceView />
-          ) : activeTab === 'targets' ? (
-            <TargetsView />
-          ) : activeTab === 'teams' ? (
-            <TeamsView />
-          ) : activeTab === 'users' ? (
+          ) : tab === 'users' ? (
             <UsersView />
-          ) : activeTab === 'roles & permissions' ? (
+          ) : tab === 'roles & permissions' ? (
             <RolesPermissionsView />
-          ) : activeTab === 'integrations' ? (
+          ) : tab === 'integrations' ? (
             <IntegrationsView />
-          ) : activeTab === 'automation' ? (
+          ) : tab === 'automation' ? (
             <AutomationView />
-          ) : activeTab === 'ai models' ? (
+          ) : tab === 'ai models' ? (
             <AIModelsView />
-          ) : activeTab === 'audit logs' ? (
+          ) : tab === 'audit logs' ? (
             <AuditLogsView />
-          ) : activeTab === 'recycle bin' ? (
-            <RecycleBinView />
-          ) : activeTab === 'dashboard' && requiredRole === 'manager' ? (
-            <ManagerDashboardView onTabChange={setActiveTab} />
-          ) : activeTab === 'dashboard' && requiredRole === 'admin' ? (
-            <AdminDashboardView />
-          ) : activeTab === 'dashboard' ? (
+          ) : tab === 'dashboard' && requiredRole === 'manager' ? (
+            <ManagerDashboardView onTabChange={setActiveTab} refreshSignal={refreshSignal} />
+          ) : tab === 'dashboard' && requiredRole === 'admin' ? (
+            <AdminDashboardView refreshSignal={refreshSignal} />
+          ) : tab === 'dashboard' ? (
             <SalesRepDashboardView onTabChange={setActiveTab} />
           ) : (
             <>
@@ -336,7 +349,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                 <div className="flex shrink-0 flex-wrap gap-2 self-start md:self-auto">
                   <button className="inline-flex items-center gap-2 rounded-full border border-border-default bg-background px-4 py-2 text-xs font-medium text-ink transition-colors hover:bg-surface-2 cursor-pointer">
                     <Calendar size={14} className="text-text-muted" />
-                    <span className="tabular-nums">May 12 – May 18, 2026</span>
+                    <span className="tabular-nums">May 12 â€“ May 18, 2026</span>
                   </button>
                   <button
                     onClick={() => setIsCustomizerOpen(true)}
@@ -493,7 +506,9 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
               </div>
             </>
           )}
-          </Suspense>
+              </Suspense>
+            </div>
+          ))}
         </main>
       </div>
 

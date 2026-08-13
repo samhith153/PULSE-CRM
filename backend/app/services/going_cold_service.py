@@ -300,6 +300,7 @@ class GoingColdService:
             company=row.get("company_name"),
             industry=row.get("industry"),
             pipeline_stage=row.get("pipeline_stage"),
+            lead_score=int(row.get("lead_score") or 0),
             cold_score=cold_score,
             risk=risk,
             days_inactive=days_inactive,
