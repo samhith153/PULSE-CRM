@@ -112,7 +112,6 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = None
     GOOGLE_AUTH_REDIRECT_URI: Optional[str] = "http://localhost:8000/api/v1/auth/google/callback"
-    GOOGLE_WEBHOOK_SECRET: Optional[str] = None
     GMAIL_TOKEN_ENCRYPTION_KEY: Optional[str] = None
     GOOGLE_PROJECT_ID: Optional[str] = None
     FRONTEND_URL: str = "http://localhost:3000"

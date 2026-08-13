@@ -27,12 +27,6 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
   // Load public auth configurations
   useEffect(() => {
     if (!isOpen) return;
-    // Use the env var immediately so the button renders without a round-trip
-    const envId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? null;
-    if (envId) {
-      setGoogleClientId(envId);
-      return;
-    }
     getAuthConfig()
       .then(config => {
         if (config.google_client_id) setGoogleClientId(config.google_client_id);

@@ -16,18 +16,16 @@ logger = get_logger(__name__)
 
 router = APIRouter()
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL")
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 BUCKET_NAME = "documents"
 
 
 def get_supabase() -> Client:
-    if not SUPABASE_URL or not SUPABASE_KEY:
+    if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
         raise HTTPException(
             status_code=503,
             detail="Supabase is not configured. Set SUPABASE_URL and SUPABASE_KEY."
         )
-    return create_client(SUPABASE_URL, SUPABASE_KEY)
+    return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
 
 
 @router.post(

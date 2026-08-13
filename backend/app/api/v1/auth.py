@@ -311,7 +311,7 @@ async def google_oauth_callback(
         )
 
         # Redirect to frontend with tokens
-        frontend_url = settings.FRONTEND_URL or "http://localhost:3000"
+        frontend_url = settings.FRONTEND_URL
         redirect_url = (
             f"{frontend_url}/auth/google/callback"
             f"?access_token={tokens['access_token']}"
@@ -322,7 +322,7 @@ async def google_oauth_callback(
     except UnauthorizedException as e:
         # Invalid state or Google error
         from urllib.parse import quote as _url_quote
-        frontend_url = settings.FRONTEND_URL or "http://localhost:3000"
+        frontend_url = settings.FRONTEND_URL
         error_url = f"{frontend_url}/auth/google/error?message={_url_quote(str(e))}"
         return RedirectResponse(url=error_url, status_code=302)
 
@@ -333,7 +333,7 @@ async def google_oauth_callback(
         logger = get_logger(__name__)
         logger.error("Google OAuth callback error", extra={"error": str(e)})
 
-        frontend_url = settings.FRONTEND_URL or "http://localhost:3000"
+        frontend_url = settings.FRONTEND_URL
         error_url = f"{frontend_url}/auth/google/error?message={_url_quote('Authentication failed. Please try again.')}"
         return RedirectResponse(url=error_url, status_code=302)
 

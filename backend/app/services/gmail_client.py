@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import hmac
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlencode
@@ -160,14 +159,6 @@ class GmailClient:
 
     def token_expiry(self, token_response: dict[str, Any]) -> datetime:
         return datetime.now(timezone.utc) + timedelta(seconds=int(token_response.get("expires_in") or 3600))
-
-    def verify_webhook_signature(self, body: bytes, signature: str | None) -> bool:
-        if not settings.GOOGLE_WEBHOOK_SECRET:
-            return True
-        if not signature:
-            return False
-        expected = hmac.new(settings.GOOGLE_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
-        return hmac.compare_digest(expected, signature)
 
     def _ensure_oauth_configured(self) -> None:
         if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET or not settings.GOOGLE_REDIRECT_URI:

@@ -14,7 +14,6 @@ The app currently polls Gmail every 5 minutes via `poll_gmail_replies()` in `mai
 
 **What already exists:**
 - `POST /api/v1/gmail/webhook` endpoint (receives Pub/Sub notifications)
-- `GmailClient.verify_webhook_signature()` (validates Pub/Sub payloads)
 - `email_service.webhook_sync()` (processes webhook-triggered sync)
 - Full OAuth2 flow (`/gmail/oauth/login` + `/gmail/oauth/callback`)
 
@@ -214,9 +213,6 @@ GOOGLE_REDIRECT_URI=https://your-domain.com/api/v1/gmail/oauth/callback
 
 # Gmail token encryption (generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
 GMAIL_TOKEN_ENCRYPTION_KEY=your-generated-key
-
-# Pub/Sub webhook verification (optional, for signature validation)
-GOOGLE_WEBHOOK_SECRET=your-webhook-secret
 
 # Google Cloud project (for Pub/Sub topic path)
 GOOGLE_PROJECT_ID=pulse-crm-12345
