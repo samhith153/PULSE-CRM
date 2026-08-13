@@ -50,7 +50,10 @@ export function useCurrentUser() {
     setLoading(true);
     getCurrentUser()
       .then((me) => setUser(me as CurrentUserProfile))
-      .catch(() => setUser(null))
+      .catch(() => {
+        setUser(null);
+        toast.error('Unable to load user profile.');
+      })
       .finally(() => setLoading(false));
   };
 

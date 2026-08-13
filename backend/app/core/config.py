@@ -63,6 +63,7 @@ class Settings(BaseSettings):
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
 
     DATABASE_URL: str
+    DIRECT_URL: Optional[str] = None
     DATABASE_POOL_SIZE: int = 25
     DATABASE_MAX_OVERFLOW: int = 20
     DATABASE_POOL_TIMEOUT: int = 20

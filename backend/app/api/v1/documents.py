@@ -1,8 +1,11 @@
-﻿import os
+﻿import asyncio
+import os
+from datetime import datetime, timezone, timedelta
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, UploadFile, File, Form, status, HTTPException, Response, Query, Depends
 from typing import Optional
+from pydantic import BaseModel
 from sqlalchemy import select
 from supabase import create_client, Client
 
@@ -18,6 +21,8 @@ router = APIRouter()
 
 BUCKET_NAME = "documents"
 
+SIGNED_URL_EXPIRY_SECONDS = 3600
+
 
 def get_supabase() -> Client:
     if not settings.SUPABASE_URL or not settings.SUPABASE_KEY:
@@ -26,6 +31,11 @@ def get_supabase() -> Client:
             detail="Supabase is not configured. Set SUPABASE_URL and SUPABASE_KEY."
         )
     return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+
+
+class SignedUrlResponse(BaseModel):
+    url: str
+    expires_at: str
 
 
 @router.post(
@@ -43,21 +53,23 @@ async def upload_document(
     company_id: Optional[UUID] = Form(None)
 ):
     file_extension = file.filename.split(".")[-1] if "." in file.filename else "bin"
-    # Group files by organization ID in the cloud bucket for better security and organization
     safe_filename = f"{current_user.organization_id}/{uuid4()}.{file_extension}"
-    
+
     file_bytes = await file.read()
-    
+
     try:
-        # Stream directly into Supabase Storage
-        get_supabase().storage.from_(BUCKET_NAME).upload(
+        # The supabase client is synchronous (blocking HTTP) — run the request
+        # in a worker thread so it never blocks the event loop.
+        storage = get_supabase().storage.from_(BUCKET_NAME)
+        await asyncio.to_thread(
+            storage.upload,
             path=safe_filename,
             file=file_bytes,
-            file_options={"content-type": file.content_type}
+            file_options={"content-type": file.content_type},
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cloud storage upload failed: {str(e)}")
-        
+
     new_doc = Document(
         organization_id=current_user.organization_id,
         uploaded_by=current_user.id,
@@ -92,11 +104,46 @@ async def list_documents(
         query = query.where(Document.deal_id == deal_id)
     if company_id:
         query = query.where(Document.company_id == company_id)
-        
+
     query = query.order_by(Document.created_at.desc())
-    
+
     result = await db.execute(query)
     return result.scalars().all()
+
+
+@router.get(
+    "/{doc_id}/url",
+    response_model=SignedUrlResponse,
+    dependencies=[Depends(require_permission("document:read"))],
+)
+async def get_signed_url(doc_id: UUID, current_user: CurrentUser, db: DBSession):
+    query = select(Document).where(
+        Document.id == doc_id,
+        Document.organization_id == current_user.organization_id
+    )
+    result = await db.execute(query)
+    doc = result.scalar_one_or_none()
+
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    try:
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=SIGNED_URL_EXPIRY_SECONDS)
+        storage = get_supabase().storage.from_(BUCKET_NAME)
+        signed = await asyncio.to_thread(
+            storage.create_signed_url,
+            path=doc.file_path,
+            expires_in=SIGNED_URL_EXPIRY_SECONDS,
+        )
+        signed_url = signed.get("signedURL") or signed.get("signed_url") or signed.get("url", "")
+        if not signed_url:
+            raise HTTPException(status_code=500, detail="Failed to generate signed URL")
+        return SignedUrlResponse(url=signed_url, expires_at=expires_at.isoformat())
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Failed to create signed URL for document %s", doc_id)
+        raise HTTPException(status_code=500, detail=f"Signed URL generation failed: {str(e)}")
 
 
 @router.get(
@@ -105,19 +152,26 @@ async def list_documents(
 )
 async def download_document(doc_id: UUID, current_user: CurrentUser, db: DBSession):
     query = select(Document).where(
-        Document.id == doc_id, 
+        Document.id == doc_id,
         Document.organization_id == current_user.organization_id
     )
     result = await db.execute(query)
     doc = result.scalar_one_or_none()
-    
+
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found in database")
-        
+
     try:
-        # Fetch file bytes from cloud storage securely
-        file_bytes = get_supabase().storage.from_(BUCKET_NAME).download(doc.file_path)
-        return Response(content=file_bytes, media_type=doc.file_type)
+        storage = get_supabase().storage.from_(BUCKET_NAME)
+        file_bytes = await asyncio.to_thread(storage.download, doc.file_path)
+        return Response(
+            content=file_bytes,
+            media_type=doc.file_type,
+            headers={
+                "Content-Disposition": f'attachment; filename="{doc.file_name}"',
+                "Content-Length": str(len(file_bytes)),
+            },
+        )
     except Exception:
         raise HTTPException(status_code=404, detail="File missing from cloud storage")
 
@@ -129,20 +183,20 @@ async def download_document(doc_id: UUID, current_user: CurrentUser, db: DBSessi
 )
 async def delete_document(doc_id: UUID, current_user: CurrentUser, db: DBSession):
     query = select(Document).where(
-        Document.id == doc_id, 
+        Document.id == doc_id,
         Document.organization_id == current_user.organization_id
     )
     result = await db.execute(query)
     doc = result.scalar_one_or_none()
-    
+
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-        
+
     try:
-        # Delete from cloud storage bucket
-        get_supabase().storage.from_(BUCKET_NAME).remove([doc.file_path])
+        storage = get_supabase().storage.from_(BUCKET_NAME)
+        await asyncio.to_thread(storage.remove, [doc.file_path])
     except Exception as e:
         logger.warning("Failed to delete cloud file: %s", e)
-        
+
     await db.delete(doc)
     await db.commit()

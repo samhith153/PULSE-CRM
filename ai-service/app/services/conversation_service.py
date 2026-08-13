@@ -9,19 +9,19 @@ import os
 from typing import Dict, Any, List
 from datetime import datetime
 
-from groq import Groq
+from groq import AsyncGroq
 
 
 _groq_client = None
 
 
-def _get_client() -> Groq:
+def _get_client() -> AsyncGroq:
     global _groq_client
     if _groq_client is None:
         api_key = os.getenv("GROQ_API_KEY") or os.getenv("SUMMARIZATION_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY or SUMMARIZATION_API_KEY environment variable is not set")
-        _groq_client = Groq(api_key=api_key)
+        _groq_client = AsyncGroq(api_key=api_key)
     return _groq_client
 
 
@@ -197,8 +197,8 @@ def parse_response(response_text: str) -> Dict[str, Any]:
         }
 
 
-def summarise_thread(thread: Dict[str, Any]) -> str:
-    """Summarise an email thread using Groq. Returns the raw summary text."""
+async def summarise_thread(thread: Dict[str, Any]) -> str:
+    """Summarise an email thread using Groq (async). Returns the raw summary text."""
     messages = []
     for msg in thread.get("inbound", []):
         messages.append({
@@ -222,7 +222,7 @@ def summarise_thread(thread: Dict[str, Any]) -> str:
 
     prompt = create_prompt(messages)
 
-    response = _get_client().chat.completions.create(
+    response = await _get_client().chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
@@ -311,7 +311,7 @@ def parse_draft_response(response_text: str) -> Dict[str, str]:
         }
 
 
-def generate_outreach_draft(
+async def generate_outreach_draft(
     recipient_name: str,
     recipient_email: str,
     company: str = "",
@@ -320,7 +320,7 @@ def generate_outreach_draft(
     context: str = "",
     sender_name: str = "",
 ) -> Dict[str, str]:
-    """Generate a fresh outreach email (subject + body) using Groq."""
+    """Generate a fresh outreach email (subject + body) using Groq (async)."""
     prompt = create_draft_prompt(
         recipient_name=recipient_name,
         recipient_email=recipient_email,
@@ -331,7 +331,7 @@ def generate_outreach_draft(
         sender_name=sender_name,
     )
 
-    response = _get_client().chat.completions.create(
+    response = await _get_client().chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[
             {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},

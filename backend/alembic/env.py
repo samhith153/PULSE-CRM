@@ -34,8 +34,9 @@ def do_run_migrations(connection):
 
 
 def run_migrations_offline():
+    url = getattr(settings, "DIRECT_URL", None) or settings.DATABASE_URL
     context.configure(
-        url=settings.DATABASE_URL,
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
     )
@@ -45,13 +46,14 @@ def run_migrations_offline():
 
 
 async def run():
+    migration_url = getattr(settings, "DIRECT_URL", None) or settings.DATABASE_URL
     connect_args = {}
     connect_args["statement_cache_size"] = 0
-    if settings.DATABASE_URL.startswith("postgresql") and "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATABASE_URL:
+    if migration_url.startswith("postgresql") and "localhost" not in migration_url and "127.0.0.1" not in migration_url:
         connect_args["ssl"] = ssl_context
 
     engine = create_async_engine(
-        settings.DATABASE_URL,
+        migration_url,
         poolclass=pool.NullPool,
         connect_args=connect_args,
     )

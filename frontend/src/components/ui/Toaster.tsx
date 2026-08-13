@@ -2,18 +2,20 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { _setAddToast, toast as toastModule, type ToastItem, type ToastType } from '@/lib/toast';
-import { X, CheckCircle, AlertCircle, Info } from 'lucide-react';
+import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
 
 const ICONS: Record<ToastType, React.ReactNode> = {
   success: <CheckCircle className="h-4 w-4 text-status-success-text" />,
   error: <AlertCircle className="h-4 w-4 text-status-danger-text" />,
   info: <Info className="h-4 w-4 text-status-info-text" />,
+  warning: <AlertTriangle className="h-4 w-4 text-status-warning-text" />,
 };
 
 const BORDER_COLORS: Record<ToastType, string> = {
   success: 'border-l-status-success-text',
   error: 'border-l-status-danger-text',
   info: 'border-l-status-info-text',
+  warning: 'border-l-status-warning-text',
 };
 
 let nextId = 1;

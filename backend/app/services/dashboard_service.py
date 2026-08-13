@@ -1236,17 +1236,13 @@ class DashboardService:
                 User.is_deleted.is_(False),
             ]
 
-        async def _deal_count(*extra):
-            r = await self.db.execute(
-                select(func.count(Deal.id)).where(*_deal_base(*extra))
-            )
-            return int(r.scalar_one() or 0)
-
-        async def _deal_sum(*extra):
-            r = await self.db.execute(
-                select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0)).where(*_deal_base(*extra))
-            )
-            return Decimal(str(r.scalar_one() or 0))
+        # NOTE: We deliberately do NOT use asyncio.gather over this single
+        # AsyncSession — asyncpg forbids concurrent operations on one connection
+        # ("cannot perform operation: another operation is in progress", see
+        # asyncpg.connection._Atomic; the same reason sales_rep_command_center
+        # reverted gather to sequential). Instead, independent queries are
+        # collapsed into single statements using FILTER (WHERE ...) aggregates,
+        # which cuts sequential round-trips without adding connections.
 
         # -- Team members: sales reps explicitly assigned to this manager. -----
         # Hierarchical scoping: a manager sees ONLY the reps assigned to them
@@ -1290,21 +1286,38 @@ class DashboardService:
         total_members = len(team_member_ids)
 
         # -- 1. Team Revenue Won (scoped to selected period) ------------------
-        team_revenue_won = await _deal_sum(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= period_start,
-            Deal.closed_at < now,
-        )
-        prev_period_won = await _deal_sum(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= prev_period_start,
-            Deal.closed_at < prev_period_end,
-        )
-        this_month_won = await _deal_sum(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= month_start,
-            Deal.closed_at < now,
-        )
+        # Single statement: three FILTER (WHERE ...) aggregates instead of three
+        # sequential round-trips.
+        revenue_stmt = select(
+            func.coalesce(
+                func.sum(func.coalesce(Deal.value, Deal.amount, 0)).filter(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= period_start,
+                    Deal.closed_at < now,
+                ),
+                0,
+            ).label("team_revenue_won"),
+            func.coalesce(
+                func.sum(func.coalesce(Deal.value, Deal.amount, 0)).filter(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= prev_period_start,
+                    Deal.closed_at < prev_period_end,
+                ),
+                0,
+            ).label("prev_period_won"),
+            func.coalesce(
+                func.sum(func.coalesce(Deal.value, Deal.amount, 0)).filter(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= month_start,
+                    Deal.closed_at < now,
+                ),
+                0,
+            ).label("this_month_won"),
+        ).where(*_deal_base())
+        _revenue_row = (await self.db.execute(revenue_stmt)).one()
+        team_revenue_won = Decimal(str(_revenue_row.team_revenue_won or 0))
+        prev_period_won = Decimal(str(_revenue_row.prev_period_won or 0))
+        this_month_won = Decimal(str(_revenue_row.this_month_won or 0))
         # Target: heuristic = prev period revenue * 1.2 (adjustable)
         team_target = max(prev_period_won * Decimal("1.2"), Decimal("1"))
         achievement_pct = self._percentage(int(team_revenue_won), int(team_target))
@@ -1319,7 +1332,12 @@ class DashboardService:
         )
 
         # -- 2. Forecast Projection --------------------------------------------
-        # SUM(amount * probability/100) for open deals
+        # Combined single statement: forecast + quarter revenue + pipeline
+        # aggregates (5 sequential queries → 1).
+        quarter_month = ((now.month - 1) // 3) * 3 + 1
+        quarter_start = now.replace(
+            month=quarter_month, day=1, hour=0, minute=0, second=0, microsecond=0
+        )
         forecast_stmt = select(
             func.coalesce(
                 func.sum(
@@ -1330,26 +1348,40 @@ class DashboardService:
                         ),
                         else_=0,
                     )
+                ).filter(
+                    Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
                 ),
                 0,
+            ).label("projected_revenue"),
+            func.coalesce(
+                func.sum(func.coalesce(Deal.value, Deal.amount, 0)).filter(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= quarter_start,
+                ),
+                0,
+            ).label("quarter_rev"),
+            func.coalesce(
+                func.sum(func.coalesce(Deal.value, Deal.amount, 0)).filter(
+                    Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
+                ),
+                0,
+            ).label("active_pipeline_value"),
+            func.count(Deal.id)
+            .filter(Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]))
+            .label("total_active_deals"),
+            func.count(Deal.id)
+            .filter(
+                Deal.probability >= 50,
+                Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
             )
-        ).where(
-            *_deal_base(),
-            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
-        )
-        projected_revenue = Decimal(
-            str((await self.db.execute(forecast_stmt)).scalar_one() or 0)
-        )
-
-        # Quarter revenue = WON deals in the current quarter
-        quarter_month = ((now.month - 1) // 3) * 3 + 1
-        quarter_start = now.replace(
-            month=quarter_month, day=1, hour=0, minute=0, second=0, microsecond=0
-        )
-        quarter_rev = await _deal_sum(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= quarter_start,
-        )
+            .label("high_prob_deals"),
+        ).where(*_deal_base())
+        _forecast_row = (await self.db.execute(forecast_stmt)).one()
+        projected_revenue = Decimal(str(_forecast_row.projected_revenue or 0))
+        quarter_rev = Decimal(str(_forecast_row.quarter_rev or 0))
+        active_pipeline_value = Decimal(str(_forecast_row.active_pipeline_value or 0))
+        total_active_deals = int(_forecast_row.total_active_deals or 0)
+        high_prob_deals = int(_forecast_row.high_prob_deals or 0)
         # Accuracy = actual / projected (capped at 100)
         forecast_accuracy = self._percentage(
             int(team_revenue_won), max(int(projected_revenue), 1)
@@ -1368,13 +1400,8 @@ class DashboardService:
         )
 
         # -- 3. Pipeline Health ------------------------------------------------
-        active_pipeline_value = await _deal_sum(
-            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
-        )
-        total_active_deals = await _deal_count(
-            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
-        )
-
+        # active_pipeline_value / total_active_deals / high_prob_deals are
+        # computed in the combined forecast_stmt above.
         stage_stmt = (
             select(Deal.status, func.count(Deal.id), func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0))
             .where(*_deal_base())
@@ -1392,10 +1419,6 @@ class DashboardService:
             for r in stage_rows
         ]
         # Health score: percentage of deals with probability > 50
-        high_prob_deals = await _deal_count(
-            Deal.probability >= 50,
-            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
-        )
         health_score = self._percentage(high_prob_deals, max(total_active_deals, 1))
 
         pipeline_health = ManagerPipelineHealth(
@@ -1528,24 +1551,31 @@ class DashboardService:
             prev_rev = m_rev
 
         # -- 7. Top 5 Performing Reps -----------------------------------------
+        # One grouped query for all team members replaces the 2-per-rep N+1
+        # loop below (up to 10 sequential queries).
+        rep_deal_counts_stmt = select(
+            Deal.owner_id,
+            func.count(Deal.id)
+            .filter(Deal.status == DealStatus.WON.value)
+            .label("won_count"),
+            func.count(Deal.id).label("total_count"),
+        ).where(
+            Deal.owner_id.in_(team_member_ids),
+            Deal.organization_id == organization_id,
+            Deal.is_active.is_(True),
+            Deal.is_deleted.is_(False),
+        ).group_by(Deal.owner_id)
+        rep_deal_counts: dict[UUID, tuple[int, int]] = {
+            owner_id: (int(won or 0), int(total or 0))
+            for owner_id, won, total in (await self.db.execute(rep_deal_counts_stmt)).all()
+        }
+
         top_reps: list[ManagerTopRep] = []
         for rank, row in enumerate(rep_rows[:5], start=1):
             total_rep_deals = int(row[2] or 1) if row[2] else 1
             won_rev = Decimal(str(row[3] or 0))
-            # Count won deals for conversion rate
-            won_count_stmt = select(func.count(Deal.id)).where(
-                Deal.owner_id == row[0],
-                Deal.status == DealStatus.WON.value,
-                Deal.is_active.is_(True),
-                Deal.is_deleted.is_(False),
-            )
-            won_count = int((await self.db.execute(won_count_stmt)).scalar_one() or 0)
-            total_rep_count_stmt = select(func.count(Deal.id)).where(
-                Deal.owner_id == row[0],
-                Deal.is_active.is_(True),
-                Deal.is_deleted.is_(False),
-            )
-            total_rep_count = int((await self.db.execute(total_rep_count_stmt)).scalar_one() or 0)
+            # Count won deals for conversion rate (from the grouped query above)
+            won_count, total_rep_count = rep_deal_counts.get(row[0], (0, 0))
             rep_target_val = assigned_targets.get(row[0], fallback_rep_target)
             top_reps.append(
                 ManagerTopRep(
@@ -1633,16 +1663,27 @@ class DashboardService:
                 )
             )
 
-        # Alert: forecast dropped vs last week
-        last_week_rev = await _deal_sum(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= week_start - timedelta(weeks=1),
-            Deal.closed_at < week_start,
-        )
-        this_week_rev = await _deal_sum(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= week_start,
-        )
+        # Alert: forecast dropped vs last week (combined single statement)
+        week_rev_stmt = select(
+            func.coalesce(
+                func.sum(func.coalesce(Deal.value, Deal.amount, 0)).filter(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= week_start - timedelta(weeks=1),
+                    Deal.closed_at < week_start,
+                ),
+                0,
+            ).label("last_week_rev"),
+            func.coalesce(
+                func.sum(func.coalesce(Deal.value, Deal.amount, 0)).filter(
+                    Deal.status == DealStatus.WON.value,
+                    Deal.closed_at >= week_start,
+                ),
+                0,
+            ).label("this_week_rev"),
+        ).where(*_deal_base())
+        _week_rev_row = (await self.db.execute(week_rev_stmt)).one()
+        last_week_rev = Decimal(str(_week_rev_row.last_week_rev or 0))
+        this_week_rev = Decimal(str(_week_rev_row.this_week_rev or 0))
         if this_week_rev < last_week_rev * Decimal("0.8"):
             alerts.append(
                 ManagerAlert(
@@ -1705,14 +1746,24 @@ class DashboardService:
         ]
 
         # -- 11. Team Performance Metrics --------------------------------------
-        total_deals_count = await _deal_count()
-        won_deals_count = await _deal_count(Deal.status == DealStatus.WON.value)
-        lost_deals_count = await _deal_count(Deal.status == DealStatus.LOST.value)
-
-        avg_deal_size_stmt = select(func.coalesce(func.avg(Deal.amount), 0)).where(
-            *_deal_base(), Deal.status == DealStatus.WON.value
-        )
-        avg_deal_size = Decimal(str((await self.db.execute(avg_deal_size_stmt)).scalar_one() or 0))
+        # Combined single statement: total/won/lost counts + average deal size.
+        metrics_stmt = select(
+            func.count(Deal.id).label("total_deals_count"),
+            func.count(Deal.id)
+            .filter(Deal.status == DealStatus.WON.value)
+            .label("won_deals_count"),
+            func.count(Deal.id)
+            .filter(Deal.status == DealStatus.LOST.value)
+            .label("lost_deals_count"),
+            func.coalesce(
+                func.avg(Deal.amount).filter(Deal.status == DealStatus.WON.value), 0
+            ).label("avg_deal_size"),
+        ).where(*_deal_base())
+        _metrics_row = (await self.db.execute(metrics_stmt)).one()
+        total_deals_count = int(_metrics_row.total_deals_count or 0)
+        won_deals_count = int(_metrics_row.won_deals_count or 0)
+        lost_deals_count = int(_metrics_row.lost_deals_count or 0)
+        avg_deal_size = Decimal(str(_metrics_row.avg_deal_size or 0))
 
         # Average sales cycle: AVG(days between lead.created_at and deal.closed_at)
         cycle_stmt = select(

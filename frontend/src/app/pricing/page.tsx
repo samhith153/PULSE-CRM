@@ -1,7 +1,8 @@
 'use client';
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/navigation/Navbar';
-import { PageContainer, useModal } from '@/components/shared/PageTemplates';
+import { PageContainer } from '@/components/shared/PageTemplates';
 import { Check, ChevronDown } from 'lucide-react';
 
 /* ── plan data ─────────────────────────────────────── */
@@ -99,11 +100,11 @@ export default function PricingPage() {
 
 function PricingContent() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const { openModal } = useModal();
+  const router = useRouter();
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#EFF6FF', minHeight: '100vh', marginTop: -64 }}>
-      <Navbar onOpenModal={() => openModal('signin')} onOpenSignUp={() => openModal('signup')} />
+      <Navbar onOpenModal={() => router.push('/login')} onOpenSignUp={() => router.push('/signup')} />
 
       {/* ── HEADER ── */}
       <section style={{ paddingTop: 120, paddingBottom: 64, textAlign: 'center', background: '#EFF6FF' }}>
@@ -235,7 +236,7 @@ function PricingContent() {
 
               {/* CTA button */}
               <button
-                onClick={() => openModal('signup')}
+                onClick={() => router.push('/signup')}
                 style={{
                   width: '100%', padding: '14px',
                   borderRadius: 12, border: 'none',
@@ -357,7 +358,7 @@ function PricingContent() {
           </p>
           <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
             <button
-              onClick={() => openModal('signup')}
+              onClick={() => router.push('/signup')}
               style={{
                 padding: '14px 32px', background: '#ffffff', color: '#2563EB',
                 fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none',

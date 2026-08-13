@@ -337,14 +337,24 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit, _retry = tru
 }
 
 async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry = true): Promise<T> {
-  let res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-      ...(options?.headers || {})
-    }
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+        ...(options?.headers || {})
+      }
+    });
+  } catch (err: any) {
+    // Network error — server unreachable, DNS failure, CORS block, etc.
+    const msg = err?.message === 'Failed to fetch'
+      ? 'Network error — could not reach the server. Please check your connection.'
+      : `Network error: ${err?.message || 'Unknown failure'}`;
+    toast.error(msg, { duration: 6000 });
+    throw new Error(msg);
+  }
 
   // On 401, attempt a single silent refresh then retry
   if (res.status === 401 && _retry) {
@@ -369,6 +379,7 @@ async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry
   }
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
+    let errorDetail = '';
     try {
       const body = await res.json();
       if (body?.message) message = body.message;
@@ -381,14 +392,25 @@ async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry
           message = d.message;
         }
       }
+      errorDetail = body?.error_code || '';
     } catch {
     }
+    // Show a toast for every non-2xx error so failures are never silent.
     if (res.status === 403) {
       toast.error(`Permission denied: ${message}`);
     } else if (res.status === 429) {
       toast.error('Too many requests. Please wait a moment and try again.');
+    } else if (res.status === 401) {
+      // Should not reach here (handled above), but guard anyway.
+      toast.error('Authentication required.');
+    } else if (res.status === 404) {
+      toast.warning(`Not found: ${message}`);
+    } else if (res.status === 422 || res.status === 400) {
+      toast.warning(message);
     } else if (res.status >= 500) {
       toast.error(`Server error: ${message}`);
+    } else {
+      toast.warning(message);
     }
     throw new Error(message);
   }
@@ -428,6 +450,13 @@ export async function updateLead(leadId: string, leadData: Record<string, unknow
   return apiFetch<Lead>(`/api/v1/leads/${leadId}`, {
     method: 'PUT',
     body: JSON.stringify(leadData)
+  });
+}
+
+export async function updateLeadStatus(leadId: string, status: string, closeReason?: string): Promise<Lead> {
+  return apiFetch<Lead>(`/api/v1/leads/${leadId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, close_reason: closeReason || undefined })
   });
 }
 
@@ -1028,6 +1057,28 @@ export interface AdminDashboardData {
   top_companies: { company_id: string; name: string; revenue: Decimal; lead_count: number; contact_count: number }[];
   recent_activities: { id: string; action: string; title: string; entity_type: string; created_at: string; created_by: string | null }[];
   notifications: { overdue_tasks: number; todays_meetings: number; pending_approvals: number; high_priority_leads: number; system_alerts: number };
+  user_management?: {
+    active_seats: number;
+    invites_pending?: number;
+    role_distribution: { role_name: string; count: number }[];
+  };
+  system_health?: {
+    services: { service: string; status: string; message?: string }[];
+    critical_logs_24h?: number;
+    warning_logs_24h?: number;
+  };
+  data_quality?: {
+    duplicates_detected: number;
+    incomplete_fields: number;
+    orphaned_leads: number;
+  };
+  license_usage?: {
+    storage_used?: number;
+    storage_limit?: number;
+    active_seats: number;
+    seat_limit?: number;
+    usage_percentage?: number;
+  };
 }
 
 export interface ManagerDashboardData {
@@ -1588,7 +1639,7 @@ export async function uploadDocument(file: File, params: { contact_id?: string; 
     if (value) formData.append(key, value);
   });
   const token = getToken();
-  const res = await fetch(`${API_BASE_URL}/api/v1/documents`, {
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
@@ -1607,6 +1658,10 @@ export async function deleteDocument(docId: string): Promise<void> {
 
 export function getDocumentDownloadUrl(docId: string): string {
   return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
+}
+
+export async function getDocumentSignedUrl(docId: string): Promise<{ url: string; expires_at: string }> {
+  return apiFetch<{ url: string; expires_at: string }>(`/api/v1/documents/${docId}/url`);
 }
 
 export async function uploadAvatar(file: File): Promise<{ url: string }> {

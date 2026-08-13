@@ -11,16 +11,13 @@ import React, { useState, useEffect, useCallback } from 'react';import {
   Ban,
   RefreshCw,
   Loader2,
-  Archive,
-  Undo2,
   UserCog
 } from 'lucide-react';
 import {
   UserData, RoleData,
   getUsers, createUser, updateUser, deleteUser,
   activateUser, deactivateUser, assignUserRole, resetUserPassword,
-  getRoles, getDeletedUsers, restoreUser, permanentDeleteUser,
-  getManagers, assignUserManager
+  getRoles, getManagers, assignUserManager
 } from '@/utils/api';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from '@/lib/toast';
@@ -28,16 +25,12 @@ import { toast } from '@/lib/toast';
 export default function UsersView() {
   const { user: currentUser } = useCurrentUser();
   const [users, setUsers] = useState<UserData[]>([]);
-  const [deletedUsers, setDeletedUsers] = useState<UserData[]>([]);
   const [roles, setRoles] = useState<RoleData[]>([]);
   const [managers, setManagers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [deletedPage, setDeletedPage] = useState(1);
-  const [deletedTotal, setDeletedTotal] = useState(0);
-  const [showArchived, setShowArchived] = useState(false);
   const pageSize = 20;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,8 +42,6 @@ export default function UsersView() {
   const [form, setForm] = useState({
     full_name: '', email: '', password: '', role_id: '' as string, manager_id: '' as string
   });
-
-  const isAdmin = currentUser?.roles?.includes('admin') ?? false;
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -67,18 +58,6 @@ export default function UsersView() {
       setLoading(false);
     }
   }, [page, currentUser]);
-
-  const loadDeletedUsers = useCallback(async () => {
-    if (!isAdmin) return;
-    try {
-      const result = await getDeletedUsers(deletedPage, pageSize);
-      const data = Array.isArray(result) ? result : (result.data ?? []);
-      setDeletedUsers(data);
-      setDeletedTotal((result as any).total ?? data.length);
-    } catch {
-      toast.error('Failed to load archived users.');
-    }
-  }, [deletedPage, isAdmin]);
 
   const loadRoles = useCallback(async () => {
     try {
@@ -100,7 +79,6 @@ export default function UsersView() {
   useEffect(() => { loadUsers(); }, [loadUsers]);
   useEffect(() => { loadRoles(); }, [loadRoles]);
   useEffect(() => { loadManagers(); }, [loadManagers]);
-  useEffect(() => { if (showArchived) loadDeletedUsers(); }, [showArchived, loadDeletedUsers]);
 
   /** Resolve the role name that will apply for the current modal state. */
   const effectiveRoleName = (): string => {
@@ -185,40 +163,13 @@ export default function UsersView() {
   };
 
   const handleDeleteUser = async (user: UserData) => {
-    if (isAdmin) {
-      if (!window.confirm(`Permanently delete user "${user.full_name}"? This action cannot be undone.`)) return;
-    } else {
-      if (!window.confirm(`Deactivate user "${user.full_name}"? They can be restored later by an admin.`)) return;
-    }
+    if (!window.confirm(`Permanently delete user "${user.full_name}"? This action cannot be undone.`)) return;
     try {
       await deleteUser(user.id);
-      toast.success(isAdmin ? `User "${user.full_name}" permanently deleted.` : `User "${user.full_name}" deactivated.`);
+      toast.success(`User "${user.full_name}" permanently deleted.`);
       loadUsers();
-      if (showArchived) loadDeletedUsers();
     } catch (err: any) {
       toast.error(err?.message || 'Failed to delete user.');
-    }
-  };
-
-  const handleRestoreUser = async (user: UserData) => {
-    try {
-      await restoreUser(user.id);
-      toast.success(`User "${user.full_name}" restored.`);
-      loadDeletedUsers();
-      loadUsers();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to restore user.');
-    }
-  };
-
-  const handlePermanentDelete = async (user: UserData) => {
-    if (!window.confirm(`Permanently delete "${user.full_name}"? The email "${user.email}" will become available again. This cannot be undone.`)) return;
-    try {
-      await permanentDeleteUser(user.id);
-      toast.success(`User "${user.full_name}" permanently deleted.`);
-      loadDeletedUsers();
-    } catch (err: any) {
-      toast.error(err?.message || 'Failed to permanently delete user.');
     }
   };
 
@@ -238,7 +189,6 @@ export default function UsersView() {
   };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const deletedTotalPages = Math.max(1, Math.ceil(deletedTotal / pageSize));
 
   return (
     <div className="space-y-6">
@@ -384,7 +334,7 @@ export default function UsersView() {
                         <button 
                           onClick={() => handleDeleteUser(user)}
                           className="p-1 text-text-muted hover:text-status-danger rounded hover:bg-surface-2 transition cursor-pointer inline-block"
-                          title={isAdmin ? 'Permanently Delete' : 'Deactivate User'}
+                          title="Permanently Delete"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -421,134 +371,6 @@ export default function UsersView() {
           </>
         )}
       </div>
-
-      {/* Archived Users Section — Admin Only */}
-      {isAdmin && (
-        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 space-y-4">
-          <button
-            onClick={() => setShowArchived(!showArchived)}
-            className="w-full flex items-center justify-between text-left cursor-pointer"
-          >
-            <h3 className="font-semibold text-text-primary text-sm flex items-center">
-              <Archive className="h-4.5 w-4.5 mr-2 text-status-warning" />
-              <span>Archived Users</span>
-              {deletedTotal > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-status-warning/10 text-status-warning rounded text-[9px] font-semibold">
-                  {deletedTotal}
-                </span>
-              )}
-            </h3>
-            <span className="text-xs text-text-muted">
-              {showArchived ? 'Hide' : 'Show'}
-            </span>
-          </button>
-
-          {showArchived && (
-            <>
-              {deletedUsers.length === 0 ? (
-                <div className="text-center py-8 text-text-muted text-xs font-medium">
-                  No archived users.
-                </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="border-b border-border-default text-[11px] uppercase font-black tracking-wider text-text-primary bg-muted/40">
-                          <th className="py-2.5">User</th>
-                          <th className="py-2.5">Email</th>
-                          <th className="py-2.5">Role</th>
-                          <th className="py-2.5">Manager</th>
-                          <th className="py-2.5">Status</th>
-                          <th className="py-2.5">Last Login</th>
-                          <th className="py-2.5 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border text-xs font-semibold text-text-primary">
-                        {deletedUsers.map((user) => (
-                          <tr key={user.id} className="hover:bg-surface-2 transition-colors opacity-75">
-                            <td className="py-3 font-semibold">{user.full_name}</td>
-                            <td className="py-3 text-text-muted">{user.email}</td>
-                            <td className="py-3">
-                              {(user.roles || []).length > 0 ? (
-                                <span className="bg-surface-2 text-text-primary px-2 py-0.5 rounded text-[9px] font-semibold">
-                                  {roleNameDisplay(user.roles[0])}
-                                </span>
-                              ) : (
-                                <span className="text-text-muted text-[9px]">No role</span>
-                              )}
-                            </td>
-                            <td className="py-3">
-                              {user.manager_name ? (
-                                <span className="inline-flex items-center gap-1 bg-accent-color/10 text-accent-color px-2 py-0.5 rounded text-[9px] font-semibold">
-                                  <UserCog className="h-3 w-3" />
-                                  {user.manager_name}
-                                </span>
-                              ) : (
-                                <span className="text-text-muted text-[9px]">—</span>
-                              )}
-                            </td>
-                            <td className="py-3">
-                              <span className="px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wide bg-status-warning/10 text-status-warning">
-                                Archived
-                              </span>
-                            </td>
-                            <td className="py-3 text-text-muted tabular-nums">
-                              {user.last_login_at 
-                                ? new Date(user.last_login_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                : 'Never'}
-                            </td>
-                            <td className="py-3 text-right space-x-1 whitespace-nowrap">
-                              <button 
-                                onClick={() => handleRestoreUser(user)}
-                                className="p-1 text-text-muted hover:text-accent-color rounded hover:bg-surface-2 transition cursor-pointer inline-block"
-                                title="Restore User"
-                              >
-                                <Undo2 className="h-4 w-4" />
-                              </button>
-                              <button 
-                                onClick={() => handlePermanentDelete(user)}
-                                className="p-1 text-text-muted hover:text-status-danger rounded hover:bg-surface-2 transition cursor-pointer inline-block"
-                                title="Permanently Delete"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {deletedTotalPages > 1 && (
-                    <div className="flex items-center justify-between pt-3 border-t border-border-default">
-                      <span className="text-[10px] text-text-muted font-medium">
-                        Page {deletedPage} of {deletedTotalPages} ({deletedTotal} total)
-                      </span>
-                      <div className="flex space-x-2">
-                        <button
-                          disabled={deletedPage <= 1}
-                          onClick={() => setDeletedPage(p => Math.max(1, p - 1))}
-                          className="px-2.5 py-1 text-[10px] font-bold border border-border-default rounded-lg disabled:opacity-30 hover:bg-surface-2 transition-colors cursor-pointer"
-                        >
-                          Previous
-                        </button>
-                        <button
-                          disabled={deletedPage >= deletedTotalPages}
-                          onClick={() => setDeletedPage(p => p + 1)}
-                          className="px-2.5 py-1 text-[10px] font-bold border border-border-default rounded-lg disabled:opacity-30 hover:bg-surface-2 transition-colors cursor-pointer"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </div>
-      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
