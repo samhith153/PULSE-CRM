@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # ── SSRF Protection ──────────────────────────────────────────────────────────
 _ALLOWED_AI_HOSTS: frozenset[str] = frozenset({
     "localhost", "127.0.0.1", "::1",
-    "pulse-crm-backend.onrender.com",
+    "pulse-crm-ai.onrender.com",
 })
 _BLOCKED_NETWORKS: frozenset[str] = frozenset({
     "169.254.169.254",  # AWS metadata
