@@ -102,13 +102,13 @@ function PricingContent() {
   const { openModal } = useModal();
 
   return (
-    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#f3f0ff', minHeight: '100vh', marginTop: -64 }}>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#EFF6FF', minHeight: '100vh', marginTop: -64 }}>
       <Navbar onOpenModal={() => openModal('signin')} onOpenSignUp={() => openModal('signup')} />
 
       {/* ── HEADER ── */}
-      <section style={{ paddingTop: 120, paddingBottom: 64, textAlign: 'center', background: '#f3f0ff' }}>
+      <section style={{ paddingTop: 120, paddingBottom: 64, textAlign: 'center', background: '#EFF6FF' }}>
         <p style={{
-          fontSize: 11, fontWeight: 800, color: '#7c3aed',
+          fontSize: 11, fontWeight: 800, color: '#2563EB',
           letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 16,
         }}>
           SIMPLE PRICING
@@ -127,7 +127,7 @@ function PricingContent() {
       {/* ── PLAN CARDS ── */}
       <section style={{
         padding: '0 24px 80px',
-        background: '#f3f0ff',
+        background: '#EFF6FF',
         display: 'flex',
         justifyContent: 'center',
       }}>
@@ -143,14 +143,14 @@ function PricingContent() {
             <div key={plan.id}
               style={{
                 position: 'relative',
-                background: plan.highlight ? '#7c3aed' : '#ffffff',
+                background: plan.highlight ? '#2563EB' : '#ffffff',
                 borderRadius: plan.highlight ? 20 : i === 0 ? '16px 0 0 16px' : '0 16px 16px 0',
                 border: plan.highlight ? 'none' : '1px solid #e2e8f0',
                 padding: plan.highlight ? '40px 36px' : '36px 32px',
                 display: 'flex',
                 flexDirection: 'column',
                 boxShadow: plan.highlight
-                  ? '0 24px 60px rgba(124,58,237,0.35), 0 0 0 1px rgba(124,58,237,0.1)'
+                  ? '0 24px 60px rgba(37,99,235,0.35), 0 0 0 1px rgba(37,99,235,0.1)'
                   : 'none',
                 zIndex: plan.highlight ? 2 : 1,
                 marginTop: plan.highlight ? -16 : 0,
@@ -221,7 +221,7 @@ function PricingContent() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       flexShrink: 0,
                     }}>
-                      <Check size={11} color={plan.highlight ? '#ffffff' : '#7c3aed'} strokeWidth={3} />
+                      <Check size={11} color={plan.highlight ? '#ffffff' : '#2563EB'} strokeWidth={3} />
                     </div>
                     <span style={{
                       fontSize: 14, fontWeight: 500,
@@ -239,26 +239,26 @@ function PricingContent() {
                 style={{
                   width: '100%', padding: '14px',
                   borderRadius: 12, border: 'none',
-                  background: plan.highlight ? '#ffffff' : '#7c3aed',
-                  color: plan.highlight ? '#7c3aed' : '#ffffff',
+                  background: plan.highlight ? '#ffffff' : '#2563EB',
+                  color: plan.highlight ? '#2563EB' : '#ffffff',
                   fontSize: 14, fontWeight: 700,
                   cursor: 'pointer', fontFamily: 'inherit',
                   transition: 'all 0.15s ease',
                   boxShadow: plan.highlight
                     ? '0 4px 16px rgba(0,0,0,0.12)'
-                    : '0 4px 14px rgba(124,58,237,0.3)',
+                    : '0 4px 14px rgba(37,99,235,0.3)',
                 }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLElement).style.transform = 'translateY(-1px)';
                   (e.currentTarget as HTMLElement).style.boxShadow = plan.highlight
                     ? '0 8px 24px rgba(0,0,0,0.18)'
-                    : '0 8px 24px rgba(124,58,237,0.45)';
+                    : '0 8px 24px rgba(37,99,235,0.45)';
                 }}
                 onMouseLeave={e => {
                   (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
                   (e.currentTarget as HTMLElement).style.boxShadow = plan.highlight
                     ? '0 4px 16px rgba(0,0,0,0.12)'
-                    : '0 4px 14px rgba(124,58,237,0.3)';
+                    : '0 4px 14px rgba(37,99,235,0.3)';
                 }}
               >
                 {plan.cta}
@@ -278,7 +278,7 @@ function PricingContent() {
             { val: 'Free', label: 'data migration help' },
           ].map(t => (
             <div key={t.val} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: '#7c3aed', letterSpacing: '-0.02em' }}>{t.val}</div>
+              <div style={{ fontSize: 18, fontWeight: 900, color: '#2563EB', letterSpacing: '-0.02em' }}>{t.val}</div>
               <div style={{ fontSize: 12, color: '#94a3b8', fontWeight: 500, marginTop: 2 }}>{t.label}</div>
             </div>
           ))}
@@ -296,7 +296,7 @@ function PricingContent() {
           </h2>
           <p style={{ fontSize: 15, color: '#64748b', textAlign: 'center', marginBottom: 48 }}>
             Still have questions?{' '}
-            <a href="mailto:sales@pulsecrm.io" style={{ color: '#7c3aed', fontWeight: 600, textDecoration: 'none' }}>
+            <a href="mailto:sales@pulsecrm.io" style={{ color: '#2563EB', fontWeight: 600, textDecoration: 'none' }}>
               Email our sales team →
             </a>
           </p>
@@ -305,10 +305,10 @@ function PricingContent() {
             {FAQS.map((faq, i) => (
               <div key={i} style={{
                 border: '1.5px solid',
-                borderColor: openFaq === i ? '#c4b5fd' : '#e2e8f0',
+                borderColor: openFaq === i ? '#BFDBFE' : '#e2e8f0',
                 borderRadius: 14, overflow: 'hidden',
                 transition: 'border-color 0.15s',
-                background: openFaq === i ? '#faf8ff' : '#ffffff',
+                background: openFaq === i ? '#F8FAFC' : '#ffffff',
               }}>
                 <button
                   onClick={() => setOpenFaq(openFaq === i ? null : i)}
@@ -329,7 +329,7 @@ function PricingContent() {
                 </button>
                 {openFaq === i && (
                   <div style={{ padding: '0 22px 18px' }}>
-                    <div style={{ height: 1, background: '#ede9fe', marginBottom: 14 }} />
+                    <div style={{ height: 1, background: '#DBEAFE', marginBottom: 14 }} />
                     <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.75, margin: 0 }}>{faq.a}</p>
                   </div>
                 )}
@@ -342,7 +342,7 @@ function PricingContent() {
       {/* ── BOTTOM CTA ── */}
       <section style={{
         padding: '80px 24px',
-        background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+        background: 'linear-gradient(135deg, #2563EB 0%, #1E3A8A 100%)',
         textAlign: 'center',
       }}>
         <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -359,7 +359,7 @@ function PricingContent() {
             <button
               onClick={() => openModal('signup')}
               style={{
-                padding: '14px 32px', background: '#ffffff', color: '#7c3aed',
+                padding: '14px 32px', background: '#ffffff', color: '#2563EB',
                 fontSize: 15, fontWeight: 700, borderRadius: 100, border: 'none',
                 cursor: 'pointer', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
                 transition: 'transform 0.15s',

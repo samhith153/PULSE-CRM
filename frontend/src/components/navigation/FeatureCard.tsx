@@ -11,7 +11,7 @@ interface FeatureCardProps {
   onClick?: () => void;
 }
 
-export default function FeatureCard({ icon: Icon, title, description, href, color = '#7c3aed', onClick }: FeatureCardProps) {
+export default function FeatureCard({ icon: Icon, title, description, href, color = '#2563EB', onClick }: FeatureCardProps) {
   const [hovered, setHovered] = useState(false);
 
   return (

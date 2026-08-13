@@ -216,6 +216,10 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(refresh_gmail_watches, "interval", hours=6, max_instances=1, misfire_grace_time=300)
     scheduler.start()
 
+    # Bootstrap RBAC tables (permissions, roles, role-permission mappings)
+    from app.services.rbac_bootstrap import bootstrap_rbac_on_startup
+    await bootstrap_rbac_on_startup()
+
     # Re-establish Gmail Pub/Sub watches on startup
     await refresh_gmail_watches()
 

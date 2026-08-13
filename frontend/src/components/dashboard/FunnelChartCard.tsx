@@ -31,11 +31,7 @@ export default function FunnelChartCard({ leads = [], deals = [], className = ''
     const proposals   = deals.filter(d => d.stage === 'Proposal' || d.stage === 'Negotiation').length + activeLeads.filter(l => l.status === 'proposal_sent').length;
     const won         = deals.filter(d => d.stage === 'Won' || d.status === 'Closed Won').length + leads.filter(l => l.status === 'won').length;
 
-    const hasRealData = (newLeads + contacted + qualified + proposals + won) > 0;
-
-    const raw = hasRealData
-      ? [newLeads, contacted, qualified, proposals, won]
-      : [120, 84, 52, 31, 18];
+    const raw = [newLeads, contacted, qualified, proposals, won];
 
     const names = ['New Leads', 'Contacted', 'Qualified', 'Proposals', 'Won'];
     const top   = raw[0] || 1;

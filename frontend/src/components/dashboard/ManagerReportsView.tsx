@@ -427,40 +427,9 @@ function Spark({ values, white = false }: { values: number[]; white?: boolean })
 ═══════════════════════════════════════════════════════════════════ */
 type Period = 'week' | 'month' | 'quarter' | 'year';
 
-/* Static fallback data */
-const FALLBACK_STAGES = [
-  { stage: 'New',         count: 84, value: 41140200 },
-  { stage: 'Qualified',   count: 52, value: 15120000 },
-  { stage: 'Proposal',    count: 36, value: 15140700 },
-  { stage: 'Negotiation', count: 22, value: 11240800 },
-  { stage: 'Closed Won',  count: 16, value: 12270000 },
-];
-const FALLBACK_SOURCE = [
-  { name: 'Website',       value: 38 },
-  { name: 'Referral',      value: 26 },
-  { name: 'Cold Outreach', value: 20 },
-  { name: 'Partner',       value: 10 },
-  { name: 'Other',         value: 6  },
-];
-const FALLBACK_TEAM = [
-  { name: 'Alex Jerome',   revenue: 3456700, deals: 56, won: 22, winRate: 39.2, winDelta: '+10%', winRateDelta: '+2.7%', quota: 92 },
-  { name: 'Maria Thomas',  revenue: 2954100, deals: 48, won: 18, winRate: 37.5, winDelta: '+9%',  winRateDelta: '+1.8%', quota: 88 },
-  { name: 'David Wilson',  revenue: 2652100, deals: 40, won: 14, winRate: 33.3, winDelta: '+2%',  winRateDelta: '+2.4%', quota: 76 },
-  { name: 'Sarah Johnson', revenue: 2312100, deals: 36, won: 12, winRate: 33.3, winDelta: '+2%',  winRateDelta: '+1.2%', quota: 64 },
-  { name: 'James Smith',   revenue: 1859600, deals: 28, won: 8,  winRate: 28.6, winDelta: '+1%',  winRateDelta: '+1.6%', quota: 61 },
-];
-const FALLBACK_DEAL_STATUS = [
-  { name: 'New',  value: 65,  pctLabel: '(26.4%)' },
-  { name: 'Lost', value: 42,  pctLabel: '(17.1%)' },
-  { name: 'Open', value: 139, pctLabel: '(56.5%)' },
-];
-const RECENT_REPORTS = [
-  { name: 'Quarterly Performance Summary', type: 'Performance', period: 'Q2-FY24',      generated: 'May 10, 2024' },
-  { name: 'Team Revenue Analysis',         type: 'Revenue',     period: 'This Quarter', generated: 'May 10, 2024' },
-  { name: 'Pipeline Health Report',        type: 'Pipeline',    period: 'This Quarter', generated: 'May 05, 2024' },
-  { name: 'Activity Summary Report',       type: 'Activity',    period: 'This Quarter', generated: 'May 08, 2024' },
-  { name: 'Deal Conversion Report',        type: 'Conversion',  period: 'This Quarter', generated: 'May 07, 2024' },
-];
+/* No static fallback data — show empty states when API returns empty */
+
+const RECENT_REPORTS: { name: string; type: string; period: string; generated: string }[] = [];
 
 export default function ManagerReportsView() {
   const [period, setPeriod] = useState<Period>('quarter');
@@ -494,78 +463,77 @@ export default function ManagerReportsView() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  /* ── Fallback constants (used when API returns 0 / empty) ── */
-  const FALLBACK_REVENUE   = 14813100;
-  const FALLBACK_PIPELINE  = 32454680;
-  const FALLBACK_DEALS     = 246;
-  const FALLBACK_WIN_RATE  = 34.2;
-
   /* ── Derived ── */
-  const totalRevenue  = salesPerf?.total_revenue || FALLBACK_REVENUE;
+  const totalRevenue  = salesPerf?.total_revenue || 0;
   const prevRevenue   = totalRevenue * 0.863;
-  const pipelineValue = (pipeline?.pipeline_by_stage?.reduce((s, p) => s + Number(p.total_value ?? 0), 0) || 0) || FALLBACK_PIPELINE;
-  const pipelineDeals = (pipeline?.pipeline_by_stage?.reduce((s, p) => s + p.deal_count, 0) || 0) || FALLBACK_DEALS;
-  const teamWinRate   = salesPerf?.team_win_rate || FALLBACK_WIN_RATE;
+  const pipelineValue = pipeline?.pipeline_by_stage?.reduce((s, p) => s + Number(p.total_value ?? 0), 0) || 0;
+  const pipelineDeals = pipeline?.pipeline_by_stage?.reduce((s, p) => s + p.deal_count, 0) || 0;
+  const teamWinRate   = salesPerf?.team_win_rate || 0;
 
-  /* Trend labels from activity or fallback */
+  /* Trend labels from activity */
   const trendLabels = activity?.activity_trend?.slice(-6).map(t =>
     new Date(t.period).toLocaleString('default', { month: 'short' })
-  ) ?? ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
+  ) ?? [];
 
-  /* Revenue trend — always produce a visible rising curve */
-  const trendCurrent = (() => {
-    const raw = (salesPerf?.revenue_by_rep ?? [])
+  /* Revenue trend — use real data only */
+  const trendCurrent = (salesPerf?.revenue_by_rep ?? [])
       .map(r => Number(r.revenue))
       .filter(v => v > 0);
-    if (raw.length >= 2) return raw.slice(0, trendLabels.length);
-    // synthesise a realistic rising curve from total revenue
-    const base = totalRevenue / 6;
-    return trendLabels.map((_, i) => Math.round(base * (0.65 + i * 0.07)));
-  })();
   const trendPrev = trendCurrent.map(v => Math.round(v * 0.83));
 
-  /* Deals trend — always produce visible bars */
-  const dealsTrend = trendLabels.map((lbl, i) => {
-    const totalWon  = deals?.total_won  || 22;
-    const totalLost = deals?.total_lost || 8;
-    const totalOpen = pipelineDeals;
-    return {
+  /* Deals trend — use real data only */
+  const dealsTrend = trendLabels.map((lbl, i) => ({
       name: lbl,
-      won:  Math.max(2, Math.round(totalWon  / trendLabels.length) + (i % 3 === 2 ? 3 : i % 2 === 0 ? 1 : 2)),
-      lost: Math.max(1, Math.round(totalLost / trendLabels.length) + (i % 2 === 0 ? 1 : 0)),
-      open: Math.max(3, Math.round(totalOpen / trendLabels.length) + i * 2),
-    };
-  });
+      won:  Math.round((deals?.total_won ?? 0) / trendLabels.length),
+      lost: Math.round((deals?.total_lost ?? 0) / trendLabels.length),
+      open: Math.round(pipelineDeals / trendLabels.length),
+    }));
 
   const stageFunnelData = pipeline?.pipeline_by_stage?.map(s => ({
     stage: s.stage, count: s.deal_count, value: Number(s.total_value ?? 0),
-  })) ?? FALLBACK_STAGES;
+  })) ?? [];
 
   const revenueBySource = leads?.source_performance?.map(s => ({
     name: s.source, value: s.total,
-  })) ?? FALLBACK_SOURCE;
+  })) ?? [];
 
   const totalDealStatus = (deals?.total_won ?? 0) + (deals?.total_lost ?? 0) + pipelineDeals;
   const dealStatusData = totalDealStatus > 0 ? [
     { name: 'New',  value: Math.max(0, pipelineDeals - (deals?.total_won ?? 0) - (deals?.total_lost ?? 0)) },
     { name: 'Lost', value: deals?.total_lost ?? 0 },
     { name: 'Open', value: deals?.total_won ?? 0 },
-  ].filter(d => d.value > 0) : FALLBACK_DEAL_STATUS.map(d => ({ name: d.name, value: d.value }));
+  ].filter(d => d.value > 0) : [];
 
   const dealStatusTotal = dealStatusData.reduce((s, d) => s + d.value, 0);
 
   const actSummary = activity?.activity_summary;
   const actMetrics = [
-    { label: 'Calls',            value: actSummary?.calls    ?? 1234, icon: Phone,       delta: '+12.4%', up: true  },
-    { label: 'Emails',           value: actSummary?.emails   ?? 856,  icon: Mail,        delta: '+6.7%',  up: true  },
-    { label: 'Meetings',         value: actSummary?.meetings ?? 432,  icon: CalendarDays,delta: '+15.3%', up: true  },
-    { label: 'Tasks Completed',  value: activity?.completed_vs_overdue?.completed ?? 689, icon: CheckSquare, delta: '+10.1%', up: true },
+    { label: 'Calls',            value: actSummary?.calls    ?? 0, icon: Phone,       delta: '+0%', up: true  },
+    { label: 'Emails',           value: actSummary?.emails   ?? 0,  icon: Mail,        delta: '+0%',  up: true  },
+    { label: 'Meetings',         value: actSummary?.meetings ?? 0,  icon: CalendarDays,delta: '+0%', up: true  },
+    { label: 'Tasks Completed',  value: activity?.completed_vs_overdue?.completed ?? 0, icon: CheckSquare, delta: '+0%', up: true },
   ];
 
   const revDelta = formatDelta(totalRevenue, prevRevenue);
-  // When revenue is the fallback, always show a positive delta
-  const revDeltaLabel = revDelta.label === '0%' ? '+15.9%' : revDelta.label;
-  const revDeltaUp    = revDelta.label === '0%' ? true : revDelta.up;
+
+  const teamRows = (teamPerf?.leaderboard?.length ?? 0) > 0
+    ? teamPerf!.leaderboard.map((e, i) => {
+        const repR = salesPerf?.revenue_by_rep?.find(r => r.rep_id === e.rep_id);
+        const d = formatDelta(Number(repR?.revenue ?? 0), Number(repR?.revenue ?? 0) * 0.88);
+        return {
+          name: e.rep_name,
+          revenue: Number(e.revenue),
+          revDelta: d.label, revUp: d.up,
+          deals: e.deals_won + 10,
+          won: e.deals_won,
+          winDelta: '+0%',
+          winRate: Number(e.win_rate),
+          winRateDelta: '+0%',
+          quota: Number(e.quota_pct),
+          idx: i,
+        };
+      })
+    : [];
 
   if (loading) {
     return (
@@ -617,7 +585,7 @@ export default function ManagerReportsView() {
             </div>
             <p className="flex items-center gap-1 text-[11px] font-bold text-white/90">
               <MoveUpRight className="size-3 shrink-0" />
-              <span>{revDeltaLabel}</span>
+              <span>{revDelta.label}</span>
             </p>
           </div>
 
@@ -637,7 +605,7 @@ export default function ManagerReportsView() {
           {/* animated sparkline */}
           <div className="relative mt-3">
             <Spark
-              values={trendCurrent.length >= 2 ? trendCurrent : [4, 6, 5, 8, 9, 11]}
+              values={trendCurrent.length >= 2 ? trendCurrent : []}
               white
             />
           </div>
@@ -647,21 +615,21 @@ export default function ManagerReportsView() {
         {[
           {
             label: 'Pipeline Value',
-            value: fmtCurrency(pipelineValue || 32454680),
-            badge: '+4.2%', badgeUp: true,
-            sub: `in last quarter ${fmtCurrency((pipelineValue || 32454680) * 0.88)}`,
+            value: fmtCurrency(pipelineValue),
+            badge: '+0%', badgeUp: true,
+            sub: `in last quarter ${fmtCurrency(pipelineValue * 0.88)}`,
           },
           {
             label: 'Total Deals',
-            value: (pipelineDeals || 246).toLocaleString(),
-            badge: '+6.2%', badgeUp: true,
-            sub: `in last quarter ${(Math.round((pipelineDeals || 246) * 0.92))} deals`,
+            value: pipelineDeals.toLocaleString(),
+            badge: '+0%', badgeUp: true,
+            sub: `in last quarter ${Math.round(pipelineDeals * 0.92)} deals`,
           },
           {
             label: 'Win Rate',
-            value: fmtPct(teamWinRate || 34.2),
-            badge: '-2.9%', badgeUp: false,
-            sub: `in last quarter ${fmtPct((teamWinRate || 34.2) * 1.09)}`,
+            value: fmtPct(teamWinRate),
+            badge: '+0%', badgeUp: true,
+            sub: `in last quarter ${fmtPct(teamWinRate * 1.09)}`,
           },
         ].map((card, i) => (
           <motion.div
@@ -769,7 +737,7 @@ export default function ManagerReportsView() {
               data={revenueBySource}
               colors={DONUT_COLORS_SRC}
               size={150}
-              centerLabel={fmtCurrency(totalRevenue || 14810000)}
+              centerLabel={fmtCurrency(totalRevenue)}
               centerSub="Total"
             />
             <div className="flex-1 space-y-2.5 min-w-0">
@@ -818,36 +786,7 @@ export default function ManagerReportsView() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--border-subtle)]">
-              {((teamPerf?.leaderboard?.length ?? 0) > 0
-                ? teamPerf!.leaderboard.map((e, i) => {
-                    const repR = salesPerf?.revenue_by_rep?.find(r => r.rep_id === e.rep_id);
-                    const d = formatDelta(Number(repR?.revenue ?? 0), Number(repR?.revenue ?? 0) * 0.88);
-                    return {
-                      name: e.rep_name,
-                      revenue: Number(e.revenue),
-                      revDelta: d.label, revUp: d.up,
-                      deals: e.deals_won + 10,
-                      won: e.deals_won,
-                      winDelta: '+10%',
-                      winRate: Number(e.win_rate),
-                      winRateDelta: '+2.1%',
-                      quota: Number(e.quota_pct),
-                      idx: i,
-                    };
-                  })
-                : FALLBACK_TEAM.map((r, i) => ({
-                    name: r.name,
-                    revenue: r.revenue,
-                    revDelta: '+4.2%', revUp: true,
-                    deals: r.deals,
-                    won: r.won,
-                    winDelta: r.winDelta,
-                    winRate: r.winRate,
-                    winRateDelta: r.winRateDelta,
-                    quota: r.quota,
-                    idx: i,
-                  }))
-              ).map(row => (
+              {teamRows.map(row => (
                 <tr key={row.name} className="hover:bg-[var(--surface-hover)] transition-colors text-[12px]">
                   {/* Rep */}
                   <td className="py-2.5 pr-3">
@@ -939,14 +878,13 @@ export default function ManagerReportsView() {
               data={dealStatusData}
               colors={DONUT_COLORS_DEAL}
               size={170}
-              centerLabel={(dealStatusTotal || 246).toLocaleString()}
+              centerLabel={dealStatusTotal.toLocaleString()}
               centerSub="Total Deals"
             />
             <div className="flex-1 space-y-3 min-w-0">
-              {(dealStatusData.length > 0 ? dealStatusData : FALLBACK_DEAL_STATUS.map(d => ({ name: d.name, value: d.value }))).map((d, i) => {
-                const tot = dealStatusData.reduce((a, x) => a + x.value, 0) || 246;
+              {dealStatusData.map((d, i) => {
+                const tot = dealStatusData.reduce((a, x) => a + x.value, 0) || 1;
                 const pctNum = (d.value / tot) * 100;
-                const fallbackPct = FALLBACK_DEAL_STATUS[i]?.pctLabel ?? '';
                 return (
                   <div key={d.name} className="flex items-center gap-2.5 text-[12px]">
                     <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: DONUT_COLORS_DEAL[i % DONUT_COLORS_DEAL.length] }} />

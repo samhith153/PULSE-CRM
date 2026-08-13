@@ -58,6 +58,8 @@ class Permission(str, Enum):
     EMAIL_SYNC = "email:sync"
     GMAIL_CONNECT = "gmail:connect"
 
+    EVENT_READ = "event:read"
+
     DASHBOARD_READ = "dashboard:read"
 
     AI_ACCESS = "ai:access"
@@ -124,6 +126,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
         Permission.GMAIL_CONNECT,
+        Permission.EVENT_READ,
         Permission.DASHBOARD_READ,
         Permission.AI_ACCESS,
         Permission.WEBHOOK_MANAGE,
@@ -158,6 +161,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
+        Permission.EVENT_READ,
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
         Permission.REPORT_VIEW,

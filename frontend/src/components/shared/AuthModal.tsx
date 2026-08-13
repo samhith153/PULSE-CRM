@@ -186,11 +186,11 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
           <X size={14} />
         </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg, #7c3aed, #7c3aed)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(124,58,237,0.27)' }}>
+          <div style={{ width: 32, height: 32, borderRadius: 10, background: 'linear-gradient(135deg, #2563EB, #2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(37,99,235,0.27)' }}>
             <Activity size={15} color="#fff" strokeWidth={2.5} />
           </div>
           <span style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Pulse<span style={{ color: '#7c3aed' }}>CRM</span>
+            Pulse<span style={{ color: '#2563EB' }}>CRM</span>
           </span>
         </div>
         <div style={{ marginBottom: 20 }}>
@@ -216,16 +216,16 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 4 }}>Name</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)}
                   placeholder="John" required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#faf9ff' }}
-                  onFocus={e => e.target.style.borderColor = '#7c3aed'}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
+                  onFocus={e => e.target.style.borderColor = '#2563EB'}
                   onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 4 }}>Company</label>
                 <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)}
                   placeholder="Acme Inc." required
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#faf9ff' }}
-                  onFocus={e => e.target.style.borderColor = '#7c3aed'}
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
+                  onFocus={e => e.target.style.borderColor = '#2563EB'}
                   onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
               </div>
             </div>
@@ -236,8 +236,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
               <Mail size={14} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                 placeholder="you@company.com" required
-                style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#faf9ff' }}
-                onFocus={e => e.target.style.borderColor = '#7c3aed'}
+                style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
                 onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
             </div>
           </div>
@@ -247,8 +247,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
               <Lock size={14} color="#94a3b8" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
               <input type="password" value={password} onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••" required
-                style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#faf9ff' }}
-                onFocus={e => e.target.style.borderColor = '#7c3aed'}
+                style={{ width: '100%', padding: '10px 12px 10px 36px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#F8FAFC' }}
+                onFocus={e => e.target.style.borderColor = '#2563EB'}
                 onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
             </div>
           </div>
@@ -257,7 +257,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
             <div style={{ display: 'flex', gap: 4 }}>
               {ROLES.map(r => (
                 <button key={r.value} type="button" onClick={() => setRole(r.value)}
-                  style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${role === r.value ? '#7c3aed' : '#e2e8f0'}`, background: role === r.value ? '#f5f3ff' : 'transparent', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: role === r.value ? '#7c3aed' : '#64748b', fontFamily: 'inherit', transition: 'all 0.15s' }}>
+                  style={{ padding: '5px 12px', borderRadius: 20, border: `1.5px solid ${role === r.value ? '#2563EB' : '#e2e8f0'}`, background: role === r.value ? '#EFF6FF' : 'transparent', cursor: 'pointer', fontSize: 10, fontWeight: 700, color: role === r.value ? '#2563EB' : '#64748b', fontFamily: 'inherit', transition: 'all 0.15s' }}>
                   {r.label}
                 </button>
               ))}
@@ -265,11 +265,11 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
           </div>
           {isSignin && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4 }}>
-              <button type="button" style={{ fontSize: 11, fontWeight: 600, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
+              <button type="button" style={{ fontSize: 11, fontWeight: 600, color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
             </div>
           )}
           <button type="submit" disabled={loading}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: loading ? '#9b72f0' : 'linear-gradient(135deg, #7c3aed, #7c3aed)', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 24px rgba(124,58,237,0.33)', transition: 'all 0.15s', letterSpacing: '-0.01em' }}>
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '12px', background: loading ? '#60A5FA' : 'linear-gradient(135deg, #2563EB, #2563EB)', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', boxShadow: '0 6px 24px rgba(37,99,235,0.33)', transition: 'all 0.15s', letterSpacing: '-0.01em' }}>
             {loading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> {isSignin ? 'Signing in\u2026' : 'Creating account\u2026'}</> : isSignin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
@@ -301,7 +301,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
         )}
         <p style={{ textAlign: 'center', fontSize: 12, color: '#475569', margin: '16px 0 0' }}>
           {isSignin ? "Don't have an account? " : 'Already have an account? '}
-          <button onClick={switchMode} style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={switchMode} style={{ fontSize: 12, fontWeight: 700, color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
             {isSignin ? 'Sign up free' : 'Sign in'}
           </button>
         </p>

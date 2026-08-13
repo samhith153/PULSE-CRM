@@ -328,6 +328,14 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
             <AIModelsView />
           ) : tab === 'audit logs' ? (
             <AuditLogsView />
+          ) : tab === 'teams' ? (
+            <TeamsView />
+          ) : tab === 'my team' ? (
+            <MyTeamView />
+          ) : tab === 'targets' ? (
+            <TargetsView />
+          ) : tab === 'recycle bin' ? (
+            <RecycleBinView />
           ) : tab === 'dashboard' && requiredRole === 'manager' ? (
             <ManagerDashboardView onTabChange={setActiveTab} refreshSignal={refreshSignal} />
           ) : tab === 'dashboard' && requiredRole === 'admin' ? (

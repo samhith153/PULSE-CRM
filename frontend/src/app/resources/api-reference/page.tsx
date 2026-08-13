@@ -17,43 +17,43 @@ const FEATURES = [
     icon: Users,
     title: 'Manage Leads',
     desc: 'Create, update and track leads.',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
+    color: '#2563EB',
+    bg: '#EFF6FF',
   },
   {
     icon: Building2,
     title: 'Companies',
     desc: 'Manage customer companies.',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
+    color: '#2563EB',
+    bg: '#EFF6FF',
   },
   {
     icon: User,
     title: 'Contacts',
     desc: 'Store and organize contacts.',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
+    color: '#2563EB',
+    bg: '#EFF6FF',
   },
   {
     icon: IndianRupee,
     title: 'Deals',
     desc: 'Track sales opportunities.',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
+    color: '#2563EB',
+    bg: '#EFF6FF',
   },
   {
     icon: CalendarCheck,
     title: 'Activities',
     desc: 'Manage follow-ups and meetings.',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
+    color: '#2563EB',
+    bg: '#EFF6FF',
   },
   {
     icon: Sparkles,
     title: 'AI Scoring',
     desc: 'Get AI lead scores and insights.',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
+    color: '#2563EB',
+    bg: '#EFF6FF',
   },
 ];
 
@@ -113,10 +113,10 @@ function ApiIllustration() {
       >
         <div style={{
           height: 44, width: 44, borderRadius: 12,
-          background: '#f5f3ff',
+          background: '#EFF6FF',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <Code2 size={22} color="#7c3aed" strokeWidth={1.8} />
+          <Code2 size={22} color="#2563EB" strokeWidth={1.8} />
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>Your App</span>
       </motion.div>
@@ -132,19 +132,19 @@ function ApiIllustration() {
           width: 80, flexShrink: 0,
         }}
       >
-        <span style={{ fontSize: 10, fontWeight: 600, color: '#7c3aed', letterSpacing: '0.04em' }}>Request</span>
+        <span style={{ fontSize: 10, fontWeight: 600, color: '#2563EB', letterSpacing: '0.04em' }}>Request</span>
         <div style={{ display: 'flex', alignItems: 'center', width: '100%', position: 'relative' }}>
           {/* dashed line */}
           <div style={{
             flex: 1, height: 1,
-            borderTop: '2px dashed #c4b5fd',
+            borderTop: '2px dashed #BFDBFE',
           }} />
           {/* arrowhead */}
           <div style={{
             width: 0, height: 0,
             borderTop: '5px solid transparent',
             borderBottom: '5px solid transparent',
-            borderLeft: '7px solid #7c3aed',
+            borderLeft: '7px solid #2563EB',
           }} />
         </div>
       </motion.div>
@@ -156,9 +156,9 @@ function ApiIllustration() {
         transition={{ delay: 0.3, duration: 0.5 }}
         style={{
           width: 110, minHeight: 130,
-          background: 'linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%)',
+          background: 'linear-gradient(135deg, #2563EB 0%, #1E3A8A 100%)',
           borderRadius: 20,
-          boxShadow: '0 12px 36px rgba(124,58,237,0.45)',
+          boxShadow: '0 12px 36px rgba(37,99,235,0.45)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           gap: 10, padding: 16,
@@ -173,7 +173,7 @@ function ApiIllustration() {
         </motion.div>
         <div style={{ textAlign: 'center' }}>
           <span style={{ fontSize: 11.5, fontWeight: 800, color: '#fff', display: 'block', lineHeight: 1.3 }}>
-            Pulse <span style={{ color: '#c4b5fd' }}>CRM</span>
+            Pulse <span style={{ color: '#BFDBFE' }}>CRM</span>
           </span>
           <span style={{ fontSize: 11.5, fontWeight: 800, color: '#fff', display: 'block' }}>API</span>
         </div>
@@ -260,7 +260,7 @@ function FeatureCard({ feat, index }: { feat: typeof FEATURES[0]; index: number 
         transition: 'all 0.18s ease',
         transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
         boxShadow: hovered
-          ? '0 10px 28px rgba(124,58,237,0.10)'
+          ? '0 10px 28px rgba(37,99,235,0.10)'
           : '0 1px 4px rgba(0,0,0,0.04)',
       }}
     >
@@ -347,10 +347,10 @@ function QuickCard({
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{
             height: 28, width: 28, borderRadius: '50%',
-            background: '#7c3aed',
+            background: '#2563EB',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 12, fontWeight: 800, color: '#fff',
-            boxShadow: '0 3px 10px rgba(124,58,237,0.38)',
+            boxShadow: '0 3px 10px rgba(37,99,235,0.38)',
             flexShrink: 0,
           }}>
             {step.num}
@@ -396,12 +396,12 @@ function QuickCard({
           display: 'flex', alignItems: 'center',
           width: 52, flexShrink: 0, paddingBottom: 20,
         }}>
-          <div style={{ flex: 1, borderTop: '2px dashed #c4b5fd' }} />
+          <div style={{ flex: 1, borderTop: '2px dashed #BFDBFE' }} />
           <div style={{
             width: 0, height: 0,
             borderTop: '5px solid transparent',
             borderBottom: '5px solid transparent',
-            borderLeft: '7px solid #7c3aed',
+            borderLeft: '7px solid #2563EB',
           }} />
         </div>
       )}
@@ -420,14 +420,14 @@ export default function ApiReferencePage() {
       <section style={{
         marginTop: 64,
         padding: '72px 48px 80px',
-        background: 'linear-gradient(160deg, #f5f3ff 0%, #faf9ff 60%, #fff 100%)',
+        background: 'linear-gradient(160deg, #EFF6FF 0%, #F8FAFC 60%, #fff 100%)',
         position: 'relative',
         overflow: 'hidden',
       }}>
         {/* Bg blobs */}
         <div style={{
           position: 'absolute', top: -100, right: -100, width: 480, height: 480,
-          background: 'radial-gradient(circle, rgba(124,58,237,0.07) 0%, transparent 65%)',
+          background: 'radial-gradient(circle, rgba(37,99,235,0.07) 0%, transparent 65%)',
           pointerEvents: 'none',
         }} />
         <div style={{
@@ -459,15 +459,15 @@ export default function ApiReferencePage() {
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 7,
                 padding: '5px 14px',
-                background: '#f5f3ff',
-                border: '1.5px solid #ede9fe',
+                background: '#EFF6FF',
+                border: '1.5px solid #DBEAFE',
                 borderRadius: 100,
                 marginBottom: 22,
               }}
             >
-              <Code2 size={11} color="#7c3aed" />
+              <Code2 size={11} color="#2563EB" />
               <span style={{
-                fontSize: 11, fontWeight: 800, color: '#7c3aed',
+                fontSize: 11, fontWeight: 800, color: '#2563EB',
                 textTransform: 'uppercase', letterSpacing: '0.09em',
               }}>
                 API Reference
@@ -488,7 +488,7 @@ export default function ApiReferencePage() {
             >
               Build with{' '}
               <span style={{
-                background: 'linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)',
+                background: 'linear-gradient(135deg, #2563EB 0%, #9333ea 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>

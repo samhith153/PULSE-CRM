@@ -18,10 +18,10 @@ interface PulseLandingPageProps {
 }
 
 const C = {
-  violet: '#7c3aed',
-  violetDark: '#6d28d9',
-  violetLight: '#ede9fe',
-  violetLighter: '#f5f3ff',
+  violet: '#2563EB',
+  violetDark: '#1D4ED8',
+  violetLight: '#DBEAFE',
+  violetLighter: '#EFF6FF',
   white: '#ffffff',
   black: '#0f172a',
   textGray: '#475569',
@@ -141,8 +141,8 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
   ];
 
   const orbitNodes = [
-    { label: 'Gmail Sync',  icon: Mail,         color: '#7c3aed', description: 'Connect Gmail via OAuth2. Emails auto-sync per user, grouped into threads, and linked to leads and deals with inbound/outbound tracking.' },
-    { label: 'AI Scoring',  icon: Sparkles,     color: '#7c3aed', description: 'Every lead gets a 0–100 score from our transparent rule-based engine. Fit (60%) + Engagement (40%) → Critical / High / Medium / Low tier.' },
+    { label: 'Gmail Sync',  icon: Mail,         color: '#2563EB', description: 'Connect Gmail via OAuth2. Emails auto-sync per user, grouped into threads, and linked to leads and deals with inbound/outbound tracking.' },
+    { label: 'AI Scoring',  icon: Sparkles,     color: '#2563EB', description: 'Every lead gets a 0–100 score from our transparent rule-based engine. Fit (60%) + Engagement (40%) → Critical / High / Medium / Low tier.' },
     { label: 'Analytics',   icon: BarChart2,    color: '#2563eb', description: 'Role-scoped live dashboard at /api/v1/dashboard – leads by status, pipeline value, deal stages, and activity feed.' },
     { label: 'Pipeline',    icon: Filter,       color: '#16a34a', description: 'FSM deal stages: New → Contacted → Qualified → Proposal Sent → Negotiation → Won / Lost. One-click stage transitions.' },
     { label: 'Next Action', icon: Trophy,       color: '#ea580c', description: 'Rule-based recommendation engine suggests: Send follow-up, Schedule demo, Send proposal, Escalate to manager – based on score + urgency + reply status.' },
@@ -215,11 +215,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       <Navbar onOpenModal={openSignIn} onOpenSignUp={openSignUp} />
 
       {/* ══════════ 1. HERO SECTION ══════════ */}
-      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(160deg, #f5f3ff 0%, #faf8ff 50%, #f0eefe 100%)', paddingTop: 64, paddingBottom: 64, marginTop: 64 }}>
+      <section style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(160deg, #EFF6FF 0%, #F8FAFC 50%, #f0eefe 100%)', paddingTop: 64, paddingBottom: 64, marginTop: 64 }}>
         {/* Background glow blobs */}
         <div style={{ position: 'absolute', top: -80, left: '50%', transform: 'translateX(-50%)', width: 700, height: 400, background: `radial-gradient(ellipse, ${C.violet}18 0%, transparent 70%)`, pointerEvents: 'none', filter: 'blur(40px)' }} />
         <div style={{ position: 'absolute', top: 60, left: '15%', width: 300, height: 300, background: 'radial-gradient(circle, #a78bfa18 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
-        <div style={{ position: 'absolute', top: 60, right: '15%', width: 300, height: 300, background: 'radial-gradient(circle, #7c3aed14 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
+        <div style={{ position: 'absolute', top: 60, right: '15%', width: 300, height: 300, background: 'radial-gradient(circle, #2563EB14 0%, transparent 70%)', pointerEvents: 'none', filter: 'blur(60px)' }} />
 
         <div style={{ maxWidth: maxW, margin: '0 auto', padding: `0 ${px}`, position: 'relative', zIndex: 1 }}>
 
@@ -309,7 +309,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
             style={{ width: '100%', maxWidth: 920, display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: '100%', background: C.white, borderRadius: '16px', boxShadow: '0 20px 50px rgba(124,58,237,0.12), 0 8px 24px rgba(0,0,0,0.06)', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            <div style={{ width: '100%', background: C.white, borderRadius: '16px', boxShadow: '0 20px 50px rgba(37,99,235,0.12), 0 8px 24px rgba(0,0,0,0.06)', border: `1px solid ${C.border}`, overflow: 'hidden' }}>
 
               {/* App top bar */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: `1px solid ${C.border}`, background: '#fafbff' }}>
@@ -369,7 +369,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                   {/* 3 stat cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
                     {[
-                      { label: 'Active Sales', value: '₹98,430', change: '+18%', icon: TrendingUp, color: '#7c3aed', trend: [30,40,35,52,48,62,58] },
+                      { label: 'Active Sales', value: '₹98,430', change: '+18%', icon: TrendingUp, color: '#2563EB', trend: [30,40,35,52,48,62,58] },
                       { label: 'Open Deals', value: '340', change: '+12%', icon: Target, color: '#0ea5e9', trend: [40,35,45,40,50,48,55] },
                       { label: 'Win Rate', value: '76%', change: '+4%', icon: Activity, color: '#10b981', trend: [50,55,52,60,58,65,68] },
                     ].map((s, i) => {
@@ -554,7 +554,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
           .feature-card-hover:hover {
             transform: translateY(-4px) scale(1.01);
             box-shadow: 0 12px 32px rgba(124, 58, 237, 0.15) !important;
-            border-color: #7c3aed !important;
+            border-color: #2563EB !important;
           }
           .feature-icon-hover {
             transition: transform 0.3s ease;
@@ -709,7 +709,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                     <span style={{ fontSize: 9, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>VISUAL PIPELINE</span>
                   </div>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    {[{l:'New',n:12,bg:'#ede9fe',a:false},{l:'Qualified',n:8,bg:'#ede9fe',a:false},{l:'Demo',n:5,bg:C.white,a:true},{l:'Proposal',n:3,bg:'#fef9c3',a:false},{l:'Won',n:7,bg:'#dcfce7',a:false}].map((s,i)=>(
+                    {[{l:'New',n:12,bg:'#DBEAFE',a:false},{l:'Qualified',n:8,bg:'#DBEAFE',a:false},{l:'Demo',n:5,bg:C.white,a:true},{l:'Proposal',n:3,bg:'#fef9c3',a:false},{l:'Won',n:7,bg:'#dcfce7',a:false}].map((s,i)=>(
                       <div key={i} style={{ flex:1, textAlign:'center' }}>
                         <div style={{ height:26, background:s.a?C.white:s.bg, borderRadius:6, display:'flex', alignItems:'center', justifyContent:'center', fontWeight:800, fontSize:12, color:s.a?C.violet:C.black, border:s.a?`2px solid ${C.violet}`:'2px solid transparent', marginBottom:3 }}>{s.n}</div>
                         <div style={{ fontSize:8, color:'#94a3b8', fontWeight:600 }}>{s.l}</div>
@@ -895,7 +895,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                 'Close more deals with less admin work'
               ].map(item => (
                 <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 13, fontWeight: 600, color: '#1e293b' }}>
-                  <div style={{ height: 20, width: 20, borderRadius: '50%', background: '#ede9fe', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ height: 20, width: 20, borderRadius: '50%', background: '#DBEAFE', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <CheckCircle2 size={13} color={C.violet} strokeWidth={2.5} />
                   </div>
                   {item}
@@ -959,7 +959,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                 width: 120, 
                 height: 120, 
                 borderRadius: '50%', 
-                background: 'linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)', 
+                background: 'linear-gradient(135deg, #2563EB 0%, #4c1d95 100%)', 
                 boxShadow: '0 12px 36px rgba(124, 58, 237, 0.35), 0 0 0 10px rgba(255, 255, 255, 0.95), 0 0 0 18px rgba(124, 58, 237, 0.06)', 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -1036,7 +1036,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                 borderRadius: 18, 
                 padding: '22px 26px', 
                 border: `2px solid ${C.violetLight}`, 
-                boxShadow: '0 12px 36px rgba(124,58,237,0.12)',
+                boxShadow: '0 12px 36px rgba(37,99,235,0.12)',
                 animation: 'fadeUpStep 0.3s ease-out',
                 position: 'relative',
                 zIndex: 4
@@ -1130,7 +1130,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
       <section style={{ background: C.sectionAlt, padding: `${sectionPy} ${px}` }}>
         <div style={{ maxWidth: maxW, margin: '0 auto' }}>
           {/* Floating card */}
-          <div style={{ background: `linear-gradient(135deg, ${C.violet} 0%, #6d28d9 100%)`, borderRadius: 28, padding: '64px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: `0 24px 64px ${C.violet}40` }}>
+          <div style={{ background: `linear-gradient(135deg, ${C.violet} 0%, #1D4ED8 100%)`, borderRadius: 28, padding: '64px 48px', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: `0 24px 64px ${C.violet}40` }}>
             {/* Decorative blobs inside card */}
             <div style={{ position: 'absolute', top: -60, left: -60, width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
             <div style={{ position: 'absolute', bottom: -80, right: -60, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,0,0,0.08)', pointerEvents: 'none' }} />
@@ -1260,7 +1260,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
         @keyframes gradientShift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
         @keyframes countUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes borderPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(124,58,237,0.4); } 50% { box-shadow: 0 0 0 8px rgba(124,58,237,0); } }
+        @keyframes borderPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(37,99,235,0.4); } 50% { box-shadow: 0 0 0 8px rgba(37,99,235,0); } }
 
         .hero-left { animation: fadeInLeft 0.8s ease both; }
         .hero-right { animation: fadeInRight 0.9s ease both; animation-delay: 0.15s; }
@@ -1278,27 +1278,27 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
         .stat-card:nth-child(4) { animation-delay: 0.35s; }
 
         .feature-card { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
-        .feature-card:hover { transform: translateY(-6px); box-shadow: 0 20px 48px rgba(124,58,237,0.12) !important; }
+        .feature-card:hover { transform: translateY(-6px); box-shadow: 0 20px 48px rgba(37,99,235,0.12) !important; }
 
         .testimonial-card { transition: all 0.25s cubic-bezier(0.4,0,0.2,1); }
         .testimonial-card:hover { transform: translateY(-4px); box-shadow: 0 16px 40px rgba(0,0,0,0.1) !important; }
 
         .cta-btn-primary { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
-        .cta-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(124,58,237,0.5) !important; }
+        .cta-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(37,99,235,0.5) !important; }
         .cta-btn-secondary { transition: all 0.2s ease; }
         .cta-btn-secondary:hover { transform: translateY(-2px); background: rgba(255,255,255,0.2) !important; }
 
-        .nav-btn:hover { background: #f5f3ff !important; color: #7c3aed !important; }
+        .nav-btn:hover { background: #EFF6FF !important; color: #2563EB !important; }
         .orbit-node { transition: all 0.2s cubic-bezier(0.4,0,0.2,1); }
         .orbit-node:hover { transform: scale(1.1) !important; }
 
         .trusted-logo { transition: all 0.2s ease; }
-        .trusted-logo:hover { color: #7c3aed !important; }
+        .trusted-logo:hover { color: #2563EB !important; }
 
         .footer-link:hover { color: #ffffff !important; padding-left: 4px; }
         .footer-link { transition: all 0.15s ease; }
 
-        .announce-bar { background: linear-gradient(90deg, #f5f3ff, #ede9fe, #f5f3ff); background-size: 200% auto; animation: shimmer 3s linear infinite; }
+        .announce-bar { background: linear-gradient(90deg, #EFF6FF, #DBEAFE, #EFF6FF); background-size: 200% auto; animation: shimmer 3s linear infinite; }
 
         * { box-sizing: border-box; }
         html { scroll-behavior: smooth; }
