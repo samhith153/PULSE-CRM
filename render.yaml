@@ -69,8 +69,6 @@ services:
         value: "true"
       - key: BREVO_API_KEY
         sync: false
-      - key: BREVO_WEBHOOK_SECRET
-        sync: false
       # ── Google OAuth ─────────────────────────────────────────────────────
       - key: GOOGLE_CLIENT_ID
         sync: false
