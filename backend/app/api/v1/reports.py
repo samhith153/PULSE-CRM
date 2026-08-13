@@ -22,7 +22,8 @@ from app.models.deal import Deal
 from app.models.lead import Lead
 from app.models.meeting import Meeting
 from app.models.pipeline import PipelineStage
-from app.models.user import User
+from app.models.role import Role
+from app.models.user import User, UserRole
 from app.schemas.common import StandardResponse
 from app.utils.enums import DealStatus
 
@@ -621,13 +622,17 @@ async def get_team_performance(
     prev_start, prev_end = _prev_period_bounds(period)
 
     won_count = func.sum(case((Deal.status == DealStatus.WON.value, 1), else_=0))
+    rep_scope = select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(
+        Role.name.in_(["sales_rep", "sales_representative"]),
+    )
     stmt = (
         select(User.id, User.full_name, User.sales_quota,
                func.coalesce(func.sum(Deal.amount), 0), func.coalesce(won_count, 0), func.count(Deal.id))
         .select_from(User)
         .outerjoin(Deal, and_(Deal.owner_id == User.id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
                               Deal.closed_at >= start, Deal.closed_at < end))
-        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False))
+        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False),
+               User.id.in_(rep_scope))
         .group_by(User.id, User.full_name, User.sales_quota)
         .order_by(func.coalesce(func.sum(Deal.amount), 0).desc())
     )

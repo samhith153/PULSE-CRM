@@ -229,7 +229,7 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
                       <input
                         type="text"
                         readOnly
-                        value={profileForm.job_title || profileForm.email}
+                        value={profileForm.job_title || userRole}
                         className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs bg-surface-2 text-text-muted focus:outline-none cursor-not-allowed"
                       />
                     </div>

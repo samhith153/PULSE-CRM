@@ -453,7 +453,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         </div>
         <div className="flex items-center gap-2">
           {/* Segmented Switch for Kanban Board vs Timeline Logs */}
-          <div className="flex border border-border rounded-lg p-0.5 bg-secondary/30 shrink-0 select-none mr-2">
+          <div className="flex border border-border rounded-lg p-0.5 bg-secondary/30 shrink-0 select-none">
             <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'list' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
               List
             </button>
@@ -463,7 +463,7 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
 
           <button onClick={() => { setIsSelectMode(!isSelectMode); setSelectedIds(new Set()); }}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 border rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'border-border bg-card hover:bg-secondary text-foreground'}`}>
+            className={`inline-flex items-center gap-1.5 px-4 py-2 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'bg-surface-1 hover:bg-surface-2 text-text-primary border-border-default'}`}>
             <Check size={13} /><span>Select</span>
           </button>
           <div className="relative">
@@ -491,7 +491,7 @@ const handleSubmit = async (e: React.FormEvent) => {
             )}
           </div>
           <button onClick={handleExport}
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold cursor-pointer shadow-sm">
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border-default bg-surface-1 hover:bg-surface-2 text-text-primary rounded-lg text-xs font-bold transition-colors cursor-pointer">
             <Download size={13} /><span>Export</span>
           </button>
           {selectedIds.size > 0 && (
@@ -684,15 +684,17 @@ const handleSubmit = async (e: React.FormEvent) => {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1}
-            className="p-1.5 border border-border bg-card hover:bg-secondary rounded-lg text-muted-foreground cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronLeft size={13} />
+            className="grid h-8 w-8 place-items-center border border-border-default bg-surface-1 text-text-muted hover:bg-surface-2 hover:text-text-primary rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            <ChevronLeft size={14} />
           </button>
-          <span className="font-bold text-foreground">{currentPage}</span>
-          <span className="text-muted-foreground">/</span>
-          <span className="text-muted-foreground">{totalPages}</span>
+          <span className="flex h-8 items-center gap-1 px-2 text-xs font-bold text-text-primary">
+            <span>{currentPage}</span>
+            <span className="text-text-muted">/</span>
+            <span className="text-text-muted">{totalPages}</span>
+          </span>
           <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage===totalPages}
-            className="p-1.5 border border-border bg-card hover:bg-secondary rounded-lg text-muted-foreground cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronRight size={13} />
+            className="grid h-8 w-8 place-items-center border border-border-default bg-surface-1 text-text-muted hover:bg-surface-2 hover:text-text-primary rounded-lg cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            <ChevronRight size={14} />
           </button>
         </div>
       </div>

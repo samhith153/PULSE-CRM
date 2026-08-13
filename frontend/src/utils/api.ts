@@ -1,6 +1,6 @@
 ﻿import { toast } from '@/lib/toast';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000').trim().replace(/\/+$/, '');
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 const REFRESH_TOKEN_KEY = 'pulse-crm-refresh-token';
 

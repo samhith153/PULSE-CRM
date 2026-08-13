@@ -29,8 +29,8 @@ const securityHeaders = [
       "img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com",
       // Fonts: self + Google Fonts
       "font-src 'self' https://fonts.gstatic.com",
-      // Connect: self + backend API
-      `connect-src 'self' ${backendUrl}`,
+      // Connect: self + backend API (localhost and 127.0.0.1 variants)
+      `connect-src 'self' ${backendUrl} http://127.0.0.1:8000 http://localhost:8000`,
       // Frame: none (no iframing)
       "frame-src 'none'",
       // Frame-ancestors: none

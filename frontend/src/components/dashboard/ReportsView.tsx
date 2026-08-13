@@ -48,13 +48,13 @@ function Delta({ v, up }: { v: string; up: boolean }) {
 /* Period picker */
 function PP({ val, set }: { val: Period; set: (v: Period) => void }) {
   return (
-    <div className="relative inline-flex items-center">
+    <div className="relative inline-flex items-center shrink-0">
       <select value={val} onChange={e => set(e.target.value as Period)}
-        className="h-7 appearance-none rounded-lg border border-border pl-2 pr-6 text-[11px] font-semibold cursor-pointer focus:outline-none"
+        className="h-9 min-w-[150px] appearance-none rounded-lg border border-border-default bg-surface-1 pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer whitespace-nowrap focus:outline-none focus:ring-1 focus:ring-accent-color/25"
         style={{ color: 'var(--text-primary)', backgroundColor: 'var(--surface-1)' }}>
         {(Object.keys(PL) as Period[]).map(k => <option key={k} value={k}>{PL[k]}</option>)}
       </select>
-      <ChevronDown className="pointer-events-none absolute right-1.5 size-3 text-muted-foreground" />
+      <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-muted-foreground" />
     </div>
   );
 }
@@ -586,9 +586,9 @@ function TopDeals({ deals, period, onPeriod }: {
       }));
 
   return (
-    <div className="card-surface p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[14px] font-bold text-foreground">Top Deals</h2>
+    <div className="card-surface p-5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 className="min-w-0 text-[14px] font-bold text-foreground">Top Deals</h2>
         <PP val={period} set={onPeriod} />
       </div>
       <div className="overflow-x-auto">
@@ -624,15 +624,15 @@ function TopDeals({ deals, period, onPeriod }: {
 function RecentActivities({ acts }: { acts: { id: string; title?: string; action?: string; entity_type: string; created_at: string; created_by: string | null }[] }) {
   const rows = acts.slice(0, 5);
   return (
-    <div className="card-surface p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[14px] font-bold text-foreground">Recent Activities</h2>
-        <div className="relative inline-flex items-center">
-          <select className="h-7 appearance-none rounded-lg border border-border pl-2 pr-6 text-[11px] font-semibold cursor-pointer focus:outline-none"
+    <div className="card-surface p-5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 className="min-w-0 text-[14px] font-bold text-foreground">Recent Activities</h2>
+        <div className="relative inline-flex items-center shrink-0">
+          <select className="h-9 min-w-[150px] appearance-none whitespace-nowrap rounded-lg bg-surface-1 border border-border-default pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-color/25"
             style={{ color: 'var(--text-primary)', backgroundColor: 'var(--surface-1)' }}>
             <option>All Activities</option>
           </select>
-          <ChevronDown className="pointer-events-none absolute right-1.5 size-3 text-muted-foreground" />
+          <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-text-muted" />
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -713,22 +713,22 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
   const wonTicks = [0, 0.25, 0.5, 0.75, 1].map(r => ({ r, v: wvMax * r }));
 
   return (
-    <div className="card-surface p-5">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-[14px] font-bold text-foreground">Performance Over Time</h2>
-        <div className="flex items-center gap-4 text-[10px]">
+    <div className="card-surface p-5 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 className="min-w-0 text-[14px] font-bold text-foreground">Performance Over Time</h2>
+        <div className="flex flex-wrap items-center gap-4 whitespace-nowrap text-[10px] shrink-0">
           <span className="flex items-center gap-1.5 text-accent-color font-semibold">
             <span className="h-0.5 w-4 rounded-full bg-accent-color inline-block" /> Revenue
           </span>
           <span className="flex items-center gap-1.5 text-[#3DA35D] font-semibold">
             <span className="h-0.5 w-4 rounded-full bg-[#3DA35D] inline-block" /> Deals Won
           </span>
-          <div className="relative inline-flex items-center ml-2">
-            <select className="h-7 appearance-none rounded-lg border border-border pl-2 pr-6 text-[11px] font-semibold cursor-pointer focus:outline-none"
+          <div className="relative inline-flex items-center ml-2 shrink-0">
+            <select className="h-9 min-w-[150px] appearance-none whitespace-nowrap rounded-lg bg-surface-1 border border-border-default pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-color/25"
               style={{ color: 'var(--text-primary)', backgroundColor: 'var(--surface-1)' }}>
               <option>Year to Date</option>
             </select>
-            <ChevronDown className="pointer-events-none absolute right-1.5 size-3 text-muted-foreground" />
+            <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-text-muted" />
           </div>
         </div>
       </div>
@@ -854,14 +854,12 @@ export default function ReportsView() {
           <h1 className="text-[26px] font-extrabold tracking-tight text-foreground leading-tight">Reports</h1>
           <p className="mt-0.5 text-[12px] text-muted-foreground">Performance overview backed by live data.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button onClick={handleExport}
-            className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[12px] font-semibold shadow-sm hover:bg-secondary/40 transition"
-            style={{ color: 'var(--text-primary)' }}>
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-2 cursor-pointer">
             <Upload className="size-3.5" /> Export
           </button>
-          <button className="flex h-8 items-center gap-1.5 rounded-lg border border-border bg-card px-3 text-[12px] font-semibold shadow-sm hover:bg-secondary/40 transition"
-            style={{ color: 'var(--text-primary)' }}>
+          <button className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-2 cursor-pointer">
             <Filter className="size-3.5" /> Filter
           </button>
         </div>

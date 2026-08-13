@@ -120,23 +120,23 @@ export default function RecycleBinView() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-text-muted" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && applySearch()}
               placeholder="Search archived leads…"
-              className="w-56 rounded-xl border border-border bg-card px-8 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-accent-color/20 placeholder:text-muted-foreground/60"
+              className="h-10 w-56 rounded-lg border border-border-default bg-surface-2/60 px-8 text-xs font-medium text-text-primary outline-none transition-colors focus:border-accent-color focus:ring-1 focus:ring-accent-color/20 placeholder:text-text-muted/60"
             />
           </div>
 
           <button
             type="button"
             onClick={applySearch}
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold transition shadow-sm cursor-pointer"
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-2 cursor-pointer"
           >
             <Search className="h-3.5 w-3.5" />
             Search
@@ -146,7 +146,7 @@ export default function RecycleBinView() {
             type="button"
             onClick={load}
             disabled={loading}
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-full text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -156,7 +156,7 @@ export default function RecycleBinView() {
             type="button"
             onClick={handlePurgeAll}
             disabled={purgeBusy || total === 0}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold text-white bg-status-danger hover:bg-status-danger/90 transition shadow-sm cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {purgeBusy ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />

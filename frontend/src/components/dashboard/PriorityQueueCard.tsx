@@ -75,23 +75,30 @@ export default function PriorityQueueCard({
   };
 
   return (
-    <div className="bg-surface-1 border border-border-default rounded-xl p-[var(--space-4)] flex flex-col justify-between h-[360px]">
+    <div className="bg-surface-1 border border-border-default rounded-[20px] p-5 flex flex-col justify-between h-full min-h-[420px]">
       <div className="flex flex-col min-h-0">
         {/* Header */}
-        <div className="flex items-center justify-between pb-[var(--space-2)] border-b border-border-default/80 mb-[var(--space-3)] select-none">
-          <h3 className="font-bold text-text-primary text-sm flex items-center gap-1.5">
-            <Layers className="h-4.5 w-4.5 text-accent-color" />
-            <span>Today's Priority</span>
-          </h3>
-          {visibleItems.length > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-accent-color/10 text-accent-color text-[10px] font-bold tabular-nums">
-              {visibleItems.length}
-            </span>
-          )}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 mb-3.5 border-b border-border/60 select-none">
+          <div className="flex items-center space-x-2.5">
+            <div className="h-9 w-9 rounded-xl bg-accent-color/12 flex items-center justify-center text-accent-color border border-accent-color/20">
+              <Layers size={18} />
+            </div>
+            <div>
+              <h3 className="font-extrabold text-foreground text-sm tracking-tight flex items-center gap-2">
+                <span>Today's Priority</span>
+                {visibleItems.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-accent-color/10 text-accent-color text-[10px] font-bold tabular-nums">
+                    {visibleItems.length}
+                  </span>
+                )}
+              </h3>
+              <p className="text-[10px] text-text-secondary font-medium">High priority actions for today</p>
+            </div>
+          </div>
         </div>
 
         {/* List */}
-        <div className="space-y-[var(--space-2)] overflow-y-auto max-h-[260px] custom-scrollbar pr-1">
+        <div className="space-y-[var(--space-2)] overflow-y-auto max-h-[280px] custom-scrollbar pr-1">
           {visibleItems.length === 0 ? (
             <div className="py-10 flex flex-col items-center justify-center text-center space-y-2">
               <div className="h-12 w-12 rounded-full bg-status-success/10 border border-status-success/20 flex items-center justify-center text-status-success shadow-inner">
@@ -178,7 +185,7 @@ export default function PriorityQueueCard({
       </div>
 
       {/* Footer */}
-      <div className="pt-[var(--space-2)] border-t border-border-default mt-[var(--space-2)] text-right shrink-0">
+      <div className="pt-[var(--space-2)] border-t border-border/60 mt-[var(--space-2)] text-right shrink-0">
         <button
           onClick={onViewAll}
           className="inline-flex items-center gap-0.5 text-xs text-accent-color hover:text-accent-color/85 font-semibold cursor-pointer select-none"

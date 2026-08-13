@@ -100,7 +100,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
     return () => { cancelled = true; };
   }, []);
 
-  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : (contacts.length > 0 ? contacts[0] : null);
+  const active = selectedId ? contacts.find(c => c.id === selectedId) || null : null;
 
   const filtered = contacts.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
