@@ -14,6 +14,8 @@ services:
       # ── Database ─────────────────────────────────────────────────────────
       - key: DATABASE_URL
         sync: false
+      - key: DIRECT_URL
+        sync: false
       - key: DATABASE_POOL_SIZE
         value: "25"
       - key: DATABASE_MAX_OVERFLOW
@@ -67,7 +69,7 @@ services:
         value: KALNET PULSE CRM
       - key: SMTP_TLS
         value: "true"
-      - key: BREVO_API_KEY
+      - key: BREVO_WEBHOOK_SECRET
         sync: false
       # ── Google OAuth ─────────────────────────────────────────────────────
       - key: GOOGLE_CLIENT_ID
