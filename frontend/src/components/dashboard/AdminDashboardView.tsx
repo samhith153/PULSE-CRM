@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -29,14 +29,68 @@ import {
   formatINR,
   formatNum,
   formatPct,
+  getAutomationEvents,
   AdminDashboardData,
+  AutomationEvent,
 } from '@/utils/api';
 import { useReveal, useCountUp } from '@/hooks/use-reveal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/utils/cn';
 
-/* ── Sparkline (same Area-chart pattern as StatCards) ─────────────────── */
-function Spark({ values, positive, highlighted }: { values: number[]; positive: boolean; highlighted?: boolean }) {
+/* -- Filter dropdown (Revenue / Lead Sources period pickers) -- */
+function FilterDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { label: string; value: string }[];
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const activeLabel = options.find((o) => o.value === value)?.label ?? options[0]?.label;
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:border-brand-purple/30 transition-colors cursor-pointer"
+      >
+        {activeLabel} <ChevronDown size={13} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-1.5 z-30 w-40 bg-card border border-border rounded-xl shadow-lg py-1.5">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`w-full text-left px-3.5 py-1.5 text-xs font-semibold cursor-pointer transition-colors ${
+                opt.value === value ? 'text-brand-purple bg-brand-purple/5' : 'text-foreground hover:bg-secondary'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -- Sparkline (same Area-chart pattern as StatCards) -- */
+function Spark({ values, positive }: { values: number[]; positive: boolean }) {
   if (values.length < 2) return null;
   const max   = Math.max(...values, 1);
   const min   = Math.min(...values, 0);
@@ -87,7 +141,7 @@ function Spark({ values, positive, highlighted }: { values: number[]; positive: 
 }
 
 
-/* ── KPI stat tile (spec §4 pattern) ─────────────────────────────────── */
+/* -- KPI stat tile (spec section 4 pattern) -- */
 interface KpiTile {
   title: string;
   value: string;
@@ -188,17 +242,25 @@ function StatTile({ tile, index = 0, delay = 0, isHero = false }: { tile: KpiTil
   );
 }
 
-/* ΓöÇΓöÇ Revenue area chart ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+/* -- Revenue area chart -- */
 function RevenueChart({
-  monthly,
+  monthly: fullMonthly,
   visible,
+  period,
 }: {
   monthly: AdminDashboardData['monthly_sales'];
   visible: boolean;
+  period: '12' | '6' | '3';
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const [activeMetric, setActiveMetric] = useState<'both' | 'revenue' | 'leads'>('both');
+
+  const monthly = period === '12' ? fullMonthly : fullMonthly.slice(-Number(period));
   const n = monthly.length;
+
+  // Reset any stale hover index whenever the visible window changes.
+  useEffect(() => { setHovered(null); }, [period]);
+
   if (n === 0) return <div className="h-48 flex items-center justify-center text-sm text-muted-foreground">No data yet.</div>;
 
   const revenues = monthly.map((m) => asNumber(m.revenue));
@@ -466,7 +528,7 @@ function RevenueChart({
   );
 }
 
-/* ΓöÇΓöÇ Donut chart ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+/* -- Donut chart -- */
 const DONUT_COLORS = [
   'var(--accent-color)',
   'var(--accent-color)',
@@ -474,6 +536,40 @@ const DONUT_COLORS = [
   'var(--chart-4)',
   'var(--chart-5)',
 ];
+
+/* -- Audit log helpers -- */
+function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 5) return 'just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
+function auditBadgeClass(eventType: string): string {
+  const t = (eventType || '').toLowerCase();
+  if (t.includes('delete') || t.includes('bulk')) return 'text-amber-500 bg-amber-500/10';
+  if (t.includes('export')) return 'text-rose-500 bg-rose-500/10';
+  if (t.includes('role') || t.includes('permission') || t.includes('user')) return 'text-brand-purple bg-brand-purple/10';
+  return 'text-brand-cyan bg-brand-cyan/10';
+}
+
+function auditBadgeLabel(eventType: string): string {
+  if (!eventType) return 'EVENT';
+  return eventType.replace(/\./g, '_').toUpperCase().slice(0, 14);
+}
+
+function auditDescription(evt: AutomationEvent): string {
+  if (evt.event_name) return evt.event_name;
+  const actor = evt.actor_id ? `Actor ${evt.actor_id.slice(0, 8)}` : 'System';
+  const target = evt.aggregate_type ? ` on ${evt.aggregate_type}` : '';
+  return `${actor} triggered ${evt.event_type}${target}`;
+}
 
 function DonutChart({
   data,
@@ -542,22 +638,39 @@ function DonutChart({
   );
 }
 
-/* ΓöÇΓöÇ Main component ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ */
+/* -- Main component -- */
 export default function AdminDashboardView() {
   const [data, setData]       = useState<AdminDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const [auditEvents, setAuditEvents] = useState<AutomationEvent[]>([]);
+  const [auditLoading, setAuditLoading] = useState(true);
+  const [revenuePeriod, setRevenuePeriod] = useState<'12' | '6' | '3'>('12');
+  const [leadSourcePeriod, setLeadSourcePeriod] = useState<'all' | 'year'>('all');
+  const [sourceLoading, setSourceLoading] = useState(false);
   const chartVisible = true;
 
   useEffect(() => {
     let cancelled = false;
-    getAdminDashboard()
-      .then((d) => { if (!cancelled) { setData(d); setLoading(false); } })
-      .catch((e) => { if (!cancelled) { setError(e?.message ?? 'Failed to load'); setLoading(false); } });
+    // Only show the full-page skeleton on the very first load; refetches
+    // triggered by the Lead Sources filter just show a small inline spinner.
+    if (!data) setLoading(true);
+    else setSourceLoading(true);
+    getAdminDashboard(leadSourcePeriod)
+      .then((d) => { if (!cancelled) { setData(d); setLoading(false); setSourceLoading(false); } })
+      .catch((e) => { if (!cancelled) { setError(e?.message ?? 'Failed to load'); setLoading(false); setSourceLoading(false); } });
+    return () => { cancelled = true; };
+  }, [leadSourcePeriod]);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAutomationEvents(5)
+      .then((res) => { if (!cancelled) { setAuditEvents(res?.items ?? []); setAuditLoading(false); } })
+      .catch(() => { if (!cancelled) { setAuditEvents([]); setAuditLoading(false); } });
     return () => { cancelled = true; };
   }, []);
 
-  /* ΓöÇΓöÇ Skeleton ΓöÇΓöÇ */
+  /* -- Skeleton -- */
   if (loading) {
     return (
       <div className="space-y-[var(--space-5)] animate-pulse">
@@ -598,7 +711,7 @@ export default function AdminDashboardView() {
       values: revSeries.length ? revSeries : [4, 6, 5, 8, 9, 11],
       icon: Wallet,
       targetValue: asNumber(s.revenue.this_month),
-      prefix: '₹',
+      prefix: '\u20b9',
     },
     {
       title: 'Active Users',
@@ -669,12 +782,18 @@ export default function AdminDashboardView() {
                 Closed-won revenue vs lead volume
               </p>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-              This year <ChevronDown size={13} />
-            </span>
+            <FilterDropdown
+              value={revenuePeriod}
+              onChange={(v) => setRevenuePeriod(v as '12' | '6' | '3')}
+              options={[
+                { label: 'This Year', value: '12' },
+                { label: 'Last 6 Months', value: '6' },
+                { label: 'Last 3 Months', value: '3' },
+              ]}
+            />
           </div>
 
-          <RevenueChart monthly={monthly} visible={chartVisible} />
+          <RevenueChart monthly={monthly} visible={chartVisible} period={revenuePeriod} />
 
           {/* Summary row */}
           <div className="mt-5 grid grid-cols-2 gap-[var(--space-3)] border-t border-border pt-[var(--space-4)] sm:grid-cols-4">
@@ -698,12 +817,19 @@ export default function AdminDashboardView() {
             <h2 className="truncate text-base font-semibold tracking-tight text-foreground">
               Lead sources
             </h2>
-            <span className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground">
-              All time <ChevronDown size={13} />
-            </span>
+            <FilterDropdown
+              value={leadSourcePeriod}
+              onChange={(v) => setLeadSourcePeriod(v as 'all' | 'year')}
+              options={[
+                { label: 'All Time', value: 'all' },
+                { label: 'This Year', value: 'year' },
+              ]}
+            />
           </div>
           {sourceData.length > 0 ? (
-            <DonutChart data={sourceData} />
+            <div className={`transition-opacity duration-150 ${sourceLoading ? 'opacity-40' : 'opacity-100'}`}>
+              <DonutChart data={sourceData} />
+            </div>
           ) : (
             <p className="py-8 text-center text-sm text-muted-foreground">No lead source data yet.</p>
           )}
@@ -896,38 +1022,34 @@ export default function AdminDashboardView() {
             </div>
             
             <div className="space-y-3 mt-1 text-xs">
-              <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-2">
-                <div className="min-w-0 flex items-center gap-3">
-                  <span className="font-semibold text-status-danger-text bg-status-danger-bg px-2 py-0.5 rounded text-[10px]">EXPORT</span>
-                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">Admin</strong> exported 50 leads to CSV</p>
+              {auditLoading ? (
+                <div className="flex items-center justify-center py-6 text-muted-foreground gap-2">
+                  <RefreshCw size={13} className="animate-spin" />
+                  <span>Loading audit events...</span>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[10px] text-muted-foreground font-medium">20m ago</p>
-                  <p className="text-[9px] text-muted-foreground/60">IP: 192.168.1.45</p>
+              ) : auditEvents.length === 0 ? (
+                <div className="text-center py-6 text-muted-foreground/70 font-medium">
+                  No audit events recorded yet.
                 </div>
-              </div>
-              
-              <div className="flex items-center justify-between gap-4 border-b border-border/40 pb-2">
-                <div className="min-w-0 flex items-center gap-3">
-                  <span className="font-semibold text-accent-color bg-accent-color/10 px-2 py-0.5 rounded text-[10px]">ROLE_UPD</span>
-                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">Sarah.J</strong> updated role of Mike.C to Manager</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[10px] text-muted-foreground font-medium">2h ago</p>
-                  <p className="text-[9px] text-muted-foreground/60">Console Admin</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0 flex items-center gap-3">
-                  <span className="font-semibold text-status-warning-text bg-status-warning-bg px-2 py-0.5 rounded text-[10px]">BULK_DEL</span>
-                  <p className="truncate text-foreground font-medium"><strong className="text-foreground">System</strong> bulk-deleted 18 dead leads</p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[10px] text-muted-foreground font-medium">5h ago</p>
-                  <p className="text-[9px] text-muted-foreground/60">Clean sweep job</p>
-                </div>
-              </div>
+              ) : (
+                auditEvents.map((evt, idx) => (
+                  <div
+                    key={evt.id}
+                    className={`flex items-center justify-between gap-4 ${idx < auditEvents.length - 1 ? 'border-b border-border/40 pb-2' : ''}`}
+                  >
+                    <div className="min-w-0 flex items-center gap-3">
+                      <span className={`font-semibold px-2 py-0.5 rounded text-[10px] shrink-0 ${auditBadgeClass(evt.event_type)}`}>
+                        {auditBadgeLabel(evt.event_type)}
+                      </span>
+                      <p className="truncate text-foreground font-medium">{auditDescription(evt)}</p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] text-muted-foreground font-medium">{relativeTime(evt.occurred_at)}</p>
+                      <p className="text-[9px] text-muted-foreground/60">{evt.source || 'System'}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </motion.div>
 

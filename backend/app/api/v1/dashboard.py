@@ -147,15 +147,19 @@ async def get_redesigned_dashboard(current_user: CurrentUser, db: DBSession) -> 
     dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
-async def get_admin_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+async def get_admin_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+    lead_source_period: str = Query(default="all", pattern="^(all|year)$"),
+) -> dict:
     """
-    GET /api/v1/dashboard/admin
+    GET /api/v1/dashboard/admin?lead_source_period=all|year
 
     Secured: JWT required + `admin` role.
     Scoped to the caller's organization_id.
     """
     svc = DashboardService(db)
-    data = await svc.admin_kpi(current_user.organization_id)
+    data = await svc.admin_kpi(current_user.organization_id, lead_source_period=lead_source_period)
     return {"success": True, "message": "Admin KPIs retrieved successfully.", "data": data}
 
 

@@ -65,7 +65,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str
     DATABASE_POOL_SIZE: int = 15
     DATABASE_MAX_OVERFLOW: int = 10
-    DATABASE_POOL_TIMEOUT: int = 20
+    DATABASE_POOL_TIMEOUT: int = 30
     DATABASE_POOL_RECYCLE: int = 300
 
     SUPABASE_URL: Optional[str] = None

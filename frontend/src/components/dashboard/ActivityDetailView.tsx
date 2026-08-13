@@ -22,7 +22,8 @@ import {
   Plus,
   Compass,
   TrendingUp,
-  Activity as ActivityIcon
+  Activity as ActivityIcon,
+   CheckCircle2
 } from 'lucide-react';
 import { getLeads, getContacts, getCrmActivity, CrmActivity, updateCrmTask, deleteCrmTask, updateCrmCall, deleteCrmCall, updateCrmNote, deleteCrmNote, createCrmTask } from '@/utils/api';
 import ContextPanel from './ContextPanel';
@@ -209,6 +210,28 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
     }
   };
 
+// Quick-close: mark completed without entering full edit mode
+  const handleCloseTask = async () => {
+    if (!activity) return;
+    try {
+      const type = activity.activity_type;
+      if (type === 'task') {
+        await updateCrmTask(activity.id, { status: 'completed' } as any);
+      } else if (type === 'call') {
+        await updateCrmCall(activity.id, { status: 'completed' } as any);
+      } else {
+        toast.error('Closing is not supported for this activity type.');
+        return;
+      }
+      const fresh = await getCrmActivity(id);
+      setActivity(fresh);
+      setStatus(fresh.status);
+      toast.success('Activity marked as completed.');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to close activity.');
+    }
+  };
+
   // Delete activity
   const handleDelete = async () => {
     if (!activity) return;
@@ -361,6 +384,16 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
                 >
                   <Mail size={13} />
                   <span>Email</span>
+                </button>
+              )}
+              {activity.status?.toLowerCase() !== 'completed' && (activity.activity_type === 'task' || activity.activity_type === 'call') && (
+                <button 
+                  onClick={handleCloseTask}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#4FB477] hover:bg-[#4FB477]/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+                  title="Mark this activity as completed"
+                >
+                  <CheckCircle2 size={13} />
+                  <span>Close Task</span>
                 </button>
               )}
               <button 
@@ -715,9 +748,8 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
 
         {/* Right Side: Sidebar Context and Settings Log */}
         <div className="col-span-12 lg:col-span-4 space-y-5 pt-[46px]">
-          <ContextPanel 
-            contactName={activity.related_entity_type === 'contact' ? (activity.related_record_name || undefined) : undefined}
-            companyName={activity.related_entity_type === 'company' ? (activity.related_record_name || undefined) : undefined}
+         <ContextPanel 
+            activity={activity}
             onTabChange={onTabChange}
           />
 
