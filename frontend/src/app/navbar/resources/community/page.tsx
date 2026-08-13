@@ -170,7 +170,7 @@ export default function CommunityPage() {
               </motion.button>
               <motion.a
                 whileHover={{ scale: 1.04, y: -2 }}
-                href="/resources/documentation"
+                href="/navbar/resources/documentation"
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 26px', background: '#fff', color: '#0f172a', fontSize: 14, fontWeight: 700, borderRadius: 100, border: '1.5px solid #e2e8f0', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textDecoration: 'none', fontFamily: 'inherit' }}>
                 View Documentation
               </motion.a>

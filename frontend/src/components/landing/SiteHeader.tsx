@@ -23,17 +23,17 @@ const menus: Record<string, MenuConfig> = {
       {
         heading: "CRM CORE",
         items: [
-          { title: "Lead Management", desc: "Capture, qualify, and manage every lead from one place." },
-          { title: "Contact Management", desc: "Keep customer contacts and communication history organized." },
-          { title: "Company Management", desc: "Manage organizations and customer information in one place." },
+          { title: "Lead Management", desc: "Capture, qualify, and manage every lead from one place.", route: "/navbar/platform/lead-management" },
+          { title: "Contact Management", desc: "Keep customer contacts and communication history organized.", route: "/navbar/platform/contact-management" },
+          { title: "Company Management", desc: "Manage organizations and customer information in one place.", route: "/navbar/platform/company-management" },
         ],
       },
       {
         heading: "SALES WORKFLOW",
         items: [
-          { title: "Sales Pipeline", desc: "Track opportunities through every stage of your sales process." },
-          { title: "Deal Management", desc: "Create, manage, and close sales opportunities." },
-          { title: "Tasks & Follow-ups", desc: "Keep sales activities and follow-ups on schedule." },
+          { title: "Sales Pipeline", desc: "Track opportunities through every stage of your sales process.", route: "/navbar/platform/sales-pipeline" },
+          { title: "Deal Management", desc: "Create, manage, and close sales opportunities.", route: "/navbar/platform/deal-management" },
+          { title: "Tasks & Follow-ups", desc: "Keep sales activities and follow-ups on schedule.", route: "/navbar/platform/tasks-follow-ups" },
         ],
       },
     ],
@@ -48,18 +48,18 @@ const menus: Record<string, MenuConfig> = {
       {
         heading: "AI & INTELLIGENCE",
         items: [
-          { title: "AI Copilot", desc: "Rule-based lead scoring (0–100) + Groq/Llama email analysis.", route: "/product/ai-copilot" },
-          { title: "Email Intelligence", desc: "Gmail OAuth sync, thread logging & AI-powered analysis.", route: "/product/email-intelligence" },
-          { title: "Revenue Analytics", desc: "Live dashboards, pipeline value, rep leaderboards & forecasts.", route: "/product/revenue-analytics" },
-          { title: "Automation", desc: "Next-best-action engine — weighted by score, urgency & reply.", route: "/product/automation" },
+          { title: "AI Copilot", desc: "Rule-based lead scoring (0–100) + Groq/Llama email analysis.", route: "/navbar/product/ai-copilot" },
+          { title: "Email Intelligence", desc: "Gmail OAuth sync, thread logging & AI-powered analysis.", route: "/navbar/product/email-intelligence" },
+          { title: "Revenue Analytics", desc: "Live dashboards, pipeline value, rep leaderboards & forecasts.", route: "/navbar/product/revenue-analytics" },
+          { title: "Automation", desc: "Next-best-action engine — weighted by score, urgency & reply.", route: "/navbar/product/automation" },
         ],
       },
       {
         heading: "PIPELINE & SECURITY",
         items: [
-          { title: "Visual Pipeline", desc: "FSM deal stages: New → Qualified → Proposal → Won/Lost.", route: "/product/visual-pipeline" },
-          { title: "Lead Management", desc: "Capture, score, qualify and track every lead in one place.", route: "/product/lead-management" },
-          { title: "Security & RBAC", desc: "3 roles, 33 permissions, JWT auth & bcrypt passwords.", route: "/product/security-rbac" },
+          { title: "Visual Pipeline", desc: "FSM deal stages: New → Qualified → Proposal → Won/Lost.", route: "/navbar/product/visual-pipeline" },
+          { title: "Lead Management", desc: "Capture, score, qualify and track every lead in one place.", route: "/navbar/product/lead-management" },
+          { title: "Security & RBAC", desc: "3 roles, 33 permissions, JWT auth & bcrypt passwords.", route: "/navbar/product/security-rbac" },
         ],
       },
     ],
@@ -77,17 +77,17 @@ const menus: Record<string, MenuConfig> = {
       {
         heading: "LEARN",
         items: [
-          { title: "Documentation", desc: "Setup guides, architecture overview & configuration", route: "/resources/documentation" },
-          { title: "Implementation Guide", desc: "Docker setup, migrations, seed data & test credentials", route: "/resources/implementation-guide" },
-          { title: "API Reference", desc: "40+ REST endpoints with Swagger UI at /docs and /redoc", route: "/resources/api-reference" },
+          { title: "Documentation", desc: "Setup guides, architecture overview & configuration", route: "/navbar/resources/documentation" },
+          { title: "Implementation Guide", desc: "Docker setup, migrations, seed data & test credentials", route: "/navbar/resources/implementation-guide" },
+          { title: "API Reference", desc: "40+ REST endpoints with Swagger UI at /docs and /redoc", route: "/navbar/resources/api-reference" },
         ],
       },
       {
         heading: "CONNECT",
         items: [
-          { title: "Blog", desc: "AI scoring deep-dives, CRM architecture & sales strategy", route: "/resources/blog" },
-          { title: "Community", desc: "Connect with developers and sales teams building on Pulse", route: "/resources/community" },
-          { title: "Support", desc: "Get help from our team — bugs, integrations, or setup", route: "/resources/support" },
+          { title: "Blog", desc: "AI scoring deep-dives, CRM architecture & sales strategy", route: "/navbar/resources/blog" },
+          { title: "Community", desc: "Connect with developers and sales teams building on Pulse", route: "/navbar/resources/community" },
+          { title: "Support", desc: "Get help from our team — bugs, integrations, or setup", route: "/navbar/resources/support" },
         ],
       },
     ],
@@ -96,7 +96,7 @@ const menus: Record<string, MenuConfig> = {
       heading: "Get Support & Resources",
       desc: "Documentation, community, and help — everything you need to succeed.",
       link: "View all resources →",
-      route: "/resources/documentation",
+      route: "/navbar/resources/documentation",
     },
   },
 };
@@ -120,12 +120,12 @@ export function SiteHeader() {
   // Navigation handler for Platform dropdown items
   const handlePlatformNavigation = (itemTitle: string) => {
     const platformRoutes: Record<string, string> = {
-      "Lead Management": "/platform/lead-management",
-      "Contact Management": "/platform/contact-management", 
-      "Company Management": "/platform/company-management",
-      "Sales Pipeline": "/platform/sales-pipeline",
-      "Deal Management": "/platform/deal-management",
-      "Tasks & Follow-ups": "/platform/tasks-follow-ups"
+      "Lead Management": "/navbar/platform/lead-management",
+      "Contact Management": "/navbar/platform/contact-management", 
+      "Company Management": "/navbar/platform/company-management",
+      "Sales Pipeline": "/navbar/platform/sales-pipeline",
+      "Deal Management": "/navbar/platform/deal-management",
+      "Tasks & Follow-ups": "/navbar/platform/tasks-follow-ups"
     };
 
     const targetRoute = platformRoutes[itemTitle];
@@ -203,11 +203,11 @@ export function SiteHeader() {
             {navLinks.map((l) => {
               const hasMenu = !!menus[l];
               if (!hasMenu) {
-                const isActive = l === "Pricing" ? pathname === "/pricing" : pathname === `/${l.toLowerCase()}`;
+                const isActive = l === "Pricing" ? pathname === "/navbar/pricing" : pathname === `/${l.toLowerCase()}`;
                 return (
                   <Link
                     key={l}
-                    href={l === "Pricing" ? "/pricing" : `/${l.toLowerCase()}`}
+                    href={l === "Pricing" ? "/navbar/pricing" : `/${l.toLowerCase()}`}
                     onMouseEnter={() => setOpenMenu(null)}
                     onClick={() => setOpenMenu(null)}
                     className={cn(
@@ -470,7 +470,7 @@ export function SiteHeader() {
                     </div>
                   ) : (
                     <Link
-                      href={l === "Pricing" ? "/pricing" : `/${l.toLowerCase()}`}
+                      href={l === "Pricing" ? "/navbar/pricing" : `/${l.toLowerCase()}`}
                       onClick={() => setMobileOpen(false)}
                       className="block py-3 text-sm font-medium text-ink hover:text-link transition-colors"
                     >
