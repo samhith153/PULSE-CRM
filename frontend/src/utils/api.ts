@@ -453,6 +453,13 @@ export async function updateLead(leadId: string, leadData: Record<string, unknow
   });
 }
 
+export async function updateLeadStatus(leadId: string, status: string, closeReason?: string): Promise<Lead> {
+  return apiFetch<Lead>(`/api/v1/leads/${leadId}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, close_reason: closeReason || undefined })
+  });
+}
+
 export async function deleteLead(leadId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/leads/${leadId}`, { method: 'DELETE' });
 }

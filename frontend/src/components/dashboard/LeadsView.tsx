@@ -4,7 +4,7 @@ import { toast } from '@/lib/toast';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import SkeletonLoader from './SkeletonLoader';
-import { Lead as BackendLead, getLeads, createLead, updateLead, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
+import { Lead as BackendLead, getLeads, createLead, updateLead, updateLeadStatus, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -601,13 +601,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   const handleEditLead = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeLead) return;
+    const newStatusBackend = STATUS_MAP[leadForm.status as string] || leadForm.status;
+    const oldStatusBackend = STATUS_MAP[activeLead.status] || activeLead.status;
+    const statusChanged = newStatusBackend !== oldStatusBackend;
     const payload: Record<string, unknown> = {
       title: leadForm.name,
       company_name: leadForm.company,
       job_title: leadForm.jobTitle || undefined,
       email: leadForm.email || undefined,
       phone: leadForm.phone || undefined,
-      status: STATUS_MAP[leadForm.status as string] || leadForm.status,
       source: SOURCE_MAP[leadForm.source as string] || leadForm.source || undefined,
       industry: leadForm.industry || undefined,
       location: leadForm.location || undefined,
@@ -615,7 +617,10 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       notes: leadForm.notes || undefined,
     };
     try {
-      const updated = await updateLead(activeLead.id, payload);
+      let updated = await updateLead(activeLead.id, payload);
+      if (statusChanged) {
+        updated = await updateLeadStatus(activeLead.id, newStatusBackend);
+      }
       setLeads(leads.map(l => l.id === activeLead.id ? backendToLocal(updated) : l));
       fetchLeadRecommendation(String(activeLead.id)).then(res => {
         setLeadRecommendations(prev => ({ ...prev, [activeLead.id]: res.recommendations?.[0] || 'No recommendation available.' }));
