@@ -13,7 +13,7 @@ router = APIRouter(prefix="/conversations", tags=["Conversation AI"])
 
 
 @router.post("/summarise", response_model=ConversationResponse, status_code=200)
-def summarise(payload: ConversationRequest) -> ConversationResponse:
+async def summarise(payload: ConversationRequest) -> ConversationResponse:
     """Summarise an email thread and extract structured insights."""
     try:
         thread = {
@@ -30,7 +30,7 @@ def summarise(payload: ConversationRequest) -> ConversationResponse:
             "meetingNotes": [],
         }
 
-        raw = summarise_thread(thread)
+        raw = await summarise_thread(thread)
 
         # The LLM returns JSON as a string — parse it into structured fields
         data = parse_llm_json(raw) if isinstance(raw, str) else raw
@@ -54,10 +54,10 @@ def summarise(payload: ConversationRequest) -> ConversationResponse:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 @router.post("/draft-email", response_model=DraftEmailResponse, status_code=200)
-def draft_email(payload: DraftEmailRequest) -> DraftEmailResponse:
+async def draft_email(payload: DraftEmailRequest) -> DraftEmailResponse:
     """Generate a brand-new outreach email draft (subject + body) for a contact."""
     try:
-        result = generate_outreach_draft(
+        result = await generate_outreach_draft(
             recipient_name=payload.recipient_name,
             recipient_email=payload.recipient_email,
             company=payload.company or "",

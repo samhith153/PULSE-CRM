@@ -1,4 +1,4 @@
-export type ToastType = 'success' | 'error' | 'info';
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
 
 export type ToastOptions = { title?: string; duration?: number };
 
@@ -29,6 +29,7 @@ export const toast = {
   success: (message: string, options?: ToastOptions) => show('success', message, options),
   error: (message: string, options?: ToastOptions) => show('error', message, options),
   info: (message: string, options?: ToastOptions) => show('info', message, options),
+  warning: (message: string, options?: ToastOptions) => show('warning', message, options),
 };
 
 export default toast;

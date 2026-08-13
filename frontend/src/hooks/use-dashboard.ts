@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { toast } from '@/lib/toast';
 import { getDashboardMe, DashboardOverviewData } from '@/utils/api';
 
 interface UseDashboardOverviewResult {
@@ -48,7 +49,9 @@ export function useDashboardOverview(): UseDashboardOverviewResult {
       setData(result);
     } catch (err: any) {
       if (err?.name !== 'AbortError') {
-        setError(err?.message ?? 'Failed to fetch dashboard data');
+        const msg = err?.message ?? 'Failed to fetch dashboard data';
+        setError(msg);
+        toast.error(msg);
       }
     } finally {
       setIsLoading(false);

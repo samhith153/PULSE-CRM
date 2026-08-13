@@ -36,16 +36,16 @@ async def health_check() -> HealthResponse:
 
 @router.get("/debug")
 async def debug_health():
-    from app.database.connection import engine, DATABASE_URL
+    from app.database.connection import engine
     from sqlalchemy import text
     try:
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT 1"))
             val = result.scalar()
-            return {"status": "ok", "db_url": DATABASE_URL, "val": val}
+            return {"status": "ok", "db_url": engine.url.render_as_string(hide_password=True), "val": val}
     except Exception as e:
         import traceback
-        return {"status": "error", "db_url": DATABASE_URL, "error": str(e), "traceback": traceback.format_exc()}
+        return {"status": "error", "db_url": engine.url.render_as_string(hide_password=True), "error": str(e), "traceback": traceback.format_exc()}
 
 
 @router.get(

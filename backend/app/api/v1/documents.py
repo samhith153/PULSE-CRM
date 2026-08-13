@@ -1,4 +1,5 @@
-﻿import os
+﻿import asyncio
+import os
 from datetime import datetime, timezone, timedelta
 from uuid import UUID, uuid4
 
@@ -57,10 +58,14 @@ async def upload_document(
     file_bytes = await file.read()
 
     try:
-        get_supabase().storage.from_(BUCKET_NAME).upload(
+        # The supabase client is synchronous (blocking HTTP) — run the request
+        # in a worker thread so it never blocks the event loop.
+        storage = get_supabase().storage.from_(BUCKET_NAME)
+        await asyncio.to_thread(
+            storage.upload,
             path=safe_filename,
             file=file_bytes,
-            file_options={"content-type": file.content_type}
+            file_options={"content-type": file.content_type},
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Cloud storage upload failed: {str(e)}")
@@ -124,7 +129,9 @@ async def get_signed_url(doc_id: UUID, current_user: CurrentUser, db: DBSession)
 
     try:
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=SIGNED_URL_EXPIRY_SECONDS)
-        signed = get_supabase().storage.from_(BUCKET_NAME).create_signed_url(
+        storage = get_supabase().storage.from_(BUCKET_NAME)
+        signed = await asyncio.to_thread(
+            storage.create_signed_url,
             path=doc.file_path,
             expires_in=SIGNED_URL_EXPIRY_SECONDS,
         )
@@ -155,7 +162,8 @@ async def download_document(doc_id: UUID, current_user: CurrentUser, db: DBSessi
         raise HTTPException(status_code=404, detail="Document not found in database")
 
     try:
-        file_bytes = get_supabase().storage.from_(BUCKET_NAME).download(doc.file_path)
+        storage = get_supabase().storage.from_(BUCKET_NAME)
+        file_bytes = await asyncio.to_thread(storage.download, doc.file_path)
         return Response(
             content=file_bytes,
             media_type=doc.file_type,
@@ -185,7 +193,8 @@ async def delete_document(doc_id: UUID, current_user: CurrentUser, db: DBSession
         raise HTTPException(status_code=404, detail="Document not found")
 
     try:
-        get_supabase().storage.from_(BUCKET_NAME).remove([doc.file_path])
+        storage = get_supabase().storage.from_(BUCKET_NAME)
+        await asyncio.to_thread(storage.remove, [doc.file_path])
     except Exception as e:
         logger.warning("Failed to delete cloud file: %s", e)
 

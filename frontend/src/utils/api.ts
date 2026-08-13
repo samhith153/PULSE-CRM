@@ -337,14 +337,24 @@ async function apiFetch<T>(endpoint: string, options?: RequestInit, _retry = tru
 }
 
 async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry = true): Promise<T> {
-  let res = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeaders(),
-      ...(options?.headers || {})
-    }
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+        ...(options?.headers || {})
+      }
+    });
+  } catch (err: any) {
+    // Network error — server unreachable, DNS failure, CORS block, etc.
+    const msg = err?.message === 'Failed to fetch'
+      ? 'Network error — could not reach the server. Please check your connection.'
+      : `Network error: ${err?.message || 'Unknown failure'}`;
+    toast.error(msg, { duration: 6000 });
+    throw new Error(msg);
+  }
 
   // On 401, attempt a single silent refresh then retry
   if (res.status === 401 && _retry) {
@@ -369,6 +379,7 @@ async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry
   }
   if (!res.ok) {
     let message = `Request failed (${res.status})`;
+    let errorDetail = '';
     try {
       const body = await res.json();
       if (body?.message) message = body.message;
@@ -381,14 +392,25 @@ async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry
           message = d.message;
         }
       }
+      errorDetail = body?.error_code || '';
     } catch {
     }
+    // Show a toast for every non-2xx error so failures are never silent.
     if (res.status === 403) {
       toast.error(`Permission denied: ${message}`);
     } else if (res.status === 429) {
       toast.error('Too many requests. Please wait a moment and try again.');
+    } else if (res.status === 401) {
+      // Should not reach here (handled above), but guard anyway.
+      toast.error('Authentication required.');
+    } else if (res.status === 404) {
+      toast.warning(`Not found: ${message}`);
+    } else if (res.status === 422 || res.status === 400) {
+      toast.warning(message);
     } else if (res.status >= 500) {
       toast.error(`Server error: ${message}`);
+    } else {
+      toast.warning(message);
     }
     throw new Error(message);
   }

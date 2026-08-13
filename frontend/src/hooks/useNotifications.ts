@@ -105,8 +105,11 @@ export function useNotifications(pageSize = 20) {
       }
       prevUnreadRef.current = newCount;
       initialLoadDone.current = true;
-    } catch {
-      // Silently fail ΓÇö notifications are non-critical
+    } catch (err: any) {
+      // Notifications are non-critical — log but don't flood toasts.
+      if (!initialLoadDone.current) {
+        console.warn('[notifications] Failed to load:', err?.message || err);
+      }
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -122,8 +125,8 @@ export function useNotifications(pageSize = 20) {
         prevUnreadRef.current = count;
         setUnreadCount(count);
       }
-    } catch {
-      // Silently fail
+    } catch (err: any) {
+      console.warn('[notifications] Failed to refresh unread count:', err?.message || err);
     }
   }, []);
 
@@ -142,7 +145,8 @@ export function useNotifications(pageSize = 20) {
     setUnreadCount((prev) => Math.max(0, prev - 1));
     try {
       await markNotificationRead(id);
-    } catch {
+    } catch (err: any) {
+      console.warn('[notifications] Failed to mark as read:', err?.message || err);
       await refresh();
     }
   }, [refresh]);
@@ -152,7 +156,8 @@ export function useNotifications(pageSize = 20) {
     setUnreadCount(0);
     try {
       await markAllNotificationsRead();
-    } catch {
+    } catch (err: any) {
+      console.warn('[notifications] Failed to mark all as read:', err?.message || err);
       await refresh();
     }
   }, [refresh]);
@@ -163,7 +168,8 @@ export function useNotifications(pageSize = 20) {
     if (wasUnread) setUnreadCount((prev) => Math.max(0, prev - 1));
     try {
       await dismissNotification(id);
-    } catch {
+    } catch (err: any) {
+      console.warn('[notifications] Failed to dismiss:', err?.message || err);
       await refresh();
     }
   }, [notifications, refresh]);

@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import NotFoundException
-from app.models.role import Role
+from app.models.role import Role, RolePermission
 from app.models.user import User, UserRole
 from app.repositories.base import BaseRepository
 
@@ -21,10 +21,15 @@ class UserRepository(BaseRepository[User]):
         super().__init__(User, db)
 
     def _base_query(self):
-        """Always load roles eagerly to avoid N+1 issues."""
+        """Always load roles + permissions eagerly to avoid N+1 issues."""
         return (
             select(User)
-            .options(selectinload(User.user_roles).selectinload(UserRole.role))
+            .options(
+                selectinload(User.user_roles)
+                .selectinload(UserRole.role)
+                .selectinload(Role.role_permissions)
+                .selectinload(RolePermission.permission)
+            )
             .where(User.is_deleted == False)
         )
 
