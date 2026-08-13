@@ -1,9 +1,42 @@
 # DEEP-PERFORMANCE-REVIEW.md
 ## PULSE-CRM — End-to-End Performance Audit
 
-**Repository:** `samhith153/PULSE-CRM` @ `d068be13b1263c8d933676ca6fae96cadd215fb7`
-**Audit date:** 2026-08-13
-**Confidence legend:** CONFIRMED (verified in code) · LIKELY (strong code evidence) · POSSIBLE (needs runtime verification)
+**Repository:** `samhith153/PULSE-CRM`
+**Original audit:** 2026-08-13 @ `d068be13b1263c8d933676ca6fae96cadd215fb7`
+**Re-verified:** 2026-08-13 @ `4449dac` (line-by-line against current codebase)
+**Confidence legend:** CONFIRMED (verified in code) · LIKELY (strong code evidence) · POSSIBLE (needs runtime verification) · FIXED (no longer present) · PARTIALLY FIXED (improved, root cause remains)
+
+---
+
+## 0. Re-verification Status (HEAD `4449dac`, 2026-08-13)
+
+This review was re-verified claim-by-claim against the current codebase. **All five P0 findings and most P1 findings still hold.** The table below shows what changed since the original audit; sections marked ⚠ in the body contain corrections or added context.
+
+| # | Finding (original doc) | Status at HEAD `4449dac` |
+|---|------------------------|--------------------------|
+| 1 | NullPool = new DB connection per request | **STILL ACTIVE.** `connection.py` still selects `NullPool` when `DATABASE_URL` contains `pooler`/`:6543`. A new `DIRECT_URL` (session-mode 5432) setting now exists, but only Alembic consumes it (`alembic/env.py`) — the app engine is still built from `DATABASE_URL` only. |
+| 2 | `get_current_user` DB query per request | **STILL ACTIVE.** `deps.py` — no caching added. |
+| 3 | AI service sync `def` endpoints | **STILL ACTIVE — broader than documented.** `conversation_router.py` (`/summarise`, `/draft-email`) uses the sync `groq.Groq` client, and `lead_router.py` (`/assess`, `/score`) is also sync `def` (rule-based, so only the conversation endpoints block on the LLM). |
+| 4 | `manager_kpi` 16 sequential queries | **STILL ACTIVE.** Lines 1150-1783, 16 `self.db.execute` calls, 0 `asyncio.gather`. |
+| 5 | Gmail Pub/Sub webhook blocks on full sync | **STILL ACTIVE.** All code paths now return 200 (try/except around sync work) but the full sync still runs inside the HTTP request. |
+| 6 | Gmail messages fetched one-by-one | **STILL ACTIVE.** `email_service.py:1033`. |
+| 7 | bcrypt on event loop | **STILL ACTIVE.** `auth_service.py:140`. |
+| 8 | In-memory rate limiter, unbounded growth | **STILL ACTIVE.** `rate_limit.py` `_buckets` defaultdicts, never evicted. |
+| 9 | Event outbox: no row locking | **PARTIALLY FIXED.** Still no `FOR UPDATE SKIP LOCKED`, but the outbox now has retry/backoff: `processing_status` (`pending`/`retrying`/`failed`), `attempts`, `next_attempt_at`, and `mark_retry` with exponential backoff (`event_repository.py`). |
+| 10 | Daily assessment: sequential per-lead | **PARTIALLY FIXED.** The N+1 was eliminated — email stats and latest-inbound timestamps are now batch-fetched in 2 queries (`main.py:daily_lead_assessment`), and only leads passing `needs_assessment` (never scored / decay changed / missed event) are processed. The per-lead sequential `run_lead_assessment` loop remains (no `Semaphore`/parallelism). |
+| 11 | SSE in-memory, per-org, single-worker | **STILL ACTIVE.** `event_bus.py` + `stream.py` unchanged. |
+| 12 | GmailClient new httpx client per call | **STILL ACTIVE.** `gmail_client.py:123,144,154`. |
+| 13 | Notification polling every 20s | **STILL ACTIVE.** `useNotifications.ts:25`. |
+| 14 | Dashboard `/me` — "9 concurrent queries" | **CORRECTED.** `/dashboard/me` (`sales_rep_command_center`) runs **11 sequential** queries. The code contains a comment documenting that `asyncio.gather` on a single session raised "concurrent operations are not permitted" and the method was reverted to sequential. |
+| 15 | Pagination COUNT subquery (was LIKELY) | **UPGRADED to CONFIRMED.** `pagination.py` still renders `SELECT count(*) FROM (SELECT …)`. The docstring claims it avoids the subquery pattern, but `select_from(query)` on a full `Select` still wraps it in a subquery. |
+| 16 | Fire-and-forget `create_task` untracked | **PARTIALLY FIXED.** Tasks are now tracked in a module-level `_background_tasks` set with `add_done_callback(discard)` (`email_service.py:53,426-570,1138`). Still no concurrency cap (Semaphore) and still lost on restart. |
+| 17 | `admin_kpi` already parallelized | **CONFIRMED (8 gathers)** — and it documents the required workaround: `await self.db.connection()` before `asyncio.gather` to avoid the asyncpg "another operation is in progress" race. |
+
+### New findings at HEAD `4449dac` (not in the original audit)
+
+1. **Supabase Storage uses the synchronous `supabase` client inside async endpoints** (`backend/app/api/v1/documents.py:26-66,127,158,188`). `get_supabase().storage.from_(...).upload() / create_signed_url() / download() / remove()` are blocking HTTP calls made directly on the event loop — every document upload/download freezes the entire backend for the duration of the storage round-trip. Fix: wrap in `asyncio.to_thread()`, or call the Supabase Storage REST API via an async httpx client. (See Section 11.1.)
+2. **`DIRECT_URL` (session-mode, port 5432) now exists in config and `render.yaml`, but the app engine ignores it.** Wiring `DIRECT_URL` into the engine with `QueuePool` implements the Phase-2 fix (MT-1) with zero new infrastructure — Alembic already uses it. (See Section 6.1.)
+3. **The dashboard parallelization recommendation must be qualified.** `sales_rep_command_center` documents that naive `asyncio.gather` on a single `AsyncSession` fails with "concurrent operations are not permitted". Parallelizing requires the pre-checkout `await self.db.connection()` pattern (as `admin_kpi` does) or separate sessions; otherwise the safer win is combining COUNT queries with `FILTER (WHERE ...)`. (See Sections 6.3/6.4.)
 
 ---
 
@@ -19,7 +52,7 @@ The application has serious, systemic performance problems that compound under l
 4. **The Gmail Pub/Sub webhook synchronously processes the entire history sync inside the HTTP response** — fetching messages one-by-one (no `batchGet`) and blocking the event loop.
 5. **The AI service's `/conversations/summarise` and `/draft-email` endpoints are `def` (synchronous), not `async def`** — they make blocking Groq LLM calls that freeze the entire AI service event loop for 2–30 seconds per call.
 6. **The in-process event bus and SSE subscribers are in-memory only** — they cannot survive restarts, don't work across multiple workers, and the SSE channel is per-organization (all users in an org share one queue).
-7. **The daily lead assessment batch job calls `run_lead_assessment` sequentially for every lead** in every organization — each call does 5–8 DB queries plus an HTTP call to the AI service, all in a single async loop with no parallelism.
+7. **The daily lead assessment batch job calls `run_lead_assessment` sequentially for every lead** in every organization — each call does ~4–8 DB queries plus an HTTP call to the AI service, all in a single async loop with no parallelism. *(Partially fixed since the original audit: email stats and inbound timestamps are now batch-fetched, and only leads passing `needs_assessment` are processed — see §0.)*
 8. **Render free tier** means cold starts: the backend and AI service spin down after inactivity, so the first request after idle takes 30–60 seconds.
 
 ### Estimated current latency profile (single user, warm)
@@ -27,7 +60,7 @@ The application has serious, systemic performance problems that compound under l
 | Flow | Estimated p50 | Estimated p99 | Dominant cost |
 |------|--------------|---------------|---------------|
 | Login | ~400ms | ~2s | bcrypt on event loop + NullPool connect |
-| Dashboard load (`/me`) | ~300ms | ~2s | 9 concurrent queries on shared NullPool connection |
+| Dashboard load (`/me`) | ~300ms | ~2s | 11 sequential queries on one session (gather reverted) |
 | Dashboard load (`/sales-rep`) | ~1.5s | ~8s | 13 sequential DB queries + AI service cold start |
 | Dashboard load (`/manager`) | ~2s | ~10s | 16 sequential DB queries |
 | Lead list (20 items) | ~200ms | ~1s | 2 queries (well-eager-loaded) + NullPool |
@@ -70,7 +103,9 @@ All times are **ESTIMATED** from static code analysis. Real measurement requires
 │  ├── SSE endpoint: /stream/dashboard (in-memory subscriber per org)    │
 │  ├── Gmail: httpx async client, Pub/Sub push webhook                   │
 │  ├── AI client: shared httpx.AsyncClient → AI service                  │
-│  └── Storage: local filesystem (uploads/)                              │
+│  ├── Storage: local filesystem (uploads/) + Supabase Storage           │
+│  │   (sync `supabase` client called directly in async routes)          │
+│  └── DIRECT_URL (5432) defined but only used by Alembic migrations     │
 └──────┬──────────────────┬───────────────────┬──────────────────────────┘
        │                  │                   │
        ▼                  ▼                   ▼
@@ -105,7 +140,7 @@ All times are **ESTIMATED** from static code analysis. Real measurement requires
 | Background jobs | APScheduler (in-process) | Render backend process | Lost on restart, single-worker only |
 | Real-time | SSE via StreamingResponse | Render backend process | In-memory, single-worker only |
 | Email/SMTP | Brevo (smtp-relay.brevo.com) | External | N/A |
-| Storage | Local filesystem | Render ephemeral disk | Lost on redeploy |
+| Storage | Local filesystem (`uploads/`) + Supabase Storage for documents | Render ephemeral disk + Supabase bucket | Local uploads lost on redeploy; documents persisted |
 
 ---
 
@@ -136,9 +171,10 @@ Auth: get_current_user dependency
   ↓
 Dashboard endpoint handler
   → DashboardService.sales_rep_command_center()
-    → asyncio.gather of 9 DB queries (but all on ONE shared session/connection)
-    → Each query: execute on shared connection (~2-5ms each, serialized by asyncpg)
-    → Total: ~9 × 5ms = ~45ms DB time
+    → 11 sequential db.execute calls on ONE shared session/connection
+      (asyncio.gather was tried and reverted — asyncpg raises
+      "concurrent operations are not permitted" on a shared connection)
+    → Each query: ~2-5ms, serialized → Total: ~11 × 15ms incl. RTT = ~150ms DB time
   ↓
 Pydantic response serialization (~5-20ms for nested models)
   ↓
@@ -260,7 +296,7 @@ EventWorker.run_once(batch_size=50):
 
 ### 5.2 Notification polling every 20 seconds (CONFIRMED)
 
-**WHERE:** `frontend/src/hooks/useNotifications.ts:17` — `const POLL_INTERVAL_MS = 20000;`
+**WHERE:** `frontend/src/hooks/useNotifications.ts:25` — `const POLL_INTERVAL_MS = 20000;`
 
 **WHAT:** `useNotifications` sets up a `setInterval` that calls `refresh()` every 20 seconds. Each poll calls `getNotifications(1, 20)` which hits `GET /api/v1/notifications?page=1&page_size=20`. The app already has an SSE connection (`useCrmStream`) that could push notification events.
 
@@ -272,7 +308,7 @@ EventWorker.run_once(batch_size=50):
 
 ### 5.3 `useDashboardOverview` — stale closure in useCallback (CONFIRMED)
 
-**WHERE:** `frontend/src/hooks/use-dashboard.ts:53` — `}, [data]);`
+**WHERE:** `frontend/src/hooks/use-dashboard.ts:56` — `}, [data]);`
 
 **WHAT:** The `fetch` callback depends on `data` in its dependency array. Every time `data` changes (after a successful fetch), the `fetch` function is recreated. The `refetch` callback depends on `fetch`, so it also changes. Any component consuming `refetch` will re-render.
 
@@ -308,9 +344,9 @@ EventWorker.run_once(batch_size=50):
 
 ### 5.6 `useCurrentUser` duplicate fetch on profile-updated event (CONFIRMED)
 
-**WHERE:** `frontend/src/hooks/useCurrentUser.ts:57-62`
+**WHERE:** `frontend/src/hooks/useCurrentUser.ts:49-91`
 
-**WHAT:** The hook listens for a `pulse-profile-updated` custom event and calls `run()` which does `getCurrentUser()` → `GET /api/v1/auth/me`. The `load()` function (line 30) also does the same. Both are defined and both can fire.
+**WHAT:** The hook listens for a `pulse-profile-updated` custom event (line 79) and calls `run()` which does `getCurrentUser()` → `GET /api/v1/auth/me`. The `load()` function (line 49) does the same. Both are defined and both can fire (e.g. avatar upload triggers both `load()` via `refresh()` and the event listener).
 
 **Fix:** Consolidate to a single fetch path. Use a ref to deduplicate.
 
@@ -333,6 +369,8 @@ EventWorker.run_once(batch_size=50):
 - 1000 users: pooler exhausts backend connections; new connects fail with `too many connections`
 
 **Fix:** Connect to Supabase using **session-mode** pooler (port 5432) instead of transaction-mode (port 6543). Session-mode maintains a dedicated backend connection per client connection, so SQLAlchemy's `QueuePool` works correctly with `pool_pre_ping=True`. Use `pool_size=10, max_overflow=5` (conservative for Supabase free tier's ~60 connection limit). This eliminates the per-request connection setup cost entirely.
+
+**⚠ 2026-08-13 update:** `DIRECT_URL` (session-mode, port 5432) is now defined in `config.py` and `render.yaml` and used by Alembic (`alembic/env.py`), but `connection.py` still builds the engine exclusively from `DATABASE_URL`. Wiring the engine to `DIRECT_URL` with `QueuePool` implements this fix with zero new infrastructure.
 
 If you must stay on transaction-mode pooler: use `NullPool` but add a **read replica** or **connection-side caching** (e.g., Supabase's connection pooler with `prepared statement cache` enabled). But the real fix is session-mode.
 
@@ -379,7 +417,7 @@ async def get_current_user(credentials, db):
 
 **Impact:** Manager dashboard takes 2-10 seconds to load. At 10 concurrent managers, all 160 queries compete for DB connections.
 
-**Fix:** Group independent queries into `asyncio.gather()` calls. The `admin_kpi` method already does this correctly (8 gather calls for 7 queries) — replicate that pattern. Even better, combine COUNT queries into a single query using `CASE WHEN` or `UNION ALL`:
+**Fix:** Group independent queries into `asyncio.gather()` calls. The `admin_kpi` method already does this correctly (8 gather calls) — replicate that pattern, **but note the constraint below**. Even better, combine COUNT queries into a single query using `CASE WHEN` or `UNION ALL`:
 ```sql
 SELECT
   COUNT(*) FILTER (WHERE status='active') AS active_leads,
@@ -390,6 +428,8 @@ FROM leads WHERE organization_id = :org_id
 This collapses 3-5 COUNT queries into 1.
 
 **Trade-offs:** Combined queries are harder to read and maintain. But the latency improvement is worth it. Add comments explaining each column.
+
+**⚠ 2026-08-13 caveat (important):** You cannot simply wrap `db.execute` calls on the **same** `AsyncSession` in `asyncio.gather`. asyncpg raises `concurrent operations are not permitted` (see the comment in `sales_rep_command_center`, lines ~2758, which documents that gather was attempted and reverted). `admin_kpi` makes it work by first calling `await self.db.connection()` to pre-checkout the connection before gathering. Alternatives: use one session per gather branch (costs extra NullPool connections), or prefer the combined `FILTER (WHERE ...)` COUNT queries, which are single-statement and avoid the problem entirely.
 
 ### 6.4 `sales_rep_kpi`: 827 lines, 13 sequential queries (P1, CONFIRMED)
 
@@ -441,11 +481,11 @@ password_valid = await asyncio.to_thread(
 
 **Trade-offs:** Adds Redis as a dependency. The Redis limiter already gracefully degrades to "allow" if Redis is down.
 
-### 6.8 Pagination wraps query in COUNT subquery (P2, LIKELY)
+### 6.8 Pagination wraps query in COUNT subquery (P2, CONFIRMED)
 
 **WHERE:** `backend/app/utils/pagination.py`
 
-**WHAT:** The pagination utility likely wraps the main query in a subquery to get the total count: `SELECT COUNT(*) FROM (SELECT ... )`. This means the DB must execute the full query (including JOINs and filters) just to count rows, on every page.
+**WHAT:** CONFIRMED — `paginate()` still executes `select(func.count()).select_from(query)` where `query` is a full `Select`, which SQLAlchemy renders as `SELECT COUNT(*) FROM (SELECT ... )`. The DB executes the full filtered query (including JOINs) just to count rows, on every page. Note the docstring claims this "avoid[s] the expensive subquery-to-subquery pattern" — that is incorrect; the subquery wrap is still emitted. The one mitigation: the base queries passed in are typically simple single-table selects, so the wrap is cheap for unfiltered small tables but grows with filter complexity.
 
 **Fix:** For list endpoints where exact count isn't needed, use a "has more" cursor-based approach (fetch `page_size + 1` rows; if you got N+1, there's a next page). For endpoints where exact count is needed, ensure the COUNT query uses covering indexes. Cache the count for a short TTL (30s) since it doesn't need to be real-time.
 
@@ -469,7 +509,9 @@ password_valid = await asyncio.to_thread(
 
 **WHERE:** `backend/app/repositories/event_repository.py` — `list_pending` method
 
-**WHAT:** The event outbox worker's `list_pending` does `SELECT ... WHERE status='pending' LIMIT 50` without any row locking. If multiple workers run (future scaling), they'll all fetch the same 50 events and process them in parallel — duplicate notifications, duplicate timeline entries.
+**WHAT:** The event outbox worker's `list_pending` does `SELECT ... WHERE processing_status IN ('pending','retrying') ... LIMIT 50` without any row locking. If multiple workers run (future scaling), they'll all fetch the same 50 events and process them in parallel — duplicate notifications, duplicate timeline entries.
+
+**⚠ 2026-08-13 update:** The outbox now has retry/backoff machinery that didn't exist at the original audit: `processing_status` (`pending`/`retrying`/`failed`), `attempts`, `next_attempt_at`, and `mark_retry` with exponential backoff (`2 ** attempts` minutes, up to 5 attempts). This improves reliability but does not fix the missing row locking.
 
 **Fix:** Add `WITH FOR UPDATE SKIP LOCKED` to the query:
 ```python
@@ -541,7 +583,9 @@ async def summarise(payload: ConversationRequest) -> ConversationResponse:
     response = await _async_client.chat.completions.create(...)
 ```
 
-**Note:** The backend's `groq_summary_provider.py` (line 35) already uses `asyncio.to_thread` to wrap the sync Groq call — this is a band-aid, not a real fix. It uses a thread, but at least doesn't block the backend's event loop. The AI service has no such protection.
+**Note:** The backend's `groq_summary_provider.py` (line 49) already uses `asyncio.to_thread` to wrap the sync Groq call — this is a band-aid, not a real fix. It uses a thread, but at least doesn't block the backend's event loop. The AI service has no such protection.
+
+**⚠ 2026-08-13 update:** The sync-`def` pattern is broader than originally documented — `lead_router.py` endpoints `/assess` and `/score` are also `def` (synchronous). They are rule-based (no LLM call), so they don't block for seconds, but they still occupy FastAPI's threadpool (default ~40 threads) and add thread-switching overhead to every assessment call.
 
 ### 8.2 Scoring service is purely synchronous rule-based (CONFIRMED — OK for now)
 
@@ -578,13 +622,13 @@ lead, deal, email_stats, intent = await asyncio.gather(
 )
 ```
 
-### 8.4 Daily assessment calls AI sequentially for every lead (P1, CONFIRMED)
+### 8.4 Daily assessment calls AI sequentially for every lead (P1, PARTIALLY FIXED)
 
 **WHERE:** `backend/app/main.py:daily_lead_assessment`
 
-**WHAT:** The daily batch job loops over every organization, then every lead in that organization, calling `run_lead_assessment` sequentially. Each call does 5-8 DB queries + 1 HTTP call to the AI service. For an org with 1000 leads, that's 5000-8000 DB queries + 1000 HTTP calls, all sequential.
+**WHAT:** The daily batch job loops over every organization, then every lead in that organization, calling `run_lead_assessment` sequentially. Each call still does ~4-8 DB queries + 1 HTTP call to the AI service.
 
-**Impact:** With 100ms per assessment (optimistic), 1000 leads = 100 seconds. With 5s per assessment (if AI service is slow), 1000 leads = 5000 seconds = 83 minutes. During this time, the scheduler thread is busy.
+**⚠ 2026-08-13 update:** The N+1 queries were eliminated. The job now (a) batch-fetches email stats for all leads in one query (`EmailStatsService.batch_get_lead_email_stats`), (b) batch-fetches latest inbound timestamps in one query, and (c) only calls `run_lead_assessment` for leads that pass `needs_assessment` (never scored, decay changed, or missed a newer inbound event). For an org with 1000 leads where most are fresh, the daily job now mostly does 2 cheap queries + a handful of assessments. **The per-lead loop is still fully sequential — no `Semaphore`/`asyncio.gather` — so a large backlog (or a slow AI service) still serializes into hours.**
 
 **Fix:** Use `asyncio.gather` with bounded concurrency (`asyncio.Semaphore(10)`) to process leads in parallel batches of 10:
 ```python
@@ -690,6 +734,8 @@ async def pubsub_webhook(request_body: dict, background_tasks: BackgroundTasks):
     return HTMLResponse("OK", status_code=200)  # Ack immediately
 ```
 
+**⚠ 2026-08-13 update:** The webhook now wraps all processing in try/except and **always returns 200** (including on sync failure), so Pub/Sub won't redeliver on application errors. This is an improvement, but the full sync (token refresh → `list_history` → N× `get_message` → DB ingest → AI summarization) still executes inside the HTTP request, blocking the event loop and holding the connection. The decoupling fix above remains the right target.
+
 Or better: write the `(connection_id, history_id)` to a Postgres `gmail_sync_queue` table, and have a background worker process it with `FOR UPDATE SKIP LOCKED`.
 
 **Trade-offs:** Background processing means errors are invisible to the webhook caller. Need a dead-letter queue and monitoring. But the latency improvement is essential.
@@ -741,6 +787,7 @@ Implement `batch_get_messages` in `gmail_client.py` using Gmail's batchGet endpo
 | bcrypt `verify_password` | `auth_service.py:140` | 250-400ms | `asyncio.to_thread()` |
 | Groq LLM call (backend) | `groq_summary_provider.py:35` | 2-30s | Already uses `to_thread` ✓ |
 | Groq LLM call (AI service) | `conversation_service.py` | 2-30s | Use `AsyncGroq` |
+| Supabase Storage upload/download/signed-URL (sync `supabase` client) | `documents.py:60,127,158,188` | 50-500ms | `asyncio.to_thread()` or async httpx to Storage REST API |
 | `json.dumps` on large responses | Various endpoints | 5-50ms | Acceptable |
 
 ### 11.2 Sequential operations that could be concurrent (CONFIRMED)
@@ -850,11 +897,11 @@ The only issue: it doesn't deduplicate across multiple hook instances. If two co
 
 **Fix:** Use an LRU cache with a max size (e.g., 50 entries). Or adopt React Query which handles this automatically.
 
-### 13.4 Fire-and-forget `asyncio.create_task` tasks (CONFIRMED)
+### 13.4 Fire-and-forget `asyncio.create_task` tasks (PARTIALLY FIXED)
 
-**WHERE:** `backend/app/services/email_service.py:548-564`
+**WHERE:** `backend/app/services/email_service.py:53,426-570,1138`
 
-**WHAT:** `asyncio.create_task` creates untracked tasks. If many emails arrive simultaneously, dozens of summarize+assess tasks run concurrently, each opening its own DB session and calling the AI service. There's no concurrency limit.
+**WHAT:** `asyncio.create_task` spawns background tasks for summarization/assessment. **⚠ 2026-08-13 update:** tasks are now tracked in a module-level `_background_tasks: set[asyncio.Task]` with `task.add_done_callback(_background_tasks.discard)` — this prevents GC of in-flight tasks and removes them on completion. However, there is **still no concurrency limit** (Semaphore) and no durability.
 
 **Impact:** A burst of 100 emails → 100 concurrent AI service calls → AI service threadpool exhaustion (see 8.1) → timeouts → cascading failures.
 
@@ -939,15 +986,15 @@ APScheduler runs in-process. If the process crashes or restarts:
 | 6 | P1 | `email_service.py:1033` | Messages fetched one-by-one, no batchGet | N × 200ms per sync |
 | 7 | P1 | `auth_service.py:140` | bcrypt on event loop | 250-400ms event-loop block |
 | 8 | P1 | `rate_limit.py:63` | In-memory rate limiter, unbounded growth | Per-worker only, memory leak |
-| 9 | P1 | `event_repository.py` | No `FOR UPDATE SKIP LOCKED` in outbox worker | Duplicate processing with multi-worker |
-| 10 | P1 | `main.py:daily_lead_assessment` | Sequential AI calls for every lead | Hours of processing |
+| 9 | P1 | `event_repository.py` | No `FOR UPDATE SKIP LOCKED` in outbox worker *(retry/backoff added since audit — §7.2)* | Duplicate processing with multi-worker |
+| 10 | P1 | `main.py:daily_lead_assessment` | Sequential AI calls per lead *(N+1 batch queries fixed since audit; loop still sequential — §8.4)* | Hours of processing if backlog |
 | 11 | P1 | `stream.py`, `event_bus.py` | SSE: in-memory, per-org, single-worker | No horizontal scaling |
 | 12 | P1 | `gmail_client.py:_post,_get` | New httpx client per Gmail API call | No connection reuse |
 | 13 | P1 | `dashboard_service.py:sales_rep_kpi` | 13 sequential queries, 827-line method | 1-8s dashboard load |
 | 14 | P2 | `useNotifications.ts:17` | Polling every 20s despite SSE being available | 3 req/min wasted per user |
 | 15 | P2 | `connection.py:85` | Auto-commit on read-only requests | Unnecessary COMMIT per GET |
 | 16 | P2 | `ai_pipeline.py:run_lead_assessment` | Sequential DB queries in data-gathering phase | 4 sequential round-trips |
-| 17 | P2 | `email_service.py:548-564` | Fire-and-forget `create_task` without limits | Unbounded concurrent AI calls |
+| 17 | P2 | `email_service.py:53,426-570` | Fire-and-forget `create_task` without limits *(tasks now tracked in `_background_tasks` set — §13.4)* | Unbounded concurrent AI calls |
 | 18 | P2 | `package.json` | Heavy deps (three.js, framer-motion + motion, recharts) | Large bundle, slow initial load |
 | 19 | P2 | `groq_summary_provider.py:35` | Sync Groq client in backend (via to_thread) | Thread pool pressure |
 | 20 | P3 | `render.yaml` | Render free tier cold starts | 30-60s first request after idle |
@@ -1361,7 +1408,7 @@ export default function () {
 
 ## THE 10 MOST IMPORTANT THINGS TO FIX FIRST
 
-### 1. NullPool → QueuePool with session-mode pooler
+### 1. NullPool → QueuePool with session-mode pooler — STILL ACTIVE (DIRECT_URL now exists but unused by the engine)
 **Problem:** Every request opens a new database connection (TCP+TLS+auth = 30-80ms).
 **Root Cause:** `NullPool` is used to avoid PgBouncer transaction-mode desync, but it eliminates all connection reuse.
 **Exact Location:** `backend/app/database/connection.py:51-59`
@@ -1369,7 +1416,7 @@ export default function () {
 **Why It Matters:** This adds 30-80ms to EVERY single API call. Fixing it is the single biggest latency improvement.
 **Validation:** Measure connection acquisition time; should drop from 30-80ms to <5ms.
 
-### 2. AI service sync endpoints blocking the event loop
+### 2. AI service sync endpoints blocking the event loop — STILL ACTIVE (also `lead_router.py` /assess + /score)
 **Problem:** LLM calls freeze the entire AI service for 2-30 seconds per call.
 **Root Cause:** `def summarise(...)` (sync) uses the synchronous Groq SDK, which blocks the thread/event loop.
 **Exact Location:** `ai-service/app/routers/conversation_router.py:30,55`
@@ -1377,7 +1424,7 @@ export default function () {
 **Why It Matters:** Under concurrent load, the AI service becomes completely unresponsive.
 **Validation:** Load test 50 concurrent summarization requests; all should complete within 30s.
 
-### 3. `get_current_user` DB query on every request
+### 3. `get_current_user` DB query on every request — STILL ACTIVE
 **Problem:** Every authenticated request queries the database for the user + roles.
 **Root Cause:** The auth dependency always hits the DB instead of trusting JWT claims or caching.
 **Exact Location:** `backend/app/api/deps.py:33-50`
@@ -1385,7 +1432,7 @@ export default function () {
 **Why It Matters:** Combined with NullPool, this means every request opens a new connection AND runs a query — doubling the overhead.
 **Validation:** Log cache hit/miss ratio; target >95% hit rate.
 
-### 4. Dashboard `manager_kpi`: 16 sequential queries
+### 4. Dashboard `manager_kpi`: 16 sequential queries — STILL ACTIVE (see §6.3 gather caveat)
 **Problem:** Manager dashboard takes 2-10 seconds due to sequential database queries.
 **Root Cause:** No use of `asyncio.gather` — each `db.execute` waits for the previous one.
 **Exact Location:** `backend/app/services/dashboard_service.py` — `manager_kpi` method (633 lines)
@@ -1393,7 +1440,7 @@ export default function () {
 **Why It Matters:** Dashboard is the most-used screen; 2-10s load is unacceptable.
 **Validation:** Time the endpoint before/after; target <500ms p95.
 
-### 5. Gmail Pub/Sub webhook blocks on full sync
+### 5. Gmail Pub/Sub webhook blocks on full sync — STILL ACTIVE (now always returns 200, but sync still in-request)
 **Problem:** The webhook holds the HTTP response open for the entire Gmail sync (5-30s), causing Pub/Sub redelivery storms.
 **Root Cause:** Acknowledgement and processing are coupled in the same request.
 **Exact Location:** `backend/app/api/v1/gmail.py:pubsub_webhook`
@@ -1401,7 +1448,7 @@ export default function () {
 **Why It Matters:** Under burst email traffic, the single Render worker is overwhelmed and Pub/Sub amplifies the load with redeliveries.
 **Validation:** Measure webhook response time; should be <100ms. Monitor Pub/Sub redelivery count.
 
-### 6. Gmail messages fetched one-by-one (no `batchGet`)
+### 6. Gmail messages fetched one-by-one (no `batchGet`) — STILL ACTIVE
 **Problem:** N messages = N sequential HTTPS calls to Gmail API (N × 200-400ms).
 **Root Cause:** Code calls `get_message` in a loop instead of using Gmail's `batchGet` endpoint.
 **Exact Location:** `backend/app/services/email_service.py:1033`
@@ -1409,7 +1456,7 @@ export default function () {
 **Why It Matters:** A 20-message sync takes 4-8 seconds; with `batchGet` it takes <500ms.
 **Validation:** Time sync with 50 messages before/after.
 
-### 7. bcrypt password verification on the event loop
+### 7. bcrypt password verification on the event loop — STILL ACTIVE
 **Problem:** Login blocks the event loop for 250-400ms, stalling all other requests.
 **Root Cause:** `verify_password` (bcrypt, 12 rounds) is called directly in an async function.
 **Exact Location:** `backend/app/services/auth_service.py:140`
@@ -1417,7 +1464,7 @@ export default function () {
 **Why It Matters:** During every login, all other in-flight requests are blocked for 250-400ms.
 **Validation:** Measure event-loop lag during concurrent logins; should be <10ms.
 
-### 8. In-memory SSE/event bus doesn't scale beyond one worker
+### 8. In-memory SSE/event bus doesn't scale beyond one worker — STILL ACTIVE
 **Problem:** SSE subscribers are in-memory; events don't cross worker boundaries. The system can't scale horizontally.
 **Root Cause:** `EventBus` uses `asyncio.Queue` and a `dict` of subscriber sets — all in-process.
 **Exact Location:** `backend/app/services/event_bus.py`, `backend/app/api/v1/stream.py`
@@ -1425,15 +1472,15 @@ export default function () {
 **Why It Matters:** This is the hard ceiling on horizontal scaling. Without fixing it, you can never run multiple workers.
 **Validation:** Start 2 workers, publish an event on worker A, verify it reaches an SSE client on worker B.
 
-### 9. Daily assessment processes leads sequentially
-**Problem:** The midnight batch job processes leads one-by-one, each with 5-8 DB queries + 1 HTTP call. 1000 leads = hours.
+### 9. Daily assessment processes leads sequentially — PARTIALLY FIXED (batch queries added; loop still sequential)
+**Problem:** The midnight batch job processes leads one-by-one, each with ~4-8 DB queries + 1 HTTP call. 1000 leads = hours.
 **Root Cause:** No parallelism in the assessment loop.
 **Exact Location:** `backend/app/main.py:daily_lead_assessment`
 **Fix:** Use `asyncio.Semaphore(10)` + `asyncio.gather` to process 10 leads concurrently.
 **Why It Matters:** The daily job may not finish before users start their day, meaning scores are stale.
 **Validation:** Time the job with 1000 test leads; should complete in <15 minutes.
 
-### 10. Render free tier cold starts
+### 10. Render free tier cold starts — STILL ACTIVE (`render.yaml` still `plan: free`)
 **Problem:** After 15 minutes of inactivity, the next request takes 30-60 seconds.
 **Root Cause:** Render free tier spins down services; cold start requires Python startup + imports + DB connection + AI health check.
 **Exact Location:** `render.yaml` — `plan: free`
