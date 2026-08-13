@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
-export default function GoogleErrorPage() {
+function GoogleErrorContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [message, setMessage] = useState('');
@@ -56,5 +56,17 @@ export default function GoogleErrorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function GoogleErrorPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <Loader2 className="h-12 w-12 animate-spin text-accent-color" />
+      </div>
+    }>
+      <GoogleErrorContent />
+    </Suspense>
   );
 }
