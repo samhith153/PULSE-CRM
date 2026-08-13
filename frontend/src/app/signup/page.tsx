@@ -96,11 +96,11 @@ export default function SignUpPage() {
   return (
     <AuthShell>
       <div className="fade-in-soft">
-        <h1 className="rise-in text-2xl font-bold tracking-tight text-text-primary" style={{ animationDelay: '60ms' }}>
+        <h1 className="rise-in text-2xl font-bold tracking-tight text-white/90" style={{ animationDelay: '60ms' }}>
           Create your account
         </h1>
         <p
-          className="rise-in mt-2 text-sm leading-relaxed text-text-secondary"
+          className="rise-in mt-2 text-sm leading-relaxed text-white/60"
           style={{ animationDelay: '120ms' }}
         >
           Start closing more deals in minutes — no credit card required.
@@ -179,12 +179,12 @@ export default function SignUpPage() {
                   <span
                     key={i}
                     className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                      strength.level >= i ? 'bg-accent-color' : 'bg-border-default'
+                      strength.level >= i ? 'bg-accent-color' : 'bg-white/10'
                     }`}
                   />
                 ))}
               </div>
-              <span className="w-14 text-right text-[11px] text-text-secondary">
+              <span className="w-14 text-right text-[11px] text-white/50">
                 {strength.label}
               </span>
             </div>
@@ -196,7 +196,7 @@ export default function SignUpPage() {
         </form>
 
         <p
-          className="rise-in mt-5 text-center text-sm text-muted-foreground"
+          className="rise-in mt-5 text-center text-sm text-white/50"
           style={{ animationDelay: '420ms' }}
         >
           Already have an account?{' '}
@@ -206,7 +206,7 @@ export default function SignUpPage() {
         </p>
 
         <p
-          className="rise-in mt-8 text-center text-xs leading-relaxed text-text-secondary/80"
+          className="rise-in mt-8 text-center text-xs leading-relaxed text-white/40"
           style={{ animationDelay: '460ms' }}
         >
           By continuing, you agree to Pulse&apos;s{' '}
@@ -220,7 +220,7 @@ export default function SignUpPage() {
           .
         </p>
 
-        <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary/80 select-none border-t border-border-default/50 pt-4 w-full">
+        <div className="flex items-center justify-center gap-1.5 text-xs text-white/40 select-none border-t border-white/10 pt-4 w-full">
           <ShieldCheck size={14} className="text-status-success-text" />
           <span>Secure, SSL encrypted connection</span>
         </div>
