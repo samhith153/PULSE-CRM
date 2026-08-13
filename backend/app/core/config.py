@@ -183,8 +183,6 @@ class Settings(BaseSettings):
                 missing.append("SECRET_KEY (must be set explicitly in production; never use the dev ephemeral key)")
             if not self.GMAIL_TOKEN_ENCRYPTION_KEY:
                 missing.append("GMAIL_TOKEN_ENCRYPTION_KEY (required in production; never fall back to SECRET_KEY)")
-            if not self.BREVO_WEBHOOK_SECRET:
-                missing.append("BREVO_WEBHOOK_SECRET (webhook signature verification required in production)")
             if missing:
                 raise ValueError(f"Missing required production secrets: {', '.join(missing)}")
             # Reject wildcard CORS in production
