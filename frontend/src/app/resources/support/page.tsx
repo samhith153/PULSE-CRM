@@ -1,7 +1,8 @@
 'use client';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { PageContainer, useModal } from '@/components/shared/PageTemplates';
+import { PageContainer } from '@/components/shared/PageTemplates';
 import { Headphones, MessageCircle, Mail, Phone, Clock, CheckCircle, Zap, ArrowRight } from 'lucide-react';
 
 const SUPPORT_OPTIONS = [
@@ -65,10 +66,10 @@ const SUPPORT_FEATURES = [
 ];
 
 export default function SupportPage() {
-  const { openModal } = useModal();
+  const router = useRouter();
 
   const handleContactSales = () => {
-    openModal();
+    router.push('/login');
   };
 
   return (

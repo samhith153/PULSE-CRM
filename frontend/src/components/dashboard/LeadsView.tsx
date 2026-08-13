@@ -278,9 +278,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
 
   const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem('pulse-crm-view-mode-leads') as any) || 'default';
+      return (localStorage.getItem('pulse-crm-view-mode-leads') as any) || 'list';
     }
-    return 'default';
+    return 'list';
   });
 
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());

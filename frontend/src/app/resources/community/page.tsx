@@ -1,7 +1,8 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { PageContainer, useModal } from '@/components/shared/PageTemplates';
+import { PageContainer } from '@/components/shared/PageTemplates';
 import {
   Users, MessageCircle, Lightbulb, Bug, BookOpen,
   ArrowRight, Star,
@@ -125,7 +126,7 @@ function CommunityIllustration() {
 
 /* ── Page ──────────────────────────────────────────── */
 export default function CommunityPage() {
-  const { openModal } = useModal();
+  const router = useRouter();
 
   return (
     <PageContainer>
@@ -164,7 +165,7 @@ export default function CommunityPage() {
               style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
               <motion.button
                 whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: 0.97 }}
-                onClick={() => openModal()}
+                onClick={() => router.push('/login')}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 26px', background: 'linear-gradient(135deg,#2563EB 0%,#1D4ED8 100%)', color: '#fff', fontSize: 14, fontWeight: 700, borderRadius: 100, border: 'none', cursor: 'pointer', boxShadow: '0 8px 24px rgba(37,99,235,0.38)', fontFamily: 'inherit' }}>
                 Join Community <ArrowRight size={15} />
               </motion.button>
