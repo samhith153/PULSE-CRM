@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const backendUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').trim();
 
 const isProd = process.env.NODE_ENV === 'production';
 
@@ -24,7 +24,7 @@ const securityHeaders = [
       "style-src 'self' 'unsafe-inline'",
       // Next.js requires 'unsafe-inline' for hydration/Turbopack/webpack runtime scripts.
       // External scripts are still blocked — only self-hosted scripts execute.
-      "script-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline'" + (isProd ? "" : " 'unsafe-eval'"),
       // Images: self + data: for avatars/base64 + HTTPS for Google avatars
       "img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com",
       // Fonts: self + Google Fonts

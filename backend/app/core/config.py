@@ -70,7 +70,6 @@ class Settings(BaseSettings):
 
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
-    SUPABASE_SERVICE_KEY: Optional[str] = None
 
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,https://pulse-crm-eight-pearl.vercel.app,https://pulse-crm-245t.onrender.com"
     CORS_ALLOW_CREDENTIALS: bool = True
