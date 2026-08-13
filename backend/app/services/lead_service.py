@@ -42,19 +42,21 @@ _lead_ai_tasks: set[asyncio.Task] = set()
 
 async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:
     """Run unified assessment pipeline in a fresh DB session, off the request path."""
+    from app.core.concurrency import assessment_semaphore
     from app.database.connection import AsyncSessionFactory
     from app.services.ai_pipeline import run_lead_assessment
 
     try:
-        async with AsyncSessionFactory() as db:
-            try:
-                await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
-            except Exception as exc:
-                logger.warning(
-                    "Background AI assessment failed for lead %s: %s",
-                    lead_id, exc,
-                )
-            await db.commit()
+        async with assessment_semaphore:
+            async with AsyncSessionFactory() as db:
+                try:
+                    await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
+                except Exception as exc:
+                    logger.warning(
+                        "Background AI assessment failed for lead %s: %s",
+                        lead_id, exc,
+                    )
+                await db.commit()
     except Exception as exc:
         logger.warning("Background AI session failed for lead %s: %s", lead_id, exc)
 

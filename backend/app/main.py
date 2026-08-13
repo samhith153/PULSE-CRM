@@ -206,6 +206,18 @@ async def lifespan(app: FastAPI):
     # Re-establish Gmail Pub/Sub watches on startup
     await refresh_gmail_watches()
 
+    # Health-check: verify AI service is reachable on startup
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=5.0) as hc:
+            resp = await hc.get(f"{settings.AI_SERVICE_URL}/health")
+            if resp.status_code == 200:
+                logger.info("AI service reachable at %s", settings.AI_SERVICE_URL)
+            else:
+                logger.warning("AI service returned %d at %s — scoring/recommendations may fail", resp.status_code, settings.AI_SERVICE_URL)
+    except Exception as exc:
+        logger.warning("AI service NOT reachable at %s — scoring/recommendations will be unavailable: %s", settings.AI_SERVICE_URL, exc)
+
     yield
     scheduler.shutdown(wait=False)
     from app.services.ai_client import close_shared_client
