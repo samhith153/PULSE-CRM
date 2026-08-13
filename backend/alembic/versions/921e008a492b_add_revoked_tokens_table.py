@@ -18,24 +18,36 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        'revoked_tokens',
-        sa.Column('id', sa.UUID(), nullable=False),
-        sa.Column('jti', sa.String(length=64), nullable=False),
-        sa.Column('user_id', sa.UUID(), nullable=True),
-        sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
-        sa.Column('revoked_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
-        sa.PrimaryKeyConstraint('id'),
-        sa.UniqueConstraint('jti'),
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'revoked_tokens')")
     )
-    op.create_index(op.f('ix_revoked_tokens_jti'), 'revoked_tokens', ['jti'], unique=True)
-    op.create_index(op.f('ix_revoked_tokens_user_id'), 'revoked_tokens', ['user_id'], unique=False)
-    op.create_index(op.f('ix_revoked_tokens_expires_at'), 'revoked_tokens', ['expires_at'], unique=False)
+    table_exists = result.scalar()
+    if not table_exists:
+        op.create_table(
+            'revoked_tokens',
+            sa.Column('id', sa.UUID(), nullable=False),
+            sa.Column('jti', sa.String(length=64), nullable=False),
+            sa.Column('user_id', sa.UUID(), nullable=True),
+            sa.Column('expires_at', sa.DateTime(timezone=True), nullable=False),
+            sa.Column('revoked_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+            sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+            sa.PrimaryKeyConstraint('id'),
+            sa.UniqueConstraint('jti'),
+        )
+        op.create_index(op.f('ix_revoked_tokens_jti'), 'revoked_tokens', ['jti'], unique=True)
+        op.create_index(op.f('ix_revoked_tokens_user_id'), 'revoked_tokens', ['user_id'], unique=False)
+        op.create_index(op.f('ix_revoked_tokens_expires_at'), 'revoked_tokens', ['expires_at'], unique=False)
 
 
 def downgrade() -> None:
-    op.drop_index(op.f('ix_revoked_tokens_expires_at'), table_name='revoked_tokens')
-    op.drop_index(op.f('ix_revoked_tokens_user_id'), table_name='revoked_tokens')
-    op.drop_index(op.f('ix_revoked_tokens_jti'), table_name='revoked_tokens')
-    op.drop_table('revoked_tokens')
+    conn = op.get_bind()
+    result = conn.execute(
+        sa.text("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'revoked_tokens')")
+    )
+    table_exists = result.scalar()
+    if table_exists:
+        op.drop_index(op.f('ix_revoked_tokens_expires_at'), table_name='revoked_tokens')
+        op.drop_index(op.f('ix_revoked_tokens_user_id'), table_name='revoked_tokens')
+        op.drop_index(op.f('ix_revoked_tokens_jti'), table_name='revoked_tokens')
+        op.drop_table('revoked_tokens')
