@@ -1610,7 +1610,7 @@ export async function uploadDocument(file: File, params: { contact_id?: string; 
     if (value) formData.append(key, value);
   });
   const token = getToken();
-  const res = await fetch(`${API_BASE_URL}/api/v1/documents`, {
+  const res = await fetch(`${API_BASE_URL}/api/v1/documents/upload`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: formData,
@@ -1629,6 +1629,10 @@ export async function deleteDocument(docId: string): Promise<void> {
 
 export function getDocumentDownloadUrl(docId: string): string {
   return `${API_BASE_URL}/api/v1/documents/${docId}/download`;
+}
+
+export async function getDocumentSignedUrl(docId: string): Promise<{ url: string; expires_at: string }> {
+  return apiFetch<{ url: string; expires_at: string }>(`/api/v1/documents/${docId}/url`);
 }
 
 export async function uploadAvatar(file: File): Promise<{ url: string }> {
