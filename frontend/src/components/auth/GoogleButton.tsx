@@ -38,7 +38,7 @@ export function GoogleButton({ label }: { label: string }) {
         console.info("[auth] Google OAuth requested");
         setTimeout(() => setLoading(false), 1600);
       }}
-      className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-border-default bg-surface-1 text-sm font-semibold text-text-primary transition-all duration-200 hover:bg-surface-hover focus-visible:ring-2 focus-visible:ring-accent-color focus-visible:ring-offset-2 outline-none active:scale-[0.985] disabled:opacity-70 cursor-pointer"
+      className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/90 transition-all duration-200 hover:bg-white/10 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-accent-color focus-visible:ring-offset-2 outline-none active:scale-[0.985] disabled:opacity-70 cursor-pointer"
     >
       {loading ? <Loader2 size={16} className="animate-spin text-accent-color" /> : <GoogleIcon />}
       <span>{label}</span>

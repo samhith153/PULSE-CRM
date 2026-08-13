@@ -109,30 +109,30 @@ export default function LoginPage() {
   return (
     <AuthShell>
       <div className="fade-in-soft">
-        <h1 className="rise-in text-2xl font-bold tracking-tight text-text-primary" style={{ animationDelay: '60ms' }}>
+        <h1 className="rise-in text-2xl font-bold tracking-tight text-white/90" style={{ animationDelay: '60ms' }}>
           Welcome back
         </h1>
         <p
-          className="rise-in mt-2 text-sm leading-relaxed text-text-secondary"
+          className="rise-in mt-2 text-sm leading-relaxed text-white/60"
           style={{ animationDelay: '120ms' }}
         >
           Sign in to pick up right where you left off.
         </p>
-
+ 
         <div className="rise-in mt-7" style={{ animationDelay: '180ms' }}>
           <GoogleButton label="Continue with Google" />
         </div>
-
+ 
         <div className="rise-in" style={{ animationDelay: '220ms' }}>
           <AuthDivider />
         </div>
-
+ 
         {errors.general && (
           <div className="mb-3 rounded-lg bg-status-danger-bg border border-status-danger-text/25 px-4 py-2.5 text-xs font-semibold text-status-danger-text">
             {errors.general}
           </div>
         )}
-
+ 
         <form onSubmit={onSubmit} noValidate className="space-y-4">
           <div className="rise-in" style={{ animationDelay: '260ms' }}>
             <AuthField
@@ -175,28 +175,28 @@ export default function LoginPage() {
               error={errors.password}
             />
           </div>
-
+ 
           {loading && (
             <div className="space-y-1.5 pt-1">
-              <div className="w-full bg-surface-2 h-1.5 rounded-full overflow-hidden relative">
+              <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden relative">
                 <div 
                   className="bg-accent-color h-full transition-all duration-300 ease-out rounded-full"
                   style={{ width: `${progress}%` }}
                 />
               </div>
-              <p className="text-[10px] font-semibold text-text-secondary select-none animate-pulse">
+              <p className="text-[10px] font-semibold text-white/60 select-none animate-pulse">
                 {progressMessage}
               </p>
             </div>
           )}
-
+ 
           <div className="rise-in pt-2" style={{ animationDelay: '340ms' }}>
             <AuthSubmit loading={loading}>Sign in</AuthSubmit>
           </div>
         </form>
-
+ 
         <p
-          className="rise-in mt-5 text-center text-sm text-muted-foreground"
+          className="rise-in mt-5 text-center text-sm text-white/50"
           style={{ animationDelay: '380ms' }}
         >
           Don&apos;t have an account?{' '}
@@ -204,8 +204,8 @@ export default function LoginPage() {
             Sign up
           </Link>
         </p>
-
-        <div className="flex items-center justify-center gap-1.5 text-xs text-text-secondary/80 select-none border-t border-border-default/50 pt-4 w-full">
+ 
+        <div className="flex items-center justify-center gap-1.5 text-xs text-white/40 select-none border-t border-white/10 pt-4 w-full">
           <ShieldCheck size={14} className="text-status-success-text" />
           <span>Secure, SSL encrypted connection</span>
         </div>
