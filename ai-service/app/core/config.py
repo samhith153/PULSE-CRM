@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     REDOC_URL: str = "/redoc"
     OPENAPI_URL: str = "/openapi.json"
 
-    PORT: int = 8001
+    AI_SERVICE_PORT: int = 8001
     HOST: str = "0.0.0.0"
 
     CORS_ORIGINS: str = "*"
