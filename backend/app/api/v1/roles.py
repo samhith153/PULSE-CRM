@@ -142,12 +142,14 @@ async def update_role_permissions(
     result = await db.execute(stmt)
     for rp in result.scalars().all():
         await db.delete(rp)
+    await db.flush()
 
     for perm in permissions:
         rp = RolePermission(role_id=role_id, permission_id=perm.id)
         db.add(rp)
 
     await db.flush()
+    db.expire(role)
     role = await repo.get_by_id_with_permissions(role_id)
 
     perms = [
