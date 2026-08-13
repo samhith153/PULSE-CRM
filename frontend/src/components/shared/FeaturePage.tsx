@@ -158,11 +158,11 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
         </button>
 
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
-          <div style={{ height:36, width:36, borderRadius:10, background:'#7c3aed', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(124,58,237,0.35)' }}>
+          <div style={{ height:36, width:36, borderRadius:10, background:'#2563EB', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 12px rgba(37,99,235,0.35)' }}>
             <Activity size={17} color="#fff" strokeWidth={2.5} />
           </div>
           <span style={{ fontSize:18, fontWeight:900, color:'#0f172a', letterSpacing:'-0.02em' }}>
-            Pulse<span style={{ color:'#7c3aed' }}>CRM</span>
+            Pulse<span style={{ color:'#2563EB' }}>CRM</span>
           </span>
         </div>
 
@@ -180,7 +180,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:8, marginBottom:22 }}>
           {ROLES.map(r => (
             <button key={r.value} onClick={() => setRole(r.value)}
-              style={{ padding:'9px 4px', borderRadius:10, border:`2px solid ${role === r.value ? '#7c3aed' : '#e2e8f0'}`, background: role === r.value ? '#f5f3ff' : '#fff', cursor:'pointer', fontSize:12, fontWeight:700, color: role === r.value ? '#7c3aed' : '#64748b', transition:'all .15s', fontFamily:'inherit' }}>
+              style={{ padding:'9px 4px', borderRadius:10, border:`2px solid ${role === r.value ? '#2563EB' : '#e2e8f0'}`, background: role === r.value ? '#EFF6FF' : '#fff', cursor:'pointer', fontSize:12, fontWeight:700, color: role === r.value ? '#2563EB' : '#64748b', transition:'all .15s', fontFamily:'inherit' }}>
               {r.label}
             </button>
           ))}
@@ -193,14 +193,14 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
                 <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#475569', marginBottom:6 }}>Full name</label>
                 <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="John Doe" required
                   style={{ width:'100%', padding:'11px 14px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff' }}
-                  onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                  onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                   onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
               </div>
               <div>
                 <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#475569', marginBottom:6 }}>Company name</label>
                 <input type="text" value={orgName} onChange={e => setOrgName(e.target.value)} placeholder="Acme Corp" required
                   style={{ width:'100%', padding:'11px 14px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff' }}
-                  onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                  onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                   onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
               </div>
             </>
@@ -211,7 +211,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
               <Mail size={15} color="#94a3b8" style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" required
                 style={{ width:'100%', padding:'11px 14px 11px 40px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff' }}
-                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
             </div>
           </div>
@@ -221,17 +221,17 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
               <Lock size={15} color="#94a3b8" style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required
                 style={{ width:'100%', padding:'11px 14px 11px 40px', borderRadius:10, border:'1.5px solid #e2e8f0', fontSize:14, fontFamily:'inherit', color:'#0f172a', outline:'none', boxSizing:'border-box', background:'#fff' }}
-                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }} />
             </div>
           </div>
           {isSignin && (
             <div style={{ display:'flex', justifyContent:'flex-end' }}>
-              <button type="button" style={{ fontSize:12, fontWeight:600, color:'#7c3aed', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>Forgot password?</button>
+              <button type="button" style={{ fontSize:12, fontWeight:600, color:'#2563EB', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>Forgot password?</button>
             </div>
           )}
           <button type="submit" disabled={loading}
-            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px', background: loading ? '#9b72f0' : '#7c3aed', color:'#fff', fontSize:15, fontWeight:700, borderRadius:12, border:'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit', boxShadow:'0 6px 20px rgba(124,58,237,0.35)' }}>
+            style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:8, padding:'13px', background: loading ? '#60A5FA' : '#2563EB', color:'#fff', fontSize:15, fontWeight:700, borderRadius:12, border:'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily:'inherit', boxShadow:'0 6px 20px rgba(37,99,235,0.35)' }}>
             {loading ? <><Loader2 size={16} style={{ animation:'spin 1s linear infinite' }} /> {isSignin ? 'Signing in\u2026' : 'Creating account\u2026'}</> : isSignin ? 'Sign In' : 'Create Account'}
           </button>
         </form>
@@ -244,7 +244,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
 
         <button onClick={handleGoogle} disabled={loading}
           style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'center', gap:10, padding:'12px', background:'#fff', border:'1.5px solid #e2e8f0', borderRadius:12, fontSize:14, fontWeight:700, color:'#0f172a', cursor:'pointer', fontFamily:'inherit', boxShadow:'0 2px 8px rgba(0,0,0,0.06)' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#7c3aed'; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#2563EB'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; }}>
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -257,7 +257,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
 
         <p style={{ textAlign:'center', fontSize:12, color:'#94a3b8', margin:'18px 0 0' }}>
           {isSignin ? "No account? " : "Already have an account? "}
-          <button onClick={switchMode} style={{ fontSize:12, fontWeight:700, color:'#7c3aed', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>
+          <button onClick={switchMode} style={{ fontSize:12, fontWeight:700, color:'#2563EB', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit' }}>
             {isSignin ? 'Sign up free' : 'Sign in'}
           </button>
         </p>
@@ -270,9 +270,9 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
 export default function FeaturePage({ data }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'signin' | 'signup'>('signup');
-  const accent       = data.accent       ?? '#7c3aed';
-  const accentBg     = data.accentBg     ?? '#f5f3ff';
-  const accentBorder = data.accentBorder ?? '#ede9fe';
+  const accent       = data.accent       ?? '#2563EB';
+  const accentBg     = data.accentBg     ?? '#EFF6FF';
+  const accentBorder = data.accentBorder ?? '#DBEAFE';
   const BadgeIcon    = data.badgeIcon;
 
   const openModal = (mode?: 'signin' | 'signup') => { setModalMode(mode || 'signin'); setModalOpen(true); };
@@ -410,7 +410,7 @@ export default function FeaturePage({ data }: Props) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            style={{ fontSize:12, fontWeight:700, color:'#7c3aed', textTransform:'uppercase', letterSpacing:'0.12em', textAlign:'center', marginBottom:14 }}>
+            style={{ fontSize:12, fontWeight:700, color:'#2563EB', textTransform:'uppercase', letterSpacing:'0.12em', textAlign:'center', marginBottom:14 }}>
             How it works
           </motion.p>
           <motion.h2 
@@ -430,7 +430,7 @@ export default function FeaturePage({ data }: Props) {
                 style={{ display:'flex', gap:28, alignItems:'flex-start' }}>
                 <motion.div 
                   whileHover={{ scale: 1.1, rotate: 5 }}
-                  style={{ fontSize:52, fontWeight:900, color:'#ede9fe', lineHeight:1, flexShrink:0, minWidth:72, fontVariantNumeric:'tabular-nums' }}>{s.step}</motion.div>
+                  style={{ fontSize:52, fontWeight:900, color:'#DBEAFE', lineHeight:1, flexShrink:0, minWidth:72, fontVariantNumeric:'tabular-nums' }}>{s.step}</motion.div>
                 <div style={{ paddingTop:4 }}>
                   <h3 style={{ fontSize:20, fontWeight:700, color:'#0f172a', marginBottom:10 }}>{s.title}</h3>
                   <p style={{ fontSize:15, color:'#64748b', lineHeight:1.75 }}>{s.desc}</p>
@@ -513,7 +513,7 @@ export default function FeaturePage({ data }: Props) {
       </section>
 
       {/* ── CTA ──────────────────────────────────────── */}
-      <section style={{ padding:'100px 48px', background:`linear-gradient(135deg,${accent} 0%,#5b21b6 100%)`, textAlign:'center', position:'relative', overflow:'hidden' }}>
+      <section style={{ padding:'100px 48px', background:`linear-gradient(135deg,${accent} 0%,#1E3A8A 100%)`, textAlign:'center', position:'relative', overflow:'hidden' }}>
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
           whileInView={{ scale: 1, opacity: 0.1 }}

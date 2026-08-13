@@ -10,12 +10,12 @@ const plans = [
     features: ['5 contacts + 5 leads seeded', 'Core CRM pipeline', 'Gmail sync (1 inbox)', 'REST API access', 'Swagger UI at /docs'],
   },
   {
-    name: 'Starter', price: '₹29', period: '/mo', icon: Zap, color: '#7c3aed',
+    name: 'Starter', price: '₹29', period: '/mo', icon: Zap, color: '#2563EB',
     badge: null,
     features: ['Up to 5 users', 'Contacts & lead management', 'FSM pipeline (6 stages)', 'Email sync (Gmail)', 'Basic analytics', 'Email support'],
   },
   {
-    name: 'Growth', price: '₹79', period: '/mo', icon: Star, color: '#7c3aed',
+    name: 'Growth', price: '₹79', period: '/mo', icon: Star, color: '#2563EB',
     badge: 'Most Popular',
     features: ['Up to 25 users', 'Everything in Starter', 'AI Copilot & lead scoring', 'Advanced reports', 'Team leaderboards', 'Activity timeline', 'Priority support', 'Full REST API'],
     highlight: true,
@@ -45,9 +45,9 @@ export default function PricingDrawer({ onClose, onOpenModal }: PricingDrawerPro
 
       {/* Heading */}
       <div style={{ textAlign: 'center' }}>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#f5f3ff', border: '1px solid #ede9fe', borderRadius: 100, padding: '5px 14px', marginBottom: 14 }}>
-          <Zap size={12} color="#7c3aed" />
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Simple Pricing</span>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#EFF6FF', border: '1px solid #DBEAFE', borderRadius: 100, padding: '5px 14px', marginBottom: 14 }}>
+          <Zap size={12} color="#2563EB" />
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Simple Pricing</span>
         </div>
         <h2 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', margin: '0 0 8px', letterSpacing: '-0.03em' }}>Start free. Scale as you grow.</h2>
         <p style={{ fontSize: 14, color: '#6b7280', margin: 0 }}>All plans include a 14-day free trial. No credit card required.</p>
@@ -60,9 +60,9 @@ export default function PricingDrawer({ onClose, onOpenModal }: PricingDrawerPro
           return (
             <div key={plan.name} style={{
               padding: '24px 20px', borderRadius: 18,
-              border: plan.highlight ? '2px solid #7c3aed' : '1.5px solid #e5e7eb',
-              background: plan.highlight ? '#7c3aed' : '#fff',
-              boxShadow: plan.highlight ? '0 12px 40px rgba(124,58,237,0.25)' : '0 2px 12px rgba(0,0,0,0.05)',
+              border: plan.highlight ? '2px solid #2563EB' : '1.5px solid #e5e7eb',
+              background: plan.highlight ? '#2563EB' : '#fff',
+              boxShadow: plan.highlight ? '0 12px 40px rgba(37,99,235,0.25)' : '0 2px 12px rgba(0,0,0,0.05)',
               position: 'relative',
               display: 'flex', flexDirection: 'column', gap: 16,
             }}>
@@ -78,8 +78,8 @@ export default function PricingDrawer({ onClose, onOpenModal }: PricingDrawerPro
               )}
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ height: 36, width: 36, borderRadius: 10, background: plan.highlight ? 'rgba(255,255,255,0.2)' : '#f5f3ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Icon size={18} color={plan.highlight ? '#fff' : '#7c3aed'} />
+                <div style={{ height: 36, width: 36, borderRadius: 10, background: plan.highlight ? 'rgba(255,255,255,0.2)' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={18} color={plan.highlight ? '#fff' : '#2563EB'} />
                 </div>
                 <span style={{ fontSize: 14, fontWeight: 800, color: plan.highlight ? '#fff' : '#0f172a' }}>{plan.name}</span>
               </div>
@@ -92,7 +92,7 @@ export default function PricingDrawer({ onClose, onOpenModal }: PricingDrawerPro
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {plan.features.map(f => (
                   <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12.5, color: plan.highlight ? 'rgba(255,255,255,0.9)' : '#374151', fontWeight: 500, lineHeight: 1.4 }}>
-                    <Check size={13} color={plan.highlight ? '#fff' : '#7c3aed'} style={{ marginTop: 1, flexShrink: 0 }} />
+                    <Check size={13} color={plan.highlight ? '#fff' : '#2563EB'} style={{ marginTop: 1, flexShrink: 0 }} />
                     {f}
                   </li>
                 ))}
@@ -102,8 +102,8 @@ export default function PricingDrawer({ onClose, onOpenModal }: PricingDrawerPro
                 onClick={() => onOpenModal()}
                 style={{
                   marginTop: 'auto', padding: '11px', borderRadius: 10, border: 'none',
-                  background: plan.highlight ? '#fff' : '#7c3aed',
-                  color: plan.highlight ? '#7c3aed' : '#fff',
+                  background: plan.highlight ? '#fff' : '#2563EB',
+                  color: plan.highlight ? '#2563EB' : '#fff',
                   fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                 }}

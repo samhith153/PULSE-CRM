@@ -119,18 +119,12 @@ function RevenueTrend({ trend, period, onPeriod }: {
 }) {
   const rawVals = trend.map(t => asNumber(t.revenue) || 0);
   const nonZero = rawVals.filter(v => v > 0);
-  // If only last bar has data or all are 0, synthesise a rising curve
-  const fallback = nonZero.length < 2;
-  const peak = nonZero.length > 0 ? Math.max(...nonZero) : 11546000;
-  const displayVals = fallback
-    ? [0.36, 0.50, 0.44, 0.62, 0.73, 0.61, 0.82, 1.0].map(r => Math.round(peak * r))
-    : rawVals;
+  const displayVals = rawVals;
   const displayMax  = Math.max(...displayVals, 1);
-  const total = (fallback ? peak * 6.5 : rawVals.reduce((s,v) => s + v, 0));
+  const total = rawVals.reduce((s,v) => s + v, 0);
   const vals = displayVals;
   const maxV = displayMax;
-  const growth = fallback ? 4.2
-    : (displayVals.length > 1 && displayVals[displayVals.length - 2] > 0
+  const growth = (displayVals.length > 1 && displayVals[displayVals.length - 2] > 0
         ? ((displayVals[displayVals.length-1] - displayVals[displayVals.length-2]) / displayVals[displayVals.length-2]) * 100 : 0);
   const labels = trend.map(t => {
     if (/^\d{4}-\d{2}$/.test(t.period)) {
@@ -139,7 +133,7 @@ function RevenueTrend({ trend, period, onPeriod }: {
     }
     return t.period;
   });
-  const displayLbls = fallback ? ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr'] : labels;
+  const displayLbls = labels;
 
   function fmtTick(v: number) {
     if (v >= 1e7) return `${(v/1e7).toFixed(1)}Cr`;
@@ -202,7 +196,7 @@ function RevenueTrend({ trend, period, onPeriod }: {
             <TrendingUp className="size-3 text-accent-color" />
             <span className="font-bold uppercase tracking-wider">Total Revenue</span>
           </div>
-          <p className="text-[20px] font-extrabold text-foreground tabular-nums">{fmtCur(fallback ? 11546000 : total)}</p>
+          <p className="text-[20px] font-extrabold text-foreground tabular-nums">{fmtCur(total)}</p>
           <p className="mt-1 text-[10px] text-muted-foreground">{displayVals.length} periods tracked</p>
         </div>
       </div>
@@ -219,10 +213,7 @@ function DealsBySource({ src, period, onPeriod, km }: {
   km: { open_deals: number; deals_created: number; deals_lost: number; activities_logged: number };
 }) {
   const total = src.reduce((s, x) => s + Number(x.count || 0), 0) || 3;
-  const items = src.length > 0 ? src : [
-    { source: 'leads_show', count: 2, percentage: 67, revenue: 0 },
-    { source: 'social_media', count: 1, percentage: 33, revenue: 0 },
-  ];
+  const items = src;
   const R = 56, CIRC = 2 * Math.PI * R;
   let acc = 0;
   const segs = items.map((it, i) => {
@@ -295,13 +286,7 @@ const STAGE_COLORS = ['#6C63FF','#7B74FF','#8A8BFF','#99AAFF','#4BD08B'];
 const STAGE_FILLS  = ['bg-[#6C63FF]','bg-[#7B74FF]','bg-[#8A8BFF]','bg-[#99AAFF]','bg-[#4BD08B]'];
 
 function DealsByStage({ stages }: { stages: { stage: string; count: number; percentage: any; conversion_rate: any }[] }) {
-  const items = stages.length > 0 ? stages : [
-    { stage: 'New Leads',  count: 129, percentage: 100, conversion_rate: 100 },
-    { stage: 'Contacted',  count: 84,  percentage: 65,  conversion_rate: 70  },
-    { stage: 'Qualified',  count: 52,  percentage: 40,  conversion_rate: 43  },
-    { stage: 'Proposals',  count: 31,  percentage: 24,  conversion_rate: 26  },
-    { stage: 'Won',        count: 18,  percentage: 14,  conversion_rate: 15  },
-  ];
+  const items = stages;
   const totalDeals = items.reduce((s, x) => s + x.count, 0);
   const wonItem    = items.find(x => x.stage.toLowerCase().includes('won'));
   const wonDeals   = wonItem?.count ?? 0;
@@ -440,20 +425,18 @@ function SalesReportArea({ trend, period, onPeriod }: {
   period: Period; onPeriod: (p: Period) => void;
 }) {
   const vals  = trend.map(t => asNumber(t.revenue) || 0);
-  const fb    = vals.every(v => v === 0);
-  const dv    = fb ? [1200,1800,2400,2100,2780,1900] : vals;
+  const dv    = vals;
   const mx    = Math.max(...dv, 1);
   const avg   = dv.reduce((s,v) => s+v, 0) / dv.length;
   const ovf   = dv[dv.length-1] > avg * 1.2;
-  const lbls  = fb ? ['Mar','Apr','May','Jun','Jul','Aug']
-    : trend.map(t => /^\d{4}-\d{2}$/.test(t.period)
+  const lbls  = trend.map(t => /^\d{4}-\d{2}$/.test(t.period)
         ? new Date(t.period.replace('-','/') + '/01').toLocaleDateString('en-US',{month:'short'})
         : t.period);
   const pcts  = [0, 25, 50, 75, 100];
   const growth = trend.length > 1 && asNumber(trend[trend.length-2]?.revenue) > 0
     ? ((asNumber(trend[trend.length-1]?.revenue) - asNumber(trend[trend.length-2]?.revenue))
-       / asNumber(trend[trend.length-2]?.revenue)) * 100 : 4.2;
-  const perUnit = avg > 0 ? avg / Math.max(dv.length, 1) : 2780;
+       / asNumber(trend[trend.length-2]?.revenue)) * 100 : 0;
+  const perUnit = avg > 0 ? avg / Math.max(dv.length, 1) : 0;
 
   return (
     <div className="card-surface p-5">
@@ -518,9 +501,7 @@ function SalesActivity({ src, period, onPeriod }: {
   src: { source: string; count: number; percentage: any }[];
   period: Period; onPeriod: (p: Period) => void;
 }) {
-  const items = src.length > 0
-    ? src.slice(0, 3)
-    : [{ source: 'On Process', count: 45, percentage: 45 }, { source: 'Cancelled', count: 23, percentage: 23 }, { source: 'Delivered', count: 32, percentage: 32 }];
+  const items = src.slice(0, 3);
   const total = items.reduce((s, x) => s + Number(x.count || 0), 0) || 100;
   const R = 52, CIRC = 2 * Math.PI * R;
   let acc = 0;
@@ -592,27 +573,17 @@ function stageBadge(stage: string) {
   );
 }
 
-const FALLBACK_DEALS = [
-  { id: '1', company: 'Innotech Solutions', name: 'Enterprise Plan',  value: 34200, stage: 'Proposal' },
-  { id: '2', company: 'Global Corporation', name: 'CRM Implementation', value: 98300, stage: 'Qualified' },
-  { id: '3', company: 'Stark Industries',   name: 'Growth Package',   value: 56000, stage: 'Proposal' },
-  { id: '4', company: 'Youre in Enterprise', name: 'Premium Plan',   value: 71800, stage: 'Proposal' },
-  { id: '5', company: 'Oscorp Industries',  name: 'Support & Maintenance', value: 8600, stage: 'New' },
-];
-
 function TopDeals({ deals, period, onPeriod }: {
   deals: any[];
   period: Period; onPeriod: (p: Period) => void;
 }) {
-  const rows = deals.length > 0
-    ? deals.slice(0, 5).map(d => ({
+  const rows = deals.slice(0, 5).map(d => ({
         id: d.id || d.deal_id,
         company: d.company_name || d.company || '—',
         name: d.title || d.deal_name || d.name || '—',
         value: asNumber(d.amount || d.value || d.deal_value),
         stage: d.stage || d.status || 'New',
-      }))
-    : FALLBACK_DEALS;
+      }));
 
   return (
     <div className="card-surface p-5">
@@ -650,16 +621,8 @@ function TopDeals({ deals, period, onPeriod }: {
 }
 
 /* ═══ Recent Activities ══════════════════════════════════════ */
-const FALLBACK_ACTS = [
-  { id:'1', title:'Email sent',         entity_type:'contact', created_at: new Date(Date.now()-3600000).toISOString(), created_by:'Globex Corporation' },
-  { id:'2', title:'Call completed',     entity_type:'deal',    created_at: new Date(Date.now()-7200000).toISOString(), created_by:'Innotech Solutions' },
-  { id:'3', title:'Meeting scheduled',  entity_type:'contact', created_at: new Date(Date.now()-86400000).toISOString(), created_by:'Stark Industries' },
-  { id:'4', title:'Email opened',       entity_type:'contact', created_at: new Date(Date.now()-90000000).toISOString(), created_by:'Wayne Enterprises' },
-  { id:'5', title:'Deal created',       entity_type:'deal',    created_at: new Date(Date.now()-172800000).toISOString(), created_by:'Oscorp Industries' },
-];
-
 function RecentActivities({ acts }: { acts: { id: string; title?: string; action?: string; entity_type: string; created_at: string; created_by: string | null }[] }) {
-  const rows = acts.length > 0 ? acts.slice(0, 5) : FALLBACK_ACTS;
+  const rows = acts.slice(0, 5);
   return (
     <div className="card-surface p-5">
       <div className="flex items-center justify-between mb-4">
@@ -709,15 +672,12 @@ function RecentActivities({ acts }: { acts: { id: string; title?: string; action
 /* ═══ Performance Over Time dual-axis line chart ════════════ */
 function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) {
   const revVals = trend.map(t => asNumber(t.revenue) || 0);
-  const fb      = revVals.every(v => v === 0);
-  const rv      = fb ? [50000,120000,180000,240000,200000,310000,280000,350000,290000,380000,320000,410000] : revVals;
+  const rv      = revVals;
   // Simulate won deals from revenue (won ≈ rev / avg_deal_size_factor)
   const wv      = rv.map(v => Math.round(v / 12000));
   const rvMax   = Math.max(...rv, 1);
   const wvMax   = Math.max(...wv, 1);
-  const lbls    = fb
-    ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-    : trend.map(t => /^\d{4}-\d{2}$/.test(t.period)
+  const lbls    = trend.map(t => /^\d{4}-\d{2}$/.test(t.period)
         ? new Date(t.period.replace('-', '/') + '/01').toLocaleDateString('en-US', { month: 'short' })
         : t.period);
 
@@ -871,18 +831,18 @@ export default function ReportsView() {
     </div>
   );
 
-  const rev       = asNumber(data.revenue_stat?.total) || 14813100;
-  const revGrowth = asNumber(data.revenue_stat?.growth_pct) || 3.9;
+  const rev       = asNumber(data.revenue_stat?.total) || 0;
+  const revGrowth = asNumber(data.revenue_stat?.growth_pct) || 0;
   const prevRev   = rev - revGrowth;
   const won       = data.won_deals_stat?.count || 0;
-  const wonGrowth = asNumber(data.won_deals_stat?.growth_pct) || 4.2;
+  const wonGrowth = asNumber(data.won_deals_stat?.growth_pct) || 0;
   const wr        = asNumber(data.win_rate_stat?.win_rate) || 0;
-  const wrGrowth  = asNumber(data.win_rate_stat?.growth_pct) || 4.2;
+  const wrGrowth  = asNumber(data.win_rate_stat?.growth_pct) || 0;
   const avgDeal   = asNumber(data.avg_deal_size_stat?.avg_deal_value) || 0;
-  const avgGrowth = asNumber(data.avg_deal_size_stat?.growth_pct) || 4.2;
+  const avgGrowth = asNumber(data.avg_deal_size_stat?.growth_pct) || 0;
   const km        = data.key_metrics;
   const trend     = data.revenue_trend || [];
-  const sparkVals = trend.length >= 2 ? trend.map(t => asNumber(t.revenue) || 0) : [4,5,4,7,8,7,9,11];
+  const sparkVals = trend.length >= 2 ? trend.map(t => asNumber(t.revenue) || 0) : [];
   const acts      = (data as any).recent_activities || [];
 
   return (
@@ -910,25 +870,26 @@ export default function ReportsView() {
       {/* 4 KPI cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiCard title="Total Profit"
-          value={rev > 0 ? fmtCur(rev) : '₹14,813.10'}
-          sub={`vs last month ${rev > 0 ? fmtCur(prevRev) : '₹12,534.00'}`}
+          value={rev > 0 ? fmtCur(rev) : '₹0'}
+          sub={rev > 0 ? `vs last month ${fmtCur(prevRev)}` : 'No data'}
           delta={`+${Math.abs(revGrowth).toFixed(1)}%`} up={revGrowth >= 0}
-          spark={sparkVals.every(v => v === 0) ? [4,5,4,7,8,7,9,11] : sparkVals}
+          spark={sparkVals}
           icon={TrendingUp} hero delay={0} />
         <KpiCard title="Insight"
-          value={won > 0 && won < 10000 ? fmtCur(won * avgDeal || won * 50000) : (won >= 10000 ? fmtCur(won) : '$122,380')}
-          sub={`vs last month ${won > 1 ? fmtCur((won - 1) * (avgDeal || 50000)) : '$119.53'}`}
-          delta={`+${Math.abs(wonGrowth || 4.2).toFixed(1)}%`} up={wonGrowth >= 0}
-          spark={[6,7,8,7,9,10,11,12]} icon={BarChart2} delay={0.07} />
+          value={won > 0 && won < 10000 ? fmtCur(won * avgDeal || won * 50000) : (won >= 10000 ? fmtCur(won) : '₹0')}
+          sub={won > 1 ? `vs last month ${fmtCur((won - 1) * (avgDeal || 50000))}` : 'No data'}
+          delta={`+${Math.abs(wonGrowth || 0).toFixed(1)}%`} up={wonGrowth >= 0}
+          spark={[]} icon={BarChart2} delay={0.07} />
         <KpiCard title="Organic Sales"
-          value={asNumber(km?.pipeline_value) > 100000 ? fmtCur(asNumber(km.pipeline_value)) : '$98.1M'}
-          sub="vs last month $2.8M" delta="-2.8%" up={false}
-          spark={[9,8,7,9,8,7,8,7]} icon={ShoppingCart} color="#3DA35D" delay={0.14} />
+          value={asNumber(km?.pipeline_value) > 0 ? fmtCur(asNumber(km.pipeline_value)) : '₹0'}
+          sub={asNumber(km?.pipeline_value) > 0 ? `vs last month ${fmtCur(asNumber(km.pipeline_value) * 0.88)}` : 'No data'}
+          delta="-0%" up={false}
+          spark={[]} icon={ShoppingCart} color="#3DA35D" delay={0.14} />
         <KpiCard title="Gross Margin"
-          value={wr > 0 && wr < 100 ? fmtPct(wr) : '72%'}
-          sub={`vs last month ${wr > 0 && wr < 100 ? fmtPct(wr * 0.96) : '69%'}`}
-          delta={`+${Math.abs(avgGrowth || 4.2).toFixed(1)}%`} up={avgGrowth >= 0}
-          spark={[5,7,6,8,9,8,9,10]} icon={Percent} delay={0.21} />
+          value={wr > 0 && wr < 100 ? fmtPct(wr) : '0%'}
+          sub={wr > 0 && wr < 100 ? `vs last month ${fmtPct(wr * 0.96)}` : 'No data'}
+          delta={`+${Math.abs(avgGrowth || 0).toFixed(1)}%`} up={avgGrowth >= 0}
+          spark={[]} icon={Percent} delay={0.21} />
       </div>
 
       {/* Revenue Trend + Deals by Source */}

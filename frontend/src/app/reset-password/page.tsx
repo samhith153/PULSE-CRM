@@ -96,17 +96,17 @@ function ResetPasswordForm() {
               width: 36,
               height: 36,
               borderRadius: 10,
-              background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+              background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(124,58,237,0.27)',
+              boxShadow: '0 4px 12px rgba(37,99,235,0.27)',
             }}
           >
             <Activity size={16} color="#fff" strokeWidth={2.5} />
           </div>
           <span style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Pulse<span style={{ color: '#7c3aed' }}>CRM</span>
+            Pulse<span style={{ color: '#2563EB' }}>CRM</span>
           </span>
         </div>
 
@@ -142,7 +142,7 @@ function ResetPasswordForm() {
                 justifyContent: 'center',
                 gap: 8,
                 padding: '12px',
-                background: 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
                 color: '#fff',
                 fontSize: 14,
                 fontWeight: 700,
@@ -150,7 +150,7 @@ function ResetPasswordForm() {
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: 'inherit',
-                boxShadow: '0 6px 24px rgba(124,58,237,0.33)',
+                boxShadow: '0 6px 24px rgba(37,99,235,0.33)',
               }}
             >
               Go to sign in
@@ -256,7 +256,7 @@ function ResetPasswordForm() {
                       color: '#0f172a',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      background: missingToken ? '#f8fafc' : '#faf9ff',
+                      background: missingToken ? '#f8fafc' : '#F8FAFC',
                     }}
                   />
                   <button
@@ -328,7 +328,7 @@ function ResetPasswordForm() {
                       color: '#0f172a',
                       outline: 'none',
                       boxSizing: 'border-box',
-                      background: missingToken ? '#f8fafc' : '#faf9ff',
+                      background: missingToken ? '#f8fafc' : '#F8FAFC',
                     }}
                   />
                 </div>
@@ -344,7 +344,7 @@ function ResetPasswordForm() {
                   gap: 8,
                   padding: '12px',
                   marginTop: 4,
-                  background: loading || missingToken ? '#9b72f0' : 'linear-gradient(135deg, #7c3aed, #6d28d9)',
+                  background: loading || missingToken ? '#60A5FA' : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
                   color: '#fff',
                   fontSize: 14,
                   fontWeight: 700,
@@ -352,7 +352,7 @@ function ResetPasswordForm() {
                   border: 'none',
                   cursor: loading || missingToken ? 'not-allowed' : 'pointer',
                   fontFamily: 'inherit',
-                  boxShadow: '0 6px 24px rgba(124,58,237,0.33)',
+                  boxShadow: '0 6px 24px rgba(37,99,235,0.33)',
                 }}
               >
                 {loading ? (
@@ -374,7 +374,7 @@ function ResetPasswordForm() {
                 style={{
                   fontSize: 12,
                   fontWeight: 700,
-                  color: '#7c3aed',
+                  color: '#2563EB',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',

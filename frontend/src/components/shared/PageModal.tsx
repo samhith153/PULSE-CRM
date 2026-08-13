@@ -54,11 +54,11 @@ export default function PageModal({ isOpen, onClose }: Props) {
 
         {/* brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-          <div style={{ height: 36, width: 36, borderRadius: 10, background: '#7c3aed', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(124,58,237,0.35)' }}>
+          <div style={{ height: 36, width: 36, borderRadius: 10, background: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(37,99,235,0.35)' }}>
             <Activity size={17} color="#fff" strokeWidth={2.5} />
           </div>
           <span style={{ fontSize: 18, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Pulse<span style={{ color: '#7c3aed' }}>CRM</span>
+            Pulse<span style={{ color: '#2563EB' }}>CRM</span>
           </span>
         </div>
 
@@ -72,7 +72,7 @@ export default function PageModal({ isOpen, onClose }: Props) {
             <button
               key={r.value}
               onClick={() => setRole(r.value)}
-              style={{ padding: '9px 4px', borderRadius: 10, border: `2px solid ${role === r.value ? '#7c3aed' : '#e2e8f0'}`, background: role === r.value ? '#f5f3ff' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: role === r.value ? '#7c3aed' : '#64748b', transition: 'all .15s', fontFamily: 'inherit' }}
+              style={{ padding: '9px 4px', borderRadius: 10, border: `2px solid ${role === r.value ? '#2563EB' : '#e2e8f0'}`, background: role === r.value ? '#EFF6FF' : '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: role === r.value ? '#2563EB' : '#64748b', transition: 'all .15s', fontFamily: 'inherit' }}
             >
               {r.label}
             </button>
@@ -92,7 +92,7 @@ export default function PageModal({ isOpen, onClose }: Props) {
                 placeholder="you@company.com"
                 required
                 style={{ width: '100%', padding: '11px 14px 11px 40px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
-                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }}
               />
             </div>
@@ -110,20 +110,20 @@ export default function PageModal({ isOpen, onClose }: Props) {
                 placeholder="••••••••"
                 required
                 style={{ width: '100%', padding: '11px 14px 11px 40px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14, fontFamily: 'inherit', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff', transition: 'border-color .15s' }}
-                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#7c3aed'; }}
+                onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#2563EB'; }}
                 onBlur={e => { (e.target as HTMLInputElement).style.borderColor = '#e2e8f0'; }}
               />
             </div>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="button" style={{ fontSize: 12, fontWeight: 600, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
+            <button type="button" style={{ fontSize: 12, fontWeight: 600, color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Forgot password?</button>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', background: loading ? '#9b72f0' : '#7c3aed', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all .15s', boxShadow: '0 6px 20px rgba(124,58,237,0.35)' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', background: loading ? '#60A5FA' : '#2563EB', color: '#fff', fontSize: 15, fontWeight: 700, borderRadius: 12, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', transition: 'all .15s', boxShadow: '0 6px 20px rgba(37,99,235,0.35)' }}
           >
             {loading ? <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> Signing in…</> : 'Sign In'}
           </button>
@@ -139,7 +139,7 @@ export default function PageModal({ isOpen, onClose }: Props) {
           onClick={handleGoogle}
           disabled={loading}
           style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '12px', background: '#fff', border: '1.5px solid #e2e8f0', borderRadius: 12, fontSize: 14, fontWeight: 700, color: '#0f172a', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', transition: 'all .15s' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#7c3aed'; }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = '#2563EB'; }}
           onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0'; }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24">
@@ -153,7 +153,7 @@ export default function PageModal({ isOpen, onClose }: Props) {
 
         <p style={{ textAlign: 'center', fontSize: 12, color: '#94a3b8', margin: '18px 0 0' }}>
           No account?{' '}
-          <button onClick={onClose} style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Sign up free</button>
+          <button onClick={onClose} style={{ fontSize: 12, fontWeight: 700, color: '#2563EB', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Sign up free</button>
         </p>
       </div>
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

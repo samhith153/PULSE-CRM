@@ -91,7 +91,7 @@ export default function MegaDrawer({ activeDrawer, onClose, onOpenModal }: MegaD
                   Pulse CRM
                 </span>
                 <span style={{ color: '#d1d5db', fontSize: 12 }}>›</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
                   {activeDrawer ? drawerLabels[activeDrawer] : ''}
                 </span>
               </div>
@@ -106,7 +106,7 @@ export default function MegaDrawer({ activeDrawer, onClose, onOpenModal }: MegaD
                   cursor: 'pointer', fontFamily: 'inherit',
                   transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#f5f3ff'; (e.currentTarget as HTMLButtonElement).style.color = '#7c3aed'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#EFF6FF'; (e.currentTarget as HTMLButtonElement).style.color = '#2563EB'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; (e.currentTarget as HTMLButtonElement).style.color = '#6b7280'; }}
               >
                 <X size={13} /> Close  <kbd style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', background: '#f1f5f9', padding: '1px 5px', borderRadius: 4, border: '1px solid #e5e7eb', fontFamily: 'monospace' }}>ESC</kbd>

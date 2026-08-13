@@ -21,13 +21,13 @@ export default function DrawerHeader({ title, description, browseLabel, browseHr
         style={{
           display: 'inline-flex', alignItems: 'center', gap: 7,
           padding: '9px 18px', borderRadius: 100,
-          background: '#7c3aed', color: '#fff',
+          background: '#2563EB', color: '#fff',
           fontSize: 13, fontWeight: 700, textDecoration: 'none',
-          boxShadow: '0 4px 14px rgba(124,58,237,0.35)',
+          boxShadow: '0 4px 14px rgba(37,99,235,0.35)',
           transition: 'all 0.15s ease',
         }}
-        onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#6d28d9'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#7c3aed'; }}
+        onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#1D4ED8'; }}
+        onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = '#2563EB'; }}
       >
         {browseLabel} <ArrowRight size={13} />
       </a>

@@ -25,7 +25,7 @@ export default function DrawerFooter({ onClose, onOpenModal }: DrawerFooterProps
           const Icon = b.icon;
           return (
             <span key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: '#6b7280' }}>
-              <Icon size={13} color='#7c3aed' /> {b.label}
+              <Icon size={13} color='#2563EB' /> {b.label}
             </span>
           );
         })}

@@ -115,8 +115,9 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
         {
           label: 'Intelligence',
           items: [
-            { name: 'AI Models',  icon: Cpu,       tab: 'ai models' },
-            { name: 'Audit Logs', icon: Activity,  tab: 'audit logs' },
+            { name: 'Reports',     icon: BarChart3, tab: 'reports' },
+            { name: 'AI Models',   icon: Cpu,       tab: 'ai models' },
+            { name: 'Audit Logs',  icon: Activity,  tab: 'audit logs' },
           ],
         },
         {
