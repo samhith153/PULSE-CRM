@@ -21,18 +21,18 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       // Inline styles needed by Tailwind runtime classes and some UI libs
-      "style-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://accounts.google.com",
       // Next.js requires 'unsafe-inline' for hydration/Turbopack/webpack runtime scripts.
       // External scripts are still blocked — only self-hosted scripts execute.
-      "script-src 'self' 'unsafe-inline'" + (isProd ? "" : " 'unsafe-eval'"),
+      "script-src 'self' 'unsafe-inline' https://accounts.google.com" + (isProd ? "" : " 'unsafe-eval'"),
       // Images: self + data: for avatars/base64 + HTTPS for Google avatars
       "img-src 'self' data: https://lh3.googleusercontent.com https://*.googleusercontent.com",
       // Fonts: self + Google Fonts
       "font-src 'self' https://fonts.gstatic.com",
       // Connect: self + backend API
-      `connect-src 'self' ${backendUrl}`,
+      `connect-src 'self' ${backendUrl} https://accounts.google.com`,
       // Frame: none (no iframing)
-      "frame-src 'none'",
+      "frame-src 'self' https://accounts.google.com",
       // Frame-ancestors: none
       "frame-ancestors 'none'",
       // Object: none
