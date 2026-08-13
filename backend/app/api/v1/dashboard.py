@@ -1,7 +1,9 @@
-﻿"""
+"""
 Dashboard routes.
 """
 from __future__ import annotations
+
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 
@@ -17,7 +19,9 @@ from app.schemas.dashboard import (
     TopSalesRepresentativeResponse,
     AdminDashboardResponse,
     ManagerDashboardResponse,
+    RedesignedDashboardResponse,
     SalesRepDashboardResponse,
+    SalesRepCommandDashboardResponse,
 )
 from app.schemas.forecast import (
     ManagerForecastResponse,
@@ -118,6 +122,19 @@ async def get_dashboard_trends(current_user: CurrentUser, db: DBSession) -> dict
     return {"success": True, "message": "OK", "data": trends}
 
 
+
+@router.get(
+    "/redesigned",
+    response_model=StandardResponse[RedesignedDashboardResponse],
+    summary="Get redesigned dashboard cards",
+    dependencies=[Depends(require_permission("dashboard:read"))],
+    tags=["Dashboard"],
+)
+async def get_redesigned_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+    svc = DashboardService(db)
+    data = await svc.redesigned_dashboard(current_user.id, current_user.organization_id)
+    return {"success": True, "message": "Dashboard cards retrieved successfully.", "data": data}
+
 @router.get(
     "/admin",
     response_model=StandardResponse[AdminDashboardResponse],
@@ -130,15 +147,19 @@ async def get_dashboard_trends(current_user: CurrentUser, db: DBSession) -> dict
     dependencies=[Depends(require_role("admin"))],
     tags=["Dashboard"],
 )
-async def get_admin_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+async def get_admin_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+    lead_source_period: str = Query(default="all", pattern="^(all|year)$"),
+) -> dict:
     """
-    GET /api/v1/dashboard/admin
+    GET /api/v1/dashboard/admin?lead_source_period=all|year
 
     Secured: JWT required + `admin` role.
     Scoped to the caller's organization_id.
     """
     svc = DashboardService(db)
-    data = await svc.admin_kpi(current_user.organization_id)
+    data = await svc.admin_kpi(current_user.organization_id, lead_source_period=lead_source_period)
     return {"success": True, "message": "Admin KPIs retrieved successfully.", "data": data}
 
 
@@ -155,7 +176,15 @@ async def get_admin_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
     dependencies=[Depends(require_role("manager", "admin"))],
     tags=["Dashboard"],
 )
-async def get_manager_dashboard(current_user: CurrentUser, db: DBSession) -> dict:
+async def get_manager_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+    period: str = Query(
+        default="quarter",
+        pattern="^(week|month|quarter|year)$",
+    ),
+    rep_id: str | None = Query(default=None),
+) -> dict:
     """
     GET /api/v1/dashboard/manager
 
@@ -163,9 +192,59 @@ async def get_manager_dashboard(current_user: CurrentUser, db: DBSession) -> dic
     Scoped to the caller's organization_id; team = all users in the same org.
     """
     svc = DashboardService(db)
-    data = await svc.manager_kpi(current_user.id, current_user.organization_id)
-    return {"success": True, "message": "Manager KPIs retrieved successfully.", "data": data}
 
+    # Admins keep the org-wide view; managers are scoped to their assigned reps.
+    is_admin = any(
+        ur.role.name == "admin" for ur in current_user.user_roles if ur.role
+    )
+    data = await svc.manager_kpi(
+        current_user.id,
+        current_user.organization_id,
+        period=period,
+        org_wide=is_admin,
+    )
+
+    return {
+        "success": True,
+        "message": "Manager KPIs retrieved successfully.",
+        "data": data,
+    }
+@router.get(
+    "/me",
+    response_model=StandardResponse[SalesRepCommandDashboardResponse],
+    summary="Sales Rep Command Center",
+    description=(
+        "Hydrates all 6 core widgets and top KPIs concurrently in a single request "
+        "for the Next.js Sales Command Center. "
+        "**Sales Rep, Manager, or Admin role required.**"
+    ),
+    dependencies=[Depends(require_role("sales_rep", "manager", "admin"))],
+    tags=["Dashboard"],
+)
+async def get_my_command_dashboard(
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """
+    GET /api/v1/dashboard/me
+
+    Secured: JWT required + sales_rep / manager / admin role.
+    All data is strictly scoped to owner_id == current_user.id.
+    Executes concurrent DB queries to prevent frontend waterfall loading.
+    """
+    svc = DashboardService(db)
+    
+    # Calls the new concurrent method built in DashboardService
+    data = await svc.sales_rep_command_center(
+        user_id=current_user.id, 
+        organization_id=current_user.organization_id
+    )
+    
+    return {
+        "success": True, 
+        "message": "Command Center data retrieved successfully.", 
+        "data": data
+    }
 
 @router.get(
     "/sales-rep",
@@ -191,36 +270,6 @@ async def get_sales_rep_dashboard(
 
     period options: week | month | quarter | year  (default: month)
     Secured: JWT required + sales_rep / manager / admin role.
-    All data scoped to owner_id == current_user.id.
-    """
-    svc = DashboardService(db)
-    data = await svc.sales_rep_kpi(current_user.id, current_user.organization_id, period)
-    return {"success": True, "message": "Sales rep KPIs retrieved successfully.", "data": data}
-
-
-@router.get(
-    "/sales",
-    response_model=StandardResponse[SalesRepDashboardResponse],
-    summary="Sales Representative Dashboard KPIs (canonical route)",
-    description=(
-        "Canonical Sales Rep dashboard endpoint. Returns the same data as "
-        "/sales-rep but is gated to the sales_rep role only, matching the "
-        "per-role dashboard pattern used by /admin and /manager. "
-        "**Sales Rep role required.**"
-    ),
-    dependencies=[Depends(require_role("sales_rep"))],
-    tags=["Dashboard"],
-)
-async def get_sales_dashboard(
-    current_user: CurrentUser,
-    db: DBSession,
-    period: str = "month",
-) -> dict:
-    """
-    GET /api/v1/dashboard/sales?period=month
-
-    period options: week | month | quarter | year  (default: month)
-    Secured: JWT required + sales_rep role.
     All data scoped to owner_id == current_user.id.
     """
     svc = DashboardService(db)
@@ -255,7 +304,7 @@ async def get_manager_forecast(
 
     Secured: JWT required + manager / admin role.
     All data is scoped to the caller's organization_id.
-    Zero values are returned when no forecast data exists — never 500.
+    Zero values are returned when no forecast data exists -- never 500.
     """
     controller = ForecastController(db)
     data = await controller.get_manager_forecast(
@@ -269,10 +318,10 @@ async def get_manager_forecast(
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Forecast sub-endpoints
 # All require manager or admin role and are scoped to the caller's org.
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 @router.get(
     "/manager/forecast/monthly",
@@ -285,7 +334,7 @@ async def get_forecast_monthly(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/monthly — last 6 months breakdown."""
+    """GET /api/v1/dashboard/manager/forecast/monthly -- last 6 months breakdown."""
     from app.services.forecast_service import ForecastService
     svc = ForecastService(db)
     from datetime import datetime, timezone
@@ -305,7 +354,7 @@ async def get_forecast_quarterly(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/quarterly — 4-quarter matrix."""
+    """GET /api/v1/dashboard/manager/forecast/quarterly -- 4-quarter matrix."""
     from app.services.forecast_service import ForecastService
     svc = ForecastService(db)
     from datetime import datetime, timezone
@@ -325,7 +374,7 @@ async def get_forecast_accuracy(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/accuracy — current vs prev month accuracy."""
+    """GET /api/v1/dashboard/manager/forecast/accuracy -- current vs prev month accuracy."""
     from app.repositories.forecast_repository import ForecastRepository
     from app.services.forecast_service import ForecastService
     from datetime import datetime, timezone
@@ -360,7 +409,7 @@ async def get_forecast_revenue_trend(
     db: DBSession,
     period: str = Query(default="monthly", description="monthly | quarterly | yearly"),
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/revenue-trend — trend by period."""
+    """GET /api/v1/dashboard/manager/forecast/revenue-trend -- trend by period."""
     from app.services.forecast_service import ForecastService
     from datetime import datetime, timezone
     svc = ForecastService(db)
@@ -380,7 +429,7 @@ async def get_forecast_insights(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/insights — rule-based AI insights."""
+    """GET /api/v1/dashboard/manager/forecast/insights -- rule-based AI insights."""
     controller = ForecastController(db)
     data = await controller.get_manager_forecast(
         organization_id=current_user.organization_id, period="monthly"
@@ -399,7 +448,7 @@ async def get_forecast_risks(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/risks — aging, overdue, low-prob deals."""
+    """GET /api/v1/dashboard/manager/forecast/risks -- aging, overdue, low-prob deals."""
     from app.repositories.forecast_repository import ForecastRepository
     from app.services.forecast_service import ForecastService
     repo = ForecastRepository(db)
@@ -420,9 +469,11 @@ async def get_forecast_recommendations(
     current_user: CurrentUser,
     db: DBSession,
 ) -> dict:
-    """GET /api/v1/dashboard/manager/forecast/recommendations — rule-based actions."""
+    """GET /api/v1/dashboard/manager/forecast/recommendations -- rule-based actions."""
     controller = ForecastController(db)
     data = await controller.get_manager_forecast(
         organization_id=current_user.organization_id, period="monthly"
     )
     return {"success": True, "message": "OK", "data": data.forecast_recommendations}
+
+

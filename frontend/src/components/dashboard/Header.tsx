@@ -3,21 +3,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
-  Search, 
-  Bell, 
-  Plus, 
-  Menu, 
-  TrendingUp,
-  User,
-  ShieldAlert,
-  Settings,
-  LogOut,
-  Sun,
-  Moon,
-  UserPlus,
-  Sparkles
+  Search, Bell, Plus, Menu,
+  TrendingUp, User, ShieldAlert, Settings, LogOut,
+  Sun, Moon, UserPlus, Mail, Zap
 } from 'lucide-react';
+import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
 import { useNotifications } from '@/hooks/useNotifications';
+import { resolveImageUrl } from '@/utils/api';
+import { cn } from '@/lib/utils';
 
 interface HeaderProps {
   collapsed: boolean;
@@ -27,321 +20,201 @@ interface HeaderProps {
   onOpenCommandPalette?: () => void;
   onSignOut?: () => void;
   userRole: 'sales_rep' | 'manager' | 'admin';
-  currentUser?: { full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null;
 }
 
-export default function Header({ 
-  collapsed, 
-  setCollapsed, 
-  onNewReportClick, 
-  onTabChange, 
-  onOpenCommandPalette, 
+export default function Header({
+  collapsed,
+  setCollapsed,
+  onNewReportClick,
+  onTabChange,
+  onOpenCommandPalette,
   onSignOut,
   userRole,
-  currentUser
 }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  
-  // Theme state and persistence logic
+  const [syncSeconds, setSyncSeconds] = useState(2);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('pulse-crm-theme') as 'light' | 'dark' || 'light';
-    setTheme(savedTheme);
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    if (savedTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(nextTheme);
-    localStorage.setItem('pulse-crm-theme', nextTheme);
-    document.documentElement.setAttribute('data-theme', nextTheme);
-    if (nextTheme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  };
-  
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const { user: currentUser } = useCurrentUser();
+  const { notifications: notifItems, unreadCount, markAllRead } = useNotifications(10);
+
+  const profileName = currentUser?.full_name || 'User';
+  const profileEmail = currentUser?.email || '';
+  const profileInitials = userInitials(currentUser?.full_name);
+
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
+    const savedTheme = (localStorage.getItem('pulse-crm-theme') as 'light' | 'dark') || 'light';
+    setTheme(savedTheme);
+    if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setSyncSeconds((prev) => {
+        if (prev >= 14) {
+          setIsSyncing(true);
+          setTimeout(() => setIsSyncing(false), 1200);
+          return 0;
+        }
+        return prev + 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node))
         setShowNotifications(false);
-      }
-      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node))
         setShowProfileMenu(false);
-      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        if (onOpenCommandPalette) {
-          onOpenCommandPalette();
-        } else {
-          searchInputRef.current?.focus();
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onOpenCommandPalette]);
+  // Ctrl+K listener is handled in DashboardShell (parent) to avoid duplicates.
 
-  const { notifications, unreadCount, markRead, markAllRead } = useNotifications(5);
-
-  const formatRelativeTime = (iso: string) => {
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const minutes = Math.floor(diffMs / 60000);
-    if (minutes < 1) return 'just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
+  const toggleTheme = () => {
+    const next = theme === 'light' ? 'dark' : 'light';
+    setTheme(next);
+    localStorage.setItem('pulse-crm-theme', next);
+    if (next === 'dark') document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
   };
 
-  const getNotificationIcon = (type: string) => {
-    if (type === 'deal_won') return <TrendingUp className="h-3.5 w-3.5 text-emerald-600" strokeWidth={1.75} />;
-    if (type === 'deal_lost') return <ShieldAlert className="h-3.5 w-3.5 text-rose-500" strokeWidth={1.75} />;
-    if (type === 'lead_assigned') return <UserPlus className="h-3.5 w-3.5 text-brand-accent" strokeWidth={1.75} />;
-    if (type === 'lead_converted') return <Sparkles className="h-3.5 w-3.5 text-amber-500" strokeWidth={1.75} />;
-    return <Bell className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />;
-  };
-
-  // Dynamic profile details mapping
-  const getUserProfile = () => {
-    if (currentUser) {
-      return {
-        name: currentUser.full_name,
-        email: currentUser.email,
-        avatar: currentUser.avatar_url || null,
-      };
-    }
-    return {
-      name: userRole === 'admin' ? 'Admin' : userRole === 'manager' ? 'Manager' : 'Sales Rep',
-      email: '',
-      avatar: null,
-    };
-  };
-
-  const profile = getUserProfile();
+  const btn = cn(
+    'grid shrink-0 size-9 place-items-center rounded-full border border-border-default bg-surface-1',
+    'text-text-secondary shadow-sm transition-all hover:bg-surface-hover hover:text-text-primary cursor-pointer',
+  );
 
   return (
-    <header className="h-16 bg-white border-b border-brand-border-purple/20 flex items-center justify-between px-6 sticky top-0 z-30 shadow-sm/5 text-brand-text">
-      {/* Search & Collapse Toggle */}
-      <div className="flex items-center space-x-4 flex-1 max-w-md">
-        <button 
-          onClick={() => setCollapsed(!collapsed)} 
-          className="text-slate-400 hover:text-brand-text transition-colors p-1.5 rounded-lg hover:bg-slate-50 cursor-pointer"
-          aria-label="Toggle Sidebar"
-        >
-          <Menu className="h-4.5 w-4.5" strokeWidth={1.75} />
-        </button>
+    /* ui.md §6: 72px height, white surface, no shadow */
+    <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border-default bg-surface-1/90 px-4 py-3 backdrop-blur-md md:px-6" style={{ height: '72px' }}>
+      {/* Sidebar toggle */}
+      <button onClick={() => setCollapsed(!collapsed)} className={btn} aria-label="Toggle Sidebar">
+        <Menu size={16} strokeWidth={1.75} />
+      </button>
 
-        {/* Polished Search Bar - Light Themed with Periwinkle Borders */}
-        <div className="relative w-full">
-          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-400">
-            <Search className="h-4 w-4" strokeWidth={1.75} />
-          </div>
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search leads, contacts, companies, deals... (Ctrl+K)"
-            value=""
-            readOnly
-            onClick={() => {
-              if (onOpenCommandPalette) onOpenCommandPalette();
-            }}
-            onFocus={(e) => {
-              e.target.blur();
-              if (onOpenCommandPalette) onOpenCommandPalette();
-            }}
-            className="w-full pl-9 pr-12 py-1.5 border border-brand-border-purple/35 rounded-lg text-xs text-brand-text bg-slate-50/60 placeholder-slate-400 cursor-pointer focus:outline-none transition-all duration-200 shadow-sm/5"
-          />
-          <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-            <kbd className="text-[9px] font-sans font-bold text-brand-text/65 bg-slate-50 border border-brand-border-purple/30 px-1.5 py-0.5 rounded shadow-sm/5">
-              ⌘K
-            </kbd>
-          </div>
-        </div>
+      {/* Search — ui.md §6: pill, surface-secondary fill, radius-full */}
+      <div
+        className="flex flex-1 h-10 items-center gap-2 rounded-full border border-border-default bg-surface-2 px-4 shadow-sm cursor-pointer hover:bg-surface-hover hover:border-accent-color/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-color/20 focus-visible:border-accent-color transition-all text-left"
+        onClick={() => onOpenCommandPalette?.()}
+        aria-label="Search CRM records"
+      >
+        <Search size={15} className="shrink-0 text-text-muted" />
+        <input
+          ref={searchInputRef}
+          type="text"
+          placeholder="Search leads, contacts, companies, deals..."
+          readOnly
+          onClick={() => onOpenCommandPalette?.()}
+          className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none cursor-pointer"
+        />
+        <span className="hidden shrink-0 rounded-md bg-surface-1 px-1.5 py-0.5 text-[11px] font-semibold text-text-muted border border-border-default sm:inline">⌘K</span>
       </div>
 
-      {/* Top Bar Actions Cluster - Light Themed */}
-      <div className="flex items-center space-x-3.5">
-        {/* Role Badge (Static) */}
-        <div className="flex items-center space-x-1.5 bg-slate-50 border border-brand-border-purple/10 px-2.5 py-1.5 rounded-lg text-xs font-bold text-brand-text shadow-sm/5 select-none">
-          <span className="text-[9px] text-slate-400 font-extrabold uppercase">Role:</span>
-          <span className="text-brand-heading font-extrabold capitalize">
+      {/* Right cluster */}
+      <div className="flex shrink-0 items-center gap-2">
+        {/* Sync badge — ui.md §9 trend badge style */}
+        <span className="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-border-default bg-surface-1 px-2.5 py-1 text-[11px] font-semibold text-accent-color select-none min-w-[110px]">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-color opacity-60"></span>
+            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent-color"></span>
+          </span>
+          <span>{isSyncing ? 'Syncing...' : `Updated ${syncSeconds}s ago`}</span>
+        </span>
+
+        {/* Role badge */}
+        <span className="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-border-default bg-surface-1 px-3 py-1.5 text-xs font-medium text-text-muted select-none">
+          <span className="size-2 rounded-full bg-status-success-text animate-pulse" />
+          Role: <span className="font-semibold text-text-primary">
             {userRole === 'sales_rep' ? 'Sales Rep' : userRole === 'manager' ? 'Sales Manager' : 'Admin'}
           </span>
-        </div>
+        </span>
 
-        {/* Theme Switcher Button */}
-        <button
-          onClick={toggleTheme}
-          className="p-1.5 text-slate-400 hover:text-brand-text rounded-lg hover:bg-slate-50 transition-all cursor-pointer relative"
-          title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          aria-label="Toggle dark mode"
-        >
-          {theme === 'light' ? (
-            <Moon className="h-4.5 w-4.5" strokeWidth={1.75} />
-          ) : (
-            <Sun className="h-4.5 w-4.5 text-amber-500" strokeWidth={1.75} />
-          )}
+        {/* Theme */}
+        <button onClick={toggleTheme} className={btn} aria-label="Toggle theme">
+          {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
         </button>
 
-        {/* Notifications Trigger */}
+        {/* Notifications */}
         <div className="relative" ref={notifRef}>
-          <button
-            onClick={() => setShowNotifications(!showNotifications)}
-            className="p-1.5 text-slate-400 hover:text-brand-text rounded-lg hover:bg-slate-50 transition-all cursor-pointer relative"
-            aria-label="View notifications"
-          >
-            <Bell className="h-4.5 w-4.5" strokeWidth={1.75} />
+          <button onClick={() => setShowNotifications(!showNotifications)} className={cn(btn, 'relative')} aria-label="Notifications">
+            <Bell size={15} />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 h-3.5 w-3.5 bg-brand-accent text-[9px] font-bold text-white rounded-full flex items-center justify-center border border-white">
+              <span className="absolute -top-0.5 -right-0.5 grid size-4 place-items-center rounded-full bg-brand text-[9px] font-bold text-white">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
           </button>
-
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white border border-brand-border-purple/35 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="px-4 py-3 bg-slate-50 border-b border-brand-border-purple/15 flex justify-between items-center">
-                <span className="font-bold text-brand-heading text-xs">Notifications</span>
+            <div className="absolute right-0 top-11 w-80 bg-surface-1 border border-border-default rounded-[12px] shadow-popover overflow-hidden z-50">
+              <div className="px-4 py-3 bg-surface-2 border-b border-border-default flex justify-between items-center">
+                <span className="font-semibold text-text-primary text-xs">Notifications</span>
                 {unreadCount > 0 && (
-                  <span className="text-[9px] bg-brand-accent/10 text-brand-accent px-2 py-0.5 rounded-full font-bold">
-                    {unreadCount} New
-                  </span>
+                  <span className="text-[11px] bg-accent-muted text-accent-color px-2 py-0.5 rounded-full font-semibold">{unreadCount} New</span>
                 )}
               </div>
-              <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
-                {notifications.length === 0 ? (
-                  <div className="p-6 text-center text-[11px] text-slate-400">No notifications yet.</div>
-                ) : (
-                  notifications.map((n) => (
-                    <button
-                      key={n.id}
-                      type="button"
-                      onClick={() => !n.is_read && markRead(n.id)}
-                      className={`w-full text-left p-3 hover:bg-slate-50/50 transition-colors flex items-start space-x-2.5 text-[11px] ${n.is_read ? 'opacity-60' : ''}`}
-                    >
-                      <div className="mt-0.5">{getNotificationIcon(n.type)}</div>
-                      <div className="flex-1">
-                        <p className="text-slate-600 leading-relaxed">{n.message || n.title}</p>
-                        <span className="text-[9px] text-slate-400 mt-0.5 block">{formatRelativeTime(n.created_at)}</span>
-                      </div>
-                      {!n.is_read && <span className="h-1.5 w-1.5 rounded-full bg-brand-accent mt-1.5 shrink-0" />}
-                    </button>
-                  ))
-                )}
+              <div className="divide-y divide-border-subtle max-h-72 overflow-y-auto">
+                {notifItems.length === 0 ? (
+                  <div className="p-6 text-center text-text-muted text-xs">No notifications yet.</div>
+                ) : notifItems.map((n) => (
+                  <div key={n.id} className="p-3 hover:bg-surface-hover flex items-start gap-2.5 text-xs">
+                    <div className="mt-0.5 shrink-0">
+                      {n.type.includes('deal') ? <TrendingUp size={14} className="text-accent-color" /> :
+                       n.type.includes('email') ? <Mail size={14} className="text-accent-color" /> :
+                       n.type.includes('lead') ? <UserPlus size={14} className="text-status-info-text" /> :
+                       <Bell size={14} className="text-text-muted" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={n.is_read ? 'text-text-muted' : 'text-text-primary'}>{n.title}</p>
+                      {n.message && <p className="text-text-muted mt-0.5 truncate">{n.message}</p>}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="p-2 border-t border-brand-border-purple/15 bg-slate-50 text-center flex justify-between px-4">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    markAllRead();
-                    setShowNotifications(false);
-                  }}
-                  className="text-[10px] font-bold text-slate-500 hover:text-brand-text transition-colors py-1 cursor-pointer"
-                >
-                  Mark all read
-                </button>
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setShowNotifications(false);
-                    onTabChange?.('notifications');
-                  }}
-                  className="text-[10px] font-bold text-brand-accent hover:text-brand-accent-hover transition-colors py-1 cursor-pointer"
-                >
-                  View all alerts
-                </button>
+              <div className="p-2 border-t border-border-default bg-surface-2 flex justify-between px-4">
+                <button onClick={markAllRead} className="text-xs text-text-muted hover:text-text-primary py-1 cursor-pointer">Mark all read</button>
+                <button onClick={() => { setShowNotifications(false); onTabChange?.('notifications'); }} className="text-xs text-accent-color hover:text-accent-hover py-1 cursor-pointer">View all</button>
               </div>
             </div>
           )}
         </div>
 
-        {/* User Dropdown */}
+        {/* Avatar — ui.md §6: right-aligned */}
         <div className="relative" ref={profileRef}>
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="flex items-center space-x-2 p-1 rounded-lg hover:bg-slate-50 transition-all cursor-pointer"
-            aria-label="Profile menu"
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-muted text-xs font-bold text-accent-color ring-1 ring-border-default ring-offset-2 ring-offset-surface-1 hover:ring-2 hover:ring-accent-color/40 transition-all cursor-pointer overflow-hidden"
           >
-            <div className="h-7 w-7 rounded-full bg-slate-200 overflow-hidden border border-brand-border-purple/20 flex items-center justify-center">
-              {profile.avatar ? (
-                <Image 
-                  src={profile.avatar} 
-                  alt={`${profile.name} Avatar`} 
-                  width={28} height={28}
-                  className="h-full w-full object-cover"
-                  unoptimized
-                />
-              ) : (
-                <User className="h-4 w-4 text-slate-400" strokeWidth={1.75} />
-              )}
-            </div>
-            <span className="text-xs font-bold text-brand-text hidden md:inline-block">{profile.name}</span>
+            {currentUser?.avatar_url ? (
+              <Image src={resolveImageUrl(currentUser.avatar_url)} alt={profileName} width={36} height={36} className="h-full w-full object-cover" unoptimized />
+            ) : (
+              <span className="select-none">{profileInitials}</span>
+            )}
           </button>
-
           {showProfileMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white border border-brand-border-purple/35 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="px-4 py-2.5 bg-slate-50 border-b border-brand-border-purple/15 text-left">
-                <p className="text-xs font-bold text-brand-text">{profile.name}</p>
-                <p className="text-[10px] text-slate-450 truncate mt-0.5 font-bold">{profile.email}</p>
+            <div className="absolute right-0 top-11 w-48 bg-surface-1 border border-border-default rounded-[12px] shadow-popover overflow-hidden z-50">
+              <div className="px-4 py-2.5 bg-surface-2 border-b border-border-default">
+                <p className="text-xs font-semibold text-text-primary truncate">{profileName}</p>
+                <p className="text-[11px] text-text-muted truncate mt-0.5">{profileEmail}</p>
               </div>
               <div className="py-1">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    onTabChange?.('profile');
-                  }}
-                  className="flex items-center space-x-2 w-full text-left px-4 py-2 text-xs text-brand-text/80 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <User className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
-                  <span>My Profile</span>
-                </button>
-
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    onTabChange?.('settings');
-                  }}
-                  className="flex items-center space-x-2 w-full text-left px-4 py-2 text-xs text-brand-text/80 hover:bg-slate-50 transition-colors cursor-pointer"
-                >
-                  <Settings className="h-3.5 w-3.5 text-slate-400" strokeWidth={1.75} />
-                  <span>Account Settings</span>
+                <button onClick={() => { setShowProfileMenu(false); onTabChange?.('profile'); }} className="flex items-center gap-2 w-full px-4 py-2 text-xs text-text-primary hover:bg-surface-hover cursor-pointer">
+                  <User size={14} className="text-text-muted" /> My Profile
                 </button>
               </div>
-              <div className="border-t border-brand-border-purple/15 py-1 bg-slate-50/50">
-                <button 
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    if (onSignOut) onSignOut();
-                  }}
-                  className="flex items-center space-x-2 w-full px-4 py-2 text-xs text-rose-650 hover:bg-rose-50 hover:text-rose-700 transition-colors text-left cursor-pointer"
-                >
-                  <LogOut className="h-3.5 w-3.5" strokeWidth={1.75} />
-                  <span>Sign Out</span>
+              <div className="border-t border-border-default py-1">
+                <button onClick={() => { setShowProfileMenu(false); onSignOut?.(); }} className="flex items-center gap-2 w-full px-4 py-2.5 text-xs text-status-danger-text hover:bg-status-danger-bg cursor-pointer">
+                  <LogOut size={14} /> Sign Out
                 </button>
               </div>
             </div>

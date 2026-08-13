@@ -5,6 +5,7 @@ All user business logic — create, update, activate, deactivate, assign roles.
 from typing import List, Optional, Tuple
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import (
@@ -31,12 +32,20 @@ class UserService:
         self.role_repo = RoleRepository(db)
         self.events = EventService(db)
 
+    def _is_admin(self, user: User) -> bool:
+        """Check if user has admin role."""
+        return any(ur.role.name == "admin" for ur in user.user_roles if ur.role)
+
     async def create_user(
         self,
         payload: UserCreateRequest,
         organization_id: UUID,
         created_by: UUID,
     ) -> User:
+        existing = await self.user_repo.get_by_email_any(payload.email.lower())
+        if existing:
+            raise DuplicateException("User", "email", payload.email)
+
         try:
             user = await self.user_repo.create(
                 email=payload.email.lower(),
@@ -49,20 +58,12 @@ class UserService:
                 organization_id=organization_id,
                 is_verified=True,
             )
-        except Exception as exc:
-            raised = self._normalize_create_db_error(exc, payload.email)
-            if raised:
-                raise raised
-            raise
+        except IntegrityError:
+            await self.db.rollback()
+            raise DuplicateException("User", "email", payload.email)
 
         if payload.role_id:
-            try:
-                await self.user_repo.assign_role(user, payload.role_id, created_by)
-            except Exception as exc:
-                raised = self._normalize_role_db_error(exc, user.id)
-                if raised:
-                    raise raised
-                raise
+            await self.user_repo.assign_role(user, payload.role_id, created_by)
 
         user = await self.user_repo.get_by_id_with_roles(user.id)
         logger.info("User created", extra={"user_id": str(user.id), "created_by": str(created_by)})
@@ -81,44 +82,6 @@ class UserService:
             },
         )
         return user
-
-    def _is_integrity_error(self, exc: BaseException) -> bool:
-        try:
-            from sqlalchemy.exc import IntegrityError
-
-            return isinstance(exc, IntegrityError)
-        except ImportError:
-            return False
-
-    def _is_unique_violation(self, exc: BaseException) -> bool:
-        try:
-            message = str(exc).lower()
-            if "unique constraint" in message or "unique violation" in message:
-                return True
-
-            integrity = exc.__cause__
-            if integrity is None:
-                return False
-            if integrity.__class__.__name__ == "UniqueViolationError":
-                return True
-            cause_message = str(integrity).lower()
-            return "unique constraint" in cause_message or "unique violation" in cause_message
-        except AttributeError:
-            return False
-
-    def _normalize_create_db_error(self, exc: BaseException, email: str):
-        if not self._is_integrity_error(exc):
-            return None
-        if self._is_unique_violation(exc):
-            return DuplicateException("User", "email", email)
-        return None
-
-    def _normalize_role_db_error(self, exc: BaseException, user_id: UUID):
-        if not self._is_integrity_error(exc):
-            return None
-        if self._is_unique_violation(exc):
-            return ConflictException("Failed to assign role: role/user combination already exists.")
-        return None
 
     async def list_users(
         self,
@@ -218,18 +181,163 @@ class UserService:
         )
         return updated
 
-    async def delete_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID) -> None:
-        if user_id == requestor_id:
-            raise ForbiddenException("You cannot delete your own account.")
+    async def assign_manager(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        manager_id: UUID,
+        assigned_by: UUID,
+    ) -> User:
+        """Assign a Sales Representative to a Manager (admin only, enforced at route level)."""
         user = await self.get_user(user_id, organization_id)
-        await self.user_repo.delete(user)
-        logger.info("User soft-deleted", extra={"user_id": str(user_id)})
+        role_names = {ur.role.name for ur in user.user_roles if ur.role}
+        if "sales_rep" not in role_names:
+            raise ConflictException(
+                "Only users with the Sales Representative role can be assigned to a manager."
+            )
+        if user.manager_id == manager_id:
+            raise ConflictException("User is already assigned to this manager.")
+        if manager_id == user_id:
+            raise ForbiddenException("A user cannot be assigned to themselves.")
+        if not user.is_active:
+            raise ConflictException("Cannot assign an inactive sales rep to a manager.")
+
+        manager = await self.user_repo.get_by_id_any(manager_id)
+        if not manager or manager.organization_id != organization_id or manager.is_deleted:
+            raise NotFoundException("Manager", manager_id)
+        if not manager.is_active:
+            raise ConflictException("Manager account is inactive.")
+        manager_roles = {ur.role.name for ur in manager.user_roles if ur.role}
+        if "manager" not in manager_roles:
+            raise ConflictException("The assigned user must hold the Manager role.")
+
+        await self.user_repo.update(user, manager_id=manager_id)
+        updated = await self.user_repo.get_by_id_with_roles(user.id)
         await self.events.record_event(
-            "USER_DELETED",
+            "USER_MANAGER_ASSIGNED",
+            organization_id=organization_id,
+            actor_id=assigned_by,
+            aggregate_type="user",
+            aggregate_id=str(user.id),
+            source="user_service",
+            payload={
+                "user_id": str(user.id),
+                "manager_id": str(manager_id),
+                "assigned_by": str(assigned_by),
+            },
+        )
+        return updated
+
+    async def remove_manager(
+        self,
+        user_id: UUID,
+        organization_id: UUID,
+        requestor_id: UUID,
+    ) -> User:
+        """Remove the manager assignment from a sales rep (admin only)."""
+        user = await self.get_user(user_id, organization_id)
+        if not user.manager_id:
+            raise ConflictException("User has no assigned manager.")
+        await self.user_repo.update(user, manager_id=None)
+        updated = await self.user_repo.get_by_id_with_roles(user.id)
+        await self.events.record_event(
+            "USER_MANAGER_REMOVED",
             organization_id=organization_id,
             actor_id=requestor_id,
             aggregate_type="user",
             aggregate_id=str(user.id),
             source="user_service",
             payload={"user_id": str(user.id), "requestor_id": str(requestor_id)},
+        )
+        return updated
+
+    async def list_managers(self, organization_id: UUID) -> List[User]:
+        """Active manager-role users in the org (admin assignment picker)."""
+        return await self.user_repo.list_managers(organization_id)
+
+    async def list_my_team(self, manager_id: UUID, organization_id: UUID) -> List[User]:
+        """Sales reps assigned to the given manager — manager-scoped team view."""
+        return await self.user_repo.list_team_reps(manager_id, organization_id)
+
+    async def delete_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID, requestor: User) -> None:
+        """Role-based delete: admin = hard delete, manager = soft delete (deactivate)."""
+        if user_id == requestor_id:
+            raise ForbiddenException("You cannot delete your own account.")
+        user = await self.get_user(user_id, organization_id)
+
+        if self._is_admin(requestor):
+            await self.user_repo.delete(user)
+            logger.info("User hard-deleted by admin", extra={"user_id": str(user_id), "requestor_id": str(requestor_id)})
+            await self.events.record_event(
+                "USER_PERMANENTLY_DELETED",
+                organization_id=organization_id,
+                actor_id=requestor_id,
+                aggregate_type="user",
+                aggregate_id=str(user_id),
+                source="user_service",
+                payload={"user_id": str(user_id), "requestor_id": str(requestor_id)},
+            )
+        else:
+            await self.user_repo.soft_delete(user)
+            logger.info("User soft-deleted (deactivated)", extra={"user_id": str(user_id), "requestor_id": str(requestor_id)})
+            await self.events.record_event(
+                "USER_DEACTIVATED",
+                organization_id=organization_id,
+                actor_id=requestor_id,
+                aggregate_type="user",
+                aggregate_id=str(user_id),
+                source="user_service",
+                payload={"user_id": str(user_id), "requestor_id": str(requestor_id)},
+            )
+
+    async def list_deleted_users(
+        self,
+        organization_id: UUID,
+        search: Optional[str],
+        page: int,
+        page_size: int,
+    ) -> Tuple[List[User], int]:
+        """List soft-deleted (archived) users — admin only."""
+        return await self.user_repo.list_deleted_by_organization(
+            organization_id, search, page, page_size
+        )
+
+    async def restore_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID) -> User:
+        """Restore a soft-deleted user — admin only."""
+        user = await self.user_repo.get_by_id_any(user_id)
+        if not user or user.organization_id != organization_id:
+            raise NotFoundException("User", user_id)
+        if not user.is_deleted:
+            raise ConflictException("User is not archived.")
+        await self.user_repo.update(user, is_deleted=False, is_active=True)
+        restored = await self.user_repo.get_by_id_with_roles(user.id)
+        logger.info("User restored", extra={"user_id": str(user_id), "requestor_id": str(requestor_id)})
+        await self.events.record_event(
+            "USER_RESTORED",
+            organization_id=organization_id,
+            actor_id=requestor_id,
+            aggregate_type="user",
+            aggregate_id=str(user_id),
+            source="user_service",
+            payload={"user_id": str(user_id), "requestor_id": str(requestor_id)},
+        )
+        return restored
+
+    async def permanent_delete_user(self, user_id: UUID, organization_id: UUID, requestor_id: UUID) -> None:
+        """Permanently delete a soft-deleted user — admin only. Frees up the email."""
+        user = await self.user_repo.get_by_id_any(user_id)
+        if not user or user.organization_id != organization_id:
+            raise NotFoundException("User", user_id)
+        if not user.is_deleted:
+            raise ConflictException("User must be archived before permanent deletion.")
+        await self.user_repo.delete(user)
+        logger.info("User permanently deleted", extra={"user_id": str(user_id), "requestor_id": str(requestor_id)})
+        await self.events.record_event(
+            "USER_PERMANENTLY_DELETED",
+            organization_id=organization_id,
+            actor_id=requestor_id,
+            aggregate_type="user",
+            aggregate_id=str(user_id),
+            source="user_service",
+            payload={"user_id": str(user_id), "requestor_id": str(requestor_id)},
         )

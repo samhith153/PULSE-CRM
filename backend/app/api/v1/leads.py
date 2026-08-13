@@ -50,7 +50,7 @@ async def list_leads(
 ) -> dict:
     svc = LeadService(db)
     leads, total = await svc.list(
-        current_user.organization_id,
+        current_user,
         search, status, owner_id, company_id, contact_id,
         page, page_size,
     )
@@ -61,6 +61,60 @@ async def list_leads(
         page_size=page_size,
     )
     return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.get(
+    "/deleted",
+    response_model=StandardResponse[PaginatedResponse[LeadResponse]],
+    summary="List soft-deleted (archived) leads — admin only",
+    dependencies=[Depends(require_permission("lead:read"))],
+)
+async def list_deleted_leads(
+    current_user: CurrentUser,
+    db: DBSession,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    search: Optional[str] = Query(default=None),
+) -> dict:
+    svc = LeadService(db)
+    leads, total = await svc.list_deleted(current_user, search, page, page_size)
+    paginated = PaginatedResponse.create(
+        data=[LeadResponse.from_lead(l) for l in leads],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.delete(
+    "/{lead_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete a soft-deleted lead — admin only",
+    dependencies=[Depends(require_permission("lead:delete"))],
+)
+async def hard_delete_lead(
+    lead_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> None:
+    svc = LeadService(db)
+    await svc.hard_delete(lead_id, current_user)
+
+
+@router.post(
+    "/purge-deleted",
+    response_model=StandardResponse[dict],
+    summary="Permanently delete ALL soft-deleted leads — admin only",
+    dependencies=[Depends(require_permission("lead:delete"))],
+)
+async def purge_deleted_leads(
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    svc = LeadService(db)
+    count = await svc.purge_deleted(current_user)
+    return {"success": True, "message": f"Purged {count} soft-deleted lead(s).", "data": {"purged": count}}
 
 
 @router.post(
@@ -92,7 +146,7 @@ async def get_lead(
     db: DBSession,
 ) -> dict:
     svc = LeadService(db)
-    lead = await svc.get(lead_id, current_user.organization_id)
+    lead = await svc.get(lead_id, current_user)
     return {"success": True, "message": "OK", "data": LeadResponse.from_lead(lead)}
 
 
@@ -109,7 +163,7 @@ async def update_lead(
     db: DBSession,
 ) -> dict:
     svc = LeadService(db)
-    lead = await svc.update(lead_id, current_user.organization_id, payload)
+    lead = await svc.update(lead_id, current_user, payload)
     return {"success": True, "message": "Lead updated.", "data": LeadResponse.from_lead(lead)}
 
 
@@ -131,7 +185,7 @@ async def update_lead_status(
     db: DBSession,
 ) -> dict:
     svc = LeadService(db)
-    lead = await svc.update_status(lead_id, current_user.organization_id, payload)
+    lead = await svc.update_status(lead_id, current_user, payload)
     return {"success": True, "message": "Lead status updated.", "data": LeadResponse.from_lead(lead)}
 
 
@@ -148,7 +202,7 @@ async def assign_lead(
     db: DBSession,
 ) -> dict:
     svc = LeadService(db)
-    lead = await svc.assign(lead_id, current_user.organization_id, payload)
+    lead = await svc.assign(lead_id, current_user, payload)
     return {"success": True, "message": "Lead assigned.", "data": LeadResponse.from_lead(lead)}
 
 
@@ -176,8 +230,7 @@ async def convert_lead(
     pipeline_stage_id = payload.pipeline_stage_id if payload else None
     deal = await svc.convert_to_deal(
         lead_id,
-        current_user.organization_id,
-        current_user.id,
+        current_user,
         industry=industry,
         revenue=revenue,
         employee_count=employee_count,
@@ -189,7 +242,7 @@ async def convert_lead(
 @router.delete(
     "/{lead_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete lead (hard)",
+    summary="Delete lead (hard for admin, soft for sales rep)",
     dependencies=[Depends(require_permission("lead:delete"))],
 )
 async def delete_lead(
@@ -198,4 +251,4 @@ async def delete_lead(
     db: DBSession,
 ) -> None:
     svc = LeadService(db)
-    await svc.delete(lead_id, current_user.organization_id)
+    await svc.delete(lead_id, current_user)

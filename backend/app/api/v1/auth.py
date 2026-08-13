@@ -12,7 +12,9 @@ GET  /api/v1/auth/me
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.deps import CurrentUser, DBSession
+from app.core.exceptions import UnauthorizedException
 from app.core.permissions import resolve_permissions_for_user
+from app.core.security import revoke_token
 from app.schemas.auth import (
     ChangePasswordRequest,
     CurrentUserResponse,
@@ -22,9 +24,12 @@ from app.schemas.auth import (
     RegisterRequest,
     ResetPasswordRequest,
     TokenResponse,
+    GoogleLoginRequest,
+    AuthConfigResponse,
 )
 from app.schemas.common import StandardResponse
 from app.services.auth_service import AuthService
+from app.services.google_oauth_service import GoogleOAuthService
 
 router = APIRouter()
 
@@ -45,8 +50,9 @@ async def register(
     db: DBSession,
 ) -> dict:
     client_ip = request.client.host if request.client else ""
+    user_agent = request.headers.get("user-agent", "")
     svc = AuthService(db)
-    tokens = await svc.register(payload, client_ip)
+    tokens = await svc.register(payload, client_ip, user_agent)
     return {"success": True, "message": "Registration successful.", "data": tokens}
 
 
@@ -62,21 +68,48 @@ async def login(
     db: DBSession,
 ) -> dict:
     client_ip = request.client.host if request.client else ""
+    user_agent = request.headers.get("user-agent", "")
     svc = AuthService(db)
-    tokens = await svc.login(payload, client_ip)
+    tokens = await svc.login(payload, client_ip, user_agent)
     return {"success": True, "message": "Login successful.", "data": tokens}
 
 
 @router.post(
     "/logout",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Logout (client-side token invalidation)",
+    summary="Logout and revoke tokens",
     description=(
-        "The server is stateless (JWTs); clients should delete tokens locally. "
-        "This endpoint exists for audit logging and future token revocation (Redis blacklist)."
+        "Revokes the current access and refresh tokens. "
+        "Clients should also delete tokens locally."
     ),
 )
-async def logout(current_user: CurrentUser) -> None:
+async def logout(
+    request: Request,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> None:
+    # Revoke the access token from the Authorization header
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        access_token = auth_header[7:]
+        revoke_token(access_token)
+
+    # Also revoke the refresh token if provided in the body — server-side,
+    # so it cannot be replayed even in multi-process deployments.
+    try:
+        body = await request.json()
+        refresh_token = body.get("refresh_token")
+        if refresh_token:
+            from app.core.security import hash_token
+            from app.services.auth_service import AuthService
+
+            svc = AuthService(db)
+            stored = await svc.refresh_token_repo.get_by_hash(hash_token(refresh_token))
+            if stored and not stored.is_revoked:
+                await svc.refresh_token_repo.revoke(stored)
+    except Exception:
+        pass  # Body may be empty or malformed — that's fine
+
     return None
 
 
@@ -88,10 +121,13 @@ async def logout(current_user: CurrentUser) -> None:
 )
 async def refresh_token(
     payload: RefreshTokenRequest,
+    request: Request,
     db: DBSession,
 ) -> dict:
+    client_ip = request.client.host if request.client else ""
+    user_agent = request.headers.get("user-agent", "")
     svc = AuthService(db)
-    tokens = await svc.refresh_token(payload.refresh_token)
+    tokens = await svc.refresh_token(payload.refresh_token, client_ip, user_agent)
     return {"success": True, "message": "Token refreshed.", "data": tokens}
 
 
@@ -165,9 +201,139 @@ async def get_me(current_user: CurrentUser) -> dict:
         roles=[ur.role.name for ur in current_user.user_roles if ur.role],
         permissions=permissions,
         is_verified=current_user.is_verified,
-        is_superuser=current_user.is_superuser,
         avatar_url=current_user.avatar_url,
         phone=current_user.phone,
         job_title=current_user.job_title,
     )
     return {"success": True, "message": "OK", "data": response}
+
+
+@router.get(
+    "/config",
+    response_model=StandardResponse[AuthConfigResponse],
+    summary="Get public auth configurations",
+    description="Returns public configuration details needed for authentication, such as the Google Client ID.",
+)
+async def get_auth_config() -> dict:
+    from app.core.config import settings
+    response = AuthConfigResponse(
+        google_client_id=settings.GOOGLE_CLIENT_ID,
+        google_redirect_uri=settings.GOOGLE_AUTH_REDIRECT_URI,
+    )
+    return {"success": True, "message": "OK", "data": response}
+
+
+@router.post(
+    "/google",
+    response_model=StandardResponse[TokenResponse],
+    summary="Authenticate with Google",
+    description="Exchange a Google ID token credential for JWT access and refresh tokens.",
+)
+async def login_with_google(
+    payload: GoogleLoginRequest,
+    request: Request,
+    db: DBSession,
+) -> dict:
+    client_ip = request.client.host if request.client else ""
+    user_agent = request.headers.get("user-agent", "")
+    svc = AuthService(db)
+    tokens = await svc.login_with_google(payload.credential, client_ip, user_agent)
+    return {"success": True, "message": "Login successful.", "data": tokens}
+
+
+# ── Google OAuth 2.0 Flow (Existing Users Only) ──────────────────────────────
+
+@router.get(
+    "/google/auth-url",
+    response_model=StandardResponse[dict],
+    summary="Get Google OAuth authorization URL",
+    description="Generate Google OAuth URL for existing users authentication.",
+)
+async def get_google_auth_url(db: DBSession) -> dict:
+    """
+    Returns the Google OAuth authorization URL and state for CSRF protection.
+    Frontend should redirect user to this URL to initiate Google login.
+    """
+    svc = GoogleOAuthService(db)
+    auth_url, state = svc.generate_auth_url()
+    return {
+        "success": True,
+        "message": "Google auth URL generated.",
+        "data": {"auth_url": auth_url, "state": state},
+    }
+
+
+@router.get(
+    "/google/callback",
+    summary="Google OAuth callback",
+    description="Handle Google OAuth callback. Authenticates existing users only with their assigned roles.",
+)
+async def google_oauth_callback(
+    code: str,
+    state: str,
+    request: Request,
+    db: DBSession,
+) -> dict:
+    """
+    Google OAuth callback endpoint.
+
+    IMPORTANT: Only existing users can authenticate via this endpoint.
+    Users must be created by admin first.
+
+    Flow:
+    1. Validate CSRF state
+    2. Exchange authorization code for Google tokens
+    3. Get user info from Google
+    4. Find user in database by email
+    5. If user exists: link Google account and authenticate with existing role
+    6. If user doesn't exist: reject with error message
+
+    Query params:
+        code: Authorization code from Google
+        state: CSRF state token
+
+    Returns:
+        Redirect to frontend with tokens or error
+    """
+    from fastapi.responses import RedirectResponse
+    from app.core.config import settings
+
+    client_ip = request.client.host if request.client else ""
+    svc = GoogleOAuthService(db)
+
+    try:
+        # Exchange code for tokens and user info
+        google_data = await svc.exchange_code_for_tokens(code, state)
+
+        # Authenticate user (existing users only, keeps their assigned role)
+        tokens = await svc.authenticate_admin_user(
+            google_data["user_info"], client_ip
+        )
+
+        # Redirect to frontend with tokens
+        frontend_url = settings.FRONTEND_URL
+        redirect_url = (
+            f"{frontend_url}/auth/google/callback"
+            f"?access_token={tokens['access_token']}"
+            f"&refresh_token={tokens['refresh_token']}"
+        )
+        return RedirectResponse(url=redirect_url, status_code=302)
+
+    except UnauthorizedException as e:
+        # Invalid state or Google error
+        from urllib.parse import quote as _url_quote
+        frontend_url = settings.FRONTEND_URL
+        error_url = f"{frontend_url}/auth/google/error?message={_url_quote(str(e))}"
+        return RedirectResponse(url=error_url, status_code=302)
+
+    except Exception as e:
+        # Unexpected error
+        from urllib.parse import quote as _url_quote
+        from app.core.logging import get_logger
+        logger = get_logger(__name__)
+        logger.error("Google OAuth callback error", extra={"error": str(e)})
+
+        frontend_url = settings.FRONTEND_URL
+        error_url = f"{frontend_url}/auth/google/error?message={_url_quote('Authentication failed. Please try again.')}"
+        return RedirectResponse(url=error_url, status_code=302)
+

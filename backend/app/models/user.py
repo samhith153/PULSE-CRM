@@ -1,4 +1,4 @@
-"""
+﻿"""
 User Model
 Central identity entity of the CRM.
 Each user belongs to exactly one Organization.
@@ -6,9 +6,10 @@ Users have Roles (M2M) which carry Permissions.
 """
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
 class User(Base, AuditMixin):
     """
-    Platform user — represents a CRM operator (admin, manager, sales rep).
+    Platform user ΓÇö represents a CRM operator (admin, manager, sales rep).
     Not to be confused with CRM Contacts (external leads/customers).
     """
     __tablename__ = "users"
@@ -30,17 +31,22 @@ class User(Base, AuditMixin):
         UniqueConstraint("email", name="uq_user_email"),
     )
 
-    # ── Identity ──────────────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Identity ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     email: Mapped[str] = mapped_column(
         String(255), nullable=False, index=True
     )
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    hashed_password: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     avatar_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     job_title: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    sales_quota: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
 
-    # ── Tenancy ───────────────────────────────────────────────────────────────
+    # ── OAuth Integration ──────────────────────────────────────────────────────
+    google_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True, unique=True, index=True)
+    auth_provider: Mapped[str] = mapped_column(String(50), default="password", nullable=False)
+
+    # ΓöÇΓöÇ Tenancy ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     organization_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("organizations.id", ondelete="RESTRICT"),
@@ -48,12 +54,11 @@ class User(Base, AuditMixin):
         index=True,
     )
 
-    # ── Account state ─────────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Account state ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
-    # ── Email verification ────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Email verification ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     email_verification_token: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True
     )
@@ -61,7 +66,7 @@ class User(Base, AuditMixin):
         DateTime(timezone=True), nullable=True
     )
 
-    # ── Password reset ────────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Password reset ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     password_reset_token: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True, index=True
     )
@@ -69,19 +74,43 @@ class User(Base, AuditMixin):
         DateTime(timezone=True), nullable=True
     )
 
-    # ── Session tracking ─────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Session tracking ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     last_login_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
     last_login_ip: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
 
-    # ── Preferences ───────────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Preferences ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     timezone: Mapped[str] = mapped_column(String(50), default="UTC", nullable=False)
     locale: Mapped[str] = mapped_column(String(10), default="en", nullable=False)
 
-    # ── Relationships ─────────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Sales quota (assigned monthly/quarterly target) ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    sales_quota: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(15, 2), nullable=True
+    )
+
+    # ΓöÇΓöÇ Relationships ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+    # ── Reporting hierarchy (Admin → Manager → Sales Rep) ───────────────────
+    # Optional manager this user reports to. Sales reps are assigned to a
+    # manager by an Admin; a manager only sees the reps assigned to them.
+    manager_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
     organization: Mapped["Organization"] = relationship(
         "Organization", back_populates="users", lazy="select"
+    )
+    manager: Mapped[Optional["User"]] = relationship(
+        "User",
+        remote_side=lambda: [User.id],
+        back_populates="managed_reps",
+        lazy="selectin",
+    )
+    managed_reps: Mapped[List["User"]] = relationship(
+        "User", back_populates="manager", lazy="select"
     )
     user_roles: Mapped[List["UserRole"]] = relationship(
         "UserRole", back_populates="user", lazy="selectin", cascade="all, delete-orphan"
@@ -90,7 +119,7 @@ class User(Base, AuditMixin):
         "Lead", back_populates="owner", lazy="select"
     )
 
-    # ── Convenience property ──────────────────────────────────────────────────
+    # ΓöÇΓöÇ Convenience property ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     @property
     def roles(self) -> List["Role"]:
         return [ur.role for ur in self.user_roles if ur.role]
@@ -106,7 +135,7 @@ class User(Base, AuditMixin):
 
 
 class UserRole(Base):
-    """Association table — User ↔ Role."""
+    """Association table ΓÇö User Γåö Role."""
     __tablename__ = "user_roles"
     __table_args__ = (
         UniqueConstraint("user_id", "role_id", name="uq_user_role"),
@@ -134,8 +163,10 @@ class UserRole(Base):
         DateTime(timezone=True), nullable=False
     )
 
-    # ── Relationships ─────────────────────────────────────────────────────────
+    # ΓöÇΓöÇ Relationships ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
     user: Mapped["User"] = relationship("User", back_populates="user_roles")
     role: Mapped["Role"] = relationship(
         "Role", back_populates="user_roles", lazy="selectin"
     )
+
+

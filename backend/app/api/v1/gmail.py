@@ -3,10 +3,13 @@ Gmail integration routes.
 """
 from __future__ import annotations
 
+import base64
+import json
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import HTMLResponse
 
 from app.api.deps import CurrentUser, DBSession, require_permission
 from app.schemas.common import PaginatedResponse, StandardResponse
@@ -55,6 +58,160 @@ async def oauth_callback(payload: GmailOAuthCallbackRequest, current_user: Curre
     return {"success": True, "message": "Gmail connected.", "data": GmailConnectionResponse.model_validate(connection)}
 
 
+@router.get(
+    "/oauth/callback",
+    summary="Handle Gmail OAuth callback (browser redirect)",
+    include_in_schema=False,
+)
+async def oauth_callback_get(code: str = Query(None), state: str = Query(None), error: str = Query(None)) -> HTMLResponse:
+    """Google redirects the browser here with ?code=...&state=... or ?error=..."""
+    from app.core.logging import get_logger
+    from app.database.connection import AsyncSessionFactory
+
+    logger = get_logger(__name__)
+
+    if error:
+        return HTMLResponse(
+            f"""<!DOCTYPE html>
+<html><head><title>Gmail Connection Failed</title>
+<style>
+body {{ font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }}
+.card {{ background: white; padding: 40px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }}
+h1 {{ color: #d93025; margin-bottom: 8px; }}
+p {{ color: #555; }}
+</style></head>
+<body><div class="card">
+<h1>Gmail Connection Failed</h1>
+<p>Google returned an error: <strong>{error}</strong></p>
+<p>Make sure you clicked "Allow" on the Google consent screen.</p>
+</div></body></html>""",
+            status_code=400,
+        )
+
+    if not code:
+        return HTMLResponse("<h1>Error: No authorization code received from Google.</h1>", status_code=400)
+
+    try:
+        decoded = json.loads(base64.urlsafe_b64decode(state))
+        org_id = UUID(decoded["org"])
+        user_id = UUID(decoded["user"])
+    except Exception:
+        return HTMLResponse("<h1>Error: Invalid or missing state parameter.</h1>", status_code=400)
+
+    try:
+        async with AsyncSessionFactory() as db:
+            svc = EmailService(db)
+            payload = GmailOAuthCallbackRequest(code=code, state=state)
+            connection = await svc.handle_oauth_callback(org_id, user_id, payload)
+            await db.commit()
+            email = connection.email_address
+    except Exception as exc:
+        logger.exception("Gmail OAuth callback failed")
+        return HTMLResponse(f"<h1>Error connecting Gmail</h1><p>{exc}</p>", status_code=400)
+
+    return HTMLResponse(
+        f"""<!DOCTYPE html>
+<html><head><title>Gmail Connected</title>
+<style>
+body {{ font-family: system-ui; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f5f5f5; }}
+.card {{ background: white; padding: 40px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }}
+h1 {{ color: #1a73e8; margin-bottom: 8px; }}
+p {{ color: #555; }}
+.check {{ font-size: 48px; margin-bottom: 16px; }}
+</style></head>
+<body><div class="card">
+<div class="check">&#10003;</div>
+<h1>Gmail Connected</h1>
+<p>{email} is now connected to PULSE CRM.</p>
+<p>You can close this window.</p>
+</div></body></html>""",
+        status_code=200,
+    )
+
+
+@router.post(
+    "/pubsub/webhook",
+    summary="Receive Gmail Pub/Sub push notification (no auth)",
+    include_in_schema=False,
+)
+async def pubsub_webhook(request_body: dict) -> HTMLResponse:
+    """Google Pub/Sub pushes Gmail notifications here.
+    Format: {"message": {"data": "base64-encoded-json", ...}, "subscription": "..."}
+    The base64 data contains {"historyId": "123", "emailAddress": "user@gmail.com"}
+    """
+    import asyncio as _asyncio
+    from app.core.logging import get_logger
+    from app.database.connection import AsyncSessionFactory
+    from app.models.email import GmailConnection
+    from app.services.email_service import EmailService, _background_tasks
+    from app.utils.enums import EmailSyncStatus
+    from sqlalchemy import select
+
+    logger = get_logger(__name__)
+
+    try:
+        message_data = request_body.get("message", {}).get("data")
+        if not message_data:
+            logger.warning("Pub/Sub message has no data")
+            return HTMLResponse("OK", status_code=200)
+
+        decoded = json.loads(base64.urlsafe_b64decode(message_data))
+        email_address = decoded.get("emailAddress")
+        history_id = decoded.get("historyId")
+        logger.info("Pub/Sub notification: email=%s historyId=%s", email_address, history_id)
+
+        if not email_address or not history_id:
+            logger.warning("Pub/Sub message missing emailAddress or historyId: %s", decoded)
+            return HTMLResponse("OK", status_code=200)
+
+        async with AsyncSessionFactory() as db:
+            from uuid import UUID
+            stmt = select(GmailConnection).where(
+                GmailConnection.email_address == email_address,
+                GmailConnection.is_active.is_(True),
+            ).order_by(GmailConnection.created_at.desc())
+            result = await db.execute(stmt)
+            connection = result.scalars().first()
+
+            if not connection:
+                logger.warning("No Gmail connection found for %s", email_address)
+                return HTMLResponse("OK", status_code=200)
+
+            svc = EmailService(db)
+            try:
+                access_token = await svc._access_token_for_connection(
+                    connection.organization_id, None, connection
+                )
+            except Exception as exc:
+                logger.warning("Failed to get access token for %s: %s", email_address, exc)
+                return HTMLResponse("OK", status_code=200)
+
+            try:
+                cursor = connection.sync_cursor
+                if not cursor or not cursor.isdigit():
+                    logger.info("[PUBSUB] No valid sync_cursor, falling back to full fetch")
+                    sync_result = await svc.fetch_from_gmail(
+                        connection.organization_id, connection.id, None,
+                    )
+                else:
+                    sync_result = await svc._incremental_sync_from_gmail(
+                        connection.organization_id, None, connection, access_token, cursor,
+                    )
+                await db.commit()
+                logger.info(
+                    "Pub/Sub sync completed for %s: synced=%d skipped=%d",
+                    email_address, sync_result.synced_count, sync_result.skipped_count,
+                )
+            except Exception as exc:
+                logger.warning("Pub/Sub sync failed for %s: %s", email_address, exc)
+                await db.rollback()
+
+    except Exception as exc:
+        logger.exception("Pub/Sub webhook processing failed")
+
+    return HTMLResponse("OK", status_code=200)
+
+
 @router.post(
     "/refresh",
     response_model=StandardResponse[GmailConnectionResponse],
@@ -65,6 +222,31 @@ async def refresh_token(payload: GmailTokenRefreshRequest, current_user: Current
     svc = EmailService(db)
     connection = await svc.refresh_token(current_user.organization_id, current_user.id, payload)
     return {"success": True, "message": "Token refreshed.", "data": GmailConnectionResponse.model_validate(connection)}
+
+
+@router.post(
+    "/watch/refresh",
+    summary="Re-establish Gmail Pub/Sub watches for all connections (no auth)",
+    include_in_schema=False,
+)
+async def refresh_watches() -> HTMLResponse:
+    """Manually trigger Gmail watch refresh for all active connections.
+    Useful for debugging and after server restarts.
+    """
+    from app.core.logging import get_logger
+    from app.database.connection import AsyncSessionFactory
+
+    logger = get_logger(__name__)
+    try:
+        async with AsyncSessionFactory() as db:
+            svc = EmailService(db)
+            refreshed = await svc.refresh_watch_for_all_connections()
+            await db.commit()
+            logger.info("Manual watch refresh: %d connections refreshed", refreshed)
+            return HTMLResponse(f"OK — {refreshed} watch(es) refreshed", status_code=200)
+    except Exception as exc:
+        logger.exception("Manual watch refresh failed")
+        return HTMLResponse(f"FAIL — {exc}", status_code=500)
 
 
 @router.post(

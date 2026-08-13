@@ -1,11 +1,10 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import asyncio
 import ssl
-import app.models
-from app.database.base import Base
 from logging.config import fileConfig
 
+import app.models
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import create_async_engine
@@ -15,8 +14,6 @@ from app.database.base import Base
 
 config = context.config
 target_metadata = Base.metadata
-
-config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -34,6 +31,8 @@ def do_run_migrations(connection):
 
     with context.begin_transaction():
         context.run_migrations()
+
+
 def run_migrations_offline():
     context.configure(
         url=settings.DATABASE_URL,
@@ -46,8 +45,9 @@ def run_migrations_offline():
 
 
 async def run():
-    connect_args = {"statement_cache_size": 0}
-    if "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATABASE_URL:
+    connect_args = {}
+    connect_args["statement_cache_size"] = 0
+    if settings.DATABASE_URL.startswith("postgresql") and "localhost" not in settings.DATABASE_URL and "127.0.0.1" not in settings.DATABASE_URL:
         connect_args["ssl"] = ssl_context
 
     engine = create_async_engine(
@@ -56,11 +56,19 @@ async def run():
         connect_args=connect_args,
     )
 
-    async with engine.connect() as conn:
-        print("CONNECTED")
-        await conn.run_sync(do_run_migrations)
+    try:
+        async with engine.connect() as conn:
+            print("CONNECTED")
+            await conn.run_sync(do_run_migrations)
 
-    await engine.dispose()
+    except Exception:
+        import traceback
+
+        traceback.print_exc()
+        raise
+
+    finally:
+        await engine.dispose()
 
 
 if context.is_offline_mode():

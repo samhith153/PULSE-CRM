@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deal Schemas (Pydantic V2)
 """
 from datetime import date, datetime
@@ -17,10 +17,12 @@ class DealCreateRequest(BaseModel):
     description: Optional[str] = None
     status: DealStatus = DealStatus.OPEN
     amount: Optional[Decimal] = Field(default=None, ge=0)
+    value: Optional[Decimal] = Field(default=None, ge=0)
     currency: str = Field(default="USD", max_length=3)
     expected_close_date: Optional[date] = None
     probability: int = Field(default=50, ge=0, le=100)
     priority: Optional[str] = Field(default=None, max_length=20)
+    sentiment: Optional[str] = Field(default=None, max_length=50)
     notes: Optional[str] = None
     owner_id: Optional[UUID] = None
     pipeline_stage_id: Optional[UUID] = None
@@ -34,10 +36,12 @@ class DealUpdateRequest(BaseModel):
     description: Optional[str] = None
     status: Optional[DealStatus] = None
     amount: Optional[Decimal] = Field(default=None, ge=0)
+    value: Optional[Decimal] = Field(default=None, ge=0)
     currency: Optional[str] = Field(default=None, max_length=3)
     expected_close_date: Optional[date] = None
     probability: Optional[int] = Field(default=None, ge=0, le=100)
     priority: Optional[str] = Field(default=None, max_length=20)
+    sentiment: Optional[str] = Field(default=None, max_length=50)
     notes: Optional[str] = None
     owner_id: Optional[UUID] = None
     pipeline_stage_id: Optional[UUID] = None
@@ -52,10 +56,12 @@ class DealResponse(BaseModel):
     description: Optional[str]
     status: str
     amount: Optional[Decimal]
+    value: Optional[Decimal]
     currency: str
     expected_close_date: Optional[date]
     probability: int
     priority: Optional[str] = None
+    sentiment: Optional[str] = None
     notes: Optional[str]
     close_reason: Optional[str]
     closed_at: Optional[datetime]
@@ -84,10 +90,12 @@ class DealResponse(BaseModel):
             description=deal.description,
             status=deal.status,
             amount=deal.amount,
+            value=deal.value,
             currency=deal.currency,
             expected_close_date=deal.expected_close_date,
             probability=deal.probability,
             priority=deal.priority,
+            sentiment=deal.sentiment,
             notes=deal.notes,
             close_reason=deal.close_reason,
             closed_at=deal.closed_at,
@@ -109,3 +117,4 @@ class DealResponse(BaseModel):
             stage_slug=deal.pipeline_stage.slug if deal.pipeline_stage else None,
             stage_name=deal.pipeline_stage.name if deal.pipeline_stage else None,
         )
+

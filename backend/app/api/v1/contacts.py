@@ -35,7 +35,7 @@ async def list_contacts(
 ) -> dict:
     svc = ContactService(db)
     contacts, total = await svc.list(
-        current_user.organization_id, search, company_id, page, page_size
+        current_user, search, company_id, page, page_size
     )
     paginated = PaginatedResponse.create(
         data=[ContactResponse.from_contact(c) for c in contacts],
@@ -75,7 +75,7 @@ async def get_contact(
     db: DBSession,
 ) -> dict:
     svc = ContactService(db)
-    contact = await svc.get(contact_id, current_user.organization_id)
+    contact = await svc.get(contact_id, current_user)
     return {"success": True, "message": "OK", "data": ContactResponse.from_contact(contact)}
 
 
@@ -92,7 +92,7 @@ async def update_contact(
     db: DBSession,
 ) -> dict:
     svc = ContactService(db)
-    contact = await svc.update(contact_id, current_user.organization_id, payload)
+    contact = await svc.update(contact_id, current_user, payload)
     return {"success": True, "message": "Contact updated.", "data": ContactResponse.from_contact(contact)}
 
 
@@ -108,4 +108,4 @@ async def delete_contact(
     db: DBSession,
 ) -> None:
     svc = ContactService(db)
-    await svc.delete(contact_id, current_user.organization_id)
+    await svc.delete(contact_id, current_user)

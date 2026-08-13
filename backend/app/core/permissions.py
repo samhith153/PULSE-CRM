@@ -51,6 +51,7 @@ class Permission(str, Enum):
     ACTIVITY_CREATE = "activity:create"
     ACTIVITY_READ = "activity:read"
     ACTIVITY_UPDATE = "activity:update"
+    ACTIVITY_DELETE = "activity:delete"
 
     EMAIL_SEND = "email:send"
     EMAIL_READ = "email:read"
@@ -64,13 +65,11 @@ class Permission(str, Enum):
     WEBHOOK_MANAGE = "webhook:manage"
     FILE_UPLOAD = "file:upload"
 
-    DOCUMENT_READ = "document:read"
-    DOCUMENT_DELETE = "document:delete"
-
-    EVENT_READ = "event:read"
-    EVENT_CREATE = "event:create"
+    TEAM_PERFORMANCE_VIEW = "team_performance:view"
+    TEAM_PERFORMANCE_EXPORT = "team_performance:export"
 
     NOTIFICATION_READ = "notification:read"
+    NOTIFICATION_MANAGE = "notification:manage"
 
     REPORT_VIEW = "report:view"
     REPORT_EXPORT = "report:export"
@@ -92,6 +91,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.USER_READ,
         Permission.USER_CREATE,
         Permission.USER_UPDATE,
+        Permission.USER_DELETE,
         Permission.USER_ACTIVATE,
         Permission.USER_DEACTIVATE,
         Permission.ORG_READ,
@@ -119,6 +119,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.ACTIVITY_CREATE,
         Permission.ACTIVITY_READ,
         Permission.ACTIVITY_UPDATE,
+        Permission.ACTIVITY_DELETE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
@@ -127,13 +128,12 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.AI_ACCESS,
         Permission.WEBHOOK_MANAGE,
         Permission.FILE_UPLOAD,
-        Permission.DOCUMENT_READ,
-        Permission.DOCUMENT_DELETE,
-        Permission.EVENT_READ,
-        Permission.EVENT_CREATE,
-        Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
         Permission.REPORT_EXPORT,
+        Permission.TEAM_PERFORMANCE_VIEW,
+        Permission.TEAM_PERFORMANCE_EXPORT,
+        Permission.NOTIFICATION_READ,
+        Permission.NOTIFICATION_MANAGE,
     },
     Role.SALES_REP: {
         Permission.USER_READ,
@@ -151,20 +151,18 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.DEAL_READ,
         Permission.DEAL_UPDATE,
         Permission.PIPELINE_READ,
-        Permission.ACTIVITY_READ,
         Permission.ACTIVITY_CREATE,
+        Permission.ACTIVITY_READ,
+        Permission.ACTIVITY_UPDATE,
+        Permission.ACTIVITY_DELETE,
         Permission.EMAIL_READ,
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
-        Permission.AI_ACCESS,
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
-        Permission.DOCUMENT_READ,
-        Permission.EVENT_READ,
-        Permission.EVENT_CREATE,
-        Permission.NOTIFICATION_READ,
         Permission.REPORT_VIEW,
-        Permission.REPORT_EXPORT,
+        Permission.TEAM_PERFORMANCE_VIEW,
+        Permission.NOTIFICATION_READ,
     },
 }
 
@@ -178,15 +176,11 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
     """
     Resolve permissions from the loaded user roles.
 
-    Use the persisted role-permission assignments whenever they exist, so
-    custom edits in the admin UI are authoritative. For built-in system
-    roles without any DB permissions assigned, fall back to the built-in
-    permission catalog so authorization remains stable.
-
-    The built-in `admin` role is always granted the full permission set.
-    This prevents an incomplete DB permission assignment from accidentally
-    locking admins out of core actions (e.g. loading the role list needed to
-    create users).
+    Persisted role-permission assignments are the source of truth: admin edits
+    to a role (including the system roles admin/manager/sales_rep) take effect
+    immediately.  The built-in catalog is only a fallback for roles that have
+    NO persisted permission rows at all (e.g. before the RBAC bootstrap seeds
+    them), so a fresh database is still usable out of the box.
     """
     permissions: set[str] = set()
 
@@ -195,12 +189,19 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         if not role:
             continue
 
-        role_db_permissions: set[str] = set()
-        for role_permission in getattr(role, "role_permissions", []) or []:
-            permission = getattr(role_permission, "permission", None)
-            codename = getattr(permission, "codename", None)
-            if codename:
-                role_db_permissions.add(codename)
+        persisted = [
+            getattr(role_permission.permission, "codename", None)
+            for role_permission in getattr(role, "role_permissions", []) or []
+            if getattr(role_permission, "permission", None)
+        ]
+        persisted = [c for c in persisted if c]
+
+        if persisted:
+            # Persisted assignments win — system-role edits via the admin UI
+            # (add or remove) are respected instead of being silently
+            # overwritten by the built-in catalog.
+            permissions.update(persisted)
+            continue
 
         role_name = getattr(role, "name", None)
         try:
@@ -208,17 +209,8 @@ def resolve_permissions_for_user(user: Any) -> list[str]:
         except ValueError:
             built_in_role = None
 
-        # Admin always has every permission — never stripped by DB edits.
-        if built_in_role is Role.ADMIN:
-            permissions.update(get_permissions_for_role(Role.ADMIN))
-            continue
-
         if built_in_role:
-            # Always include built-in baseline so permissions are never missing
-            # due to an incomplete seed. DB permissions extend, never shrink.
             permissions.update(get_permissions_for_role(built_in_role))
-        else:
-            permissions.update(role_db_permissions)
 
     return sorted(permissions)
 

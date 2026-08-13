@@ -1,4 +1,5 @@
 services:
+  # ── Backend API ───────────────────────────────────────────────────────────
   - type: web
     name: pulse-crm-backend
     runtime: python
@@ -10,15 +11,147 @@ services:
     healthCheckPath: /api/v1/health
     rootDir: backend
     envVars:
+      # ── Database ─────────────────────────────────────────────────────────
       - key: DATABASE_URL
         sync: false
+      - key: DATABASE_POOL_SIZE
+        value: "25"
+      - key: DATABASE_MAX_OVERFLOW
+        value: "20"
+      - key: DATABASE_POOL_TIMEOUT
+        value: "20"
+      - key: DATABASE_POOL_RECYCLE
+        value: "300"
+      # ── Security ─────────────────────────────────────────────────────────
       - key: SECRET_KEY
         generateValue: true
       - key: ENVIRONMENT
         value: production
-      - key: SUMMARIZATION_API_KEY
+      # ── Rate Limiting ────────────────────────────────────────────────────
+      - key: ENABLE_RATE_LIMIT
+        value: "true"
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "600"
+      - key: RATE_LIMIT_BURST
+        value: "200"
+      - key: AUTH_RATE_LIMIT_PER_MINUTE
+        value: "20"
+      - key: AUTH_RATE_LIMIT_BURST
+        value: "10"
+      - key: PASSWORD_RESET_RATE_LIMIT_PER_MINUTE
+        value: "5"
+      - key: PASSWORD_RESET_RATE_LIMIT_BURST
+        value: "3"
+      # ── Logging ──────────────────────────────────────────────────────────
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+      # ── First Superuser ──────────────────────────────────────────────────
+      - key: FIRST_SUPERUSER_EMAIL
+        value: admin@kalnet-pulse.com
+      - key: FIRST_SUPERUSER_PASSWORD
+        sync: false
+      # ── SMTP / Email ─────────────────────────────────────────────────────
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: SMTP_FROM_EMAIL
+        value: noreply@kalnet-pulse.com
+      - key: SMTP_FROM_NAME
+        value: KALNET PULSE CRM
+      - key: SMTP_TLS
+        value: "true"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: BREVO_WEBHOOK_SECRET
+        sync: false
+      # ── Google OAuth ─────────────────────────────────────────────────────
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://pulse-crm-backend.onrender.com/api/v1/gmail/oauth/callback
+      - key: GOOGLE_AUTH_REDIRECT_URI
+        value: https://pulse-crm-backend.onrender.com/api/v1/auth/google/callback
+      - key: GMAIL_TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      # ── Gmail Pub/Sub ────────────────────────────────────────────────────
+      - key: GOOGLE_PROJECT_ID
+        sync: false
+      - key: GOOGLE_PUBSUB_TOPIC
+        sync: false
+      # ── Supabase ─────────────────────────────────────────────────────────
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      # ── CORS ─────────────────────────────────────────────────────────────
+      - key: CORS_ORIGINS
+        value: "https://pulse-crm-eight-pearl.vercel.app,https://pulse-crm-backend.onrender.com"
+      # ── Frontend ─────────────────────────────────────────────────────────
+      - key: FRONTEND_URL
+        value: https://pulse-crm-eight-pearl.vercel.app
+      - key: FRONTEND_BASE_URL
+        value: https://pulse-crm-eight-pearl.vercel.app
+      # ── AI / LLM ─────────────────────────────────────────────────────────
+      - key: ENABLE_AI
+        value: "true"
+      - key: AI_PROVIDER
+        value: rule_based
+      - key: SCORING_PROVIDER
+        value: rule_based
+      - key: AI_TIMEOUT
+        value: "30"
+      - key: AI_SERVICE_URL
+        value: http://pulse-crm-ai.onrender.com
+      - key: AI_SERVICE_TIMEOUT
+        value: "30.0"
+      - key: GROQ_API_KEY
         sync: false
       - key: ASSISTANT_API_KEY
         sync: false
+      - key: ASSISTANT_MODEL
+        value: llama-3.3-70b-versatile
+      - key: OPENAI_API_KEY
+        sync: false
+      # ── Storage ──────────────────────────────────────────────────────────
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: LOCAL_STORAGE_PATH
+        value: uploads
+      - key: MAX_UPLOAD_SIZE_BYTES
+        value: "10485760"
 
-
+  # ── AI Service ───────────────────────────────────────────────────────────
+  - type: web
+    name: pulse-crm-ai
+    runtime: python
+    repo: https://github.com/samhith153/PULSE-CRM
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    rootDir: ai-service
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: LLM_API_KEY
+        sync: false
+      - key: SUMMARIZATION_API_KEY
+        sync: false
+      - key: LLM_MODEL
+        value: llama-3.3-70b-versatile
+      - key: LLM_TEMPERATURE
+        value: "0.3"
+      - key: LLM_MAX_TOKENS
+        value: "800"
+      - key: LLM_TIMEOUT
+        value: "30"

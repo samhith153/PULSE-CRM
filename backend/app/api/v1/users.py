@@ -1,10 +1,13 @@
 """
 User Management Routes
 GET    /api/v1/users
+GET    /api/v1/users/deleted
 POST   /api/v1/users
 GET    /api/v1/users/{id}
 PUT    /api/v1/users/{id}
 DELETE /api/v1/users/{id}
+POST   /api/v1/users/{id}/restore
+DELETE /api/v1/users/{id}/permanent
 POST   /api/v1/users/{id}/activate
 POST   /api/v1/users/{id}/deactivate
 POST   /api/v1/users/{id}/roles
@@ -12,11 +15,17 @@ POST   /api/v1/users/{id}/roles
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import CurrentUser, DBSession, require_permission
+from app.api.deps import CurrentUser, DBSession, require_permission, require_role
 from app.schemas.common import PaginatedResponse, StandardResponse
-from app.schemas.user import UserCreateRequest, UserResponse, UserRoleAssignRequest, UserUpdateRequest
+from app.schemas.user import (
+    ManagerAssignmentRequest,
+    UserCreateRequest,
+    UserResponse,
+    UserRoleAssignRequest,
+    UserUpdateRequest,
+)
 from app.services.user_service import UserService
 from app.core.security import hash_password
 from app.repositories.user_repository import UserRepository
@@ -48,6 +57,76 @@ async def list_users(
         page_size=page_size,
     )
     return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.get(
+    "/deleted",
+    response_model=StandardResponse[PaginatedResponse[UserResponse]],
+    summary="List archived (soft-deleted) users",
+    dependencies=[Depends(require_permission("user:delete"))],
+)
+async def list_deleted_users(
+    current_user: CurrentUser,
+    db: DBSession,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    search: Optional[str] = Query(default=None),
+) -> dict:
+    svc = UserService(db)
+    users, total = await svc.list_deleted_users(
+        current_user.organization_id, search, page, page_size
+    )
+    paginated = PaginatedResponse.create(
+        data=[UserResponse.from_orm_with_roles(u) for u in users],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+    return {"success": True, "message": "OK", "data": paginated}
+
+
+@router.get(
+    "/managers",
+    response_model=StandardResponse[list[UserResponse]],
+    summary="List managers (for sales-rep assignment)",
+    dependencies=[Depends(require_permission("user:read"))],
+)
+async def list_managers(current_user: CurrentUser, db: DBSession) -> dict:
+    """
+    GET /api/v1/users/managers
+
+    Lists active users holding the Manager role in the caller's organization —
+    used by Admins when assigning Sales Representatives to a manager.
+    """
+    svc = UserService(db)
+    managers = await svc.list_managers(current_user.organization_id)
+    return {
+        "success": True,
+        "message": "Managers retrieved successfully.",
+        "data": [UserResponse.from_orm_with_roles(u) for u in managers],
+    }
+
+
+@router.get(
+    "/my-team",
+    response_model=StandardResponse[list[UserResponse]],
+    summary="My team (sales reps assigned to me)",
+    dependencies=[Depends(require_role("manager"))],
+)
+async def list_my_team(current_user: CurrentUser, db: DBSession) -> dict:
+    """
+    GET /api/v1/users/my-team
+
+    Manager-only. Returns only the Sales Representatives explicitly assigned
+    to the calling manager by an admin — never the whole organization.
+    """
+    svc = UserService(db)
+    reps = await svc.list_my_team(current_user.id, current_user.organization_id)
+    return {
+        "success": True,
+        "message": "Team retrieved successfully.",
+        "data": [UserResponse.from_orm_with_roles(u) for u in reps],
+    }
 
 
 @router.post(
@@ -103,7 +182,7 @@ async def update_user(
 @router.delete(
     "/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete user (soft)",
+    summary="Delete user (admin: permanent, manager: deactivate)",
     dependencies=[Depends(require_permission("user:delete"))],
 )
 async def delete_user(
@@ -112,7 +191,7 @@ async def delete_user(
     db: DBSession,
 ) -> None:
     svc = UserService(db)
-    await svc.delete_user(user_id, current_user.organization_id, current_user.id)
+    await svc.delete_user(user_id, current_user.organization_id, current_user.id, current_user)
 
 
 @router.post(
@@ -167,6 +246,93 @@ async def assign_roles(
 
 
 @router.post(
+    "/{user_id}/manager",
+    response_model=StandardResponse[UserResponse],
+    summary="Assign sales rep to a manager",
+    dependencies=[Depends(require_permission("user:manage_roles"))],
+)
+async def assign_manager(
+    user_id: UUID,
+    payload: ManagerAssignmentRequest,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """
+    POST /api/v1/users/{user_id}/manager  {manager_id: UUID}
+
+    Admin only. Assigns the Sales Representative to the given manager.
+    """
+    svc = UserService(db)
+    user = await svc.assign_manager(
+        user_id,
+        current_user.organization_id,
+        payload.manager_id,
+        current_user.id,
+    )
+    return {
+        "success": True,
+        "message": "Manager assigned.",
+        "data": UserResponse.from_orm_with_roles(user),
+    }
+
+
+@router.delete(
+    "/{user_id}/manager",
+    response_model=StandardResponse[UserResponse],
+    summary="Remove manager assignment from a sales rep",
+    dependencies=[Depends(require_permission("user:manage_roles"))],
+)
+async def remove_manager(
+    user_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    """
+    DELETE /api/v1/users/{user_id}/manager
+
+    Admin only. Unassigns the Sales Representative from their manager.
+    """
+    svc = UserService(db)
+    user = await svc.remove_manager(user_id, current_user.organization_id, current_user.id)
+    return {
+        "success": True,
+        "message": "Manager assignment removed.",
+        "data": UserResponse.from_orm_with_roles(user),
+    }
+
+
+@router.post(
+    "/{user_id}/restore",
+    response_model=StandardResponse[UserResponse],
+    summary="Restore archived user",
+    dependencies=[Depends(require_permission("user:delete"))],
+)
+async def restore_user(
+    user_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> dict:
+    svc = UserService(db)
+    user = await svc.restore_user(user_id, current_user.organization_id, current_user.id)
+    return {"success": True, "message": "User restored.", "data": UserResponse.from_orm_with_roles(user)}
+
+
+@router.delete(
+    "/{user_id}/permanent",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Permanently delete archived user (admin only)",
+    dependencies=[Depends(require_permission("user:delete"))],
+)
+async def permanent_delete_user(
+    user_id: UUID,
+    current_user: CurrentUser,
+    db: DBSession,
+) -> None:
+    svc = UserService(db)
+    await svc.permanent_delete_user(user_id, current_user.organization_id, current_user.id)
+
+
+@router.post(
     "/{user_id}/reset-password",
     response_model=StandardResponse[dict],
     summary="Reset user password (admin only)",
@@ -209,5 +375,5 @@ async def reset_user_password(
     return {
         "success": True,
         "message": "Password reset successfully. The user will be notified via email.",
-        "data": {},
+        "data": {"new_password": new_password},
     }

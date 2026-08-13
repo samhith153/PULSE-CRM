@@ -52,30 +52,48 @@ class Settings(BaseSettings):
     REDOC_URL: str = "/redoc"
     OPENAPI_URL: str = "/openapi.json"
 
-    SECRET_KEY: str = Field(default_factory=lambda: secrets.token_urlsafe(64))
+    # Empty by default so production validation can detect an unset key.
+    # In development an ephemeral per-process key is generated lazily (see
+    # ``secret_key``) so dev keeps working out of the box; production must
+    # set SECRET_KEY explicitly and fails fast at startup if it doesn't.
+    SECRET_KEY: str = ""
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"
     PASSWORD_RESET_TOKEN_EXPIRE_MINUTES: int = 15
 
     DATABASE_URL: str
-    DATABASE_POOL_SIZE: int = 10
+    DATABASE_POOL_SIZE: int = 25
     DATABASE_MAX_OVERFLOW: int = 20
-    DATABASE_POOL_TIMEOUT: int = 30
-    DATABASE_POOL_RECYCLE: int = 1800
+    DATABASE_POOL_TIMEOUT: int = 20
+    DATABASE_POOL_RECYCLE: int = 300
 
     SUPABASE_URL: Optional[str] = None
     SUPABASE_KEY: Optional[str] = None
-    SUPABASE_SERVICE_KEY: Optional[str] = None
 
     CORS_ORIGINS: str = "http://localhost:3000,http://localhost:3001,http://127.0.0.1:3000,https://pulse-crm-eight-pearl.vercel.app,https://pulse-crm-245t.onrender.com"
     CORS_ALLOW_CREDENTIALS: bool = True
-    CORS_ALLOW_METHODS: str = "*"
-    CORS_ALLOW_HEADERS: str = "*"
+    CORS_ALLOW_METHODS: str = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    CORS_ALLOW_HEADERS: str = "Authorization,Content-Type,Accept,Origin,X-Requested-With,X-Request-ID"
+
+    # Security response headers
+    SECURITY_HEADERS_ENABLED: bool = True
+    HSTS_MAX_AGE: int = 31536000
 
     ENABLE_RATE_LIMIT: bool = True
     RATE_LIMIT_PER_MINUTE: int = 600
-    RATE_LIMIT_BURST: int = 120
+    RATE_LIMIT_BURST: int = 200
+
+    # Comma-separated IPs of trusted reverse proxies.  X-Forwarded-For is only
+    # honored when the direct peer is one of these; otherwise a spoofed header
+    # could bypass rate limits by rotating the IP per request.
+    TRUSTED_PROXY_IPS: str = "127.0.0.1,::1"
+
+    # Auth rate limiting (stricter than global)
+    AUTH_RATE_LIMIT_PER_MINUTE: int = 20
+    AUTH_RATE_LIMIT_BURST: int = 10
+    PASSWORD_RESET_RATE_LIMIT_PER_MINUTE: int = 5
+    PASSWORD_RESET_RATE_LIMIT_BURST: int = 3
 
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100
@@ -88,26 +106,35 @@ class Settings(BaseSettings):
     SMTP_FROM_NAME: str = "KALNET PULSE CRM"
     SMTP_TLS: bool = True
     FRONTEND_BASE_URL: str = "http://localhost:3000"
-    BREVO_API_KEY: str = ""
-    BREVO_WEBHOOK_SECRET: Optional[str] = None
 
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
     GOOGLE_REDIRECT_URI: Optional[str] = None
-    GOOGLE_WEBHOOK_SECRET: Optional[str] = None
+    GOOGLE_AUTH_REDIRECT_URI: Optional[str] = "http://localhost:8000/api/v1/auth/google/callback"
     GMAIL_TOKEN_ENCRYPTION_KEY: Optional[str] = None
+    GOOGLE_PROJECT_ID: Optional[str] = None
+    FRONTEND_URL: str = "http://localhost:3000"
+    GOOGLE_PUBSUB_TOPIC: Optional[str] = None
     GOOGLE_OAUTH_SCOPES: str = (
         "https://www.googleapis.com/auth/gmail.readonly,"
         "https://www.googleapis.com/auth/gmail.modify,"
         "https://www.googleapis.com/auth/gmail.send"
     )
 
+    BREVO_WEBHOOK_SECRET: Optional[str] = None
+
     ENABLE_AI: bool = True
     AI_PROVIDER: str = "rule_based"
     MODEL_NAME: Optional[str] = None
     OPENAI_API_KEY: Optional[str] = None
+    GROQ_API_KEY: Optional[str] = None
     SCORING_PROVIDER: str = "rule_based"
     AI_TIMEOUT: int = 30
+
+    # PULSE AI microservice (separate deployment). The backend calls this
+    # service over HTTP for lead scoring, recommendations, and summarization.
+    AI_SERVICE_URL: str = "http://localhost:8001"
+    AI_SERVICE_TIMEOUT: float = 30.0
 
     # Assistant (Groq free tier)
     ASSISTANT_API_KEY: Optional[str] = None
@@ -133,7 +160,7 @@ class Settings(BaseSettings):
 
     FIRST_SUPERUSER_EMAIL: str = "admin@kalnet-pulse.com"
     FIRST_SUPERUSER_PASSWORD: str = Field(
-        default_factory=lambda: secrets.token_urlsafe(32),
+        default="Admin@123456",
         description="Override via env FIRST_SUPERUSER_PASSWORD"
     )
     FIRST_SUPERUSER_FULL_NAME: str = "System Administrator"
@@ -153,12 +180,39 @@ class Settings(BaseSettings):
         if self.is_production:
             missing = []
             if not self.SECRET_KEY:
-                missing.append("SECRET_KEY")
+                missing.append("SECRET_KEY (must be set explicitly in production; never use the dev ephemeral key)")
             if not self.GMAIL_TOKEN_ENCRYPTION_KEY:
-                missing.append("GMAIL_TOKEN_ENCRYPTION_KEY")
+                missing.append("GMAIL_TOKEN_ENCRYPTION_KEY (required in production; never fall back to SECRET_KEY)")
+            if not self.BREVO_WEBHOOK_SECRET:
+                missing.append("BREVO_WEBHOOK_SECRET (webhook signature verification required in production)")
             if missing:
                 raise ValueError(f"Missing required production secrets: {', '.join(missing)}")
+            # Reject wildcard CORS in production
+            if self.CORS_ALLOW_METHODS == "*":
+                raise ValueError("CORS_ALLOW_METHODS must not be '*' in production")
+            if self.CORS_ALLOW_HEADERS == "*":
+                raise ValueError("CORS_ALLOW_HEADERS must not be '*' in production")
         return self
+
+    _dev_secret_key: Optional[str] = None
+
+    @property
+    def secret_key(self) -> str:
+        """Stable signing key.
+
+        Returns SECRET_KEY when configured; otherwise (development only) an
+        ephemeral random key for this process.  Production is guaranteed to
+        have SECRET_KEY set by ``_validate_production_secrets``.
+        """
+        if self.SECRET_KEY:
+            return self.SECRET_KEY
+        if self._dev_secret_key is None:
+            self._dev_secret_key = secrets.token_urlsafe(64)
+        return self._dev_secret_key
+
+    @property
+    def trusted_proxy_ips_list(self) -> List[str]:
+        return [ip.strip() for ip in self.TRUSTED_PROXY_IPS.split(",") if ip.strip()]
 
     @property
     def cors_origins_list(self) -> List[str]:

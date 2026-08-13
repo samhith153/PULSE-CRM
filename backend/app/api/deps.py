@@ -8,7 +8,7 @@ Provides reusable dependencies for:
 from typing import Annotated, Callable
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,14 +24,22 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security)],
     db: AsyncSession = Depends(get_db),
 ) -> User:
-    """Validate JWT access token and return the authenticated User."""
-    if not credentials:
+    """Validate JWT access token and return the authenticated User.
+
+    Tokens are accepted **only** from the ``Authorization: Bearer <token>`` header.
+    Query-parameter tokens are rejected to prevent token leakage via logs,
+    browser history, and Referer headers.
+    """
+    if not credentials or not credentials.credentials:
         raise UnauthorizedException("Missing Bearer token.")
 
-    payload = decode_access_token(credentials.credentials)
+    token = credentials.credentials
+
+    payload = decode_access_token(token)
     user_id = payload.get("sub")
     if not user_id:
         raise UnauthorizedException("Invalid token payload.")
@@ -59,9 +67,6 @@ def require_permission(permission: str) -> Callable:
     """Dependency factory for a required permission."""
 
     async def _check(current_user: CurrentUser) -> None:
-        if current_user.is_superuser:
-            return
-
         permissions = resolve_permissions_for_user(current_user)
         if permission not in permissions:
             raise ForbiddenException(permission)
@@ -73,9 +78,6 @@ def require_any_permission(*permissions: str) -> Callable:
     """Pass if the user has at least one of the given permissions."""
 
     async def _check(current_user: CurrentUser) -> None:
-        if current_user.is_superuser:
-            return
-
         user_permissions = resolve_permissions_for_user(current_user)
         if not any(p in user_permissions for p in permissions):
             raise ForbiddenException(permissions[0])
@@ -90,9 +92,6 @@ def require_role(*roles: Role | str) -> Callable:
     """
 
     async def _check(current_user: CurrentUser) -> None:
-        if current_user.is_superuser:
-            return
-
         # Normalize all role names to strings for comparison
         required_role_names = {
             role.value if isinstance(role, Role) else str(role)

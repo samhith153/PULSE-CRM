@@ -1,473 +1,1196 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  TrendingUp,
-  Target,
-  AlertTriangle,
-  Users,
-  ArrowUpRight,
   Activity,
-  BellRing,
-  ShieldAlert,
-  Sparkles,
-  Award,
+  AlertTriangle,
+  ArrowDownRight,
+  ArrowUpRight,
   BarChart3,
-  Layers,
-  Calendar,
-  Clock,
-  ArrowRight,
-  TrendingDown,
-  Info,
-  CheckCircle2,
-  Loader2,
+  Bell,
+  CalendarDays,
+  ChevronRight,
+  Gauge,
+  IndianRupee,
+  RefreshCw,
+  Target,
+  TrendingUp,
+  Trophy,
+  Users,
 } from 'lucide-react';
-import { getManagerDashboard, asNumber, formatINR, formatNum, formatPct, ManagerDashboardData } from '@/utils/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  getManagerDashboard,
+  ManagerDashboardData,
+} from '@/utils/api';
+
+type ManagerDashboardPeriod = 'week' | 'month' | 'quarter' | 'year';
 
 interface ManagerDashboardViewProps {
-  onTabChange?: (tab: string) => void;
-  onLoaded?: () => void;
+onTabChange?: (tab: string) => void;
+onDealClick?: (dealId: string) => void;
+refreshSignal?: number;
 }
 
-export default function ManagerDashboardView({ onTabChange, onLoaded }: ManagerDashboardViewProps) {
+/* -------------------------------------------------------------------------- */
+/* Helpers                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const toNumber = (value: unknown): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const formatCurrency = (value: unknown): string => {
+  const amount = toNumber(value);
+
+  if (Math.abs(amount) >= 10000000) {
+    return `\u20B9${(amount / 10000000).toFixed(2)}Cr`;
+  }
+
+  if (Math.abs(amount) >= 100000) {
+    return `\u20B9${(amount / 100000).toFixed(2)}L`;
+  }
+
+  if (Math.abs(amount) >= 1000) {
+    return `\u20B9${(amount / 1000).toFixed(1)}K`;
+  }
+
+  return `\u20B9${Math.round(amount).toLocaleString('en-IN')}`;
+};
+
+const formatPercent = (value: unknown): string =>
+  `${toNumber(value).toFixed(1)}%`;
+
+const formatUpdatedAt = (value?: string | null): string => {
+  if (!value) return 'Time unavailable';
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Time unavailable';
+  }
+
+  return date.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getInitials = (name?: string | null): string => {
+  if (!name) return 'NA';
+
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
+};
+
+/* -------------------------------------------------------------------------- */
+/* Sparkline (SVG area chart pattern)                                         */
+/* -------------------------------------------------------------------------- */
+
+function Spark({ values, positive }: { values: number[]; positive: boolean }) {
+  if (values.length < 2) return null;
+  const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
+  const range = max - min || 1;
+  const n = values.length;
+  const coords = values.map((v, i) => ({
+    x: (i / (n - 1)) * 100,
+    y: 34 - ((v - min) / range) * 30 + 2,
+  }));
+
+  let linePath = `M ${coords[0].x.toFixed(1)} ${coords[0].y.toFixed(1)}`;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const p0 = coords[i];
+    const p1 = coords[i + 1];
+    const cpX1 = p0.x + (p1.x - p0.x) / 3;
+    const cpY1 = p0.y;
+    const cpX2 = p0.x + (2 * (p1.x - p0.x)) / 3;
+    const cpY2 = p1.y;
+    linePath += ` C ${cpX1.toFixed(1)} ${cpY1.toFixed(1)}, ${cpX2.toFixed(1)} ${cpY2.toFixed(1)}, ${p1.x.toFixed(1)} ${p1.y.toFixed(1)}`;
+  }
+
+  const areaPath = `${linePath} L ${coords[n - 1].x.toFixed(1)} 40 L 0 40 Z`;
+  const strokeColor = positive ? 'var(--status-success-text)' : 'var(--status-danger-text)';
+
+  return (
+    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-8 w-full overflow-visible" aria-hidden>
+      <motion.path
+        d={areaPath}
+        fill={strokeColor}
+        fillOpacity="0.08"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6 }}
+      />
+      <motion.path
+        d={linePath}
+        fill="none"
+        stroke={strokeColor}
+        strokeWidth="1.5"
+        vectorEffect="non-scaling-stroke"
+        initial={{ pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      />
+    </svg>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* KPI stat tile                                                              */
+/* -------------------------------------------------------------------------- */
+
+interface KpiTile {
+  title: string;
+  value: string;
+  change: string;
+  isPositive: boolean;
+  values: number[];
+  icon: React.ElementType;
+  targetValue: number;
+  prefix?: string;
+  suffix?: string;
+}
+
+function StatTile({ tile, delay = 0, isHero = false }: { tile: KpiTile; delay?: number; isHero?: boolean }) {
+  const value = useCountUp(tile.targetValue, true, 1000);
+  const Delta = tile.isPositive ? ArrowUpRight : ArrowDownRight;
+
+  const displayVal = tile.targetValue === 0
+    ? tile.value
+    : `${tile.prefix ?? ''}${value.toLocaleString()}${tile.suffix ?? ''}`;
+
+  if (isHero) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileHover={{ y: -4 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
+        className="flex flex-col justify-between rounded-2xl bg-gradient-to-br from-accent-color to-purple-600 p-[var(--space-5)] text-white shadow-lg cursor-pointer sm:col-span-2 xl:col-span-2"
+      >
+        <div className="flex items-center justify-between">
+          <div className="grid size-10 place-items-center rounded-xl bg-white/15">
+            <tile.icon size={18} strokeWidth={2} />
+          </div>
+          <p className="flex items-center gap-1 text-[11px] font-bold text-white/90">
+            <Delta size={12} strokeWidth={2.5} className="shrink-0" />
+            <span>{tile.change}</span>
+          </p>
+        </div>
+        <div className="mt-4">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-white/70 leading-none">
+            {tile.title}
+          </p>
+          <p className="mt-2 text-[28px] font-extrabold tracking-tight leading-none tabular-nums">
+            {displayVal}
+          </p>
+          <p className="mt-1.5 text-[10px] text-white/60 font-semibold">vs last month</p>
+        </div>
+        <div className="mt-3">
+          <Spark values={tile.values} positive={tile.isPositive} />
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: delay / 1000 }}
+      className="flex flex-col gap-[var(--space-2)] rounded-2xl border border-border bg-card p-[var(--space-4)] shadow-sm transition-colors duration-200 cursor-pointer"
+    >
+      <div className="flex items-center justify-between">
+        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-secondary text-accent-color">
+          <tile.icon size={16} strokeWidth={2} />
+        </div>
+        <p className={`flex items-center gap-1 text-[11px] font-bold ${tile.isPositive ? 'text-status-success-text' : 'text-status-danger-text'}`}>
+          <Delta size={12} strokeWidth={2.5} className="shrink-0" />
+          <span>{tile.change}</span>
+        </p>
+      </div>
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground leading-none">
+        {tile.title}
+      </p>
+      <p className="text-2xl font-semibold text-foreground tabular-nums leading-none">
+        {displayVal}
+      </p>
+      <span className="text-[10px] text-muted-foreground/60 font-semibold mt-0.5">vs last month</span>
+      <div className="mt-2">
+        <Spark values={tile.values} positive={tile.isPositive} />
+      </div>
+    </motion.div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* useCountUp hook (simple implementation)                                    */
+/* -------------------------------------------------------------------------- */
+
+function useCountUp(target: number, active: boolean, duration = 1000): number {
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (!active || target === 0) {
+      setCurrent(target);
+      return;
+    }
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setCurrent(Math.round(eased * target));
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [target, active, duration]);
+
+  return current;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Main component                                                             */
+/* -------------------------------------------------------------------------- */
+
+export default function ManagerDashboardView({
+  onTabChange,
+  onDealClick,
+  refreshSignal = 0,
+}: ManagerDashboardViewProps) {
   const [data, setData] = useState<ManagerDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [hoveredQuotaIdx, setHoveredQuotaIdx] = useState<number | null>(null);
-  const [hoveredMonthIdx, setHoveredMonthIdx] = useState<number | null>(null);
+  const [period, setPeriod] =
+    useState<ManagerDashboardPeriod>('quarter');
+  const [repId, setRepId] = useState<string>('all');
+
+  const loadDashboard = async (silent = false) => {
+    try {
+      // Keep showing existing data on re-activation (silent background refresh)
+      if (!silent) setLoading(true);
+      setError(null);
+
+      const dashboardData = await getManagerDashboard({
+        period,
+        repId: repId === 'all' ? undefined : repId,
+      });
+
+      setData(dashboardData);
+    } catch (err) {
+      console.error('Failed to load manager dashboard:', err);
+
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to load manager dashboard.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    getManagerDashboard()
-      .then((d) => {
-        if (!cancelled) setData(d);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Failed to load manager dashboard');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-        onLoaded?.();
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    loadDashboard();
+  }, [period, repId]);
+
+  // Silent background refresh when the tab becomes active again (keep data visible)
+  useEffect(() => {
+    if (refreshSignal > 0) loadDashboard(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshSignal]);
+
+  /* ---------------------------------------------------------------------- */
+  /* Derived data                                                           */
+  /* ---------------------------------------------------------------------- */
+
+  const sortedReps = useMemo(() => {
+    if (!data) return [];
+
+    return [...data.rep_quota_attainment]
+      .sort(
+        (a, b) =>
+          toNumber(b.quota_achievement_pct) -
+          toNumber(a.quota_achievement_pct)
+      )
+      .slice(0, 5);
+  }, [data]);
+
+  const visibleActivities = useMemo(() => {
+    if (!data) return [];
+
+    return data.recent_activities.slice(0, 6);
+  }, [data]);
+
+  const visibleRisks = useMemo(() => {
+    if (!data) return [];
+
+    return data.deals_at_risk.slice(0, 4);
+  }, [data]);
+
+  const visibleAlerts = useMemo(() => {
+    if (!data) return [];
+
+    return data.alerts.slice(0, 4);
+  }, [data]);
+
+  const revenueTrendMax = useMemo(() => {
+    if (!data || data.monthly_revenue_trend.length === 0) {
+      return 1;
+    }
+
+    return Math.max(
+      ...data.monthly_revenue_trend.flatMap((month) => [
+        toNumber(month.revenue),
+        toNumber(month.target),
+      ]),
+      1
+    );
+  }, [data]);
+
+  /* ---------------------------------------------------------------------- */
+  /* Loading                                                                */
+  /* ---------------------------------------------------------------------- */
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="h-9 w-72 bg-slate-100 rounded animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-white border rounded-2xl p-5 h-32 animate-pulse" />
-          ))}
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-7 bg-white border rounded-2xl p-5 h-72 animate-pulse" />
-          <div className="lg:col-span-5 bg-white border rounded-2xl p-5 h-72 animate-pulse" />
+      <div className="space-y-[var(--space-5)]">
+        <div className="animate-pulse space-y-[var(--space-5)]">
+          <div className="h-20 rounded-2xl bg-muted" />
+
+          <div className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-32 rounded-2xl border bg-card"
+              />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-[var(--space-4)] xl:grid-cols-3">
+            <div className="h-80 rounded-2xl border bg-card xl:col-span-2" />
+            <div className="h-80 rounded-2xl border bg-card" />
+          </div>
+
+          <div className="h-72 rounded-2xl border bg-card" />
+
+          <div className="grid grid-cols-1 gap-[var(--space-4)] xl:grid-cols-2">
+            <div className="h-80 rounded-2xl border bg-card" />
+            <div className="h-80 rounded-2xl border bg-card" />
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error || !data) {
+  /* ---------------------------------------------------------------------- */
+  /* Error                                                                  */
+  /* ---------------------------------------------------------------------- */
+
+  if (error) {
     return (
-      <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-rose-700">
-        <p className="font-bold">Couldn’t load manager dashboard</p>
-        <p className="text-sm mt-1">{error ?? 'No data returned.'}</p>
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 text-center">
+          <AlertTriangle className="mx-auto h-10 w-10 text-accent-color" />
+
+          <h2 className="mt-4 text-sm font-semibold text-foreground">
+            Unable to load Manager Dashboard
+          </h2>
+
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            {error}
+          </p>
+
+          <button
+            type="button"
+            onClick={() => loadDashboard()}
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-accent-color px-4 py-2 text-xs font-semibold text-surface-0 transition hover:bg-accent-color/90"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
 
-  const s = data.summary;
-  const revenueStats = data.revenue_stats;
-  const forecast = data.forecast;
-  const pipeline = data.pipeline_health;
-  const leaderboards = data.rep_quota_attainment
-    .slice()
-    .sort((a, b) => a.rank - b.rank)
-    .map((rep) => ({
-      rank: rep.rank,
-      name: rep.full_name,
-      won: asNumber(rep.revenue_generated),
-      target: asNumber(rep.assigned_target),
-      wonFormatted: formatINR(rep.revenue_generated),
-      targetFormatted: formatINR(rep.assigned_target),
-      deals: 0,
-      progress: Math.round(asNumber(rep.quota_achievement_pct)),
-      avatar: '',
-    }));
-  const pipelineStages = pipeline.stage_distribution.map((stage, i) => ({
-    name: stage.stage,
-    value: formatINR(stage.total_value),
-    count: stage.deal_count,
-    pct: Math.max(Math.round(asNumber(stage.percentage)), 4),
-    color: ['bg-purple-600', 'bg-indigo-500', 'bg-blue-500', 'bg-sky-500', 'bg-emerald-500', 'bg-teal-500'][i % 6],
-    textColor: ['text-purple-600', 'text-indigo-500', 'text-blue-500', 'text-sky-500', 'text-emerald-500', 'text-teal-500'][i % 6],
-    lightBg: ['bg-purple-50', 'bg-indigo-50', 'bg-blue-50', 'bg-sky-50', 'bg-emerald-50', 'bg-teal-50'][i % 6],
-  }));
+  if (!data) {
+    return (
+      <div className="flex min-h-[500px] items-center justify-center">
+        <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-2xl border border-border/50 px-8">
+          <p>No manager dashboard data available</p>
 
-  const monthlyForecast = data.monthly_revenue_trend.map((m, i) => ({
-    month: m.month,
-    actual: asNumber(m.revenue) / 1_00_000,
-    target: asNumber(m.target) / 1_00_000,
-    x: 50 + i * 100,
-    y: 130 - (asNumber(m.revenue) / Math.max(...data.monthly_revenue_trend.map((x) => asNumber(x.revenue)), 1)) * 110,
-  }));
+          <button
+            type="button"
+            onClick={() => loadDashboard()}
+            className="mt-4 rounded-lg border border-border px-4 py-2 text-xs font-semibold text-foreground hover:bg-secondary/40 transition"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+    );
+  }
 
-  const riskDeals = data.deals_at_risk.map((d) => ({
-    id: d.deal_id,
-    title: d.deal_name,
-    company: d.company ?? '—',
-    value: formatINR(d.deal_value),
-    rep: d.owner_name ?? 'Unassigned',
-    risk: d.risk_reason,
-    avatar: '',
-  }));
-
-  const alerts = data.alerts.map((a, i) => ({
-    id: i + 1,
-    text: a.message,
-    type: a.severity,
-    time: new Date(a.timestamp).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-  }));
-
-  const activities = data.recent_activities.map((a) => ({
-    time: new Date(a.created_at).toLocaleString('en-IN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-    actor: a.title,
-    action: a.action,
-    avatar: '',
-  }));
-
-  const avgQuota = leaderboards.length
-    ? Math.round(leaderboards.reduce((s, l) => s + l.progress, 0) / leaderboards.length)
-    : 0;
+  /* ---------------------------------------------------------------------- */
+  /* Dashboard                                                              */
+  /* ---------------------------------------------------------------------- */
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-brand-accent/5 to-brand-secondary-accent/15 border border-brand-border-purple/30 rounded-2xl p-6 shadow-sm/5 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative overflow-hidden">
-        <div className="absolute right-0 top-0 h-40 w-40 bg-brand-accent/5 rounded-full filter blur-2xl pointer-events-none" />
-        <div className="flex items-center space-x-4">
-          <div className="h-12 w-12 rounded-2xl bg-brand-accent flex items-center justify-center text-white shrink-0 shadow-md">
-            <Sparkles className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-3xl font-sans text-brand-heading tracking-tight font-extrabold">Sales Operations Hub</h1>
-              <span className="flex items-center h-2 w-2 rounded-full bg-emerald-500 animate-pulse mt-1" title="Live" />
-            </div>
-            <p className="text-xs md:text-sm text-brand-text/75 mt-1 font-medium tracking-wide">
-              Team is at {formatPct(s.quota_achievement)} quota completion across {s.team_members} members.
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-2 shrink-0 self-start md:self-auto bg-white/60 backdrop-blur-md border border-brand-border-purple/20 px-3.5 py-2 rounded-xl text-xs font-bold text-brand-text/80 shadow-sm/5">
-          <Calendar className="h-4 w-4 text-brand-accent mr-1.5" />
-          <span className="tabular-nums">Current Period</span>
-        </div>
-      </div>
+    <div className="space-y-[var(--space-5)]">
 
-      {/* KPI Core Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white border border-brand-border-purple/20 border-l-4 border-l-emerald-500 rounded-2xl p-5 shadow-sm/5 flex flex-col justify-between min-h-[135px] hover:shadow-md transition-all duration-300">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-extrabold text-brand-text/60 uppercase tracking-wider">Team Revenue Won</span>
-            <span className="text-[9px] font-extrabold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100/50 tabular-nums">
-              {formatPct(revenueStats.monthly_growth_pct)}
+      {/* ================================================================== */}
+      {/* HEADER                                                             */}
+      {/* ================================================================== */}
+
+      <div className="flex flex-col gap-[var(--space-4)] lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-sans font-bold tracking-tight text-foreground">
+              Welcome back, Manager
+            </h1>
+
+            <span className="rounded-full bg-accent-color/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-accent-color border border-accent-color/15">
+              Manager
             </span>
           </div>
-          <div className="mt-2.5">
-            <h4 className="text-2xl font-black text-brand-heading">{formatINR(revenueStats.team_revenue_won)}</h4>
-            <p className="text-[9px] text-slate-450 mt-1 font-bold">Target Quota: {formatINR(revenueStats.team_target)}</p>
-          </div>
-          <div className="mt-3">
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${Math.min(asNumber(revenueStats.achievement_pct), 100)}%` }} />
-            </div>
-            <div className="flex justify-between text-[8px] font-extrabold text-slate-400 mt-1 uppercase">
-              <span>Progress</span>
-              <span>{Math.round(asNumber(revenueStats.achievement_pct))}% achieved</span>
-            </div>
-          </div>
+
+          <p className="mt-1 text-xs md:text-sm text-muted-foreground font-medium tracking-wide">
+            Sales performance &amp; team command center
+          </p>
         </div>
 
-        <div className="bg-white border border-brand-border-purple/20 border-l-4 border-l-brand-accent rounded-2xl p-5 shadow-sm/5 flex flex-col justify-between min-h-[135px] hover:shadow-md transition-all duration-300">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-extrabold text-brand-text/60 uppercase tracking-wider">Forecast Projection</span>
-            <Target className="h-4 w-4 text-brand-accent" />
-          </div>
-          <div className="mt-2.5">
-            <h4 className="text-2xl font-black text-brand-heading">{formatINR(forecast.projected_revenue)}</h4>
-            <p className="text-[9px] text-slate-450 mt-1 font-bold">Confidence {Math.round(asNumber(forecast.confidence_score))}% · Accuracy {Math.round(asNumber(forecast.forecast_accuracy))}%</p>
-          </div>
-          <div className="mt-3">
-            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div className="h-full bg-brand-accent rounded-full" style={{ width: `${Math.min(asNumber(forecast.confidence_score), 100)}%` }} />
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={period}
+            onChange={(e) =>
+              setPeriod(e.target.value as ManagerDashboardPeriod)
+            }
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-accent-color/20"
+          >
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="quarter">This Quarter</option>
+            <option value="year">This Year</option>
+          </select>
+
+          <select
+            value={repId}
+            onChange={(e) => setRepId(e.target.value)}
+            className="rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-accent-color/20"
+          >
+            <option value="all">All Reps</option>
+
+            {data.rep_quota_attainment.map((rep) => (
+              <option key={rep.user_id} value={rep.user_id}>
+                {rep.full_name}
+              </option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground"
+          >
+            All Pipelines
+          </button>
+
+          <button
+            type="button"
+            onClick={() => loadDashboard()}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground transition hover:bg-secondary/40 disabled:opacity-50"
+          >
+            <RefreshCw
+              className={`h-3.5 w-3.5 ${
+                loading ? 'animate-spin' : ''
+              }`}
+            />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* KPI CARDS â€” with sparklines + gradient hero                        */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-1 gap-[var(--space-4)] sm:grid-cols-2 xl:grid-cols-5">
+        {(() => {
+          const growthPct = toNumber(data.revenue_stats.monthly_growth_pct);
+          const kpiTiles: KpiTile[] = [
+            {
+              title: 'Team Revenue',
+              value: formatCurrency(data.summary.team_revenue),
+              change: `${growthPct >= 0 ? '+' : ''}${formatPercent(growthPct)}`,
+              isPositive: growthPct >= 0,
+              values: data.monthly_revenue_trend.length > 0
+                ? data.monthly_revenue_trend.map((m) => toNumber(m.revenue))
+                : [4, 6, 5, 8, 9, 11],
+              icon: IndianRupee,
+              targetValue: toNumber(data.summary.team_revenue),
+              prefix: 'â‚¹',
+            },
+            {
+              title: 'Pipeline Value',
+              value: formatCurrency(data.summary.pipeline_value),
+              change: `${data.pipeline_health.total_deals} deals`,
+              isPositive: true,
+              values: [12, 15, 14, 18, 20, 22],
+              icon: BarChart3,
+              targetValue: toNumber(data.summary.pipeline_value),
+              prefix: 'â‚¹',
+            },
+            {
+              title: 'Forecast',
+              value: formatCurrency(data.forecast.projected_revenue),
+              change: `${formatPercent(data.forecast.confidence_score)} conf.`,
+              isPositive: toNumber(data.forecast.confidence_score) >= 50,
+              values: [8, 10, 9, 12, 14, 16],
+              icon: Gauge,
+              targetValue: toNumber(data.forecast.projected_revenue),
+              prefix: 'â‚¹',
+            },
+            {
+              title: 'Quota Attainment',
+              value: formatPercent(data.revenue_stats.achievement_pct),
+              change: `Target ${formatCurrency(data.revenue_stats.team_target)}`,
+              isPositive: toNumber(data.revenue_stats.achievement_pct) >= 70,
+              values: [40, 55, 60, 65, 72, toNumber(data.revenue_stats.achievement_pct)],
+              icon: Target,
+              targetValue: toNumber(data.revenue_stats.achievement_pct),
+              suffix: '%',
+            },
+            {
+              title: 'Win Rate',
+              value: formatPercent(data.summary.win_rate),
+              change: `${formatPercent(data.summary.conversion_rate)} conv.`,
+              isPositive: toNumber(data.summary.win_rate) >= 20,
+              values: [15, 18, 20, 22, 25, toNumber(data.summary.win_rate)],
+              icon: Trophy,
+              targetValue: toNumber(data.summary.win_rate),
+              suffix: '%',
+            },
+          ];
+          return kpiTiles.map((tile, idx) => (
+            <StatTile
+              key={tile.title}
+              tile={tile}
+              delay={idx * 75}
+              isHero={idx === 0}
+            />
+          ));
+        })()}
+      </div>
+
+      {/* ================================================================== */}
+      {/* REVENUE CHART + FORECAST â€” 8/4 grid                                */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Revenue vs Target */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-accent-color" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Revenue vs Target</h3>
+                <p className="text-[10px] text-muted-foreground">Monthly team revenue performance</p>
+              </div>
             </div>
-            <div className="flex justify-between text-[8px] font-extrabold text-slate-400 mt-1 uppercase">
-              <span>Weighted Projection</span>
-              <span>{Math.round(asNumber(forecast.confidence_score))}% accuracy</span>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('reports')}
+              className="text-[10px] font-bold text-accent-color hover:underline"
+            >
+              View Report
+            </button>
+          </div>
+
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-3xl font-sans font-bold tracking-tight text-foreground">
+                {formatCurrency(data.summary.team_revenue)}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">Current revenue</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs font-bold text-foreground">
+                Target {formatCurrency(data.revenue_stats.team_target)}
+              </p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {formatPercent(data.revenue_stats.achievement_pct)} achieved
+              </p>
             </div>
           </div>
+
+          {data.monthly_revenue_trend.length > 0 ? (
+            <>
+              <div className="mt-4 flex h-52 items-end gap-3 border-b border-border px-2">
+                {data.monthly_revenue_trend.map((month, idx) => {
+                  const revenue = toNumber(month.revenue);
+                  const target = toNumber(month.target);
+                  const revenueHeight = revenue > 0 ? Math.max(8, (revenue / revenueTrendMax) * 100) : 4;
+                  const targetHeight = target > 0 ? Math.max(8, (target / revenueTrendMax) * 100) : 4;
+                  const isLast = idx === data.monthly_revenue_trend.length - 1;
+
+                  return (
+                    <div
+                      key={month.month}
+                      className="group flex h-full flex-1 items-end justify-center gap-1.5"
+                      title={`${month.month} â€” Revenue ${formatCurrency(revenue)} â€” Target ${formatCurrency(target)}`}
+                    >
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: `${revenueHeight}%` }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
+                        className={`w-3 rounded-t-lg ${isLast ? 'bg-accent-color shadow-md' : 'bg-accent-color/70'}`}
+                      />
+                      <motion.div
+                        initial={{ height: 0 }}
+                        animate={{ height: `${targetHeight}%` }}
+                        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 + 0.1 }}
+                        className={`w-3 rounded-t-lg ${isLast ? 'bg-purple-400/60' : 'bg-purple-400/30'}`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-2 flex justify-between text-[10px] text-muted-foreground">
+                {data.monthly_revenue_trend.map((month) => (
+                  <span key={month.month}>
+                    {new Date(`${month.month}-01`).toLocaleDateString('en-US', { month: 'short' })}
+                  </span>
+                ))}
+              </div>
+
+              <div className="mt-3 flex items-center gap-5 text-xs text-muted-foreground">
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-accent-color" />
+                  Revenue
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-purple-400/60" />
+                  Target
+                </span>
+              </div>
+            </>
+          ) : (
+            <div className="mt-8 flex h-52 items-center justify-center bg-secondary/10 rounded-xl border border-border/50">
+              <p className="text-xs font-semibold text-muted-foreground">
+                No monthly revenue data available.
+              </p>
+            </div>
+          )}
         </div>
 
-        <div className="bg-white border border-brand-border-purple/20 border-l-4 border-l-indigo-500 rounded-2xl p-5 shadow-sm/5 flex flex-col justify-between min-h-[135px] hover:shadow-md transition-all duration-300">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-extrabold text-brand-text/60 uppercase tracking-wider">Pipeline Health</span>
-            <span className="text-[9px] font-extrabold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-100/50">{Math.round(asNumber(pipeline.health_score)) >= 70 ? 'Strong' : 'Watch'}</span>
-          </div>
-          <div className="mt-2.5">
-            <h4 className="text-2xl font-black text-brand-heading">{formatINR(pipeline.active_pipeline_value)}</h4>
-            <p className="text-[9px] text-slate-450 mt-1 font-bold">{pipeline.total_deals} Active Deals</p>
-          </div>
-          <div className="mt-3">
-            <div className="flex space-x-1.5 h-2 rounded-full overflow-hidden">
-              {pipelineStages.slice(0, 3).map((st, i) => (
-                <div key={i} className={`h-full ${st.color} rounded-l`} style={{ width: `${Math.max(st.pct, 10)}%` }} title={st.name} />
-              ))}
+        {/* Forecast Health */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Gauge className="h-4 w-4 text-accent-color" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Forecast Health</h3>
+                <p className="text-[10px] text-muted-foreground">Current quarter outlook</p>
+              </div>
             </div>
-            <div className="flex justify-between text-[8px] font-extrabold text-slate-400 mt-1 uppercase">
-              <span>Distribution</span>
-              <span>{pipelineStages.length} stages</span>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('forecast')}
+              className="text-[10px] font-bold text-accent-color hover:underline"
+            >
+              Open
+            </button>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Confidence Ring */}
+            <div className="relative shrink-0">
+              <svg className="size-20 -rotate-90" viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="56" fill="none" stroke="var(--surface-2)" strokeWidth="12" />
+                <motion.circle
+                  cx="80" cy="80" r="56"
+                  fill="none"
+                  stroke="var(--accent-color)"
+                  strokeWidth="12"
+                  strokeDasharray={`${(toNumber(data.forecast.confidence_score) / 100) * (2 * Math.PI * 56)} ${2 * Math.PI * 56}`}
+                  strokeDashoffset={0}
+                  strokeLinecap="round"
+                  initial={{ strokeDasharray: `0 ${2 * Math.PI * 56}` }}
+                  animate={{ strokeDasharray: `${(toNumber(data.forecast.confidence_score) / 100) * (2 * Math.PI * 56)} ${2 * Math.PI * 56}` }}
+                  transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-lg font-bold text-foreground tabular-nums leading-none">
+                  {formatPercent(data.forecast.confidence_score)}
+                </span>
+                <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider">Conf.</span>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                Expected Revenue
+              </p>
+              <p className="text-xl font-bold tracking-tight text-foreground tabular-nums">
+                {formatCurrency(data.forecast.projected_revenue)}
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-2 border-t border-border">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Forecast Accuracy</span>
+              <span className="text-xs font-bold text-foreground">{formatPercent(data.forecast.forecast_accuracy)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Quarter Projection</span>
+              <span className="text-xs font-bold text-foreground">{formatCurrency(data.forecast.expected_quarter_revenue)}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Sales Manager Analytics Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="col-span-12 lg:col-span-7 bg-white border border-brand-border-purple/20 rounded-2xl p-5 shadow-sm/5 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3 mb-4">
-              <h3 className="font-extrabold text-brand-heading text-sm flex items-center">
-                <BarChart3 className="h-4.5 w-4.5 mr-2 text-brand-accent" />
-                <span>Rep Sales Quota Attainment</span>
-              </h3>
-              <span className="text-[9px] font-extrabold bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase tracking-wider">Current Quarter</span>
+      {/* ================================================================== */}
+      {/* PIPELINE HEALTH â€” full width                                       */}
+      {/* ================================================================== */}
+
+      <div className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+        <div className="flex items-center justify-between border-b border-border pb-2">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-accent-color" />
+            <div>
+              <h3 className="font-semibold text-foreground text-sm">Pipeline Health</h3>
+              <p className="text-[10px] text-muted-foreground">Deal distribution across pipeline stages</p>
             </div>
-            <div className="space-y-4 pt-1">
-              {leaderboards.map((rep, idx) => {
-                const pct = rep.target > 0 ? Math.round((rep.won / rep.target) * 100) : 0;
-                return (
-                  <div
-                    key={rep.rank}
-                    onMouseEnter={() => setHoveredQuotaIdx(idx)}
-                    onMouseLeave={() => setHoveredQuotaIdx(null)}
-                    className="space-y-1.5 cursor-pointer p-2.5 rounded-xl transition-all hover:bg-slate-50/70 border border-transparent hover:border-brand-border-purple/15"
-                  >
-                    <div className="flex justify-between items-center text-xs font-bold">
-                      <span className="text-brand-text flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-brand-accent/10 border border-brand-border-purple/20 flex items-center justify-center text-[9px] font-black text-brand-accent shrink-0">{rep.rank}</span>
-                        <span className="truncate max-w-[130px]">{rep.name}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onTabChange?.('pipeline')}
+            className="inline-flex items-center gap-1 text-[10px] font-bold text-accent-color hover:underline"
+          >
+            View Pipeline
+            <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {data.pipeline_health.stage_distribution.map((stage, idx) => {
+            const stageColors = [
+              'bg-purple-400',
+              'bg-accent-color',
+              'bg-violet-500',
+              'bg-status-warning-text',
+              'bg-status-success-text',
+              'bg-status-danger-text',
+            ];
+            const color = stageColors[idx % stageColors.length];
+            return (
+              <motion.div
+                key={stage.stage}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: idx * 0.05 }}
+                className="rounded-xl border border-border bg-secondary/10 p-[var(--space-3)] transition hover:bg-secondary/20"
+              >
+                <div className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${color}`} />
+                  <p className="truncate text-[11px] font-bold text-foreground">
+                    {stage.stage}
+                  </p>
+                </div>
+                <p className="mt-2 text-xl font-bold text-foreground tabular-nums">
+                  {stage.deal_count}
+                </p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                  {formatCurrency(stage.total_value)}
+                </p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, Math.max(0, toNumber(stage.percentage)))}%` }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
+                    className={`h-full rounded-full ${color}`}
+                  />
+                </div>
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  {formatPercent(stage.percentage)}
+                </p>
+              </motion.div>
+            );
+          })}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 border-t border-border pt-3 sm:grid-cols-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Active Deals</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{data.pipeline_health.total_deals}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Pipeline Value</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{formatCurrency(data.pipeline_health.active_pipeline_value)}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Health Score</p>
+            <p className="mt-1 text-lg font-bold text-foreground">{formatPercent(data.pipeline_health.health_score)}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ================================================================== */}
+      {/* TEAM PERFORMANCE + DEALS AT RISK â€” 8/4 grid                       */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Team Performance */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-accent-color" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Team Performance</h3>
+                <p className="text-[10px] text-muted-foreground">Quota attainment across the sales team</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('team performance')}
+              className="inline-flex items-center gap-1 text-[10px] font-bold text-accent-color hover:underline"
+            >
+              View Team
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-[var(--space-3)]">
+            {sortedReps.map((rep, idx) => {
+              const attainment = toNumber(rep.quota_achievement_pct);
+              const rankBadge = idx === 0 ? 'bg-yellow-400/20 text-yellow-600' :
+                               idx === 1 ? 'bg-gray-300/30 text-gray-500' :
+                               idx === 2 ? 'bg-orange-400/20 text-orange-600' :
+                               'bg-secondary text-muted-foreground';
+              const barColor = attainment >= 100 ? 'bg-status-success-text' :
+                              attainment >= 70 ? 'bg-accent-color' :
+                              attainment >= 50 ? 'bg-status-warning-text' :
+                              'bg-status-danger-text';
+
+              return (
+                <motion.div
+                  key={rep.user_id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.4, delay: idx * 0.05 }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold border ${rankBadge}`}>
+                        {idx < 3 ? `#${idx + 1}` : getInitials(rep.full_name)}
                       </span>
-                      <div className="flex items-center space-x-2 tabular-nums">
-                        <span className="text-brand-heading font-black">{rep.wonFormatted}</span>
-                        <span className="text-slate-400 text-[10px] font-normal">/ {rep.targetFormatted}</span>
-                        <span className={`text-[9.5px] font-extrabold px-1.5 py-0.5 rounded-md ${pct >= 90 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100/50' : 'bg-purple-50 text-purple-700 border border-brand-border-purple/15'}`}>{pct}%</span>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-foreground">{rep.full_name}</p>
+                        <p className="text-[10px] text-muted-foreground">Revenue {formatCurrency(rep.revenue_generated)}</p>
                       </div>
                     </div>
-                    <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden relative">
-                      <div className={`h-full rounded-full transition-all duration-500 ${hoveredQuotaIdx === idx ? 'bg-purple-600 shadow-sm' : 'bg-brand-accent'}`} style={{ width: `${Math.min(pct, 100)}%` }} />
-                    </div>
+                    <span className={`shrink-0 text-xs font-bold tabular-nums ${attainment >= 100 ? 'text-status-success-text' : attainment >= 70 ? 'text-accent-color' : 'text-status-warning-text'}`}>
+                      {formatPercent(attainment)}
+                    </span>
                   </div>
-                );
-              })}
-              {leaderboards.length === 0 && <p className="text-xs text-slate-400 py-4 text-center">No rep quota data yet.</p>}
-            </div>
-          </div>
-          <div className="border-t border-brand-border-purple/15 pt-3.5 mt-4 flex items-center justify-between text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-            <span>Average Quota Attainment: <strong className="text-brand-heading font-black">{avgQuota}%</strong></span>
-            <button onClick={() => onTabChange?.('team performance')} className="text-brand-accent hover:text-brand-accent-hover font-black flex items-center space-x-1 cursor-pointer bg-transparent border-0 uppercase"><span>Rep Details</span><ArrowUpRight className="h-3.5 w-3.5" /></button>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, Math.max(0, attainment))}%` }}
+                      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: idx * 0.05 }}
+                      className={`h-full rounded-full ${barColor}`}
+                    />
+                  </div>
+                </motion.div>
+              );
+            })}
+
+            {sortedReps.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                No rep data available.
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="col-span-12 lg:col-span-5 bg-white border border-brand-border-purple/20 rounded-2xl p-5 shadow-sm/5 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3 mb-4">
-              <h3 className="font-extrabold text-brand-heading text-sm flex items-center"><Layers className="h-4.5 w-4.5 mr-2 text-indigo-500" /><span>Pipeline Stage Breakdown</span></h3>
-              <span className="text-[9px] font-extrabold bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase tracking-wider">Value</span>
+        {/* Deals At Risk */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-status-warning" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Deals at Risk</h3>
+                <p className="text-[10px] text-muted-foreground">High-value opportunities</p>
+              </div>
             </div>
-            <div className="space-y-3.5 pt-1">
-              {pipelineStages.map((stage) => (
-                <div key={stage.name} className="space-y-1.5">
-                  <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-brand-text flex items-center"><span className={`h-2.5 w-2.5 rounded-full mr-2 shrink-0 ${stage.color}`} />{stage.name}</span>
-                    <div className="flex items-center space-x-2.5 tabular-nums text-[10px]">
-                      <span className="text-slate-400 font-bold">{stage.count} deals</span>
-                      <span className="text-brand-heading font-black">{stage.value}</span>
-                    </div>
-                  </div>
-                  <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${stage.color}`} style={{ width: `${stage.pct}%` }} />
-                  </div>
-                </div>
-              ))}
-              {pipelineStages.length === 0 && <p className="text-xs text-slate-400 py-4 text-center">No pipeline data yet.</p>}
-            </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('pipeline')}
+              className="text-[10px] font-bold text-accent-color hover:underline"
+            >
+              View Pipeline
+            </button>
           </div>
-          <div className="border-t border-brand-border-purple/15 pt-3.5 mt-4 flex justify-between items-center text-[10px] font-extrabold text-slate-500 uppercase tracking-wider">
-            <span>Stage Conversion: <strong className="text-emerald-600 font-black">{formatPct(s.conversion_rate)}</strong></span>
-            <button onClick={() => onTabChange?.('leads')} className="text-brand-accent hover:text-brand-accent-hover font-black flex items-center space-x-1 cursor-pointer bg-transparent border-0 uppercase"><span>View Funnel</span><ArrowUpRight className="h-3.5 w-3.5" /></button>
-          </div>
-        </div>
 
-        <div className="col-span-12 bg-white border border-brand-border-purple/20 rounded-2xl p-5 shadow-sm/5 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3 mb-4">
-              <h3 className="font-extrabold text-brand-heading text-sm flex items-center"><TrendingUp className="h-4.5 w-4.5 mr-2 text-emerald-500" /><span>Monthly Revenue Trend vs Target</span></h3>
-              <div className="flex items-center space-x-4 text-[10px] font-black uppercase">
-                <div className="flex items-center space-x-1.5"><span className="h-2.5 w-2.5 rounded-full bg-brand-accent inline-block" /><span className="text-brand-text">Actual Won (₹)</span></div>
-                <div className="flex items-center space-x-1.5"><span className="h-2.5 w-2.5 rounded-full bg-slate-300 inline-block" /><span className="text-slate-450">Target Quota (₹)</span></div>
-              </div>
-            </div>
-            {monthlyForecast.length > 0 ? (
-              <div className="relative h-28 w-full pt-1">
-                <svg className="w-full h-full overflow-visible" viewBox="0 0 600 140" preserveAspectRatio="none" onMouseLeave={() => setHoveredMonthIdx(null)}>
-                  <line x1="0" y1="20" x2="600" y2="20" stroke="#f1f5f9" strokeWidth="1" />
-                  <line x1="0" y1="60" x2="600" y2="60" stroke="#f1f5f9" strokeWidth="1" />
-                  <line x1="0" y1="100" x2="600" y2="100" stroke="#f1f5f9" strokeWidth="1" />
-                  <path d={monthlyForecast.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${130 - (p.target / Math.max(...monthlyForecast.map((x) => x.target), 1)) * 110}`).join(' ')} fill="none" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
-                  <path d={monthlyForecast.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ')} fill="none" stroke="#7957fb" strokeWidth="3.25" strokeLinecap="round" />
-                  {monthlyForecast.map((pt, idx) => {
-                    const isHovered = hoveredMonthIdx === idx;
-                    return (
-                      <g key={pt.month} className="pointer-events-none">
-                        <circle cx={pt.x} cy={pt.y} r={isHovered ? '6' : '3.5'} fill={isHovered ? '#ffffff' : '#7957fb'} stroke="#7957fb" strokeWidth={isHovered ? '3.5' : '1.5'} className="transition-all duration-150" />
-                      </g>
-                    );
-                  })}
-                  {hoveredMonthIdx !== null && (
-                    <g className="pointer-events-none">
-                      <line x1={monthlyForecast[hoveredMonthIdx].x} y1={monthlyForecast[hoveredMonthIdx].y} x2={monthlyForecast[hoveredMonthIdx].x} y2="130" stroke="#7957fb" strokeWidth="1" strokeDasharray="3,3" />
-                      <foreignObject x={monthlyForecast[hoveredMonthIdx].x - 55} y={monthlyForecast[hoveredMonthIdx].y - 65} width="110" height="60">
-                        <div className="bg-slate-900 border border-slate-800 rounded-lg p-1.5 text-center shadow-lg select-none animate-in fade-in zoom-in-95 duration-150">
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{monthlyForecast[hoveredMonthIdx].month}</p>
-                          <p className="text-[10px] font-black text-white tabular-nums">Actual: {formatINR(monthlyForecast[hoveredMonthIdx].actual * 1_00_000)}</p>
-                          <p className="text-[9px] font-bold text-slate-400 tabular-nums">Target: {formatINR(monthlyForecast[hoveredMonthIdx].target * 1_00_000)}</p>
-                        </div>
-                      </foreignObject>
-                    </g>
-                  )}
-                  {monthlyForecast.map((pt, idx) => (
-                    <rect key={`hover-${idx}`} x={pt.x - 50} y="0" width="100" height="140" fill="transparent" className="cursor-pointer" onMouseEnter={() => setHoveredMonthIdx(idx)} />
-                  ))}
-                  <defs>
-                    <linearGradient id="managerGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#7957fb" stopOpacity="0.8" />
-                      <stop offset="100%" stopColor="#7957fb" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="flex justify-between px-10 text-[9px] font-extrabold text-slate-400 mt-2">
-                  {monthlyForecast.map((pt) => <span key={pt.month}>{pt.month}</span>)}
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2">
+            {visibleRisks.map((deal) => (
+              <div
+                key={deal.deal_id}
+                onClick={() => onDealClick?.(deal.deal_id)}
+                className="cursor-pointer rounded-xl border border-border p-3 transition hover:bg-secondary/20"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-bold text-foreground">{deal.deal_name}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-muted-foreground">{deal.company || 'No company'}</p>
+                  </div>
+                  <p className="shrink-0 text-xs font-bold text-foreground tabular-nums">{formatCurrency(deal.deal_value)}</p>
+                </div>
+
+                <div className="mt-2 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Owner</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-foreground">{deal.owner_name || 'Unassigned'}</p>
+                  </div>
+                  <div className="text-right min-w-0">
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground/60 font-bold">Risk</p>
+                    <p className="mt-0.5 text-[10px] font-semibold text-status-warning truncate">{deal.risk_reason}</p>
+                  </div>
+                </div>
+
+                <div className="mt-2 flex items-center justify-between border-t border-border pt-2">
+                  <span className="text-[10px] text-muted-foreground">
+                    {deal.days_since_last_activity}d since activity
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onDealClick?.(deal.deal_id)}
+                    className="rounded-lg border border-border px-2 py-1 text-[9px] font-bold text-foreground hover:bg-secondary/40 transition"
+                  >
+                    Open
+                  </button>
                 </div>
               </div>
-            ) : (
-              <div className="h-28 flex items-center justify-center text-xs text-slate-400">No revenue trend data yet.</div>
+            ))}
+
+            {visibleRisks.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Trophy className="mx-auto h-4 w-4 mb-1" />
+                No deals at risk
+              </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Leaderboard & Risk Deals splits */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="col-span-12 lg:col-span-7 bg-white border border-brand-border-purple/20 rounded-2xl p-5 shadow-sm/5 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3 mb-4">
-              <h3 className="font-extrabold text-brand-heading text-sm flex items-center"><Award className="h-4.5 w-4.5 mr-2 text-brand-accent" /><span>Top Performing Sales Representatives</span></h3>
-              <span className="text-[9px] font-extrabold bg-slate-100 text-slate-500 px-2 py-0.5 rounded uppercase tracking-wider">Quota Attainment</span>
+      {/* ================================================================== */}
+      {/* ACTION QUEUE + ACTIVITY â€” 8/4 grid                                 */}
+      {/* ================================================================== */}
+
+      <div className="grid grid-cols-12 gap-[var(--space-4)]">
+
+        {/* Manager Action Queue */}
+        <div className="col-span-12 lg:col-span-8 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4 text-accent-color" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Manager Action Queue</h3>
+                <p className="text-[10px] text-muted-foreground">System-generated items that may need attention</p>
+              </div>
             </div>
-            <div className="space-y-3">
-              {leaderboards.map((rep) => (
-                <div key={rep.rank} className="flex items-center justify-between p-3 border border-brand-border-purple/15 rounded-xl bg-slate-50/50 hover:bg-slate-50/80 transition-colors">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-xs font-black text-brand-accent w-4">#{rep.rank}</span>
-                    <div className="h-8 w-8 rounded-full bg-brand-accent/10 border border-brand-border-purple/20 flex items-center justify-center text-[10px] font-black text-brand-accent">{rep.name.charAt(0)}</div>
-                    <div>
-                      <p className="text-xs font-extrabold text-brand-text">{rep.name}</p>
-                      <p className="text-[9px] text-slate-400 font-bold mt-0.5">{Math.round(asNumber(data.top_reps.find((t) => t.full_name === rep.name)?.deals_closed ?? 0))} deals closed</p>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('activities')}
+              className="text-[10px] font-bold text-accent-color hover:underline"
+            >
+              View Activity
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1 space-y-2">
+            {visibleAlerts.map((alert, index) => {
+              const severity = String(alert.severity || '').toLowerCase();
+              const isHigh = severity === 'high' || severity === 'critical';
+
+              return (
+                <div
+                  key={`${alert.timestamp}-${index}`}
+                  onClick={() => onTabChange?.('activities')}
+                  className={[
+                    'cursor-pointer rounded-xl border p-3 transition hover:bg-secondary/20',
+                    isHigh ? 'border-status-danger/20 bg-status-danger/10' : 'border-status-warning/20 bg-status-warning/10',
+                  ].join(' ')}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className={[
+                        'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg',
+                        isHigh ? 'bg-status-danger/10 text-status-danger' : 'bg-status-warning/10 text-status-warning',
+                      ].join(' ')}
+                    >
+                      {isHigh ? <AlertTriangle className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-extrabold text-brand-heading tabular-nums">{rep.wonFormatted}</p>
-                    <div className="w-24 bg-slate-150 h-1.5 rounded-full overflow-hidden mt-1.5 ml-auto">
-                      <div className="h-full bg-brand-accent rounded-full" style={{ width: `${rep.progress}%` }} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-foreground leading-5">{alert.message}</p>
+                      <p className="mt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground/60">
+                        {alert.severity} \u00B7 {formatUpdatedAt(alert.timestamp)}
+                      </p>
                     </div>
                   </div>
                 </div>
-              ))}
-              {leaderboards.length === 0 && <p className="text-xs text-slate-400 py-4 text-center">No rep data yet.</p>}
-            </div>
+              );
+            })}
+
+            {visibleAlerts.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Bell className="mx-auto h-4 w-4 mb-1" />
+                No manager alerts
+                <p className="mt-1 text-[10px] text-muted-foreground">Everything looks good right now.</p>
+              </div>
+            )}
           </div>
-          <div className="border-t border-brand-border-purple/15 pt-3 mt-4 flex justify-end">
-            <button onClick={() => onTabChange?.('team performance')} className="text-xs font-bold text-brand-accent hover:text-brand-accent-hover transition-colors flex items-center space-x-1 cursor-pointer bg-transparent border-0 uppercase"><span>View full leaderboard</span><ArrowUpRight className="h-3.5 w-3.5" /></button>
-          </div>
+
+          {data.deals_at_risk.length > 0 && (
+            <button
+              type="button"
+              onClick={() => onTabChange?.('pipeline')}
+              className="w-full flex items-center justify-between rounded-xl bg-secondary/10 border border-border/50 px-3 py-2.5 text-left hover:bg-secondary/20 transition"
+            >
+              <div>
+                <p className="text-xs font-bold text-foreground">{data.deals_at_risk.length} deals require review</p>
+                <p className="mt-0.5 text-[10px] text-muted-foreground">Open pipeline to review risk</p>
+              </div>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+            </button>
+          )}
         </div>
 
-        <div className="col-span-12 lg:col-span-5 bg-white border border-brand-border-purple/20 rounded-2xl p-5 shadow-sm/5 flex flex-col justify-between hover:shadow-md transition-all duration-300">
-          <div>
-            <div className="flex items-center justify-between border-b border-slate-50 pb-3 mb-4">
-              <h3 className="font-extrabold text-brand-heading text-sm flex items-center"><AlertTriangle className="h-4.5 w-4.5 mr-2 text-rose-500" /><span>Deals At Risk</span></h3>
-              <span className="text-[9px] font-extrabold bg-rose-50 text-rose-700 px-2 py-0.5 rounded border border-rose-100/50 uppercase tracking-wider">Escalated</span>
+        {/* Recent Team Activity */}
+        <div className="col-span-12 lg:col-span-4 bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]">
+          <div className="flex items-center justify-between border-b border-border pb-2">
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-accent-color" />
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">Recent Activity</h3>
+                <p className="text-[10px] text-muted-foreground">Latest CRM activity</p>
+              </div>
             </div>
-            <div className="space-y-3">
-              {riskDeals.map((deal) => (
-                <div key={deal.id} className="p-3 border border-rose-150 rounded-xl bg-rose-50/15 hover:bg-rose-50/25 transition-colors">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="text-xs font-extrabold text-brand-text leading-tight">{deal.title}</h4>
-                      <p className="text-[10px] text-brand-accent font-bold mt-1">{deal.company}</p>
-                    </div>
-                    <span className="text-xs font-black text-rose-600 tabular-nums shrink-0">{deal.value}</span>
-                  </div>
-                  <div className="flex justify-between items-center mt-3 pt-2.5 border-t border-rose-100/50 text-[10px] font-semibold text-slate-450">
-                    <span className="flex items-center gap-1.5"><span className="h-4.5 w-4.5 rounded-full bg-brand-accent/10 border border-brand-border-purple/20 flex items-center justify-center text-[8px] font-black text-brand-accent">{deal.rep.charAt(0)}</span>Owner: {deal.rep}</span>
-                    <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-black uppercase tracking-wider text-[8px]">{deal.risk}</span>
-                  </div>
+            <button
+              type="button"
+              onClick={() => onTabChange?.('activities')}
+              className="text-[10px] font-bold text-accent-color hover:underline"
+            >
+              View All
+            </button>
+          </div>
+
+          <div className="max-h-[300px] overflow-y-auto pr-1">
+            {visibleActivities.map((activity) => (
+              <button
+                key={activity.id}
+                type="button"
+                onClick={() => onTabChange?.('activities')}
+                className="flex w-full items-start gap-2.5 rounded-xl px-2 py-2.5 text-left transition hover:bg-secondary/20"
+              >
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-color/10 text-accent-color">
+                  <Activity className="h-3 w-3" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-xs font-bold text-foreground">{activity.title || activity.action}</p>
+                  <p className="mt-0.5 truncate text-[10px] capitalize text-muted-foreground">
+                    {activity.action.replace(/_/g, ' ')} \u00B7 {activity.entity_type.replace(/_/g, ' ')}
+                  </p>
+                  <p className="mt-0.5 text-[9px] text-muted-foreground">
+                    {formatUpdatedAt(activity.created_at)}
+                    {activity.created_by ? ` \u00B7 ${activity.created_by}` : ''}
+                  </p>
                 </div>
-              ))}
-              {riskDeals.length === 0 && <p className="text-xs text-slate-400 py-4 text-center">No deals currently at risk.</p>}
-            </div>
+                <ChevronRight className="mt-1 h-3 w-3 shrink-0 text-muted-foreground" />
+              </button>
+            ))}
+
+            {visibleActivities.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground text-xs font-semibold bg-secondary/10 rounded-xl border border-border/50">
+                <Activity className="mx-auto h-4 w-4 mb-1" />
+                No recent team activity
+                <p className="mt-1 text-[10px] text-muted-foreground">New CRM activity will appear here.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Manager Alerts & Signals */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-2xl p-5 shadow-sm/5 space-y-4 hover:shadow-md transition-all duration-300">
-        <h3 className="font-extrabold text-brand-heading text-xs uppercase tracking-wider flex items-center border-b border-slate-50 pb-2.5"><BellRing className="h-4.5 w-4.5 mr-2 text-brand-accent" /><span>Manager Command Alerts &amp; Signals</span></h3>
-        <div className="space-y-3">
-          {alerts.map((alert) => (
-            <div key={alert.id} className={`p-3.5 rounded-xl border text-xs font-bold flex items-start justify-between space-x-2.5 ${alert.type === 'high' || alert.type === 'warning' ? 'bg-rose-50/80 border-rose-100 text-rose-900' : alert.type === 'success' ? 'bg-emerald-50/80 border-emerald-100 text-emerald-900' : 'bg-indigo-50/50 border-brand-border-purple/25 text-brand-text'}`}>
-              <div className="flex items-start space-x-2.5">
-                {alert.type === 'high' || alert.type === 'warning' ? <ShieldAlert className="h-4.5 w-4.5 shrink-0 mt-0.5 text-rose-600" /> : alert.type === 'success' ? <CheckCircle2 className="h-4.5 w-4.5 shrink-0 mt-0.5 text-emerald-600" /> : <Sparkles className="h-4.5 w-4.5 shrink-0 mt-0.5 text-indigo-500" />}
-                <span>{alert.text}</span>
-              </div>
-              <span className={`text-[8.5px] font-black uppercase tracking-wider shrink-0 px-2 py-0.5 rounded border ${alert.type === 'high' || alert.type === 'warning' ? 'bg-rose-100/50 border-rose-200 text-rose-700' : alert.type === 'success' ? 'bg-emerald-100/50 border-emerald-200 text-emerald-700' : 'bg-indigo-100/50 border-brand-border-purple/20 text-indigo-700'}`}>{alert.time}</span>
-            </div>
-          ))}
-          {alerts.length === 0 && <p className="text-xs text-slate-400 py-2">No active alerts.</p>}
-        </div>
-      </div>
+      {/* ================================================================== */}
+      {/* BOTTOM METRICS â€” 4-column grid                                     */}
+      {/* ================================================================== */}
 
-      {/* Team Activity Logs Feed */}
-      <div className="bg-white border border-brand-border-purple/20 rounded-2xl p-5 shadow-sm/5 hover:shadow-md transition-all duration-300">
-        <h3 className="font-extrabold text-brand-heading text-xs uppercase tracking-wider mb-4 flex items-center border-b border-slate-50 pb-2.5"><Activity className="h-4.5 w-4.5 mr-2 text-brand-accent" /><span>Recent Team Activity Log</span></h3>
-        <div className="divide-y divide-slate-100">
-          {activities.map((act, idx) => (
-            <div key={idx} className="py-3 flex items-start space-x-3.5 text-xs font-semibold first:pt-0 last:pb-0">
-              <div className="h-7 w-7 rounded-full bg-brand-accent/10 border border-brand-border-purple/20 flex items-center justify-center text-[9px] font-black text-brand-accent mt-0.5 shrink-0">{act.actor.charAt(0)}</div>
-              <div className="flex-1">
-                <p className="text-brand-text/90 leading-relaxed"><span className="font-black text-brand-text">{act.actor}</span> {act.action}</p>
-                <span className="text-[9.5px] text-slate-450 font-extrabold flex items-center mt-1"><Clock className="h-3 w-3 mr-1 text-slate-400" />{act.time}</span>
-              </div>
-            </div>
-          ))}
-          {activities.length === 0 && <p className="text-xs text-slate-400 py-2">No recent activity.</p>}
+      <div className="grid grid-cols-2 gap-[var(--space-4)] lg:grid-cols-4">
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Team Members</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{data.team_metrics.total_members}</p>
+          <p className="text-[10px] text-muted-foreground">{data.team_metrics.active_reps} active reps</p>
         </div>
-        <div className="border-t border-brand-border-purple/15 mt-4 pt-3 flex justify-end">
-          <button onClick={() => onTabChange?.('reports')} className="text-xs font-bold text-brand-accent hover:text-brand-accent-hover transition-colors flex items-center space-x-1 cursor-pointer bg-transparent border-0 uppercase"><span>View all reports</span><ArrowRight className="h-3.5 w-3.5" /></button>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('pipeline')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('pipeline'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Avg Deal Size</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{formatCurrency(data.team_metrics.avg_deal_size)}</p>
+          <p className="text-[10px] text-muted-foreground">Across active pipeline</p>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('team performance')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('team performance'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Sales Cycle</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">
+            {toNumber(data.team_metrics.avg_sales_cycle_days).toFixed(0)} days
+          </p>
+          <p className="text-[10px] text-muted-foreground">Average team cycle</p>
+        </div>
+
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => onTabChange?.('forecast')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTabChange?.('forecast'); } }}
+          className="bg-card border border-border rounded-2xl p-[var(--space-4)] space-y-[var(--space-3)]"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60">Forecast Accuracy</p>
+          <p className="text-xl font-bold text-foreground tabular-nums">{formatPercent(data.team_metrics.forecast_accuracy)}</p>
+          <p className="text-[10px] text-muted-foreground">Current forecast performance</p>
         </div>
       </div>
     </div>

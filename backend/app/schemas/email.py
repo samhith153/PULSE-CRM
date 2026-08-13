@@ -133,24 +133,9 @@ class EmailSyncResultResponse(BaseModel):
     emails: list[EmailResponse] = Field(default_factory=list)
 
 
-class EmailThreadSummary(BaseModel):
-    summary: Optional[str] = None
-    summary_word: Optional[str] = None
-    sentiment: Optional[str] = None
-    intent: Optional[str] = None
-    confidence: Optional[float] = None
-    key_points: list[str] = Field(default_factory=list)
-    action_items: list[str] = Field(default_factory=list)
-    category: Optional[str] = None
-    draft_reply: Optional[str] = None
-    follow_up_suggestion: Optional[str] = None
-    follow_up_timing: Optional[str] = None
-
-
 class EmailThreadResponse(BaseModel):
     thread_id: str
     emails: list[EmailResponse] = Field(default_factory=list)
-    summary: Optional[EmailThreadSummary] = None
 
 
 class EmailHistoryResponse(BaseModel):
@@ -159,13 +144,25 @@ class EmailHistoryResponse(BaseModel):
     page_size: int
     records: list[EmailResponse] = Field(default_factory=list)
 
-from pydantic import BaseModel, EmailStr
-from uuid import UUID
-
-
 class SMTPSendRequest(BaseModel):
     receiver: EmailStr
     subject: str
     html_body: str
     external_entity_type: str | None = None
-    external_entity_id: UUID | None = None
+    external_entity_id: UUID | None = None 
+
+class EmailDraftRequest(BaseModel):
+    recipient_name: str = Field(min_length=1)
+    recipient_email: EmailStr
+    company: Optional[str] = None
+    designation: Optional[str] = None
+    purpose: str = Field(default="follow_up")
+    context: Optional[str] = None
+    external_entity_type: Optional[str] = None
+    external_entity_id: Optional[UUID] = None
+
+
+class EmailDraftResponse(BaseModel):
+    subject: str
+    body: str
+    model_version: Optional[str] = None

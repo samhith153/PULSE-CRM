@@ -1,4 +1,4 @@
-"""add ai persistence tables
+﻿"""add ai persistence tables
 
 Revision ID: 20260723_0008
 Revises: 20260723_0007

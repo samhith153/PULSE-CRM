@@ -2,17 +2,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import date, timezone
 from decimal import Decimal
 from typing import Optional, Protocol
 from uuid import UUID
 
 from app.core.config import settings
-from app.models.activity import ActivityTimeline
 from app.models.deal import Deal
 from app.models.email import Email
 from app.models.lead import Lead
-from app.utils.enums import MeetingAttendanceStatus, BestContactTimeSlot
 
 
 @dataclass(slots=True)
@@ -53,51 +51,10 @@ class RecommendationProvider(Protocol):
 
 
 class ConversationSummaryProvider(Protocol):
-    def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult: ...
+    async def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult: ...
 
 
-# -- Helper utilities for new features -------------------------------------
-
-def compute_email_opened_no_reply_flag(email_open_count: int, reply_received: bool) -> bool:
-    """Detect interested-but-stuck leads: opened emails but never replied."""
-    return email_open_count > 0 and not reply_received
-
-
-def compute_best_contact_time(activities: list[ActivityTimeline] | None = None, emails: list[Email] | None = None) -> str | None:
-    """Analyze historical successful interactions to determine the best time slot."""
-    hour_counts: dict[int, int] = {}
-
-    if activities:
-        for activity in activities:
-            if activity.created_at:
-                h = activity.created_at.hour
-                hour_counts[h] = hour_counts.get(h, 0) + 1
-
-    if emails:
-        for email in emails:
-            if email.sent_at:
-                h = email.sent_at.hour
-                hour_counts[h] = hour_counts.get(h, 0) + 1
-
-    if not hour_counts:
-        return None
-
-    # Find the most active hour
-    best_hour = max(hour_counts, key=hour_counts.get)
-
-    # Map hour to time slot
-    if 8 <= best_hour < 10:
-        return BestContactTimeSlot.MORNING_08_10.value
-    elif 10 <= best_hour < 12:
-        return BestContactTimeSlot.MORNING_10_12.value
-    elif 14 <= best_hour < 16:
-        return BestContactTimeSlot.AFTERNOON_14_16.value
-    elif 16 <= best_hour < 18:
-        return BestContactTimeSlot.AFTERNOON_16_18.value
-    else:
-        # Default to a reasonable slot if outside defined ranges
-        return BestContactTimeSlot.MORNING_10_12.value
-
+# -- Feature Extraction ----------------------------------------------------
 
 def compute_deal_value_from_lead(lead: Lead) -> float:
     """Get the deal value without triggering async lazy relationship loads."""
@@ -108,8 +65,6 @@ def compute_deal_value_from_lead(lead: Lead) -> float:
         return float(lead.estimated_value)
     return 0.0
 
-
-# -- Feature Extraction ----------------------------------------------------
 
 class FeatureExtractionService:
     def lead_features(self, lead: Lead, emails: list[Email]) -> FeatureSet:
@@ -128,7 +83,7 @@ class FeatureExtractionService:
                 "email_count": len(emails),
                 "read_email_count": sum(1 for email in emails if email.is_read),
                 "email_open_count": sum(getattr(email, "email_open_count", 0) for email in emails),
-                "email_opened_no_reply_flag": False,  # computed later with reply info
+                "email_opened_no_reply_flag": False,
             },
         )
 
@@ -168,7 +123,6 @@ class RuleBasedScorer:
         score += status_delta
         factors.append(f"Lead status contributes {status_delta:+d} points.")
 
-        # Deal value scoring
         deal_value = float(values.get("deal_value") or 0)
         if deal_value >= 100000:
             score += 20
@@ -180,7 +134,6 @@ class RuleBasedScorer:
             score += 8
             factors.append(f"Moderate deal value ${deal_value:,.0f} supports qualification.")
 
-        # Email open count scoring
         email_open_count = int(values.get("email_open_count") or 0)
         if email_open_count >= 5:
             score += 10
@@ -227,7 +180,6 @@ class RuleBasedScorer:
         factors = [f"Deal probability starts the score at {score}."]
         amount = float(values.get("amount") or 0)
 
-        # Deal value scoring
         if amount >= 100000:
             score += 15
             factors.append("Large deal amount significantly raises potential impact.")
@@ -235,7 +187,6 @@ class RuleBasedScorer:
             score += 10
             factors.append("Large deal amount raises potential impact.")
 
-        # Email open count scoring for deals
         email_open_count = int(values.get("email_open_count") or 0)
         if email_open_count >= 3:
             score += 8
@@ -279,13 +230,11 @@ class RuleBasedRecommendationProvider:
         reasons: list[str] = []
         numeric_score = score if score is not None else 50
 
-        # Deal value based recommendations
         deal_value = float(values.get("deal_value") or 0)
         if deal_value >= 100000:
             actions.append("Schedule executive-sponsored review for high-value opportunity.")
             reasons.append("The deal value exceeds $100k, requiring executive attention.")
 
-        # Email engagement based recommendations
         email_open_count = int(values.get("email_open_count") or 0)
         email_opened_no_reply = values.get("email_opened_no_reply_flag", False)
         if email_opened_no_reply and email_open_count > 0:
@@ -319,7 +268,7 @@ class RuleBasedRecommendationProvider:
 class RuleBasedConversationSummaryProvider:
     provider_name = "rule_based"
 
-    def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult:
+    async def summarize_emails(self, emails: list[Email], prompt: str | None = None) -> SummaryResult:
         ordered = sorted(emails, key=lambda item: item.sent_at or item.created_at)
         if not ordered:
             return SummaryResult(summary=prompt or "No conversation history is available yet.", bullets=[], metadata={"email_count": 0})
@@ -347,4 +296,7 @@ def get_recommendation_provider() -> RecommendationProvider:
 
 
 def get_summary_provider() -> ConversationSummaryProvider:
+    if settings.AI_PROVIDER == "groq":
+        from app.services.groq_summary_provider import GroqConversationSummaryProvider
+        return GroqConversationSummaryProvider()
     return RuleBasedConversationSummaryProvider()

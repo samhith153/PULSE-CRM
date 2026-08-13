@@ -7,12 +7,12 @@ import { motion } from 'framer-motion';
 const SecurityScreenshot = () => (
   <div style={{ padding: '20px', background: '#f8fafc' }}>
     <div style={{ background: '#fff', borderRadius: 12, padding: '20px', border: '1px solid #e2e8f0' }}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 16 }}>3 Roles · 33 Permissions</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 16 }}>3 Roles · 50 Permissions</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
         {[
-          { role: 'Admin', perms: 33, color: '#7c3aed' },
-          { role: 'Manager', perms: 30, color: '#2563eb' },
-          { role: 'Sales Rep', perms: 18, color: '#059669' },
+          { role: 'Admin', perms: 50, color: '#7c3aed' },
+          { role: 'Manager', perms: 46, color: '#2563eb' },
+          { role: 'Sales Rep', perms: 27, color: '#059669' },
         ].map((r, i) => (
           <div key={i} style={{ padding: '14px', background: `${r.color}08`, borderRadius: 10, border: `1px solid ${r.color}20`, textAlign: 'center' }}>
             <div style={{ height: 32, width: 32, borderRadius: 8, background: `${r.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
@@ -42,7 +42,7 @@ export default function SecurityRBACPage() {
       <HeroWithScreenshot
         badge="Product · Security & RBAC"
         badgeIcon={Shield}
-        title={<>3 roles. 33 permissions.<br /><span style={{ color: '#7c3aed' }}>Zero guesswork.</span></>}
+        title={<>3 roles. 50 permissions.<br /><span style={{ color: '#7c3aed' }}>Zero guesswork.</span></>}
         description="Pulse uses JWT-based authentication with role-based access control. Every endpoint is protected by permission checks using FastAPI's dependency injection. Passwords are bcrypt-hashed, tokens are short-lived, and every resource supports soft-delete for audit-safe data management."
         screenshot={<SecurityScreenshot />}
       />
@@ -59,7 +59,7 @@ export default function SecurityRBACPage() {
                 'JWT access token (30 min) + refresh token (7 days)',
                 'Passwords hashed with bcrypt via passlib',
                 'Permissions stored as resource:action strings (e.g. lead:assign)',
-                'Admin → 33 perms, Manager → 30, Sales Rep → 18',
+                'Admin → 50 perms, Manager → 46, Sales Rep → 27',
                 'Soft-delete on all 11 tables — data is never hard-deleted',
                 'Organization-level multi-tenancy on every resource',
               ].map((item, i) => (
@@ -72,14 +72,22 @@ export default function SecurityRBACPage() {
           </motion.div>
           <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.6 }}
             style={{ background: '#f8fafc', padding: 28, borderRadius: 16, border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 14 }}>All 33 permissions cover:</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 14 }}>All 50 permissions cover:</div>
             {[
-              { resource: 'Companies', actions: 'create, read, update, delete, list' },
-              { resource: 'Contacts', actions: 'create, read, update, delete, list' },
+              { resource: 'Users', actions: 'create, read, update, delete, manage_roles, activate, deactivate' },
+              { resource: 'Organizations', actions: 'create, read, update, delete' },
+              { resource: 'Companies', actions: 'create, read, update, delete' },
+              { resource: 'Contacts', actions: 'create, read, update, delete' },
               { resource: 'Leads', actions: 'create, read, update, delete, assign, convert' },
-              { resource: 'Deals', actions: 'create, read, update, delete, assign' },
+              { resource: 'Deals', actions: 'create, read, update, delete' },
+              { resource: 'Pipeline', actions: 'read, update' },
               { resource: 'Activities', actions: 'create, read, update, delete' },
-              { resource: 'Users / Roles', actions: 'manage, assign, deactivate' },
+              { resource: 'Email', actions: 'send, read, sync, gmail_connect' },
+              { resource: 'Dashboard / AI / Webhooks', actions: 'read, access, manage, upload' },
+              { resource: 'Team Performance', actions: 'view, export' },
+              { resource: 'Notifications', actions: 'read, manage' },
+              { resource: 'Reports', actions: 'view, export' },
+              { resource: 'System', actions: 'admin' },
             ].map((item, i) => (
               <div key={i} style={{ padding: '10px 14px', background: '#fff', borderRadius: 8, marginBottom: 8, border: '1px solid #e2e8f0' }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{item.resource}</div>

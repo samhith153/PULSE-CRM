@@ -8,23 +8,16 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, DBSession, require_permission
+from app.database.connection import get_db
 from app.repositories.event_repository import EventRepository
 from app.schemas.event_outbox import EventCreate, EventListResponse, EventRead
 from app.services.event_service import EventService
-
-try:
-    from app.database.connection import get_db as get_session
-except ImportError:  # pragma: no cover
-    try:
-        from app.database.connection import get_session  # type: ignore
-    except ImportError:  # pragma: no cover
-        from app.database.connection import get_async_session as get_session  # type: ignore
 
 
 router = APIRouter(tags=["Events"])
 
 
-def get_event_service(session: AsyncSession = Depends(get_session)) -> EventService:
+def get_event_service(session: AsyncSession = Depends(get_db)) -> EventService:
     return EventService(EventRepository(session))
 
 

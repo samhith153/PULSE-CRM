@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import hmac
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlencode
@@ -18,7 +17,15 @@ from app.models.email import GmailConnection
 
 class TokenCipher:
     def __init__(self) -> None:
-        key_material = settings.GMAIL_TOKEN_ENCRYPTION_KEY or settings.SECRET_KEY
+        key_material = settings.GMAIL_TOKEN_ENCRYPTION_KEY
+        if not key_material:
+            if settings.is_production:
+                raise ServiceUnavailableException(
+                    "GMAIL_TOKEN_ENCRYPTION_KEY must be set in production. "
+                    "Using SECRET_KEY for Gmail token encryption is not allowed."
+                )
+            # Dev-only fallback: use the dev secret so local dev works out of the box.
+            key_material = settings.secret_key
         digest = hashlib.sha256(key_material.encode()).digest()
         self._fernet = Fernet(base64.urlsafe_b64encode(digest))
 
@@ -83,14 +90,27 @@ class GmailClient:
         page_token: str | None = None,
         max_results: int = 100,
     ) -> dict[str, Any]:
-        params = {
+        params: dict[str, Any] = {
             "startHistoryId": start_history_id,
             "maxResults": max_results,
-            "historyTypes": ["messageAdded", "messageUpdated", "labelAdded", "labelRemoved"],
+            "historyTypes": "messageAdded",
         }
         if page_token:
             params["pageToken"] = page_token
         return await self._get("history", access_token, params=params)
+
+    async def watch(self, access_token: str, topic_name: str, label_ids: list[str] | None = None) -> dict[str, Any]:
+        """Start watching for new messages via Pub/Sub."""
+        body: dict[str, Any] = {"topicName": topic_name, "labelFilterBehavior": "INCLUDE"}
+        if label_ids:
+            body["labelIds"] = label_ids
+        else:
+            body["labelIds"] = ["INBOX"]
+        return await self._post("watch", access_token, json=body)
+
+    async def stop(self, access_token: str) -> dict[str, Any]:
+        """Stop watching for new messages."""
+        return await self._post("stop", access_token, json={})
 
     async def get_message(self, access_token: str, message_id: str) -> dict[str, Any]:
         return await self._get(f"messages/{message_id}", access_token, params={"format": "full"})
@@ -107,6 +127,11 @@ class GmailClient:
                 json=json,
             )
         if response.status_code >= 400:
+            if response.status_code in (400, 401):
+                raise ValidationException(
+                    "Gmail access token may be expired. Please reconnect Gmail in Integrations settings.",
+                    {"google_status": response.status_code, "body": response.text[:500]},
+                )
             raise ValidationException(
                 "Gmail API request failed.",
                 {"google_status": response.status_code, "body": response.text[:500]},
@@ -134,14 +159,6 @@ class GmailClient:
 
     def token_expiry(self, token_response: dict[str, Any]) -> datetime:
         return datetime.now(timezone.utc) + timedelta(seconds=int(token_response.get("expires_in") or 3600))
-
-    def verify_webhook_signature(self, body: bytes, signature: str | None) -> bool:
-        if not settings.GOOGLE_WEBHOOK_SECRET:
-            return True
-        if not signature:
-            return False
-        expected = hmac.new(settings.GOOGLE_WEBHOOK_SECRET.encode(), body, hashlib.sha256).hexdigest()
-        return hmac.compare_digest(expected, signature)
 
     def _ensure_oauth_configured(self) -> None:
         if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET or not settings.GOOGLE_REDIRECT_URI:

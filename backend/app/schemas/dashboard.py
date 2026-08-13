@@ -1,7 +1,7 @@
-﻿"""
+"""
 Dashboard and Analytics Schemas
 """
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal
 from typing import Optional
 from uuid import UUID
@@ -80,9 +80,147 @@ class DashboardStatsResponse(BaseModel):
     generated_at: datetime
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+class DashboardDealItem(BaseModel):
+    id: UUID
+    name: str
+    status: str
+    amount: Optional[Decimal] = None
+    expected_close_date: Optional[str] = None
+
+
+class DashboardOpenDealsCard(BaseModel):
+    count: int
+    recent_deals: list[DashboardDealItem] = Field(default_factory=list)
+
+
+class DashboardUntouchedDealsCard(BaseModel):
+    count: int
+    threshold_days: int
+    deal_ids: list[UUID] = Field(default_factory=list)
+
+
+class DashboardLeadsCard(BaseModel):
+    count: int
+
+
+class DashboardCallsTodayCard(BaseModel):
+    count: int
+    pending: int = 0
+    completed: int = 0
+    total: int = 0
+
+
+class DashboardTaskItem(BaseModel):
+    id: UUID
+    title: str
+    due_date: datetime
+    priority: str
+    status: str
+    overdue: bool
+    fit_score: Optional[int] = None
+
+
+class DashboardTasksCard(BaseModel):
+    count: int
+    today: int = 0
+    upcoming: int = 0
+    overdue: int = 0
+    items: list[DashboardTaskItem] = Field(default_factory=list)
+
+
+class DashboardMeetingItem(BaseModel):
+    id: UUID
+    title: str
+    start_datetime: datetime
+    end_datetime: datetime
+    status: str
+    meeting_link: Optional[str] = None
+    location: Optional[str] = None
+
+
+class DashboardMeetingsCard(BaseModel):
+    count: int
+    today: list[DashboardMeetingItem] = Field(default_factory=list)
+    upcoming: list[DashboardMeetingItem] = Field(default_factory=list)
+
+
+class DashboardPriorityQueueItem(BaseModel):
+    task_id: UUID
+    title: str
+    priority_score: int
+    label: str = "Task"
+    reason: Optional[str] = None
+    reasons: list[str] = Field(default_factory=list)
+    due_date: datetime
+    overdue: bool
+
+
+class DashboardPriorityQueueCard(BaseModel):
+    items: list[DashboardPriorityQueueItem] = Field(default_factory=list)
+
+
+class DashboardDealRiskItem(BaseModel):
+    deal_id: UUID
+    deal_name: str
+    risk_score: int
+    risk_reason: str
+    risk_level: str = "low"
+    last_activity_at: Optional[datetime] = None
+    days_since_activity: Optional[int] = None
+    amount: Optional[Decimal] = None
+    company_name: Optional[str] = None
+
+
+class DashboardDealsAtRiskCard(BaseModel):
+    items: list[DashboardDealRiskItem] = Field(default_factory=list)
+
+
+class DashboardQuotaCard(BaseModel):
+    target: Optional[Decimal] = None
+    achieved: Decimal
+    expected: Optional[Decimal] = None
+    gap_to_goal: Decimal = Decimal("0")
+    percentage: Optional[Decimal] = None
+    won_deals: int = 0
+    average_deal_size: Decimal = Decimal("0")
+    status: str
+
+
+class DashboardPipelineStage(BaseModel):
+    label: str
+    count: int
+    conversion_percentage: Decimal
+
+
+class DashboardPipelineFunnelCard(BaseModel):
+    stages: list[DashboardPipelineStage] = Field(default_factory=list)
+
+
+class DashboardWorkSummaryCard(BaseModel):
+    total: int
+    completed: int
+    completion_percentage: Decimal
+
+
+class RedesignedDashboardResponse(BaseModel):
+    open_deals: DashboardOpenDealsCard = Field(alias="openDeals")
+    untouched_deals: DashboardUntouchedDealsCard = Field(alias="untouchedDeals")
+    calls_today: DashboardCallsTodayCard = Field(alias="callsToday")
+    my_leads: DashboardLeadsCard = Field(alias="myLeads")
+    tasks: DashboardTasksCard
+    meetings: DashboardMeetingsCard
+    priority_queue: DashboardPriorityQueueCard = Field(alias="priorityQueue")
+    deals_at_risk: DashboardDealsAtRiskCard = Field(alias="dealsAtRisk")
+    quota: DashboardQuotaCard
+    pipeline_funnel: DashboardPipelineFunnelCard = Field(alias="pipelineFunnel")
+    todays_work_summary: DashboardWorkSummaryCard = Field(alias="todaysWorkSummary")
+    last_updated: datetime = Field(alias="lastUpdated")
+
+    model_config = {"populate_by_name": True}
+
+# -----------------------------------------------------------------------------
 # Admin Dashboard KPI Schemas
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 class AdminOrganizationStats(BaseModel):
     total: int
@@ -194,11 +332,131 @@ class AdminDashboardSummary(BaseModel):
     tasks: AdminTaskStats
 
 
+class AdminMetricAvailability(BaseModel):
+    value: Optional[Decimal | int | str] = None
+    available: bool = False
+    reason: str
+
+
+class AdminOverviewMetric(BaseModel):
+    current_value: Decimal
+    previous_value: Decimal
+    percentage_change: Decimal
+
+
+class AdminOverviewCards(BaseModel):
+    revenue_month: AdminOverviewMetric
+    active_users: AdminOverviewMetric
+    companies: AdminOverviewMetric
+    new_leads: AdminOverviewMetric
+
+
+class AdminRevenueTrendPoint(BaseModel):
+    month: str
+    revenue: Decimal
+    lead_count: int
+
+
+class AdminRevenueLeadSummary(BaseModel):
+    revenue_year: Decimal
+    converted_leads: int
+    contacts: int
+    tasks_pending: int
+
+
+class AdminRoleDistributionItem(BaseModel):
+    role: str
+    count: int
+
+
+class AdminUserManagement(BaseModel):
+    active_seats: int
+    invites_pending: Optional[int] = None
+    invites_pending_state: Optional[AdminMetricAvailability] = None
+    role_distribution: list[AdminRoleDistributionItem] = Field(default_factory=list)
+
+
+class AdminServiceHealthItem(BaseModel):
+    service: str
+    status: str
+    message: Optional[str] = None
+
+
+class AdminSystemHealth(BaseModel):
+    services: list[AdminServiceHealthItem] = Field(default_factory=list)
+    critical_logs_24h: Optional[int] = None
+    critical_logs_24h_state: Optional[AdminMetricAvailability] = None
+    warning_logs_24h: Optional[int] = None
+    warning_logs_24h_state: Optional[AdminMetricAvailability] = None
+
+
+class AdminDataQuality(BaseModel):
+    duplicates_detected: int
+    incomplete_fields: int
+    orphaned_leads: int
+
+
+class AdminLicenseUsage(BaseModel):
+    storage_used: Optional[int] = None
+    storage_used_state: Optional[AdminMetricAvailability] = None
+    storage_limit: Optional[int] = None
+    storage_limit_state: Optional[AdminMetricAvailability] = None
+    active_seats: int
+    seat_limit: Optional[int] = None
+    usage_percentage: Optional[Decimal] = None
+
+
+class AdminAuditLogItem(BaseModel):
+    event_type: str
+    description: Optional[str] = None
+    performed_by: Optional[str] = None
+    timestamp: datetime
+    ip_address: Optional[str] = None
+    metadata: Optional[dict] = None
+
+
+class AdminIntegrationStatus(BaseModel):
+    integration: str
+    status: str
+    last_sync: Optional[datetime] = None
+    message: Optional[str] = None
+
+
+class AdminCustomWorkflowStats(BaseModel):
+    custom_fields_active: Optional[int] = None
+    custom_fields_active_state: Optional[AdminMetricAvailability] = None
+    custom_fields_idle: Optional[int] = None
+    custom_fields_idle_state: Optional[AdminMetricAvailability] = None
+    automations_active: int
+    automations_idle: int
+    lead_scoring_usage: int
+
+
+class AdminSecurityStats(BaseModel):
+    failed_logins_24h: Optional[int] = None
+    failed_logins_24h_state: Optional[AdminMetricAvailability] = None
+    active_api_keys: Optional[int] = None
+    active_api_keys_state: Optional[AdminMetricAvailability] = None
+    unusual_exports: int
+    security_status: str
+
+
 class AdminDashboardResponse(BaseModel):
     summary: AdminDashboardSummary
+    overview: Optional[AdminOverviewCards] = None
+    revenue_trend: list[AdminRevenueTrendPoint] = Field(default_factory=list)
+    revenue_lead_summary: Optional[AdminRevenueLeadSummary] = None
     monthly_sales: list[AdminMonthlySalesPoint] = Field(default_factory=list)
     lead_sources: list[AdminLeadSourceBreakdown] = Field(default_factory=list)
     lead_funnel: list[AdminLeadFunnelStage] = Field(default_factory=list)
+    user_management: Optional[AdminUserManagement] = None
+    system_health: Optional[AdminSystemHealth] = None
+    data_quality: Optional[AdminDataQuality] = None
+    license_usage: Optional[AdminLicenseUsage] = None
+    audit_logs: list[AdminAuditLogItem] = Field(default_factory=list)
+    integrations: list[AdminIntegrationStatus] = Field(default_factory=list)
+    custom_fields: Optional[AdminCustomWorkflowStats] = None
+    security: Optional[AdminSecurityStats] = None
     top_sales_reps: list[AdminTopSalesRep] = Field(default_factory=list)
     top_companies: list[AdminTopCompany] = Field(default_factory=list)
     recent_activities: list[AdminRecentActivity] = Field(default_factory=list)
@@ -214,9 +472,9 @@ class AdminDashboardResponse(BaseModel):
     generated_at: datetime
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Manager Dashboard KPI Schemas
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 class ManagerRevenueStats(BaseModel):
     team_revenue_won: Decimal
@@ -252,7 +510,7 @@ ManagerPipelineHealth.model_rebuild()
 class RepQuotaAttainment(BaseModel):
     user_id: UUID
     full_name: str
-    assigned_target: Decimal
+    assigned_target: Optional[Decimal] = None
     revenue_generated: Decimal
     quota_achievement_pct: Decimal
     rank: int
@@ -335,9 +593,9 @@ class ManagerDashboardResponse(BaseModel):
     generated_at: datetime
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 # Sales Representative Dashboard KPI Schemas
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 
 class RepRevenueStat(BaseModel):
     total: Decimal
@@ -471,4 +729,100 @@ class SalesRepDashboardResponse(BaseModel):
     key_metrics: RepKeyMetrics
     recent_reports: list[RepRecentReport] = Field(default_factory=list)
     report_templates: list[RepReportTemplate] = Field(default_factory=list)
+    generated_at: datetime
+
+
+# -----------------------------------------------------------------------------
+# Sales Command Center (6 Core Widgets + Top KPIs)
+# -----------------------------------------------------------------------------
+
+class RepDashboardKPIs(BaseModel):
+    """Top 4 Stat Cards for Individual Sales Reps."""
+    open_deals: int = Field(default=0, description="Total open deals owned by rep")
+    untouched_deals: int = Field(default=0, description="Deals with no activity in >5 days")
+    calls_today: int = Field(default=0, description="Phone/call activities logged today")
+    leads_assigned: int = Field(default=0, description="Total active leads assigned to rep")
+
+
+class RepQuotaPace(BaseModel):
+    """Widget 5: Live Quota Progress vs Target."""
+    closed_won_revenue: Decimal = Field(default=Decimal("0.00"), description="Closed won revenue this month/quarter")
+    target_revenue: Decimal = Field(default=Decimal("50000.00"), description="Target quota set for rep")
+    attained_percentage: Decimal = Field(default=Decimal("0.0"), description="Percentage of quota completed")
+    pace_status: str = Field(default="Behind Pace", description="'On Pace' | 'Behind Pace' | 'Ahead of Pace'")
+
+
+class RepTaskItem(BaseModel):
+    """Widget 1: My Tasks Today (AI-extracted & manual)."""
+    id: UUID
+    title: str
+    due_date: date
+    status: str  # "pending" | "completed" | "overdue"
+    source: Optional[str] = "manual"  # "ai_extracted" | "manual"
+    lead_id: Optional[UUID] = None
+    deal_id: Optional[UUID] = None
+
+
+class RepMeetingItem(BaseModel):
+    """Widget 2: My Meetings Today."""
+    id: UUID
+    title: str
+    start_time: datetime
+    end_time: datetime
+    zoom_link: Optional[str] = None
+    contact_name: Optional[str] = None
+    transcript_status: Optional[str] = "pending"  # "pending" | "processing" | "completed"
+
+
+class RepPriorityLeadItem(BaseModel):
+    """Widget 3: Priority Leads (Fit + Engagement Score >= 70)."""
+    lead_id: UUID
+    first_name: str
+    last_name: str
+    company_name: Optional[str] = None
+    email: str
+    score: int
+    tier: str  # "Hot" | "Warm" | "Cold"
+    top_reason: Optional[str] = None  # e.g., "+25 Demo Requested"
+    top_reasons: Optional[list[str]] = None  # full AI reasoning list from lead_scores
+
+
+class RepDealAtRiskItem(BaseModel):
+    """Widget 4: At-Risk Deals (Stalled > 5 Days or Negative Sentiment)."""
+    deal_id: UUID
+    deal_title: str
+    value: Decimal
+    stalled_days: int
+    risk_reason: str  # "Stalled >5 Days" | "Negative Buyer Sentiment"
+    sentiment: Optional[str] = None  # "positive" | "neutral" | "negative"
+    probability: Optional[int] = None  # stored Deal.probability (win likelihood %)
+    company_name: Optional[str] = None
+    owner_name: Optional[str] = None
+
+
+class RepQuickCaptureRequest(BaseModel):
+    """Widget 6: Quick Log / Capture (Ctrl+K Hotkey)."""
+    entry_type: str  # "quick_note" | "create_lead" | "log_call"
+    content: str
+    lead_id: Optional[UUID] = None
+    deal_id: Optional[UUID] = None
+
+
+class RepQuickCaptureResponse(BaseModel):
+    status: str = "success"
+    message: str
+    created_id: Optional[UUID] = None
+
+
+class SalesRepCommandDashboardResponse(BaseModel):
+    """
+    Unified Payload returned by GET /api/v1/dashboard/me 
+    Hydrates all 6 core widgets + 4 top KPI cards in 1 single HTTP request.
+    """
+    kpis: RepDashboardKPIs
+    open_tasks: list[RepTaskItem] = Field(default_factory=list)
+    meetings_today: list[RepMeetingItem] = Field(default_factory=list)
+    priority_queue: list[RepPriorityLeadItem] = Field(default_factory=list)
+    deals_at_risk: list[RepDealAtRiskItem] = Field(default_factory=list)
+    quota_pace: RepQuotaPace
     generated_at: datetime

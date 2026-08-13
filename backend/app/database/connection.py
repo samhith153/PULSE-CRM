@@ -9,6 +9,7 @@ from typing import AsyncGenerator
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.config import settings
 
@@ -33,25 +34,38 @@ ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
 connect_args = {}
+# Disable asyncpg prepared statement cache — required for pgbouncer
+# transaction/statement pooling (e.g. Supabase pooler on port 6543).
+connect_args["statement_cache_size"] = 0
 if "localhost" not in DATABASE_URL and "127.0.0.1" not in DATABASE_URL:
     connect_args["ssl"] = ssl_context
 
-# asyncpg + PgBouncer (Supabase pooler) are incompatible with asyncpg's
-# prepared-statement cache: pgbouncer resets server-side prepared statements
-# between transactions, which desyncs asyncpg's transaction state and raises
-# "cannot use Connection.transaction() in a manually started transaction".
-connect_args["statement_cache_size"] = 0
+# SQLAlchemy's internal QueuePool keeps physical connections alive and tries to
+# reuse them across statements, which desynchronizes transaction state with
+# PgBouncer-style poolers (Supabase pooler on port 6543, transaction mode) and
+# causes the asyncpg error "cannot use Connection.transaction() in a manually
+# started transaction". When connecting through such a pooler, use NullPool so
+# every checkout gets a fresh connection and transaction state is never leaked;
+# the pooler handles connection reuse externally. Direct connections (e.g. on
+# Render) keep the normal pooled engine.
+_is_pooler = "pooler" in DATABASE_URL or ":6543" in DATABASE_URL
 
-engine = create_async_engine(
-    DATABASE_URL,
+_pool_kwargs = dict(
     connect_args=connect_args,
     echo=False,
     pool_pre_ping=True,
-    pool_size=settings.DATABASE_POOL_SIZE,
-    max_overflow=settings.DATABASE_MAX_OVERFLOW,
-    pool_recycle=settings.DATABASE_POOL_RECYCLE,
-    pool_timeout=settings.DATABASE_POOL_TIMEOUT,
 )
+if _is_pooler:
+    _pool_kwargs["poolclass"] = NullPool
+else:
+    _pool_kwargs.update(
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=settings.DATABASE_MAX_OVERFLOW,
+        pool_recycle=settings.DATABASE_POOL_RECYCLE,
+        pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+    )
+
+engine = create_async_engine(DATABASE_URL, **_pool_kwargs)
 AsyncSessionFactory = async_sessionmaker(
     bind=engine,
     class_=AsyncSession,
@@ -87,9 +101,15 @@ async def check_db_connection() -> bool:
     """Quick health check — verifies we can query the database."""
     try:
         async with engine.connect() as conn:
-            result = await conn.execute(text("SELECT current_user"))
-            user = result.scalar()
-            logger.info("Database Connected - current_user=%s", user)
+            if engine.url.drivername.startswith("sqlite"):
+                result = await conn.execute(text("SELECT 1"))
+                user = "sqlite_user"
+            else:
+                result = await conn.execute(text("SELECT current_user"))
+                user = result.scalar()
+            logger.info("Database connected - current_user=%s", user)
+            print(f"Database Connected!")
+            print(f"Current User: {user}")
         return True
     except Exception as exc:
         logger.exception(

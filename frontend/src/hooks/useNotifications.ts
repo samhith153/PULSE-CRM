@@ -1,32 +1,112 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from '@/lib/toast';
 import {
-  Notification,
+  NotificationData,
   getNotifications,
   getUnreadNotificationCount,
   markNotificationRead,
   markAllNotificationsRead,
   dismissNotification,
 } from '@/utils/api';
-import { toast } from '@/lib/toast';
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  type: string;
+  entity_type: string | null;
+  entity_id: string | null;
+}
 
 const POLL_INTERVAL_MS = 20000;
+
+function toNotification(n: NotificationData): Notification {
+  return {
+    id: n.id,
+    title: n.title,
+    message: n.message || '',
+    is_read: n.is_read,
+    created_at: n.created_at,
+    type: n.type,
+    entity_type: n.entity_type,
+    entity_id: n.entity_id,
+  };
+}
+
+let audioCtx: AudioContext | null = null;
+
+function playNotificationSound() {
+  try {
+    if (typeof window === 'undefined') return;
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    // Browsers require the context to be resumed after a user gesture.
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume().catch(() => {});
+    }
+    const now = audioCtx.currentTime;
+
+    // Two-tone chime: high then low
+    const osc1 = audioCtx.createOscillator();
+    const gain1 = audioCtx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(880, now);       // A5
+    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+    osc1.connect(gain1);
+    gain1.connect(audioCtx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.3);
+
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(1174.66, now + 0.15); // D6
+    gain2.gain.setValueAtTime(0, now);
+    gain2.gain.setValueAtTime(0.25, now + 0.15);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+    osc2.connect(gain2);
+    gain2.connect(audioCtx.destination);
+    osc2.start(now + 0.15);
+    osc2.stop(now + 0.5);
+  } catch {
+    // Audio not available ΓÇö silently ignore
+  }
+}
 
 export function useNotifications(pageSize = 20) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const mounted = useRef(true);
+  const prevUnreadRef = useRef(0);
+  const initialLoadDone = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
-      const result = await getNotifications({ page: 1, pageSize });
+      const result = await getNotifications(1, pageSize);
       if (!mounted.current) return;
-      setNotifications(result.items);
-      setUnreadCount(result.unread_count);
+      setNotifications((result.items || []).map(toNotification));
+      const newCount = result.unread_count || 0;
+      setUnreadCount(newCount);
+
+      // Play sound + show toast when unread count increases (but not on initial load)
+      if (initialLoadDone.current && newCount > prevUnreadRef.current) {
+        playNotificationSound();
+        const newest = result.items?.[0];
+        if (newest) {
+          toast.info(`${newest.title || 'New notification'}${newest.message ? `: ${newest.message}` : ''}`);
+        }
+      }
+      prevUnreadRef.current = newCount;
+      initialLoadDone.current = true;
     } catch {
-      toast.error('Failed to load notifications');
+      // Silently fail ΓÇö notifications are non-critical
     } finally {
       if (mounted.current) setLoading(false);
     }
@@ -35,9 +115,15 @@ export function useNotifications(pageSize = 20) {
   const refreshUnreadCount = useCallback(async () => {
     try {
       const count = await getUnreadNotificationCount();
-      if (mounted.current) setUnreadCount(count);
+      if (mounted.current) {
+        if (initialLoadDone.current && count > prevUnreadRef.current) {
+          playNotificationSound();
+        }
+        prevUnreadRef.current = count;
+        setUnreadCount(count);
+      }
     } catch {
-      toast.error('Failed to load unread count');
+      // Silently fail
     }
   }, []);
 
@@ -57,7 +143,6 @@ export function useNotifications(pageSize = 20) {
     try {
       await markNotificationRead(id);
     } catch {
-      toast.error('Failed to mark notification as read');
       await refresh();
     }
   }, [refresh]);
@@ -68,7 +153,6 @@ export function useNotifications(pageSize = 20) {
     try {
       await markAllNotificationsRead();
     } catch {
-      toast.error('Failed to mark all notifications as read');
       await refresh();
     }
   }, [refresh]);
@@ -80,10 +164,9 @@ export function useNotifications(pageSize = 20) {
     try {
       await dismissNotification(id);
     } catch {
-      toast.error('Failed to dismiss notification');
       await refresh();
     }
   }, [notifications, refresh]);
 
-  return { notifications, unreadCount, loading, refresh, markRead, markAllRead, dismiss };
+  return { notifications, unreadCount, loading, refresh, refreshUnreadCount, markRead, markAllRead, dismiss };
 }

@@ -4,7 +4,10 @@ Uses Groq (free tier) with a knowledge base to answer CRM-related questions.
 """
 from __future__ import annotations
 
+import asyncio
+import html
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +19,29 @@ from app.core.config import settings
 from app.schemas.assistant import AssistantChatRequest, AssistantChatResponse
 
 router = APIRouter(dependencies=[Depends(require_permission("ai:access"))])
+
+# ---------------------------------------------------------------------------
+# Output sanitization — treat ALL LLM output as untrusted
+# ---------------------------------------------------------------------------
+
+_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _sanitize_response(text: str) -> str:
+    """Strip any HTML tags the model might emit and unescape entities.
+
+    The frontend renders assistant output as plain React text (auto-escaped),
+    but we enforce text-only at the source so a future markdown/HTML renderer
+    cannot accidentally introduce stored XSS.
+    """
+    # Remove HTML tags entirely
+    text = _TAG_RE.sub("", text)
+    # Decode any HTML entities the model may have produced
+    text = html.unescape(text)
+    # Collapse excessive whitespace while preserving intentional newlines
+    text = re.sub(r"[^\S\n]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 # ---------------------------------------------------------------------------
 # Knowledge base loading (loaded once at import time)
@@ -122,15 +148,22 @@ def _format_knowledge_base() -> str:
     return "\n\n".join(sections)
 
 
+_groq_client: Groq | None = None
+
+
 def _get_client() -> Groq:
-    """Get or create the Groq client."""
+    """Get or create the Groq client (cached singleton)."""
+    global _groq_client
+    if _groq_client is not None:
+        return _groq_client
     api_key = settings.ASSISTANT_API_KEY
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Assistant API key is not configured. Set ASSISTANT_API_KEY in your .env file.",
         )
-    return Groq(api_key=api_key)
+    _groq_client = Groq(api_key=api_key)
+    return _groq_client
 
 
 def _get_suggestions(user_message: str, response_text: str) -> list[str]:
@@ -208,10 +241,15 @@ async def chat(
 
 ## PULSE CRM Knowledge Base
 {kb_str}
+
+IMPORTANT: Respond in plain text only. Do NOT use HTML tags, markdown bold/italic,
+or any markup. Use natural paragraphs and bullet points with plain text formatting.
+Never include <script>, <img>, <a>, or any HTML elements in your response.
 """
 
     try:
-        completion = client.chat.completions.create(
+        completion = await asyncio.to_thread(
+            client.chat.completions.create,
             model=settings.ASSISTANT_MODEL,
             messages=[
                 {"role": "system", "content": system_message},
@@ -231,6 +269,9 @@ async def chat(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred. Please try again.",
         )
+
+    # Sanitize — strip any HTML/markup the model may have emitted
+    response_text = _sanitize_response(response_text)
 
     suggestions = _get_suggestions(payload.message, response_text)
 

@@ -7,6 +7,7 @@ No N+1 queries.
 """
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
@@ -26,7 +27,7 @@ from app.utils.enums import DealStatus
 
 
 # ── thresholds (no hardcoded business values — all configurable here) ─────────
-HIGH_VALUE_LEAD_SCORE     = 90
+HIGH_VALUE_LEAD_SCORE     = 70   # immediate actions: leads scoring >70 qualify
 HIGH_VALUE_DEAL_AMOUNT    = Decimal("100_000")
 HIGH_PROB_THRESHOLD       = 80
 NO_ACTIVITY_DAYS          = 3
@@ -254,49 +255,49 @@ class AIInsightsRepository:
                 *extra,
             ]
 
-        async def _scalar(stmt) -> float:
-            r = await self.db.execute(stmt)
-            return float(r.scalar_one() or 0)
-
-        # Lead quality: avg lead score (0-100)
+        # Build all statements (independent of each other)
         lq_stmt = (
             select(func.coalesce(func.avg(LeadScore.overall_score), 0))
-            .select_from(Lead) #explicitly set the base table first
             .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
             .where(*self._active_leads(organization_id))
         )
-        lead_quality = await _scalar(lq_stmt)
-
-        # Avg probability of open deals
         ap_stmt = select(func.coalesce(func.avg(Deal.probability), 0)).where(
             *self._open_deals(organization_id)
         )
-        avg_prob = await _scalar(ap_stmt)
-
-        # Recent activities (count in last 30 days, capped at 100)
         act_stmt = select(func.count(ActivityTimeline.id)).where(
             ActivityTimeline.organization_id == organization_id,
             ActivityTimeline.created_at >= month_ago,
         )
-        raw_act = float((await self.db.execute(act_stmt)).scalar_one() or 0)
-        recent_activities = min(raw_act / max(raw_act, 1) * 100, 100) if raw_act > 0 else 0
-
-        # Pipeline coverage: open_pipeline / (won_revenue * 1.2) capped at 100
         open_pipe_stmt = select(func.coalesce(func.sum(Deal.amount), 0)).where(
             *self._open_deals(organization_id)
         )
         won_rev_stmt = select(func.coalesce(func.sum(Deal.amount), 1)).where(
             *_deal_base(Deal.status == DealStatus.WON.value)
         )
-        open_pipe = float((await self.db.execute(open_pipe_stmt)).scalar_one() or 0)
-        won_rev   = float((await self.db.execute(won_rev_stmt)).scalar_one() or 1)
-        coverage_ratio = min((open_pipe / (won_rev * 1.2)) * 100, 100)
-
-        # Win rate
-        won_stmt  = select(func.count(Deal.id)).where(*_deal_base(Deal.status == DealStatus.WON.value))
+        won_stmt = select(func.count(Deal.id)).where(*_deal_base(Deal.status == DealStatus.WON.value))
         lost_stmt = select(func.count(Deal.id)).where(*_deal_base(Deal.status == DealStatus.LOST.value))
-        won  = float((await self.db.execute(won_stmt)).scalar_one() or 0)
-        lost = float((await self.db.execute(lost_stmt)).scalar_one() or 0)
+
+        # Run all 7 queries concurrently
+        _lq, _ap, _ra, _op, _wr, _w, _l = await asyncio.gather(
+            self.db.execute(lq_stmt),
+            self.db.execute(ap_stmt),
+            self.db.execute(act_stmt),
+            self.db.execute(open_pipe_stmt),
+            self.db.execute(won_rev_stmt),
+            self.db.execute(won_stmt),
+            self.db.execute(lost_stmt),
+        )
+
+        # Post-process
+        lead_quality = float(_lq.scalar_one() or 0)
+        avg_prob = float(_ap.scalar_one() or 0)
+        raw_act = float(_ra.scalar_one() or 0)
+        recent_activities = min(raw_act / max(raw_act, 1) * 100, 100) if raw_act > 0 else 0
+        open_pipe = float(_op.scalar_one() or 0)
+        won_rev = float(_wr.scalar_one() or 1)
+        coverage_ratio = min((open_pipe / (won_rev * 1.2)) * 100, 100)
+        won = float(_w.scalar_one() or 0)
+        lost = float(_l.scalar_one() or 0)
         win_rate = (won / max(won + lost, 1)) * 100
 
         return {
@@ -319,10 +320,6 @@ class AIInsightsRepository:
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
         week_end = today_start + timedelta(days=7)
 
-        async def _count(stmt) -> int:
-            r = await self.db.execute(stmt)
-            return int(r.scalar_one() or 0)
-
         def _base(*extra):
             q = select(func.count(Deal.id)).where(
                 Deal.organization_id == organization_id,
@@ -336,39 +333,48 @@ class AIInsightsRepository:
                 q = q.where(Deal.owner_id.in_(team_ids))
             return q
 
-        urgent_deals = await _count(_base(
+        # Build all 6 statements (independent)
+        urgent_stmt = _base(
             Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
             Deal.probability >= HIGH_PROB_THRESHOLD,
-        ))
-        overdue_followups = await _count(_base(
+        )
+        overdue_stmt = _base(
             Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
             Deal.expected_close_date < now.date(),
-        ))
-        closing_this_week = await _count(_base(
+        )
+        closing_stmt = _base(
             Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
             Deal.expected_close_date >= today_start.date(),
             Deal.expected_close_date < week_end.date(),
-        ))
-        high_value = await _count(_base(
+        )
+        high_val_stmt = _base(
             Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
             Deal.amount >= SUPER_HIGH_VALUE_DEAL,
-        ))
-
-        # meetings & calls today from activity timeline
+        )
         act_base = select(func.count(ActivityTimeline.id)).where(
             ActivityTimeline.organization_id == organization_id,
             ActivityTimeline.created_at >= today_start,
         )
-        meetings = await _count(act_base.where(ActivityTimeline.action.in_(["meeting", "meeting_scheduled"])))
-        calls    = await _count(act_base.where(ActivityTimeline.action.in_(["call", "call_logged"])))
+        meetings_stmt = act_base.where(ActivityTimeline.action.in_(["meeting", "meeting_scheduled"]))
+        calls_stmt = act_base.where(ActivityTimeline.action.in_(["call", "call_logged"]))
+
+        # Run all 6 queries concurrently
+        _urg, _ovd, _clo, _hv, _mtg, _cal = await asyncio.gather(
+            self.db.execute(urgent_stmt),
+            self.db.execute(overdue_stmt),
+            self.db.execute(closing_stmt),
+            self.db.execute(high_val_stmt),
+            self.db.execute(meetings_stmt),
+            self.db.execute(calls_stmt),
+        )
 
         return {
-            "urgent_deals": urgent_deals,
-            "follow_ups": overdue_followups,
-            "meetings": meetings,
-            "calls": calls,
-            "closing_this_week": closing_this_week,
-            "high_value_opportunities": high_value,
+            "urgent_deals": int(_urg.scalar_one() or 0),
+            "follow_ups": int(_ovd.scalar_one() or 0),
+            "meetings": int(_mtg.scalar_one() or 0),
+            "calls": int(_cal.scalar_one() or 0),
+            "closing_this_week": int(_clo.scalar_one() or 0),
+            "high_value_opportunities": int(_hv.scalar_one() or 0),
         }
 
     # ── 5. High-value deals ───────────────────────────────────────────────────

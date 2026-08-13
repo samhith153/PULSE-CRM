@@ -23,6 +23,7 @@ class DealRepository(BaseRepository[Deal]):
             select(Deal)
             .where(
                 Deal.organization_id == organization_id,
+                Deal.is_active.is_(True),
                 Deal.is_deleted.is_(False),
             )
             .options(
@@ -35,6 +36,19 @@ class DealRepository(BaseRepository[Deal]):
 
     async def get_active_by_id(self, deal_id: UUID, organization_id: UUID) -> Optional[Deal]:
         stmt = self._base_query(organization_id).where(Deal.id == deal_id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_active_by_id_light(self, deal_id: UUID, organization_id: UUID) -> Optional[Deal]:
+        """Lightweight fetch – skips relationship eager-loading (use for writes/moves)."""
+        stmt = (
+            select(Deal)
+            .where(
+                Deal.organization_id == organization_id,
+                Deal.is_deleted.is_(False),
+                Deal.id == deal_id,
+            )
+        )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
@@ -85,7 +99,6 @@ class DealRepository(BaseRepository[Deal]):
                     Deal.name.ilike(term),
                     Deal.description.ilike(term),
                     Deal.notes.ilike(term),
-                    Deal.currency.ilike(term),
                 )
             )
 

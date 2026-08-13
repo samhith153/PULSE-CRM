@@ -1,4 +1,4 @@
-"""
+﻿"""
 Deal Model
 Represents an active sales opportunity derived from a lead or created directly.
 """
@@ -33,9 +33,11 @@ class Deal(Base, TenantMixin):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(50), default="open", nullable=False, index=True)
     amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
+    value: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2), nullable=True)
     currency: Mapped[str] = mapped_column(String(3), default="USD", nullable=False)
     expected_close_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True, index=True)
     probability: Mapped[int] = mapped_column(Integer, default=50, nullable=False)
+    sentiment: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     close_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     closed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -83,6 +85,7 @@ class Deal(Base, TenantMixin):
         index=True,
     )
     priority: Mapped[Optional[str]] = mapped_column(String(20), nullable=True, default=None)
+    sentiment: Mapped[Optional[str]] = mapped_column(String(50), nullable=True, default=None)
 
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
@@ -109,7 +112,9 @@ class Deal(Base, TenantMixin):
     @property
     def deal_value(self) -> Decimal | None:
         """Alias for amount to expose deal_value consistently."""
-        return self.amount
+        return self.value if self.value is not None else self.amount
 
     def __repr__(self) -> str:
         return f"<Deal id={self.id} name={self.name!r} status={self.status!r}>"
+
+

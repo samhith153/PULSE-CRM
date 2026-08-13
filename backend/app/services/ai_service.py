@@ -160,7 +160,7 @@ class AIService:
     async def conversation_summary(self, organization_id: UUID, thread_id: str) -> AIConversationSummaryResponse:
         self._ensure_enabled()
         emails = await self.email_repo.list_thread_history(organization_id, thread_id)
-        result = self.summarizer.summarize_emails(emails)
+        result = await self.summarizer.summarize_emails(emails)
         previous = await self.summary_repo.latest_for_thread(organization_id, thread_id)
         await self.summary_repo.create(
             organization_id=organization_id,
@@ -187,7 +187,7 @@ class AIService:
         email = await self.email_repo.get_by_id_in_org(organization_id, email_id)
         if not email:
             raise NotFoundException("Email", email_id)
-        result = self.summarizer.summarize_emails([email])
+        result = await self.summarizer.summarize_emails([email])
         previous = await self.summary_repo.latest_for_email(organization_id, email_id)
         await self.summary_repo.create(
             organization_id=organization_id,
@@ -212,6 +212,34 @@ class AIService:
 
     async def recommendations(self, organization_id: UUID, entity_type: str, entity_id: UUID | None = None) -> AIRecommendationResponse:
         self._ensure_enabled()
+        if entity_id and entity_type == "lead":
+            # Use the unified weighted formula engine via RecommendationService
+            from app.services.recommendation_service import RecommendationService
+            rec_svc = RecommendationService(self.db)
+            result = await rec_svc.get_for_lead(entity_id, organization_id)
+            if result:
+                return AIRecommendationResponse(
+                    entity_type=entity_type,
+                    entity_id=entity_id,
+                    status="generated",
+                    recommendations=[result.get("recommended_action", "")],
+                    reasoning=[result.get("reason", "")],
+                    metadata={
+                        "current_score": result.get("current_score", 0),
+                        "current_stage": result.get("current_stage", ""),
+                        "all_candidates": result.get("all_candidates", []),
+                    },
+                    generated_at=datetime.now(timezone.utc),
+                )
+            return AIRecommendationResponse(
+                entity_type=entity_type,
+                entity_id=entity_id,
+                status="no_recommendation",
+                recommendations=["No recommendation available for this lead."],
+                reasoning=["Lead may be in a terminal stage or insufficient data."],
+                metadata={},
+                generated_at=datetime.now(timezone.utc),
+            )
         if entity_id:
             action = await self.next_best_action(organization_id, entity_type, entity_id)
             return AIRecommendationResponse(
@@ -270,7 +298,7 @@ class AIService:
 
     async def summarize(self, organization_id: UUID, entity_type: str, prompt: str | None = None) -> SummaryResponse:
         self._ensure_enabled()
-        result = self.summarizer.summarize_emails([], prompt)
+        result = await self.summarizer.summarize_emails([], prompt)
         return SummaryResponse(
             entity_type=entity_type,
             entity_id=None,

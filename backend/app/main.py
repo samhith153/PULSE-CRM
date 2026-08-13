@@ -2,16 +2,6 @@
 KALNET PULSE CRM - FastAPI Application Factory
 """
 import asyncio
-import os
-import sys
-
-# Monorepo layout: the `ai` package lives at the repository root, while this
-# service is run from `backend/` (Render uses rootDir: backend). Ensure the
-# repository root is on sys.path so `import ai...` resolves both locally and
-# in production, instead of failing with ModuleNotFoundError at import time.
-_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-if _REPO_ROOT not in sys.path:
-    sys.path.insert(0, _REPO_ROOT)
 
 from contextlib import asynccontextmanager
 
@@ -33,7 +23,7 @@ from app.middlewares.exception_handler import (
 )
 from app.middlewares.logging import RequestLoggingMiddleware
 from app.middlewares.private_network import PrivateNetworkAccessMiddleware
-from app.middlewares.rate_limit import RateLimitMiddleware
+from app.middlewares.rate_limit import AuthRateLimitMiddleware, RateLimitMiddleware, SecurityHeadersMiddleware
 from app.middlewares.request_id import RequestIDMiddleware
 from app.services.event_bus import register_default_consumers
 from app.services.event_worker import EventWorker
@@ -47,25 +37,57 @@ scheduler = AsyncIOScheduler()
 event_worker = EventWorker()
 
 
+_outbox_backoff: int = 0
+
 async def process_event_outbox():
+    global _outbox_backoff
     try:
-        processed = await event_worker.run_once(batch_size=100)
+        processed = await event_worker.run_once(batch_size=50)
         if processed:
             logger.info("Event outbox: processed %d event(s).", processed)
+        _outbox_backoff = 0
     except Exception as exc:
-        logger.warning("Event outbox processing failed: %s", exc)
+        _outbox_backoff = min(_outbox_backoff + 5, 60)
+        logger.warning("Event outbox processing failed: %s (backoff %ds)", exc, _outbox_backoff)
+        await asyncio.sleep(_outbox_backoff)
 
 
-async def recompute_features():
-    """Async batch job: run feature recompute subprocess per org, then
-    rescore every lead.  Runs via APScheduler AsyncIOScheduler (no
-    asyncio.run needed — we're already in the event loop).
+async def refresh_gmail_watches():
+    """Re-establish Gmail Pub/Sub watches for all active connections.
+    Runs on startup and every 6 hours via APScheduler.
     """
-    from app.services.feature_recompute_service import recompute_lead_features
+    from app.database.connection import AsyncSessionFactory
+    from app.services.email_service import EmailService
+
+    try:
+        async with AsyncSessionFactory() as db:
+            service = EmailService(db)
+            refreshed = await service.refresh_watch_for_all_connections()
+            await db.commit()
+            return refreshed
+    except Exception as exc:
+        logger.warning("Gmail watch refresh failed: %s", exc)
+        return 0
+
+
+async def daily_lead_assessment():
+    """Daily batch job: reassess leads whose decay changed or who missed scoring.
+    Runs via APScheduler cron at 12:00 AM. Uses the same unified pipeline.
+
+    Optimizations:
+    - Batch-fetches email stats for all leads in a single DB query instead of
+      one query per lead (reduces N+1 → 1 query).
+    - Batch-fetches latest inbound timestamps for all leads in a single query.
+    """
+    from datetime import datetime, timezone
+    from app.services.ai_pipeline import run_lead_assessment
+    from app.services.email_analytics import EmailStatsService
     from app.database.connection import AsyncSessionFactory
     from app.models.lead import Lead
-    from app.services.lead_scoring_service import LeadScoringService
-    from sqlalchemy import select, text
+    from app.models.lead_score import LeadScore
+    from app.models.feature_vector import FeatureVector
+    from app.models.email import Email
+    from sqlalchemy import desc, func, select, text
     from uuid import UUID
 
     try:
@@ -77,83 +99,142 @@ async def recompute_features():
         return
 
     for org_id in org_ids:
-        # Run the subprocess in a thread so the event loop stays responsive
-        try:
-            ok = await asyncio.to_thread(recompute_lead_features, org_id)
-            if not ok:
-                logger.warning("Feature recompute failed for org %s.", org_id)
-            else:
-                logger.info("Feature recompute completed for org %s.", org_id)
-        except Exception as exc:
-            logger.warning("Feature recompute exception for org %s: %s", org_id, exc)
-
-        # Rescore all leads for this org in a fresh session
         try:
             async with AsyncSessionFactory() as db:
-                result = await db.execute(
-                    select(Lead.id).where(
-                        Lead.organization_id == UUID(org_id),
+                uuid_org = UUID(org_id)
+                # Get active leads with their scores and feature vectors
+                stmt = (
+                    select(Lead.id, Lead.status, LeadScore.id.label("score_id"),
+                           LeadScore.scored_at, FeatureVector.engagement_decay_penalty)
+                    .outerjoin(LeadScore, (LeadScore.lead_id == Lead.id) & (LeadScore.organization_id == Lead.organization_id))
+                    .outerjoin(FeatureVector, (FeatureVector.lead_id == Lead.id) & (FeatureVector.organization_id == Lead.organization_id))
+                    .where(
+                        Lead.organization_id == uuid_org,
                         Lead.is_active.is_(True),
                         Lead.is_deleted.is_(False),
                     )
                 )
-                lead_ids = [row[0] for row in result.all()]
-                svc = LeadScoringService(db)
-                scored = 0
-                for lid in lead_ids:
-                    try:
-                        ls = await svc.compute_and_store_scores(lid, UUID(org_id))
-                        if ls:
-                            scored += 1
-                    except Exception:
-                        pass
+                result = await db.execute(stmt)
+                leads = result.all()
+
+                lead_ids = [lead_row.id for lead_row in leads]
+
+                # ── Batch email stats (1 query instead of N) ─────────────
+                email_svc = EmailStatsService(db)
+                all_email_stats = await email_svc.batch_get_lead_email_stats(lead_ids, uuid_org)
+
+                # ── Batch latest inbound timestamps (1 query instead of N) ─
+                latest_inbound_stmt = (
+                    select(Email.external_entity_id, func.max(Email.sent_at).label("latest_inbound_at"))
+                    .where(
+                        Email.organization_id == uuid_org,
+                        Email.external_entity_type == "lead",
+                        Email.external_entity_id.in_(lead_ids),
+                        Email.direction == "inbound",
+                        Email.is_active.is_(True),
+                    )
+                    .group_by(Email.external_entity_id)
+                )
+                latest_inbound_result = await db.execute(latest_inbound_stmt)
+                latest_inbound_map = {
+                    row[0]: row[1] for row in latest_inbound_result
+                }
+
+                assessed = 0
+                for lead_row in leads:
+                    lead_id = lead_row.id
+                    scored_at = lead_row.scored_at
+                    stored_decay = lead_row.engagement_decay_penalty
+
+                    needs_assessment = False
+
+                    # (a) Never scored
+                    if scored_at is None:
+                        needs_assessment = True
+
+                    if not needs_assessment:
+                        # (b) Decay changed: compute current days_since_last_inbound
+                        stats = all_email_stats.get(lead_id, {})
+                        last_inbound = stats.get("last_inbound_at")
+                        if last_inbound:
+                            now = datetime.now(timezone.utc)
+                            if last_inbound.tzinfo is None:
+                                last_inbound = last_inbound.replace(tzinfo=timezone.utc)
+                            days = (now - last_inbound).days
+                            # Compute current decay penalty
+                            if days <= 3:
+                                current_decay = 0
+                            elif days <= 7:
+                                current_decay = -5
+                            elif days <= 14:
+                                current_decay = -10
+                            elif days <= 30:
+                                current_decay = -20
+                            else:
+                                current_decay = -30
+                            if current_decay != (stored_decay or 0):
+                                needs_assessment = True
+
+                    if not needs_assessment:
+                        # (c) Missed event: latest inbound newer than scored_at
+                        latest_inbound = latest_inbound_map.get(lead_id)
+                        if latest_inbound and scored_at and latest_inbound > scored_at:
+                            needs_assessment = True
+
+                    if needs_assessment:
+                        try:
+                            await run_lead_assessment(
+                                db, lead_id, uuid_org, None,
+                                trigger="daily_refresh",
+                            )
+                            assessed += 1
+                        except Exception as exc:
+                            logger.warning(
+                                "Daily assessment failed for lead %s: %s", lead_id, exc
+                            )
+
                 await db.commit()
-                logger.info("Rescored %d leads for org %s.", scored, org_id)
+                logger.info("Daily assessment: %d leads reassessed for org %s", assessed, org_id)
         except Exception as exc:
-            logger.warning("Rescoring failed for org %s: %s", org_id, exc)
+            logger.warning("Daily assessment failed for org %s: %s", org_id, exc)
 
-
-async def poll_gmail_replies():
-    """Poll connected Gmail accounts for new inbound messages / replies."""
-    from sqlalchemy import select
-
-    from app.database.connection import AsyncSessionFactory
-    from app.models.email import GmailConnection
-    from app.services.email_service import EmailService
-
-    try:
-        async with AsyncSessionFactory() as db:
-            result = await db.execute(
-                select(GmailConnection).where(GmailConnection.is_active.is_(True))
-            )
-            connections = list(result.scalars().all())
-            if not connections:
-                return
-            svc = EmailService(db)
-            for organization_id in {c.organization_id for c in connections}:
-                try:
-                    await svc.sync_all_connections(organization_id, None)
-                    await db.commit()
-                except Exception as exc:
-                    await db.rollback()
-                    logger.warning("Gmail polling failed for org %s: %s", organization_id, exc)
-    except Exception as exc:
-        logger.warning("Gmail polling failed: %s", exc)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     register_default_consumers()
+    logger.info(
+        "Starting %s v%s [%s]",
+        settings.APP_NAME,
+        settings.APP_VERSION,
+        settings.ENVIRONMENT,
+    )
     logger.info("Application starting")
 
-    scheduler.add_job(recompute_features, "interval", minutes=60)
-    scheduler.add_job(process_event_outbox, "interval", seconds=15)
-    scheduler.add_job(poll_gmail_replies, "interval", minutes=5)
+    scheduler.add_job(daily_lead_assessment, "cron", hour=0, minute=0)
+    scheduler.add_job(process_event_outbox, "interval", seconds=30, max_instances=1, misfire_grace_time=60)
+    scheduler.add_job(refresh_gmail_watches, "interval", hours=6, max_instances=1, misfire_grace_time=300)
     scheduler.start()
 
-    yield
+    # Re-establish Gmail Pub/Sub watches on startup
+    await refresh_gmail_watches()
 
-    scheduler.shutdown()
+    # Health-check: verify AI service is reachable on startup
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=5.0) as hc:
+            resp = await hc.get(f"{settings.AI_SERVICE_URL}/health")
+            if resp.status_code == 200:
+                logger.info("AI service reachable at %s", settings.AI_SERVICE_URL)
+            else:
+                logger.warning("AI service returned %d at %s — scoring/recommendations may fail", resp.status_code, settings.AI_SERVICE_URL)
+    except Exception as exc:
+        logger.warning("AI service NOT reachable at %s — scoring/recommendations will be unavailable: %s", settings.AI_SERVICE_URL, exc)
+
+    yield
+    scheduler.shutdown(wait=False)
+    from app.services.ai_client import close_shared_client
+    await close_shared_client()
     logger.info("Application shutdown complete.")
 
 
@@ -170,8 +251,14 @@ def create_app() -> FastAPI:
 
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuthRateLimitMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(GZipMiddleware, minimum_size=1000)
+    app.add_middleware(PrivateNetworkAccessMiddleware)
+    # CORSMiddleware registered LAST so it is outermost: rate-limit 429
+    # responses (which bypass inner middlewares) still receive correct,
+    # credentials-aware CORS headers instead of a hand-rolled "*" policy.
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
@@ -180,7 +267,6 @@ def create_app() -> FastAPI:
         allow_headers=settings.cors_headers_list,
         expose_headers=["*"],
     )
-    app.add_middleware(PrivateNetworkAccessMiddleware)
 
     app.add_exception_handler(PulseCRMException, pulse_exception_handler)
     app.add_exception_handler(RequestValidationError, validation_exception_handler)

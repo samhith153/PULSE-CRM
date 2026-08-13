@@ -1,10 +1,10 @@
-"""
+﻿"""
 Contact Repository
 """
 from typing import List, Optional, Tuple
 from uuid import UUID
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -31,7 +31,18 @@ class ContactRepository(BaseRepository[Contact]):
         self, email: str, organization_id: UUID
     ) -> Optional[Contact]:
         stmt = self._base_query(organization_id).where(
-            Contact.email == email.lower()
+            func.lower(Contact.email) == email.lower()
+        )
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+
+    async def get_by_phone_in_org(self, phone: str, organization_id: UUID) -> Optional[Contact]:
+        normalized = ''.join(ch for ch in phone if ch.isdigit())
+        if not normalized:
+            return None
+        stmt = self._base_query(organization_id).where(
+            func.regexp_replace(func.coalesce(Contact.phone, ''), r'\D+', '', 'g') == normalized
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -52,9 +63,12 @@ class ContactRepository(BaseRepository[Contact]):
         company_id: Optional[UUID],
         page: int,
         page_size: int,
+        owner_id: Optional[UUID] = None,
     ) -> Tuple[List[Contact], int]:
         stmt = self._base_query(organization_id)
 
+        if owner_id:
+            stmt = stmt.where(Contact.owner_id == owner_id)
         if company_id:
             stmt = stmt.where(Contact.company_id == company_id)
 
