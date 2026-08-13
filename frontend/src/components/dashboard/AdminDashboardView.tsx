@@ -869,17 +869,17 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             <div className="space-y-3 mt-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-medium">Active Seats</span>
-                <span className="font-semibold text-foreground tabular-nums">{s.users.active} / {s.users.total || 10}</span>
+                <span className="font-semibold text-foreground tabular-nums">{data.user_management?.active_seats ?? s.users.active} / {s.users.total || 10}</span>
               </div>
               <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                 <div 
                   className="h-full rounded-full bg-accent-color transition-all duration-500"
-                  style={{ width: `${Math.min(100, (s.users.active / (s.users.total || 10)) * 100)}%` }}
+                  style={{ width: `${Math.min(100, ((data.user_management?.active_seats ?? s.users.active) / (s.users.total || 10)) * 100)}%` }}
                 />
               </div>
               <div className="border-t border-border/40 pt-3 flex justify-between items-center text-[10px] text-muted-foreground/80">
-                <span>Invites Pending: <strong className="text-accent-color font-semibold">3</strong></span>
-                <span>Roles: Admin (1), Mgr (2), Rep (3)</span>
+                <span>Invites Pending: <strong className="text-accent-color font-semibold">{data.user_management?.invites_pending ?? 0}</strong></span>
+                <span>{data.user_management?.role_distribution?.map(r => `${r.role_name} (${r.count})`).join(', ') ?? 'No roles assigned'}</span>
               </div>
             </div>
           </motion.div>
@@ -898,7 +898,7 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-color opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-color"></span>
                 </span>
-                99.98%
+                {(data.system_health?.services?.every(s => s.status === 'operational') ?? true) ? 'All OK' : 'Issues Found'}
               </div>
             </div>
             <div>
@@ -907,21 +907,30 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             </div>
             
             <div className="space-y-2.5 text-xs mt-1">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
-                <span className="text-muted-foreground">API Gateway</span>
-                <span className="font-semibold text-accent-color">Operational</span>
-              </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
-                <span className="text-muted-foreground">Async Workers</span>
-                <span className="font-semibold text-accent-color">100% Load OK</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Telephony API</span>
-                <span className="font-semibold text-status-warning-text">Degraded (110ms)</span>
-              </div>
+              {(data.system_health?.services ?? []).length > 0 ? (
+                data.system_health!.services.slice(0, 3).map((svc) => (
+                  <div key={svc.service} className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground">{svc.service}</span>
+                    <span className={`font-semibold ${svc.status === 'operational' ? 'text-accent-color' : svc.status === 'degraded' ? 'text-status-warning-text' : 'text-destructive'}`}>
+                      {svc.status === 'operational' ? 'Operational' : svc.status === 'degraded' ? `Degraded` : 'Down'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
+                    <span className="text-muted-foreground">API Gateway</span>
+                    <span className="font-semibold text-accent-color">Operational</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">System</span>
+                    <span className="font-semibold text-accent-color">No health data</span>
+                  </div>
+                </>
+              )}
               <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center justify-between text-[10px] text-muted-foreground/80">
-                <span>Logs (24h): <strong className="text-foreground">0 Critical</strong></span>
-                <span className="text-status-warning-text font-semibold">2 Warnings</span>
+                <span>Logs (24h): <strong className="text-foreground">{data.system_health?.critical_logs_24h ?? 0} Critical</strong></span>
+                <span className="text-status-warning-text font-semibold">{data.system_health?.warning_logs_24h ?? 0} Warnings</span>
               </div>
             </div>
           </motion.div>
@@ -935,9 +944,16 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
               <div className="grid size-9 place-items-center rounded-xl bg-secondary text-status-success-text">
                 <Database size={18} />
               </div>
-              <span className="rounded-full bg-status-success-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-success-text uppercase tracking-wider">
-                92.4% Health
-              </span>
+              {(() => {
+                const dq = data.data_quality;
+                const totalIssues = (dq?.duplicates_detected ?? 0) + (dq?.incomplete_fields ?? 0) + (dq?.orphaned_leads ?? 0);
+                const healthPct = totalIssues === 0 ? 100 : Math.max(0, Math.round(100 - (totalIssues / Math.max(s.contacts.total + s.leads.total, 1)) * 100));
+                return (
+                  <span className="rounded-full bg-status-success-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-success-text uppercase tracking-wider">
+                    {healthPct}% Health
+                  </span>
+                );
+              })()}
             </div>
             <div>
               <h3 className="text-sm font-semibold text-foreground">Data Quality</h3>
@@ -947,17 +963,17 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             <div className="space-y-2.5 text-xs mt-1">
               <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">Duplicates Detected</span>
-                <span className="font-semibold text-status-warning-text tabular-nums">14 contacts</span>
+                <span className="font-semibold text-status-warning-text tabular-nums">{data.data_quality?.duplicates_detected ?? 0} contacts</span>
               </div>
               <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">Incomplete Fields</span>
-                <span className="font-semibold text-foreground tabular-nums">32 fields</span>
+                <span className="font-semibold text-foreground tabular-nums">{data.data_quality?.incomplete_fields ?? 0} fields</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Orphaned Leads</span>
-                <span className="font-semibold text-destructive tabular-nums">18 leads</span>
+                <span className="font-semibold text-destructive tabular-nums">{data.data_quality?.orphaned_leads ?? 0} leads</span>
               </div>
-              <div className="border-t border-border/40 mt-1.5 pt-3 flex items-center justify-between text-[10px]">
+              <div className="border-t border-border/40 mt-1.5 pt-3 flex justify-between items-center text-[10px]">
                 <span className="text-muted-foreground">Check interval: <strong className="text-foreground">Daily</strong></span>
                 <span className="text-accent-color hover:underline font-semibold flex items-center gap-0.5">Deduplicate &rarr;</span>
               </div>
@@ -974,7 +990,7 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
                 <CreditCard size={18} />
               </div>
               <span className="rounded-full bg-status-warning-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-warning-text uppercase tracking-wider">
-                Enterprise
+                {data.license_usage?.usage_percentage != null && Number(data.license_usage.usage_percentage) >= 80 ? 'Nearing Limit' : 'Active'}
               </span>
             </div>
             <div>
@@ -985,20 +1001,24 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             <div className="space-y-3 mt-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-medium">Storage Used</span>
-                <span className="font-semibold text-foreground tabular-nums">4.2 GB / 10 GB</span>
+                <span className="font-semibold text-foreground tabular-nums">
+                  {data.license_usage?.storage_used != null ? `${(data.license_usage.storage_used / 1024 / 1024 / 1024).toFixed(1)} GB` : '—'} / {data.license_usage?.storage_limit != null ? `${(data.license_usage.storage_limit / 1024 / 1024 / 1024).toFixed(0)} GB` : '—'}
+                </span>
               </div>
               <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                 <div 
                   className="h-full rounded-full bg-status-warning-text"
-                  style={{ width: '42%' }}
+                  style={{ width: `${data.license_usage?.usage_percentage != null ? Math.min(100, Number(data.license_usage.usage_percentage)) : 0}%` }}
                 />
               </div>
               <div className="border-t border-border/40 pt-3 flex justify-between items-center text-[10px] text-muted-foreground/80">
-                <span>Seats: <strong className="text-foreground">{s.users.active} / {s.users.total || 10} used</strong></span>
-                <span className="text-destructive font-semibold flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping"></span>
-                  Nearing Limit
-                </span>
+                <span>Seats: <strong className="text-foreground">{data.license_usage?.active_seats ?? s.users.active} / {(data.license_usage?.seat_limit ?? s.users.total) || 10} used</strong></span>
+                {data.license_usage?.usage_percentage != null && Number(data.license_usage.usage_percentage) >= 80 && (
+                  <span className="text-destructive font-semibold flex items-center gap-1">
+                    <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-ping"></span>
+                    Nearing Limit
+                  </span>
+                )}
               </div>
             </div>
           </motion.div>

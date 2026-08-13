@@ -1028,6 +1028,28 @@ export interface AdminDashboardData {
   top_companies: { company_id: string; name: string; revenue: Decimal; lead_count: number; contact_count: number }[];
   recent_activities: { id: string; action: string; title: string; entity_type: string; created_at: string; created_by: string | null }[];
   notifications: { overdue_tasks: number; todays_meetings: number; pending_approvals: number; high_priority_leads: number; system_alerts: number };
+  user_management?: {
+    active_seats: number;
+    invites_pending?: number;
+    role_distribution: { role_name: string; count: number }[];
+  };
+  system_health?: {
+    services: { service: string; status: string; message?: string }[];
+    critical_logs_24h?: number;
+    warning_logs_24h?: number;
+  };
+  data_quality?: {
+    duplicates_detected: number;
+    incomplete_fields: number;
+    orphaned_leads: number;
+  };
+  license_usage?: {
+    storage_used?: number;
+    storage_limit?: number;
+    active_seats: number;
+    seat_limit?: number;
+    usage_percentage?: number;
+  };
 }
 
 export interface ManagerDashboardData {
