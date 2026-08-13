@@ -180,17 +180,57 @@ async def seed_sample_users(
         ("Priya Sharma", "priya.sharma@kalnet-demo.com", sales_role),
     ]
     users: list[User] = []
-    for full_name, email, role in sample:
+    manager_user = None
+
+    # First, let's look for or create Sarah Johnson so we have the manager reference
+    result = await db.execute(select(User).where(User.email == "sarah.johnson@kalnet-demo.com"))
+    manager_user = result.scalar_one_or_none()
+    if not manager_user:
+        # Create Sarah
+        manager_user = User(
+            email="sarah.johnson@kalnet-demo.com",
+            full_name="Sarah Johnson",
+            hashed_password=hash_password(os.getenv("SEED_USER_PASSWORD", "Demo@123456")),
+            organization_id=org.id,
+            is_verified=True,
+            is_active=True,
+        )
+        db.add(manager_user)
+        await db.flush()
+        db.add(UserRole(
+            user_id=manager_user.id,
+            role_id=manager_role.id,
+            assigned_by=manager_user.id,
+            assigned_at=datetime.now(timezone.utc),
+        ))
+        await db.flush()
+        logger.info("Seeded manager: %s", manager_user.email)
+    
+    users.append(manager_user)
+
+    # Now seed/update the sales reps
+    reps_sample = [
+        ("Mike Chen", "mike.chen@kalnet-demo.com", sales_role),
+        ("Priya Sharma", "priya.sharma@kalnet-demo.com", sales_role),
+    ]
+
+    for full_name, email, role in reps_sample:
         result = await db.execute(select(User).where(User.email == email))
         existing = result.scalar_one_or_none()
         if existing:
+            # Update existing to link to manager if not already linked
+            if existing.manager_id != manager_user.id:
+                existing.manager_id = manager_user.id
+                await db.flush()
             users.append(existing)
             continue
+
         u = User(
             email=email,
             full_name=full_name,
             hashed_password=hash_password(os.getenv("SEED_USER_PASSWORD", "Demo@123456")),
             organization_id=org.id,
+            manager_id=manager_user.id,
             is_verified=True,
             is_active=True,
         )
@@ -206,6 +246,7 @@ async def seed_sample_users(
         users.append(u)
         logger.info("Seeded user: %s", email)
     return users
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────

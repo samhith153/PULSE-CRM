@@ -725,6 +725,55 @@ header {
 
 /* ---------- Utilities ---------- */
 
+/* ── Custom Text Color Utilities ── */
+@utility text-text-primary {
+  color: var(--text-primary);
+}
+@utility text-text-secondary {
+  color: var(--text-secondary);
+}
+@utility text-text-muted {
+  color: var(--text-muted);
+}
+@utility text-text-disabled {
+  color: var(--text-disabled);
+}
+@utility text-text-on-primary {
+  color: var(--text-on-primary);
+}
+
+/* ── Custom Border Color Utilities ── */
+@utility border-border-subtle {
+  border-color: var(--border-subtle);
+}
+@utility border-border-default {
+  border-color: var(--border-default);
+}
+@utility border-border-strong {
+  border-color: var(--border-strong);
+}
+
+/* ── Custom Background Utilities ── */
+@utility bg-surface-0 {
+  background-color: var(--surface-0);
+}
+@utility bg-surface-1 {
+  background-color: var(--surface-1);
+}
+@utility bg-surface-2 {
+  background-color: var(--surface-2);
+}
+@utility bg-surface-hover {
+  background-color: var(--surface-hover);
+}
+@utility bg-surface-selected {
+  background-color: var(--surface-selected);
+}
+@utility bg-surface-warm {
+  background-color: var(--surface-warm);
+}
+
+/* ── Gradient Utilities ── */
 @utility grad-teal-purple {
   background-image: var(--grad-teal-purple);
 }
@@ -743,6 +792,85 @@ header {
 }
 @utility shadow-nav {
   box-shadow: var(--shadow-nav);
+}
+
+/* ── Custom Text and Color Utilities (Brand/Status) ── */
+@utility text-accent-color {
+  color: var(--accent-color);
+}
+@utility text-link {
+  color: var(--link);
+}
+@utility text-ink {
+  color: var(--ink);
+}
+@utility text-status-success-text {
+  color: var(--status-success-text);
+}
+@utility text-status-warning-text {
+  color: var(--status-warning-text);
+}
+@utility text-status-danger-text {
+  color: var(--status-danger-text);
+}
+@utility text-status-info-text {
+  color: var(--status-info-text);
+}
+
+/* ── Custom Background Color Utilities (Status) ── */
+@utility bg-status-success-bg {
+  background-color: var(--status-success-bg);
+}
+@utility bg-status-warning-bg {
+  background-color: var(--status-warning-bg);
+}
+@utility bg-status-danger-bg {
+  background-color: var(--status-danger-bg);
+}
+@utility bg-status-info-bg {
+  background-color: var(--status-info-bg);
+}
+
+/* ── Custom Border Utilities (Status) ── */
+@utility border-status-success-text {
+  border-color: var(--status-success-text);
+}
+@utility border-status-warning-text {
+  border-color: var(--status-warning-text);
+}
+@utility border-status-danger-text {
+  border-color: var(--status-danger-text);
+}
+@utility border-status-info-text {
+  border-color: var(--status-info-text);
+}
+
+/* ── Brand Color Utilities ── */
+@utility text-brand {
+  color: var(--brand-purple);
+}
+@utility text-brand-purple {
+  color: var(--brand-purple);
+}
+@utility text-brand-blue {
+  color: var(--brand-blue);
+}
+@utility text-brand-cyan {
+  color: var(--brand-cyan);
+}
+
+@utility bg-brand-purple {
+  background-color: var(--brand-purple);
+}
+@utility bg-brand-blue {
+  background-color: var(--brand-blue);
+}
+@utility bg-brand-cyan {
+  background-color: var(--brand-cyan);
+}
+
+@utility fill-brand-cyan {
+  fill: var(--brand-cyan);
 }
 
 /* ---------- Motion vocabulary (pulse-design-system.md §5) ---------- */
