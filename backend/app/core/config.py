@@ -160,7 +160,7 @@ class Settings(BaseSettings):
 
     FIRST_SUPERUSER_EMAIL: str = "admin@kalnet-pulse.com"
     FIRST_SUPERUSER_PASSWORD: str = Field(
-        default_factory=lambda: secrets.token_urlsafe(32),
+        default="Admin@123456",
         description="Override via env FIRST_SUPERUSER_PASSWORD"
     )
     FIRST_SUPERUSER_FULL_NAME: str = "System Administrator"
