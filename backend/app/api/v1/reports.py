@@ -443,9 +443,19 @@ async def get_sales_performance(
         ))
     team_win_rate = _pct(total_won, total_won + total_lost)
 
+    rep_role_subq = (
+        select(UserRole.user_id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(Role.name.in_(["manager", "sales_rep", "sales_representative"]))
+    )
     stmt = (
         select(User.id, User.full_name, User.sales_quota)
-        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False))
+        .where(
+            User.organization_id == org_id,
+            User.is_active.is_(True),
+            User.is_deleted.is_(False),
+            User.id.in_(rep_role_subq),
+        )
     )
     if rep_id:
         stmt = stmt.where(User.id == UUID(rep_id))

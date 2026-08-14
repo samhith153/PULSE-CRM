@@ -246,11 +246,19 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
     }
   };
 
-  const handleDelete = (id: number | string) => {
-    const remaining = contacts.filter(c => c.id !== id);
-    if (remaining.length > 0) {
+  const handleDelete = async (id: number | string) => {
+    if (!window.confirm('Are you sure you want to delete this contact?')) return;
+    try {
+      await deleteContact(id);
+      const remaining = contacts.filter(c => c.id !== id);
       setContacts(remaining);
-      setSelectedId(remaining[0].id);
+      if (selectedId === id) {
+        setSelectedId(remaining.length > 0 ? remaining[0].id : null);
+      }
+      toast.success('Contact deleted successfully.');
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e?.message || 'Failed to delete contact.');
     }
   };
 
@@ -321,7 +329,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
               {selectedIds.size > 0 && (
                 <button 
                   onClick={handleDeleteSelectedContacts}
-                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-status-danger hover:bg-status-danger/90 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer mr-2"
+                  className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-status-danger-text hover:bg-status-danger-text/90 text-text-on-primary rounded-lg text-xs font-semibold transition-colors cursor-pointer mr-2"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   <span>Delete Selected ({selectedIds.size})</span>
@@ -419,7 +427,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
                               </button>
                               <button 
                                 onClick={() => handleDelete(con.id)}
-                                className="p-1 text-text-muted hover:text-status-danger hover:bg-status-danger/10 rounded transition-colors cursor-pointer"
+                                className="p-1 text-text-muted hover:text-status-danger-text hover:bg-status-danger-bg rounded transition-colors cursor-pointer"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>
@@ -487,7 +495,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
                           </button>
                           <button 
                             onClick={() => handleDelete(con.id)}
-                            className="p-1 text-text-muted hover:text-status-danger hover:bg-status-danger/10 rounded transition-colors cursor-pointer"
+                            className="p-1 text-text-muted hover:text-status-danger-text hover:bg-status-danger-bg rounded transition-colors cursor-pointer"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -515,15 +523,24 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
                 <p className="text-[10px] text-text-muted font-semibold">{active.designation} at {active.company}</p>
               </div>
             </div>
-            {/* Close Button */}
-            <button 
-              onClick={() => setSelectedId(null)}
-              className="p-1 bg-surface-2 hover:bg-surface-2 border border-border-default rounded text-text-muted hover:text-text-primary transition duration-200 cursor-pointer"
-              title="Close Summary"
-              aria-label="Close Summary"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button 
+                onClick={() => handleDelete(active.id)}
+                className="p-1 bg-surface-2 hover:bg-status-danger-bg border border-border-default rounded text-text-muted hover:text-status-danger-text transition duration-200 cursor-pointer"
+                title="Delete Contact"
+                aria-label="Delete Contact"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+              <button 
+                onClick={() => setSelectedId(null)}
+                className="p-1 bg-surface-2 hover:bg-surface-2 border border-border-default rounded text-text-muted hover:text-text-primary transition duration-200 cursor-pointer"
+                title="Close Summary"
+                aria-label="Close Summary"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           <div className="py-3 space-y-2 text-[11px] font-semibold border-b border-border-default">

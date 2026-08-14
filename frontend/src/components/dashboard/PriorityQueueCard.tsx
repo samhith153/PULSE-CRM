@@ -75,7 +75,7 @@ export default function PriorityQueueCard({
   };
 
   return (
-    <div className="bg-surface-1 border border-border-default rounded-[20px] p-5 flex flex-col justify-between h-full min-h-[420px]">
+    <div className="bg-surface-1 border border-border-default rounded-[20px] p-5 flex flex-col justify-between h-full">
       <div className="flex flex-col min-h-0">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 mb-3.5 border-b border-border/60 select-none">
