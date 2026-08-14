@@ -25,6 +25,7 @@ const STAGE_FILLS = [
 export default function FunnelChartCard({ leads = [], deals = [], className = '' }: FunnelChartCardProps) {
   /* ── Compute stage data ── */
   const [hoveredStage, setHoveredStage] = useState<number | null>(null);
+  const svgContainerRef = React.useRef<HTMLDivElement>(null);
 
   const stages = useMemo(() => {
     const activeLeads = leads.filter(l => l.status !== 'Lost' && l.status !== 'Converted');
@@ -112,8 +113,8 @@ export default function FunnelChartCard({ leads = [], deals = [], className = ''
           ))}
         </div>
 
-        {/* SVG funnel */}
-        <div className="flex-1 min-w-0">
+        {/* SVG funnel + HTML tooltip overlay */}
+        <div className="flex-1 min-w-0 relative" ref={svgContainerRef}>
           <svg
             viewBox={`0 0 ${SVG_W} ${SVG_H}`}
             className="w-full h-auto"
@@ -150,63 +151,37 @@ export default function FunnelChartCard({ leads = [], deals = [], className = ''
                 />
               );
             })}
-            {/* Hover tooltip */}
-            <AnimatePresence>
-              {hoveredStage !== null && (
-                <motion.g
-                  initial={{ opacity: 0, y: 5 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 5 }}
-                  transition={{ duration: 0.15 }}
-                >
-                  <rect
-                    x={SVG_W / 2 - 55}
-                    y={hoveredStage * ROW_H + ROW_H / 2 - 28}
-                    width={110}
-                    height={56}
-                    rx={8}
-                    fill="#1a1a2e"
-                    fillOpacity={0.95}
-                    stroke="white"
-                    strokeOpacity={0.15}
-                    strokeWidth={1}
-                  />
-                  <text
-                    x={SVG_W / 2}
-                    y={hoveredStage * ROW_H + ROW_H / 2 - 12}
-                    textAnchor="middle"
-                    fill="white"
-                    fontSize={11}
-                    fontWeight={700}
-                  >
-                    {stages[hoveredStage].name}
-                  </text>
-                  <text
-                    x={SVG_W / 2}
-                    y={hoveredStage * ROW_H + ROW_H / 2 + 4}
-                    textAnchor="middle"
-                    fill="#94a3b8"
-                    fontSize={9}
-                    fontWeight={600}
-                  >
-                    {stages[hoveredStage].count} deals ({stages[hoveredStage].pct}%)
-                  </text>
-                  {hoveredStage > 0 && (
-                    <text
-                      x={SVG_W / 2}
-                      y={hoveredStage * ROW_H + ROW_H / 2 + 17}
-                      textAnchor="middle"
-                      fill="#6C63FF"
-                      fontSize={8}
-                      fontWeight={600}
-                    >
-                      {stages[hoveredStage].conversionFromPrev}% from prev
-                    </text>
-                  )}
-                </motion.g>
-              )}
-            </AnimatePresence>
           </svg>
+
+          {/* HTML tooltip — rendered outside SVG so it never intercepts mouse events */}
+          <AnimatePresence>
+            {hoveredStage !== null && (
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 5 }}
+                transition={{ duration: 0.15 }}
+                className="absolute pointer-events-none z-10"
+                style={{
+                  left: '50%',
+                  top: `${((hoveredStage * ROW_H + ROW_H / 2) / SVG_H) * 100}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+              >
+                <div className="rounded-lg bg-[#1a1a2e] border border-white/15 px-3 py-2 shadow-xl min-w-[120px] text-center">
+                  <p className="text-[11px] font-bold text-white leading-tight">{stages[hoveredStage].name}</p>
+                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
+                    {stages[hoveredStage].count} deals ({stages[hoveredStage].pct}%)
+                  </p>
+                  {hoveredStage > 0 && (
+                    <p className="text-[9px] font-semibold mt-0.5" style={{ color: '#6C63FF' }}>
+                      {stages[hoveredStage].conversionFromPrev}% from prev
+                    </p>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Count + % column */}

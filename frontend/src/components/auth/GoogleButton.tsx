@@ -92,6 +92,14 @@ export function GoogleButton({ label }: { label: string }) {
           callback: handleGoogleCallback,
         });
         setGsiReady(true);
+        if (containerRef.current) {
+          g.accounts.id.renderButton(containerRef.current, {
+            theme: "outline",
+            size: "large",
+            width: 316,
+            text: "continue_with",
+          });
+        }
       }
     };
 
@@ -108,34 +116,34 @@ export function GoogleButton({ label }: { label: string }) {
     }
   }, [googleClientId, handleGoogleCallback]);
 
-  const triggerGoogleSignIn = () => {
-    const g = (window as any).google;
-    if (g && g.accounts && g.accounts.id && gsiReady) {
-      g.accounts.id.prompt();
-    }
-  };
-
   return (
     <div className="flex flex-col items-center gap-2">
-      {/* Custom styled Google button that matches dark theme */}
-      <button
-        type="button"
-        onClick={triggerGoogleSignIn}
-        disabled={!googleClientId || loading}
-        aria-label={label}
-        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white hover:border-white/20 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-      >
-        {loading ? (
-          <Loader2 size={18} className="animate-spin" />
-        ) : (
-          <GoogleIcon />
-        )}
-        <span>{loading ? 'Signing in...' : label}</span>
-      </button>
-      {!googleClientId && (
-        <p className="text-center text-[11px] text-white/40">
-          Google Sign-In is not configured on the server.
-        </p>
+      {/* Real GSI button rendered directly — this is the only reliable way */}
+      <div
+        ref={containerRef}
+        className="flex min-h-[44px] w-full items-center justify-center [&_iframe]:!rounded-full"
+      />
+      {loading && (
+        <div className="flex items-center gap-2 text-sm text-white/60">
+          <Loader2 size={16} className="animate-spin" />
+          <span>Signing in with Google...</span>
+        </div>
+      )}
+      {!googleClientId && !loading && (
+        <>
+          <button
+            type="button"
+            disabled
+            aria-label={label}
+            className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/40 cursor-not-allowed opacity-60"
+          >
+            <GoogleIcon />
+            <span>{label}</span>
+          </button>
+          <p className="text-center text-[11px] text-white/40">
+            Google Sign-In is not configured on the server.
+          </p>
+        </>
       )}
       {error && (
         <p className="text-center text-[11px] text-red-400">{error}</p>

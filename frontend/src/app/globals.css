@@ -2104,3 +2104,19 @@ a:hover { color: var(--accent-hover); }
   background: var(--quota-card-bg);
 }
 
+/* ── Browser autofill overrides (dark login fields) ── */
+@-webkit-keyframes autofill {
+  from { background-color: transparent; }
+  to { background-color: transparent; }
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+  -webkit-text-fill-color: #ffffff !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.05) inset !important;
+  caret-color: #ffffff !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
