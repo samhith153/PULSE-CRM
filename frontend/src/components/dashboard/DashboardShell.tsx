@@ -66,7 +66,11 @@ interface DashboardShellProps {
 
 function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }: DashboardShellProps) {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState(false);
+  const [authorized, setAuthorized] = useState(() => {
+    const auth = sessionStorage.getItem('pulse-crm-auth') === 'true';
+    const role = localStorage.getItem('pulse-crm-role');
+    return auth && role === requiredRole;
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [dashboardSubTab, setDashboardSubTab] = useState('overview');

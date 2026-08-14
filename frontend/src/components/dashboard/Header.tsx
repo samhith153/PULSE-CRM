@@ -88,6 +88,7 @@ export default function Header({
     const next = theme === 'light' ? 'dark' : 'light';
     setTheme(next);
     localStorage.setItem('pulse-crm-theme', next);
+    document.documentElement.setAttribute('data-theme', next);
     if (next === 'dark') document.documentElement.classList.add('dark');
     else document.documentElement.classList.remove('dark');
   };
