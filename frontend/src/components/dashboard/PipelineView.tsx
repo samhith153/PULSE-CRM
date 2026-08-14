@@ -19,6 +19,7 @@ import {
   Search,
   SlidersHorizontal,
   ChevronDown,
+  Loader2,
 } from 'lucide-react';
 
 function StageDropdown({ 
@@ -195,6 +196,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreatingDeal, setIsCreatingDeal] = useState(false);
+  const [isEditingDeal, setIsEditingDeal] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 
   const [form, setForm] = useState({
@@ -519,6 +522,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreatingDeal(true);
     try {
       const stageId = stageIdByName[form.stage];
       const created = await createDeal({
@@ -543,11 +547,13 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     } catch (err) {
       console.error("Failed to create deal:", err);
     }
+    setIsCreatingDeal(false);
     setIsAddModalOpen(false);
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsEditingDeal(true);
     if (!selectedDeal) return;
     try {
       const stageId = stageIdByName[form.stage];
@@ -571,6 +577,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
     } catch (err) {
       console.error("Failed to update deal:", err);
     }
+    setIsEditingDeal(false);
     setIsEditModalOpen(false);
     setSelectedDeal(null);
   };
@@ -1124,7 +1131,23 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
       {isAddModalOpen && (
         <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-surface-1 border border-border-default rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-1 border border-border-default rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 relative" onClick={e => e.stopPropagation()}>
+            {isCreatingDeal && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-surface-0/80 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="size-14 rounded-full border-4 border-accent-color/20 animate-pulse" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="size-7 text-accent-color animate-spin" />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-text-primary">Creating Deal...</p>
+                    <p className="text-xs text-text-muted mt-1">Please wait</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="px-5 py-3.5 border-b border-border-default flex justify-between items-center bg-surface-2">
               <h3 className="font-semibold text-text-primary text-sm">Create New Deal</h3>
               <button onClick={() => setIsAddModalOpen(false)} className="text-text-muted hover:text-text-primary p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
@@ -1170,7 +1193,10 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               </div>
               <div className="pt-3 border-t border-border-default flex justify-end space-x-2.5">
                 <button type="button" onClick={() => setIsAddModalOpen(false)} className="px-4 py-1.5 border border-border-default rounded-lg text-xs font-semibold text-text-primary hover:bg-surface-2 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold  cursor-pointer">Save Deal</button>
+                <button type="submit" disabled={isCreatingDeal} className="px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-1.5 cursor-pointer">
+                  {isCreatingDeal && <span className="size-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+                  {isCreatingDeal ? 'Creating...' : 'Save Deal'}
+                </button>
               </div>
             </form>
           </div>
@@ -1179,7 +1205,23 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
       {isEditModalOpen && (
         <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
-          <div className="bg-surface-1 border border-border-default rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="bg-surface-1 border border-border-default rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 relative" onClick={e => e.stopPropagation()}>
+            {isEditingDeal && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-surface-0/80 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="size-14 rounded-full border-4 border-accent-color/20 animate-pulse" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Loader2 className="size-7 text-accent-color animate-spin" />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-text-primary">Saving Changes...</p>
+                    <p className="text-xs text-text-muted mt-1">Please wait</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="px-5 py-3.5 border-b border-border-default flex justify-between items-center bg-surface-2">
               <h3 className="font-semibold text-text-primary text-sm">Edit Deal Details</h3>
               <button onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="text-text-muted hover:text-text-primary p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
@@ -1252,7 +1294,10 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
               )}
               <div className="pt-3 border-t border-border-default flex justify-end space-x-2.5">
                 <button type="button" onClick={() => { setIsEditModalOpen(false); setSelectedDeal(null); }} className="px-4 py-1.5 border border-border-default rounded-lg text-xs font-semibold text-text-primary hover:bg-surface-2 cursor-pointer">Cancel</button>
-                <button type="submit" className="px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold  cursor-pointer">Save Changes</button>
+                <button type="submit" disabled={isEditingDeal} className="px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-1.5 cursor-pointer">
+                  {isEditingDeal && <span className="size-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />}
+                  {isEditingDeal ? 'Saving...' : 'Save Changes'}
+                </button>
               </div>
             </form>
           </div>

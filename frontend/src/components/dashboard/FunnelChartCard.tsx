@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useMemo, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Layers, HelpCircle } from 'lucide-react';
+import { formatINR } from '@/utils/api';
 
 interface FunnelChartCardProps {
   leads?: any[];
@@ -23,6 +24,8 @@ const STAGE_FILLS = [
 
 export default function FunnelChartCard({ leads = [], deals = [], className = '' }: FunnelChartCardProps) {
   /* ── Compute stage data ── */
+  const [hoveredStage, setHoveredStage] = useState<number | null>(null);
+
   const stages = useMemo(() => {
     const activeLeads = leads.filter(l => l.status !== 'Lost' && l.status !== 'Converted');
     const newLeads    = activeLeads.filter(l => l.status === 'new').length;
@@ -40,6 +43,7 @@ export default function FunnelChartCard({ leads = [], deals = [], className = ''
       name,
       count: raw[i],
       pct: Math.round((raw[i] / top) * 100),
+      conversionFromPrev: i > 0 ? Math.round((raw[i] / Math.max(raw[i - 1], 1)) * 100) : 100,
     }));
   }, [leads, deals]);
 
@@ -121,11 +125,13 @@ export default function FunnelChartCard({ leads = [], deals = [], className = ''
                 key={i}
                 d={d}
                 fill={STAGE_FILLS[i]}
-                fillOpacity={0.9}
+                fillOpacity={hoveredStage === i ? 1 : 0.9}
                 initial={{ opacity: 0, scaleX: 0 }}
                 animate={{ opacity: 1, scaleX: 1 }}
                 transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1], delay: i * 0.08 }}
-                style={{ transformOrigin: `${SVG_W / 2}px center` }}
+                style={{ transformOrigin: `${SVG_W / 2}px center`, cursor: 'pointer' }}
+                onMouseEnter={() => setHoveredStage(i)}
+                onMouseLeave={() => setHoveredStage(null)}
               />
             ))}
             {/* Connector dots on right edge */}
@@ -140,10 +146,66 @@ export default function FunnelChartCard({ leads = [], deals = [], className = ''
                   cy={y}
                   r={3}
                   fill="white"
-                  fillOpacity={0.7}
+                  fillOpacity={hoveredStage === i ? 1 : 0.7}
                 />
               );
             })}
+            {/* Hover tooltip */}
+            <AnimatePresence>
+              {hoveredStage !== null && (
+                <motion.g
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 5 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <rect
+                    x={SVG_W / 2 - 55}
+                    y={hoveredStage * ROW_H + ROW_H / 2 - 28}
+                    width={110}
+                    height={56}
+                    rx={8}
+                    fill="#1a1a2e"
+                    fillOpacity={0.95}
+                    stroke="white"
+                    strokeOpacity={0.15}
+                    strokeWidth={1}
+                  />
+                  <text
+                    x={SVG_W / 2}
+                    y={hoveredStage * ROW_H + ROW_H / 2 - 12}
+                    textAnchor="middle"
+                    fill="white"
+                    fontSize={11}
+                    fontWeight={700}
+                  >
+                    {stages[hoveredStage].name}
+                  </text>
+                  <text
+                    x={SVG_W / 2}
+                    y={hoveredStage * ROW_H + ROW_H / 2 + 4}
+                    textAnchor="middle"
+                    fill="#94a3b8"
+                    fontSize={9}
+                    fontWeight={600}
+                  >
+                    {stages[hoveredStage].count} deals ({stages[hoveredStage].pct}%)
+                  </text>
+                  {hoveredStage > 0 && (
+                    <text
+                      x={SVG_W / 2}
+                      y={hoveredStage * ROW_H + ROW_H / 2 + 17}
+                      textAnchor="middle"
+                      fill="#6C63FF"
+                      fontSize={8}
+                      fontWeight={600}
+                    >
+                      {stages[hoveredStage].conversionFromPrev}% from prev
+                    </text>
+                  )}
+                </motion.g>
+              )}
+            </AnimatePresence>
           </svg>
         </div>
 

@@ -305,19 +305,35 @@ export default function AdminReportsView() {
           {/* Revenue by Rep */}
           <div>
             <h3 className="text-sm font-bold mb-3">Revenue by Rep</h3>
-            <SVBarChart
-              data={salesPerf?.revenue_by_rep?.map(r => ({ name: r.rep_name.split(' ')[0], value: Number(r.revenue) })) || []}
-              height={260}
-            />
+            {salesPerf?.revenue_by_rep && salesPerf.revenue_by_rep.length > 0 ? (
+              <SVBarChart
+                data={salesPerf.revenue_by_rep.map(r => ({ name: r.rep_name.split(' ')[0], value: Number(r.revenue) }))}
+                height={260}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[180px] bg-muted/30 rounded-xl border border-dashed border-border-default">
+                <TrendingUp className="size-8 text-text-muted/40 mb-2" />
+                <p className="text-sm text-text-muted">No revenue data available</p>
+                <p className="text-xs text-text-muted/60 mt-1">Data will appear once deals are closed</p>
+              </div>
+            )}
           </div>
 
           {/* Win Rate by Rep */}
           <div>
             <h3 className="text-sm font-bold mb-3">Win Rate by Rep</h3>
-            <SVHorizontalBarChart
-              data={salesPerf?.win_rate_by_rep?.map(r => ({ name: r.rep_name.split(' ')[0], value: Number(r.win_rate) })) || []}
-              height={260}
-            />
+            {salesPerf?.win_rate_by_rep && salesPerf.win_rate_by_rep.length > 0 ? (
+              <SVHorizontalBarChart
+                data={salesPerf.win_rate_by_rep.map(r => ({ name: r.rep_name.split(' ')[0], value: Number(r.win_rate) }))}
+                height={260}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[180px] bg-muted/30 rounded-xl border border-dashed border-border-default">
+                <TrendingUp className="size-8 text-text-muted/40 mb-2" />
+                <p className="text-sm text-text-muted">No win rate data available</p>
+                <p className="text-xs text-text-muted/60 mt-1">Data will appear once deals are closed</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -352,43 +368,48 @@ export default function AdminReportsView() {
       {/* ── Team Performance ──────────────────────────────────────── */}
       <SectionCard title="Team Performance" icon={Users}>
         {/* Leaderboard */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-muted text-xs text-text-muted">
-                <th className="rounded-l-xl px-4 py-2 text-left font-medium">Rank</th>
-                <th className="px-4 py-2 text-left font-medium">Rep</th>
-                <th className="px-4 py-2 text-right font-medium">Revenue</th>
-                <th className="px-4 py-2 text-center font-medium">Won</th>
-                <th className="px-4 py-2 text-center font-medium">Win Rate</th>
-                <th className="rounded-r-xl px-4 py-2 text-right font-medium">Quota %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teamPerf?.leaderboard?.map(entry => (
-                <tr key={entry.rep_id} className="border-b border-border-default last:border-0">
-                  <td className="px-4 py-3">
-                    <span className="grid size-7 place-items-center rounded-full bg-brand-soft/20 text-[11px] font-bold text-accent-color">
-                      {entry.rank}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 font-semibold">{entry.rep_name}</td>
-                  <td className="px-4 py-3 text-right font-semibold">{fmtCurrency(Number(entry.revenue))}</td>
-                  <td className="px-4 py-3 text-center">{entry.deals_won}</td>
-                  <td className="px-4 py-3 text-center">{fmtPct(Number(entry.win_rate))}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${Number(entry.quota_pct) >= 100 ? 'bg-status-success-bg text-status-success-text' : Number(entry.quota_pct) >= 70 ? 'bg-status-warning-bg text-status-warning-text' : 'bg-status-danger-bg text-status-danger-text'}`}>
-                      {fmtPct(Number(entry.quota_pct))}
-                    </span>
-                  </td>
+        {teamPerf?.leaderboard && teamPerf.leaderboard.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted text-xs text-text-muted">
+                  <th className="rounded-l-xl px-4 py-2 text-left font-medium">Rank</th>
+                  <th className="px-4 py-2 text-left font-medium">Rep</th>
+                  <th className="px-4 py-2 text-right font-medium">Revenue</th>
+                  <th className="px-4 py-2 text-center font-medium">Won</th>
+                  <th className="px-4 py-2 text-center font-medium">Win Rate</th>
+                  <th className="rounded-r-xl px-4 py-2 text-right font-medium">Quota %</th>
                 </tr>
-              ))}
-              {(!teamPerf?.leaderboard || teamPerf.leaderboard.length === 0) && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-text-muted">No team data available</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {teamPerf.leaderboard.map(entry => (
+                  <tr key={entry.rep_id} className="border-b border-border-default last:border-0">
+                    <td className="px-4 py-3">
+                      <span className="grid size-7 place-items-center rounded-full bg-brand-soft/20 text-[11px] font-bold text-accent-color">
+                        {entry.rank}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 font-semibold">{entry.rep_name}</td>
+                    <td className="px-4 py-3 text-right font-semibold">{fmtCurrency(Number(entry.revenue))}</td>
+                    <td className="px-4 py-3 text-center">{entry.deals_won}</td>
+                    <td className="px-4 py-3 text-center">{fmtPct(Number(entry.win_rate))}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-bold ${Number(entry.quota_pct) >= 100 ? 'bg-status-success-bg text-status-success-text' : Number(entry.quota_pct) >= 70 ? 'bg-status-warning-bg text-status-warning-text' : 'bg-status-danger-bg text-status-danger-text'}`}>
+                        {fmtPct(Number(entry.quota_pct))}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center h-[140px] bg-muted/30 rounded-xl border border-dashed border-border-default">
+            <Users className="size-8 text-text-muted/40 mb-2" />
+            <p className="text-sm text-text-muted">No team performance data available</p>
+            <p className="text-xs text-text-muted/60 mt-1">Data will appear once team members close deals</p>
+          </div>
+        )}
 
         {/* Performance vs Prior */}
         {teamPerf?.performance_vs_prior && teamPerf.performance_vs_prior.length > 0 && (

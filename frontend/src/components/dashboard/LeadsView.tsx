@@ -350,6 +350,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   const [isEditingFullPage, setIsEditingFullPage] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreatingLead, setIsCreatingLead] = useState(false);
+  const [isEditingLead, setIsEditingLead] = useState(false);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isMeetingModalOpen, setIsMeetingModalOpen] = useState(false);
@@ -565,6 +567,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   // Action: Create Lead Submit
   const handleCreateLead = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreatingLead(true);
     const payload: Record<string, unknown> = {
       title: leadForm.name,
       company_name: leadForm.company,
@@ -620,12 +623,14 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       console.error("Failed to create lead:", err);
     }
     setIsCreatingFullPage(false);
+    setIsCreatingLead(false);
     setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
   };
 
   // Action: Edit Lead Submit
   const handleEditLead = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsEditingLead(true);
     if (!activeLead) return;
     const newStatusBackend = STATUS_MAP[leadForm.status as string] || leadForm.status;
     const oldStatusBackend = STATUS_MAP[activeLead.status] || activeLead.status;
@@ -655,6 +660,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       console.error("Failed to update lead:", err);
     }
     setIsEditingFullPage(false);
+    setIsEditingLead(false);
     setEditingLeadId(null);
     setIsEditModalOpen(false);
   };
@@ -905,14 +911,36 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             <button
               type="submit"
               form="full-page-lead-form"
-              className="px-5.5 py-2 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-xl text-xs font-semibold cursor-pointer shadow-lg shadow-accent-color/10 hover:shadow-accent-color/20 transition hover:-translate-y-0.5"
+              disabled={isCreatingLead || isEditingLead}
+              className="px-5.5 py-2 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-xl text-xs font-semibold shadow-lg shadow-accent-color/10 hover:shadow-accent-color/20 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center gap-2 cursor-pointer"
             >
-              {isEdit ? 'Save Changes' : 'Create Lead'}
+              {(isCreatingLead || isEditingLead) && (
+                <span className="size-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+              )}
+              {isCreatingLead ? 'Creating Lead...' : isEditingLead ? 'Saving Changes...' : isEdit ? 'Save Changes' : 'Create Lead'}
             </button>
           </div>
         </div>
 
-        <form id="full-page-lead-form" onSubmit={isEdit ? handleEditLead : handleCreateLead} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form id="full-page-lead-form" onSubmit={isEdit ? handleEditLead : handleCreateLead} className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+          
+          {/* Loading overlay while creating/editing */}
+          {(isCreatingLead || isEditingLead) && (
+            <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-surface-0/80 backdrop-blur-sm rounded-2xl">
+              <div className="flex flex-col items-center gap-4">
+                <div className="relative">
+                  <div className="size-16 rounded-full border-4 border-accent-color/20 animate-pulse" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="size-8 text-accent-color animate-spin" />
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-text-primary">{isEdit ? 'Saving Changes...' : 'Creating Lead...'}</p>
+                  <p className="text-xs text-text-muted mt-1">Please wait while we process your request</p>
+                </div>
+              </div>
+            </div>
+          )}
           
           {/* Card 1: Contact Information */}
           <div className="bg-surface-1 border border-border-default rounded-2xl p-6 space-y-4 hover:shadow-md transition-shadow">
