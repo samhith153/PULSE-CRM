@@ -681,7 +681,7 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
         ? new Date(t.period.replace('-', '/') + '/01').toLocaleDateString('en-US', { month: 'short' })
         : t.period);
 
-  const W = 500, H = 160, padL = 40, padR = 40, padT = 10, padB = 28;
+  const W = 500, H = 280, padL = 40, padR = 40, padT = 10, padB = 28;
   const iW = W - padL - padR, iH = H - padT - padB;
   const n  = lbls.length;
   const xOf = (i: number) => padL + (i / Math.max(n - 1, 1)) * iW;

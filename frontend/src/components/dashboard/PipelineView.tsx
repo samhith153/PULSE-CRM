@@ -946,7 +946,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           </div>
         </div>
       ) : (
-        <div className="flex space-x-4 overflow-x-auto pb-4" style={{ scrollbarWidth: 'thin', scrollbarColor: 'hsl(var(--border)) transparent' }}>
+        <div className="flex space-x-4 pb-4">
           {stages.map((stage) => {
             const stageDeals = filteredDeals.filter(d => d.stage === stage.name);
             const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
@@ -956,7 +956,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 key={stage.id}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(stage.name)}
-                className="bg-surface-2 border border-border-default rounded-2xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
+                className="bg-surface-2 border border-border-default rounded-2xl p-3 min-w-[160px] flex-1 flex flex-col h-[550px]"
               >
               <div className="flex justify-between items-center pb-2 border-b border-border-default mb-3">
                 <div>

@@ -419,8 +419,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const hasLinkedRecord = Boolean(relatedLeadId || relatedContactId || relatedCompanyId || relatedDealId);
     if (!hasLinkedRecord) {
-      toast.error(`Please link a ${relatedType} before saving this activity.`);
-      return;
+      toast.info(`Tip: Link a ${relatedType} to associate this activity with a record.`);
     }
     setSubmitting(true);
     try {

@@ -77,6 +77,7 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           items: [
             { name: 'Activities',   icon: Activity,  tab: 'activities' },
             { name: 'AI Insights',  icon: Sparkles,  tab: 'ai insights' },
+            { name: 'Documents',    icon: FileText,  tab: 'documents' },
           ],
         },
         {
@@ -116,6 +117,7 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           label: 'Intelligence',
           items: [
             { name: 'Reports',     icon: BarChart3, tab: 'reports' },
+            { name: 'Documents',   icon: FileText,  tab: 'documents' },
             { name: 'AI Models',   icon: Cpu,       tab: 'ai models' },
             { name: 'Audit Logs',  icon: Activity,  tab: 'audit logs' },
           ],
@@ -223,7 +225,7 @@ export default function Sidebar({
       </div>
 
       {/* ── Scrollable nav — ui.md §6: md-lg padding ───────────────────── */}
-      <nav className="flex-1 overflow-y-auto px-3 space-y-3.5">
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 space-y-3.5">
 
         {/* Home — ui.md §6: icon 20px */}
         <button

@@ -92,6 +92,7 @@ export default function RolesPermissionsView() {
   const [saving, setSaving] = useState(false);
   const [matrix, setMatrix] = useState<Record<string, Record<string, boolean>>>({});
   const [toast, setToast] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (toast) {
@@ -168,6 +169,18 @@ export default function RolesPermissionsView() {
     }
   };
 
+  const filteredRows = React.useMemo(() => {
+    if (!searchQuery.trim()) return rows;
+    const q = searchQuery.toLowerCase();
+    return rows.filter(
+      row =>
+        row.name.toLowerCase().includes(q) ||
+        row.description.toLowerCase().includes(q) ||
+        row.codename.toLowerCase().includes(q) ||
+        (categoryLabel[row.category] || row.category).toLowerCase().includes(q)
+    );
+  }, [rows, searchQuery]);
+
   const userCountRole = (roleName: string): number => {
     return 0;
   };
@@ -237,6 +250,28 @@ export default function RolesPermissionsView() {
             Loading permissions...
           </div>
         ) : (
+          <>
+          {/* Search Filter */}
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search permissions... (e.g. report, deal, create)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full max-w-md px-4 py-2 pl-9 border border-border-default rounded-xl text-xs text-text-primary placeholder-text-muted focus:outline-none focus:ring-1 focus:ring-accent-color/30 bg-surface-2/15"
+            />
+            <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-text-muted">
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg>
+            </span>
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute inset-y-0 right-3 flex items-center text-text-muted hover:text-text-primary cursor-pointer"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <div className="overflow-x-auto select-none max-h-[600px] overflow-y-auto">
             <table className="w-full text-left border-collapse">
               <thead className="sticky top-0 bg-surface-1 z-10">
@@ -250,7 +285,7 @@ export default function RolesPermissionsView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border text-xs font-medium text-text-primary">
-                {rows.map((row) => (
+                {filteredRows.map((row) => (
                   <tr key={row.key} className="hover:bg-surface-2/80 transition-colors group">
                     <td className="py-3 px-4">
                       <span className={`inline-block px-2.5 py-1 rounded-md text-[10px] font-semibold border ${row.categoryBg}`}>
@@ -287,6 +322,7 @@ export default function RolesPermissionsView() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

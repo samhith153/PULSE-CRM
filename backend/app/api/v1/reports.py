@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import case, func, select, and_, desc, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, DBSession, require_role
+from app.api.deps import CurrentUser, DBSession, require_permission
 from app.models.activity import ActivityTimeline
 from app.models.crm_call import CrmCall
 from app.models.crm_email import CrmEmail
@@ -367,7 +367,7 @@ def _pct(numerator, denominator):
     "/sales-performance",
     response_model=StandardResponse[SalesPerformanceReport],
     summary="Sales Performance Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_sales_performance(
     current_user: CurrentUser,
@@ -514,7 +514,7 @@ async def get_sales_performance(
     "/pipeline-analytics",
     response_model=StandardResponse[PipelineAnalyticsReport],
     summary="Pipeline Analytics Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_pipeline_analytics(
     current_user: CurrentUser, db: DBSession,
@@ -620,7 +620,7 @@ async def get_pipeline_analytics(
     "/team-performance",
     response_model=StandardResponse[TeamPerformanceReport],
     summary="Team Performance Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_team_performance(
     current_user: CurrentUser, db: DBSession,
@@ -712,7 +712,7 @@ async def get_team_performance(
     "/activity-analytics",
     response_model=StandardResponse[ActivityAnalyticsReport],
     summary="Activity Analytics Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_activity_analytics(
     current_user: CurrentUser, db: DBSession,
@@ -830,7 +830,7 @@ async def get_activity_analytics(
     "/lead-analytics",
     response_model=StandardResponse[LeadAnalyticsReport],
     summary="Lead Analytics Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_lead_analytics(
     current_user: CurrentUser, db: DBSession,
@@ -912,7 +912,7 @@ async def get_lead_analytics(
     "/deal-analytics",
     response_model=StandardResponse[DealAnalyticsReport],
     summary="Deal Analytics Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_deal_analytics(
     current_user: CurrentUser, db: DBSession,
