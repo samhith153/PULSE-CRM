@@ -32,8 +32,6 @@ class TokenCipher:
     def encrypt(self, token: str | None) -> str | None:
         if token is None:
             return None
-        if token.startswith("gAAAAA"):
-            return token
         return self._fernet.encrypt(token.encode()).decode()
 
     def decrypt(self, token: str | None) -> str | None:
@@ -42,7 +40,12 @@ class TokenCipher:
         try:
             return self._fernet.decrypt(token.encode()).decode()
         except Exception:
-            return token
+            raise ValidationException(
+                "Gmail token decryption failed — GMAIL_TOKEN_ENCRYPTION_KEY may have "
+                "changed since the connection was created. Please disconnect and "
+                "reconnect Gmail in Integrations settings.",
+                {"hint": "key_mismatch"},
+            )
 
 
 class GmailClient:
