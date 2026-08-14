@@ -504,8 +504,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
     return leadRecommendations[lead.id] || 'Loading recommendation...';
   };
 
-  // Score-based priority view helpers — engagement score from CRM activity
+  // Score-based priority view helpers — prefer real backend scores, fall back to heuristic
   const getEngagementScore = (lead: Lead) => {
+    if (lead.engagement_score != null) return lead.engagement_score;
     let score = 0;
     if (lead.emails && lead.emails.length > 0) {
       score += lead.emails.length * 5;
@@ -525,6 +526,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   };
 
   const getOverallScore = (lead: Lead) => {
+    if (lead.score != null) return lead.score;
     return Math.round(getFitScore(lead) * 0.6 + getEngagementScore(lead) * 0.4);
   };
 
@@ -1451,6 +1453,14 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             </>
                           ) : (
                             <>
+                              <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={isRowSelected}
+                                  onChange={() => handleToggleSelectRow(lead.id)}
+                                  className="rounded border-border-default text-accent-color focus:ring-accent-color cursor-pointer size-3.5"
+                                />
+                              </td>
                               <td className="py-3.5 px-2 font-bold truncate" title={lead.name}>{lead.name}</td>
                               <td className="py-3.5 px-2 text-center font-bold tabular-nums">
                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums inline-block ${
