@@ -1382,10 +1382,10 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                       />
                     </th>
                     <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('name')}>Name</th>
+                    <th className="py-3 px-2 w-[7%] cursor-pointer hover:text-text-primary transition-colors text-center" onClick={() => handleHeaderClick('score')}>Score</th>
                     <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('company')}>Company</th>
                     <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('email')}>Email</th>
                     <th className="py-3 px-2 w-[11%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('phone')}>Phone</th>
-                    <th className="py-3 px-2 w-[7%] cursor-pointer hover:text-text-primary transition-colors text-center" onClick={() => handleHeaderClick('score')}>Score</th>
                     {isPriorityView && (
                       <>
                         <th className="py-3 px-2 w-[8%] text-center">Fit Score</th>
@@ -1418,9 +1418,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             />
                           </td>
                           <td className="py-3.5 px-2 font-bold truncate" title={lead.name}>{lead.name}</td>
-                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.company}>{lead.company}</td>
-                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.email}>{lead.email}</td>
-                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.phone}>{lead.phone}</td>
                           <td className="py-3.5 px-2 text-center font-bold tabular-nums">
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums inline-block ${
                               lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
@@ -1430,6 +1427,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                               {lead.score != null ? `${lead.score}%` : '—'}
                             </span>
                           </td>
+                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.company}>{lead.company}</td>
+                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.email}>{lead.email}</td>
+                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.phone}>{lead.phone}</td>
                           {isPriorityView && (
                             <>
                               <td className="py-3.5 px-2 text-center">
