@@ -1,5 +1,7 @@
-import { useState } from "react";
+'use client';
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Loader2 } from "lucide-react";
+import { getAuthConfig, loginWithGoogle, setToken, getCurrentUser } from "@/utils/api";
 
 function GoogleIcon() {
   return (
@@ -26,22 +28,127 @@ function GoogleIcon() {
 
 export function GoogleButton({ label }: { label: string }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [gsiReady, setGsiReady] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleGoogleCallback = useCallback(async (response: any) => {
+    if (!response.credential) return;
+    setLoading(true);
+    setError("");
+    try {
+      const result = await loginWithGoogle(response.credential);
+      setToken(result.access_token);
+
+      const user = await getCurrentUser();
+      const primaryRole =
+        user.roles && user.roles.length > 0 ? user.roles[0] : "sales_rep";
+
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("pulse-crm-auth", "true");
+        localStorage.setItem("pulse-crm-role", primaryRole);
+        localStorage.setItem("pulse-crm-user", user.full_name || "Google User");
+      }
+
+      let redirectPath = "/dashboard";
+      if (primaryRole === "admin") {
+        redirectPath = "/dashboard/admin";
+      } else if (primaryRole === "manager") {
+        redirectPath = "/dashboard/manager";
+      }
+
+      window.location.href = redirectPath;
+    } catch (err: any) {
+      console.error("Google auth error:", err);
+      setError(err.message || "Google Sign-In failed.");
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    getAuthConfig()
+      .then((config) => {
+        if (config.google_client_id) {
+          setGoogleClientId(config.google_client_id);
+        }
+      })
+      .catch((err) => console.error("Failed to load auth config:", err));
+  }, []);
+
+  useEffect(() => {
+    if (!googleClientId) return;
+
+    const id = "google-gsi-client";
+    let script = document.getElementById(id) as HTMLScriptElement;
+
+    const initializeGoogleSignIn = () => {
+      const g = (window as any).google;
+      if (g && g.accounts && g.accounts.id) {
+        g.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleCallback,
+        });
+        setGsiReady(true);
+        if (containerRef.current) {
+          g.accounts.id.renderButton(containerRef.current, {
+            theme: "outline",
+            size: "large",
+            width: 316,
+            text: "continue_with",
+          });
+        }
+      }
+    };
+
+    if (!script) {
+      script = document.createElement("script");
+      script.id = id;
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGoogleSignIn;
+      document.body.appendChild(script);
+    } else {
+      setTimeout(initializeGoogleSignIn, 50);
+    }
+  }, [googleClientId, handleGoogleCallback]);
 
   return (
-    <button
-      type="button"
-      disabled={loading}
-      aria-label={label}
-      aria-busy={loading}
-      onClick={() => {
-        setLoading(true);
-        console.info("[auth] Google OAuth requested");
-        setTimeout(() => setLoading(false), 1600);
-      }}
-      className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/90 transition-all duration-200 hover:bg-white/10 hover:border-white/20 focus-visible:ring-2 focus-visible:ring-accent-color focus-visible:ring-offset-2 outline-none active:scale-[0.985] disabled:opacity-70 cursor-pointer"
-    >
-      {loading ? <Loader2 size={16} className="animate-spin text-accent-color" /> : <GoogleIcon />}
-      <span>{label}</span>
-    </button>
+    <div className="flex flex-col items-center gap-2">
+      <div
+        ref={containerRef}
+        className="flex min-h-[44px] w-full items-center justify-center"
+      />
+      {!googleClientId && (
+        <>
+          <button
+            type="button"
+            disabled
+            aria-label={label}
+            className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/40 cursor-not-allowed opacity-60"
+          >
+            <GoogleIcon />
+            <span>{label}</span>
+          </button>
+          <p className="text-center text-[11px] text-white/40">
+            Google Sign-In is not configured on the server.
+          </p>
+        </>
+      )}
+      {loading && !gsiReady && (
+        <button
+          type="button"
+          disabled
+          className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/90"
+        >
+          <Loader2 size={16} className="animate-spin text-accent-color" />
+          <span>Loading...</span>
+        </button>
+      )}
+      {error && (
+        <p className="text-center text-[11px] text-red-400">{error}</p>
+      )}
+    </div>
   );
 }
