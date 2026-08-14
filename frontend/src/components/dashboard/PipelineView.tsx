@@ -124,6 +124,10 @@ interface Deal {
   owner: string;
   closeDate: string;
   createdAt?: string;
+  leadId?: string | null;
+  leadName?: string | null;
+  leadEmail?: string | null;
+  leadScore?: number | null;
 }
 
 interface PipelineStage {
@@ -156,7 +160,11 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
           priority: (d.priority || 'Medium') as Deal['priority'],
           owner: d.owner_name || 'Unassigned',
           closeDate: d.expected_close_date || '',
-          createdAt: d.created_at || new Date().toISOString()
+          createdAt: d.created_at || new Date().toISOString(),
+          leadId: d.lead_id || null,
+          leadName: d.lead_name || null,
+          leadEmail: d.lead_email || null,
+          leadScore: d.lead_score ?? null,
         };
       });
       setDeals(mappedDeals);
@@ -1002,6 +1010,20 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       {deal.company}
                     </div>
 
+                    {deal.leadName && (
+                      <div className="text-[9px] mt-1 flex items-center gap-1">
+                        <span className="text-text-muted">Lead:</span>
+                        <span className="font-semibold text-text-primary truncate">{deal.leadName}</span>
+                        {deal.leadScore != null && (
+                          <span className={`text-[8px] font-bold px-1 py-0.25 rounded ${
+                            deal.leadScore >= 80 ? 'text-status-success bg-status-success/10' :
+                            deal.leadScore >= 50 ? 'text-status-warning bg-status-warning/10' :
+                            'text-text-muted bg-surface-2'
+                          }`}>{deal.leadScore}%</span>
+                        )}
+                      </div>
+                    )}
+
                     {deal.createdAt && (
                       <div className="text-[9px] text-text-muted mt-1 flex items-center gap-1">
                         <CalendarDays className="h-2.5 w-2.5 text-text-muted/70" />
@@ -1201,6 +1223,24 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                   <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs text-text-primary focus:outline-none bg-surface-0 cursor-pointer" />
                 </div>
               </div>
+              {selectedDeal && selectedDeal.leadName && (
+                <div className="bg-surface-2 border border-border-default rounded-xl p-3.5">
+                  <h4 className="text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-2">Linked Lead</h4>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold text-text-primary">{selectedDeal.leadName}</p>
+                      {selectedDeal.leadEmail && <p className="text-[9px] text-text-muted mt-0.5">{selectedDeal.leadEmail}</p>}
+                    </div>
+                    {selectedDeal.leadScore != null && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        selectedDeal.leadScore >= 80 ? 'text-status-success bg-status-success/10' :
+                        selectedDeal.leadScore >= 50 ? 'text-status-warning bg-status-warning/10' :
+                        'text-text-muted bg-surface-2'
+                      }`}>{selectedDeal.leadScore}%</span>
+                    )}
+                  </div>
+                </div>
+              )}
               {selectedDeal && (
                 <div className="mt-3.5 bg-accent-color/5 border border-border-default rounded-xl p-3.5 flex items-start space-x-2">
                   <Sparkles className="h-4.5 w-4.5 text-accent-color shrink-0 mt-0.5" />
