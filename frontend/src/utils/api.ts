@@ -1021,7 +1021,7 @@ export function asNumber(v: Decimal | undefined | null): number {
 export function formatINR(v: Decimal | undefined | null): string {
   const n = asNumber(v);
   if (n >= 1_00_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}Cr`;
-  if (n >= 1_00_000) return `₹${(n / 1_00_00_000).toFixed(2)}L`;
+  if (n >= 1_00_000) return `₹${(n / 1_00_000).toFixed(2)}L`;
   if (n >= 1000) return `₹${(n / 1000).toFixed(1)}K`;
   return `₹${n.toLocaleString('en-IN')}`;
 }
@@ -1078,6 +1078,14 @@ export interface AdminDashboardData {
     active_seats: number;
     seat_limit?: number;
     usage_percentage?: number;
+  };
+  integrations?: { integration: string; status: string; last_sync?: string; message?: string }[];
+  custom_fields?: {
+    custom_fields_active?: number;
+    custom_fields_idle?: number;
+    automations_active: number;
+    automations_idle: number;
+    lead_scoring_usage: number;
   };
 }
 

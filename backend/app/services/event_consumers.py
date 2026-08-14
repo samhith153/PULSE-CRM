@@ -65,7 +65,7 @@ class NotificationConsumer(EventConsumer):
 
         service = NotificationService(self.db)
         try:
-            await service.create_for_user(
+            created = await service.create_for_user(
                 organization_id=event.organization_id,
                 user_id=user_id,
                 notif_type=notif_type,
@@ -80,6 +80,28 @@ class NotificationConsumer(EventConsumer):
                 "Notification created for user=%s type=%s event=%s",
                 user_id, notif_type, event.event_type,
             )
+            # Push a real-time SSE event so the frontend refreshes instantly
+            if created:
+                from app.services.event_bus import event_bus as _bus
+                from app.services.event_bus import EventEnvelope
+                from datetime import datetime as _dt
+                from uuid import uuid4
+                _sse_event = EventEnvelope(
+                    event_id=uuid4(),
+                    organization_id=event.organization_id,
+                    aggregate_type="notification",
+                    aggregate_id=created.id,
+                    event_type="NOTIFICATION_CREATED",
+                    topic="notifications",
+                    title=title,
+                    description=message,
+                    payload={"user_id": str(user_id), "type": notif_type, "title": title},
+                    source="notification_consumer",
+                    status="processed",
+                    created_at=_dt.utcnow(),
+                    actor_id=user_id,
+                )
+                await _bus.publish(_sse_event)
         except Exception:
             logger.exception("Failed to create notification for event %s", event.event_type)
 

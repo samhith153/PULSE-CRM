@@ -1,47 +1,63 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Target, CheckCircle2, AlertTriangle, AlertCircle, Zap, Award, Sparkles, ChevronDown } from 'lucide-react';
 import { formatINR, asNumber } from '@/utils/api';
 
 interface QuotaPaceCardProps {
   deals?: any[];
-  customTarget?: number;
+  quotaPace?: {
+    closed_won_revenue: number | string;
+    target_revenue: number | string;
+    attained_percentage: number | string;
+    pace_status: string;
+  } | null;
   className?: string;
 }
 
-export default function QuotaPaceCard({ deals = [], customTarget = 500000, className = '' }: QuotaPaceCardProps) {
+export default function QuotaPaceCard({ deals = [], quotaPace = null, className = '' }: QuotaPaceCardProps) {
+  const [expanded, setExpanded] = useState(true);
   const quota = useMemo(() => {
+    // Use backend quota_pace data when available
+    if (quotaPace) {
+      const achieved = asNumber(quotaPace.closed_won_revenue);
+      const target = asNumber(quotaPace.target_revenue);
+      const pct = Math.min(Math.round(Number(quotaPace.attained_percentage)), 100);
+      const gap = Math.max(0, target - achieved);
+      const wonDeals = deals.filter(
+        d => d.status === 'Won' || d.stage === 'Won' || d.status === 'Closed Won' || d.status === 'Closed'
+      );
+      const avgDeal = wonDeals.length > 0 ? Math.round(achieved / wonDeals.length) : 0;
+
+      // Map backend pace_status to display status
+      let status: 'success' | 'warning' | 'danger';
+      let statusText: string;
+      let StatusIcon: typeof CheckCircle2;
+      const paceStr = (quotaPace.pace_status || '').toLowerCase();
+      if (paceStr.includes('ahead') || paceStr.includes('on pace')) {
+        status = 'success'; statusText = 'On Track'; StatusIcon = CheckCircle2;
+      } else if (paceStr.includes('behind')) {
+        status = 'danger'; statusText = 'Behind Pace'; StatusIcon = AlertCircle;
+      } else {
+        status = 'warning'; statusText = 'At Risk'; StatusIcon = AlertTriangle;
+      }
+
+      return { displayPct: pct, displayAchieved: achieved, displayGap: gap, displayWon: wonDeals.length, displayAvgDeal: avgDeal, target, status, statusText, StatusIcon };
+    }
+
+    // Fallback: calculate from deals when no backend data
     const wonDeals = deals.filter(
       d => d.status === 'Won' || d.stage === 'Won' || d.status === 'Closed Won' || d.status === 'Closed'
     );
     const achieved = wonDeals.reduce((sum, d) => sum + asNumber(d.amount || d.value), 0);
-    const target = customTarget;
-    const pct = target > 0 ? Math.min(Math.round((achieved / target) * 100), 100) : 0;
-    const gap = Math.max(0, target - achieved);
-    const avgDeal = wonDeals.length > 0 ? Math.round(achieved / wonDeals.length) : 0;
+    const target = 0;
+    const pct = 0;
+    const gap = 0;
+    const avgDeal = 0;
 
-    // Use fallback demo values when no real data
-    const hasDemoData = wonDeals.length === 0 && achieved === 0;
-    const displayPct       = hasDemoData ? 68  : pct;
-    const displayAchieved  = hasDemoData ? Math.round(target * 0.68) : achieved;
-    const displayGap       = hasDemoData ? Math.round(target * 0.32) : gap;
-    const displayWon       = hasDemoData ? 12  : wonDeals.length;
-    const displayAvgDeal   = hasDemoData ? 12345 : avgDeal;
-
-    const expectedPace = 60;
-    const pace = expectedPace > 0 ? (displayPct / expectedPace) * 100 : 100;
-
-    let status: 'success' | 'warning' | 'danger';
-    let statusText: string;
-    let StatusIcon: typeof CheckCircle2;
-    if (pace >= 90)      { status = 'success'; statusText = 'On Track';    StatusIcon = CheckCircle2; }
-    else if (pace >= 70) { status = 'warning'; statusText = 'At Risk';     StatusIcon = AlertTriangle; }
-    else                 { status = 'danger';  statusText = 'Behind Pace'; StatusIcon = AlertCircle; }
-
-    return { displayPct, displayAchieved, displayGap, displayWon, displayAvgDeal, target, status, statusText, StatusIcon };
-  }, [deals, customTarget]);
+    return { displayPct: pct, displayAchieved: achieved, displayGap: gap, displayWon: wonDeals.length, displayAvgDeal: avgDeal, target, status: 'danger' as const, statusText: 'No Data', StatusIcon: AlertCircle };
+  }, [deals, quotaPace]);
 
   const {
     displayPct, displayAchieved, displayGap, displayWon, displayAvgDeal,
@@ -86,9 +102,12 @@ export default function QuotaPaceCard({ deals = [], customTarget = 500000, class
             <StatusIcon className="size-3" />
             {statusText}
           </span>
-          {/* Chevron toggle (visual only) */}
-          <button className="grid size-7 place-items-center rounded-full border border-border bg-muted/40 text-muted-foreground hover:bg-muted transition-colors">
-            <ChevronDown className="size-3.5" />
+          {/* Chevron toggle */}
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="grid size-7 place-items-center rounded-full border border-border bg-muted/40 text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <ChevronDown className={`size-3.5 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
           </button>
         </div>
       </div>
@@ -135,15 +154,12 @@ export default function QuotaPaceCard({ deals = [], customTarget = 500000, class
           <span>25%</span>
           <span>50%</span>
           <span>75%</span>
-          <span>100%</span>
-          <span className="text-right text-[8px]">
-            Target<br />{formatINR(target)}
-          </span>
+          <span className="text-right">100%<br /><span className="text-[8px]">Target {formatINR(target)}</span></span>
         </div>
       </div>
 
       {/* ── 3 KPI tiles ── */}
-      <div className="mt-5 grid grid-cols-3 gap-3">
+      <div className={`mt-5 grid grid-cols-3 gap-3 transition-all duration-300 overflow-hidden ${expanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 mt-0'}`}>
         {tiles.map(t => {
           const Icon = t.icon;
           return (

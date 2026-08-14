@@ -18,6 +18,7 @@ export default function IntegrationsView() {
   const [isLoadingGmail, setIsLoadingGmail] = useState(true);
   const [gmailError, setGmailError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const integrations: IntegrationItem[] = [
     { id: 'gmail', name: 'Gmail Integration', provider: 'Google Suite', description: 'Sync customer mail threads and parse leads automatically.', status: gmailConnection?.is_active ? 'Connected' : 'Disconnected', icon: Mail },
@@ -170,7 +171,10 @@ export default function IntegrationsView() {
                     <button className="px-3 py-1.5 rounded-lg text-xs font-bold bg-surface-2/80 text-text-muted cursor-not-allowed border border-border-default/50">Coming Soon</button>
                   )}
                   {item.status !== 'Disconnected' && (
-                    <button className="p-1.5 border border-border-default hover:bg-surface-2 rounded-lg text-text-muted hover:text-text-primary transition cursor-pointer bg-surface-1">
+                    <button 
+                      onClick={() => item.id === 'gmail' && setShowSettingsModal(true)}
+                      className="p-1.5 border border-border-default hover:bg-surface-2 rounded-lg text-text-muted hover:text-text-primary transition cursor-pointer bg-surface-1"
+                    >
                       <Settings className="h-4 w-4" />
                     </button>
                   )}
@@ -180,6 +184,40 @@ export default function IntegrationsView() {
           })}
         </div>
       </div>
+      {/* Gmail Settings Coming Soon Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-ink/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <div className="bg-surface-1 border border-border-default rounded-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-5 py-4 border-b border-border-default flex justify-between items-center bg-surface-2/30">
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4 text-text-muted" />
+                <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">Gmail Settings</h3>
+              </div>
+              <button onClick={() => setShowSettingsModal(false)} className="text-text-muted hover:text-text-primary p-1 cursor-pointer">
+                <span className="sr-only">Close</span>
+                ✕
+              </button>
+            </div>
+            <div className="p-6 text-center">
+              <div className="mx-auto h-12 w-12 rounded-full bg-accent-color/10 flex items-center justify-center mb-3">
+                <Settings className="h-5 w-5 text-accent-color" />
+              </div>
+              <h4 className="text-sm font-bold text-text-primary mb-1">Coming Soon</h4>
+              <p className="text-[11px] text-text-muted font-semibold leading-relaxed max-w-[260px] mx-auto">
+                Gmail sync configuration — including sync scope, date range, AI summarization toggle, and force re-sync — is on the roadmap.
+              </p>
+            </div>
+            <div className="px-5 py-3 border-t border-border-default flex justify-end bg-surface-2/20">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-bold cursor-pointer"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -112,7 +112,12 @@ class SalesTargetRepository(BaseRepository[SalesTarget]):
         manager_id: Optional[UUID] = None,
         rep_user_id: Optional[UUID] = None,
     ) -> List[Tuple[User, Optional[SalesTarget]]]:
-        """Return all reps paired with their target for a given period (if set)."""
+        """Return all reps paired with their target for a given period (if set).
+
+        Uses ``period_end >= today`` instead of exact ``period_start`` match
+        so the lookup is immune to timezone differences between the frontend
+        (browser-local) and the backend (server UTC).
+        """
         reps = await self.get_reps_in_org(
             organization_id,
             manager_id=manager_id,
@@ -121,15 +126,22 @@ class SalesTargetRepository(BaseRepository[SalesTarget]):
         targets_map: dict[UUID, SalesTarget] = {}
         if reps:
             rep_ids = [r.id for r in reps]
-            stmt = select(SalesTarget).where(
-                SalesTarget.organization_id == organization_id,
-                SalesTarget.rep_id.in_(rep_ids),
-                SalesTarget.period_type == period_type,
-                SalesTarget.period_start == period_start,
-                SalesTarget.is_active.is_(True),
+            today_date = date.today()
+            stmt = (
+                select(SalesTarget)
+                .where(
+                    SalesTarget.organization_id == organization_id,
+                    SalesTarget.rep_id.in_(rep_ids),
+                    SalesTarget.period_type == period_type,
+                    SalesTarget.period_end >= today_date,
+                    SalesTarget.is_active.is_(True),
+                )
+                .order_by(SalesTarget.rep_id, SalesTarget.period_end.desc())
             )
             result = await self.db.execute(stmt)
             for t in result.scalars().all():
-                targets_map[t.rep_id] = t
+                # Keep only the latest target per rep (ordered by period_end DESC)
+                if t.rep_id not in targets_map:
+                    targets_map[t.rep_id] = t
 
         return [(rep, targets_map.get(rep.id)) for rep in reps]

@@ -260,7 +260,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
         />
 
         {/* ui.md Â§6: Content padding 2xl (32px) on all sides */}
-        <main className="flex-1 overflow-y-auto px-8 py-8 md:px-8 space-y-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-8 py-8 md:px-8 space-y-6">
           {/* Keep-alive: every visited tab stays mounted (hidden when inactive),
               so tab switches never tear down state or refetch everything. */}
           {Array.from(visitedTabs).map((tab) => (
@@ -375,7 +375,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
                 )}
 
                 {/* New Quota Pace and Funnel Chart cards */}
-                {layoutSettings.quotaPace && <QuotaPaceCard />}
+                {layoutSettings.quotaPace && <QuotaPaceCard quotaPace={dashboardData?.quota_pace ?? null} />}
                 {layoutSettings.funnelChart && <FunnelChartCard />}
 
                 {/* Stacked Dashboard Row Layout */}

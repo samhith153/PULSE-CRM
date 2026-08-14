@@ -22,7 +22,7 @@ export interface Notification {
   entity_id: string | null;
 }
 
-const POLL_INTERVAL_MS = 20000;
+const POLL_INTERVAL_MS = 10_000;
 
 function toNotification(n: NotificationData): Notification {
   return {
@@ -129,6 +129,19 @@ export function useNotifications(pageSize = 20) {
       console.warn('[notifications] Failed to refresh unread count:', err?.message || err);
     }
   }, []);
+
+  // Listen for real-time NOTIFICATION_CREATED events via the SSE stream
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    function handleSseNotification() {
+      // Refresh immediately when the SSE stream pushes a notification event
+      refresh();
+    }
+
+    window.addEventListener('pulse-notification-created', handleSseNotification);
+    return () => window.removeEventListener('pulse-notification-created', handleSseNotification);
+  }, [refresh]);
 
   useEffect(() => {
     mounted.current = true;

@@ -154,33 +154,33 @@ export default function DealsAtRiskCard({
         {/* Filter Toolbar */}
         {normalizedDeals.length > 0 && (
           <div className="flex items-center justify-between mb-3 text-[11px]">
-            <div className="flex items-center space-x-1 bg-muted/50 p-0.5 rounded-lg border border-border/40">
+            <div className="flex items-center space-x-1 bg-muted/50 p-0.5 rounded-lg border border-border-default">
               <button
                 onClick={() => setFilter('all')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition ${
+                className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer select-none ${
                   filter === 'all'
-                    ? 'bg-card text-foreground shadow-xs border border-border/60'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-card text-foreground border-border-default'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2'
                 }`}
               >
                 All ({normalizedDeals.length})
               </button>
               <button
                 onClick={() => setFilter('critical')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition ${
+                className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer select-none ${
                   filter === 'critical'
-                    ? 'bg-destructive/15 text-destructive shadow-xs border border-destructive/25'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-destructive/15 text-destructive border-destructive/25'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2'
                 }`}
               >
                 Critical 🔥
               </button>
               <button
                 onClick={() => setFilter('high_value')}
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold transition ${
+                className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer select-none ${
                   filter === 'high_value'
-                    ? 'bg-status-warning-text/15 text-status-warning-text dark:text-status-warning-text shadow-xs border border-status-warning-text/25'
-                    : 'text-muted-foreground hover:text-foreground'
+                    ? 'bg-status-warning-text/15 text-status-warning-text dark:text-status-warning-text border-status-warning-text/25'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2'
                 }`}
               >
                 Top Value 💰

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Loader2, TrendingUp, TrendingDown, Users, Target, BarChart3, Activity, Zap, AlertTriangle, ChevronDown, Building2 } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Users, Target, Zap, ChevronDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import {
   getSalesPerformanceReport,
@@ -197,7 +197,7 @@ function SectionCard({ title, icon: Icon, children }: { title: string; icon: any
 
 function KPICard({ label, value, sub, positive }: { label: string; value: string; sub?: string; positive?: boolean }) {
   return (
-    <div className="rounded-xl bg-muted/50 p-4">
+    <div className="rounded-2xl border border-border-default bg-surface-1 p-5">
       <p className="text-xs text-text-muted">{label}</p>
       <p className="mt-1 text-[22px] font-extrabold tracking-tight">{value}</p>
       {sub && (
@@ -266,38 +266,31 @@ export default function AdminReportsView() {
           <p className="mt-1 text-sm text-text-muted">Organization-wide performance overview.</p>
         </div>
         <div className="ml-auto">
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as any)}
-            className="rounded-full bg-surface-1 border border-border-default px-4 py-2 text-[13px] font-semibold"
-          >
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-            <option value="quarter">This Quarter</option>
-            <option value="year">This Year</option>
-          </select>
+          <div className="relative inline-flex items-center">
+            <select
+              value={period}
+              onChange={(e) => setPeriod(e.target.value as any)}
+              className="h-9 min-w-[150px] appearance-none rounded-lg bg-surface-1 border border-border-default pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer whitespace-nowrap focus:outline-none focus:ring-1 focus:ring-accent-color/25"
+            >
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="quarter">This Quarter</option>
+              <option value="year">This Year</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-text-muted" />
+          </div>
         </div>
       </div>
 
       {/* ── Org Overview ─────────────────────────────────────────── */}
       {adminData?.summary && (
-        <SectionCard title="Organization Overview" icon={Building2}>
-          <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-            <KPICard label="Total Users" value={String(adminData.summary.users?.total || 0)} sub={`${adminData.summary.users?.active || 0} active`} positive />
-            <KPICard label="Total Companies" value={String(adminData.summary.companies?.total || 0)} sub={`${adminData.summary.companies?.added_this_month || 0} this month`} positive />
-            <KPICard label="Total Contacts" value={String(adminData.summary.contacts?.total || 0)} sub={`${adminData.summary.contacts?.new_this_month || 0} new`} positive />
-            <KPICard label="Total Leads" value={String(adminData.summary.leads?.total || 0)} sub={`${Number(adminData.summary.leads?.conversion_rate || 0).toFixed(1)}% conversion`} positive />
-          </div>
-        </SectionCard>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <KPICard label="Total Users" value={String(adminData.summary.users?.total || 0)} sub={`${adminData.summary.users?.active || 0} active`} positive />
+          <KPICard label="Total Companies" value={String(adminData.summary.companies?.total || 0)} sub={`${adminData.summary.companies?.added_this_month || 0} this month`} positive />
+          <KPICard label="Total Contacts" value={String(adminData.summary.contacts?.total || 0)} sub={`${adminData.summary.contacts?.new_this_month || 0} new`} positive />
+          <KPICard label="Total Leads" value={String(adminData.summary.leads?.total || 0)} sub={`${Number(adminData.summary.leads?.conversion_rate || 0).toFixed(1)}% conversion`} positive />
+        </div>
       )}
-
-      {/* ── KPIs ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <KPICard label="Total Revenue" value={fmtCurrency(salesPerf?.total_revenue || 0)} sub={`${fmtPct(salesPerf?.team_win_rate || 0)} win rate`} positive />
-        <KPICard label="Pipeline Value" value={fmtCurrency(pipeline?.pipeline_by_stage?.reduce((s, p) => s + Number(p.total_value || 0), 0) || 0)} sub={`${pipeline?.pipeline_by_stage?.reduce((s, p) => s + p.deal_count, 0) || 0} deals`} positive />
-        <KPICard label="Total Leads" value={String(leads?.total_leads || 0)} sub={`${fmtPct(leads?.overall_conversion_rate || 0)} conversion`} positive />
-        <KPICard label="Activity Score" value={String(activity?.activity_summary?.total || 0)} sub={`${activity?.completed_vs_overdue?.completed || 0} completed`} positive />
-      </div>
 
       {/* ── Sales Performance ─────────────────────────────────────── */}
       <SectionCard title="Sales Performance" icon={TrendingUp}>
@@ -347,58 +340,6 @@ export default function AdminReportsView() {
             )}
           </div>
         </div>
-      </SectionCard>
-
-      {/* ── Pipeline Analytics ────────────────────────────────────── */}
-      <SectionCard title="Pipeline Analytics" icon={BarChart3}>
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          {/* Pipeline by Stage */}
-          <div>
-            <h3 className="text-sm font-bold mb-3">Pipeline by Stage</h3>
-            <SVBarChart
-              data={pipeline?.pipeline_by_stage?.map(s => ({ name: s.stage, value: Number(s.total_value) })) || []}
-              height={260}
-            />
-          </div>
-
-          {/* Pipeline Aging */}
-          <div>
-            <h3 className="text-sm font-bold mb-3">Pipeline Aging</h3>
-            <SVBarChart
-              data={pipeline?.pipeline_aging?.map(a => ({ name: a.bucket, value: a.count })) || []}
-              height={260}
-            />
-          </div>
-        </div>
-
-        {/* Stage Conversion */}
-        {pipeline?.stage_conversion && pipeline.stage_conversion.length > 0 && (
-          <div className="mt-5">
-            <h3 className="text-sm font-bold mb-3">Stage Conversion</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted text-xs text-text-muted">
-                    <th className="rounded-l-xl px-4 py-2 text-left font-medium">From</th>
-                    <th className="px-4 py-2 text-left font-medium">To</th>
-                    <th className="px-4 py-2 text-center font-medium">Count</th>
-                    <th className="rounded-r-xl px-4 py-2 text-right font-medium">Conversion %</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pipeline.stage_conversion.slice(0, 6).map((c, i) => (
-                    <tr key={i} className="border-b border-border-default last:border-0">
-                      <td className="px-4 py-2.5">{c.from_stage}</td>
-                      <td className="px-4 py-2.5">{c.to_stage}</td>
-                      <td className="px-4 py-2.5 text-center font-semibold">{c.count}</td>
-                      <td className="px-4 py-2.5 text-right font-semibold">{fmtPct(Number(c.conversion_pct))}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
       </SectionCard>
 
       {/* ── Team Performance ──────────────────────────────────────── */}
@@ -459,178 +400,31 @@ export default function AdminReportsView() {
         )}
       </SectionCard>
 
-      {/* ── Activity Analytics ────────────────────────────────────── */}
-      <SectionCard title="Activity Analytics" icon={Activity}>
-        <div className="grid grid-cols-5 gap-4 mb-5">
-          {[
-            { label: 'Calls', value: activity?.activity_summary?.calls || 0 },
-            { label: 'Emails', value: activity?.activity_summary?.emails || 0 },
-            { label: 'Meetings', value: activity?.activity_summary?.meetings || 0 },
-            { label: 'Tasks', value: activity?.activity_summary?.tasks || 0 },
-            { label: 'Notes', value: activity?.activity_summary?.notes || 0 },
-          ].map(a => (
-            <div key={a.label} className="rounded-xl bg-muted/50 p-3 text-center">
-              <p className="text-[22px] font-extrabold">{a.value}</p>
-              <p className="text-xs text-text-muted">{a.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Activity by Rep */}
-        <div className="mb-5">
-          <SVGroupedBarChart
-            data={activity?.activity_by_rep?.slice(0, 8).map(r => ({
-              name: r.rep_name.split(' ')[0], calls: r.calls, emails: r.emails, meetings: r.meetings, tasks: r.tasks,
-            })) || []}
-            height={260}
-          />
-          <div className="mt-3 flex items-center gap-5 text-xs text-text-muted justify-center">
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--status-success-text)' }} />
-              Calls
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--accent-color)' }} />
-              Emails
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--status-warning-text)' }} />
-              Meetings
-            </span>
-            <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: 'var(--chart-5)' }} />
-              Tasks
-            </span>
-          </div>
-        </div>
-
-        {/* Completed vs Overdue */}
-        {activity?.completed_vs_overdue && (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="rounded-xl bg-status-success-bg p-4 text-center">
-              <p className="text-[22px] font-extrabold text-status-success-text">{activity.completed_vs_overdue.completed}</p>
-              <p className="text-xs text-status-success-text">Completed</p>
-            </div>
-            <div className="rounded-xl bg-status-danger-bg p-4 text-center">
-              <p className="text-[22px] font-extrabold text-status-danger-text">{activity.completed_vs_overdue.overdue}</p>
-              <p className="text-xs text-status-danger-text">Overdue</p>
-            </div>
-            <div className="rounded-xl bg-status-warning-bg p-4 text-center">
-              <p className="text-[22px] font-extrabold text-status-warning-text">{activity.completed_vs_overdue.pending}</p>
-              <p className="text-xs text-status-warning-text">Pending</p>
-            </div>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* ── Lead Analytics ────────────────────────────────────────── */}
-      <SectionCard title="Lead Analytics" icon={Zap}>
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          {/* Source Performance */}
-          <div>
-            <h3 className="text-sm font-bold mb-3">Lead Source Performance</h3>
-            <SVBarChart
-              data={leads?.source_performance?.map(s => ({ name: s.source, value: s.total })) || []}
-              height={260}
-            />
-          </div>
-
-          {/* Conversion Funnel */}
-          <div>
-            <h3 className="text-sm font-bold mb-3">Conversion Funnel</h3>
-            <div className="space-y-2">
-              {leads?.conversion_funnel?.map((s, i) => {
-                const maxCount = Math.max(...(leads.conversion_funnel?.map(f => f.count) || [1]));
-                const width = maxCount > 0 ? Math.max(20, (s.count / maxCount) * 100) : 20;
-                return (
-                  <div key={s.stage} className="flex items-center gap-3">
-                    <span className="w-[110px] text-xs font-semibold capitalize">{s.stage.replace('_', ' ')}</span>
-                    <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden relative">
-                      <div
-                        className="h-full rounded-lg"
-                        style={{ width: `${width}%`, background: COLORS[i % COLORS.length] }}
-                      />
-                      <span className="absolute inset-0 flex items-center px-3 text-[11px] font-bold">
-                        {s.count} ({fmtPct(Number(s.percentage))})
-                      </span>
-                    </div>
+      {/* ── Conversion Funnel ────────────────────────────────────── */}
+      <SectionCard title="Conversion Funnel" icon={Zap}>
+        {leads?.conversion_funnel && leads.conversion_funnel.length > 0 ? (
+          <div className="space-y-2">
+            {leads.conversion_funnel.map((s, i) => {
+              const maxCount = Math.max(...(leads.conversion_funnel?.map(f => f.count) || [1]));
+              const width = maxCount > 0 ? Math.max(20, (s.count / maxCount) * 100) : 20;
+              return (
+                <div key={s.stage} className="flex items-center gap-3">
+                  <span className="w-[110px] text-xs font-semibold capitalize">{s.stage.replace('_', ' ')}</span>
+                  <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden relative">
+                    <div
+                      className="h-full rounded-lg"
+                      style={{ width: `${width}%`, background: COLORS[i % COLORS.length] }}
+                    />
+                    <span className="absolute inset-0 flex items-center px-3 text-[11px] font-bold">
+                      {s.count} ({fmtPct(Number(s.percentage))})
+                    </span>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Lead Aging */}
-        {leads?.lead_aging && leads.lead_aging.length > 0 && (
-          <div className="mt-5">
-            <h3 className="text-sm font-bold mb-3">Lead Aging</h3>
-            <div className="flex gap-3">
-              {leads.lead_aging.map(a => (
-                <div key={a.bucket} className="flex-1 rounded-xl bg-muted/50 p-3 text-center">
-                  <p className="text-[20px] font-extrabold">{a.count}</p>
-                  <p className="text-xs text-text-muted">{a.bucket}</p>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
-        )}
-      </SectionCard>
-
-      {/* ── Deal Analytics ────────────────────────────────────────── */}
-      <SectionCard title="Deal Analytics" icon={AlertTriangle}>
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          {/* Deal KPIs */}
-          <div className="grid grid-cols-2 gap-4">
-            <KPICard label="Won Deals" value={String(deals?.total_won || 0)} sub={fmtCurrency(deals?.total_won_value || 0)} positive />
-            <KPICard label="Lost Deals" value={String(deals?.total_lost || 0)} sub={fmtCurrency(deals?.total_lost_value || 0)} positive={false} />
-            <KPICard label="Avg Deal Size" value={fmtCurrency(deals?.avg_deal_size?.current || 0)} sub={`${fmtPct(deals?.avg_deal_size?.change_pct || 0)} change`} positive={Number(deals?.avg_deal_size?.change_pct || 0) >= 0} />
-            <KPICard label="Closing Soon" value={String(deals?.deals_closing_soon?.length || 0)} sub="Next 14 days" positive />
-          </div>
-
-          {/* Lost Reason Analysis */}
-          <div>
-            <h3 className="text-sm font-bold mb-3">Lost Reason Analysis</h3>
-            {deals?.lost_reason_analysis && deals.lost_reason_analysis.length > 0 ? (
-              <SVDonutChart
-                data={deals.lost_reason_analysis.map(r => ({ name: r.reason, value: r.count }))}
-                height={200}
-              />
-            ) : (
-              <p className="text-sm text-text-muted">No lost deal data</p>
-            )}
-          </div>
-        </div>
-
-        {/* At-Risk Deals */}
-        {deals?.at_risk_deals && deals.at_risk_deals.length > 0 && (
-          <div className="mt-5">
-            <h3 className="text-sm font-bold mb-3">At-Risk Deals</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-muted text-xs text-text-muted">
-                    <th className="rounded-l-xl px-4 py-2 text-left font-medium">Deal</th>
-                    <th className="px-4 py-2 text-left font-medium">Owner</th>
-                    <th className="px-4 py-2 text-left font-medium">Stage</th>
-                    <th className="px-4 py-2 text-right font-medium">Value</th>
-                    <th className="rounded-r-xl px-4 py-2 text-left font-medium">Risk</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {deals.at_risk_deals.slice(0, 5).map(d => (
-                    <tr key={d.deal_id} className="border-b border-border-default last:border-0">
-                      <td className="px-4 py-2.5 font-semibold">{d.deal_name}</td>
-                      <td className="px-4 py-2.5">{d.owner_name}</td>
-                      <td className="px-4 py-2.5">{d.stage}</td>
-                      <td className="px-4 py-2.5 text-right font-semibold">{fmtCurrency(Number(d.value))}</td>
-                      <td className="px-4 py-2.5 text-status-danger-text text-xs font-semibold">{d.risk_reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+        ) : (
+          <p className="text-sm text-text-muted">No funnel data available</p>
         )}
       </SectionCard>
     </div>

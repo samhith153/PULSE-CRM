@@ -39,6 +39,7 @@ class Permission(str, Enum):
     LEAD_DELETE = "lead:delete"
     LEAD_ASSIGN = "lead:assign"
     LEAD_CONVERT = "lead:convert"
+    LEAD_WRITE = "lead:write"
 
     DEAL_CREATE = "deal:create"
     DEAL_READ = "deal:read"
@@ -59,6 +60,7 @@ class Permission(str, Enum):
     GMAIL_CONNECT = "gmail:connect"
 
     EVENT_READ = "event:read"
+    EVENT_CREATE = "event:create"
 
     DASHBOARD_READ = "dashboard:read"
 
@@ -66,6 +68,8 @@ class Permission(str, Enum):
 
     WEBHOOK_MANAGE = "webhook:manage"
     FILE_UPLOAD = "file:upload"
+    DOCUMENT_READ = "document:read"
+    DOCUMENT_DELETE = "document:delete"
 
     TEAM_PERFORMANCE_VIEW = "team_performance:view"
     TEAM_PERFORMANCE_EXPORT = "team_performance:export"
@@ -112,6 +116,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.LEAD_DELETE,
         Permission.LEAD_ASSIGN,
         Permission.LEAD_CONVERT,
+        Permission.LEAD_WRITE,
         Permission.DEAL_CREATE,
         Permission.DEAL_READ,
         Permission.DEAL_UPDATE,
@@ -127,10 +132,13 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.EMAIL_SEND,
         Permission.GMAIL_CONNECT,
         Permission.EVENT_READ,
+        Permission.EVENT_CREATE,
         Permission.DASHBOARD_READ,
         Permission.AI_ACCESS,
         Permission.WEBHOOK_MANAGE,
         Permission.FILE_UPLOAD,
+        Permission.DOCUMENT_READ,
+        Permission.DOCUMENT_DELETE,
         Permission.REPORT_VIEW,
         Permission.REPORT_EXPORT,
         Permission.TEAM_PERFORMANCE_VIEW,
@@ -150,6 +158,7 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.LEAD_READ,
         Permission.LEAD_UPDATE,
         Permission.LEAD_CONVERT,
+        Permission.LEAD_WRITE,
         Permission.DEAL_CREATE,
         Permission.DEAL_READ,
         Permission.DEAL_UPDATE,
@@ -162,8 +171,11 @@ ROLE_PERMISSIONS: Dict[Role, Set[Permission]] = {
         Permission.EMAIL_SYNC,
         Permission.EMAIL_SEND,
         Permission.EVENT_READ,
+        Permission.EVENT_CREATE,
         Permission.DASHBOARD_READ,
         Permission.FILE_UPLOAD,
+        Permission.DOCUMENT_READ,
+        Permission.DOCUMENT_DELETE,
         Permission.REPORT_VIEW,
         Permission.TEAM_PERFORMANCE_VIEW,
         Permission.NOTIFICATION_READ,

@@ -1362,15 +1362,12 @@ export default function WorkflowsView({
                   (open) => !open
                 )
               }
-              className="flex w-full items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5 text-left text-xs font-semibold text-foreground shadow-sm transition hover:border-brand-purple/40"
+              className="flex h-10 w-full items-center gap-2 rounded-lg border border-border-default bg-surface-1 px-3 text-left text-xs font-semibold text-text-primary transition-colors hover:bg-surface-2 cursor-pointer"
             >
-              <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              <Search className="h-3.5 w-3.5 shrink-0 text-text-muted" />
 
               <span className="flex-1 truncate">
-                Search leads…
-                {selectedLead
-                  ? ` (${selectedLead.title || firstName(selectedLead)})`
-                  : ''}
+                Search leads...
               </span>
 
               <ChevronDown
@@ -1457,7 +1454,7 @@ export default function WorkflowsView({
 
           <button
             onClick={() => loadBase()}
-            className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-border bg-card text-muted-foreground shadow-sm hover:text-foreground"
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border-default bg-surface-1 text-text-muted transition-colors hover:bg-surface-2 hover:text-text-primary"
             title="Refresh"
           >
             <RefreshCw className="h-4 w-4" />
@@ -1587,7 +1584,7 @@ export default function WorkflowsView({
           <button
             type="button"
             onClick={() => setFullWorkflowOpen(true)}
-            className="hidden sm:inline-flex items-center rounded-lg border border-border bg-card px-3 py-2 text-[10px] font-bold text-foreground hover:border-brand-purple/40"
+            className="hidden sm:inline-flex items-center rounded-lg border border-border-default bg-surface-1 px-3 py-1.5 text-xs font-bold text-text-primary transition-colors cursor-pointer hover:bg-surface-2"
           >
             View full workflow
           </button>

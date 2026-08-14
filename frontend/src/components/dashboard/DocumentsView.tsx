@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, Trash2, FileText, Download, UploadCloud, X, Calendar, User, Eye, Loader2 } from 'lucide-react';
-import { DocumentData, getDocuments, uploadDocument, deleteDocument, getDocumentDownloadUrl, getDocumentSignedUrl } from '@/utils/api';
+import { DocumentData, getDocuments, uploadDocument, deleteDocument, getDocumentDownloadUrl, getDocumentSignedUrl, getToken } from '@/utils/api';
 import { toast } from '@/lib/toast';
 
 function formatSize(bytes: number): string {
@@ -99,7 +99,8 @@ export default function DocumentsView({ onLoaded }: { onLoaded?: () => void } = 
   const handleView = async (doc: DocumentData) => {
     try {
       const { url } = await getDocumentSignedUrl(doc.id);
-      window.open(url, '_blank');
+      const separator = url.includes('?') ? '&' : '?';
+      window.open(`${url}${separator}download=false`, '_blank');
     } catch (err: any) {
       toast.error(err?.message || 'Failed to open document.');
     }
@@ -108,7 +109,7 @@ export default function DocumentsView({ onLoaded }: { onLoaded?: () => void } = 
   const handleDownload = async (doc: DocumentData) => {
     try {
       const res = await fetch(getDocumentDownloadUrl(doc.id), {
-        headers: { Authorization: `Bearer ${localStorage.getItem('pulse_crm_token') || ''}` },
+        headers: { Authorization: `Bearer ${getToken() || ''}` },
       });
       if (!res.ok) throw new Error('Download failed');
       const blob = await res.blob();

@@ -419,8 +419,103 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
       </aside>
  
       <section className="flex-1 min-w-0 flex flex-col border-l border-border-default bg-surface-1">
-        <div className="h-12 border-b border-border-default px-4 flex items-center justify-between bg-surface-2 shrink-0 gap-3">
-          <div className="relative flex-1">
+        {selectedEmail ? (
+          <>
+            <div className="h-12 border-b border-border-default px-4 flex items-center gap-2 bg-surface-2 shrink-0">
+              <button onClick={handleCloseDetail} className="p-1.5 hover:bg-surface-2 rounded-lg text-text-muted hover:text-text-primary cursor-pointer transition-colors" title="Back to emails">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-xs font-bold text-text-primary truncate flex-1 min-w-0">{selectedEmail.subject}</span>
+              <button onClick={loadEmails} disabled={isLoading} className="p-1.5 hover:bg-surface-2 rounded text-text-muted hover:text-text-primary transition-colors disabled:opacity-50" title="Refresh emails">
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {isDetailLoading ? (
+                <div className="h-full flex items-center justify-center text-text-muted text-xs font-semibold"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading email...</div>
+              ) : (
+                <div className="p-6 space-y-5 max-w-4xl">
+                  <h2 className="text-xl font-bold text-text-primary leading-tight">{selectedEmail.subject}</h2>
+                  <div className="flex items-center gap-3 border-b border-border-default pb-4">
+                    <div className="h-9 w-9 shrink-0 rounded-full bg-accent-color/10 text-accent-color flex items-center justify-center font-bold text-sm">
+                      {(selectedEmail.sender || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-text-primary truncate">{selectedEmail.sender}</p>
+                      <p className="text-[11px] text-text-muted font-semibold truncate">
+                        <span className="text-text-muted">to:</span> {selectedEmail.receiver || 'Not provided'}
+                      </p>
+                    </div>
+                    <span className="text-[11px] text-text-muted font-semibold shrink-0">{formatDate(selectedEmail.sent_at)}</span>
+                  </div>
+                  <div className="flex gap-2 select-none">
+                    <button onClick={handleReply} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-accent-color text-text-on-primary hover:bg-accent-color/90 transition cursor-pointer">Reply</button>
+                    <button onClick={handleForward} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border border-border-default bg-surface-1 hover:bg-surface-hover text-text-primary transition cursor-pointer">Forward</button>
+                    <button onClick={handleToggleUnread} className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border border-border-default bg-surface-1 hover:bg-surface-hover text-text-primary transition cursor-pointer ml-auto">Mark as unread</button>
+                  </div>
+                  <div className="text-sm text-text-primary leading-relaxed min-h-[200px] font-sans" dangerouslySetInnerHTML={{ __html: selectedEmail.body_preview ? selectedEmail.body_preview.replace(/\n/g, '<br/>') : 'No message body was provided.' }} />
+                  {selectedEmail.direction === 'inbound' && (emailSummary || isSummaryLoading) && (
+                    <div className="rounded-xl border border-accent-color/20 bg-accent-color/5 p-4 space-y-3">
+                      <div className="flex items-center gap-2 text-xs font-semibold text-accent-color">
+                        {isSummaryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                        <span>AI Summary</span>
+                        {emailSummary?.model_version && <span className="text-[10px] text-text-muted font-semibold ml-auto">{emailSummary.model_version}</span>}
+                      </div>
+                      {isSummaryLoading ? (
+                        <p className="text-[11px] text-text-muted font-semibold">Generating summary...</p>
+                      ) : emailSummary?.summary && (
+                        <>
+                          <p className="text-xs text-text-primary font-semibold leading-relaxed whitespace-pre-line">{emailSummary.summary}</p>
+                          <div className="flex flex-wrap gap-2 text-[10px] font-semibold">
+                            {emailSummary.sentiment && <span className="px-2 py-0.5 rounded-full bg-surface-2 text-text-muted">{emailSummary.sentiment}</span>}
+                            {emailSummary.intent && <span className="px-2 py-0.5 rounded-full bg-surface-2 text-text-muted">{emailSummary.intent}</span>}
+                            {emailSummary.category && <span className="px-2 py-0.5 rounded-full bg-surface-2 text-text-muted">{emailSummary.category}</span>}
+                            {emailSummary.follow_up_suggestion && <span className="px-2 py-0.5 rounded-full bg-accent-color/10 text-accent-color">{emailSummary.follow_up_suggestion}</span>}
+                          </div>
+                          {emailSummary.key_points?.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-[9px] font-semibold text-text-muted uppercase tracking-widest">Key Points</p>
+                              <ul className="list-disc list-inside text-[11px] text-text-primary font-semibold space-y-0.5">
+                                {emailSummary.key_points.map((point, i) => <li key={i}>{point}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                          {emailSummary.action_items?.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-[9px] font-semibold text-text-muted uppercase tracking-widest">Action Items</p>
+                              <ul className="list-disc list-inside text-[11px] text-text-primary font-semibold space-y-0.5">
+                                {emailSummary.action_items.map((item, i) => <li key={i}>{item}</li>)}
+                              </ul>
+                            </div>
+                          )}
+                          {emailSummary.draft_reply && (
+                            <div className="space-y-1">
+                              <p className="text-[9px] font-semibold text-text-muted uppercase tracking-widest">Suggested Reply</p>
+                              <p className="text-[11px] text-text-primary font-semibold whitespace-pre-line border-l-2 border-accent-color/30 pl-3">{emailSummary.draft_reply}</p>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <div className="space-y-2.5">
+                    <h4 className="text-[9px] font-semibold text-text-primary uppercase tracking-widest">Attachments</h4>
+                    {selectedEmail.attachment_metadata?.length ? selectedEmail.attachment_metadata.map(file => (
+                      <div key={file.attachment_id || file.filename} className="p-2.5 border border-border-default rounded-lg bg-surface-2 flex items-center text-[10px] font-semibold w-fit">
+                        <Paperclip className="h-3.5 w-3.5 mr-1.5 text-text-muted" />
+                        <span className="text-text-primary mr-2">{file.filename}</span>
+                        <span className="text-text-muted font-semibold">{formatSize(file.size_bytes)}</span>
+                      </div>
+                    )) : <p className="text-xs text-text-muted font-semibold">No attachments.</p>}
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="h-12 border-b border-border-default px-4 flex items-center justify-between bg-surface-2 shrink-0 gap-3">
+              <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search sender, subject, preview..." className="w-full pl-8 pr-3 py-1.5 border border-border-default rounded-lg text-[11px] text-text-primary focus:outline-none bg-surface-0" />
           </div>
@@ -431,26 +526,25 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
  
         {error && <div className="m-3 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive flex gap-2"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}
  
-        <div className="flex-1 overflow-y-auto divide-y divide-border">
+        <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="h-full flex items-center justify-center text-text-muted text-xs font-semibold"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading emails...</div>
           ) : emails.length === 0 ? (
             <div className="h-full flex items-center justify-center text-text-muted text-xs font-semibold">No emails found.</div>
-          ) : emails.map(email => (
-            <button key={email.id} onClick={() => handleSingleClick(email)} onDoubleClick={() => handleDoubleClick(email)} className={`w-full text-left px-5 py-3.5 hover:bg-surface-2/50 transition-colors relative ${selectedEmail?.id === email.id ? 'bg-accent-color/5' : !email.is_read ? 'bg-surface-1/95' : 'bg-surface-1/40'}`}>
+          ) : emails.map((email: SyncedEmail) => (
+            <button key={email.id} onClick={() => handleSingleClick(email)} onDoubleClick={() => handleDoubleClick(email)} className="w-full text-left px-4 py-3 flex items-center gap-3 border-b border-border-default/60 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors relative">
               {!email.is_read && (
                 <div className="absolute left-1.5 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-accent-color" title="Unread" />
               )}
-              <div className="flex items-center justify-between gap-3">
-                <p className={`truncate text-xs ${!email.is_read ? 'font-extrabold text-text-primary' : 'font-semibold text-text-muted/80'}`}>{email.direction === 'outbound' ? email.receiver || 'Recipient' : email.sender}</p>
-                <span className="text-[10px] text-text-muted font-semibold shrink-0">{formatDate(email.sent_at)}</span>
-              </div>
-              <p className={`text-xs truncate mt-1 ${!email.is_read ? 'font-extrabold text-text-primary' : 'font-medium text-text-secondary'}`}>{email.subject}</p>
-              <p className="text-[11px] text-text-muted font-semibold truncate mt-0.5">{email.body_preview || 'No preview available'}</p>
-              <div className="flex items-center gap-2 mt-2 text-[10px] text-text-muted font-semibold">
-                {email.thread_id && <span>Thread {email.thread_id}</span>}
-                {email.attachment_metadata?.length > 0 && <span className="inline-flex items-center gap-1"><Paperclip className="h-3 w-3" />{email.attachment_metadata.length}</span>}
-              </div>
+              <p className={`w-48 min-w-0 truncate text-xs shrink-0 ${!email.is_read ? 'font-bold text-text-primary' : 'font-medium text-text-muted/80'}`}>{email.direction === 'outbound' ? email.receiver || 'Recipient' : email.sender}</p>
+              <p className="flex-1 min-w-0 truncate text-xs">
+                <span className={`${!email.is_read ? 'font-bold text-text-primary' : 'font-semibold text-text-primary'}`}>{email.subject}</span>
+                {email.body_preview && <span className="text-text-muted font-medium truncate"> — {email.body_preview}</span>}
+              </p>
+              <span className="flex items-center gap-1.5 text-[10px] text-text-muted font-semibold shrink-0 ml-auto">
+                {email.attachment_metadata?.length > 0 && <Paperclip className="h-3 w-3" />}
+                {formatDate(email.sent_at)}
+              </span>
             </button>
           ))}
         </div>
@@ -462,121 +556,9 @@ export default function EmailsView({ onLoaded, onTabChange, composeTarget, onCom
             <button onClick={() => setPage(value => Math.min(totalPages, value + 1))} disabled={page >= totalPages} className="p-1 hover:bg-surface-2 disabled:opacity-40"><ChevronRight className="h-3.5 w-3.5" /></button>
           </div>
         </div>
+          </>
+        )}
       </section>
-
-      {/* Detail Slide-over Drawer (overlay) */}
-      {isEmailModalOpen && selectedEmail && (
-        <div className="absolute inset-y-0 right-0 w-[550px] max-w-full bg-surface-1 border-l border-border-default shadow-2xl z-20 flex flex-col animate-in slide-in-from-right duration-300">
-          <div className="flex items-center justify-between border-b border-border-default p-4 bg-surface-2 shrink-0">
-            <h3 className="text-xs font-bold text-text-primary uppercase tracking-wider">Email Details</h3>
-            <button 
-              onClick={handleCloseDetail}
-              className="p-1.5 hover:bg-surface-2 rounded text-text-muted hover:text-text-primary cursor-pointer transition-colors"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-6 space-y-5">
-            {isDetailLoading ? (
-              <div className="h-full flex items-center justify-center text-text-muted text-xs font-semibold"><Loader2 className="h-5 w-5 animate-spin mr-2" />Loading details...</div>
-            ) : (
-              <>
-                <div className="flex gap-2 pb-4 border-b border-border-default select-none">
-                  <button 
-                    onClick={handleReply}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold bg-accent-color text-text-on-primary hover:bg-accent-color/90 transition cursor-pointer"
-                  >
-                    Reply
-                  </button>
-                  <button 
-                    onClick={handleForward}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border border-border-default bg-surface-1 hover:bg-surface-hover text-text-primary transition cursor-pointer"
-                  >
-                    Forward
-                  </button>
-                  <button 
-                    onClick={handleToggleUnread}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold border border-border-default bg-surface-1 hover:bg-surface-hover text-text-primary transition cursor-pointer ml-auto"
-                  >
-                    Mark as unread
-                  </button>
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold text-text-primary leading-tight">{selectedEmail.subject}</h3>
-                  <p className="text-[10px] font-semibold text-text-muted mt-1">{formatDate(selectedEmail.sent_at)} - {selectedEmail.is_read ? 'Read' : 'Unread'}</p>
-                </div>
-                <div className="rounded-xl border border-border-default bg-surface-2 p-4 space-y-2 text-xs font-semibold text-text-muted">
-                  <p><span className="font-semibold text-text-primary">From:</span> {selectedEmail.sender}</p>
-                  <p><span className="font-semibold text-text-primary">To:</span> {selectedEmail.receiver || 'Not provided'}</p>
-                  {selectedEmail.thread_id && <p><span className="font-semibold text-text-primary">Thread:</span> {selectedEmail.thread_id}</p>}
-                </div>
-                <div 
-                  className="text-xs text-text-primary leading-relaxed border-b border-border-default pb-6 min-h-[140px] font-sans"
-                  dangerouslySetInnerHTML={{ 
-                    __html: selectedEmail.body_preview 
-                      ? selectedEmail.body_preview.replace(/\n/g, '<br/>') 
-                      : 'No message body was provided.' 
-                  }}
-                />
-                {selectedEmail.direction === 'inbound' && (emailSummary || isSummaryLoading) && (
-                  <div className="rounded-xl border border-accent-color/20 bg-accent-color/5 p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-semibold text-accent-color">
-                      {isSummaryLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                      <span>AI Summary</span>
-                      {emailSummary?.model_version && <span className="text-[10px] text-text-muted font-semibold ml-auto">{emailSummary.model_version}</span>}
-                    </div>
-                    {isSummaryLoading ? (
-                      <p className="text-[11px] text-text-muted font-semibold">Generating summary...</p>
-                    ) : emailSummary?.summary && (
-                      <>
-                        <p className="text-xs text-text-primary font-semibold leading-relaxed whitespace-pre-line">{emailSummary.summary}</p>
-                        <div className="flex flex-wrap gap-2 text-[10px] font-semibold">
-                          {emailSummary.sentiment && <span className="px-2 py-0.5 rounded-full bg-surface-2 text-text-muted">{emailSummary.sentiment}</span>}
-                          {emailSummary.intent && <span className="px-2 py-0.5 rounded-full bg-surface-2 text-text-muted">{emailSummary.intent}</span>}
-                          {emailSummary.category && <span className="px-2 py-0.5 rounded-full bg-surface-2 text-text-muted">{emailSummary.category}</span>}
-                          {emailSummary.follow_up_suggestion && <span className="px-2 py-0.5 rounded-full bg-accent-color/10 text-accent-color">{emailSummary.follow_up_suggestion}</span>}
-                        </div>
-                        {emailSummary.key_points?.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="text-[9px] font-semibold text-text-muted uppercase tracking-widest">Key Points</p>
-                            <ul className="list-disc list-inside text-[11px] text-text-primary font-semibold space-y-0.5">
-                              {emailSummary.key_points.map((point, i) => <li key={i}>{point}</li>)}
-                            </ul>
-                          </div>
-                        )}
-                        {emailSummary.action_items?.length > 0 && (
-                          <div className="space-y-1">
-                            <p className="text-[9px] font-semibold text-text-muted uppercase tracking-widest">Action Items</p>
-                            <ul className="list-disc list-inside text-[11px] text-text-primary font-semibold space-y-0.5">
-                              {emailSummary.action_items.map((item, i) => <li key={i}>{item}</li>)}
-                            </ul>
-                          </div>
-                        )}
-                        {emailSummary.draft_reply && (
-                          <div className="space-y-1">
-                            <p className="text-[9px] font-semibold text-text-muted uppercase tracking-widest">Suggested Reply</p>
-                            <p className="text-[11px] text-text-primary font-semibold whitespace-pre-line border-l-2 border-accent-color/30 pl-3">{emailSummary.draft_reply}</p>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )}
-                <div className="space-y-2.5">
-                  <h4 className="text-[9px] font-semibold text-text-primary uppercase tracking-widest">Attachments</h4>
-                  {selectedEmail.attachment_metadata?.length ? selectedEmail.attachment_metadata.map(file => (
-                    <div key={file.attachment_id || file.filename} className="p-2.5 border border-border-default rounded-lg bg-surface-2 flex items-center text-[10px] font-semibold w-fit">
-                      <Paperclip className="h-3.5 w-3.5 mr-1.5 text-text-muted" />
-                      <span className="text-text-primary mr-2">{file.filename}</span>
-                      <span className="text-text-muted font-semibold">{formatSize(file.size_bytes)}</span>
-                    </div>
-                  )) : <p className="text-xs text-text-muted font-semibold">No attachments.</p>}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* AI Compose Modal */}
       {isComposeOpen && (
