@@ -1,7 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Navbar from '@/components/navigation/Navbar';
+import { SiteHeader } from '@/components/landing/SiteHeader';
 import { PageContainer } from '@/components/shared/PageTemplates';
 import { Check, ChevronDown } from 'lucide-react';
 
@@ -104,7 +104,7 @@ function PricingContent() {
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#EFF6FF', minHeight: '100vh', marginTop: -64 }}>
-      <Navbar onOpenModal={() => router.push('/login')} onOpenSignUp={() => router.push('/signup')} />
+      <SiteHeader />
 
       {/* ── HEADER ── */}
       <section style={{ paddingTop: 120, paddingBottom: 64, textAlign: 'center', background: '#EFF6FF' }}>

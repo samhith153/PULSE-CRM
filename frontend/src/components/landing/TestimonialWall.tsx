@@ -202,12 +202,13 @@ export function TestimonialWall() {
                 <div
                   key={ci}
                   className={`marquee-col flex flex-col gap-5 group-hover:[animation-play-state:paused] motion-reduce:[animation-play-state:paused] ${ci === 1 ? "sm:-mt-10" : ""} ${ci === 2 ? "hidden xl:flex" : ""}`}
-                  style={
-                    {
-                      "--col-dur": `${38 + ci * 9}s`,
-                      animationDelay: `${ci * -6}s`,
-                    } as CSSProperties
-                  }
+style={
+                      {
+                        "--col-dur": ci === 1 ? "30s" : ci === 2 ? "35s" : "24s",
+                        animationDelay: `${ci * -6}s`,
+                        animationDirection: ci === 1 ? "reverse" : "normal",
+                      } as CSSProperties
+                    }
                 >
                   {loop.map((t, ri) => (
                     <WallCard key={`${t.name}-${ri}`} t={t} />
