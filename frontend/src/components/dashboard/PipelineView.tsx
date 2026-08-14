@@ -149,7 +149,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
         const stageName = stageObj ? stageObj.name : (d.status || 'New');
         return {
           id: d.id,
-          title: d.name || 'Untitled Deal',
+          title: (d as any).title || d.name || 'Untitled Deal',
           company: d.company_name || '',
           value: d.amount ? Number(d.amount) : 0,
           stage: stageName,
@@ -956,7 +956,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 key={stage.id}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(stage.name)}
-                className="bg-surface-2 border border-border-default rounded-2xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
+                className="bg-surface-2 border border-border-default rounded-2xl p-3 flex-1 min-w-[300px] shrink-0 flex flex-col h-[550px]"
               >
               <div className="flex justify-between items-center pb-2 border-b border-border-default mb-3">
                 <div>
@@ -968,7 +968,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 </span>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+              <div className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1">
                 {stageDeals.map((deal) => (
                   <div 
                     key={deal.id}
@@ -987,7 +987,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       });
                       setIsEditModalOpen(true);
                     }}
-                    className="bg-surface-1 border border-border-default rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
+                    className="bg-surface-1 border border-border-default rounded-xl p-3 w-full overflow-hidden hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
                   >
                     <div className="flex justify-between items-start gap-1">
                       <h4 className="text-[11px] font-semibold text-text-primary leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
@@ -1046,8 +1046,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       </div>
                     </div>
 
-                    <div className="mt-2 flex justify-between items-center text-[9px] font-semibold text-text-muted border-t border-border-default pt-1.5">
-                      <span>Shift Stage:</span>
+                    <div className="mt-2 flex items-center justify-between gap-2 text-[9px] font-semibold text-text-muted border-t border-border-default pt-1.5">
+                      <span className="whitespace-nowrap shrink-0">Shift Stage:</span>
                       <StageDropdown
                         value={deal.stage}
                         stages={stageNames}
@@ -1088,7 +1088,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                             toast.error(err?.message || 'Failed to update deal stage.');
                           });
                         }}
-                        className="w-28 shrink-0"
+                        className="flex-1 min-w-0"
                       />
                     </div>
                   </div>

@@ -297,7 +297,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           ) : tab === 'documents' ? (
             <DocumentsView />
           ) : tab === 'reports' ? (
-            requiredRole === 'manager' ? <ManagerReportsView /> :
+            requiredRole === 'manager' ? <ManagerReportsView onTabChange={setActiveTab} onNewReport={() => setIsReportModalOpen(true)} /> :
             requiredRole === 'admin' ? <AdminReportsView /> :
             <ReportsView />
           ) : tab === 'workflows' ? (

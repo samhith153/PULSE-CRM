@@ -451,24 +451,24 @@ const handleSubmit = async (e: React.FormEvent) => {
           </h2>
           <p className="text-xs text-muted-foreground mt-0.5">Review, log, and action scheduled sales activities.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {/* Segmented Switch for Kanban Board vs Timeline Logs */}
           <div className="flex border border-border rounded-lg p-0.5 bg-secondary/30 shrink-0 select-none">
-            <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'list' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === 'list' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
               List
             </button>
-            <button type="button" onClick={() => setViewMode('kanban')} className={`px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${viewMode === 'kanban' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button type="button" onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === 'kanban' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
               Kanban
             </button>
           </div>
 
           <button onClick={() => { setIsSelectMode(!isSelectMode); setSelectedIds(new Set()); }}
-            className={`inline-flex items-center gap-1.5 px-4 py-2 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'bg-surface-1 hover:bg-surface-2 text-text-primary border-border-default'}`}>
+            className={`inline-flex items-center gap-1.5 py-1.5 px-3 border rounded-lg text-xs font-semibold transition-colors cursor-pointer ${isSelectMode ? 'bg-accent-color text-white border-accent-color' : 'bg-surface-1 hover:bg-surface-2 text-text-primary border-border-default'}`}>
             <Check size={13} /><span>Select</span>
           </button>
           <div className="relative">
             <button onClick={() => setIsAddDropdownOpen(!isAddDropdownOpen)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-xs font-bold cursor-pointer shadow-sm">
+              className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-sm">
               <span>Add activity</span>
               <ChevronDown size={12} className={`transition-transform ${isAddDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -491,12 +491,12 @@ const handleSubmit = async (e: React.FormEvent) => {
             )}
           </div>
           <button onClick={handleExport}
-            className="inline-flex items-center gap-1.5 px-4 py-2 border border-border-default bg-surface-1 hover:bg-surface-2 text-text-primary rounded-lg text-xs font-bold transition-colors cursor-pointer">
+            className="inline-flex items-center gap-1.5 py-1.5 px-3 border border-border-default bg-surface-1 hover:bg-surface-2 text-text-primary rounded-lg text-xs font-semibold transition-colors cursor-pointer">
             <Download size={13} /><span>Export</span>
           </button>
           {selectedIds.size > 0 && (
             <button onClick={handleBulkDelete}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-status-danger-text hover:bg-status-danger-text/90 text-text-on-primary rounded-lg text-xs font-bold cursor-pointer shadow-sm animate-in fade-in">
+              className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-status-danger-text hover:bg-status-danger-text/90 text-text-on-primary rounded-lg text-xs font-semibold cursor-pointer shadow-sm animate-in fade-in">
               <Trash2 size={13} /><span>Delete ({selectedIds.size})</span>
             </button>
           )}
@@ -720,7 +720,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <span className="text-[8px] font-black uppercase text-brand-purple tracking-widest block leading-none font-['Space_Grotesk']">Linked CRM Context</span>
                   <span className="text-[8px] font-bold uppercase text-rose-500 bg-rose-500/10 border border-rose-500/20 px-1.5 py-0.5 rounded-full">Required</span>
                 </div>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-4 gap-2.5">
                   {[
                     { id: 'lead', label: 'Lead' },
                     { id: 'contact', label: 'Contact' },
@@ -731,7 +731,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                       type="button"
                       key={rt.id}
                       onClick={() => setRelatedType(rt.id as any)}
-                      className={`py-1.5 rounded-lg text-[9px] font-bold uppercase transition-all border cursor-pointer ${
+                      className={`py-1.5 px-3 rounded-lg text-xs font-bold uppercase transition-all border cursor-pointer ${
                         relatedType === rt.id
                           ? 'bg-accent-color/10 border-accent-color/20 text-accent-color font-extrabold shadow-sm'
                           : 'bg-card border-border text-muted-foreground'
@@ -859,8 +859,8 @@ const handleSubmit = async (e: React.FormEvent) => {
               </>)}
 
               <div className="pt-4 border-t border-border flex justify-end gap-2 shrink-0">
-                <button type="button" onClick={()=>{setActiveFormType(null);resetForm();}} className="px-4 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-semibold cursor-pointer">Cancel</button>
-                {activeFormType!=='email'&&<button type="submit" disabled={submitting} className="px-4 py-2 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-xs font-semibold cursor-pointer disabled:opacity-60">{submitting?'Saving…':'Submit Activity'}</button>}
+                <button type="button" onClick={()=>{setActiveFormType(null);resetForm();}} className="px-4 py-2 rounded-lg border border-border-default bg-surface-1 text-text-primary text-xs font-semibold transition-colors hover:bg-surface-2 cursor-pointer">Cancel</button>
+                {activeFormType!=='email'&&<button type="submit" disabled={submitting} className="px-4 py-2 rounded-lg bg-accent-color hover:bg-accent-color/90 text-white text-xs font-semibold transition-colors cursor-pointer disabled:opacity-60">{submitting?'Saving…':'Submit Activity'}</button>}
               </div>
             </form>
           </div>

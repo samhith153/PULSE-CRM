@@ -622,15 +622,25 @@ function TopDeals({ deals, period, onPeriod }: {
 
 /* ═══ Recent Activities ══════════════════════════════════════ */
 function RecentActivities({ acts }: { acts: { id: string; title?: string; action?: string; entity_type: string; created_at: string; created_by: string | null }[] }) {
-  const rows = acts.slice(0, 5);
+  const [activityFilter, setActivityFilter] = useState('All');
+  const activityOptions = ['All Activities', 'Emails', 'Calls', 'Meetings', 'Tasks'];
+  const filterKey = (label: string) => label === 'All Activities' ? 'All' : label.toLowerCase().replace(/\s+/g, '');
+  const filteredActs = activityFilter === 'All'
+    ? acts
+    : acts.filter(a => {
+        const needle = filterKey(activityFilter);
+        const haystack = `${a.entity_type || ''} ${a.action || ''} ${a.title || ''}`.toLowerCase().replace(/\s+/g, '');
+        return haystack.includes(needle);
+      });
+  const rows = filteredActs.slice(0, 5);
   return (
     <div className="card-surface p-5 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="min-w-0 text-[14px] font-bold text-foreground">Recent Activities</h2>
         <div className="relative inline-flex items-center shrink-0">
-          <select className="h-9 min-w-[150px] appearance-none whitespace-nowrap rounded-lg bg-surface-1 border border-border-default pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-color/25"
+          <select value={activityFilter} onChange={e => setActivityFilter(e.target.value)} className="h-9 min-w-[150px] appearance-none whitespace-nowrap rounded-lg bg-surface-1 border border-border-default pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-color/25"
             style={{ color: 'var(--text-primary)', backgroundColor: 'var(--surface-1)' }}>
-            <option>All Activities</option>
+            {activityOptions.map(opt => <option key={opt} value={filterKey(opt)}>{opt}</option>)}
           </select>
           <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-text-muted" />
         </div>
@@ -671,13 +681,43 @@ function RecentActivities({ acts }: { acts: { id: string; title?: string; action
 
 /* ═══ Performance Over Time dual-axis line chart ════════════ */
 function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) {
-  const revVals = trend.map(t => asNumber(t.revenue) || 0);
+  const [timeframe, setTimeframe] = useState('YTD');
+  const timeframeOptions = ['Year to Date', 'Last 6 Months', 'This Quarter', 'This Month'];
+  const tfKey = (label: string) => label === 'Year to Date' ? 'YTD' : label.toLowerCase().replace(/\s+/g, '');
+
+  const parsePeriod = (p: string): Date | null => {
+    if (/^\d{4}-\d{2}$/.test(p)) return new Date(p.replace('-', '/') + '/01');
+    const d = new Date(p);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const now = new Date();
+  const inRange = (period: string, key: string): boolean => {
+    const d = parsePeriod(period);
+    if (!d) return true;
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const quarterStartMonth = Math.floor(now.getMonth() / 3) * 3;
+    const quarterStart = new Date(now.getFullYear(), quarterStartMonth, 1);
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    switch (key) {
+      case 'last6months': return d >= sixMonthsAgo;
+      case 'thisquarter': return d >= quarterStart;
+      case 'thismonth': return d >= monthStart;
+      case 'ytd':
+      default: return d >= startOfYear;
+    }
+  };
+
+  const filteredTrend = timeframe === 'YTD' ? trend : trend.filter(t => inRange(t.period, tfKey(timeframe)));
+
+  const revVals = filteredTrend.map(t => asNumber(t.revenue) || 0);
   const rv      = revVals;
   // Simulate won deals from revenue (won ≈ rev / avg_deal_size_factor)
   const wv      = rv.map(v => Math.round(v / 12000));
   const rvMax   = Math.max(...rv, 1);
   const wvMax   = Math.max(...wv, 1);
-  const lbls    = trend.map(t => /^\d{4}-\d{2}$/.test(t.period)
+  const lbls    = filteredTrend.map(t => /^\d{4}-\d{2}$/.test(t.period)
         ? new Date(t.period.replace('-', '/') + '/01').toLocaleDateString('en-US', { month: 'short' })
         : t.period);
 
@@ -689,6 +729,7 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
   const yWonOf = (v: number) => padT + iH - (v / wvMax) * iH;
 
   function smooth(pts: {x:number;y:number}[]) {
+    if (pts.length === 0) return '';
     let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i], b = pts[i+1];
@@ -701,7 +742,7 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
   const wonPts = wv.map((v, i) => ({ x: xOf(i), y: yWonOf(v) }));
   const revLine = smooth(revPts);
   const wonLine = smooth(wonPts);
-  const revArea = `${revLine} L ${revPts[n-1].x.toFixed(1)} ${padT+iH} L ${padL} ${padT+iH} Z`;
+  const revArea = revPts.length === 0 ? '' : `${revLine} L ${revPts[n-1].x.toFixed(1)} ${padT+iH} L ${padL} ${padT+iH} Z`;
 
   function fmtRevTick(v: number) {
     if (v >= 1e5) return `${(v/1e5).toFixed(0)}L`;
@@ -724,9 +765,9 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
             <span className="h-0.5 w-4 rounded-full bg-[#3DA35D] inline-block" /> Deals Won
           </span>
           <div className="relative inline-flex items-center ml-2 shrink-0">
-            <select className="h-9 min-w-[150px] appearance-none whitespace-nowrap rounded-lg bg-surface-1 border border-border-default pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-color/25"
+            <select value={timeframe} onChange={e => setTimeframe(e.target.value)} className="h-9 min-w-[150px] appearance-none whitespace-nowrap rounded-lg bg-surface-1 border border-border-default pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-color/25"
               style={{ color: 'var(--text-primary)', backgroundColor: 'var(--surface-1)' }}>
-              <option>Year to Date</option>
+              {timeframeOptions.map(opt => <option key={tfKey(opt)} value={tfKey(opt)}>{opt}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-text-muted" />
           </div>
