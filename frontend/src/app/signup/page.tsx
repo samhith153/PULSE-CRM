@@ -7,6 +7,7 @@ import { AuthField } from '@/components/auth/AuthField';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { register, setToken, getCurrentUser } from '@/utils/api';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 
 function strengthOf(pw: string) {
@@ -22,6 +23,7 @@ function strengthOf(pw: string) {
 }
 
 export default function SignUpPage() {
+  const router = useRouter();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -86,7 +88,7 @@ export default function SignUpPage() {
         redirectPath = '/dashboard/manager';
       }
 
-      window.location.href = redirectPath;
+      router.push(redirectPath);
     } catch (err: any) {
       setLoading(false);
       setErrors({ general: err.message || 'Registration failed. Please try again.' });

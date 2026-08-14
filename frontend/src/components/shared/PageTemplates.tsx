@@ -21,6 +21,7 @@ export function useModal() {
 type Role = 'representative' | 'manager' | 'admin';
 
 function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolean; onClose: () => void; defaultMode?: 'signin' | 'signup' }) {
+  const router = useRouter();
   const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -62,7 +63,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
       }
 
       onClose();
-      window.location.href = '/';
+      router.push('/');
     } catch (err: any) {
       console.error('Auth error:', err);
       setError(err.message || 'Authentication failed.');

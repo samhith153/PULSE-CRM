@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDashboardLayout, DashboardLayoutProvider } from '@/components/dashboard/DashboardLayoutContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
@@ -64,6 +65,7 @@ interface DashboardShellProps {
 }
 
 function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }: DashboardShellProps) {
+  const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
@@ -139,7 +141,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
     if (!auth) {
       // Redirect back to the landing page login, not the Next.js /login route
-      window.location.href = '/login';
+      router.push('/login');
       return;
     }
 
@@ -148,7 +150,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
       let correctPath = '/dashboard';
       if (role === 'admin') correctPath = '/dashboard/admin';
       else if (role === 'manager') correctPath = '/dashboard/manager';
-      window.location.href = correctPath;
+      router.push(correctPath);
       return;
     }
 
@@ -221,7 +223,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     localStorage.removeItem('pulse-crm-role');
     localStorage.removeItem('pulse-crm-user');
     clearToken();
-    window.location.href = '/login';
+    router.push('/login');
   };
 
   const legacyRole = requiredRole;

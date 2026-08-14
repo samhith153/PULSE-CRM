@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { X, Mail, Lock, Loader2, Activity, AlertCircle } from 'lucide-react';
 import { login, register, setToken, getAuthConfig, loginWithGoogle, getCurrentUser } from '@/utils/api';
 
@@ -14,6 +15,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onSuccess }: AuthModalProps) {
+  const router = useRouter();
   const [mode, setMode] = useState<ModalMode>(defaultMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -63,7 +65,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
       if (onSuccess) {
         onSuccess();
       } else {
-        window.location.href = redirectPath;
+        router.push(redirectPath);
       }
     } catch (err: any) {
       console.error('Google auth error:', err);
@@ -154,7 +156,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'signup', onS
       if (onSuccess) {
         onSuccess();
       } else {
-        window.location.href = redirectPath;
+        router.push(redirectPath);
       }
     } catch (err: any) {
       console.error('Auth error:', err);

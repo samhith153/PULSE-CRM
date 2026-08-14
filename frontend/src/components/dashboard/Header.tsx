@@ -35,7 +35,11 @@ export default function Header({
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [syncSeconds, setSyncSeconds] = useState(2);
   const [isSyncing, setIsSyncing] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(
+    () => (typeof document !== 'undefined'
+      ? (document.documentElement.classList.contains('dark') ? 'dark' : 'light')
+      : 'dark')
+  );
 
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -49,10 +53,8 @@ export default function Header({
   const profileInitials = userInitials(currentUser?.full_name);
 
   useEffect(() => {
-    const savedTheme = (localStorage.getItem('pulse-crm-theme') as 'light' | 'dark') || 'light';
+    const savedTheme = (localStorage.getItem('pulse-crm-theme') as 'light' | 'dark') || 'dark';
     setTheme(savedTheme);
-    if (savedTheme === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
   }, []);
 
   useEffect(() => {
