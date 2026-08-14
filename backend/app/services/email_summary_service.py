@@ -137,23 +137,43 @@ class EmailSummaryService:
 
 
 async def _summarize_via_ai_service(thread_id: str, emails: list) -> Optional[dict]:
-    """Call the ai-service microservice to summarize an email thread."""
-    try:
-        messages = _build_messages(emails)
-        if not messages:
-            return None
+    """Call the ai-service microservice to summarize an email thread.
 
+    Falls back to a direct Groq API call when the AI service is unreachable
+    (e.g. Render free-tier spin-down) so email summarization keeps working.
+    """
+    messages = _build_messages(emails)
+    if not messages:
+        return None
+
+    # ── Primary: ai-service microservice ──────────────────────────────
+    try:
         client = AIClient()
         raw = await client.summarise(thread_id=thread_id, messages=messages)
         await client.close()
 
-        if not raw:
-            return _fallback_result()
-
-        return _parse_result(raw)
+        if raw and not _is_fallback(raw):
+            return _parse_result(raw)
+        logger.info("[EMAIL_SUMMARY] ai-service returned fallback for thread %s — trying direct Groq", thread_id)
     except Exception as exc:
-        logger.warning("ai-service summarization failed: %s", exc)
-        return _fallback_result()
+        logger.warning("[EMAIL_SUMMARY] ai-service failed for thread %s: %s — trying direct Groq", thread_id, exc)
+
+    # ── Fallback: direct Groq call from backend ───────────────────────
+    try:
+        result = await _summarize_via_groq_direct(messages)
+        if result:
+            logger.info("[EMAIL_SUMMARY] Direct Groq fallback succeeded for thread %s", thread_id)
+            return result
+    except Exception as exc:
+        logger.warning("[EMAIL_SUMMARY] Direct Groq fallback also failed for thread %s: %s", thread_id, exc)
+
+    return _fallback_result()
+
+
+def _is_fallback(raw: dict) -> bool:
+    """Check if the AI service returned a failure/fallback marker."""
+    summary = (raw.get("summary") or "").strip().lower()
+    return summary in _FAILURE_MARKERS
 
 
 def _build_messages(emails: list) -> list[dict]:
@@ -231,4 +251,159 @@ def _fallback_result() -> dict:
         "draft_reply": "Unable to process this thread.",
         "follow_up_suggestion": "Unable to suggest follow-up.",
         "follow_up_timing": "no_followup",
+    }
+
+
+# ── Direct Groq fallback ─────────────────────────────────────────────────
+# When the ai-service microservice is unreachable (Render spin-down, etc.),
+# call Groq directly from the backend using the same detailed prompt the
+# AI service uses.  This keeps email summarization working even when the
+# separate AI service container is sleeping.
+
+_GROQ_SUMMARY_PROMPT_TEMPLATE = """You are an AI sales assistant for PULSE, a revenue platform.
+Your task is to analyse email conversations and provide structured insights.
+
+Email Thread:
+{thread_text}
+
+=== TASK 1: SUMMARY ===
+Write a one-sentence summary of the email thread.
+
+=== TASK 2: SUMMARY WORD (For Lead Scoring) ===
+Choose ONE word that best represents this email:
+- "demo_request" - Asked for demo
+- "contract_signed" - Deal closed
+- "pricing_negotiation" - Discussing pricing
+- "interested" - Prospect shows interest
+- "proposal" - Proposal sent
+- "budget" - Budget discussion
+- "meeting" - Meeting requested
+- "follow_up" - Needs follow-up
+- "inquiry" - General question
+- "introduction" - Intro email
+- "positive" - Very positive
+- "neutral" - Neutral tone
+- "negative" - Very negative
+- "thank_you" - Thank you email
+- "referral" - Referral given
+- "support" - Support request
+- "complaint" - Negative feedback
+- "lost" - Deal lost
+- "urgent" - Urgent action needed
+
+=== TASK 3: SENTIMENT ===
+Choose ONE: positive / neutral / negative
+
+=== TASK 4: INTENT ===
+Choose ONE: demo / buy / negotiate / followup / decline / other
+
+=== TASK 5: CONFIDENCE ===
+Rate your confidence (0.0 to 1.0)
+
+=== TASK 6: KEY POINTS ===
+Extract 2-5 key points from the conversation
+
+=== TASK 7: ACTION ITEMS ===
+Extract any action items or next steps
+
+=== TASK 8: EMAIL CATEGORY ===
+Choose ONE: sales / support / general / urgent
+
+=== TASK 9: DRAFT REPLY ===
+Write a 1-2 sentence suggested draft reply.
+
+=== TASK 10: FOLLOW-UP SUGGESTION ===
+Suggest the best follow-up action and timing.
+
+=== TASK 11: FOLLOW-UP TIMING ===
+Choose ONE: immediate / today / tomorrow / 2_days / 3_days / 1_week / 2_weeks / no_followup
+
+Return ONLY valid JSON in this exact format:
+{{
+    "summary": "one sentence summary",
+    "summary_word": "single_word_tag",
+    "sentiment": "positive/neutral/negative",
+    "intent": "demo/buy/negotiate/followup/decline/other",
+    "confidence": 0.92,
+    "key_points": ["point 1", "point 2"],
+    "action_items": ["action 1", "action 2"],
+    "category": "sales/support/general/urgent",
+    "draft_reply": "Suggested reply...",
+    "follow_up_suggestion": "Follow up in X days with Y",
+    "follow_up_timing": "immediate/today/tomorrow/2_days/3_days/1_week/no_followup"
+}}
+"""
+
+
+def _format_thread_for_groq(messages: list[dict]) -> str:
+    """Convert message dicts into a readable thread for the Groq prompt."""
+    lines = []
+    for msg in messages:
+        direction = "From" if msg.get("direction") == "incoming" else "To"
+        sender = msg.get("sender", "unknown")
+        subject = msg.get("subject", "")
+        body = msg.get("body", "")
+        timestamp = msg.get("timestamp", "")
+
+        header = f"{direction} {sender}"
+        if subject:
+            header += f" | Subject: {subject}"
+        if timestamp:
+            header += f" | {timestamp}"
+        lines.append(f"{header}:\n{body}\n")
+    return "\n".join(lines)
+
+
+async def _summarize_via_groq_direct(messages: list[dict]) -> Optional[dict]:
+    """Call Groq directly from the backend as a fallback when the AI service is down."""
+    import asyncio
+    from groq import AsyncGroq
+
+    api_key = settings.GROQ_API_KEY
+    if not api_key:
+        logger.warning("[EMAIL_SUMMARY] No GROQ_API_KEY configured — cannot use direct Groq fallback")
+        return None
+
+    thread_text = _format_thread_for_groq(messages)
+    prompt = _GROQ_SUMMARY_PROMPT_TEMPLATE.format(thread_text=thread_text)
+
+    client = AsyncGroq(api_key=api_key)
+    try:
+        response = await asyncio.wait_for(
+            client.chat.completions.create(
+                model=settings.MODEL_NAME or "llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                max_tokens=1500,
+            ),
+            timeout=(settings.AI_TIMEOUT or 30) + 5,
+        )
+    finally:
+        await client.close()
+
+    raw_text = response.choices[0].message.content.strip()
+    cleaned = raw_text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+
+    try:
+        data = json.loads(cleaned)
+    except (json.JSONDecodeError, ValueError):
+        logger.warning("[EMAIL_SUMMARY] Direct Groq response was not valid JSON: %s", cleaned[:200])
+        return None
+
+    # Normalize — ensure all expected fields exist with defaults
+    return {
+        "summary": data.get("summary", "Unable to generate summary"),
+        "summary_word": data.get("summary_word", "neutral"),
+        "sentiment": data.get("sentiment", "neutral"),
+        "intent": data.get("intent", "other"),
+        "confidence": data.get("confidence", 0.5),
+        "key_points": data.get("key_points", []),
+        "action_items": data.get("action_items", []),
+        "category": data.get("category", "general"),
+        "draft_reply": data.get("draft_reply", "No reply suggested."),
+        "follow_up_suggestion": data.get("follow_up_suggestion", "No follow-up suggested."),
+        "follow_up_timing": data.get("follow_up_timing", "no_followup"),
     }

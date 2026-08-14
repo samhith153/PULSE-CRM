@@ -10,6 +10,7 @@ Optimizations:
 """
 from __future__ import annotations
 
+import asyncio
 import ipaddress
 import logging
 from typing import Any, Optional
@@ -84,24 +85,73 @@ class AIClient:
     async def close(self) -> None:
         pass  # Shared client lifecycle is managed at app level
 
-    async def _post(self, path: str, payload: dict) -> Optional[dict]:
-        """POST JSON to the AI service and return parsed JSON or None on failure."""
-        try:
-            logger.info("[AI_CLIENT] POST %s", path)
-            response = await self._client.post(f"{self.base_url}{path}", json=payload)
-            if response.status_code >= 400:
+    @staticmethod
+    def _is_html_response(body: str) -> bool:
+        """Detect Render free-tier wake-up HTML pages."""
+        stripped = body.lstrip()
+        return stripped.startswith("<") and ("<html" in stripped.lower() or "<!doctype" in stripped.lower())
+
+    async def _post(self, path: str, payload: dict, retries: int = 2) -> Optional[dict]:
+        """POST JSON to the AI service and return parsed JSON or None on failure.
+
+        Retries up to *retries* times when the AI service returns an HTML
+        wake-up page (Render free-tier spin-down) or a transient error.
+        """
+        last_exc: Exception | None = None
+        for attempt in range(retries + 1):
+            try:
+                logger.info("[AI_CLIENT] POST %s (attempt %d/%d)", path, attempt + 1, retries + 1)
+                response = await self._client.post(f"{self.base_url}{path}", json=payload)
+
+                if response.status_code >= 400:
+                    logger.warning("[AI_CLIENT] %d from %s", response.status_code, path)
+                    return None
+
+                body = response.text
+
+                # Render free-tier spin-down returns HTML instead of JSON
+                if self._is_html_response(body):
+                    logger.warning(
+                        "[AI_CLIENT] Got HTML wake-up page from %s (attempt %d/%d), retrying…",
+                        path, attempt + 1, retries + 1,
+                    )
+                    if attempt < retries:
+                        await asyncio.sleep(3 * (attempt + 1))  # 3s, 6s backoff
+                        continue
+                    logger.error("[AI_CLIENT] HTML wake-up page after %d retries from %s", retries, path)
+                    return None
+
+                return response.json()
+
+            except httpx.HTTPError as exc:
+                last_exc = exc
                 logger.warning(
-                    "[AI_CLIENT] %d from %s",
-                    response.status_code, path,
+                    "[AI_CLIENT] Request failed (%s %s) attempt %d/%d: %s",
+                    path, self.base_url, attempt + 1, retries + 1, type(exc).__name__,
                 )
+                if attempt < retries:
+                    await asyncio.sleep(3 * (attempt + 1))
+                    continue
                 return None
-            return response.json()
-        except httpx.HTTPError as exc:
-            logger.warning("[AI_CLIENT] Request failed (%s %s): %s", path, self.base_url, type(exc).__name__)
-            return None
-        except ValueError as exc:
-            logger.warning("[AI_CLIENT] Invalid JSON from %s: %s", path, type(exc).__name__)
-            return None
+
+            except ValueError as exc:
+                last_exc = exc
+                # Log the first 500 chars of the response body for debugging
+                body_preview = ""
+                try:
+                    body_preview = response.text[:500]  # type: ignore[assignment]
+                except Exception:
+                    pass
+                logger.warning(
+                    "[AI_CLIENT] Invalid JSON from %s: %s | body_preview=%s",
+                    path, type(exc).__name__, body_preview,
+                )
+                if attempt < retries:
+                    await asyncio.sleep(3 * (attempt + 1))
+                    continue
+                return None
+
+        return None
 
     # ── Lead scoring ──────────────────────────────────────────────────────
     async def score_lead(self, lead_id: str, raw_data: dict[str, Any]) -> Optional[dict]:

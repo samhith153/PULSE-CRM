@@ -70,6 +70,26 @@ async def refresh_gmail_watches():
         return 0
 
 
+async def keep_alive_ai_service():
+    """Ping the AI service health endpoint every 10 minutes.
+
+    Render free-tier services spin down after ~15 min of inactivity. This
+    lightweight ping keeps the AI service alive so the first real request
+    doesn't hit a cold-start HTML wake-up page.
+    """
+    try:
+        import httpx
+        async with httpx.AsyncClient(timeout=5.0) as hc:
+            resp = await hc.get(f"{settings.AI_SERVICE_URL}/health")
+            if resp.status_code == 200:
+                logger.debug("AI keep-alive: OK")
+            else:
+                logger.debug("AI keep-alive: %d", resp.status_code)
+    except Exception as exc:
+        # Expected when the service is mid-spin-down — nothing to worry about
+        logger.debug("AI keep-alive failed (service may be waking up): %s", exc)
+
+
 async def daily_lead_assessment():
     """Daily batch job: reassess leads whose decay changed or who missed scoring.
     Runs via APScheduler cron at 12:00 AM. Uses the same unified pipeline.
@@ -214,6 +234,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(daily_lead_assessment, "cron", hour=0, minute=0)
     scheduler.add_job(process_event_outbox, "interval", seconds=5, max_instances=1, misfire_grace_time=60)
     scheduler.add_job(refresh_gmail_watches, "interval", hours=6, max_instances=1, misfire_grace_time=300)
+    scheduler.add_job(keep_alive_ai_service, "interval", minutes=10, max_instances=1, misfire_grace_time=300)
     scheduler.start()
 
     # Bootstrap RBAC tables (permissions, roles, role-permission mappings)

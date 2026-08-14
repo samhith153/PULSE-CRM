@@ -140,8 +140,8 @@ export default function UsersView() {
       }
       setIsModalOpen(false);
       loadUsers();
-    } catch (err: any) {
-      toast.error(err?.message || 'Operation failed.');
+    } catch {
+      // apiFetch already showed a descriptive toast — no duplicate
     } finally {
       setSaving(false);
     }
@@ -158,7 +158,7 @@ export default function UsersView() {
       }
       loadUsers();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to update user status.');
+      // apiFetch already showed a toast — no duplicate
     }
   };
 
@@ -169,7 +169,7 @@ export default function UsersView() {
       toast.success(`User "${user.full_name}" permanently deleted.`);
       loadUsers();
     } catch (err: any) {
-      toast.error(err?.message || 'Failed to delete user.');
+      // apiFetch already showed a toast — no duplicate
     }
   };
 
