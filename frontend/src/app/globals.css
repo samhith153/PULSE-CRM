@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 :root {
+  color-scheme: light;
   --radius: 1rem;
 
   /* ── Layered Surface System (Light) — ui.md §2 ── */
@@ -2115,8 +2116,17 @@ input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.05) inset !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(2, 6, 23, 0.92) inset !important;
   caret-color: #ffffff !important;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── Lead Management section (dark-styled block) ── */
+.lead-mgmt-section .overflow-hidden.rounded-xl:not(aside):not(aside *),
+.lead-mgmt-section .overflow-hidden.rounded-2xl:not(aside):not(aside *) {
+  background-color: var(--color-slate-950) !important;
+  box-shadow: var(--shadow-card) !important;
+  border: 1px solid var(--color-gray-800) !important;
+  transition: box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 

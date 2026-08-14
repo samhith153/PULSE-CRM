@@ -108,7 +108,7 @@ export default function SignUpPage() {
           Start closing more deals in minutes — no credit card required.
         </p>
 
-        <div className="rise-in mt-7" style={{ animationDelay: '180ms' }}>
+        <div className="rise-in mt-6" style={{ animationDelay: '180ms' }}>
           <GoogleButton label="Continue with Google" />
         </div>
 
@@ -128,6 +128,7 @@ export default function SignUpPage() {
               label="Full name"
               autoComplete="name"
               value={name}
+              placeholder="Jane Doe"
               onChange={(e) => {
                 setName(e.target.value);
                 if (errors.name) {
@@ -146,6 +147,7 @@ export default function SignUpPage() {
               type="email"
               autoComplete="email"
               value={email}
+              placeholder="you@company.com"
               onChange={(e) => {
                 setEmail(e.target.value);
                 if (errors.email) {
@@ -175,20 +177,15 @@ export default function SignUpPage() {
               }}
               error={errors.password}
             />
-            <div className="mt-2 flex items-center gap-2 px-1">
-              <div className="flex flex-1 gap-1.5">
-                {[1, 2, 3].map((i) => (
-                  <span
-                    key={i}
-                    className={`h-1 flex-1 rounded-full transition-all duration-300 ${
-                      strength.level >= i ? 'bg-accent-color' : 'bg-white/10'
-                    }`}
-                  />
-                ))}
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-[11px] font-medium text-white/50">Password strength</span>
+              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden relative">
+                <div
+                  className={`absolute inset-0 h-full rounded-full transition-colors duration-300 ${strength.level >= 1 ? 'bg-red-400' : strength.level >= 2 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                  style={{ width: `${strength.level * 33.33}%` }}
+                />
               </div>
-              <span className="w-14 text-right text-[11px] text-white/50">
-                {strength.label}
-              </span>
+              <span className="text-[11px] font-semibold ml-2 text-emerald-400">{strength.label}</span>
             </div>
           </div>
 
@@ -208,7 +205,7 @@ export default function SignUpPage() {
         </p>
 
         <p
-          className="rise-in mt-8 text-center text-xs leading-relaxed text-white/40"
+          className="rise-in mt-6 text-center text-xs leading-relaxed text-white/40"
           style={{ animationDelay: '460ms' }}
         >
           By continuing, you agree to Pulse&apos;s{' '}

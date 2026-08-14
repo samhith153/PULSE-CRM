@@ -1,4 +1,4 @@
-import { useId, useState, type InputHTMLAttributes } from "react";
+import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -6,64 +6,46 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   error?: string;
   toggleable?: boolean;
+  labelAction?: ReactNode;
 };
 
-export function AuthField({ label, error, toggleable, className, ...props }: Props) {
+export function AuthField({ label, error, toggleable, labelAction, className, ...props }: Props) {
   const id = useId();
   const [show, setShow] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const filled = String(props.value ?? "").length > 0;
-  const float = focused || filled;
 
   return (
     <div className={cn(error && "shake-x")}>
-      <div
-        className={cn(
-          "relative rounded-xl border transition-all duration-200",
-          focused ? "border-blue-500 ring-2 ring-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.15)]" : "border-white/15 hover:border-white/25",
-          error && !focused && "border-red-500/60",
-        )}
-        style={{
-          background: 'rgba(255, 255, 255, 0.05)',
-        }}
-      >
-        <label
-          htmlFor={id}
-          className={cn(
-            "pointer-events-none absolute left-3.5 origin-left transition-all duration-200 select-none",
-            float ? "top-1.5 text-[11px] font-medium text-white/50" : "top-1/2 -translate-y-1/2 text-sm text-white/40",
-            focused && "text-blue-400",
-          )}
-        >
+      <div className="mb-1.5 flex items-center justify-between gap-3">
+        <label htmlFor={id} className="select-none text-[13px] font-medium text-white/70">
           {label}
         </label>
+        {labelAction}
+      </div>
+      <div
+        className={cn(
+          "relative rounded-2xl border bg-slate-950/50 backdrop-blur-sm transition-all duration-200",
+          "border-white/15 hover:border-white/25",
+          "focus-within:border-cyan-400/60 focus-within:ring-2 focus-within:ring-cyan-400/20 focus-within:shadow-[0_0_20px_rgba(56,189,248,0.16)]",
+          error && "border-red-500/60 focus-within:border-red-500/70 focus-within:ring-red-500/20 focus-within:shadow-[0_0_20px_rgba(239,68,68,0.14)]",
+        )}
+      >
         <input
           id={id}
           {...props}
           type={toggleable ? (show ? "text" : "password") : props.type}
-          onFocus={(e) => {
-            setFocused(true);
-            props.onFocus?.(e);
-          }}
-          onBlur={(e) => {
-            setFocused(false);
-            props.onBlur?.(e);
-          }}
           className={cn(
-            "h-14 w-full rounded-xl bg-transparent px-3.5 pt-5 pb-1.5 text-sm text-white outline-none placeholder:text-transparent",
+            "h-[52px] w-full rounded-2xl bg-transparent px-4 text-[15px] text-white outline-none placeholder:text-white/35",
             toggleable && "pr-11",
             className,
           )}
-          style={{
-            caretColor: '#ffffff',
-          } as React.CSSProperties}
+          style={{ caretColor: "#ffffff" } as React.CSSProperties}
         />
         {toggleable && (
           <button
             type="button"
             aria-label={show ? "Hide password" : "Show password"}
             onClick={() => setShow((v) => !v)}
-            className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1.5 text-white/40 transition-colors hover:bg-white/10 hover:text-white"
+            className="absolute top-1/2 right-3.5 -translate-y-1/2 rounded-full p-1.5 text-white/45 transition-colors hover:bg-white/10 hover:text-white"
           >
             {show ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>

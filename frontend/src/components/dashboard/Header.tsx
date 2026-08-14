@@ -37,8 +37,8 @@ export default function Header({
   const [isSyncing, setIsSyncing] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(
     () => (typeof document !== 'undefined'
-      ? (document.documentElement.classList.contains('dark') ? 'dark' : 'light')
-      : 'dark')
+      ? (document.documentElement.classList.contains('dark') ? 'light' : 'light')
+      : 'light')
   );
 
   const notifRef = useRef<HTMLDivElement>(null);
@@ -53,8 +53,10 @@ export default function Header({
   const profileInitials = userInitials(currentUser?.full_name);
 
   useEffect(() => {
-    const savedTheme = (localStorage.getItem('pulse-crm-theme') as 'light' | 'dark') || 'dark';
-    setTheme(savedTheme);
+    setTheme('light');
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('pulse-crm-theme', 'light');
   }, []);
 
   useEffect(() => {
@@ -85,12 +87,10 @@ export default function Header({
   // Ctrl+K listener is handled in DashboardShell (parent) to avoid duplicates.
 
   const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    localStorage.setItem('pulse-crm-theme', next);
-    document.documentElement.setAttribute('data-theme', next);
-    if (next === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    setTheme('light');
+    localStorage.setItem('pulse-crm-theme', 'light');
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark');
   };
 
   const btn = cn(

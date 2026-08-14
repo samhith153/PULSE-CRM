@@ -120,15 +120,9 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
   /* ── Theme / sidebar utilities ────────────────────────────── */
 
   const toggleTheme = useCallback(() => {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    const next = current === 'light' ? 'dark' : 'light';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('pulse-crm-theme', next);
-    if (next === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('pulse-crm-theme', 'light');
   }, []);
 
   const toggleSidebar = useCallback(() => {

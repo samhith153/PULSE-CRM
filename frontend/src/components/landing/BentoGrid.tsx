@@ -316,7 +316,7 @@ export function BentoGrid() {
   const { ref, visible } = useReveal<HTMLDivElement>(0.05);
 
   return (
-    <section className="relative overflow-hidden bg-ink py-24 md:py-32">
+    <section className="lead-mgmt-section relative overflow-hidden bg-ink py-24 md:py-32">
       <div aria-hidden className="footer-grid pointer-events-none absolute inset-0" />
       <div aria-hidden className="footer-grid-fine pointer-events-none absolute inset-0" />
       <div

@@ -26,8 +26,18 @@ export function AuthShell({ children }: { children: ReactNode }) {
         />
       </div>
 
+      {/* Dim vignette over the starfield so the form stays the focal point */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-[1]"
+        style={{
+          background:
+            "radial-gradient(ellipse 120% 90% at 50% 40%, rgba(2,6,23,0.28) 0%, rgba(2,6,23,0.66) 100%)",
+        }}
+      />
+
       <div className="relative z-10 flex flex-col w-full max-w-[400px]">
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-8">
           <Link href="/" className="rise-in inline-flex items-center gap-2.5">
             <div className="grid size-9 shrink-0 place-items-center rounded-full bg-accent-color text-text-on-primary shadow-[0_8px_18px_-8px_var(--accent-color)]">
               <Zap size={18} strokeWidth={2.6} />
@@ -38,11 +48,11 @@ export function AuthShell({ children }: { children: ReactNode }) {
 
         {/* Glassmorphic card sitting nicely above the background */}
         <div 
-          className="w-full rounded-[24px] p-7 border border-white/15 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15)]"
+          className="w-full rounded-[24px] p-8 sm:p-9 border border-white/15 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15)]"
           style={{ 
-            background: 'rgba(255, 255, 255, 0.08)', 
-            backdropFilter: 'blur(18px)',
-            WebkitBackdropFilter: 'blur(18px)'
+            background: 'rgba(255, 255, 255, 0.09)', 
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)'
           }}
         >
           {children}
