@@ -85,7 +85,7 @@ function StageDropdown({
         <ChevronDown size={10} className={`text-text-secondary shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
       {isOpen && (
-        <div className="absolute left-0 right-0 bottom-full mb-1 z-50 bg-surface-1 border border-border-default rounded-xl shadow-lg p-1 max-h-48 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-1 border border-border-default rounded-xl shadow-lg p-1 max-h-48 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
           {stages.map((st, idx) => {
             const isSelected = st === value;
             const isFocused = idx === focusedIndex;
@@ -956,7 +956,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 key={stage.id}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(stage.name)}
-                className="bg-surface-2 border border-border-default rounded-2xl p-3 w-72 shrink-0 flex flex-col h-[550px]"
+                className="bg-surface-2 border border-border-default rounded-2xl p-3 w-72 shrink-0 flex flex-col"
               >
               <div className="flex justify-between items-center pb-2 border-b border-border-default mb-3">
                 <div>
@@ -968,7 +968,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 </span>
               </div>
 
-              <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+              <div className="flex-1 space-y-3 pr-1">
                 {stageDeals.map((deal) => (
                   <div 
                     key={deal.id}
@@ -987,7 +987,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       });
                       setIsEditModalOpen(true);
                     }}
-                    className="bg-surface-1 border border-border-default rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
+                    className="bg-surface-1 border border-border-default rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none overflow-visible"
                   >
                     <div className="flex justify-between items-start gap-1">
                       <h4 className="text-[11px] font-semibold text-text-primary leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
@@ -1046,8 +1046,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       </div>
                     </div>
 
-                    <div className="mt-2 flex justify-between items-center text-[9px] font-semibold text-text-muted border-t border-border-default pt-1.5">
-                      <span>Shift Stage:</span>
+                    <div className="mt-2 border-t border-border-default pt-1.5">
+                      <span className="text-[8px] font-semibold text-text-muted uppercase tracking-wider mb-1 block">Shift Stage:</span>
                       <StageDropdown
                         value={deal.stage}
                         stages={stageNames}

@@ -175,12 +175,13 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
 
   // Tasks state
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [tasksLoading, setTasksLoading] = useState(false);
+  const [tasksLoading, setTasksLoading] = useState(true);
   const [taskSortField, setTaskSortField] = useState<'title' | 'deadline' | 'status'>('deadline');
   const [taskSortOrder, setTaskSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Meetings state
   const [meetings, setMeetings] = useState<Meeting[]>([]);
+  const [meetingsLoading, setMeetingsLoading] = useState(true);
   const [meetingSortField, setMeetingSortField] = useState<'title' | 'from'>('from');
   const [meetingSortOrder, setMeetingSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -361,24 +362,48 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     }
     if (dashboardData.deals) setDeals(dashboardData.deals);
     if (dashboardData.leads) setLeadsListState(dashboardData.leads);
+    // Wire meetings from backend
+    if (dashboardData.meetings_today?.length) {
+      setMeetings(dashboardData.meetings_today.map((m: any, i: number) => ({
+        id: m.id || String(i + 1),
+        title: m.title || 'Meeting',
+        from: m.start_time || '',
+        to: m.end_time || '',
+        type: m.zoom_link ? 'video' : 'in-person',
+      })));
+    }
+    setMeetingsLoading(false);
+    // Wire tasks from backend
+    if (dashboardData.open_tasks?.length) {
+      setTasks(dashboardData.open_tasks.map((t: any) => ({
+        id: Number(t.id) || 0,
+        title: t.title || '',
+        deadline: t.due_date || '',
+        priority: 'Medium',
+        status: t.status === 'overdue' ? 'Overdue' : t.status === 'completed' ? 'Completed' : 'Not Started',
+        fitScore: 0,
+      })));
+      localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(dashboardData.open_tasks));
+    }
     setStatsLoading(false);
+    setTasksLoading(false);
   }, [dashboardData]);
 
 
   // Load tasks
   const loadTasks = () => {
-    setTasksLoading(true);
+    // Only load from localStorage as a fallback; dashboardData is the primary source
     const saved = localStorage.getItem('pulse-crm-manual-tasks');
     if (saved) {
       try {
-        setTasks(JSON.parse(saved));
-      } catch (e) {
-        initializeDefaultTasks();
-      }
-    } else {
-      initializeDefaultTasks();
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTasks(parsed);
+        }
+      } catch { /* ignore bad data */ }
     }
-    setTasksLoading(false);
+    // tasksLoading stays true until dashboardData arrives (set in the dashboardData useEffect)
+    // or times out (handled by the fallback useEffect above)
   };
 
   const initializeDefaultTasks = () => {
@@ -399,21 +424,27 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(updated));
   };
 
-  // Initialize meetings with defaults
+  // Initialize on mount: load stats and tasks, fallback if no dashboardData
   useEffect(() => {
-    const defaultMeetings: Meeting[] = [
-      { id: '1', title: 'Demo', from: '2026-08-03 06:24 PM', to: '2026-08-03 07:24 PM', type: 'video' },
-      { id: '2', title: 'Webinar', from: '2026-08-03 08:24 PM', to: '2026-08-03 09:24 PM', type: 'video' },
-      { id: '3', title: 'TradeShow', from: '2026-08-03 09:00 AM', to: '2026-08-03 05:00 PM', type: 'in-person' },
-      { id: '4', title: 'Webinar', from: '2026-08-03 07:24 PM', to: '2026-08-03 08:24 PM', type: 'video' },
-      { id: '5', title: 'Seminar', from: '2026-08-03 06:24 PM', to: '2026-08-03 07:24 PM', type: 'in-person' },
-      { id: '6', title: 'Attend Customer conference', from: '2026-08-03 10:00 AM', to: '2026-08-03 04:00 PM', type: 'in-person' },
-      { id: '7', title: 'CRM Webinar', from: '2026-08-03 05:24 PM', to: '2026-08-03 06:24 PM', type: 'video' }
-    ];
-    setMeetings(defaultMeetings);
     loadStats();
     loadTasks();
+    // Fallback: if no dashboardData arrives (non-sales-rep), stop loading after 3s
+    const fallback = setTimeout(() => {
+      setMeetingsLoading(prev => prev); // no-op, but triggers if still true
+    }, 3000);
+    return () => clearTimeout(fallback);
   }, []);
+
+  // If dashboardData never arrives (e.g. manager/admin), stop loading states after mount
+  useEffect(() => {
+    if (!dashboardData) {
+      const t = setTimeout(() => {
+        setMeetingsLoading(false);
+        setTasksLoading(false);
+      }, 3000);
+      return () => clearTimeout(t);
+    }
+  }, [dashboardData]);
 
   const openTasks = useMemo(() => {
     return tasks.filter(t => t.status !== 'Completed');
@@ -788,7 +819,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                 );
               } else if (itemId === 'quotaPace') {
                 // Render Quota Pace chart
-                cardContent = <QuotaPaceCard deals={deals} />;
+                cardContent = <QuotaPaceCard deals={deals} quotaPace={dashboardData?.quota_pace ?? null} />;
               } else if (itemId === 'funnelChart') {
                 // Render Funnel Chart
                 cardContent = <FunnelChartCard leads={leadsListState} deals={deals} />;
@@ -999,7 +1030,20 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
 
                         {/* Scrollable Container */}
                         <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar pr-1.5">
-                          {sortedMeetings.length === 0 ? (
+                          {meetingsLoading ? (
+                            <div className="space-y-3 py-3">
+                              {Array.from({ length: 5 }).map((_, idx) => (
+                                <div key={idx} className="flex items-center justify-between py-2.5 px-3 border border-border/30 rounded-xl animate-pulse">
+                                  <div className="flex flex-col gap-1.5 w-[45%]">
+                                    <div className="h-3 w-3/4 rounded bg-surface-2" />
+                                    <div className="h-2.5 w-1/2 rounded bg-surface-2/60" />
+                                  </div>
+                                  <div className="h-3 w-16 rounded bg-surface-2" />
+                                  <div className="h-3 w-16 rounded bg-surface-2" />
+                                </div>
+                              ))}
+                            </div>
+                          ) : sortedMeetings.length === 0 ? (
                             <div className="flex flex-col items-center justify-center h-full py-16 text-center select-none">
                               <div className="h-12 w-12 rounded-full bg-accent-color/10 flex items-center justify-center mb-3">
                                 <Calendar className="size-6 text-accent-color" />
@@ -1109,7 +1153,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                 cardContent = <DealsAtRiskCard deals={riskDeals} />;
               } else if (itemId === 'activitySummary') {
                 // Render Today's Work summary card
-                cardContent = <ActivitySummaryCard onTabChange={onTabChange} />;
+                cardContent = <ActivitySummaryCard onTabChange={onTabChange} dashboardData={dashboardData ?? null} />;
               }
 
               return (

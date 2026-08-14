@@ -52,6 +52,11 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
             onInvalidateRef.current?.();
             debounceTimerRef.current = null;
           }, 500);
+        } else if (data?.type === 'NOTIFICATION_CREATED') {
+          // Notify the useNotifications hook to refresh immediately
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('pulse-notification-created', { detail: data }));
+          }
         }
       } catch (err) {
         console.error('[useCrmStream] Failed to parse SSE message:', err);

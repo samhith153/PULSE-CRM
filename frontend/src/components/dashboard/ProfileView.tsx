@@ -9,9 +9,7 @@ import {
   Award,
   TrendingUp,
   Mail,
-  Phone,
   Building2,
-  Calendar,
   ShieldAlert,
   Loader2,
   Camera,
@@ -25,11 +23,9 @@ interface ProfileShape {
   id: string;
   full_name: string;
   email: string;
-  phone?: string | null;
   department?: string | null;
   avatar_url?: string | null;
   roles: string[];
-  created_at: string;
 }
 
 export default function ProfileView({ userRole = 'manager' }: { userRole?: string }) {
@@ -40,7 +36,7 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [editForm, setEditForm] = useState({ full_name: '', phone: '' });
+  const [editForm, setEditForm] = useState({ full_name: '' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -77,7 +73,6 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const achieved = asNumber(kpi?.summary?.total_revenue);
   const quota = asNumber(kpi?.revenue_stat?.total) || achieved || 1;
   const progressPercent = Math.min(100, Math.round((achieved / (quota || 1)) * 100));
-  const joined = profile.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '–';
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -113,14 +108,13 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
   const startEditing = () => {
     setEditForm({
       full_name: profile.full_name || '',
-      phone: profile.phone || '',
     });
     setEditing(true);
   };
 
   const cancelEditing = () => {
     setEditing(false);
-    setEditForm({ full_name: '', phone: '' });
+    setEditForm({ full_name: '' });
   };
 
   const saveProfile = async () => {
@@ -132,7 +126,6 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
     try {
       await updateUser(profile.id, {
         full_name: editForm.full_name.trim(),
-        phone: editForm.phone.trim() || undefined,
       });
       const fresh = await getCurrentUser();
       setProfile(fresh as unknown as ProfileShape);
@@ -196,16 +189,6 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
                     className="w-full px-3 py-2 text-sm border border-border-default rounded-lg bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-color"
                   />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-semibold text-text-muted uppercase mb-1">Phone</label>
-                  <input
-                    type="tel"
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm border border-border-default rounded-lg bg-surface-0 text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-color"
-                    placeholder="Enter phone number"
-                  />
-                </div>
                 <div className="flex space-x-2 pt-1">
                   <button
                     onClick={saveProfile}
@@ -244,16 +227,8 @@ export default function ProfileView({ userRole = 'manager' }: { userRole?: strin
                     <span>{profile.email}</span>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-text-muted" />
-                    <span>{profile.phone || '–'}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
                     <Building2 className="h-4 w-4 text-text-muted" />
                     <span>{dept}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-text-muted" />
-                    <span>Joined {joined}</span>
                   </div>
                 </div>
               </>

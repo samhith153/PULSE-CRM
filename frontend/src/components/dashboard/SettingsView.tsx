@@ -90,7 +90,7 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
       }
       setSaving(true);
       try {
-        await updateUser(userId, { full_name: profileForm.full_name.trim() });
+        await updateUser(userId, { full_name: profileForm.full_name.trim(), job_title: profileForm.job_title.trim() });
         setSaveSuccess(true);
       } catch (err: any) {
         setSaveError(err?.message || 'Failed to update profile.');
@@ -229,19 +229,30 @@ export default function SettingsView({ userRole = 'manager' }: { userRole?: stri
                       <input
                         type="text"
                         readOnly
-                        value={profileForm.job_title || profileForm.email}
+                        value={userRole}
                         className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs bg-surface-2 text-text-muted focus:outline-none cursor-not-allowed"
                       />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">Contact Email</label>
-                    <input
-                      type="email"
-                      readOnly
-                      value={profileForm.email}
-                      className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs bg-surface-2 text-text-muted focus:outline-none cursor-not-allowed"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">Job Title</label>
+                      <input
+                        type="text"
+                        value={profileForm.job_title}
+                        onChange={e => setProfileForm({...profileForm, job_title: e.target.value})}
+                        className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs bg-surface-0 text-text-primary focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">Contact Email</label>
+                      <input
+                        type="email"
+                        readOnly
+                        value={profileForm.email}
+                        className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs bg-surface-2 text-text-muted focus:outline-none cursor-not-allowed"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

@@ -474,7 +474,7 @@ class LeadService:
 
             # ΓöÇΓöÇ Create Deal ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
             deal = await self.deal_repo.create(
-                name=lead.title,
+                name=lead.title or lead.company_name or "Untitled Deal",
                 description=lead.description,
                 status=DealStatus.OPEN.value,
                 amount=revenue or lead.estimated_value,

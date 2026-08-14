@@ -869,12 +869,12 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             <div className="space-y-3 mt-1.5">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground font-medium">Active Seats</span>
-                <span className="font-semibold text-foreground tabular-nums">{data.user_management?.active_seats ?? s.users.active} / {s.users.total || 10}</span>
+                <span className="font-semibold text-foreground tabular-nums">{data.user_management?.active_seats ?? s.users.active} / {(data.license_usage?.seat_limit ?? s.users.total) || 10}</span>
               </div>
               <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                 <div 
                   className="h-full rounded-full bg-accent-color transition-all duration-500"
-                  style={{ width: `${Math.min(100, ((data.user_management?.active_seats ?? s.users.active) / (s.users.total || 10)) * 100)}%` }}
+                  style={{ width: `${Math.min(100, ((data.user_management?.active_seats ?? s.users.active) / ((data.license_usage?.seat_limit ?? s.users.total) || 10)) * 100)}%` }}
                 />
               </div>
               <div className="border-t border-border/40 pt-3 flex justify-between items-center text-[10px] text-muted-foreground/80">
@@ -1083,7 +1083,7 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
                 <Plug size={18} />
               </div>
               <span className="rounded-full bg-status-info-bg px-2.5 py-0.5 text-[10px] font-semibold text-status-info-text uppercase tracking-wider">
-                4 Active
+                {data.integrations?.filter(i => i.status === 'active').length ?? 0} Active
               </span>
             </div>
             <div>
@@ -1092,30 +1092,24 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             </div>
             
             <div className="space-y-2.5 text-xs mt-1">
-              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
-                <span className="text-muted-foreground">Email Sync</span>
-                <span className="font-medium text-accent-color flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent-color"></span>
-                  Active (3m ago)
-                </span>
-              </div>
-              <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
-                <span className="text-muted-foreground">WhatsApp Business</span>
-                <span className="font-medium text-accent-color flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-accent-color"></span>
-                  Synced (12m ago)
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">HubSpot Sync</span>
-                <span className="font-semibold text-destructive flex items-center gap-1.5">
-                  <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse"></span>
-                  Failed (Auth)
-                </span>
-              </div>
-              <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-destructive/80 font-medium">
-                Action: Reconnect HubSpot Integration
-              </div>
+              {data.integrations && data.integrations.length > 0 ? (
+                data.integrations.map((intg) => (
+                  <div key={intg.integration} className="flex items-center justify-between pb-1.5 border-b border-border/40 last:border-0 last:pb-0">
+                    <span className="text-muted-foreground">{intg.integration}</span>
+                    <span className={`font-medium flex items-center gap-1.5 ${intg.status === 'active' ? 'text-accent-color' : 'text-muted-foreground'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${intg.status === 'active' ? 'bg-accent-color' : 'bg-muted-foreground/40'}`}></span>
+                      {intg.status === 'active' ? 'Active' : 'Not Configured'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <span className="text-muted-foreground">No integrations configured</span>
+              )}
+              {data.integrations?.some(i => i.status !== 'active' && i.message) && (
+                <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-destructive/80 font-medium">
+                  Action: Reconnect failed integrations
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -1140,18 +1134,15 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             <div className="space-y-2.5 text-xs mt-1">
               <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">Custom Fields</span>
-                <span className="font-semibold text-foreground">14 active <span className="text-muted-foreground/60 font-normal text-[10px] ml-1">(8 idle)</span></span>
+                <span className="font-semibold text-foreground">{data.custom_fields?.custom_fields_active != null ? `${data.custom_fields.custom_fields_active} active ${data.custom_fields.custom_fields_idle ? `( ${data.custom_fields.custom_fields_idle} idle)` : ''}` : 'N/A'}</span>
               </div>
               <div className="flex items-center justify-between pb-1.5 border-b border-border/40">
                 <span className="text-muted-foreground">Automations</span>
-                <span className="font-semibold text-foreground">6 active <span className="text-muted-foreground/60 font-normal text-[10px] ml-1">(2 idle)</span></span>
+                <span className="font-semibold text-foreground">{data.custom_fields?.automations_active ?? 0} active <span className="text-muted-foreground/60 font-normal text-[10px] ml-1">({data.custom_fields?.automations_idle ?? 0} idle)</span></span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Lead Scoring</span>
-                <span className="font-semibold text-accent-color">92% Utilized</span>
-              </div>
-              <div className="border-t border-border/40 mt-1.5 pt-3 text-[10px] text-status-warning-text/90 font-medium">
-                Tip: Archive 8 unused fields to save system load.
+                <span className="font-semibold text-accent-color">{data.custom_fields?.lead_scoring_usage ?? 0} leads scored</span>
               </div>
             </div>
           </motion.div>

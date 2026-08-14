@@ -12,31 +12,61 @@ import {
   Inbox,
   ArrowUpRight,
 } from 'lucide-react';
-import { getActivitiesFromStorage, Activity } from '@/utils/activityDb';
+import { getCrmActivities, type DashboardOverviewData } from '@/utils/api';
 
 interface ActivitySummaryCardProps {
   onTabChange?: (tab: string) => void;
+  dashboardData?: DashboardOverviewData | null;
 }
 
-export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCardProps) {
+export default function ActivitySummaryCard({ onTabChange, dashboardData }: ActivitySummaryCardProps) {
   const router = useRouter();
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [crmCounts, setCrmCounts] = useState({ tasks: 0, meetings: 0, calls: 0, emails: 0, overdue: 0, completed: 0 });
 
+  // Fetch counts from CRM activities API
   useEffect(() => {
-    setActivities(getActivitiesFromStorage());
+    let mounted = true;
+    const fetchCounts = async () => {
+      try {
+        const [tasksRes, meetingsRes, callsRes, emailsRes, overdueRes, completedRes] = await Promise.all([
+          getCrmActivities({ view: 'task', page_size: 1 }).catch(() => ({ data: [], meta: { total: 0 } })),
+          getCrmActivities({ view: 'meeting', page_size: 1 }).catch(() => ({ data: [], meta: { total: 0 } })),
+          getCrmActivities({ view: 'call', page_size: 1 }).catch(() => ({ data: [], meta: { total: 0 } })),
+          getCrmActivities({ view: 'email', page_size: 1 }).catch(() => ({ data: [], meta: { total: 0 } })),
+          getCrmActivities({ view: 'task', quick_tab: 'overdue', page_size: 1 }).catch(() => ({ data: [], meta: { total: 0 } })),
+          getCrmActivities({ view: 'task', status: 'completed', page_size: 1 }).catch(() => ({ data: [], meta: { total: 0 } })),
+        ]);
+        if (mounted) {
+          setCrmCounts({
+            tasks: tasksRes?.meta?.total ?? 0,
+            meetings: meetingsRes?.meta?.total ?? 0,
+            calls: callsRes?.meta?.total ?? 0,
+            emails: emailsRes?.meta?.total ?? 0,
+            overdue: overdueRes?.meta?.total ?? 0,
+            completed: completedRes?.meta?.total ?? 0,
+          });
+        }
+      } catch {
+        // counts stay at 0
+      }
+      if (mounted) setLoading(false);
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 60_000);
+    return () => { mounted = false; clearInterval(interval); };
   }, []);
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  // Prefer dashboardData (live today counts) for tasks and meetings
+  const todayTasks       = dashboardData?.open_tasks?.filter(t => t.status !== 'completed').length ?? 0;
+  const upcomingMeetings = dashboardData?.meetings_today?.length ?? 0;
+  // Use CRM API counts for things not in dashboardData
+  const pendingCalls     = crmCounts.calls;
+  const overdueTasks     = dashboardData?.open_tasks?.filter(t => t.status === 'overdue').length ?? crmCounts.overdue;
+  const completedItems   = crmCounts.completed;
+  const emailsSent       = crmCounts.emails; // approximate
 
-  const todayTasks       = activities.filter(a => a.type === 'task'    && a.status === 'Pending'   && a.dueDate?.slice(0, 10) === todayStr).length;
-  const upcomingMeetings = activities.filter(a => a.type === 'meeting' && a.status === 'Scheduled' && a.dueDate?.slice(0, 10) >= todayStr).length;
-  const pendingCalls     = activities.filter(a => a.type === 'call'    && a.status === 'Pending').length;
-  const overdueTasks     = activities.filter(a => a.type === 'task'    && a.status === 'Overdue').length;
-  const completedItems   = activities.filter(a => a.status === 'Completed').length;
-  const emailsSent       = activities.filter(a => a.type === 'email'   && a.details.from?.includes('sarah.johnson')).length;
-  const emailsReceived   = activities.filter(a => a.type === 'email'   && a.details.to?.includes('sarah.johnson')).length;
-
-  const totalActive = todayTasks + upcomingMeetings + pendingCalls + overdueTasks + emailsSent + emailsReceived;
+  const totalActive = todayTasks + upcomingMeetings + pendingCalls + overdueTasks + emailsSent;
   const completionPct = totalActive + completedItems > 0
     ? Math.round((completedItems / (totalActive + completedItems)) * 100)
     : 0;
@@ -51,11 +81,52 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
   const rightStats = [
     { label: 'Completed Items',  count: completedItems,   icon: CheckCircle2,  filter: 'completed',        color: 'text-status-success',  bg: 'bg-status-success/10 border-status-success/20' },
     { label: 'Emails Sent',      count: emailsSent,       icon: Mail,          filter: 'emails-sent',      color: 'text-status-warning',    bg: 'bg-status-warning/10 border-status-warning/20' },
-    { label: 'Emails Received',  count: emailsReceived,   icon: Inbox,         filter: 'emails-received',  color: 'text-accent-color',   bg: 'bg-accent-color/10 border-accent-color/20' },
   ];
 
   const allStats = [...leftStats, ...rightStats];
   const maxCount = Math.max(...allStats.map(s => s.count), 1);
+
+  if (loading && !dashboardData) {
+    return (
+      <div className="bg-surface-1/95 backdrop-blur-md border border-border-default/80 dark:border-border-default/60 rounded-2xl p-5 shadow-sm w-full relative overflow-hidden">
+        <div className="flex items-center gap-3 pb-3.5 mb-3.5 border-b border-border-default/60">
+          <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/15 animate-pulse" />
+          <div className="space-y-1.5">
+            <div className="h-4 w-40 rounded bg-surface-2 animate-pulse" />
+            <div className="h-2.5 w-28 rounded bg-surface-2/60 animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="h-7 w-7 rounded-lg bg-surface-2" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-2.5 w-full rounded bg-surface-2" />
+                  <div className="h-1 w-full rounded-full bg-surface-2/40">
+                    <div className="h-1 w-1/3 rounded-full bg-primary/20" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="h-7 w-7 rounded-lg bg-surface-2" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-2.5 w-full rounded bg-surface-2" />
+                  <div className="h-1 w-full rounded-full bg-surface-2/40">
+                    <div className="h-1 w-1/4 rounded-full bg-primary/20" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface-1/95 backdrop-blur-md border border-border-default/80 dark:border-border-default/60 hover:border-primary/30 rounded-2xl p-5 shadow-sm hover:shadow-xl hover:shadow-primary/5 transition duration-300 w-full relative overflow-hidden group">
@@ -137,8 +208,6 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
                     <div
                       className={`h-full rounded-full transition-[width] duration-500 ${
                         item.color === 'text-accent-color' ? 'bg-accent-color' :
-                        item.color === 'text-accent-color'   ? 'bg-accent-color' :
-                        item.color === 'text-accent-color'   ? 'bg-accent-color' :
                         item.color === 'text-status-danger'     ? 'bg-status-danger' :
                         'bg-border'
                       }`}
@@ -161,7 +230,7 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
               <button
                 key={item.filter}
                 onClick={() => {
-                  if (item.filter === 'emails-sent' || item.filter === 'emails-received') {
+                  if (item.filter === 'emails-sent') {
                     onTabChange?.('emails');
                   } else if (item.filter === 'completed') {
                     router.push('?tab=completed');
@@ -185,7 +254,6 @@ export default function ActivitySummaryCard({ onTabChange }: ActivitySummaryCard
                       className={`h-full rounded-full transition-[width] duration-500 ${
                         item.color === 'text-status-success' ? 'bg-status-success' :
                         item.color === 'text-status-warning'   ? 'bg-status-warning' :
-                        item.color === 'text-accent-color'  ? 'bg-accent-color' :
                         'bg-border'
                       }`}
                       style={{ width: `${barWidth}%` }}

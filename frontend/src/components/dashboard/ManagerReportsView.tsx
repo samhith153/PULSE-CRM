@@ -82,14 +82,14 @@ function PeriodPill({ value, onChange }: { value: string; onChange: (v: string) 
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-7 appearance-none rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] pl-3 pr-7 text-[11px] font-semibold text-text-primary shadow-sm cursor-pointer"
+        className="h-9 min-w-[150px] appearance-none rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer whitespace-nowrap focus:outline-none focus:ring-1 focus:ring-accent-color/25"
       >
         <option value="week">This Week</option>
         <option value="month">This Month</option>
         <option value="quarter">This Quarter</option>
         <option value="year">This Year</option>
       </select>
-      <ChevronDown className="pointer-events-none absolute right-2 size-3 text-text-muted" />
+      <ChevronDown className="pointer-events-none absolute right-3 size-3.5 text-text-muted" />
     </div>
   );
 }
@@ -854,7 +854,7 @@ export default function ManagerReportsView() {
                     <p className="text-[22px] font-extrabold text-text-primary tabular-nums leading-none">
                       {m.value.toLocaleString()}
                     </p>
-                    <p className="mt-1 text-[11px] text-text-muted">{m.label}</p>
+                    <p className="mt-1 text-[12px] text-text-secondary">{m.label}</p>
                     <Delta value={m.delta} up={m.up} className="mt-2" />
                   </div>
                   <div className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-[var(--surface-1)] shadow-sm">
@@ -888,9 +888,9 @@ export default function ManagerReportsView() {
                 return (
                   <div key={d.name} className="flex items-center gap-2.5 text-[12px]">
                     <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: DONUT_COLORS_DEAL[i % DONUT_COLORS_DEAL.length] }} />
-                    <span className="flex-1 text-text-secondary">{d.name}</span>
+                    <span className="min-w-0 flex-1 truncate text-text-secondary">{d.name}</span>
                     <span className="font-bold text-text-primary tabular-nums">{d.value}</span>
-                    <span className="text-[10px] text-text-muted w-[54px] text-right tabular-nums">
+                    <span className="w-[58px] shrink-0 text-right text-[11px] text-text-secondary tabular-nums">
                       ({fmtPct(pctNum)})
                     </span>
                   </div>

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import case, func, select, and_, desc, cast, String
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, DBSession, require_role
+from app.api.deps import CurrentUser, DBSession, require_permission
 from app.models.activity import ActivityTimeline
 from app.models.crm_call import CrmCall
 from app.models.crm_email import CrmEmail
@@ -22,7 +22,8 @@ from app.models.deal import Deal
 from app.models.lead import Lead
 from app.models.meeting import Meeting
 from app.models.pipeline import PipelineStage
-from app.models.user import User
+from app.models.role import Role
+from app.models.user import User, UserRole
 from app.schemas.common import StandardResponse
 from app.utils.enums import DealStatus
 
@@ -366,7 +367,7 @@ def _pct(numerator, denominator):
     "/sales-performance",
     response_model=StandardResponse[SalesPerformanceReport],
     summary="Sales Performance Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_sales_performance(
     current_user: CurrentUser,
@@ -442,9 +443,19 @@ async def get_sales_performance(
         ))
     team_win_rate = _pct(total_won, total_won + total_lost)
 
+    rep_role_subq = (
+        select(UserRole.user_id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(Role.name.in_(["manager", "sales_rep", "sales_representative"]))
+    )
     stmt = (
         select(User.id, User.full_name, User.sales_quota)
-        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False))
+        .where(
+            User.organization_id == org_id,
+            User.is_active.is_(True),
+            User.is_deleted.is_(False),
+            User.id.in_(rep_role_subq),
+        )
     )
     if rep_id:
         stmt = stmt.where(User.id == UUID(rep_id))
@@ -503,7 +514,7 @@ async def get_sales_performance(
     "/pipeline-analytics",
     response_model=StandardResponse[PipelineAnalyticsReport],
     summary="Pipeline Analytics Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_pipeline_analytics(
     current_user: CurrentUser, db: DBSession,
@@ -609,7 +620,7 @@ async def get_pipeline_analytics(
     "/team-performance",
     response_model=StandardResponse[TeamPerformanceReport],
     summary="Team Performance Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_team_performance(
     current_user: CurrentUser, db: DBSession,
@@ -621,13 +632,17 @@ async def get_team_performance(
     prev_start, prev_end = _prev_period_bounds(period)
 
     won_count = func.sum(case((Deal.status == DealStatus.WON.value, 1), else_=0))
+    rep_scope = select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(
+        Role.name.in_(["sales_rep", "sales_representative"]),
+    )
     stmt = (
         select(User.id, User.full_name, User.sales_quota,
                func.coalesce(func.sum(Deal.amount), 0), func.coalesce(won_count, 0), func.count(Deal.id))
         .select_from(User)
         .outerjoin(Deal, and_(Deal.owner_id == User.id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
                               Deal.closed_at >= start, Deal.closed_at < end))
-        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False))
+        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False),
+               User.id.in_(rep_scope))
         .group_by(User.id, User.full_name, User.sales_quota)
         .order_by(func.coalesce(func.sum(Deal.amount), 0).desc())
     )
@@ -697,7 +712,7 @@ async def get_team_performance(
     "/activity-analytics",
     response_model=StandardResponse[ActivityAnalyticsReport],
     summary="Activity Analytics Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_activity_analytics(
     current_user: CurrentUser, db: DBSession,
@@ -815,7 +830,7 @@ async def get_activity_analytics(
     "/lead-analytics",
     response_model=StandardResponse[LeadAnalyticsReport],
     summary="Lead Analytics Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_lead_analytics(
     current_user: CurrentUser, db: DBSession,
@@ -897,7 +912,7 @@ async def get_lead_analytics(
     "/deal-analytics",
     response_model=StandardResponse[DealAnalyticsReport],
     summary="Deal Analytics Report",
-    dependencies=[Depends(require_role("manager", "admin"))],
+    dependencies=[Depends(require_permission("report:view"))],
 )
 async def get_deal_analytics(
     current_user: CurrentUser, db: DBSession,

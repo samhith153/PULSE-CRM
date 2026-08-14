@@ -212,7 +212,7 @@ async def lifespan(app: FastAPI):
     logger.info("Application starting")
 
     scheduler.add_job(daily_lead_assessment, "cron", hour=0, minute=0)
-    scheduler.add_job(process_event_outbox, "interval", seconds=30, max_instances=1, misfire_grace_time=60)
+    scheduler.add_job(process_event_outbox, "interval", seconds=5, max_instances=1, misfire_grace_time=60)
     scheduler.add_job(refresh_gmail_watches, "interval", hours=6, max_instances=1, misfire_grace_time=300)
     scheduler.start()
 
