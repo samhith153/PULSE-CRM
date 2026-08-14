@@ -537,7 +537,11 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   });
 
   const displayLeads = isPriorityView
-    ? [...filteredLeads].sort((a, b) => (b.score || 0) - (a.score || 0))
+    ? [...filteredLeads].sort((a, b) => {
+        const aScore = Math.round(getFitScore(a) * 0.6 + getEngagementScore(a) * 0.4);
+        const bScore = Math.round(getFitScore(b) * 0.6 + getEngagementScore(b) * 0.4);
+        return bScore - aScore;
+      })
     : filteredLeads;
 
   const sortedLeads = React.useMemo(() => {
@@ -1533,6 +1537,13 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('phone')}>Phone</th>
                     <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('email')}>Email</th>
                     <th className="py-3 cursor-pointer hover:text-text-primary text-center" onClick={() => handleHeaderClick('score')}>Score</th>
+                    {isPriorityView && (
+                      <>
+                        <th className="py-3 text-center">Fit Score</th>
+                        <th className="py-3 text-center">Engagement Score</th>
+                        <th className="py-3 text-center">Overall Score</th>
+                      </>
+                    )}
                     <th className="py-3 text-right pr-4">Actions</th>
                   </tr>
                 </thead>
@@ -1564,6 +1575,28 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                               {lead.score != null ? `${lead.score}%` : '—'}
                             </span>
                           </td>
+                          {isPriorityView && (
+                            <>
+                              <td className="py-3.5 text-center">
+                                <span className={`text-xs font-extrabold tabular-nums ${
+                                  getFitScore(lead) >= 80 ? 'text-status-success-text' :
+                                  getFitScore(lead) >= 60 ? 'text-status-warning-text' : 'text-destructive'
+                                }`}>{getFitScore(lead)}</span>
+                              </td>
+                              <td className="py-3.5 text-center">
+                                <span className={`text-xs font-extrabold tabular-nums ${
+                                  getEngagementScore(lead) >= 30 ? 'text-status-success-text' :
+                                  getEngagementScore(lead) >= 15 ? 'text-status-warning-text' : 'text-destructive'
+                                }`}>{getEngagementScore(lead)}</span>
+                              </td>
+                              <td className="py-3.5 text-center">
+                                <span className={`text-xs font-extrabold tabular-nums px-1.5 py-0.5 rounded ${
+                                  getOverallScore(lead) >= 70 ? 'bg-status-success-text/10 text-status-success-text' :
+                                  getOverallScore(lead) >= 40 ? 'bg-status-warning-text/10 text-status-warning-text' : 'bg-destructive/10 text-destructive'
+                                }`}>{getOverallScore(lead)}</span>
+                              </td>
+                            </>
+                          )}
                           <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
                             <div className="flex justify-end space-x-1">
                               {lead.status !== 'Converted' && (
