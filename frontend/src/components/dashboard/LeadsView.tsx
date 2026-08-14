@@ -1537,11 +1537,13 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                     </tr>
                   ) : (
                     <tr className="border-b border-border-default text-[9px] uppercase font-extrabold tracking-wider text-text-primary pb-2">
-                      <th className="pb-2">Name & Company</th>
+                      <th className="pb-2">Name</th>
                       <th className="pb-2 text-center">Score</th>
+                      <th className="pb-2">Company</th>
+                      <th className="pb-2">Email</th>
+                      <th className="pb-2">Phone</th>
                       <th className="pb-2">Status</th>
                       <th className="pb-2">Priority</th>
-                      <th className="pb-2">Owner</th>
                       <th className="pb-2 text-right">Actions</th>
                     </tr>
                   )}
@@ -1602,10 +1604,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             <>
                               <td className="py-3">
                                 <div className="font-extrabold text-text-primary">{lead.name}</div>
-                                <div className="text-[10px] text-text-muted mt-0.5 flex items-center">
-                                  <Building2 className="h-3.5 w-3.5 mr-1 text-text-muted/40" />
-                                  {lead.company}
-                                </div>
                               </td>
                               <td className="py-3 text-center">
                                 <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
@@ -1615,6 +1613,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                   {lead.score}
                                 </span>
                               </td>
+                              <td className="py-3 text-[10px] text-text-muted">{lead.company}</td>
+                              <td className="py-3 text-[10px] text-text-muted truncate max-w-[140px]">{lead.email}</td>
+                              <td className="py-3 text-[10px] text-text-muted tabular-nums">{lead.phone}</td>
                               <td className="py-3">
                                 <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
                                   lead.status === 'New' ? 'text-accent-color bg-accent-color/10' :
@@ -1631,20 +1632,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                   lead.priority === 'High' ? 'text-destructive' :
                                   lead.priority === 'Medium' ? 'text-status-warning-text' : 'text-text-muted'
                                 }`}>
-                                  ? {lead.priority}
+                                  ● {lead.priority}
                                 </span>
-                              </td>
-                              <td className="py-3">
-                                <div className="flex items-center space-x-1.5">
-                                  {lead.ownerAvatar ? (
-                                    <img src={lead.ownerAvatar} alt={lead.owner} className="h-5 w-5 rounded-full border border-border-default" />
-                                  ) : (
-                                    <div className="h-5 w-5 rounded-full bg-surface-3 flex items-center justify-center text-[8px] font-bold text-text-muted border border-border-default">
-                                      {lead.owner.slice(0, 2).toUpperCase()}
-                                    </div>
-                                  )}
-                                  <span className="text-[10px] text-text-muted truncate max-w-[80px]">{lead.owner.split(' ')[0]}</span>
-                                </div>
                               </td>
                             </>
                           )}
