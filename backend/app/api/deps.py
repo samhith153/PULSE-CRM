@@ -5,6 +5,7 @@ Provides reusable dependencies for:
   - Current authenticated user
   - RBAC permission enforcement
 """
+import time
 from typing import Annotated, Callable
 from uuid import UUID
 
@@ -22,6 +23,23 @@ from app.repositories.user_repository import UserRepository
 # OAuth2 / Bearer extractor
 security = HTTPBearer(auto_error=False)
 
+# ── In-process RBAC user cache (60s TTL) ────────────────────────────────────
+# Caches the full User object (with loaded roles/permissions) to avoid the
+# 4-query selectinload chain on every authenticated request. Invalidated
+# explicitly on role/permission changes via the helpers below.
+_USER_CACHE_TTL = 60  # seconds
+_user_cache: dict[str, tuple[float, User]] = {}
+
+
+def invalidate_user_cache(user_id: str) -> None:
+    """Drop the cached User for a specific user (call on role change)."""
+    _user_cache.pop(user_id, None)
+
+
+def invalidate_user_cache_all() -> None:
+    """Clear the entire user cache (call when role permissions change)."""
+    _user_cache.clear()
+
 
 async def get_current_user(
     request: Request,
@@ -33,6 +51,9 @@ async def get_current_user(
     Tokens are accepted **only** from the ``Authorization: Bearer <token>`` header.
     Query-parameter tokens are rejected to prevent token leakage via logs,
     browser history, and Referer headers.
+
+    The resolved User (with roles/permissions) is cached in-process for 60s
+    to avoid the 4-query selectinload chain on every request.
     """
     if not credentials or not credentials.credentials:
         raise UnauthorizedException("Missing Bearer token.")
@@ -44,12 +65,21 @@ async def get_current_user(
     if not user_id:
         raise UnauthorizedException("Invalid token payload.")
 
+    # Check cache
+    cached = _user_cache.get(user_id)
+    if cached and time.time() - cached[0] < _USER_CACHE_TTL:
+        user = cached[1]
+        if not user.is_active or user.is_deleted:
+            raise UnauthorizedException("User account not found or is inactive.")
+        return user
+
     user_repo = UserRepository(db)
     user = await user_repo.get_by_id_with_roles(UUID(user_id))
 
     if not user or not user.is_active or user.is_deleted:
         raise UnauthorizedException("User account not found or is inactive.")
 
+    _user_cache[user_id] = (time.time(), user)
     return user
 
 
