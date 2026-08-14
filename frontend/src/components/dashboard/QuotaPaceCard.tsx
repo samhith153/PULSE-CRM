@@ -18,6 +18,7 @@ interface QuotaPaceCardProps {
 
 export default function QuotaPaceCard({ deals = [], quotaPace = null, className = '' }: QuotaPaceCardProps) {
   const [expanded, setExpanded] = useState(true);
+  const [barHovered, setBarHovered] = useState(false);
   const quota = useMemo(() => {
     // Use backend quota_pace data when available
     if (quotaPace) {
@@ -125,26 +126,38 @@ export default function QuotaPaceCard({ deals = [], quotaPace = null, className 
       {/* ── Progress bar ── */}
       <div className="relative mb-2">
         {/* Track */}
-        <div className="h-3 w-full rounded-full bg-muted/60 overflow-visible relative">
+        <div
+          className="h-3 w-full rounded-full bg-muted/60 overflow-visible relative cursor-pointer"
+          onMouseEnter={() => setBarHovered(true)}
+          onMouseLeave={() => setBarHovered(false)}
+        >
           <motion.div
             className="h-full rounded-full bg-accent-color"
             initial={{ width: 0 }}
             animate={{ width: `${fillW}%` }}
             transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
           />
-          {/* Bubble label */}
+          {/* Bubble label — only visible on hover */}
           <motion.div
-            className="absolute -top-7 flex flex-col items-center"
+            className="absolute -top-7 flex flex-col items-center pointer-events-none"
             initial={{ left: '0%' }}
             animate={{ left: `${fillW}%` }}
             transition={{ duration: 1.4, ease: [0.22, 1, 0.36, 1] }}
             style={{ transform: 'translateX(-50%)' }}
           >
-            <span className="rounded-full bg-accent-color px-2 py-0.5 text-[10px] font-bold text-white shadow-sm whitespace-nowrap">
+            <motion.span
+              className="rounded-full bg-accent-color px-2 py-0.5 text-[10px] font-bold text-white shadow-sm whitespace-nowrap"
+              animate={{ opacity: barHovered ? 1 : 0, y: barHovered ? 0 : 4 }}
+              transition={{ duration: 0.2 }}
+            >
               {displayPct}%
-            </span>
+            </motion.span>
             {/* small triangle pointer */}
-            <span className="mt-0.5 size-1.5 rotate-45 bg-accent-color inline-block" />
+            <motion.span
+              className="mt-0.5 size-1.5 rotate-45 bg-accent-color inline-block"
+              animate={{ opacity: barHovered ? 1 : 0 }}
+              transition={{ duration: 0.2 }}
+            />
           </motion.div>
         </div>
 

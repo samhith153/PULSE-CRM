@@ -54,6 +54,11 @@ export function AuthField({ label, error, toggleable, className, ...props }: Pro
             toggleable && "pr-11",
             className,
           )}
+          style={{
+            WebkitBoxShadow: '0 0 0 1000px rgba(255,255,255,0.05) inset',
+            WebkitTextFillColor: 'white',
+            caretColor: 'white',
+          } as React.CSSProperties}
         />
         {toggleable && (
           <button

@@ -18,6 +18,7 @@ from app.models.email_summary import EmailSummary
 from app.schemas.common import PaginatedResponse, StandardResponse
 from app.schemas.email import EmailDetailResponse, EmailDraftRequest, EmailDraftResponse, EmailResponse
 from app.services.email_service import EmailService
+from app.services.email_summary_service import EmailSummaryService, is_failed_summary
 from app.utils.enums import EmailDirection, SortOrder
 from app.services.ai_client import AIClient
 
@@ -185,6 +186,13 @@ async def get_email_summary(thread_id: str, current_user: CurrentUser, db: DBSes
     summary = result.scalar_one_or_none()
     if not summary:
         return {"success": True, "message": "No summary found", "data": None}
+    if is_failed_summary(summary):
+        # Retry failed summaries lazily so stale "Unable to process thread"
+        # rows self-heal once the AI service is available again.
+        svc = EmailSummaryService(db)
+        refreshed = await svc.summarize_thread(current_user.organization_id, thread_id)
+        if refreshed:
+            summary = refreshed
     data = {
         "summary": summary.summary,
         "summary_word": summary.summary_word,

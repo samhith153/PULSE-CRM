@@ -156,9 +156,9 @@ export default function LoginPage() {
           </div>
           <div className="rise-in" style={{ animationDelay: '300ms' }}>
             <div className="mb-1.5 flex justify-end">
-              <a href="#" className="text-xs font-semibold text-link hover:underline">
+              <Link href="/reset-password" className="text-xs font-semibold text-link hover:underline">
                 Forgot password?
-              </a>
+              </Link>
             </div>
             <AuthField
               label="Password"

@@ -21,6 +21,28 @@ from app.services.ai_client import AIClient
 
 logger = get_logger(__name__)
 
+# Summary text used when AI summarization fails. A stored summary that matches
+# one of these markers is treated as failed and retried on the next call.
+_FAILURE_MARKERS = frozenset({
+    "unable to process thread",
+    "unable to process this thread.",
+    "unable to generate summary",
+})
+
+
+def is_failed_summary(summary: Optional[EmailSummary]) -> bool:
+    """Return True when a stored summary is a failure/fallback marker.
+
+    Failed summaries are retried on the next summarization call so they
+    self-heal once the AI service is available again.
+    """
+    if summary is None:
+        return True
+    text = (summary.summary or "").strip().lower()
+    if not text:
+        return True
+    return text in _FAILURE_MARKERS
+
 
 class EmailSummaryService:
     """Summarizes email threads via the ai-service and persists results."""
@@ -46,9 +68,18 @@ class EmailSummaryService:
 
         existing = await self._get_existing(thread_id)
         if existing:
-            # Re-summarize if new emails arrived after the last summary
-            if existing.created_at and emails[-1].sent_at and emails[-1].sent_at > existing.created_at:
+            # Re-summarize if new emails arrived after the last summary, or if
+            # the previous attempt failed (stored a fallback marker).
+            new_emails = bool(
+                existing.created_at
+                and emails[-1].sent_at
+                and emails[-1].sent_at > existing.created_at
+            )
+            failed = is_failed_summary(existing)
+            if new_emails:
                 logger.info("Thread %s has new emails, re-summarizing", thread_id)
+            elif failed:
+                logger.info("Thread %s has a failed summary, retrying", thread_id)
             else:
                 return existing
 

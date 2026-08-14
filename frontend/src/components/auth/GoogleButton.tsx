@@ -92,14 +92,6 @@ export function GoogleButton({ label }: { label: string }) {
           callback: handleGoogleCallback,
         });
         setGsiReady(true);
-        if (containerRef.current) {
-          g.accounts.id.renderButton(containerRef.current, {
-            theme: "outline",
-            size: "large",
-            width: 316,
-            text: "continue_with",
-          });
-        }
       }
     };
 
@@ -116,37 +108,34 @@ export function GoogleButton({ label }: { label: string }) {
     }
   }, [googleClientId, handleGoogleCallback]);
 
+  const triggerGoogleSignIn = () => {
+    const g = (window as any).google;
+    if (g && g.accounts && g.accounts.id && gsiReady) {
+      g.accounts.id.prompt();
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-2">
-      <div
-        ref={containerRef}
-        className="flex min-h-[44px] w-full items-center justify-center"
-      />
+      {/* Custom styled Google button that matches dark theme */}
+      <button
+        type="button"
+        onClick={triggerGoogleSignIn}
+        disabled={!googleClientId || loading}
+        aria-label={label}
+        className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/80 hover:bg-white/10 hover:text-white hover:border-white/20 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+      >
+        {loading ? (
+          <Loader2 size={18} className="animate-spin" />
+        ) : (
+          <GoogleIcon />
+        )}
+        <span>{loading ? 'Signing in...' : label}</span>
+      </button>
       {!googleClientId && (
-        <>
-          <button
-            type="button"
-            disabled
-            aria-label={label}
-            className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/40 cursor-not-allowed opacity-60"
-          >
-            <GoogleIcon />
-            <span>{label}</span>
-          </button>
-          <p className="text-center text-[11px] text-white/40">
-            Google Sign-In is not configured on the server.
-          </p>
-        </>
-      )}
-      {loading && !gsiReady && (
-        <button
-          type="button"
-          disabled
-          className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/90"
-        >
-          <Loader2 size={16} className="animate-spin text-accent-color" />
-          <span>Loading...</span>
-        </button>
+        <p className="text-center text-[11px] text-white/40">
+          Google Sign-In is not configured on the server.
+        </p>
       )}
       {error && (
         <p className="text-center text-[11px] text-red-400">{error}</p>

@@ -2,6 +2,7 @@
 
 import React, { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   Activity,
   AlertCircle,
@@ -10,8 +11,12 @@ import {
   Lock,
   Eye,
   EyeOff,
+  Mail,
+  ArrowLeft,
+  Send,
 } from 'lucide-react';
-import { resetPassword } from '@/utils/api';
+import { resetPassword, forgotPassword } from '@/utils/api';
+import { AuthShell } from '@/components/auth/AuthShell';
 
 function passwordStrengthHint(password: string): string | null {
   if (!password) return null;
@@ -25,11 +30,141 @@ function passwordStrengthHint(password: string): string | null {
   return null;
 }
 
-function ResetPasswordForm() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const token = searchParams.get('token') || '';
+/* ─────────────────────────────────────────────────────────────────────
+   Step 1: Request reset email
+───────────────────────────────────────────────────────────────────── */
+function RequestResetForm() {
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await forgotPassword(email.trim());
+      setSent(true);
+    } catch (err: any) {
+      // Show success anyway to prevent email enumeration
+      setSent(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AuthShell>
+      <div className="fade-in-soft">
+        <Link
+          href="/login"
+          className="rise-in inline-flex items-center gap-1.5 text-xs font-semibold text-white/50 hover:text-white/80 transition-colors mb-5"
+        >
+          <ArrowLeft size={14} />
+          Back to sign in
+        </Link>
+
+        {sent ? (
+          <div className="rise-in" style={{ animationDelay: '60ms' }}>
+            <div className="grid size-12 place-items-center rounded-2xl bg-[#10B981]/15 border border-[#10B981]/20 mx-auto mb-4">
+              <CheckCircle2 size={22} className="text-[#10B981]" />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight text-white/90 text-center">
+              Check your email
+            </h1>
+            <p className="mt-2 text-sm text-white/50 text-center leading-relaxed">
+              If an account exists for <span className="text-white/70 font-medium">{email}</span>, we&apos;ve sent a password reset link.
+            </p>
+            <p className="mt-1 text-xs text-white/35 text-center">
+              Didn&apos;t get it? Check your spam folder or try again.
+            </p>
+            <button
+              type="button"
+              onClick={() => { setSent(false); setEmail(''); }}
+              className="rise-in mt-6 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white transition-all cursor-pointer"
+            >
+              Send another email
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="rise-in" style={{ animationDelay: '60ms' }}>
+              <div className="grid size-12 place-items-center rounded-2xl bg-accent-color/15 border border-accent-color/20 mx-auto mb-4">
+                <Lock size={22} className="text-accent-color" />
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-white/90 text-center">
+                Reset your password
+              </h1>
+              <p className="mt-2 text-sm text-white/50 text-center leading-relaxed">
+                Enter the email address associated with your account and we&apos;ll send a reset link.
+              </p>
+            </div>
+
+            {error && (
+              <div className="rise-in mt-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 flex items-center gap-2" style={{ animationDelay: '100ms' }}>
+                <AlertCircle size={14} className="text-red-400 shrink-0" />
+                <span className="text-xs font-semibold text-red-400">{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-4 mt-5">
+              <div className="rise-in" style={{ animationDelay: '140ms' }}>
+                <label className="block text-[11px] font-bold text-white/50 uppercase tracking-wider mb-1.5">
+                  Email address
+                </label>
+                <div className="relative">
+                  <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); if (error) setError(''); }}
+                    placeholder="you@company.com"
+                    required
+                    autoComplete="email"
+                    className="h-12 w-full rounded-xl border border-white/15 bg-white/5 pl-10 pr-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="rise-in pt-1" style={{ animationDelay: '180ms' }}>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(37,99,235,0.45)] hover:from-blue-500 hover:to-indigo-500 active:translate-y-0 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
+                >
+                  {loading ? (
+                    <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  ) : (
+                    <Send size={16} />
+                  )}
+                  {loading ? 'Sending...' : 'Send reset link'}
+                </button>
+              </div>
+            </form>
+          </>
+        )}
+
+        <p className="rise-in mt-5 text-center text-sm text-white/40" style={{ animationDelay: '220ms' }}>
+          Remember your password?{' '}
+          <Link href="/login" className="font-semibold text-link hover:underline">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </AuthShell>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Step 2: Set new password (with token from email link)
+───────────────────────────────────────────────────────────────────── */
+function SetPasswordForm({ token }: { token: string }) {
+  const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -38,16 +173,11 @@ function ResetPasswordForm() {
   const [success, setSuccess] = useState(false);
 
   const clientHint = useMemo(() => passwordStrengthHint(password), [password]);
-  const missingToken = !token;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (missingToken) {
-      setError('This reset link is invalid or incomplete. Request a new one from the sign-in screen.');
-      return;
-    }
     if (clientHint) {
       setError(clientHint);
       return;
@@ -68,345 +198,157 @@ function ResetPasswordForm() {
     }
   };
 
-  return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        background: 'linear-gradient(160deg, #faf5ff 0%, #f8fafc 45%, #eef2ff 100%)',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 420,
-          background: '#fff',
-          borderRadius: 20,
-          padding: '28px 32px 24px',
-          boxShadow: '0 32px 80px rgba(15,23,42,0.12)',
-          border: '1px solid #f1f5f9',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 18 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(37,99,235,0.27)',
-            }}
-          >
-            <Activity size={16} color="#fff" strokeWidth={2.5} />
+  if (success) {
+    return (
+      <AuthShell>
+        <div className="fade-in-soft text-center">
+          <div className="grid size-12 place-items-center rounded-2xl bg-[#10B981]/15 border border-[#10B981]/20 mx-auto mb-4">
+            <CheckCircle2 size={22} className="text-[#10B981]" />
           </div>
-          <span style={{ fontSize: 17, fontWeight: 900, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Pulse<span style={{ color: '#2563EB' }}>CRM</span>
-          </span>
+          <h1 className="text-xl font-bold tracking-tight text-white/90">
+            Password updated
+          </h1>
+          <p className="mt-2 text-sm text-white/50 leading-relaxed">
+            Your password has been reset. You can now sign in with your new password.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push('/login')}
+            className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(37,99,235,0.45)] transition-all cursor-pointer"
+          >
+            Go to sign in
+          </button>
+        </div>
+      </AuthShell>
+    );
+  }
+
+  return (
+    <AuthShell>
+      <div className="fade-in-soft">
+        <Link
+          href="/login"
+          className="rise-in inline-flex items-center gap-1.5 text-xs font-semibold text-white/50 hover:text-white/80 transition-colors mb-5"
+        >
+          <ArrowLeft size={14} />
+          Back to sign in
+        </Link>
+
+        <div className="rise-in" style={{ animationDelay: '60ms' }}>
+          <div className="grid size-12 place-items-center rounded-2xl bg-accent-color/15 border border-accent-color/20 mx-auto mb-4">
+            <Lock size={22} className="text-accent-color" />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight text-white/90 text-center">
+            Choose a new password
+          </h1>
+          <p className="mt-2 text-sm text-white/50 text-center leading-relaxed">
+            Use at least 8 characters with upper, lower, number, and special character.
+          </p>
         </div>
 
-        {success ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div
-              style={{
-                padding: '14px 16px',
-                background: '#f0fdf4',
-                border: '1px solid #bbf7d0',
-                borderRadius: 12,
-                display: 'flex',
-                gap: 10,
-                alignItems: 'flex-start',
-              }}
-            >
-              <CheckCircle2 size={18} color="#16a34a" style={{ flexShrink: 0, marginTop: 1 }} />
-              <div>
-                <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: '#166534' }}>
-                  Password updated
-                </p>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: '#15803d', lineHeight: 1.5 }}>
-                  Your password has been reset. You can sign in with your new password.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => router.push('/?auth=signin')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                padding: '12px',
-                background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-                color: '#fff',
-                fontSize: 14,
-                fontWeight: 700,
-                borderRadius: 12,
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                boxShadow: '0 6px 24px rgba(37,99,235,0.33)',
-              }}
-            >
-              Go to sign in
-            </button>
+        {error && (
+          <div className="rise-in mt-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-2.5 flex items-center gap-2" style={{ animationDelay: '100ms' }}>
+            <AlertCircle size={14} className="text-red-400 shrink-0" />
+            <span className="text-xs font-semibold text-red-400">{error}</span>
           </div>
-        ) : (
-          <>
-            <div style={{ marginBottom: 18 }}>
-              <h1
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  color: '#0f172a',
-                  margin: 0,
-                  letterSpacing: '-0.03em',
-                }}
-              >
-                Choose a new password
-              </h1>
-              <p style={{ fontSize: 13, color: '#475569', margin: '4px 0 0', lineHeight: 1.5 }}>
-                Use at least 8 characters with upper, lower, number, and special character.
-              </p>
-            </div>
+        )}
 
-            {missingToken && (
-              <div
-                style={{
-                  padding: '10px 14px',
-                  background: '#fff7ed',
-                  border: '1px solid #fed7aa',
-                  borderRadius: 10,
-                  marginBottom: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <AlertCircle size={14} color="#c2410c" style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: '#9a3412', fontWeight: 600 }}>
-                  Missing reset token. Open the link from your email, or request a new one.
-                </span>
-              </div>
-            )}
-
-            {error && (
-              <div
-                style={{
-                  padding: '10px 14px',
-                  background: '#fef2f2',
-                  border: '1px solid #fecaca',
-                  borderRadius: 10,
-                  marginBottom: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <AlertCircle size={14} color="#dc2626" style={{ flexShrink: 0 }} />
-                <span style={{ fontSize: 12, color: '#991b1b', fontWeight: 600 }}>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: '#475569',
-                    marginBottom: 4,
-                  }}
-                >
-                  New password
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Lock
-                    size={14}
-                    color="#94a3b8"
-                    style={{
-                      position: 'absolute',
-                      left: 12,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    autoComplete="new-password"
-                    disabled={missingToken}
-                    style={{
-                      width: '100%',
-                      padding: '10px 40px 10px 36px',
-                      borderRadius: 10,
-                      border: '1.5px solid #e2e8f0',
-                      fontSize: 13,
-                      fontFamily: 'inherit',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      background: missingToken ? '#f8fafc' : '#F8FAFC',
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    style={{
-                      position: 'absolute',
-                      right: 10,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      border: 'none',
-                      background: 'none',
-                      cursor: 'pointer',
-                      color: '#94a3b8',
-                      display: 'flex',
-                      padding: 2,
-                    }}
-                  >
-                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                  </button>
-                </div>
-                {clientHint && password.length > 0 && (
-                  <p style={{ margin: '6px 0 0', fontSize: 11, color: '#b45309', fontWeight: 600 }}>
-                    {clientHint}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label
-                  style={{
-                    display: 'block',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    color: '#475569',
-                    marginBottom: 4,
-                  }}
-                >
-                  Confirm password
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <Lock
-                    size={14}
-                    color="#94a3b8"
-                    style={{
-                      position: 'absolute',
-                      left: 12,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      pointerEvents: 'none',
-                    }}
-                  />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    autoComplete="new-password"
-                    disabled={missingToken}
-                    style={{
-                      width: '100%',
-                      padding: '10px 12px 10px 36px',
-                      borderRadius: 10,
-                      border: '1.5px solid #e2e8f0',
-                      fontSize: 13,
-                      fontFamily: 'inherit',
-                      color: '#0f172a',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      background: missingToken ? '#f8fafc' : '#F8FAFC',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading || missingToken}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                  padding: '12px',
-                  marginTop: 4,
-                  background: loading || missingToken ? '#60A5FA' : 'linear-gradient(135deg, #2563EB, #1D4ED8)',
-                  color: '#fff',
-                  fontSize: 14,
-                  fontWeight: 700,
-                  borderRadius: 12,
-                  border: 'none',
-                  cursor: loading || missingToken ? 'not-allowed' : 'pointer',
-                  fontFamily: 'inherit',
-                  boxShadow: '0 6px 24px rgba(37,99,235,0.33)',
-                }}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
-                    Updating…
-                  </>
-                ) : (
-                  'Reset password'
-                )}
-              </button>
-            </form>
-
-            <p style={{ textAlign: 'center', fontSize: 12, color: '#64748b', margin: '18px 0 0' }}>
-              Remembered it?{' '}
+        <form onSubmit={handleSubmit} className="space-y-4 mt-5">
+          <div className="rise-in" style={{ animationDelay: '140ms' }}>
+            <label className="block text-[11px] font-bold text-white/50 uppercase tracking-wider mb-1.5">
+              New password
+            </label>
+            <div className="relative">
+              <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                autoComplete="new-password"
+                className="h-12 w-full rounded-xl border border-white/15 bg-white/5 pl-10 pr-11 text-sm text-white placeholder:text-white/30 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              />
               <button
                 type="button"
-                onClick={() => router.push('/?auth=signin')}
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: '#2563EB',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70 transition-colors cursor-pointer"
               >
-                Back to sign in
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
-            </p>
-          </>
-        )}
+            </div>
+            {clientHint && password.length > 0 && (
+              <p className="mt-1.5 text-[11px] text-[#F59E0B] font-semibold">{clientHint}</p>
+            )}
+          </div>
+
+          <div className="rise-in" style={{ animationDelay: '180ms' }}>
+            <label className="block text-[11px] font-bold text-white/50 uppercase tracking-wider mb-1.5">
+              Confirm password
+            </label>
+            <div className="relative">
+              <Lock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none" />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="••••••••"
+                required
+                autoComplete="new-password"
+                className="h-12 w-full rounded-xl border border-white/15 bg-white/5 pl-10 pr-4 text-sm text-white placeholder:text-white/30 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+              />
+            </div>
+          </div>
+
+          <div className="rise-in pt-1" style={{ animationDelay: '220ms' }}>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-semibold text-white shadow-[0_4px_14px_rgba(37,99,235,0.3)] hover:-translate-y-0.5 hover:shadow-[0_6px_20px_rgba(37,99,235,0.45)] hover:from-blue-500 hover:to-indigo-500 active:translate-y-0 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-300 cursor-pointer"
+            >
+              {loading ? (
+                <>
+                  <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  Updating...
+                </>
+              ) : (
+                'Reset password'
+              )}
+            </button>
+          </div>
+        </form>
+
+        <p className="rise-in mt-5 text-center text-sm text-white/40" style={{ animationDelay: '260ms' }}>
+          Remembered it?{' '}
+          <Link href="/login" className="font-semibold text-link hover:underline">
+            Sign in
+          </Link>
+        </p>
       </div>
-      <style>{`@keyframes spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }`}</style>
-    </div>
+    </AuthShell>
   );
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+   Main: Decide which step to show
+───────────────────────────────────────────────────────────────────── */
+function ResetPasswordForm() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token') || '';
+
+  if (token) {
+    return <SetPasswordForm token={token} />;
+  }
+
+  return <RequestResetForm />;
 }
 
 export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div
-          style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#64748b',
-            fontSize: 14,
-          }}
-        >
-          Loading…
+        <div className="min-h-screen flex items-center justify-center text-white/50 text-sm">
+          Loading...
         </div>
       }
     >
