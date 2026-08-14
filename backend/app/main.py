@@ -220,6 +220,34 @@ async def lifespan(app: FastAPI):
     from app.services.rbac_bootstrap import bootstrap_rbac_on_startup
     await bootstrap_rbac_on_startup()
 
+    # Verify Gmail token decryption is possible for all connections
+    try:
+        from app.database.connection import AsyncSessionFactory
+        from app.models.email import GmailConnection
+        from app.services.gmail_client import TokenCipher
+        from sqlalchemy import select
+        async with AsyncSessionFactory() as db:
+            rows = (await db.execute(select(GmailConnection))).scalars().all()
+            cipher = TokenCipher()
+            broken = []
+            for conn in rows:
+                try:
+                    cipher.decrypt(conn.access_token_encrypted)
+                    cipher.decrypt(conn.refresh_token_encrypted)
+                except Exception:
+                    broken.append(conn.email_address)
+            if broken:
+                logger.error(
+                    "Gmail token decryption FAILED for %d connection(s): %s — "
+                    "these connections must be reconnected in Integrations. "
+                    "GMAIL_TOKEN_ENCRYPTION_KEY may have changed.",
+                    len(broken), ", ".join(broken),
+                )
+            else:
+                logger.info("All %d Gmail connection(s) decrypted OK with current key", len(rows))
+    except Exception as exc:
+        logger.warning("Could not verify Gmail token decryption on startup: %s", exc)
+
     # Re-establish Gmail Pub/Sub watches on startup
     await refresh_gmail_watches()
 
