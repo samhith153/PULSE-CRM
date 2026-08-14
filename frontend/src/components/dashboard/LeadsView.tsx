@@ -537,11 +537,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   });
 
   const displayLeads = isPriorityView
-    ? [...filteredLeads].sort((a, b) => {
-        const aScore = Math.round(getFitScore(a) * 0.6 + getEngagementScore(a) * 0.4);
-        const bScore = Math.round(getFitScore(b) * 0.6 + getEngagementScore(b) * 0.4);
-        return bScore - aScore;
-      })
+    ? [...filteredLeads].sort((a, b) => (b.score || 0) - (a.score || 0))
     : filteredLeads;
 
   const sortedLeads = React.useMemo(() => {
@@ -1527,136 +1523,175 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               </table>
             </div>
           ) : (
-            <div className="overflow-y-auto max-h-[580px] border border-border-default/60 rounded-xl bg-surface-1 custom-scrollbar">
-              <table className="w-full border-collapse text-left">
-                <thead className="sticky top-0 bg-surface-1 z-10 border-b border-border-default shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
-                  <tr className="text-[11px] uppercase font-black tracking-wider text-text-primary border-b border-border-default bg-surface-2/40">
-                    <th className="py-3 px-4 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('name')}>Contact Name</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('company')}>Company</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('jobTitle')}>Designation</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('phone')}>Phone</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('email')}>Email</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary text-center" onClick={() => handleHeaderClick('score')}>Score</th>
-                    {isPriorityView && (
-                      <>
-                        <th className="py-3 text-center">Fit Score</th>
-                        <th className="py-3 text-center">Engagement Score</th>
-                        <th className="py-3 text-center">Overall Score</th>
-                      </>
-                    )}
-                    <th className="py-3 text-right pr-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40 text-xs text-text-primary font-medium">
-                  {sortedLeads.length > 0 ? (
-                    sortedLeads.map((lead) => {
-                      const isSelected = lead.id === selectedLeadId;
-                      return (
-                        <tr
-                          key={lead.id}
-                          onClick={() => setSelectedLeadId(lead.id)}
-                          onDoubleClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedLeadId(prevId => prevId === lead.id ? null : prevId);
-                          }}
-                          className={`hover:bg-surface-2/40 cursor-pointer transition duration-200 border-b border-border-default/40 ${isSelected ? 'bg-accent-color/[0.04]' : ''}`}
-                        >
-                          <td className="py-3.5 px-4 font-semibold text-text-primary truncate max-w-[150px]">{lead.name}</td>
-                          <td className="py-3.5 text-text-muted truncate max-w-[130px]">{lead.company}</td>
-                          <td className="py-3.5 truncate max-w-[120px]">{lead.jobTitle || '—'}</td>
-                          <td className="py-3.5 tabular-nums">{lead.phone || '—'}</td>
-                          <td className="py-3.5 truncate max-w-[120px]">{lead.email || '—'}</td>
-                          <td className="py-3.5 text-center">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums inline-block ${
-                              lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
-                              lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' :
-                              'text-destructive bg-destructive/10 border-destructive/10'
-                            }`}>
-                              {lead.score != null ? `${lead.score}%` : '—'}
-                            </span>
-                          </td>
-                          {isPriorityView && (
+            <div className="overflow-y-auto max-h-[580px] pr-1.5 custom-scrollbar grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {sortedLeads.length > 0 ? (
+                sortedLeads.map((lead, idx) => {
+                  const isSelected = lead.id === selectedLeadId;
+                  const isTopPriority = isPriorityView && idx === 0;
+                  return (
+                    <div
+                      key={lead.id}
+                      onClick={() => setSelectedLeadId(lead.id)}
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedLeadId(prevId => prevId === lead.id ? null : prevId);
+                      }}
+                      className={`group relative p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between gap-3 ${
+                        isSelected
+                          ? 'bg-accent-color/[0.04] border-accent-color/60 shadow-[0_4px_12px_-4px_rgba(59,130,246,0.15)]'
+                          : 'bg-surface-1 border-border-default hover:border-text-secondary/30 hover:shadow-sm'
+                      } ${isTopPriority ? 'bg-accent-color/[0.01]' : ''}`}
+                    >
+                      {/* Card Header: Name & Company + Overall Score */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="min-w-0">
+                          {isPriorityView ? (
                             <>
-                              <td className="py-3.5 text-center">
-                                <span className={`text-xs font-extrabold tabular-nums ${
-                                  getFitScore(lead) >= 80 ? 'text-status-success-text' :
-                                  getFitScore(lead) >= 60 ? 'text-status-warning-text' : 'text-destructive'
-                                }`}>{getFitScore(lead)}</span>
-                              </td>
-                              <td className="py-3.5 text-center">
-                                <span className={`text-xs font-extrabold tabular-nums ${
-                                  getEngagementScore(lead) >= 30 ? 'text-status-success-text' :
-                                  getEngagementScore(lead) >= 15 ? 'text-status-warning-text' : 'text-destructive'
-                                }`}>{getEngagementScore(lead)}</span>
-                              </td>
-                              <td className="py-3.5 text-center">
-                                <span className={`text-xs font-extrabold tabular-nums px-1.5 py-0.5 rounded ${
-                                  getOverallScore(lead) >= 70 ? 'bg-status-success-text/10 text-status-success-text' :
-                                  getOverallScore(lead) >= 40 ? 'bg-status-warning-text/10 text-status-warning-text' : 'bg-destructive/10 text-destructive'
-                                }`}>{getOverallScore(lead)}</span>
-                              </td>
+                              <div className="font-bold text-text-primary text-sm flex items-center space-x-1.5 truncate">
+                                <Building2 className="h-3.5 w-3.5 text-text-secondary shrink-0" />
+                                <span>{lead.company}</span>
+                              </div>
+                              <div className="text-[10px] text-text-secondary mt-0.5">
+                                Contact: {lead.name}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <h4 className="font-bold text-text-primary text-sm truncate">{lead.name}</h4>
+                              <div className="flex items-center gap-1.5 text-text-secondary text-[11px] mt-0.5">
+                                <Building2 size={12} className="shrink-0 text-text-secondary/70" />
+                                <span className="truncate">{lead.company}</span>
+                              </div>
                             </>
                           )}
-                          <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-end space-x-1">
-                              {lead.status !== 'Converted' && (
-                                <button
-                                  onClick={() => handleConvertLead(lead.id)}
-                                  className="px-2 py-1 bg-status-success-bg border border-status-success-text/25 text-status-success-text hover:bg-status-success-text hover:text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer select-none active:scale-95"
-                                  title="Convert Lead"
-                                >
-                                  Convert
-                                </button>
-                              )}
-                              <button
-                                onClick={() => {
-                                  setLeadForm({
-                                    name: lead.name,
-                                    jobTitle: lead.jobTitle || '',
-                                    email: lead.email,
-                                    phone: lead.phone,
-                                    company: lead.company,
-                                    industry: lead.industry || '',
-                                    location: lead.location || '',
-                                    numberOfEmployees: lead.numberOfEmployees || '',
-                                    source: lead.source || '',
-                                    currentCRM: lead.currentCRM || '',
-                                    operationalSystem: lead.operationalSystem || '',
-                                    status: lead.status,
-                                    priority: lead.priority,
-                                    owner: lead.owner,
-                                    notes: lead.notes
-                                  });
-                                  setEditingLeadId(String(lead.id));
-                                  setSelectedLeadId(lead.id);
-                                  setIsEditingFullPage(true);
-                                }}
-                                className="p-1 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors cursor-pointer"
-                                title="Edit Lead"
-                              >
-                                <Edit className="h-3.5 w-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirmId(lead.id)}
-                                className="p-1 text-text-muted hover:text-status-danger hover:bg-status-danger/10 rounded transition-colors cursor-pointer"
-                                title="Delete Lead"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
+                        </div>
+
+                        {/* Overall Score */}
+                        <div className="shrink-0 text-right select-none">
+                          <div className="text-[9px] font-semibold text-text-secondary uppercase leading-none mb-1">Score</div>
+                          <span className={`inline-flex items-center justify-center size-7 rounded-full text-[11px] font-bold border tabular-nums ${
+                            lead.score >= 80 ? 'text-status-success-text bg-status-success-bg border-status-success-text/10' :
+                            lead.score >= 60 ? 'text-status-warning-text bg-status-warning-bg border-status-warning-text/10' :
+                            'text-status-danger-text bg-status-danger-bg border-status-danger-text/10'
+                          }`}>
+                            {lead.score}%
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Card Body: Priority / Status / Recommendation */}
+                      {isPriorityView ? (
+                        <div className="bg-surface-2/40 rounded-lg p-2.5 flex flex-col gap-1.5 border border-border-default/30">
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-text-secondary font-semibold">Fit Score:</span>
+                            <span className="text-status-info-text font-bold">{lead.fit_score ?? 0}%</span>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-text-secondary font-semibold">Engagement:</span>
+                            <span className="text-text-primary font-bold">{lead.engagement_score ?? 0}%</span>
+                          </div>
+                          <div className="border-t border-border-default/40 pt-1.5 mt-0.5">
+                            <p className="text-[10px] text-text-secondary leading-normal italic line-clamp-2" title={getAIRecommendation(lead)}>
+                              &ldquo;{getAIRecommendation(lead)}&rdquo;
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Status pill */}
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border select-none ${
+                            lead.status === 'New' ? 'text-status-info-text bg-status-info-text/10 border-status-info-text/10' :
+                            lead.status === 'Contacted' ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' :
+                            lead.status === 'Qualified' ? 'text-accent-color bg-accent-color/10 border-accent-color/10' :
+                            lead.status === 'Converted' ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
+                            'text-text-secondary bg-surface-2/80 border border-border-default/80'
+                          }`}>
+                            {lead.status}
+                          </span>
+
+                          {/* Priority Badge */}
+                          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-text-secondary select-none">
+                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                              lead.priority === 'Critical' ? 'bg-status-success-text' :
+                              lead.priority === 'High' ? 'bg-destructive' :
+                              lead.priority === 'Medium' ? 'bg-status-warning-text' :
+                              'bg-text-secondary/40'
+                            }`} />
+                            <span>{lead.priority}</span>
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Card Footer: Owner & Actions */}
+                      <div className="flex items-center justify-between border-t border-border-default/40 pt-2.5 mt-1">
+                        {/* Owner details */}
+                        <div className="flex items-center gap-2 min-w-0">
+                          {lead.ownerAvatar ? (
+                            <img src={lead.ownerAvatar} alt={lead.owner} className="size-5 rounded-full border border-border-default object-cover shrink-0" />
+                          ) : (
+                            <div className="size-5 rounded-full bg-surface-3 flex items-center justify-center text-[8px] font-bold text-text-secondary border border-border-default shrink-0 select-none">
+                              {lead.owner.slice(0, 2).toUpperCase()}
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-text-muted">
-                        No leads matching search or filter selections.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                          )}
+                          <span className="text-[10px] text-text-secondary font-bold truncate max-w-[90px]">{lead.owner}</span>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {lead.status !== 'Converted' && (
+                            <button
+                              onClick={() => handleConvertLead(lead.id)}
+                              className="px-2.5 py-1 bg-status-success-bg border border-status-success-text/25 text-status-success-text hover:bg-status-success-text hover:text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer select-none active:scale-95"
+                              title="Convert Lead"
+                            >
+                              Convert
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setLeadForm({
+                                name: lead.name,
+                                jobTitle: lead.jobTitle || '',
+                                company: lead.company,
+                                email: lead.email,
+                                phone: lead.phone,
+                                industry: lead.industry || '',
+                                location: lead.location || '',
+                                numberOfEmployees: lead.numberOfEmployees || '',
+                                source: lead.source || '',
+                                currentCRM: lead.currentCRM || '',
+                                operationalSystem: lead.operationalSystem || '',
+                                status: lead.status,
+                                priority: lead.priority,
+                                owner: lead.owner,
+                                notes: lead.notes
+                              });
+                              setEditingLeadId(String(lead.id));
+                              setSelectedLeadId(lead.id);
+                              setIsEditingFullPage(true);
+                            }}
+                            className="p-1 text-text-secondary hover:text-text-primary hover:bg-surface-hover rounded-lg transition cursor-pointer"
+                            title="Edit Lead"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(lead.id)}
+                            className="p-1 text-text-secondary hover:text-status-danger-text hover:bg-status-danger-bg rounded-lg transition cursor-pointer"
+                            title="Delete Lead"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="col-span-full py-12 text-center text-text-secondary select-none font-semibold">
+                  No leads matching search or filter selections.
+                </div>
+              )}
             </div>
 
           )}
