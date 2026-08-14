@@ -7,9 +7,11 @@ import { AuthField } from '@/components/auth/AuthField';
 import { GoogleButton } from '@/components/auth/GoogleButton';
 import { login, setToken, getCurrentUser } from '@/utils/api';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -98,7 +100,7 @@ export default function LoginPage() {
       setProgress(100);
       setProgressMessage('Authenticated! Redirecting...');
       setTimeout(() => {
-        window.location.href = redirectPath;
+        router.push(redirectPath);
       }, 400);
     } catch (err: any) {
       setLoading(false);

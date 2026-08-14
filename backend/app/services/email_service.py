@@ -635,26 +635,35 @@ class EmailService:
         self, organization_id: UUID, lead_id: UUID, trigger: str = "inbound_email", intent: Optional[str] = None
     ) -> None:
         """Run the unified assessment pipeline in a background task."""
-        try:
-            from app.core.concurrency import assessment_semaphore
-            from app.database.connection import AsyncSessionFactory
-            from app.services.ai_pipeline import run_lead_assessment
+        _MAX_RETRIES = 3
+        _RETRY_DELAY = 0.8
 
-            logger.info("[ASSESS_BG] Starting assessment for lead=%s org=%s trigger=%s intent=%s", lead_id, organization_id, trigger, intent)
-            async with assessment_semaphore:
-                async with AsyncSessionFactory() as db:
-                    result = await run_lead_assessment(db, lead_id, organization_id, created_by=None, trigger=trigger, intent=intent)
-                    if result:
-                        await db.commit()
-                        logger.info("[ASSESS_BG] Assessment persisted for lead=%s engagement=%s overall=%s",
-                            lead_id,
-                            result.get("engagement", {}).get("score"),
-                            result.get("overall", {}).get("score"),
-                        )
-                    else:
-                        logger.warning("[ASSESS_BG] Assessment returned None for lead=%s", lead_id)
-        except Exception:
-            logger.exception("Background assessment failed for lead %s", lead_id)
+        for attempt in range(_MAX_RETRIES):
+            try:
+                from app.core.concurrency import assessment_semaphore
+                from app.database.connection import AsyncSessionFactory
+                from app.services.ai_pipeline import run_lead_assessment
+
+                logger.info("[ASSESS_BG] Starting assessment for lead=%s org=%s trigger=%s intent=%s attempt=%d", lead_id, organization_id, trigger, intent, attempt + 1)
+                async with assessment_semaphore:
+                    async with AsyncSessionFactory() as db:
+                        result = await run_lead_assessment(db, lead_id, organization_id, created_by=None, trigger=trigger, intent=intent)
+                        if result:
+                            await db.commit()
+                            logger.info("[ASSESS_BG] Assessment persisted for lead=%s engagement=%s overall=%s",
+                                lead_id,
+                                result.get("engagement", {}).get("score"),
+                                result.get("overall", {}).get("score"),
+                            )
+                            return
+                        # result is None — email rows or lead may not be committed yet; retry
+                        if attempt < _MAX_RETRIES - 1:
+                            logger.info("[ASSESS_BG] lead %s assessment returned None (attempt %d/%d), retrying in %.1fs", lead_id, attempt + 1, _MAX_RETRIES, _RETRY_DELAY)
+                            await asyncio.sleep(_RETRY_DELAY)
+            except Exception:
+                logger.exception("Background assessment failed for lead %s (attempt %d)", lead_id, attempt + 1)
+                return
+        logger.warning("[ASSESS_BG] lead %s assessment skipped after %d attempts", lead_id, _MAX_RETRIES)
 
 
     async def send_email(

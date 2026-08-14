@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.deal import Deal
+from app.models.lead import Lead
 from app.repositories.base import BaseRepository
 from app.utils.enums import DealSortField, DealStatus, SortOrder
 
@@ -31,6 +32,7 @@ class DealRepository(BaseRepository[Deal]):
                 selectinload(Deal.contact),
                 selectinload(Deal.owner),
                 selectinload(Deal.pipeline_stage),
+                selectinload(Deal.lead).selectinload(Lead.lead_score),
             )
         )
 

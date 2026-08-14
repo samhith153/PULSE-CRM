@@ -23,7 +23,6 @@ import {
   Shield,
   Bell,
   Link2,
-  Cpu,
   Zap,
   LayoutDashboard,
   ClipboardList,
@@ -117,8 +116,6 @@ function getSections(userRole: SidebarProps['userRole']): NavSection[] {
           label: 'Intelligence',
           items: [
             { name: 'Reports',     icon: BarChart3, tab: 'reports' },
-            { name: 'Documents',   icon: FileText,  tab: 'documents' },
-            { name: 'AI Models',   icon: Cpu,       tab: 'ai models' },
             { name: 'Audit Logs',  icon: Activity,  tab: 'audit logs' },
           ],
         },

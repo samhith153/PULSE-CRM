@@ -124,6 +124,10 @@ interface Deal {
   owner: string;
   closeDate: string;
   createdAt?: string;
+  leadId?: string | null;
+  leadName?: string | null;
+  leadEmail?: string | null;
+  leadScore?: number | null;
 }
 
 interface PipelineStage {
@@ -149,14 +153,18 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
         const stageName = stageObj ? stageObj.name : (d.status || 'New');
         return {
           id: d.id,
-          title: d.name || 'Untitled Deal',
+          title: (d as any).title || d.name || 'Untitled Deal',
           company: d.company_name || '',
           value: d.amount ? Number(d.amount) : 0,
           stage: stageName,
           priority: (d.priority || 'Medium') as Deal['priority'],
           owner: d.owner_name || 'Unassigned',
           closeDate: d.expected_close_date || '',
-          createdAt: d.created_at || new Date().toISOString()
+          createdAt: d.created_at || new Date().toISOString(),
+          leadId: d.lead_id || null,
+          leadName: d.lead_name || null,
+          leadEmail: d.lead_email || null,
+          leadScore: d.lead_score ?? null,
         };
       });
       setDeals(mappedDeals);
@@ -956,7 +964,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 key={stage.id}
                 onDragOver={handleDragOver}
                 onDrop={() => handleDrop(stage.name)}
-                className="bg-surface-2 border border-border-default rounded-2xl p-3 w-72 shrink-0 flex flex-col"
+                className="bg-surface-2 border border-border-default rounded-2xl p-3 flex-1 min-w-[300px] shrink-0 flex flex-col h-[550px]"
               >
               <div className="flex justify-between items-center pb-2 border-b border-border-default mb-3">
                 <div>
@@ -968,7 +976,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                 </span>
               </div>
 
-              <div className="flex-1 space-y-3 pr-1">
+              <div className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1">
                 {stageDeals.map((deal) => (
                   <div 
                     key={deal.id}
@@ -987,7 +995,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       });
                       setIsEditModalOpen(true);
                     }}
-                    className="bg-surface-1 border border-border-default rounded-xl p-3 hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none overflow-visible"
+                    className="bg-surface-1 border border-border-default rounded-xl p-3 w-full overflow-hidden hover:shadow-nav hover:-translate-y-0.5 transition duration-200 cursor-pointer select-none"
                   >
                     <div className="flex justify-between items-start gap-1">
                       <h4 className="text-[11px] font-semibold text-text-primary leading-tight truncate flex-1 pr-1.5" title={deal.title}>{deal.title}</h4>
@@ -1001,6 +1009,20 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       <Building2 className="h-3 w-3 mr-1 text-text-muted" />
                       {deal.company}
                     </div>
+
+                    {deal.leadName && (
+                      <div className="text-[9px] mt-1 flex items-center gap-1">
+                        <span className="text-text-muted">Lead:</span>
+                        <span className="font-semibold text-text-primary truncate">{deal.leadName}</span>
+                        {deal.leadScore != null && (
+                          <span className={`text-[8px] font-bold px-1 py-0.25 rounded ${
+                            deal.leadScore >= 80 ? 'text-status-success bg-status-success/10' :
+                            deal.leadScore >= 50 ? 'text-status-warning bg-status-warning/10' :
+                            'text-text-muted bg-surface-2'
+                          }`}>{deal.leadScore}%</span>
+                        )}
+                      </div>
+                    )}
 
                     {deal.createdAt && (
                       <div className="text-[9px] text-text-muted mt-1 flex items-center gap-1">
@@ -1046,8 +1068,8 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                       </div>
                     </div>
 
-                    <div className="mt-2 border-t border-border-default pt-1.5">
-                      <span className="text-[8px] font-semibold text-text-muted uppercase tracking-wider mb-1 block">Shift Stage:</span>
+                    <div className="mt-2 flex items-center justify-between gap-2 text-[9px] font-semibold text-text-muted border-t border-border-default pt-1.5">
+                      <span className="whitespace-nowrap shrink-0">Shift Stage:</span>
                       <StageDropdown
                         value={deal.stage}
                         stages={stageNames}
@@ -1088,7 +1110,7 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                             toast.error(err?.message || 'Failed to update deal stage.');
                           });
                         }}
-                        className="w-28 shrink-0"
+                        className="flex-1 min-w-0"
                       />
                     </div>
                   </div>
@@ -1201,6 +1223,24 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
                   <input type="date" value={form.closeDate} onChange={e => setForm({...form, closeDate: e.target.value})} className="w-full px-3 py-1.5 border border-border-default rounded-lg text-xs text-text-primary focus:outline-none bg-surface-0 cursor-pointer" />
                 </div>
               </div>
+              {selectedDeal && selectedDeal.leadName && (
+                <div className="bg-surface-2 border border-border-default rounded-xl p-3.5">
+                  <h4 className="text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-2">Linked Lead</h4>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold text-text-primary">{selectedDeal.leadName}</p>
+                      {selectedDeal.leadEmail && <p className="text-[9px] text-text-muted mt-0.5">{selectedDeal.leadEmail}</p>}
+                    </div>
+                    {selectedDeal.leadScore != null && (
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                        selectedDeal.leadScore >= 80 ? 'text-status-success bg-status-success/10' :
+                        selectedDeal.leadScore >= 50 ? 'text-status-warning bg-status-warning/10' :
+                        'text-text-muted bg-surface-2'
+                      }`}>{selectedDeal.leadScore}%</span>
+                    )}
+                  </div>
+                </div>
+              )}
               {selectedDeal && (
                 <div className="mt-3.5 bg-accent-color/5 border border-border-default rounded-xl p-3.5 flex items-start space-x-2">
                   <Sparkles className="h-4.5 w-4.5 text-accent-color shrink-0 mt-0.5" />

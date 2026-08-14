@@ -46,19 +46,35 @@ async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUI
     from app.database.connection import AsyncSessionFactory
     from app.services.ai_pipeline import run_lead_assessment
 
-    try:
-        async with assessment_semaphore:
-            async with AsyncSessionFactory() as db:
-                try:
-                    await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
-                except Exception as exc:
-                    logger.warning(
-                        "Background AI assessment failed for lead %s: %s",
-                        lead_id, exc,
-                    )
-                await db.commit()
-    except Exception as exc:
-        logger.warning("Background AI session failed for lead %s: %s", lead_id, exc)
+    _MAX_RETRIES = 3
+    _RETRY_DELAY = 0.8
+
+    for attempt in range(_MAX_RETRIES):
+        try:
+            async with assessment_semaphore:
+                async with AsyncSessionFactory() as db:
+                    try:
+                        result = await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
+                    except Exception as exc:
+                        logger.warning(
+                            "Background AI assessment failed for lead %s (attempt %d): %s",
+                            lead_id, attempt + 1, exc,
+                        )
+                        return
+                    if result:
+                        await db.commit()
+                        return
+                    # result is None — lead may not be committed yet; retry
+                    if attempt < _MAX_RETRIES - 1:
+                        logger.info(
+                            "[ASSESS_BG] lead %s not visible yet (attempt %d/%d), retrying in %.1fs",
+                            lead_id, attempt + 1, _MAX_RETRIES, _RETRY_DELAY,
+                        )
+                        await asyncio.sleep(_RETRY_DELAY)
+        except Exception as exc:
+            logger.warning("Background AI session failed for lead %s: %s", lead_id, exc)
+            return
+    logger.warning("[ASSESS_BG] lead %s assessment skipped after %d attempts (race condition)", lead_id, _MAX_RETRIES)
 
 
 def _enqueue_lead_ai(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:

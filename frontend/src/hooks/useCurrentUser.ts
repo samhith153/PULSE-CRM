@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getCurrentUser } from '@/utils/api';
 import { toast } from '@/lib/toast';
 
@@ -43,6 +44,7 @@ export function userInitials(fullName?: string | null): string {
  * identity instead of role-keyed placeholder data.
  */
 export function useCurrentUser() {
+  const router = useRouter();
   const [user, setUser] = useState<CurrentUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -70,7 +72,7 @@ export function useCurrentUser() {
             toast.error('Unable to load user profile. Please log in again.');
             sessionStorage.removeItem('pulse-crm-auth');
             localStorage.removeItem('pulse-crm-role');
-            window.location.href = '/login';
+            router.push('/login');
           }
         })
         .finally(() => {

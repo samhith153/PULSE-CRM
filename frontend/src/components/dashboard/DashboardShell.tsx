@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { useDashboardLayout, DashboardLayoutProvider } from '@/components/dashboard/DashboardLayoutContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
@@ -64,7 +65,13 @@ interface DashboardShellProps {
 }
 
 function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }: DashboardShellProps) {
-  const [authorized, setAuthorized] = useState(false);
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const auth = sessionStorage.getItem('pulse-crm-auth') === 'true';
+    const role = localStorage.getItem('pulse-crm-role');
+    return auth && role === requiredRole;
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [activeTab, setActiveTab] = useState(defaultTab);
   const [dashboardSubTab, setDashboardSubTab] = useState('overview');
@@ -139,7 +146,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
     if (!auth) {
       // Redirect back to the landing page login, not the Next.js /login route
-      window.location.href = '/login';
+      router.push('/login');
       return;
     }
 
@@ -148,7 +155,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
       let correctPath = '/dashboard';
       if (role === 'admin') correctPath = '/dashboard/admin';
       else if (role === 'manager') correctPath = '/dashboard/manager';
-      window.location.href = correctPath;
+      router.push(correctPath);
       return;
     }
 
@@ -221,7 +228,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
     localStorage.removeItem('pulse-crm-role');
     localStorage.removeItem('pulse-crm-user');
     clearToken();
-    window.location.href = '/login';
+    router.push('/login');
   };
 
   const legacyRole = requiredRole;
@@ -297,7 +304,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
           ) : tab === 'documents' ? (
             <DocumentsView />
           ) : tab === 'reports' ? (
-            requiredRole === 'manager' ? <ManagerReportsView /> :
+            requiredRole === 'manager' ? <ManagerReportsView onTabChange={setActiveTab} onNewReport={() => setIsReportModalOpen(true)} /> :
             requiredRole === 'admin' ? <AdminReportsView /> :
             <ReportsView />
           ) : tab === 'workflows' ? (

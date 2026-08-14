@@ -207,6 +207,11 @@ export interface Deal {
   company_name: string | null;
   contact_name: string | null;
   owner_name: string | null;
+  stage_slug?: string | null;
+  stage_name?: string | null;
+  lead_name?: string | null;
+  lead_email?: string | null;
+  lead_score?: number | null;
 }
 
 export async function register(fullName: string, email: string, password: string, organizationName: string): Promise<{ access_token: string; refresh_token: string }> {
@@ -768,22 +773,16 @@ export async function deleteCompany(companyId: string | number): Promise<void> {
 export async function getDeals(): Promise<Deal[]> {
   const dbResult = await apiFetch<any>('/api/v1/deals');
   const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
-  return dbDeals.map((dd, idx) => {
-    return {
-      id: dd.id,
-      title: dd.name || `Deal ${dd.id}`,
-      company: dd.company_name || dd.company?.name || '',
-      value: Number(dd.amount || 0),
-      stage: dd.stage_name || dd.stage_slug || 'New',
-      priority: dd.priority || '',
-      owner: dd.owner_name || dd.owner || '',
-      closeDate: dd.expected_close_date || '',
-      createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
-      contact_id: dd.contact_id || null,
-      company_id: dd.company_id || null,
-      contact_name: dd.contact_name || null,
-    };
-  }) as unknown as Deal[];
+  return dbDeals.map((dd) => ({
+    ...dd,
+    title: dd.name || `Deal ${dd.id}`,
+    company: dd.company_name || dd.company?.name || '',
+    value: Number(dd.amount || 0),
+    stage: dd.stage_name || dd.stage_slug || 'New',
+    owner: dd.owner_name || dd.owner || '',
+    closeDate: dd.expected_close_date || '',
+    createdAt: dd.created_at || dd.createdAt || new Date().toISOString(),
+  })) as unknown as Deal[];
 }
 
 export async function updateDealStage(

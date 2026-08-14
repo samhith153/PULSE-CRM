@@ -18,7 +18,6 @@ import {
   Clock, 
   Sparkles, 
   X, 
-  Check, 
   Send, 
   PhoneCall, 
   MessageSquare, 
@@ -37,7 +36,8 @@ import {
   Maximize2,
   Minimize2,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Eye
 } from 'lucide-react';
 
 // Mapping helpers
@@ -284,7 +284,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   });
 
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [sortField, setSortField] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
@@ -503,6 +502,30 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   // AI Recommendation engine — returns cached backend recommendation or loading text
   const getAIRecommendation = (lead: Lead) => {
     return leadRecommendations[lead.id] || 'Loading recommendation...';
+  };
+
+  // Score-based priority view helpers — engagement score from CRM activity
+  const getEngagementScore = (lead: Lead) => {
+    let score = 0;
+    if (lead.emails && lead.emails.length > 0) {
+      score += lead.emails.length * 5;
+      lead.emails.forEach(e => {
+        if (e.subject?.toLowerCase().includes('re:')) score += 15;
+      });
+    }
+    if (lead.calls && lead.calls.length > 0) score += lead.calls.length * 10;
+    if (lead.meetings && lead.meetings.length > 0) score += lead.meetings.length * 15;
+    if (lead.timeline && lead.timeline.length > 0) score += lead.timeline.length * 3;
+    return Math.min(score, 100);
+  };
+
+  const getFitScore = (lead: Lead) => {
+    const fit = lead.fit_score ?? lead.score;
+    return Number(fit) || 0;
+  };
+
+  const getOverallScore = (lead: Lead) => {
+    return Math.round(getFitScore(lead) * 0.6 + getEngagementScore(lead) * 0.4);
   };
 
   // Filtered Leads list
@@ -1287,19 +1310,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                 </button>
               )}
 
-              <button
-                type="button"
-                onClick={() => setIsSelectionMode(!isSelectionMode)}
-                className={`inline-flex items-center space-x-1.5 px-3 py-1.5 border rounded-lg text-xs font-bold transition-colors cursor-pointer ${
-                  isSelectionMode
-                    ? 'bg-accent-color text-surface-0 border-accent-color'
-                    : 'bg-surface-1 hover:bg-surface-2 text-text-primary border-border-default'
-                }`}
-              >
-                <Check className="h-3.5 w-3.5" strokeWidth={2.25} />
-                <span>{isSelectionMode ? 'Done' : 'Select'}</span>
-              </button>
-
               <button 
                 onClick={() => {
                   setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
@@ -1364,24 +1374,37 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               <table className="w-full border-collapse text-left table-fixed">
                 <thead className="sticky top-0 bg-surface-1 z-10 border-b border-border-default shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
                   <tr className="text-[11px] uppercase font-black tracking-wider text-text-primary border-b border-border-default bg-surface-2/40">
+                    {!isPriorityView && (
                     <th className="py-3 px-4 w-[5%] text-left">
-                      {isSelectionMode && (
-                        <input 
-                          type="checkbox" 
-                          checked={sortedLeads.length > 0 && selectedIds.size === sortedLeads.length}
-                          onChange={() => handleToggleSelectAll(sortedLeads)}
-                          className="rounded border-border-default text-accent-color focus:ring-accent-color cursor-pointer size-3.5"
-                        />
-                      )}
+                      <input 
+                        type="checkbox" 
+                        checked={sortedLeads.length > 0 && selectedIds.size === sortedLeads.length}
+                        onChange={() => handleToggleSelectAll(sortedLeads)}
+                        className="rounded border-border-default text-accent-color focus:ring-accent-color cursor-pointer size-3.5"
+                      />
                     </th>
-                    <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('name')}>Name</th>
-                    <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('company')}>Company</th>
-                    <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('email')}>Email</th>
-                    <th className="py-3 px-2 w-[11%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('phone')}>Phone</th>
-                    <th className="py-3 px-2 w-[7%] cursor-pointer hover:text-text-primary transition-colors text-center" onClick={() => handleHeaderClick('score')}>Score</th>
-                    <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('status')}>Status</th>
-                    <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('priority')}>Priority</th>
-                    <th className="py-3 px-2 w-[14%] text-right pr-4">Actions</th>
+                    )}
+                    {isPriorityView ? (
+                      <>
+                        <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('company')}>Company Name</th>
+                        <th className="py-3 px-2 w-[10%] text-center">Fit Score</th>
+                        <th className="py-3 px-2 w-[12%] text-center">Engagement Score</th>
+                        <th className="py-3 px-2 w-[10%] text-center">Overall Score</th>
+                        <th className="py-3 px-2 w-[28%]">Recommendation</th>
+                        <th className="py-3 px-2 w-[10%] text-right pr-4">Actions</th>
+                      </>
+                    ) : (
+                      <>
+                        <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('name')}>Name</th>
+                        <th className="py-3 px-2 w-[7%] cursor-pointer hover:text-text-primary transition-colors text-center" onClick={() => handleHeaderClick('score')}>Score</th>
+                        <th className="py-3 px-2 w-[16%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('company')}>Company</th>
+                        <th className="py-3 px-2 w-[18%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('email')}>Email</th>
+                        <th className="py-3 px-2 w-[11%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('phone')}>Phone</th>
+                        <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('status')}>Status</th>
+                        <th className="py-3 px-2 w-[10%] cursor-pointer hover:text-text-primary transition-colors" onClick={() => handleHeaderClick('priority')}>Priority</th>
+                        <th className="py-3 px-2 w-[14%] text-right pr-4">Actions</th>
+                      </>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40 text-xs text-text-primary font-medium">
@@ -1394,84 +1417,92 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           onClick={() => setSelectedLeadId(lead.id)}
                           className={`hover:bg-surface-2/20 transition border-b border-border-default/40 ${isRowSelected ? 'bg-accent-color/[0.02]' : ''}`}
                         >
-                          <td className="py-3.5 px-4 text-left" onClick={(e) => e.stopPropagation()}>
-                            {isSelectionMode && (
-                              <input 
-                                type="checkbox" 
-                                checked={isRowSelected}
-                                onChange={() => handleToggleSelectRow(lead.id)}
-                                className="rounded border-border-default text-accent-color focus:ring-accent-color cursor-pointer size-3.5"
-                              />
-                            )}
-                          </td>
-                          <td className="py-3.5 px-2 font-bold truncate" title={lead.name}>{lead.name}</td>
-                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.company}>{lead.company}</td>
-                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.email}>{lead.email}</td>
-                          <td className="py-3.5 px-2 text-text-muted truncate" title={lead.phone}>{lead.phone}</td>
-                          <td className="py-3.5 px-2 text-center font-bold tabular-nums">
-                            <span className={`px-2 py-0.5 rounded text-[10px] ${
-                              lead.score >= 80 ? 'bg-status-success-text/10 text-status-success-text border border-status-success-text/15' :
-                              lead.score >= 50 ? 'bg-status-warning-text/10 text-status-warning-text border border-status-warning-text/15' :
-                              'bg-status-danger-text/10 text-status-danger-text border border-status-danger-text/15'
-                            }`}>
-                              {lead.score}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-2">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
-                              lead.status === 'Converted' ? 'bg-status-success-text/10 text-status-success-text border-status-success-text/15' :
-                              lead.status === 'Lost' ? 'bg-status-danger-text/10 text-status-danger-text border-status-danger-text/15' :
-                              'bg-accent-color/10 text-accent-color border-accent-color/15'
-                            }`}>
-                              {lead.status}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-2">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold border inline-block ${
-                              lead.priority === 'Critical' ? 'bg-status-danger-text/10 text-status-danger-text border-status-danger-text/15' :
-                              lead.priority === 'High' ? 'bg-status-warning-text/10 text-status-warning-text border-status-warning-text/15' :
-                              'bg-surface-2 text-text-muted border-border-default'
-                            }`}>
-                              {lead.priority}
-                            </span>
-                          </td>
-                          <td className="py-3.5 px-2 text-right pr-4" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex justify-end gap-1.5">
-                              <button 
-                                onClick={() => {
-                                  setLeadForm({
-                                    name: lead.name,
-                                    jobTitle: lead.jobTitle || '',
-                                    email: lead.email,
-                                    phone: lead.phone,
-                                    company: lead.company,
-                                    industry: lead.industry || '',
-                                    location: lead.location || '',
-                                    numberOfEmployees: lead.numberOfEmployees || '',
-                                    source: lead.source || '',
-                                    currentCRM: lead.currentCRM || '',
-                                    operationalSystem: lead.operationalSystem || '',
-                                    status: lead.status,
-                                    priority: lead.priority,
-                                    owner: lead.owner,
-                                    notes: lead.notes
-                                  });
-                                  setEditingLeadId(String(lead.id));
-                                  setSelectedLeadId(lead.id);
-                                  setIsEditingFullPage(true);
-                                }}
-                                className="p-1 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors cursor-pointer"
-                              >
-                                <Edit className="h-3.5 w-3.5" />
-                              </button>
-                              <button 
-                                onClick={() => setDeleteConfirmId(lead.id)}
-                                className="p-1 text-text-muted hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </td>
+                          {isPriorityView ? (
+                            <>
+                              <td className="py-3.5 px-2 font-bold truncate" title={lead.company}>{lead.company}</td>
+                              <td className="py-3.5 px-2 text-center">
+                                <span className={`text-xs font-extrabold tabular-nums ${
+                                  getFitScore(lead) >= 80 ? 'text-status-success-text' :
+                                  getFitScore(lead) >= 60 ? 'text-status-warning-text' : 'text-destructive'
+                                }`}>{getFitScore(lead)}</span>
+                              </td>
+                              <td className="py-3.5 px-2 text-center">
+                                <span className={`text-xs font-extrabold tabular-nums ${
+                                  getEngagementScore(lead) >= 30 ? 'text-status-success-text' :
+                                  getEngagementScore(lead) >= 15 ? 'text-status-warning-text' : 'text-destructive'
+                                }`}>{getEngagementScore(lead)}</span>
+                              </td>
+                              <td className="py-3.5 px-2 text-center">
+                                <span className={`text-xs font-extrabold tabular-nums px-1.5 py-0.5 rounded ${
+                                  getOverallScore(lead) >= 70 ? 'bg-status-success-text/10 text-status-success-text' :
+                                  getOverallScore(lead) >= 40 ? 'bg-status-warning-text/10 text-status-warning-text' : 'bg-destructive/10 text-destructive'
+                                }`}>{getOverallScore(lead)}</span>
+                              </td>
+                              <td className="py-3.5 px-2 text-[10px] text-text-muted max-w-[200px] truncate">{getAIRecommendation(lead)}</td>
+                              <td className="py-3.5 px-2 text-right pr-4">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(lead.id); }}
+                                  className="text-text-muted/50 hover:text-destructive transition-colors p-1"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="py-3.5 px-2 font-bold truncate" title={lead.name}>{lead.name}</td>
+                              <td className="py-3.5 px-2 text-center font-bold tabular-nums">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums inline-block ${
+                                  lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
+                                  lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' :
+                                  'text-destructive bg-destructive/10 border-destructive/10'
+                                }`}>
+                                  {lead.score != null ? `${lead.score}%` : '—'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-2 text-text-muted truncate" title={lead.company}>{lead.company}</td>
+                              <td className="py-3.5 px-2 text-text-muted truncate" title={lead.email}>{lead.email}</td>
+                              <td className="py-3.5 px-2 text-text-muted truncate" title={lead.phone}>{lead.phone}</td>
+                              <td className="py-3.5 px-2">
+                                <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                  lead.status === 'New' ? 'text-accent-color bg-accent-color/10' :
+                                  lead.status === 'Contacted' ? 'text-status-warning-text bg-status-warning-text/10' :
+                                  lead.status === 'Qualified' ? 'text-status-info-text bg-status-info-text/10' :
+                                  lead.status === 'Converted' ? 'text-status-success-text bg-status-success-text/10 border border-status-success-text/15' :
+                                  'text-text-muted bg-surface-2'
+                                }`}>
+                                  {lead.status}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-2">
+                                <span className={`text-[9px] font-bold ${
+                                  lead.priority === 'High' ? 'text-destructive' :
+                                  lead.priority === 'Medium' ? 'text-status-warning-text' : 'text-text-muted'
+                                }`}>
+                                  ● {lead.priority}
+                                </span>
+                              </td>
+                              <td className="py-3.5 px-2 text-right pr-4">
+                                <div className="flex items-center justify-end gap-1">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setSelectedLeadId(lead.id); }}
+                                    className="text-text-muted/50 hover:text-accent-color transition-colors p-1"
+                                    title="View"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(lead.id); }}
+                                    className="text-text-muted/50 hover:text-destructive transition-colors p-1"
+                                    title="Delete"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </>
+                          )}
                         </tr>
                       );
                     })
@@ -1486,22 +1517,36 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
               </table>
             </div>
           ) : (
-            <div className="overflow-y-auto max-h-[580px] border border-border-default/60 rounded-xl bg-surface-1 custom-scrollbar">
+            <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left">
-                <thead className="sticky top-0 bg-surface-1 z-10 border-b border-border-default shadow-[0_1px_0_0_rgba(0,0,0,0.02)] select-none">
-                  <tr className="text-[11px] uppercase font-black tracking-wider text-text-primary border-b border-border-default bg-surface-2/40">
-                    <th className="py-3 px-4 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('name')}>Contact Name</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('company')}>Company</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('jobTitle')}>Designation</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('phone')}>Phone</th>
-                    <th className="py-3 cursor-pointer hover:text-text-primary" onClick={() => handleHeaderClick('email')}>Email</th>
-                    <th className="py-3 text-right pr-4">Actions</th>
-                  </tr>
+                <thead>
+                  {isPriorityView ? (
+                    <tr className="border-b border-border-default text-[9px] uppercase font-extrabold tracking-wider text-text-primary pb-2">
+                      <th className="pb-2">Company Name</th>
+                      <th className="pb-2 text-center">Fit Score</th>
+                      <th className="pb-2 text-center">Engagement Score</th>
+                      <th className="pb-2 text-center">Overall Score</th>
+                      <th className="pb-2">Recommendation</th>
+                      <th className="pb-2 text-right">Actions</th>
+                    </tr>
+                  ) : (
+                    <tr className="border-b border-border-default text-[9px] uppercase font-extrabold tracking-wider text-text-primary pb-2">
+                      <th className="pb-2">Name</th>
+                      <th className="pb-2 text-center">Score</th>
+                      <th className="pb-2">Company</th>
+                      <th className="pb-2">Email</th>
+                      <th className="pb-2">Phone</th>
+                      <th className="pb-2">Status</th>
+                      <th className="pb-2">Priority</th>
+                      <th className="pb-2 text-right">Actions</th>
+                    </tr>
+                  )}
                 </thead>
-                <tbody className="divide-y divide-border/40 text-xs text-text-primary font-medium">
-                  {sortedLeads.length > 0 ? (
-                    sortedLeads.map((lead) => {
+                <tbody className="divide-y divide-border/40 text-xs text-text-primary font-semibold">
+                  {displayLeads.length > 0 ? (
+                    displayLeads.map((lead, idx) => {
                       const isSelected = lead.id === selectedLeadId;
+                      const isTopPriority = isPriorityView && idx === 0;
                       return (
                         <tr
                           key={lead.id}
@@ -1510,19 +1555,88 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                             e.stopPropagation();
                             setSelectedLeadId(prevId => prevId === lead.id ? null : prevId);
                           }}
-                          className={`hover:bg-surface-2/40 cursor-pointer transition duration-200 border-b border-border-default/40 ${isSelected ? 'bg-accent-color/[0.04]' : ''}`}
+                          className={`hover:bg-surface-2/20 cursor-pointer transition-all duration-200 ${
+                            isSelected ? 'bg-accent-color/[0.04]' : ''
+                          } ${isTopPriority ? 'border-l-4 border-l-accent-color bg-accent-color/[0.03]' : ''}`}
                         >
-                          <td className="py-3.5 px-4 font-semibold text-text-primary truncate max-w-[150px]">{lead.name}</td>
-                          <td className="py-3.5 text-text-muted truncate max-w-[130px]">{lead.company}</td>
-                          <td className="py-3.5 truncate max-w-[120px]">{lead.jobTitle || '—'}</td>
-                          <td className="py-3.5 tabular-nums">{lead.phone || '—'}</td>
-                          <td className="py-3.5 truncate max-w-[120px]">{lead.email || '—'}</td>
-                          <td className="py-3 text-right" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-end space-x-1">
+                          {isPriorityView ? (
+                            <>
+                              <td className="py-3">
+                                <div className="font-extrabold text-text-primary flex items-center space-x-1.5">
+                                  <Building2 className="h-3.5 w-3.5 text-text-muted shrink-0" />
+                                  <span>{lead.company}</span>
+                                </div>
+                                <div className="text-[10px] text-text-muted mt-0.5 ml-5">
+                                  Contact: {lead.name}
+                                </div>
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/10 text-accent-color">
+                                  {getFitScore(lead)}%
+                                </span>
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-surface-2 text-text-primary">
+                                  {getEngagementScore(lead)}%
+                                </span>
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                                  lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10' :
+                                  lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
+                                }`}>
+                                  {lead.score}%
+                                </span>
+                              </td>
+                              <td className="py-3">
+                                <div className="text-[10px] text-text-muted font-bold max-w-[220px] truncate" title={getAIRecommendation(lead)}>
+                                  {getAIRecommendation(lead)}
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="py-3">
+                                <div className="font-extrabold text-text-primary">{lead.name}</div>
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                                  lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10' :
+                                  lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
+                                }`}>
+                                  {lead.score}
+                                </span>
+                              </td>
+                              <td className="py-3 text-[10px] text-text-muted">{lead.company}</td>
+                              <td className="py-3 text-[10px] text-text-muted truncate max-w-[140px]">{lead.email}</td>
+                              <td className="py-3 text-[10px] text-text-muted tabular-nums">{lead.phone}</td>
+                              <td className="py-3">
+                                <span className={`text-[9px] font-extrabold px-2 py-0.5 rounded-full ${
+                                  lead.status === 'New' ? 'text-accent-color bg-accent-color/10' :
+                                  lead.status === 'Contacted' ? 'text-status-warning-text bg-status-warning-text/10' :
+                                  lead.status === 'Qualified' ? 'text-status-info-text bg-status-info-text/10' :
+                                  lead.status === 'Converted' ? 'text-status-success-text bg-status-success-text/10 border border-status-success-text/15' :
+                                  'text-text-muted bg-surface-2'
+                                }`}>
+                                  {lead.status}
+                                </span>
+                              </td>
+                              <td className="py-3">
+                                <span className={`text-[9px] font-bold ${
+                                  lead.priority === 'High' ? 'text-destructive' :
+                                  lead.priority === 'Medium' ? 'text-status-warning-text' : 'text-text-muted'
+                                }`}>
+                                  ● {lead.priority}
+                                </span>
+                              </td>
+                            </>
+                          )}
+                          <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end space-x-1">
                               {lead.status !== 'Converted' && (
                                 <button
                                   onClick={() => handleConvertLead(lead.id)}
-                                  className="px-2 py-1 bg-status-success-bg border border-status-success-text/25 text-status-success-text hover:bg-status-success-text hover:text-white rounded-lg text-[10px] font-bold transition-all cursor-pointer select-none active:scale-95"
+                                  className="px-2 py-0.5 border border-status-success-text/25 text-status-success-text hover:bg-status-success-text hover:text-white rounded text-[10px] font-extrabold transition-colors cursor-pointer"
                                   title="Convert Lead"
                                 >
                                   Convert
@@ -1533,9 +1647,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                   setLeadForm({
                                     name: lead.name,
                                     jobTitle: lead.jobTitle || '',
+                                    company: lead.company,
                                     email: lead.email,
                                     phone: lead.phone,
-                                    company: lead.company,
                                     industry: lead.industry || '',
                                     location: lead.location || '',
                                     numberOfEmployees: lead.numberOfEmployees || '',
@@ -1552,14 +1666,12 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                   setIsEditingFullPage(true);
                                 }}
                                 className="p-1 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded transition-colors cursor-pointer"
-                                title="Edit Lead"
                               >
                                 <Edit className="h-3.5 w-3.5" />
                               </button>
                               <button
                                 onClick={() => setDeleteConfirmId(lead.id)}
-                                className="p-1 text-text-muted hover:text-status-danger hover:bg-status-danger/10 rounded transition-colors cursor-pointer"
-                                title="Delete Lead"
+                                className="p-1 text-text-muted hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </button>

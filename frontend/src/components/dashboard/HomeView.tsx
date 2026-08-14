@@ -357,7 +357,6 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     if (kpis) {
       setOpenDealsCount(kpis.open_deals ?? null);
       setCallsTodayCount(kpis.calls_today ?? null);
-      setLeadsCount(kpis.leads_today ?? null);
       setUntouchedDealsCount(null); // backend doesn't expose this yet
     }
     if (dashboardData.deals) setDeals(dashboardData.deals);
@@ -374,16 +373,21 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     }
     setMeetingsLoading(false);
     // Wire tasks from backend
-    if (dashboardData.open_tasks?.length) {
-      setTasks(dashboardData.open_tasks.map((t: any) => ({
-        id: Number(t.id) || 0,
-        title: t.title || '',
-        deadline: t.due_date || '',
-        priority: 'Medium',
-        status: t.status === 'overdue' ? 'Overdue' : t.status === 'completed' ? 'Completed' : 'Not Started',
-        fitScore: 0,
-      })));
-      localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(dashboardData.open_tasks));
+    if (dashboardData.open_tasks !== undefined) {
+      if (dashboardData.open_tasks.length) {
+        setTasks(dashboardData.open_tasks.map((t: any) => ({
+          id: Number(t.id) || 0,
+          title: t.title || '',
+          deadline: t.due_date || '',
+          priority: 'Medium',
+          status: t.status === 'overdue' ? 'Overdue' : t.status === 'completed' ? 'Completed' : 'Not Started',
+          fitScore: 0,
+        })));
+        localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(dashboardData.open_tasks));
+      } else {
+        setTasks([]);
+        localStorage.removeItem('pulse-crm-manual-tasks');
+      }
     }
     setStatsLoading(false);
     setTasksLoading(false);
@@ -404,19 +408,6 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     }
     // tasksLoading stays true until dashboardData arrives (set in the dashboardData useEffect)
     // or times out (handled by the fallback useEffect above)
-  };
-
-  const initializeDefaultTasks = () => {
-    const defaults: Task[] = [
-      { id: 1, title: "Register for upcoming CRM Webinars", deadline: "2026-08-03", priority: "Medium", status: "Not Started", fitScore: 82 },
-      { id: 2, title: "Refer CRM Videos", deadline: "2026-08-05", priority: "Medium", status: "In Progress", fitScore: 67 },
-      { id: 3, title: "Competitor Comparison Document", deadline: "2026-08-01", priority: "High", status: "Not Started", fitScore: 91 },
-      { id: 4, title: "Get Approval from Manager", deadline: "2026-08-02", priority: "High", status: "Not Started", fitScore: 45 },
-      { id: 5, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress", fitScore: 58 },
-      { id: 6, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress", fitScore: 74 }
-    ];
-    setTasks(defaults);
-    localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(defaults));
   };
 
   const saveTasks = (updated: Task[]) => {
@@ -897,12 +888,6 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
                               <p className="text-[11px] text-muted-foreground max-w-[200px] mt-1">
                                 No open tasks found. You have completed all manual follow-ups.
                               </p>
-                              <button
-                                onClick={initializeDefaultTasks}
-                                className="mt-3 inline-flex items-center justify-center px-3 py-1.5 border border-border-default hover:bg-surface-2 rounded-xl text-[11px] font-bold text-text-primary transition active:scale-95 cursor-pointer"
-                              >
-                                Restore Demo Tasks
-                              </button>
                             </div>
                           ) : (
                             <table className="w-full text-left border-collapse table-fixed">

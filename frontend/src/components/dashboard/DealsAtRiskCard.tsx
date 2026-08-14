@@ -154,13 +154,13 @@ export default function DealsAtRiskCard({
         {/* Filter Toolbar */}
         {normalizedDeals.length > 0 && (
           <div className="flex items-center justify-between mb-3 text-[11px]">
-            <div className="flex items-center space-x-1 bg-muted/50 p-0.5 rounded-lg border border-border-default">
+            <div className="flex items-center space-x-1 bg-surface-2/40 p-0.5 rounded-lg border border-border-default">
               <button
                 onClick={() => setFilter('all')}
                 className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer select-none ${
                   filter === 'all'
-                    ? 'bg-card text-foreground border-border-default'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2'
+                    ? 'bg-surface-1 text-text-primary border-border-default'
+                    : 'border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2'
                 }`}
               >
                 All ({normalizedDeals.length})
@@ -170,7 +170,7 @@ export default function DealsAtRiskCard({
                 className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer select-none ${
                   filter === 'critical'
                     ? 'bg-destructive/15 text-destructive border-destructive/25'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2'
+                    : 'border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2'
                 }`}
               >
                 Critical 🔥
@@ -180,7 +180,7 @@ export default function DealsAtRiskCard({
                 className={`px-3 py-1.5 rounded-md text-xs font-bold border transition-colors cursor-pointer select-none ${
                   filter === 'high_value'
                     ? 'bg-status-warning-text/15 text-status-warning-text dark:text-status-warning-text border-status-warning-text/25'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:bg-surface-2'
+                    : 'border-transparent text-text-muted hover:text-text-primary hover:bg-surface-2'
                 }`}
               >
                 Top Value 💰
@@ -285,7 +285,7 @@ export default function DealsAtRiskCard({
                         <button
                           onClick={(e) => handleNudge(e, deal)}
                           title={`Send alert to ${deal.owner}`}
-                          className={`px-2 py-0.5 rounded-md text-[9px] font-bold flex items-center gap-1 transition shrink-0 cursor-pointer ${
+                          className={`px-2 py-1 rounded-md text-[10px] font-bold flex items-center gap-1 transition shrink-0 cursor-pointer ${
                             isNudged
                               ? 'bg-status-success-bg text-status-success-text border border-status-success-text/25'
                               : 'bg-surface-1 border border-border-default hover:border-status-warning-text/50 text-text-primary hover:text-status-warning-text hover:bg-status-warning-text/10'

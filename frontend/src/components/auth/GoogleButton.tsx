@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { getAuthConfig, loginWithGoogle, setToken, getCurrentUser } from "@/utils/api";
 
@@ -27,6 +28,7 @@ function GoogleIcon() {
 }
 
 export function GoogleButton({ label }: { label: string }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [gsiReady, setGsiReady] = useState(false);
@@ -58,7 +60,7 @@ export function GoogleButton({ label }: { label: string }) {
         redirectPath = "/dashboard/manager";
       }
 
-      window.location.href = redirectPath;
+      router.push(redirectPath);
     } catch (err: any) {
       console.error("Google auth error:", err);
       setError(err.message || "Google Sign-In failed.");

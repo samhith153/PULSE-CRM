@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, useInView, useAnimation } from 'framer-motion';
 import Navbar from '@/components/navigation/Navbar';
 import { ArrowRight, CheckCircle, X, Mail, Lock, Loader2, Activity } from 'lucide-react';
@@ -88,6 +89,7 @@ function AnimatedCounter({ value, duration = 2000 }: { value: string; duration?:
 type Role = 'representative' | 'manager' | 'admin';
 
 function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolean; onClose: () => void; defaultMode?: 'signin' | 'signup' }) {
+  const router = useRouter();
   const [mode, setMode] = useState<'signin' | 'signup'>(defaultMode);
   const [name, setName] = useState('');
   const [orgName, setOrgName] = useState('');
@@ -125,7 +127,7 @@ function AuthModal({ isOpen, onClose, defaultMode = 'signup' }: { isOpen: boolea
         localStorage.setItem('pulse-crm-user', name || role);
       }
       onClose();
-      window.location.href = '/';
+      router.push('/');
     } catch (err: any) {
       setError(err.message || 'Authentication failed.');
       setLoading(false);

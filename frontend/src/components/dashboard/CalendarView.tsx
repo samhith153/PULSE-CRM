@@ -382,7 +382,7 @@ export default function CalendarView() {
 
   return (
     <div className="grid grid-cols-12 gap-6 items-start">
-      <div className="col-span-12 lg:col-span-8 space-y-5">
+      <div className={`col-span-12 ${selectedEvent ? 'lg:col-span-8' : 'lg:col-span-12'} space-y-5`}>
         <div className="bg-surface-1 border border-border-default rounded-2xl p-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
             <div>
@@ -462,7 +462,7 @@ export default function CalendarView() {
 
               <button
                 onClick={() => setIsAddOpen(true)}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 text-primary-foreground rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                className="h-9 px-4 rounded-lg flex items-center justify-center gap-1.5 bg-accent-color text-white hover:bg-accent-color/90 text-xs font-semibold transition-colors cursor-pointer"
                 type="button"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -851,19 +851,19 @@ export default function CalendarView() {
         )}
       </div>
 
-      <aside className="col-span-12 lg:col-span-4">
-        <div className="bg-surface-1 border border-border-default rounded-2xl p-5 lg:sticky lg:top-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-bold text-text-primary">
-                Agenda Details
-              </h3>
-              <p className="text-[10px] text-text-muted mt-0.5">
-                Select an activity to view its details.
-              </p>
-            </div>
+      {selectedEvent && (
+        <aside className="col-span-12 lg:col-span-4">
+          <div className="bg-surface-1 border border-border-default rounded-2xl p-5 lg:sticky lg:top-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-text-primary">
+                  Agenda Details
+                </h3>
+                <p className="text-[10px] text-text-muted mt-0.5">
+                  Select an activity to view its details.
+                </p>
+              </div>
 
-            {selectedEvent && (
               <button
                 type="button"
                 onClick={() => setSelectedEventId(null)}
@@ -872,10 +872,8 @@ export default function CalendarView() {
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-            )}
-          </div>
+            </div>
 
-          {selectedEvent ? (
             <div className="space-y-4">
               <div
                 className={`rounded-xl border p-4 ${getBadgeColor(
@@ -963,24 +961,9 @@ export default function CalendarView() {
                 )}
               </div>
             </div>
-          ) : (
-            <div className="min-h-[280px] rounded-xl border border-dashed border-border-default bg-surface-2/20 flex flex-col items-center justify-center text-center px-6">
-              <div className="h-10 w-10 rounded-full bg-accent-color/10 flex items-center justify-center mb-3">
-                <CalendarIcon className="h-5 w-5 text-accent-color" />
-              </div>
-
-              <p className="text-xs font-bold text-text-primary">
-                No activity selected
-              </p>
-
-              <p className="text-[10px] text-text-muted mt-1 leading-relaxed">
-                Click a task, call, meeting, or follow-up in the calendar to
-                view its full details.
-              </p>
-            </div>
-          )}
-        </div>
-      </aside>
+          </div>
+        </aside>
+      )}
     </div>
   );
 }

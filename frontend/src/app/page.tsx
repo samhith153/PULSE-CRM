@@ -52,9 +52,16 @@ import { AnimatePresence } from 'framer-motion';
 
 export default function DashboardHome() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>('manager');
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('pulse-crm-auth') === 'true';
+  });
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+  const [userRole, setUserRole] = useState<'sales_rep' | 'manager' | 'admin'>(() => {
+    if (typeof window === 'undefined') return 'manager';
+    const stored = localStorage.getItem('pulse-crm-role');
+    return (stored as 'sales_rep' | 'manager' | 'admin') || 'manager';
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

@@ -154,7 +154,7 @@ export default function PriorityQueueCard({
                       <button
                         onClick={() => handleDismiss(item.id, 'done')}
                         title="Mark done"
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold border border-border-default/80 bg-surface-1 text-text-primary hover:text-status-success hover:border-status-success/40 hover:bg-status-success/10 transition cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold border border-border-default bg-surface-1 text-text-primary hover:text-status-success hover:border-status-success/40 hover:bg-status-success/10 transition cursor-pointer"
                       >
                         <Check size={9} />
                         Done
@@ -162,7 +162,7 @@ export default function PriorityQueueCard({
                       <button
                         onClick={() => handleDismiss(item.id, 'snooze')}
                         title="Snooze"
-                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold border border-border-default/80 bg-surface-1 text-text-primary hover:text-status-warning hover:border-status-warning/40 hover:bg-status-warning/10 transition cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold border border-border-default bg-surface-1 text-text-primary hover:text-status-warning hover:border-status-warning/40 hover:bg-status-warning/10 transition cursor-pointer"
                       >
                         <Clock size={9} />
                         Snooze
@@ -171,7 +171,7 @@ export default function PriorityQueueCard({
                     <button
                       onClick={() => onOpenLead?.(item.leadId)}
                       title="Open lead"
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold text-accent-color bg-accent-color/10 border border-accent-color/20 hover:bg-accent-color hover:text-surface-0 hover:border-transparent transition cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-bold text-accent-color bg-accent-color/10 border border-accent-color/20 hover:bg-accent-color hover:text-surface-0 hover:border-transparent transition cursor-pointer"
                     >
                       <ExternalLink size={9} />
                       Open
