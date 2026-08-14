@@ -79,11 +79,25 @@ class DealResponse(BaseModel):
     owner_name: Optional[str] = None
     stage_slug: Optional[str] = None
     stage_name: Optional[str] = None
+    lead_name: Optional[str] = None
+    lead_email: Optional[str] = None
+    lead_score: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
     @staticmethod
     def from_deal(deal: Deal) -> "DealResponse":
+        lead = deal.lead if hasattr(deal, "lead") and deal.lead is not None else None
+        lead_name = None
+        lead_email = None
+        lead_score = None
+        if lead is not None:
+            lead_name = getattr(lead, "title", None)
+            lead_email = getattr(lead, "email", None)
+            ls = getattr(lead, "lead_score", None)
+            if ls is not None:
+                lead_score = getattr(ls, "overall_score", None)
+
         return DealResponse(
             id=deal.id,
             name=deal.name,
@@ -116,5 +130,8 @@ class DealResponse(BaseModel):
             owner_name=deal.owner.full_name if deal.owner else None,
             stage_slug=deal.pipeline_stage.slug if deal.pipeline_stage else None,
             stage_name=deal.pipeline_stage.name if deal.pipeline_stage else None,
+            lead_name=deal.lead.title if deal.lead else None,
+            lead_email=deal.lead.email if deal.lead else None,
+            lead_score=deal.lead.lead_score.overall_score if deal.lead and getattr(deal.lead, "lead_score", None) else None,
         )
 
