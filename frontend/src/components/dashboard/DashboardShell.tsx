@@ -67,6 +67,7 @@ interface DashboardShellProps {
 function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }: DashboardShellProps) {
   const router = useRouter();
   const [authorized, setAuthorized] = useState(() => {
+    if (typeof window === 'undefined') return false;
     const auth = sessionStorage.getItem('pulse-crm-auth') === 'true';
     const role = localStorage.getItem('pulse-crm-role');
     return auth && role === requiredRole;
