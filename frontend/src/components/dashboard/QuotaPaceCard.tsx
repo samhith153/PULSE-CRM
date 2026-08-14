@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Target, CheckCircle2, AlertTriangle, AlertCircle, Zap, Award, Sparkles, ChevronDown } from 'lucide-react';
 import { formatINR, asNumber } from '@/utils/api';
@@ -17,6 +17,7 @@ interface QuotaPaceCardProps {
 }
 
 export default function QuotaPaceCard({ deals = [], quotaPace = null, className = '' }: QuotaPaceCardProps) {
+  const [expanded, setExpanded] = useState(true);
   const quota = useMemo(() => {
     // Use backend quota_pace data when available
     if (quotaPace) {
@@ -101,9 +102,12 @@ export default function QuotaPaceCard({ deals = [], quotaPace = null, className 
             <StatusIcon className="size-3" />
             {statusText}
           </span>
-          {/* Chevron toggle (visual only) */}
-          <button className="grid size-7 place-items-center rounded-full border border-border bg-muted/40 text-muted-foreground hover:bg-muted transition-colors">
-            <ChevronDown className="size-3.5" />
+          {/* Chevron toggle */}
+          <button
+            onClick={() => setExpanded(e => !e)}
+            className="grid size-7 place-items-center rounded-full border border-border bg-muted/40 text-muted-foreground hover:bg-muted transition-colors cursor-pointer"
+          >
+            <ChevronDown className={`size-3.5 transition-transform duration-200 ${expanded ? '' : '-rotate-90'}`} />
           </button>
         </div>
       </div>
@@ -155,7 +159,7 @@ export default function QuotaPaceCard({ deals = [], quotaPace = null, className 
       </div>
 
       {/* ── 3 KPI tiles ── */}
-      <div className="mt-5 grid grid-cols-3 gap-3">
+      <div className={`mt-5 grid grid-cols-3 gap-3 transition-all duration-300 overflow-hidden ${expanded ? 'max-h-40 opacity-100' : 'max-h-0 opacity-0 mt-0'}`}>
         {tiles.map(t => {
           const Icon = t.icon;
           return (

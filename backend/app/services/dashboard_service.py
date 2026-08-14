@@ -1461,20 +1461,22 @@ class DashboardService:
         # Reps without an assigned target emit assigned_target=None (frontend
         # shows "No target set"); the heuristic split is only used to compute a
         # non-zero attainment % for ranking purposes.
-        target_period_start, _ = _current_period_dates("monthly", ref_date=now.date())
-        assigned_stmt = select(
-            SalesTarget.rep_id, SalesTarget.target_amount
-        ).where(
-            SalesTarget.organization_id == organization_id,
-            SalesTarget.rep_id.in_(team_member_ids),
-            SalesTarget.period_type == "monthly",
-            SalesTarget.period_start == target_period_start,
-            SalesTarget.is_active.is_(True),
+        today_date = now.date()
+        assigned_stmt = (
+            select(SalesTarget.rep_id, SalesTarget.target_amount)
+            .where(
+                SalesTarget.organization_id == organization_id,
+                SalesTarget.rep_id.in_(team_member_ids),
+                SalesTarget.period_type == "monthly",
+                SalesTarget.period_end >= today_date,
+                SalesTarget.is_active.is_(True),
+            )
+            .order_by(SalesTarget.rep_id, SalesTarget.period_end.desc())
         )
-        assigned_targets: dict[UUID, Decimal] = {
-            rep_id: Decimal(str(amount))
-            for rep_id, amount in (await self.db.execute(assigned_stmt)).all()
-        }
+        assigned_targets: dict[UUID, Decimal] = {}
+        for rep_id, amount in (await self.db.execute(assigned_stmt)).all():
+            if rep_id not in assigned_targets:
+                assigned_targets[rep_id] = Decimal(str(amount))
         month_won_stmt = select(
             Deal.owner_id,
             func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0),
@@ -2727,13 +2729,24 @@ class DashboardService:
         # Manager-assigned targets from the sales_targets table take priority
         # over the static users.sales_quota value so rep dashboards reflect the
         # target the manager actually set.
-        target_period_start, _ = _current_period_dates("monthly")
-        rep_target_stmt = select(SalesTarget.target_amount).where(
-            SalesTarget.organization_id == organization_id,
-            SalesTarget.rep_id == user_id,
-            SalesTarget.period_type == "monthly",
-            SalesTarget.period_start == target_period_start,
-            SalesTarget.is_active.is_(True),
+        # NOTE: We match on period_end >= today (server UTC) instead of
+        # recomputing period_start, because the frontend may compute
+        # period_start in browser-local time which can differ from UTC at
+        # month boundaries.  The unique constraint guarantees at most one
+        # active monthly target per rep+org, so ORDER BY period_end DESC LIMIT 1
+        # always returns the current assignment.
+        today_date = now.date()
+        rep_target_stmt = (
+            select(SalesTarget.target_amount)
+            .where(
+                SalesTarget.organization_id == organization_id,
+                SalesTarget.rep_id == user_id,
+                SalesTarget.period_type == "monthly",
+                SalesTarget.period_end >= today_date,
+                SalesTarget.is_active.is_(True),
+            )
+            .order_by(SalesTarget.period_end.desc())
+            .limit(1)
         )
 
         # -- Query 7: Open Tasks Today (Widget 1) ------------------------------
