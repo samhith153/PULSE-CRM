@@ -204,8 +204,7 @@ function DashboardShellContent({ requiredRole, defaultTab = 'home', activityId }
 
   useEffect(() => {
     if (!isLoading) return;
-    const timer = setTimeout(() => setIsLoading(false), 450);
-    return () => clearTimeout(timer);
+    setIsLoading(false);
   }, [isLoading]);
 
   // Custom reports state

@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import CurrentUser, DBSession, require_permission
+from app.api.deps import CurrentUser, DBSession, invalidate_user_cache_all, require_permission
 from app.models.role import Permission, Role, RolePermission
 from app.repositories.role_repository import RoleRepository
 from app.schemas.common import StandardResponse
@@ -157,6 +157,7 @@ async def update_role_permissions(
         for rp in role.role_permissions
         if rp.permission
     ]
+    invalidate_user_cache_all()
     return {
         "success": True,
         "message": "Permissions updated.",

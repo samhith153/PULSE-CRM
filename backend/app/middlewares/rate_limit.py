@@ -48,6 +48,9 @@ class _TokenBucket:
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
+    _CLEANUP_INTERVAL = 300  # seconds
+    _BUCKET_IDLE_TTL = 300   # evict buckets idle > 5 min
+
     def __init__(
         self,
         app,
@@ -63,6 +66,17 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._buckets: dict[str, _TokenBucket] = defaultdict(
             lambda: _TokenBucket(self.burst, self._refill_rate)
         )
+        self._last_cleanup = time.monotonic()
+
+    def _cleanup_stale_buckets(self) -> None:
+        now = time.monotonic()
+        if now - self._last_cleanup < self._CLEANUP_INTERVAL:
+            return
+        self._last_cleanup = now
+        stale = [k for k, b in self._buckets.items()
+                 if now - b.last_refill > self._BUCKET_IDLE_TTL]
+        for k in stale:
+            del self._buckets[k]
 
     def _client_key(self, request: Request) -> str:
         """Client identity for rate limiting.
@@ -86,6 +100,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if request.url.path in {"/", settings.DOCS_URL, settings.REDOC_URL, settings.OPENAPI_URL}:
             return await call_next(request)
 
+        self._cleanup_stale_buckets()
         key = self._client_key(request)
         bucket = self._buckets[key]
 
@@ -129,6 +144,9 @@ class AuthRateLimitMiddleware(BaseHTTPMiddleware):
     global rate limit applied to all other routes.
     """
 
+    _CLEANUP_INTERVAL = 300
+    _BUCKET_IDLE_TTL = 300
+
     def __init__(self, app) -> None:
         super().__init__(app)
         self.enabled = settings.ENABLE_RATE_LIMIT
@@ -140,6 +158,21 @@ class AuthRateLimitMiddleware(BaseHTTPMiddleware):
             lambda: _TokenBucket(settings.PASSWORD_RESET_RATE_LIMIT_BURST,
                                  settings.PASSWORD_RESET_RATE_LIMIT_PER_MINUTE / 60.0)
         )
+        self._last_cleanup = time.monotonic()
+
+    def _cleanup_stale_buckets(self) -> None:
+        now = time.monotonic()
+        if now - self._last_cleanup < self._CLEANUP_INTERVAL:
+            return
+        self._last_cleanup = now
+        stale = [k for k, b in self._buckets.items()
+                 if now - b.last_refill > self._BUCKET_IDLE_TTL]
+        for k in stale:
+            del self._buckets[k]
+        stale_pw = [k for k, b in self._pw_buckets.items()
+                    if now - b.last_refill > self._BUCKET_IDLE_TTL]
+        for k in stale_pw:
+            del self._pw_buckets[k]
 
     def _client_key(self, request: Request) -> str:
         """Client identity for rate limiting.
@@ -161,6 +194,7 @@ class AuthRateLimitMiddleware(BaseHTTPMiddleware):
         if not self.enabled:
             return await call_next(request)
 
+        self._cleanup_stale_buckets()
         path = request.url.path.rstrip("/")
         key = self._client_key(request)
 

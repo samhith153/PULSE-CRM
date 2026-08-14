@@ -248,17 +248,25 @@ Never include <script>, <img>, <a>, or any HTML elements in your response.
 """
 
     try:
-        completion = await asyncio.to_thread(
-            client.chat.completions.create,
-            model=settings.ASSISTANT_MODEL,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": payload.message},
-            ],
-            temperature=0.3,
-            max_tokens=800,
+        completion = await asyncio.wait_for(
+            asyncio.to_thread(
+                client.chat.completions.create,
+                model=settings.ASSISTANT_MODEL,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": payload.message},
+                ],
+                temperature=0.3,
+                max_tokens=800,
+            ),
+            timeout=settings.AI_TIMEOUT + 5,
         )
         response_text = completion.choices[0].message.content or "I couldn't generate a response. Please try again."
+    except asyncio.TimeoutError:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Assistant service timed out. Please try again.",
+        )
     except GroqError as e:
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
