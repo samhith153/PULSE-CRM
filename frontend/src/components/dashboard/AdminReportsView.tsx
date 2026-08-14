@@ -195,13 +195,20 @@ function SectionCard({ title, icon: Icon, children }: { title: string; icon: any
   );
 }
 
-function KPICard({ label, value, sub, positive }: { label: string; value: string; sub?: string; positive?: boolean }) {
+function KPICard({ label, value, sub, positive, highlight }: { label: string; value: string; sub?: string; positive?: boolean; highlight?: boolean }) {
   return (
-    <div className="rounded-2xl border border-border-default bg-surface-1 p-5">
-      <p className="text-xs text-text-muted">{label}</p>
-      <p className="mt-1 text-[22px] font-extrabold tracking-tight">{value}</p>
+    <div className={highlight
+      ? "relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent-color to-purple-600 p-5 text-white shadow-lg"
+      : "rounded-2xl border border-border-default bg-surface-1 p-5"
+    }>
+      {highlight && <span className="pointer-events-none absolute -right-8 -top-8 size-36 rounded-full bg-white/10" />}
+      <p className={highlight ? "text-xs font-semibold text-white/70" : "text-xs text-text-muted"}>{label}</p>
+      <p className={`mt-1 text-[22px] font-extrabold tracking-tight ${highlight ? 'text-white' : ''}`}>{value}</p>
       {sub && (
-        <span className={`mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${positive ? 'text-status-success-text' : 'text-status-danger-text'}`}>
+        <span className={highlight
+          ? "mt-1.5 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-white border border-white/20"
+          : `mt-1 inline-flex items-center gap-1 text-[11px] font-semibold ${positive ? 'text-status-success-text' : 'text-status-danger-text'}`
+        }>
           {positive ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
           {sub}
         </span>
@@ -285,7 +292,7 @@ export default function AdminReportsView() {
       {/* ── Org Overview ─────────────────────────────────────────── */}
       {adminData?.summary && (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <KPICard label="Total Users" value={String(adminData.summary.users?.total || 0)} sub={`${adminData.summary.users?.active || 0} active`} positive />
+          <KPICard label="Total Users" value={String(adminData.summary.users?.total || 0)} sub={`${adminData.summary.users?.active || 0} active`} positive highlight />
           <KPICard label="Total Companies" value={String(adminData.summary.companies?.total || 0)} sub={`${adminData.summary.companies?.added_this_month || 0} this month`} positive />
           <KPICard label="Total Contacts" value={String(adminData.summary.contacts?.total || 0)} sub={`${adminData.summary.contacts?.new_this_month || 0} new`} positive />
           <KPICard label="Total Leads" value={String(adminData.summary.leads?.total || 0)} sub={`${Number(adminData.summary.leads?.conversion_rate || 0).toFixed(1)}% conversion`} positive />

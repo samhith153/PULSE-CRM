@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Activity, 
   Search, 
@@ -11,6 +11,8 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { toast } from '@/lib/toast';
+import { getAutomationEvents } from '@/utils/api';
+import type { AutomationEvent } from '@/utils/api';
 
 interface AuditLog {
   id: string;
@@ -22,6 +24,40 @@ interface AuditLog {
   status: 'Authorized' | 'Warning' | 'Blocked';
 }
 
+function titleCase(value: string): string {
+  return value.replace(/[._-]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso || '—';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function deriveStatus(event: AutomationEvent): AuditLog['status'] {
+  const t = `${event.event_type} ${event.event_name || ''} ${event.payload?.status || event.payload?.outcome || ''}`.toLowerCase();
+  if (t.includes('block') || t.includes('denied') || t.includes('forbid')) return 'Blocked';
+  if (t.includes('fail') || t.includes('attempt') || t.includes('unauthoriz') || t.includes('suspicious')) return 'Warning';
+  return 'Authorized';
+}
+
+function eventToAuditLog(event: AutomationEvent): AuditLog {
+  const payload = event.payload || {};
+  const ipAddress = String(payload?.ip_address ?? payload?.ip ?? payload?.source_ip ?? event.source ?? '');
+  const actor = String(payload?.user_name || payload?.email || (event.actor_id ? `User ${event.actor_id.slice(0, 8)}` : 'System'));
+  const target = titleCase(String(event.aggregate_type || payload?.target || 'System'));
+  return {
+    id: `A${event.id.slice(0, 6).toUpperCase()}`,
+    timestamp: formatTimestamp(event.occurred_at || event.created_at),
+    actor,
+    action: titleCase(event.event_name || event.event_type),
+    target,
+    ipAddress: ipAddress || '—',
+    status: deriveStatus(event)
+  };
+}
+
 export default function AuditLogsView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Authorized' | 'Warning' | 'Blocked'>('All');
@@ -29,14 +65,30 @@ export default function AuditLogsView() {
   const [sortField, setSortField] = useState<'timestamp' | 'id' | 'actor' | 'status'>('timestamp');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
-  const [logs] = useState<AuditLog[]>([
-    { id: "A731", timestamp: "2026-07-19 11:42:01", actor: "System Admin", action: "Updated Permission Matrix", target: "Sales Manager Role mapping", ipAddress: "192.168.1.42", status: "Authorized" },
-    { id: "A730", timestamp: "2026-07-19 11:21:44", actor: "Sarah Johnson", action: "User Login", target: "Representative Workspace Session", ipAddress: "192.168.1.58", status: "Authorized" },
-    { id: "A729", timestamp: "2026-07-19 10:05:12", actor: "System Admin", action: "Provisioned User profile", target: "alex.johnson@pulse.crm", ipAddress: "192.168.1.42", status: "Authorized" },
-    { id: "A728", timestamp: "2026-07-19 09:12:00", actor: "Unknown User", action: "Failed login attempt", target: "admin@pulse.crm credentials", ipAddress: "203.0.113.88", status: "Warning" },
-    { id: "A727", timestamp: "2026-07-19 08:31:05", actor: "Alex Johnson", action: "Triggered Model Retrain", target: "Lead Scoring Engine v4.2.1", ipAddress: "192.168.1.99", status: "Authorized" },
-    { id: "A726", timestamp: "2026-07-18 23:45:12", actor: "Forbidden IP", action: "API endpoint query attempt", target: "/users endpoint restrictions", ipAddress: "198.51.100.12", status: "Blocked" }
-  ]);
+  const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAuditLogs = () => {
+      getAutomationEvents(100)
+        .then((res) => {
+          if (cancelled) return;
+          setLogs((res?.items ?? []).map(eventToAuditLog));
+          setLogsLoading(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setLogs([]);
+          setLogsLoading(false);
+        });
+    };
+
+    loadAuditLogs();
+    const interval = setInterval(loadAuditLogs, 15000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   const handleSort = (field: typeof sortField) => {
     if (sortField === field) {
@@ -218,7 +270,13 @@ export default function AuditLogsView() {
                   </td>
                 </tr>
               ))}
-              {filteredLogs.length === 0 && (
+              {logsLoading ? (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-text-muted font-bold">
+                    Loading audit events...
+                  </td>
+                </tr>
+              ) : filteredLogs.length === 0 && (
                 <tr>
                   <td colSpan={7} className="py-8 text-center text-text-muted font-bold">
                     No audit records matched your filter criteria.

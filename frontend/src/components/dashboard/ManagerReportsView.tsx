@@ -22,6 +22,7 @@ import {
   type LeadAnalyticsReport,
   type DealAnalyticsReport,
 } from '@/utils/api';
+import { toast } from '@/lib/toast';
 import { cn } from '@/utils/cn';
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -431,7 +432,10 @@ type Period = 'week' | 'month' | 'quarter' | 'year';
 
 const RECENT_REPORTS: { name: string; type: string; period: string; generated: string }[] = [];
 
-export default function ManagerReportsView() {
+export default function ManagerReportsView({ onTabChange, onNewReport }: {
+  onTabChange?: (tab: string) => void;
+  onNewReport?: () => void;
+}) {
   const [period, setPeriod] = useState<Period>('quarter');
   const [loading, setLoading] = useState(true);
   const [salesPerf, setSalesPerf] = useState<SalesPerformanceReport | null>(null);
@@ -557,7 +561,11 @@ export default function ManagerReportsView() {
         </div>
         <div className="flex items-center gap-2">
           <PeriodPill value={period} onChange={v => setPeriod(v as Period)} />
-          <button className="flex h-7 items-center gap-1.5 rounded-lg bg-[#3D5AFE] px-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#2F46E0] transition-colors">
+          <button
+            type="button"
+            onClick={onNewReport}
+            className="flex h-7 cursor-pointer items-center gap-1.5 rounded-lg bg-[#3D5AFE] px-3 text-[12px] font-semibold text-white shadow-sm hover:bg-[#2F46E0] transition-colors"
+          >
             <Plus className="size-3" />
             New report
           </button>
@@ -618,18 +626,21 @@ export default function ManagerReportsView() {
             value: fmtCurrency(pipelineValue),
             badge: '+0%', badgeUp: true,
             sub: `in last quarter ${fmtCurrency(pipelineValue * 0.88)}`,
+            route: 'team pipeline',
           },
           {
             label: 'Total Deals',
             value: pipelineDeals.toLocaleString(),
             badge: '+0%', badgeUp: true,
             sub: `in last quarter ${Math.round(pipelineDeals * 0.92)} deals`,
+            route: 'targets',
           },
           {
             label: 'Win Rate',
             value: fmtPct(teamWinRate),
             badge: '+0%', badgeUp: true,
             sub: `in last quarter ${fmtPct(teamWinRate * 1.09)}`,
+            route: 'targets',
           },
         ].map((card, i) => (
           <motion.div
@@ -640,7 +651,12 @@ export default function ManagerReportsView() {
           >
             <div className="flex items-start justify-between">
               <p className="text-[12px] font-semibold text-text-muted">{card.label}</p>
-              <button className="grid size-6 place-items-center rounded-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] transition-colors">
+              <button
+                type="button"
+                onClick={() => onTabChange?.(card.route)}
+                className="grid size-6 cursor-pointer place-items-center rounded-full bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] transition-colors"
+                aria-label={`View ${card.label}`}
+              >
                 <ArrowUpRight className="size-3 text-text-muted" />
               </button>
             </div>
@@ -768,7 +784,11 @@ export default function ManagerReportsView() {
           icon={Users}
           title="Team Performance Overview"
           action={
-            <button className="flex items-center gap-1 text-[11px] font-semibold text-[#3D5AFE] hover:underline">
+            <button
+              type="button"
+              onClick={() => onTabChange?.('team performance')}
+              className="flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-[#3D5AFE] hover:underline"
+            >
               View full report <ChevronDown className="size-3" />
             </button>
           }
@@ -907,7 +927,11 @@ export default function ManagerReportsView() {
           icon={FileText}
           title="Recent Reports"
           action={
-            <button className="flex items-center gap-1 text-[11px] font-semibold text-[#3D5AFE] hover:underline">
+            <button
+              type="button"
+              onClick={() => toast.info('Loading all reports directory...')}
+              className="flex cursor-pointer items-center gap-1 text-[11px] font-semibold text-[#3D5AFE] hover:underline"
+            >
               View all reports <ArrowRight className="size-3" />
             </button>
           }
@@ -946,10 +970,10 @@ export default function ManagerReportsView() {
                   {/* Actions: download + dots */}
                   <td className="py-2.5 text-center">
                     <div className="flex items-center justify-center gap-1.5">
-                      <button className="grid size-6 place-items-center rounded-md text-text-muted hover:bg-[var(--surface-2)] hover:text-[#3D5AFE] transition-colors">
+                      <button type="button" className="grid size-6 cursor-pointer place-items-center rounded-md text-text-muted hover:bg-[var(--surface-2)] hover:text-[#3D5AFE] transition-colors">
                         <Download className="size-3.5" />
                       </button>
-                      <button className="grid size-6 place-items-center rounded-md text-text-muted hover:bg-[var(--surface-2)] hover:text-text-primary transition-colors">
+                      <button type="button" className="grid size-6 cursor-pointer place-items-center rounded-md text-text-muted hover:bg-[var(--surface-2)] hover:text-text-primary transition-colors">
                         <MoreVertical className="size-3.5" />
                       </button>
                     </div>

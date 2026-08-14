@@ -204,9 +204,10 @@ function PillSelect({ value, onChange, options }: {
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        className="h-8 appearance-none rounded-lg border border-border bg-card pl-3 pr-7 text-[12px] font-semibold text-foreground shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-color/30"
+        className="h-9 min-w-[120px] appearance-none whitespace-nowrap rounded-lg bg-surface-1 border border-border-default pl-4 pr-9 text-xs font-semibold text-text-primary shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-accent-color/30"
+        style={{ color: 'var(--text-primary)', backgroundColor: 'var(--surface-1)' }}
       >
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {options.map(o => <option key={o.value} value={o.value} style={{ color: 'var(--text-primary)', backgroundColor: 'var(--surface-1)' }}>{o.label}</option>)}
       </select>
       <ChevronDown className="pointer-events-none absolute right-2 size-3 text-muted-foreground" />
     </div>
