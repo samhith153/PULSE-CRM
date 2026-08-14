@@ -405,9 +405,11 @@ async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry
         const d = body.details[0];
         if (d?.field && d?.message && /password/.test(d.field)) {
           message = d.message.replace(/^Value error,\s*/i, '');
-        } else if (d?.message && d.message !== message) {
-          message = d.message;
         }
+        // Only use detail messages to ENRICH the top-level message,
+        // never to replace a descriptive one with a terse resource name.
+        // e.g. detail[0].message = "User" should not overwrite
+        // "User with email 'x' already exists."
       }
       errorDetail = body?.error_code || '';
     } catch {

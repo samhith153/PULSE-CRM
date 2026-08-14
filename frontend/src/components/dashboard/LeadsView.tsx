@@ -276,6 +276,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   const leadsRef = useRef<Lead[]>([]);
   leadsRef.current = leads;
 
+  // Track leads whose AI assessment is in progress (score pending)
+  const [scoringLeadIds, setScoringLeadIds] = useState<Set<string>>(new Set());
+
   const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
     if (typeof window !== 'undefined') {
       return (localStorage.getItem('pulse-crm-view-mode-leads') as any) || 'list';
@@ -442,6 +445,17 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
         setLeads(mapped);
         const ids = mapped.map(l => l.id).filter(Boolean) as string[];
         refreshRecommendations(ids);
+        // Clear scoring indicators for leads that now have scores
+        setScoringLeadIds(prev => {
+          if (prev.size === 0) return prev;
+          const next = new Set(prev);
+          let changed = false;
+          for (const id of prev) {
+            const lead = mapped.find(l => String(l.id) === id);
+            if (lead && lead.score > 0) { next.delete(id); changed = true; }
+          }
+          return changed ? next : prev;
+        });
       }).catch(() => {});
     }, 30000);
     return () => window.clearInterval(intervalId);
@@ -604,10 +618,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       // Poll for score update — background AI assessment takes 5-15s
       const newId = String(created?.id ?? '');
       if (newId) {
+        setScoringLeadIds(prev => new Set(prev).add(newId));
         let attempts = 0;
         const pollId = window.setInterval(async () => {
           attempts++;
-          if (attempts > 10) { window.clearInterval(pollId); return; }
+          if (attempts > 10) {
+            window.clearInterval(pollId);
+            setScoringLeadIds(prev => { const n = new Set(prev); n.delete(newId); return n; });
+            return;
+          }
           try {
             const refreshed = await getLeads();
             const mapped = (refreshed ?? []).map(backendToLocal);
@@ -615,6 +634,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             const updated = mapped.find(l => String(l.id) === newId);
             if (updated && updated.score > 0) {
               window.clearInterval(pollId);
+              setScoringLeadIds(prev => { const n = new Set(prev); n.delete(newId); return n; });
+              toast.success(`Lead scored: ${updated.score}% — ${updated.priorityTier || 'N/A'} priority`);
             }
           } catch { /* retry next tick */ }
         }, 3000);
@@ -656,6 +677,28 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
       fetchLeadRecommendation(String(activeLead.id)).then(res => {
         setLeadRecommendations(prev => ({ ...prev, [activeLead.id]: res.recommendations?.[0] || 'No recommendation available.' }));
       }).catch(() => {});
+      // Track re-assessment after edit (AI may re-score in background)
+      const editId = String(activeLead.id);
+      setScoringLeadIds(prev => new Set(prev).add(editId));
+      let editAttempts = 0;
+      const editPollId = window.setInterval(async () => {
+        editAttempts++;
+        if (editAttempts > 8) {
+          window.clearInterval(editPollId);
+          setScoringLeadIds(prev => { const n = new Set(prev); n.delete(editId); return n; });
+          return;
+        }
+        try {
+          const refreshed = await getLeads();
+          const mapped = (refreshed ?? []).map(backendToLocal);
+          setLeads(mapped);
+          const r = mapped.find(l => String(l.id) === editId);
+          if (r && r.score > 0) {
+            window.clearInterval(editPollId);
+            setScoringLeadIds(prev => { const n = new Set(prev); n.delete(editId); return n; });
+          }
+        } catch { /* retry */ }
+      }, 3000);
     } catch (err) {
       console.error("Failed to update lead:", err);
     }
@@ -1491,13 +1534,20 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                               </td>
                               <td className="py-3.5 px-2 font-bold truncate" title={lead.name}>{lead.name}</td>
                               <td className="py-3.5 px-2 text-center font-bold tabular-nums">
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums inline-block ${
-                                  lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
-                                  lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' :
-                                  'text-destructive bg-destructive/10 border-destructive/10'
-                                }`}>
-                                  {lead.score != null ? `${lead.score}%` : '—'}
-                                </span>
+                                {scoringLeadIds.has(String(lead.id)) ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-accent-color/20 bg-accent-color/5 text-accent-color">
+                                    <Loader2 className="animate-spin h-3 w-3" />
+                                    Scoring
+                                  </span>
+                                ) : (
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums inline-block ${
+                                    lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
+                                    lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' :
+                                    'text-destructive bg-destructive/10 border-destructive/10'
+                                  }`}>
+                                    {lead.score != null ? `${lead.score}%` : '—'}
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3.5 px-2 text-text-muted truncate" title={lead.company}>{lead.company}</td>
                               <td className="py-3.5 px-2 text-text-muted truncate" title={lead.email}>{lead.email}</td>
@@ -1609,22 +1659,37 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                 </div>
                               </td>
                               <td className="py-3 text-center">
-                                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/10 text-accent-color">
-                                  {getFitScore(lead)}%
-                                </span>
+                                {scoringLeadIds.has(String(lead.id)) ? (
+                                  <Loader2 className="animate-spin h-3.5 w-3.5 text-accent-color mx-auto" />
+                                ) : (
+                                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/10 text-accent-color">
+                                    {getFitScore(lead)}%
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3 text-center">
-                                <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-surface-2 text-text-primary">
-                                  {getEngagementScore(lead)}%
-                                </span>
+                                {scoringLeadIds.has(String(lead.id)) ? (
+                                  <Loader2 className="animate-spin h-3.5 w-3.5 text-text-muted mx-auto" />
+                                ) : (
+                                  <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-surface-2 text-text-primary">
+                                    {getEngagementScore(lead)}%
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3 text-center">
-                                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                                  lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10' :
-                                  lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
-                                }`}>
-                                  {lead.score}%
-                                </span>
+                                {scoringLeadIds.has(String(lead.id)) ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/5 text-accent-color">
+                                    <Loader2 className="animate-spin h-3 w-3" />
+                                    Scoring
+                                  </span>
+                                ) : (
+                                  <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                                    lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10' :
+                                    lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
+                                  }`}>
+                                    {lead.score}%
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3">
                                 <div className="text-[10px] text-text-muted font-bold max-w-[220px] truncate" title={getAIRecommendation(lead)}>
@@ -1638,12 +1703,19 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                 <div className="font-extrabold text-text-primary">{lead.name}</div>
                               </td>
                               <td className="py-3 text-center">
-                                <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                                  lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10' :
-                                  lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
-                                }`}>
-                                  {lead.score}
-                                </span>
+                                {scoringLeadIds.has(String(lead.id)) ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/5 text-accent-color">
+                                    <Loader2 className="animate-spin h-3 w-3" />
+                                    Scoring
+                                  </span>
+                                ) : (
+                                  <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
+                                    lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10' :
+                                    lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
+                                  }`}>
+                                    {lead.score}
+                                  </span>
+                                )}
                               </td>
                               <td className="py-3 text-[10px] text-text-muted">{lead.company}</td>
                               <td className="py-3 text-[10px] text-text-muted truncate max-w-[140px]">{lead.email}</td>
