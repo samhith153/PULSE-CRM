@@ -59,7 +59,7 @@ export default function AICopilotChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Pre-fetch data for instant availability
+    if (!isOpen || leads.length > 0) return;
     async function loadCRMData() {
       try {
         const [fetchedLeads, fetchedDeals] = await Promise.all([
@@ -73,7 +73,7 @@ export default function AICopilotChat() {
       }
     }
     loadCRMData();
-  }, []);
+  }, [isOpen, leads.length]);
 
   useEffect(() => {
     if (messagesEndRef.current) {

@@ -17,7 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.api.deps import CurrentUser, DBSession, require_permission, require_role
+from app.api.deps import CurrentUser, DBSession, invalidate_user_cache, require_permission, require_role
 from app.schemas.common import PaginatedResponse, StandardResponse
 from app.schemas.user import (
     ManagerAssignmentRequest,
@@ -242,6 +242,7 @@ async def assign_roles(
     user = await svc.assign_role(
         user_id, current_user.organization_id, payload.role_id, current_user.id
     )
+    invalidate_user_cache(str(user_id))
     return {"success": True, "message": "Role assigned.", "data": UserResponse.from_orm_with_roles(user)}
 
 

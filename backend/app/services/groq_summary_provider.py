@@ -46,12 +46,22 @@ class GroqConversationSummaryProvider:
             return SummaryResult(summary="No conversation history is available yet.", bullets=[], metadata={"email_count": 0})
 
         thread_text = _format_thread(emails)
-        response = await asyncio.to_thread(
-            _client.chat.completions.create,
-            model=settings.MODEL_NAME or "llama-3.1-8b-instant",
-            messages=[{"role": "user", "content": _PROMPT_TEMPLATE.format(thread_text=thread_text)}],
-            temperature=0.2,
-        )
+        try:
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    _client.chat.completions.create,
+                    model=settings.MODEL_NAME or "llama-3.1-8b-instant",
+                    messages=[{"role": "user", "content": _PROMPT_TEMPLATE.format(thread_text=thread_text)}],
+                    temperature=0.2,
+                ),
+                timeout=settings.AI_TIMEOUT + 5,
+            )
+        except asyncio.TimeoutError:
+            return SummaryResult(
+                summary="Summary unavailable — AI request timed out.",
+                bullets=[],
+                metadata={"email_count": len(emails), "error": "timeout"},
+            )
         raw = response.choices[0].message.content.strip()
         cleaned = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
 

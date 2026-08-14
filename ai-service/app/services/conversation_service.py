@@ -4,12 +4,15 @@ Conversation Service — ported exactly from ai/summarization/src/agent.py.
 Uses Groq LLM to generate lead conversation summaries.
 """
 
+import asyncio
 import json
 import os
 from typing import Dict, Any, List
 from datetime import datetime
 
 from groq import AsyncGroq
+
+from app.core.config import settings
 
 
 _groq_client = None
@@ -222,14 +225,18 @@ async def summarise_thread(thread: Dict[str, Any]) -> str:
 
     prompt = create_prompt(messages)
 
-    response = await _get_client().chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.3,
-        max_tokens=1500,
+    response = await asyncio.wait_for(
+        _get_client().chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+            timeout=settings.LLM_TIMEOUT,
+        ),
+        timeout=settings.LLM_TIMEOUT + 5,
     )
 
     return response.choices[0].message.content.strip()
@@ -331,14 +338,18 @@ async def generate_outreach_draft(
         sender_name=sender_name,
     )
 
-    response = await _get_client().chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[
-            {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0.4,
-        max_tokens=350,
+    response = await asyncio.wait_for(
+        _get_client().chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.4,
+            max_tokens=350,
+            timeout=settings.LLM_TIMEOUT,
+        ),
+        timeout=settings.LLM_TIMEOUT + 5,
     )
 
     return parse_draft_response(response.choices[0].message.content.strip())

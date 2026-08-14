@@ -99,6 +99,12 @@ AsyncSessionFactory = async_sessionmaker(
 )
 AsyncSessionLocal = AsyncSessionFactory
 
+logger.info(
+    "DB engine using %s pool for URL host=%s",
+    "Null" if _is_pooler else "Queue",
+    urlparse(engine_url).hostname,
+)
+
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Yield a database session with automatic commit/rollback.
