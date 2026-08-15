@@ -1,9 +1,10 @@
-'use client';
+// frontend/src/app/dashboard/contacts/page.tsx
+// ──────────────────────────────────────────────────────────────────────────────
+// SERVER COMPONENT — thin shell, data fetching happens client-side in ContactsView.
+// ──────────────────────────────────────────────────────────────────────────────
 
-import ContactsView from "@/components/dashboard/ContactsView";
-import { useDashboardApp } from "@/components/dashboard/DashboardAppContext";
+import ContactsClient from './ContactsClient';
 
 export default function ContactsPage() {
-  const { navigateToTab, openEmailCompose } = useDashboardApp();
-  return <ContactsView onTabChange={navigateToTab} onComposeEmail={openEmailCompose} />;
+  return <ContactsClient />;
 }

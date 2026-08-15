@@ -1,12 +1,15 @@
-'use client';
+// frontend/src/app/dashboard/contacts/[id]/page.tsx
+// ──────────────────────────────────────────────────────────────────────────────
+// SERVER COMPONENT — thin shell, data fetching happens client-side in ContactsView.
+// ──────────────────────────────────────────────────────────────────────────────
 
-import { useParams } from 'next/navigation';
-import ContactsView from "@/components/dashboard/ContactsView";
-import { useDashboardApp } from "@/components/dashboard/DashboardAppContext";
+import ContactsClient from '../ContactsClient';
 
-export default function ContactDetailPage() {
-  const params = useParams();
-  const id = params?.id as string;
-  const { navigateToTab, openEmailCompose } = useDashboardApp();
-  return <ContactsView openContactId={id} onTabChange={navigateToTab} onComposeEmail={openEmailCompose} />;
+interface ContactDetailPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function ContactDetailPage({ params }: ContactDetailPageProps) {
+  const { id } = await params;
+  return <ContactsClient />;
 }

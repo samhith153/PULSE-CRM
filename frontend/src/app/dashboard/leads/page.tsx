@@ -1,9 +1,10 @@
-'use client';
+// frontend/src/app/dashboard/leads/page.tsx
+// ──────────────────────────────────────────────────────────────────────────────
+// SERVER COMPONENT — thin shell, data fetching happens client-side in LeadsView.
+// ──────────────────────────────────────────────────────────────────────────────
 
-import LeadsView from "@/components/dashboard/LeadsView";
-import { useDashboardApp } from "@/components/dashboard/DashboardAppContext";
+import LeadsClient from './LeadsClient';
 
 export default function LeadsPage() {
-  const { navigateToTab, openEmailCompose } = useDashboardApp();
-  return <LeadsView onTabChange={navigateToTab} onComposeEmail={openEmailCompose} />;
+  return <LeadsClient />;
 }
