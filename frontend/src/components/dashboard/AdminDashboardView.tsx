@@ -809,6 +809,7 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
       {!customizer.hidden.includes('kpi') && (
         <SortableSectionWrapper
           id="kpi"
+          order={customizer.layout.indexOf('kpi')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('kpi')}
         >
@@ -824,6 +825,7 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
       {!customizer.hidden.includes('revenue') && (
         <SortableSectionWrapper
           id="revenue"
+          order={customizer.layout.indexOf('revenue')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('revenue')}
         >
@@ -899,6 +901,7 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
       {!customizer.hidden.includes('systems') && (
         <SortableSectionWrapper
           id="systems"
+          order={customizer.layout.indexOf('systems')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('systems')}
         >
@@ -1258,6 +1261,7 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
       {!customizer.hidden.includes('companies') && (
         <SortableSectionWrapper
           id="companies"
+          order={customizer.layout.indexOf('companies')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('companies')}
         >

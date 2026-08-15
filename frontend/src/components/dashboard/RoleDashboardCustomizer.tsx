@@ -143,6 +143,8 @@ export function useDashboardCustomizer(
 interface SortableSectionWrapperProps {
   id: string;
   isEditMode: boolean;
+  /** Grid/flex `order` so the DOM placement follows the saved layout order (this is a grid container child). */
+  order?: number;
   resizable?: boolean;
   size?: SectionSize;
   onToggleSize?: () => void;
@@ -153,6 +155,7 @@ interface SortableSectionWrapperProps {
 export function SortableSectionWrapper({
   id,
   isEditMode,
+  order,
   resizable = false,
   size = 'full',
   onToggleSize,
@@ -173,6 +176,7 @@ export function SortableSectionWrapper({
     transition,
     zIndex: isDragging ? 50 : undefined,
     position: 'relative',
+    order,
   };
 
   const colSpanClass = !resizable || size === 'full'

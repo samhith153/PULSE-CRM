@@ -647,6 +647,7 @@ export default function ManagerDashboardView({
       {!customizer.hidden.includes('kpi') && (
         <SortableSectionWrapper
           id="kpi"
+          order={customizer.layout.indexOf('kpi')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('kpi')}
         >
@@ -698,6 +699,7 @@ export default function ManagerDashboardView({
       {!customizer.hidden.includes('revenue') && (
         <SortableSectionWrapper
           id="revenue"
+          order={customizer.layout.indexOf('revenue')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('revenue')}
         >
@@ -734,6 +736,7 @@ export default function ManagerDashboardView({
       {!customizer.hidden.includes('pipeline') && (
         <SortableSectionWrapper
           id="pipeline"
+          order={customizer.layout.indexOf('pipeline')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('pipeline')}
         >
@@ -854,6 +857,7 @@ export default function ManagerDashboardView({
       {!customizer.hidden.includes('team') && (
         <SortableSectionWrapper
           id="team"
+          order={customizer.layout.indexOf('team')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('team')}
         >
@@ -988,6 +992,7 @@ export default function ManagerDashboardView({
       {!customizer.hidden.includes('actions') && (
         <SortableSectionWrapper
           id="actions"
+          order={customizer.layout.indexOf('actions')}
           isEditMode={customizer.isEditMode}
           onHide={() => customizer.handleHide('actions')}
         >
