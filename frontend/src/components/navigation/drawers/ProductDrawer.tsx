@@ -28,7 +28,7 @@ const sidebarItems = [
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
-const featureMap: Record<string, { icon: React.ElementType; title: string; desc: string; href: string; color: string }[]> = {
+const featureMap: Record<string, { icon: React.ComponentType<any>; title: string; desc: string; href: string; color: string }[]> = {
   dashboard: [
     { icon: LayoutDashboard, title: 'Sales Dashboard', desc: 'Real-time KPIs: New Deals, Emails Sent, Revenue. Pipeline chart + AI insights.', href: '/features/dashboard', color: '#2563EB' },
     { icon: BarChart2, title: 'Pipeline Overview', desc: 'Visualise deal stages and pipeline value at a glance.', href: '/features/analytics', color: '#2563eb' },

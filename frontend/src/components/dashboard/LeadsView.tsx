@@ -1,7 +1,7 @@
 'use client';
 
 import { toast } from '@/lib/toast';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SkeletonLoader from './SkeletonLoader';
 import { Lead as BackendLead, getLeads, createLead, updateLead, updateLeadStatus, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
@@ -199,6 +199,8 @@ interface Lead {
 interface LeadsViewProps {
   onLoaded?: () => void;
   onTabChange?: (tab: string) => void;
+  /** Deep-link support: /dashboard/leads/[id] pre-selects this lead. */
+  openLeadId?: string | number;
   onComposeEmail?: (target: { 
     to: string; 
     name?: string; 
@@ -211,8 +213,20 @@ interface LeadsViewProps {
   }) => void;
 }
 
-export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: LeadsViewProps = {}) {
+export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openLeadId }: LeadsViewProps = {}) {
   const router = useRouter();
+
+  // Record selection & view state — declared early because the event-listener
+  // effects below reference these setters.
+  const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
+  const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('pulse-crm-view-mode-leads') as any) || 'list';
+    }
+    return 'list';
+  });
+  const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
+
   // NEW: Listen for the Command Palette search click to open a specific lead
   useEffect(() => {
     const handleOpenRecord = (event: Event) => {
@@ -242,6 +256,16 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
     window.addEventListener('pulse-open-record', handleOpenRecord);
     return () => window.removeEventListener('pulse-open-record', handleOpenRecord);
   }, []);
+
+  // Deep-link support: /dashboard/leads/[id] pre-selects the record directly.
+  useEffect(() => {
+    if (openLeadId == null) return;
+    let rawId = String(openLeadId);
+    if (rawId.startsWith('lead_')) rawId = rawId.replace('lead_', '');
+    const finalId = /^\d+$/.test(rawId) ? Number(rawId) : rawId;
+    setSelectedLeadId(finalId);
+    setViewMode('default');
+  }, [openLeadId]);
 
   // Listen for command palette "Create Lead" event
   useEffect(() => {
@@ -273,18 +297,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const leadsRef = useRef<Lead[]>([]);
-  leadsRef.current = leads;
 
   // Track leads whose AI assessment is in progress (score pending)
   const [scoringLeadIds, setScoringLeadIds] = useState<Set<string>>(new Set());
-
-  const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('pulse-crm-view-mode-leads') as any) || 'list';
-    }
-    return 'list';
-  });
 
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const [sortField, setSortField] = useState<string>('name');
@@ -340,7 +355,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   };
 
   // Selections & Filters State
-  const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
@@ -349,7 +363,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   const [isMaximized, setIsMaximized] = useState(false);
 
   // Modal Open/Close States
-  const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
   const [isEditingFullPage, setIsEditingFullPage] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

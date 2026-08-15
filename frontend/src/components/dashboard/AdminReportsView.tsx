@@ -121,11 +121,10 @@ function SVDonutChart({ data, height = 200 }: { data: { name: string; value: num
   const [hovered, setHovered] = useState<number | null>(null);
   const total = data.reduce((s, d) => s + d.value, 0);
   const CIRC = 2 * Math.PI * 56;
-  let acc = 0;
   const segments = data.map((d, i) => {
     const dash = total > 0 ? (d.value / total) * CIRC : 0;
-    const offset = -(acc / total) * CIRC;
-    acc += d.value;
+    const before = data.slice(0, i).reduce((s, x) => s + x.value, 0);
+    const offset = total > 0 ? -(before / total) * CIRC : 0;
     return { ...d, dash, offset, color: COLORS[i % COLORS.length] };
   });
 

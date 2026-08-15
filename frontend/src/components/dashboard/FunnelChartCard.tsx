@@ -168,13 +168,13 @@ export default function FunnelChartCard({ leads = [], deals = [], className = ''
                   transform: 'translate(-50%, -50%)',
                 }}
               >
-                <div className="rounded-lg bg-[#1a1a2e] border border-white/15 px-3 py-2 shadow-xl min-w-[120px] text-center">
-                  <p className="text-[11px] font-bold text-white leading-tight">{stages[hoveredStage].name}</p>
-                  <p className="text-[10px] text-slate-400 font-semibold mt-0.5">
-                    {stages[hoveredStage].count} deals ({stages[hoveredStage].pct}%)
+                <div className="rounded-md bg-[#1a1a2e] border border-white/15 px-2 py-1.5 shadow-lg text-center">
+                  <p className="text-[10px] font-bold text-white leading-tight">{stages[hoveredStage].name}</p>
+                  <p className="text-[9px] text-slate-400 font-semibold">
+                    {stages[hoveredStage].count} · {stages[hoveredStage].pct}%
                   </p>
                   {hoveredStage > 0 && (
-                    <p className="text-[9px] font-semibold mt-0.5" style={{ color: '#6C63FF' }}>
+                    <p className="text-[8px] font-semibold mt-0.5" style={{ color: '#6C63FF' }}>
                       {stages[hoveredStage].conversionFromPrev}% from prev
                     </p>
                   )}

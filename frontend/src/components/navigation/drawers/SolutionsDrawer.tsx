@@ -20,7 +20,7 @@ const sidebarItems = [
   { id: 'migration', label: 'CRM Migration', icon: Settings },
 ];
 
-const contentMap: Record<string, { icon: React.ElementType; title: string; desc: string; href: string; color: string }[]> = {
+const contentMap: Record<string, { icon: React.ComponentType<any>; title: string; desc: string; href: string; color: string }[]> = {
   industry: [
     { icon: Building2, title: 'Enterprise', desc: 'Scalable CRM for large sales orgs with SSO, audit logs, and dedicated support.', href: '/features/contacts', color: '#2563EB' },
     { icon: Zap, title: 'Startups', desc: 'Fast setup in 2 minutes. Seed data, REST API, and AI scoring out of the box.', href: '/features/contacts', color: '#f59e0b' },

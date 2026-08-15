@@ -45,7 +45,7 @@ const RESOURCES_ITEMS = [
   { icon: HelpCircle,     label: 'Support',              desc: 'Get help from our team — bugs, integrations, or setup',       href: '/resources/support' },
 ];
 
-type DropdownItem = { icon: React.ElementType; label: string; desc: string; href: string };
+type DropdownItem = { icon: React.ComponentType<any>; label: string; desc: string; href: string };
 const MENU_DATA: Record<NonNullable<MenuKey>, DropdownItem[]> = {
   platform:  PLATFORM_ITEMS,
   product:   PRODUCT_ITEMS,

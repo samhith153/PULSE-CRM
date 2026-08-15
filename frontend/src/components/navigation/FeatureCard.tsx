@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
 
 interface FeatureCardProps {
-  icon: React.ElementType;
+  icon: React.ComponentType<any>;
   title: string;
   description: string;
   href: string;

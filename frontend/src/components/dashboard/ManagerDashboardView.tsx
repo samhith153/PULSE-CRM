@@ -108,7 +108,7 @@ function Spark({ values, white = false, positive = true }: { values: number[]; w
 
 function HeroKpi({ title, value, change, isPositive, sparkValues, icon: Icon, sub }: {
   title: string; value: string; change: string; isPositive: boolean;
-  sparkValues: number[]; icon: React.ElementType; sub: string;
+  sparkValues: number[]; icon: React.ComponentType<any>; sub: string;
 }) {
   const Delta = isPositive ? ArrowUpRight : ArrowDownRight;
   return (
@@ -146,7 +146,7 @@ function HeroKpi({ title, value, change, isPositive, sparkValues, icon: Icon, su
 
 function NormalKpi({ title, value, change, isPositive, sparkValues, icon: Icon, sub, delay = 0 }: {
   title: string; value: string; change: string; isPositive: boolean;
-  sparkValues: number[]; icon: React.ElementType; sub: string; delay?: number;
+  sparkValues: number[]; icon: React.ComponentType<any>; sub: string; delay?: number;
 }) {
   const Delta = isPositive ? ArrowUpRight : ArrowDownRight;
   return (

@@ -253,7 +253,7 @@ export default function CommunityPage() {
 
 /* ── Sub-components defined after export to avoid hoisting issues ── */
 
-function ActionCard({ item, index, Icon }: { item: typeof ACTIONS[0]; index: number; Icon: React.ElementType }) {
+function ActionCard({ item, index, Icon }: { item: typeof ACTIONS[0]; index: number; Icon: React.ComponentType<any> }) {
   const [hovered, setHovered] = useState(false);
   return (
     <motion.div

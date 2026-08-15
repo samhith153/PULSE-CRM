@@ -1,5 +1,5 @@
-import DashboardShell from "@/components/dashboard/DashboardShell";
+import RoleHomeView from "@/components/dashboard/RoleHomeView";
 
 export default function ManagerDashboard() {
-  return <DashboardShell requiredRole="manager" defaultTab="home" />;
+  return <RoleHomeView />;
 }

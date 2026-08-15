@@ -44,7 +44,9 @@ function Card({
 /** interval that respects reduced motion */
 function useLoop(fn: () => void, ms: number) {
   const saved = useRef(fn);
-  saved.current = fn;
+  useEffect(() => {
+    saved.current = fn;
+  });
   useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const id = setInterval(() => saved.current(), ms);

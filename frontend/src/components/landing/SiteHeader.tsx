@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 const navLinks = ["Platform", "Products", "Pricing", "Resources"];
 
-type MenuItem = { title: string; desc: string; route?: string; icon: React.ElementType };
+type MenuItem = { title: string; desc: string; route?: string; icon: React.ComponentType<any> };
 type MenuColumn = { heading: string; items: MenuItem[] };
 type MenuConfig = {
   columns?: MenuColumn[];

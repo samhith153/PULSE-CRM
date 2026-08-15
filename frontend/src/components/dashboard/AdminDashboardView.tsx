@@ -148,7 +148,7 @@ interface KpiTile {
   change: string;
   isPositive: boolean;
   values: number[];
-  icon: React.ElementType;
+  icon: React.ComponentType<any>;
   targetValue: number;
   prefix?: string;
   suffix?: string;
@@ -578,11 +578,10 @@ function DonutChart({
 }) {
   const [hovered, setHovered] = useState<number | null>(null);
   const CIRC = 2 * Math.PI * 56;
-  let acc = 0;
   const segments = data.map((d, i) => {
     const dash = (d.pct / 100) * CIRC;
-    const offset = -(acc / 100) * CIRC;
-    acc += d.pct;
+    const before = data.slice(0, i).reduce((s, x) => s + x.pct, 0);
+    const offset = -(before / 100) * CIRC;
     return { ...d, dash, offset, color: DONUT_COLORS[i % DONUT_COLORS.length] };
   });
 

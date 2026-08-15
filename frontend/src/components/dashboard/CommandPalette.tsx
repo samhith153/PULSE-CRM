@@ -3,30 +3,20 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LayoutDashboard,
-  Users,
-  Contact,
-  Building2,
-  Layers,
-  Package,
   Activity,
-  Mail,
-  GitBranch,
   Sparkles,
-  BarChart3,
-  FileText,
-  Settings,
-  User,
   Plus,
   Search,
   CornerDownLeft,
-  Calendar,
   Clock,
   Zap,
+  FilePlus2,
 } from 'lucide-react';
 import Fuse from 'fuse.js';
 import { searchGlobalCRM } from '@/utils/api';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { ROLE_TABS, type Role } from '@/lib/roles';
+import { type Role } from '@/lib/roles';
+import { NAV_HOME, NAV_EXTRA_ITEMS, getNavSections } from '@/lib/dashboard-nav';
 
 /* ── Types ────────────────────────────────────────────────────── */
 
@@ -67,6 +57,38 @@ function saveRecentCommand(id: string) {
   recent.unshift(id);
   localStorage.setItem(RECENT_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
 }
+
+/* ── Palette-specific nav flavor. Tabs, labels and icons come from
+      lib/dashboard-nav.ts — these only add shortcuts + descriptions. ── */
+const TAB_SHORTCUTS: Record<string, string> = {
+  home: 'G H',
+  leads: 'G L',
+  contacts: 'G C',
+  companies: 'G O',
+  deals: 'G D',
+  tasks: 'G T',
+  calendar: 'G M',
+  reports: 'G R',
+  settings: 'G S',
+};
+
+const TAB_DESCRIPTIONS: Record<string, string> = {
+  home: 'View sales performance metrics',
+  leads: 'Manage sales opportunities',
+  contacts: 'Browse directory contacts list',
+  companies: 'Manage accounts and organizations',
+  deals: 'View active sales pipeline',
+  tasks: 'Manage your active to-do lists',
+  calendar: 'View calendar slots and schedules',
+  activities: 'View calls, emails, and meetings',
+  reports: 'View performance analytics and metrics',
+  'ai insights': 'AI-powered recommendations and scoring',
+  emails: 'View and manage email communications',
+  settings: 'Configure integrations and workspace preferences',
+  profile: 'View and edit your profile',
+  documents: 'Manage files and attachments',
+  workflows: 'Manage automation workflows',
+};
 
 /* ── Component ────────────────────────────────────────────────── */
 
@@ -140,44 +162,43 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
     [setActiveTab],
   );
 
+  /* ── Navigation commands — generated from lib/dashboard-nav.ts ── */
+
+  const navCommands = useMemo<CommandItem[]>(() => {
+    const commands: CommandItem[] = [];
+    const push = (item: { tab: string; name: string; icon: React.ElementType }) => {
+      commands.push({
+        id: `nav-${item.tab}`,
+        title: `Go to ${item.name}`,
+        description: TAB_DESCRIPTIONS[item.tab] ?? `Navigate to ${item.name}`,
+        category: 'Navigation',
+        icon: item.icon,
+        shortcut: TAB_SHORTCUTS[item.tab],
+        action: () => { setActiveTab(item.tab); onClose(); },
+      });
+    };
+    push(NAV_HOME);
+    for (const section of getNavSections(userRole)) {
+      for (const item of section.items) push(item);
+    }
+    for (const item of NAV_EXTRA_ITEMS) push(item);
+    return commands;
+  }, [userRole, setActiveTab, onClose]);
+
   /* ── Build static commands (memoized, role-filtered) ──────── */
 
   const allCommands = useMemo<CommandItem[]>(() => {
-    const nav = (tab: string, roles?: Role[]): CommandItem => ({
-      id: `nav-${tab}`,
-      title: `Go to ${tab.charAt(0).toUpperCase() + tab.slice(1)}`,
-      description: `Navigate to ${tab}`,
-      category: 'Navigation',
-      icon: LayoutDashboard,
-      action: () => { setActiveTab(tab); onClose(); },
-      roles,
-    });
-
     return [
       // ── Suggestions ──
       { id: 'suggest-theme', title: 'Switch theme', description: 'Toggle light and dark appearance', category: 'Suggestions', icon: Sparkles, action: () => { toggleTheme(); onClose(); } },
       { id: 'suggest-sidebar', title: 'Toggle sidebar', description: 'Collapse or expand navigation panel', category: 'Suggestions', icon: LayoutDashboard, action: () => { toggleSidebar(); onClose(); } },
       { id: 'suggest-notif', title: 'Open notifications', description: 'View sync alerts and messages', category: 'Suggestions', icon: Activity, action: () => { setActiveTab('notifications'); onClose(); } },
 
-      // ── Navigation (role-filtered) ──
-      { id: 'nav-home', title: 'Go to Dashboard', description: 'View sales performance metrics', category: 'Navigation', icon: LayoutDashboard, action: () => { setActiveTab('home'); onClose(); }, shortcut: 'G H' },
-      { id: 'nav-leads', title: 'Go to Leads', description: 'Manage sales opportunities', category: 'Navigation', icon: Users, action: () => { setActiveTab('leads'); onClose(); }, shortcut: 'G L' },
-      { id: 'nav-contacts', title: 'Go to Contacts', description: 'Browse directory contacts list', category: 'Navigation', icon: Contact, action: () => { setActiveTab('contacts'); onClose(); }, shortcut: 'G C' },
-      { id: 'nav-companies', title: 'Go to Companies', description: 'Manage accounts and organizations', category: 'Navigation', icon: Building2, action: () => { setActiveTab('companies'); onClose(); }, shortcut: 'G O' },
-      { id: 'nav-deals', title: 'Go to Deals', description: 'View active sales pipeline', category: 'Navigation', icon: Layers, action: () => { setActiveTab('deals'); onClose(); }, shortcut: 'G D' },
-      { id: 'nav-tasks', title: 'Go to Tasks', description: 'Manage your active to-do lists', category: 'Navigation', icon: FileText, action: () => { setActiveTab('tasks'); onClose(); }, shortcut: 'G T' },
-      { id: 'nav-meetings', title: 'Go to Calendar', description: 'View calendar slots and schedules', category: 'Navigation', icon: Calendar, action: () => { setActiveTab('calendar'); onClose(); }, shortcut: 'G M' },
-      { id: 'nav-activities', title: 'Go to Activities', description: 'View calls, emails, and meetings', category: 'Navigation', icon: Activity, action: () => { setActiveTab('activities'); onClose(); } },
-      { id: 'nav-reports', title: 'Go to Reports', description: 'View performance analytics and metrics', category: 'Navigation', icon: BarChart3, action: () => { setActiveTab('reports'); onClose(); }, shortcut: 'G R' },
-      { id: 'nav-ai', title: 'Go to AI Insights', description: 'AI-powered recommendations and scoring', category: 'Navigation', icon: Sparkles, action: () => { setActiveTab('ai insights'); onClose(); } },
-      { id: 'nav-emails', title: 'Go to Emails', description: 'View and manage email communications', category: 'Navigation', icon: Mail, action: () => { setActiveTab('emails'); onClose(); } },
-      { id: 'nav-settings', title: 'Go to Settings', description: 'Configure integrations and workspace preferences', category: 'Navigation', icon: Settings, action: () => { setActiveTab('settings'); onClose(); }, shortcut: 'G S' },
-      { id: 'nav-profile', title: 'Go to Profile', description: 'View and edit your profile', category: 'Navigation', icon: User, action: () => { setActiveTab('profile'); onClose(); } },
-      { id: 'nav-documents', title: 'Go to Documents', description: 'Manage files and attachments', category: 'Navigation', icon: FileText, action: () => { setActiveTab('documents'); onClose(); } },
-      { id: 'nav-workflows', title: 'Go to Workflows', description: 'Manage automation workflows', category: 'Navigation', icon: GitBranch, action: () => { setActiveTab('workflows'); onClose(); } },
+      // ── Navigation (from lib/dashboard-nav.ts, role-filtered) ──
+      ...navCommands,
 
       // ── Search ──
-      { id: 'search-all', title: 'Search all records', description: 'Query companies, leads, contacts, and deals', category: 'Search', icon: Search, action: () => { setQuery(''); inputRef.current?.focus(); }, shortcut: '/' },
+      { id: 'search-all', title: 'Search all records', description: 'Query companies, leads, contacts, and deals', category: 'Search', icon: Search, action: () => { setQuery(''); }, shortcut: '/' },
 
       // ── Create Quick Actions ──
       { id: 'create-lead', title: 'Create Lead', description: 'Create a new sales opportunity', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('leads', 'pulse-open-create-lead-modal'); onClose(); }, shortcut: 'N L' },
@@ -186,6 +207,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
       { id: 'create-task', title: 'Create Task', description: 'Create to-do checklist item', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('tasks', 'pulse-open-create-task-modal'); onClose(); }, shortcut: 'N T' },
       { id: 'create-meeting', title: 'Create Meeting', description: 'Schedule new calendar event', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('activities', 'pulse-open-create-meeting-modal'); onClose(); }, shortcut: 'N M' },
       { id: 'create-note', title: 'Create Note', description: 'Write details to active lead timeline', category: 'Create Quick Actions', icon: Plus, action: () => { transitionAndEmit('leads', 'pulse-open-create-note-modal'); onClose(); } },
+      { id: 'create-report', title: 'New Report', description: 'Build a custom analytics report', category: 'Create Quick Actions', icon: FilePlus2, action: () => { onNewReportClick(); onClose(); }, shortcut: 'N R' },
 
       // ── Workflow Actions ──
       { id: 'flow-tag', title: 'Add tag', description: 'Categorize selected record', category: 'Workflow Actions', icon: Zap, action: () => { alert('Tag added successfully.'); onClose(); } },
@@ -197,7 +219,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
       { id: 'prod-theme', title: 'Switch theme', description: 'Toggle light and dark mode', category: 'Productivity', icon: Sparkles, action: () => { toggleTheme(); onClose(); }, shortcut: 'Shift+T' },
       { id: 'prod-sidebar', title: 'Toggle sidebar', description: 'Collapse/expand left navigation panel', category: 'Productivity', icon: LayoutDashboard, action: () => { toggleSidebar(); onClose(); } },
     ];
-  }, [setActiveTab, onClose, toggleTheme, toggleSidebar, transitionAndEmit]);
+  }, [setActiveTab, onClose, toggleTheme, toggleSidebar, transitionAndEmit, navCommands, onNewReportClick]);
 
   // Filter commands by user role
   const roleFilteredCommands = useMemo(() => {
@@ -463,6 +485,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
                   )}
                   <button
                     onClick={() => executeCommand(item)}
+                    onMouseDown={(e) => e.preventDefault()}
                     onMouseEnter={() => handleItemHover(idx)}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition duration-150 cmd-item ${
                       isActive

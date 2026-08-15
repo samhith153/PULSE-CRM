@@ -93,9 +93,18 @@ export default function TasksView({ isEmbedded = false }: Props) {
     title: '', deadline: '2026-08-04', priority: 'Medium' as Task['priority'], status: 'Pending' as Task['status']
   });
 
-  useEffect(() => {
-    fetchTasks();
-  }, []);
+  const initializeDefaultTasks = () => {
+    const defaults: Task[] = [
+      { id: 1, title: "Register for upcoming CRM Webinars", deadline: "2026-08-03", priority: "Medium", status: "Not Started" },
+      { id: 2, title: "Refer CRM Videos", deadline: "2026-08-05", priority: "Medium", status: "In Progress" },
+      { id: 3, title: "Competitor Comparison Document", deadline: "2026-08-01", priority: "High", status: "Not Started" },
+      { id: 4, title: "Get Approval from Manager", deadline: "2026-08-02", priority: "High", status: "Not Started" },
+      { id: 5, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress" },
+      { id: 6, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress" }
+    ];
+    setTasks(defaults);
+    localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(defaults));
+  };
 
   const fetchTasks = async () => {
     try {
@@ -127,18 +136,9 @@ export default function TasksView({ isEmbedded = false }: Props) {
     }
   };
 
-  const initializeDefaultTasks = () => {
-    const defaults: Task[] = [
-      { id: 1, title: "Register for upcoming CRM Webinars", deadline: "2026-08-03", priority: "Medium", status: "Not Started" },
-      { id: 2, title: "Refer CRM Videos", deadline: "2026-08-05", priority: "Medium", status: "In Progress" },
-      { id: 3, title: "Competitor Comparison Document", deadline: "2026-08-01", priority: "High", status: "Not Started" },
-      { id: 4, title: "Get Approval from Manager", deadline: "2026-08-02", priority: "High", status: "Not Started" },
-      { id: 5, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress" },
-      { id: 6, title: "Get Approval from Manager", deadline: "2026-08-04", priority: "Medium", status: "In Progress" }
-    ];
-    setTasks(defaults);
-    localStorage.setItem('pulse-crm-manual-tasks', JSON.stringify(defaults));
-  };
+  useEffect(() => {
+    fetchTasks();
+  }, []);
 
   const saveTasks = (updated: Task[]) => {
     setTasks(updated);

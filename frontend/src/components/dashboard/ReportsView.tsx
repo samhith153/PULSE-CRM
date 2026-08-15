@@ -84,7 +84,7 @@ function Spark({ vals, white = false, color = '#3D5AFE' }: { vals: number[]; whi
 /* KPI hero card */
 function KpiCard({ title, value, sub, delta, up, spark, icon: Icon, hero = false, delay = 0, color: _color }: {
   title: string; value: string; sub: string; delta: string; up: boolean;
-  spark: number[]; icon: React.ElementType; hero?: boolean; delay?: number; color?: string;
+  spark: number[]; icon: React.ComponentType<any>; hero?: boolean; delay?: number; color?: string;
 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -3 }}
@@ -215,11 +215,10 @@ function DealsBySource({ src, period, onPeriod, km }: {
   const total = src.reduce((s, x) => s + Number(x.count || 0), 0) || 3;
   const items = src;
   const R = 56, CIRC = 2 * Math.PI * R;
-  let acc = 0;
   const segs = items.map((it, i) => {
     const dash = (Number(it.count) / total) * CIRC;
-    const off  = -(acc / total) * CIRC;
-    acc += Number(it.count);
+    const before = items.slice(0, i).reduce((s, x) => s + Number(x.count), 0);
+    const off  = -(before / total) * CIRC;
     return { ...it, dash, off, color: SRC_COLORS[i % SRC_COLORS.length] };
   });
 
@@ -504,11 +503,10 @@ function SalesActivity({ src, period, onPeriod }: {
   const items = src.slice(0, 3);
   const total = items.reduce((s, x) => s + Number(x.count || 0), 0) || 100;
   const R = 52, CIRC = 2 * Math.PI * R;
-  let acc = 0;
   const segs = items.map((it, i) => {
     const dash = (Number(it.count) / total) * CIRC;
-    const off  = -(acc / total) * CIRC;
-    acc += Number(it.count);
+    const before = items.slice(0, i).reduce((s, x) => s + Number(x.count), 0);
+    const off  = -(before / total) * CIRC;
     return { ...it, dash, off, color: ACT_COLORS[i % ACT_COLORS.length] };
   });
   const displayTotal = total >= 1000 ? `${(total / 1000).toFixed(0)}K` : String(total);

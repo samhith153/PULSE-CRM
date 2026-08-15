@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
-  Search, Bell, Plus, Menu,
-  TrendingUp, User, ShieldAlert, Settings, LogOut,
-  Sun, Moon, UserPlus, Mail, Zap
+  Search, Bell, Menu,
+  TrendingUp, User, LogOut,
+  Sun, Moon, UserPlus, Mail
 } from 'lucide-react';
 import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 interface HeaderProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  onNewReportClick: () => void;
   onTabChange?: (tab: string) => void;
   onOpenCommandPalette?: () => void;
   onSignOut?: () => void;
@@ -25,7 +24,6 @@ interface HeaderProps {
 export default function Header({
   collapsed,
   setCollapsed,
-  onNewReportClick,
   onTabChange,
   onOpenCommandPalette,
   onSignOut,
