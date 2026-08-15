@@ -142,9 +142,11 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
   /* ── Theme / sidebar utilities ────────────────────────────── */
 
   const toggleTheme = useCallback(() => {
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.documentElement.classList.remove('dark');
-    localStorage.setItem('pulse-crm-theme', 'light');
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = current === 'light' ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', next);
+    document.documentElement.classList.toggle('dark', next === 'dark');
+    localStorage.setItem('pulse-crm-theme', next);
   }, []);
 
   const toggleSidebar = useCallback(() => {
@@ -435,7 +437,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
               setActiveIndex(0);
             }}
             onKeyDown={handleKeyDown}
-            className="w-full pl-11 pr-20 py-3.5 text-xs text-foreground bg-surface-1 placeholder-text-muted focus:outline-none font-medium"
+            className="w-full pl-11 pr-20 py-3.5 text-xs text-text-primary bg-surface-1 placeholder-text-muted focus:outline-none font-medium"
             role="combobox"
             aria-expanded={true}
             aria-controls="command-list"
@@ -490,7 +492,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left select-none cursor-pointer transition duration-150 cmd-item ${
                       isActive
                         ? 'bg-accent-color/[0.08] text-accent-color border-l-3 border-accent-color pl-2'
-                        : 'text-text-muted/75 hover:bg-surface-2 hover:text-text-muted border-l-3 border-transparent'
+                        : 'text-text-primary hover:bg-surface-2 hover:text-text-primary border-l-3 border-transparent'
                     }`}
                     role="option"
                     aria-selected={isActive}
@@ -498,14 +500,14 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
                     <div className="flex items-center space-x-3 min-w-0">
                       <div
                         className={`p-1.5 rounded-md ${
-                          isActive ? 'bg-accent-color/15 text-accent-color' : 'bg-surface-2/80 text-text-muted'
+                          isActive ? 'bg-accent-color/15 text-accent-color' : 'bg-surface-2/80 text-text-secondary'
                         }`}
                       >
                         <Icon className="h-4 w-4" strokeWidth={isActive ? 2.25 : 1.75} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-bold truncate leading-tight">{item.title}</p>
-                        <p className="text-[10px] text-text-muted font-semibold truncate mt-0.5 leading-none">
+                        <p className="text-[10px] text-text-secondary font-semibold truncate mt-0.5 leading-none">
                           {item.description}
                         </p>
                       </div>
@@ -513,7 +515,7 @@ export default function CommandPalette({ isOpen, onClose, setActiveTab, onNewRep
 
                     <div className="flex items-center space-x-2 shrink-0">
                       {item.shortcut && (
-                        <span className="text-[9px] font-bold text-text-muted/50 bg-surface-2 border border-border-default px-1.5 py-0.5 rounded hidden sm:inline">
+                        <span className="text-[9px] font-bold text-text-secondary/70 bg-surface-2 border border-border-default px-1.5 py-0.5 rounded hidden sm:inline">
                           {item.shortcut}
                         </span>
                       )}

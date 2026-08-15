@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { BarChart2, TrendingUp, Users, Target } from 'lucide-react';
+import { BarChart2, TrendingUp, Users, Target, Medal, Trophy } from 'lucide-react';
 import { PageContainer, HeroWithScreenshot, Statistics, CTASection } from '@/components/shared/PageTemplates';
 import { motion } from 'framer-motion';
 
@@ -51,12 +51,14 @@ export default function RevenueAnalyticsPage() {
             style={{ background: 'linear-gradient(135deg, #EFF6FF 0%, #fff 100%)', padding: 32, borderRadius: 16, border: '1px solid #DBEAFE' }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#2563EB', marginBottom: 16 }}>Rep Leaderboard — Live</div>
             {[
-              { rank: '🥇', name: 'Alex R.', revenue: '₹24.1L' },
-              { rank: '🥈', name: 'Jordan L.', revenue: '₹19.8L' },
-              { rank: '🥉', name: 'Sam T.', revenue: '₹17.2L' },
+              { rank: 1, name: 'Alex R.', revenue: '₹24.1L' },
+              { rank: 2, name: 'Jordan L.', revenue: '₹19.8L' },
+              { rank: 3, name: 'Sam T.', revenue: '₹17.2L' },
             ].map((rep, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: '#fff', borderRadius: 10, marginBottom: 10, border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: 24 }}>{rep.rank}</div>
+                {rep.rank === 1
+                  ? <Trophy size={22} style={{ color: '#F59E0B' }} />
+                  : <Medal size={22} style={{ color: rep.rank === 2 ? '#94A3B8' : '#CD7F32' }} />}
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{rep.name}</div>
                   <div style={{ fontSize: 12, color: '#64748b' }}>Q4 2025</div>

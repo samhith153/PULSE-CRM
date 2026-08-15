@@ -75,7 +75,7 @@ const STATS = [
   { target: 12000, suffix: '+', label: 'Members' },
   { target: 850,   suffix: '+', label: 'Discussions' },
   { target: 120,   suffix: '+', label: 'Guides' },
-  { target: 4.9,   suffix: '★', label: 'Community Rating', isDecimal: true },
+  { target: 4.9,   suffix: '', label: 'Community Rating', isDecimal: true, star: true },
 ];
 
 /* ── Community Illustration ────────────────────────── */
@@ -318,7 +318,7 @@ function StatCard({ stat, index, isLast }: { stat: typeof STATS[0]; index: numbe
     >
       <p style={{ fontSize: 'clamp(28px,3.5vw,40px)', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em', marginBottom: 4, lineHeight: 1 }}>
         {stat.isDecimal
-          ? <span>{stat.target}{stat.suffix}</span>
+          ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>{stat.target}{stat.suffix}{stat.star && <Star size={26} style={{ color: '#F59E0B', fill: '#F59E0B' }} />}</span>
           : <AnimCounter target={stat.target} suffix={stat.suffix} />
         }
       </p>

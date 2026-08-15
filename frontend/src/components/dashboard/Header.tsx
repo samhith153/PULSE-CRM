@@ -34,9 +34,13 @@ export default function Header({
   const [syncSeconds, setSyncSeconds] = useState(2);
   const [isSyncing, setIsSyncing] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(
-    () => (typeof document !== 'undefined'
-      ? (document.documentElement.classList.contains('dark') ? 'light' : 'light')
-      : 'light')
+    () => {
+      if (typeof document === 'undefined') return 'light';
+      const stored = localStorage.getItem('pulse-crm-theme');
+      if (stored === 'light' || stored === 'dark') return stored;
+      // default to light if no preference, but respect current page theme
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    }
   );
 
   const notifRef = useRef<HTMLDivElement>(null);
@@ -51,10 +55,14 @@ export default function Header({
   const profileInitials = userInitials(currentUser?.full_name);
 
   useEffect(() => {
-    setTheme('light');
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.documentElement.classList.remove('dark');
-    localStorage.setItem('pulse-crm-theme', 'light');
+    function handleClickOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node))
+        setShowNotifications(false);
+      if (profileRef.current && !profileRef.current.contains(e.target as Node))
+        setShowProfileMenu(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -85,10 +93,15 @@ export default function Header({
   // Ctrl+K listener is handled in DashboardShell (parent) to avoid duplicates.
 
   const toggleTheme = () => {
-    setTheme('light');
-    localStorage.setItem('pulse-crm-theme', 'light');
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.documentElement.classList.remove('dark');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('pulse-crm-theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
 
   const btn = cn(

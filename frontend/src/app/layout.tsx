@@ -39,9 +39,16 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  document.documentElement.setAttribute('data-theme', 'light');
-                  document.documentElement.classList.remove('dark');
-                  localStorage.setItem('pulse-crm-theme', 'light');
+                  const storedTheme = localStorage.getItem('pulse-crm-theme');
+                  if (storedTheme) {
+                    document.documentElement.setAttribute('data-theme', storedTheme);
+                    document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+                    document.documentElement.style.colorScheme = storedTheme;
+                  } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.style.colorScheme = 'light';
+                  }
                 } catch (e) {}
               })();
             `,

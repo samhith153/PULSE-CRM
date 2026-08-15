@@ -205,3 +205,6 @@ frontend/.next/
 .DS_Store
 Thumbs.db
 /.freebuff
+
+# Build scratch files
+frontend/build_output.txt
