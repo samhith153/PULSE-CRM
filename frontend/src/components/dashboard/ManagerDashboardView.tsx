@@ -23,6 +23,13 @@ import {
   getManagerDashboard,
   ManagerDashboardData,
 } from '@/utils/api';
+import {
+  CustomizeLayoutDnd,
+  CustomizeToggleButton,
+  CustomizeToolbar,
+  SortableSectionWrapper,
+  useDashboardCustomizer,
+} from './RoleDashboardCustomizer';
 
 type ManagerDashboardPeriod = 'week' | 'month' | 'quarter' | 'year';
 
@@ -484,6 +491,24 @@ export default function ManagerDashboardView({
   const stageColors = ['#3D5AFE', '#3D5AFE', '#8FA6F2', '#F59E0B', '#5FD4C4'];
 
   /* ---------------------------------------------------------------------- */
+  /* Layout customization (drag to reorder / hide / restore)                */
+  /* ---------------------------------------------------------------------- */
+
+  const managerWidgets = ['kpi', 'revenue', 'pipeline', 'team', 'actions'];
+  const managerWidgetLabels: Record<string, string> = {
+    kpi: 'Key Performance Metrics',
+    revenue: 'Revenue vs Target & Deals Trend',
+    pipeline: 'Pipeline Health & Performance by Stage',
+    team: 'Team Performance & Deals at Risk',
+    actions: 'Manager Action Queue & Recent Activity',
+  };
+  const customizer = useDashboardCustomizer(
+    'pulse-crm-manager-layout',
+    managerWidgets,
+    { kpi: 'full', revenue: 'full', pipeline: 'full', team: 'full', actions: 'full' },
+  );
+
+  /* ---------------------------------------------------------------------- */
   /* Loading                                                                */
   /* ---------------------------------------------------------------------- */
 
@@ -568,6 +593,10 @@ export default function ManagerDashboardView({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <CustomizeToggleButton
+            isEditMode={customizer.isEditMode}
+            onToggle={() => customizer.setIsEditMode(!customizer.isEditMode)}
+          />
           <PillSelect
             value={period}
             onChange={v => setPeriod(v as ManagerDashboardPeriod)}
@@ -598,8 +627,30 @@ export default function ManagerDashboardView({
         </div>
       </div>
 
+      {customizer.isEditMode && (
+        <CustomizeToolbar
+          hidden={customizer.hidden}
+          labels={managerWidgetLabels}
+          onShow={customizer.handleShow}
+          onReset={customizer.handleReset}
+        />
+      )}
+
+      {/* ── Customizable sections ─────────────────────────────────────── */}
+      <CustomizeLayoutDnd
+        sensors={customizer.sensors}
+        onDragEnd={customizer.handleDragEnd}
+        layout={customizer.layout}
+      >
+
       {/* ── 4 KPI Cards ──────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {!customizer.hidden.includes('kpi') && (
+        <SortableSectionWrapper
+          id="kpi"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('kpi')}
+        >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <HeroKpi
           title="Team Revenue"
           value={formatCurrency(data.summary.team_revenue)}
@@ -639,10 +690,18 @@ export default function ManagerDashboardView({
           sub={`vs last quarter ${formatPercent(toNumber(data.revenue_stats.achievement_pct) * 0.89)}`}
           delay={0.21}
         />
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
 
       {/* ── Revenue vs Target  +  Deals Trend ────────────────────────── */}
-      <div className="grid grid-cols-12 gap-4">
+      {!customizer.hidden.includes('revenue') && (
+        <SortableSectionWrapper
+          id="revenue"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('revenue')}
+        >
+        <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 lg:col-span-7 card-surface p-5">
           <SecHead
             title="Revenue vs Target"
@@ -667,10 +726,18 @@ export default function ManagerDashboardView({
           />
           <DealsChart data={dealsTrend} />
         </div>
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
 
       {/* ── Pipeline Health  +  Performance by Stage ─────────────────── */}
-      <div className="grid grid-cols-12 gap-4">
+      {!customizer.hidden.includes('pipeline') && (
+        <SortableSectionWrapper
+          id="pipeline"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('pipeline')}
+        >
+        <div className="grid grid-cols-12 gap-4">
         {/* Pipeline Health */}
         <div className="col-span-12 lg:col-span-7 card-surface p-5">
           <SecHead
@@ -779,10 +846,18 @@ export default function ManagerDashboardView({
             })}
           </div>
         </div>
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
 
       {/* ── Team Performance  +  Deals at Risk ───────────────────────── */}
-      <div className="grid grid-cols-12 gap-4">
+      {!customizer.hidden.includes('team') && (
+        <SortableSectionWrapper
+          id="team"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('team')}
+        >
+        <div className="grid grid-cols-12 gap-4">
         {/* Team Performance */}
         <div className="col-span-12 lg:col-span-7 card-surface p-5">
           <SecHead
@@ -905,10 +980,18 @@ export default function ManagerDashboardView({
             )}
           </div>
         </div>
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
 
       {/* ── Manager Action Queue  +  Recent Activity ──────────────────── */}
-      <div className="grid grid-cols-12 gap-4">
+      {!customizer.hidden.includes('actions') && (
+        <SortableSectionWrapper
+          id="actions"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('actions')}
+        >
+        <div className="grid grid-cols-12 gap-4">
         {/* Manager Action Queue */}
         <div className="col-span-12 lg:col-span-7 card-surface p-5">
           <SecHead
@@ -1014,7 +1097,11 @@ export default function ManagerDashboardView({
             )}
           </div>
         </div>
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
+
+      </CustomizeLayoutDnd>
 
     </div>
   );

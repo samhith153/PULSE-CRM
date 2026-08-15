@@ -36,6 +36,13 @@ import {
 import { useReveal, useCountUp } from '@/hooks/use-reveal';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/utils/cn';
+import {
+  CustomizeLayoutDnd,
+  CustomizeToggleButton,
+  CustomizeToolbar,
+  SortableSectionWrapper,
+  useDashboardCustomizer,
+} from './RoleDashboardCustomizer';
 
 /* -- Filter dropdown (Revenue / Lead Sources period pickers) -- */
 function FilterDropdown({
@@ -669,6 +676,20 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
     return () => { cancelled = true; };
   }, []);
 
+  /* -- Layout customization (drag to reorder / hide / restore) -- */
+  const adminWidgets = ['kpi', 'revenue', 'systems', 'companies'];
+  const adminWidgetLabels: Record<string, string> = {
+    kpi: 'Key Performance Metrics',
+    revenue: 'Revenue & Leads + Lead Sources',
+    systems: 'System Administration & Control Center',
+    companies: 'Top Companies',
+  };
+  const customizer = useDashboardCustomizer(
+    'pulse-crm-admin-layout',
+    adminWidgets,
+    { kpi: 'full', revenue: 'full', systems: 'full', companies: 'full' },
+  );
+
   /* -- Skeleton -- */
   if (loading) {
     return (
@@ -752,24 +773,61 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
     <div className="space-y-[var(--space-5)]">
 
       {/* Page title */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.75rem]">
-          Admin overview
-        </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-          Organization health, revenue performance, lead funnel, and top performers.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground md:text-[2.75rem]">
+            Admin overview
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+            Organization health, revenue performance, lead funnel, and top performers.
+          </p>
+        </div>
+        <CustomizeToggleButton
+          isEditMode={customizer.isEditMode}
+          onToggle={() => customizer.setIsEditMode(!customizer.isEditMode)}
+        />
       </div>
 
+      {customizer.isEditMode && (
+        <CustomizeToolbar
+          hidden={customizer.hidden}
+          labels={adminWidgetLabels}
+          onShow={customizer.handleShow}
+          onReset={customizer.handleReset}
+        />
+      )}
+
+      {/* Customizable sections */}
+      <CustomizeLayoutDnd
+        sensors={customizer.sensors}
+        onDragEnd={customizer.handleDragEnd}
+        layout={customizer.layout}
+        gridClassName="grid grid-cols-12 gap-[var(--space-5)]"
+      >
+
       {/* KPI tiles */}
-      <div className="grid gap-[var(--space-4)] sm:grid-cols-2 lg:grid-cols-4">
+      {!customizer.hidden.includes('kpi') && (
+        <SortableSectionWrapper
+          id="kpi"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('kpi')}
+        >
+        <div className="grid gap-[var(--space-4)] sm:grid-cols-2 lg:grid-cols-4">
         {kpiTiles.map((tile, idx) => (
           <StatTile key={tile.title} tile={tile} index={idx} delay={idx * 75} />
         ))}
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
 
       {/* Revenue chart + Lead Sources */}
-      <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
+      {!customizer.hidden.includes('revenue') && (
+        <SortableSectionWrapper
+          id="revenue"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('revenue')}
+        >
+        <div className="grid gap-[var(--space-4)] lg:grid-cols-[1.4fr_1fr]">
         {/* Revenue over time */}
         <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
@@ -833,10 +891,18 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             <p className="py-8 text-center text-sm text-muted-foreground">No lead source data yet.</p>
           )}
         </div>
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
 
       {/* Admin Operations & Systems Command Center */}
-      <div className="space-y-6 mt-8">
+      {!customizer.hidden.includes('systems') && (
+        <SortableSectionWrapper
+          id="systems"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('systems')}
+        >
+        <div className="space-y-6">
         <div>
           <h2 className="text-xl font-bold tracking-tight text-foreground">
             System Administration &amp; Control Center
@@ -1184,10 +1250,18 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             </div>
           </motion.div>
         </div>
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
 
       {/* Top companies table */}
-      <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
+      {!customizer.hidden.includes('companies') && (
+        <SortableSectionWrapper
+          id="companies"
+          isEditMode={customizer.isEditMode}
+          onHide={() => customizer.handleHide('companies')}
+        >
+        <div className="rounded-2xl border border-border bg-card p-[var(--space-4)] hover:-translate-y-0.5 hover:shadow-nav transition duration-200">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-semibold tracking-tight text-foreground">Top companies</h2>
           <span className="text-xs font-medium text-accent-color cursor-pointer hover:underline">
@@ -1240,7 +1314,11 @@ export default function AdminDashboardView({ refreshSignal = 0 }: { refreshSigna
             </tbody>
           </table>
         </div>
-      </div>
+        </div>
+        </SortableSectionWrapper>
+      )}
+
+      </CustomizeLayoutDnd>
 
     </div>
   );
