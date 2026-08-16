@@ -7,6 +7,8 @@ import { getCompaniesServer, getCompanyServer } from '@/lib/api-server';
 import { notFound } from 'next/navigation';
 import CompaniesClient from '../CompaniesClient';
 
+export const dynamic = 'force-dynamic';
+
 interface CompanyDetailPageProps {
   params: Promise<{ id: string }>;
 }
