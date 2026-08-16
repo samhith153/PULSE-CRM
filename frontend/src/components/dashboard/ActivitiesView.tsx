@@ -453,7 +453,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         <div className="flex items-center gap-2.5">
           {/* Segmented Switch for Kanban Board vs Timeline Logs */}
           <div className="flex border border-border rounded-lg p-0.5 bg-secondary/30 shrink-0 select-none">
-            <button type="button" onClick={() => setViewMode('list')} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === 'list' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button type="button" onClick={() => setViewMode('logs')} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === 'logs' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
               List
             </button>
             <button type="button" onClick={() => setViewMode('kanban')} className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${viewMode === 'kanban' ? 'bg-brand-blue text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>

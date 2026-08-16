@@ -280,12 +280,11 @@ function SVDonutChart({
   const [hovered, setHovered] = useState<number | null>(null);
   const total = data.reduce((s, d) => s + d.value, 0);
   const r = 54; const CIRC = 2 * Math.PI * r;
-  let acc = 0;
 
   const segments = data.map((d, i) => {
     const dash = total > 0 ? (d.value / total) * CIRC : 0;
-    const offset = total > 0 ? -(acc / total) * CIRC : 0;
-    acc += d.value;
+    const before = data.slice(0, i).reduce((sum, x) => sum + x.value, 0);
+    const offset = total > 0 ? -(before / total) * CIRC : 0;
     return { ...d, dash, offset, color: colors[i % colors.length] };
   });
 
@@ -345,7 +344,7 @@ function QuotaBar({ pct }: { pct: number }) {
    Section icon + title row
 ═══════════════════════════════════════════════════════════════════ */
 function SectionTitle({ icon: Icon, title, action }: {
-  icon?: React.ElementType;
+  icon?: React.ComponentType<any>;
   title: string;
   action?: React.ReactNode;
 }) {
@@ -367,7 +366,7 @@ function SectionTitle({ icon: Icon, title, action }: {
 /* ═══════════════════════════════════════════════════════════════════
    Type badge for Recent Reports
 ═══════════════════════════════════════════════════════════════════ */
-const TYPE_STYLES: Record<string, { bg: string; text: string; icon: React.ElementType }> = {
+const TYPE_STYLES: Record<string, { bg: string; text: string; icon: React.ComponentType<any> }> = {
   Performance: { bg: '#EEF1FF', text: '#3D5AFE', icon: TrendingUp },
   Revenue:     { bg: '#E6F6EA', text: '#3DA35D', icon: BarChart2 },
   Pipeline:    { bg: '#FBF2DD', text: '#B8860B', icon: Activity },

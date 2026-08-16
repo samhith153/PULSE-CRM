@@ -7,10 +7,11 @@ from datetime import datetime, timezone, timedelta
 from typing import Optional
 from uuid import UUID
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError, OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from fastapi import HTTPException as FastAPIHTTPException
 from app.core.exceptions import (
     BusinessRuleException,
     DuplicateException,
@@ -135,36 +136,48 @@ class AuthService:
         client_ip: str = "",
         user_agent: str = "",
     ) -> TokenResponse:
-        user = await self.user_repo.get_by_email(payload.email.lower())
-
-        if not user or not verify_password(payload.password, user.hashed_password or ""):
-            raise InvalidCredentialsException()
-
-        if not user.is_active:
-            raise UnauthorizedException("Your account has been deactivated.")
-
-        await self.user_repo.update(
-            user,
-            last_login_at=datetime.now(timezone.utc),
-            last_login_ip=client_ip,
-        )
-
-        logger.info("User logged in", extra={"user_id": str(user.id)})
-        tokens = await self._build_tokens(user, client_ip, user_agent)
         try:
-            async with self.db.begin_nested():
-                await self.events.record_event(
-                    "USER_LOGGED_IN",
-                    organization_id=user.organization_id,
-                    actor_id=user.id,
-                    aggregate_type="user",
-                    aggregate_id=str(user.id),
-                    source="auth",
-                    payload={"user_id": str(user.id), "email": user.email, "client_ip": client_ip},
-                )
-        except Exception:
-            logger.exception("Failed to record login event", extra={"user_id": str(user.id)})
-        return tokens
+            user = await self.user_repo.get_by_email(payload.email.lower())
+
+            if not user or not verify_password(payload.password, user.hashed_password or ""):
+                raise InvalidCredentialsException()
+
+            if not user.is_active:
+                raise UnauthorizedException("Your account has been deactivated.")
+
+            await self.user_repo.update(
+                user,
+                last_login_at=datetime.now(timezone.utc),
+                last_login_ip=client_ip,
+            )
+
+            logger.info("User logged in", extra={"user_id": str(user.id)})
+            tokens = await self._build_tokens(user, client_ip, user_agent)
+            try:
+                async with self.db.begin_nested():
+                    await self.events.record_event(
+                        "USER_LOGGED_IN",
+                        organization_id=user.organization_id,
+                        actor_id=user.id,
+                        aggregate_type="user",
+                        aggregate_id=str(user.id),
+                        source="auth",
+                        payload={"user_id": str(user.id), "email": user.email, "client_ip": client_ip},
+                    )
+            except Exception:
+                logger.exception("Failed to record login event", extra={"user_id": str(user.id)})
+
+            return tokens
+        except InvalidCredentialsException:
+            raise
+        except UnauthorizedException:
+            raise
+        except SQLAlchemyError as e:
+            logger.error("Database error during login: %s", str(e))
+            raise FastAPIHTTPException(status_code=503, detail="Database connection error. Please try again.")
+        except Exception as e:
+            logger.error("Unexpected error during login: %s", str(e))
+            raise FastAPIHTTPException(status_code=500, detail="An unexpected error occurred. Please try again.")
 
     async def refresh_token(
         self,

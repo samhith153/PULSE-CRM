@@ -12,7 +12,7 @@ interface PlatformCapabilitiesProps {
 }
 
 // Icon mapping
-const iconMap: Record<string, React.ElementType> = {
+const iconMap: Record<string, React.ComponentType<any>> = {
   Target,
   Users,
   Building2,

@@ -53,7 +53,7 @@ interface Company {
   files: { id: number; name: string; size: string }[];
 }
 
-export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = {}) {
+export default function CompaniesView({ onLoaded, openCompanyId }: { onLoaded?: () => void; openCompanyId?: string | number } = {}) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -148,11 +148,17 @@ export default function CompaniesView({ onLoaded }: { onLoaded?: () => void } = 
   useEffect(() => {
     getCompanies().then(data => {
       setCompanies(data as any);
+      // Deep-link support: /dashboard/companies/[id] pre-selects the company.
+      if (openCompanyId != null) {
+        const target = String(openCompanyId).replace(/^company_/, '');
+        const match = (data as any[]).find((c: any) => String(c.id) === target);
+        if (match) setSelectedId(match.id);
+      }
     }).finally(() => {
       setLoading(false);
       onLoaded?.();
     });
-  }, []);
+  }, [openCompanyId]);
 
   useEffect(() => {
     const handleOpen = () => {

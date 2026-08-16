@@ -7,7 +7,7 @@ import {
   Loader2, Mail, Sparkles, Users, Zap, Award, Shield,
   BarChart2, RefreshCw, Headphones, TrendingUp, Settings,
   X, LayoutDashboard, Star, Filter, Trophy,
-  Target, Lock
+  Target, Lock, Building2, UserRound, Factory, HardHat, Briefcase
 } from 'lucide-react';
 import Navbar from '@/components/navigation/Navbar';
 import AuthModal from '@/components/shared/AuthModal';
@@ -490,11 +490,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
             <div className="marquee-container">
               {/* First set of logos */}
               {[
-                { name: 'TechCorp', icon: '🏢', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '👤', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '🏭', color: '#f97316' },
-                { name: 'Acme Systems', icon: '🏗', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '💼', color: '#10b981' },
+                { name: 'TechCorp', icon: Building2, color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: UserRound, color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: Factory, color: '#f97316' },
+                { name: 'Acme Systems', icon: HardHat, color: '#0ea5e9' },
+                { name: 'Initech Global', icon: Briefcase, color: '#10b981' },
               ].map((company, i) => (
                 <div key={`${company.name}-1`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <div style={{ 
@@ -507,7 +507,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                     justifyContent: 'center',
                     fontSize: 16
                   }}>
-                    {company.icon}
+                    <company.icon style={{ width: 18, height: 18, color: '#ffffff' }} />
                   </div>
                   <span style={{ fontSize: 15, fontWeight: 700, color: '#475569', letterSpacing: '-0.01em', userSelect: 'none' }}>
                     {company.name}
@@ -516,11 +516,11 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
               ))}
               {/* Duplicate set for seamless loop */}
               {[
-                { name: 'TechCorp', icon: '🏢', color: '#3b82f6' },
-                { name: 'Sparta Creative', icon: '👤', color: '#1e293b' },
-                { name: 'Empirio Logistics', icon: '🏭', color: '#f97316' },
-                { name: 'Acme Systems', icon: '🏗', color: '#0ea5e9' },
-                { name: 'Initech Global', icon: '💼', color: '#10b981' },
+                { name: 'TechCorp', icon: Building2, color: '#3b82f6' },
+                { name: 'Sparta Creative', icon: UserRound, color: '#1e293b' },
+                { name: 'Empirio Logistics', icon: Factory, color: '#f97316' },
+                { name: 'Acme Systems', icon: HardHat, color: '#0ea5e9' },
+                { name: 'Initech Global', icon: Briefcase, color: '#10b981' },
               ].map((company, i) => (
                 <div key={`${company.name}-2`} className="trusted-logo-item" style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 48px', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   <div style={{ 
@@ -533,7 +533,7 @@ export default function PulseLandingPage({ onLogin }: PulseLandingPageProps) {
                     justifyContent: 'center',
                     fontSize: 16
                   }}>
-                    {company.icon}
+                    <company.icon style={{ width: 18, height: 18, color: '#ffffff' }} />
                   </div>
                   <span style={{ fontSize: 15, fontWeight: 700, color: '#475569', letterSpacing: '-0.01em', userSelect: 'none' }}>
                     {company.name}

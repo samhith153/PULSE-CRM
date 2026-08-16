@@ -1,5 +1,5 @@
-import DashboardShell from "@/components/dashboard/DashboardShell";
+import RoleHomeView from "@/components/dashboard/RoleHomeView";
 
-export default function SalesRepDashboard() {
-  return <DashboardShell requiredRole="sales_rep" defaultTab="home" />;
+export default function DashboardHome() {
+  return <RoleHomeView />;
 }

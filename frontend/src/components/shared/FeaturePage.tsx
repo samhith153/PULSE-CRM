@@ -7,7 +7,7 @@ import { ArrowRight, CheckCircle, X, Mail, Lock, Loader2, Activity } from 'lucid
 
 /* ─── data shapes ──────────────────────────────────── */
 export interface FPCapability {
-  icon: React.ElementType;
+  icon: React.ComponentType<any>;
   title: string;
   desc: string;
 }
@@ -23,7 +23,7 @@ export interface FPStat {
 }
 export interface FPData {
   badge: string;
-  badgeIcon?: React.ElementType;
+  badgeIcon?: React.ComponentType<any>;
   heroTitle: React.ReactNode;
   heroDesc: string;
   overviewTitle: string;

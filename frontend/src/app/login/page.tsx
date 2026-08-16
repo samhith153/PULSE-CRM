@@ -121,7 +121,7 @@ export default function LoginPage() {
           Sign in to pick up right where you left off.
         </p>
  
-        <div className="rise-in mt-7" style={{ animationDelay: '180ms' }}>
+        <div className="rise-in mt-6" style={{ animationDelay: '180ms' }}>
           <GoogleButton label="Continue with Google" />
         </div>
  
@@ -142,6 +142,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               value={email}
+              placeholder="you@company.com"
               onChange={(e) => {
                 setEmail(e.target.value);
                 if (errors.email) {
@@ -155,16 +156,20 @@ export default function LoginPage() {
             />
           </div>
           <div className="rise-in" style={{ animationDelay: '300ms' }}>
-            <div className="mb-1.5 flex justify-end">
-              <Link href="/reset-password" className="text-xs font-semibold text-link hover:underline">
-                Forgot password?
-              </Link>
-            </div>
             <AuthField
               label="Password"
               toggleable
               autoComplete="current-password"
               value={password}
+              placeholder="At least 8 characters"
+              labelAction={
+                <Link
+                  href="/reset-password"
+                  className="text-xs font-semibold text-link hover:underline transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              }
               onChange={(e) => {
                 setPassword(e.target.value);
                 if (errors.password) {

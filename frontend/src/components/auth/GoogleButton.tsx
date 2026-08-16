@@ -130,20 +130,26 @@ export function GoogleButton({ label }: { label: string }) {
         </div>
       )}
       {!googleClientId && !loading && (
-        <>
+        <div className="group relative w-full">
           <button
             type="button"
             disabled
             aria-label={label}
-            className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/5 text-sm font-semibold text-white/40 cursor-not-allowed opacity-60"
+            title="Google Sign-In is not configured on the server."
+            className="flex h-12 w-full items-center justify-center gap-2.5 rounded-full border border-white/10 bg-white/[0.04] text-sm font-medium text-white/35 cursor-not-allowed select-none"
           >
-            <GoogleIcon />
+            <span className="opacity-40">
+              <GoogleIcon />
+            </span>
             <span>{label}</span>
           </button>
-          <p className="text-center text-[11px] text-white/40">
+          <span
+            role="tooltip"
+            className="pointer-events-none absolute -top-2 left-1/2 z-20 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg border border-white/15 bg-slate-950/95 px-3 py-1.5 text-[11px] font-medium text-white/70 opacity-0 shadow-lg backdrop-blur-sm transition-opacity duration-150 group-hover:opacity-100"
+          >
             Google Sign-In is not configured on the server.
-          </p>
-        </>
+          </span>
+        </div>
       )}
       {error && (
         <p className="text-center text-[11px] text-red-400">{error}</p>

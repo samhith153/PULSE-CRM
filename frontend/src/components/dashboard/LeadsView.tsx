@@ -1,7 +1,7 @@
 'use client';
 
 import { toast } from '@/lib/toast';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SkeletonLoader from './SkeletonLoader';
 import { Lead as BackendLead, getLeads, createLead, updateLead, updateLeadStatus, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
@@ -199,6 +199,8 @@ interface Lead {
 interface LeadsViewProps {
   onLoaded?: () => void;
   onTabChange?: (tab: string) => void;
+  /** Deep-link support: /dashboard/leads/[id] pre-selects this lead. */
+  openLeadId?: string | number;
   onComposeEmail?: (target: { 
     to: string; 
     name?: string; 
@@ -211,8 +213,20 @@ interface LeadsViewProps {
   }) => void;
 }
 
-export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: LeadsViewProps = {}) {
+export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openLeadId }: LeadsViewProps = {}) {
   const router = useRouter();
+
+  // Record selection & view state — declared early because the event-listener
+  // effects below reference these setters.
+  const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
+  const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('pulse-crm-view-mode-leads') as any) || 'list';
+    }
+    return 'list';
+  });
+  const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
+
   // NEW: Listen for the Command Palette search click to open a specific lead
   useEffect(() => {
     const handleOpenRecord = (event: Event) => {
@@ -242,6 +256,16 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
     window.addEventListener('pulse-open-record', handleOpenRecord);
     return () => window.removeEventListener('pulse-open-record', handleOpenRecord);
   }, []);
+
+  // Deep-link support: /dashboard/leads/[id] pre-selects the record directly.
+  useEffect(() => {
+    if (openLeadId == null) return;
+    let rawId = String(openLeadId);
+    if (rawId.startsWith('lead_')) rawId = rawId.replace('lead_', '');
+    const finalId = /^\d+$/.test(rawId) ? Number(rawId) : rawId;
+    setSelectedLeadId(finalId);
+    setViewMode('default');
+  }, [openLeadId]);
 
   // Listen for command palette "Create Lead" event
   useEffect(() => {
@@ -273,18 +297,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
 
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
-  const leadsRef = useRef<Lead[]>([]);
-  leadsRef.current = leads;
 
   // Track leads whose AI assessment is in progress (score pending)
   const [scoringLeadIds, setScoringLeadIds] = useState<Set<string>>(new Set());
-
-  const [viewMode, setViewMode] = useState<'default' | 'list'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('pulse-crm-view-mode-leads') as any) || 'list';
-    }
-    return 'list';
-  });
 
   const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
   const [sortField, setSortField] = useState<string>('name');
@@ -340,7 +355,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   };
 
   // Selections & Filters State
-  const [selectedLeadId, setSelectedLeadId] = useState<number | string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [priorityFilter, setPriorityFilter] = useState('All');
@@ -349,7 +363,6 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
   const [isMaximized, setIsMaximized] = useState(false);
 
   // Modal Open/Close States
-  const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
   const [isEditingFullPage, setIsEditingFullPage] = useState(false);
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -1817,7 +1830,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
             ? "fixed inset-4 md:inset-8 z-50 flex flex-col rounded-2xl overflow-hidden shadow-[0_32px_80px_rgba(0,0,0,0.35)] animate-in zoom-in-95 duration-200"
             : "bg-surface-1 border border-border-default rounded-2xl p-5 sticky top-20"
           }
-          style={isMaximized ? { background: 'var(--text-on-primary)', color: 'var(--foreground)' } : undefined}
+          style={isMaximized ? { background: 'var(--surface-1)', color: 'var(--foreground)' } : undefined}
           >
             {isMaximized ? (
               /* ===== MAXIMIZED LIGHT-THEME LAYOUT ===== */
@@ -1842,18 +1855,18 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                   </div>
                   <div className="flex items-center gap-2">
                     <button type="button" onClick={() => setIsMaximized(false)}
-                      className="p-2 rounded-lg border cursor-pointer transition bg-text-on-primary border-border-default hover:bg-surface-2 text-text-muted hover:text-text-primary" title="Minimize">
+                      className="p-2 rounded-lg border cursor-pointer transition bg-surface-1 border-border-default hover:bg-surface-2 text-text-muted hover:text-text-primary" title="Minimize">
                       <Minimize2 className="h-4 w-4" />
                     </button>
                     <button onClick={() => { setSelectedLeadId(null); setIsMaximized(false); }}
-                      className="p-2 rounded-lg border cursor-pointer transition bg-text-on-primary border-border-default hover:bg-status-danger-text/10 hover:text-status-danger-text text-text-muted" title="Close">
+                      className="p-2 rounded-lg border cursor-pointer transition bg-surface-1 border-border-default hover:bg-status-danger-text/10 hover:text-status-danger-text text-text-muted" title="Close">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
                 {/* Body: Two-column layout */}
-                <div className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--text-on-primary)' }}>
+                <div className="flex-1 overflow-y-auto p-6" style={{ background: 'var(--surface-1)' }}>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
                     {/* LEFT COLUMN */}
@@ -1988,7 +2001,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                                 className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-dashed border-accent-color/40 hover:border-accent-color hover:bg-accent-color/5 text-xs font-bold text-accent-color transition duration-200 cursor-pointer shadow-sm select-none"
                               >
                                 <Sparkles className="h-4 w-4 animate-pulse" />
-                                <span>⚡ Click to read the next best actions</span>
+                                <span>Click to read the next best actions</span>
                               </button>
                             ) : (
                               <div className="p-4 bg-accent-color/5 border border-accent-color/20 rounded-xl space-y-2.5 relative overflow-hidden transition-all duration-300">
@@ -2057,15 +2070,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                       {/* Quick Action Buttons */}
                       <div className="grid grid-cols-3 gap-2">
                         <button onClick={() => { router.push(`?compose=${encodeURIComponent(activeLead.email)}`); onTabChange?.('emails'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } })); }, 150); }}
-                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border-default bg-text-on-primary hover:bg-accent-color/10 hover:border-accent-color hover:text-accent-color text-text-primary cursor-pointer transition">
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border-default bg-surface-1 hover:bg-accent-color/10 hover:border-accent-color hover:text-accent-color text-text-primary cursor-pointer transition">
                           <Mail className="h-4 w-4" /><span>Email</span>
                         </button>
                         <button onClick={() => setIsCallModalOpen(true)}
-                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border-default bg-text-on-primary hover:bg-status-success-text/10 hover:border-status-success-text hover:text-status-success-text text-text-primary cursor-pointer transition">
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border-default bg-surface-1 hover:bg-status-success-text/10 hover:border-status-success-text hover:text-status-success-text text-text-primary cursor-pointer transition">
                           <PhoneCall className="h-4 w-4" /><span>Call</span>
                         </button>
                         <button onClick={() => { onTabChange?.('calendar'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-open-create-calendar-event-modal', { detail: { title: `Meet with ${activeLead.name}`, attendees: activeLead.email || activeLead.name, date: new Date().toISOString().slice(0, 10), time: '11:00 AM', type: 'meeting' } })); }, 150); }}
-                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border-default bg-text-on-primary hover:bg-status-info-text/10 hover:border-status-info-text hover:text-status-info-text text-text-primary cursor-pointer transition">
+                          className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border-default bg-surface-1 hover:bg-status-info-text/10 hover:border-status-info-text hover:text-status-info-text text-text-primary cursor-pointer transition">
                           <Calendar className="h-4 w-4" /><span>Meet</span>
                         </button>
                       </div>
@@ -2104,14 +2117,14 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail }: Lea
                           return (
                             <button key={tab.id} onClick={() => setActiveHistoryTab(tab.id)}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold transition cursor-pointer"
-                              style={active ? { background: 'var(--accent-color)', color: 'var(--text-on-primary)', border: '1px solid var(--accent-color)' } : { background: 'var(--text-on-primary)', color: 'var(--text-muted)', border: '1px solid var(--border-default)' }}>
+                              style={active ? { background: 'var(--accent-color)', color: 'var(--text-on-primary)', border: '1px solid var(--accent-color)' } : { background: 'var(--surface-1)', color: 'var(--text-muted)', border: '1px solid var(--border-default)' }}>
                               <Icon className="h-3 w-3 shrink-0" />
                               <span>{tab.label}</span>
                             </button>
                           );
                         })}
                       </div>
-                      <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-text-on-primary">
+                      <div className="flex-1 overflow-y-auto p-4 space-y-2.5 bg-surface-1">
                         {activeHistoryTab === 'timeline' && (
                           activeLead.timeline.length > 0 ? activeLead.timeline.map(act => (
                             <div key={act.id} className="flex gap-3 p-3 rounded-lg border bg-surface-2 border-border-default hover:bg-accent-color/10 hover:border-accent-color/15 transition">

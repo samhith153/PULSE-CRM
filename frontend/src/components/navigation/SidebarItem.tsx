@@ -2,7 +2,7 @@
 import React from 'react';
 
 interface SidebarItemProps {
-  icon: React.ElementType;
+  icon: React.ComponentType<any>;
   label: string;
   active: boolean;
   onClick: () => void;

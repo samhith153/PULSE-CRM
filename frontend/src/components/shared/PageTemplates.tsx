@@ -239,7 +239,7 @@ export function HeroWithScreenshot({
   onCTA,
 }: {
   badge: string;
-  badgeIcon?: React.ElementType;
+  badgeIcon?: React.ComponentType<any>;
   title: React.ReactNode;
   description: string;
   screenshot: React.ReactNode;
@@ -290,7 +290,7 @@ export function HeroWithScreenshot({
 }
 
 /* ─── Feature Cards Grid ──────────────────────────── */
-export function FeatureCards({ features }: { features: Array<{ icon: React.ElementType; title: string; description: string }> }) {
+export function FeatureCards({ features }: { features: Array<{ icon: React.ComponentType<any>; title: string; description: string }> }) {
   return (
     <section style={{ padding: '80px 48px', background: '#fff' }}>
       <div style={{ maxWidth: 1280, margin: '0 auto' }}>

@@ -39,12 +39,15 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var savedTheme = localStorage.getItem('pulse-crm-theme') || 'dark';
-                  document.documentElement.setAttribute('data-theme', savedTheme);
-                  if (savedTheme === 'dark') {
-                    document.documentElement.classList.add('dark');
+                  const storedTheme = localStorage.getItem('pulse-crm-theme');
+                  if (storedTheme) {
+                    document.documentElement.setAttribute('data-theme', storedTheme);
+                    document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+                    document.documentElement.style.colorScheme = storedTheme;
                   } else {
+                    document.documentElement.setAttribute('data-theme', 'light');
                     document.documentElement.classList.remove('dark');
+                    document.documentElement.style.colorScheme = 'light';
                   }
                 } catch (e) {}
               })();

@@ -170,7 +170,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
           The requested activity ID is invalid, or it may have been deleted by another team member.
         </p>
         <button
-          onClick={() => onBack ? onBack() : router.push('/activities')}
+          onClick={() => onBack ? onBack() : router.push('/dashboard/activities')}
           className="mt-4 px-4 py-2 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-xs font-semibold cursor-pointer"
         >
           Return to Activities
@@ -250,7 +250,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
       }
       toast.success("Activity deleted.");
       if (onBack) onBack();
-      else router.push('/activities');
+      else router.push('/dashboard/activities');
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete activity.");
     }
@@ -315,7 +315,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-border/60 select-none">
         <div className="flex items-center gap-4 min-w-0">
           <button 
-            onClick={() => onBack ? onBack() : router.push('/activities')}
+            onClick={() => onBack ? onBack() : router.push('/dashboard/activities')}
             className="p-2 hover:bg-secondary/40 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-colors border border-border bg-card shadow-sm"
           >
             <ArrowLeft size={14} />

@@ -21,7 +21,6 @@ import {
   getDeals,
   getPipelineStages,
   fetchBatchRecommendations,
-  fetchEntityTimeline,
   getLeadWorkflow,
   formatINR,
   type Lead,
@@ -194,14 +193,9 @@ export default function WorkflowsView({
     useState(true);
 
   const [baseError, setBaseError] =
-    useState<string | null>(null);
+    useState<string | null>(null);  const [recItem, setRecItem] = useState<BatchRecommendationItem | null>(null);
 
-  const [recItem, setRecItem] = useState<BatchRecommendationItem | null>(null);
-
-  const [activity, setActivity] = useState<ActivityEvent[]>([]);
-
-  const [loadingRec, setLoadingRec] =
-    useState(false);
+  const [loadingRec, setLoadingRec] = useState(false);
 
   type PlannedWorkflowStep = {
     action_type: string;

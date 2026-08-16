@@ -84,7 +84,7 @@ function Spark({ vals, white = false, color = '#3D5AFE' }: { vals: number[]; whi
 /* KPI hero card */
 function KpiCard({ title, value, sub, delta, up, spark, icon: Icon, hero = false, delay = 0, color: _color }: {
   title: string; value: string; sub: string; delta: string; up: boolean;
-  spark: number[]; icon: React.ElementType; hero?: boolean; delay?: number; color?: string;
+  spark: number[]; icon: React.ComponentType<any>; hero?: boolean; delay?: number; color?: string;
 }) {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -3 }}
@@ -215,19 +215,18 @@ function DealsBySource({ src, period, onPeriod, km }: {
   const total = src.reduce((s, x) => s + Number(x.count || 0), 0) || 3;
   const items = src;
   const R = 56, CIRC = 2 * Math.PI * R;
-  let acc = 0;
   const segs = items.map((it, i) => {
     const dash = (Number(it.count) / total) * CIRC;
-    const off  = -(acc / total) * CIRC;
-    acc += Number(it.count);
+    const before = items.slice(0, i).reduce((s, x) => s + Number(x.count), 0);
+    const off  = -(before / total) * CIRC;
     return { ...it, dash, off, color: SRC_COLORS[i % SRC_COLORS.length] };
   });
 
   const kmRows = [
-    { label: 'Open Deals',    val: km.open_deals,       icon: '🟢' },
-    { label: 'Deals Created', val: km.deals_created,    icon: '📈' },
-    { label: 'Deals Lost',    val: km.deals_lost,       icon: '📉' },
-    { label: 'Activities',    val: km.activities_logged, icon: '⚡' },
+    { label: 'Open Deals',    val: km.open_deals },
+    { label: 'Deals Created', val: km.deals_created },
+    { label: 'Deals Lost',    val: km.deals_lost },
+    { label: 'Activities',    val: km.activities_logged },
   ];
 
   return (
@@ -386,10 +385,10 @@ function KeyMetrics({ km }: { km: { open_deals: number; pipeline_value: any; dea
   const pv = asNumber(km?.pipeline_value) || 0;
   const gr = asNumber(km?.pipeline_value_growth_pct) || 0;
   const rows = [
-    { label: 'Open Deals',    val: km?.open_deals ?? 0,       icon: '🟢', color: '#3DA35D' },
-    { label: 'Deals Created', val: km?.deals_created ?? 0,    icon: '📈', color: '#3D5AFE' },
-    { label: 'Deals Lost',    val: km?.deals_lost ?? 0,       icon: '📉', color: '#E5484D' },
-    { label: 'Activities',    val: km?.activities_logged ?? 0, icon: '⚡', color: '#F59E0B' },
+    { label: 'Open Deals',    val: km?.open_deals ?? 0,       color: '#3DA35D' },
+    { label: 'Deals Created', val: km?.deals_created ?? 0,    color: '#3D5AFE' },
+    { label: 'Deals Lost',    val: km?.deals_lost ?? 0,       color: '#E5484D' },
+    { label: 'Activities',    val: km?.activities_logged ?? 0, color: '#F59E0B' },
   ];
   return (
     <div className="card-surface p-5">
@@ -504,11 +503,10 @@ function SalesActivity({ src, period, onPeriod }: {
   const items = src.slice(0, 3);
   const total = items.reduce((s, x) => s + Number(x.count || 0), 0) || 100;
   const R = 52, CIRC = 2 * Math.PI * R;
-  let acc = 0;
   const segs = items.map((it, i) => {
     const dash = (Number(it.count) / total) * CIRC;
-    const off  = -(acc / total) * CIRC;
-    acc += Number(it.count);
+    const before = items.slice(0, i).reduce((s, x) => s + Number(x.count), 0);
+    const off  = -(before / total) * CIRC;
     return { ...it, dash, off, color: ACT_COLORS[i % ACT_COLORS.length] };
   });
   const displayTotal = total >= 1000 ? `${(total / 1000).toFixed(0)}K` : String(total);

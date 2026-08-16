@@ -2,181 +2,31 @@
 
 import React from 'react';
 import Image from 'next/image';
-import {
-  Home,
-  Users,
-  Contact,
-  Building2,
-  Layers,
-  Package,
-  Activity,
-  Mail,
-  GitBranch,
-  Sparkles,
-  BarChart3,
-  FileText,
-  Settings,
-  ChevronsUpDown,
-  Calendar,
-  Award,
-  TrendingUp,
-  Shield,
-  Bell,
-  Link2,
-  Zap,
-  LayoutDashboard,
-  ClipboardList,
-  UserCog,
-  Target,
-  Trash2,
-} from 'lucide-react';
+import { ChevronsUpDown, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
 import { resolveImageUrl } from '@/utils/api';
+import { NAV_HOME, getNavSections } from '@/lib/dashboard-nav';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   collapsed: boolean;
-  setCollapsed: (collapsed: boolean) => void;
   userRole: 'sales_rep' | 'manager' | 'admin';
   currentUser?: { full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null;
 }
 
-/* ── Nav data per role ───────────────────────────────────────────────── */
-
-type NavItem = { name: string; icon: React.ElementType; tab: string };
-type NavSection = { label: string; items: NavItem[] };
-
-function getSections(userRole: SidebarProps['userRole']): NavSection[] {
-  switch (userRole) {
-    case 'manager':
-      return [
-        {
-          label: 'Sales',
-          items: [
-            { name: 'My Team',       icon: UserCog,    tab: 'my team' },
-            { name: 'Targets',       icon: Target,     tab: 'targets' },
-            { name: 'Team Pipeline', icon: Layers,     tab: 'team pipeline' },
-            { name: 'Leads',         icon: Users,      tab: 'leads' },
-            { name: 'Companies',     icon: Building2,  tab: 'companies' },
-            { name: 'Contacts',      icon: Contact,    tab: 'contacts' },
-          ],
-        },
-        {
-          label: 'Forecasting',
-          items: [
-            { name: 'Reports',          icon: BarChart3,  tab: 'reports' },
-            { name: 'Forecast',         icon: TrendingUp, tab: 'forecast' },
-            { name: 'Team Performance', icon: Award,      tab: 'team performance' },
-          ],
-        },
-        {
-          label: 'Productivity',
-          items: [
-            { name: 'Activities',   icon: Activity,  tab: 'activities' },
-            { name: 'AI Insights',  icon: Sparkles,  tab: 'ai insights' },
-            { name: 'Documents',    icon: FileText,  tab: 'documents' },
-          ],
-        },
-        {
-          label: 'Settings',
-          items: [
-            { name: 'Settings',      icon: Settings,   tab: 'settings' },
-            { name: 'Notifications', icon: Bell,       tab: 'notifications' },
-          ],
-        },
-      ];
-
-    case 'admin':
-      return [
-        {
-          label: 'People',
-          items: [
-            { name: 'Teams',             icon: UserCog, tab: 'teams' },
-            { name: 'Users',             icon: Users,  tab: 'users' },
-            { name: 'Roles & Perms',     icon: Shield, tab: 'roles & permissions' },
-          ],
-        },
-        {
-          label: 'Data',
-          items: [
-            { name: 'Recycle Bin',       icon: Trash2, tab: 'recycle bin' },
-          ],
-        },
-        {
-          label: 'Records',
-          items: [
-            { name: 'Companies', icon: Building2, tab: 'companies' },
-            { name: 'Contacts',  icon: Contact,   tab: 'contacts' },
-            { name: 'Products',  icon: Package,   tab: 'products' },
-          ],
-        },
-        {
-          label: 'Intelligence',
-          items: [
-            { name: 'Reports',     icon: BarChart3, tab: 'reports' },
-            { name: 'Audit Logs',  icon: Activity,  tab: 'audit logs' },
-          ],
-        },
-        {
-          label: 'Settings',
-          items: [
-            { name: 'Settings',      icon: Settings,  tab: 'settings' },
-            { name: 'Notifications', icon: Bell,      tab: 'notifications' },
-          ],
-        },
-      ];
-
-    case 'sales_rep':
-    default:
-      return [
-        {
-          label: 'Productivity',
-          items: [
-            { name: 'Leads',        icon: Users,      tab: 'leads' },
-            { name: 'Contacts',     icon: Contact,    tab: 'contacts' },
-            { name: 'Companies',    icon: Building2,  tab: 'companies' },
-            { name: 'Deals',        icon: Layers,     tab: 'deals' },
-            { name: 'Activities',   icon: Activity,   tab: 'activities' },
-            { name: 'Emails',       icon: Mail,       tab: 'emails' },
-          ],
-        },
-        {
-          label: 'Automations & Intelligence',
-          items: [
-            { name: 'Workflows',   icon: Zap,      tab: 'workflows' },
-            { name: 'AI Insights', icon: Sparkles, tab: 'ai insights' },
-          ],
-        },
-        {
-          label: 'Data & Analytics',
-          items: [
-            { name: 'Reports',   icon: BarChart3, tab: 'reports' },
-            { name: 'Documents', icon: FileText,  tab: 'documents' },
-          ],
-        },
-        {
-          label: 'Settings',
-          items: [
-            { name: 'Settings',      icon: Settings,  tab: 'settings' },
-            { name: 'Notifications', icon: Bell,      tab: 'notifications' },
-          ],
-        },
-      ];
-  }
-}
-
 /* ── Component ───────────────────────────────────────────────────────── */
+/* Nav data (sections, items, icons, tab keys) lives in lib/dashboard-nav.ts —
+   the single source of truth shared with the command palette. */
 
 export default function Sidebar({
   activeTab,
   setActiveTab,
   collapsed,
-  setCollapsed,
   userRole,
 }: SidebarProps) {
-  const sections = getSections(userRole);
+  const sections = getNavSections(userRole);
   const { user: currentUser } = useCurrentUser();
   const profileName = currentUser?.full_name || 'User';
   const profileRoleLabel = userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative';
@@ -226,27 +76,27 @@ export default function Sidebar({
 
         {/* Home — ui.md §6: icon 20px */}
         <button
-          onClick={() => setActiveTab('home')}
+          onClick={() => setActiveTab(NAV_HOME.tab)}
           className={cn(
             itemBase,
             collapsed ? 'justify-center px-2' : '',
-            isActive('home') ? itemActive : itemInactive,
+            isActive(NAV_HOME.tab) ? itemActive : itemInactive,
           )}
         >
-          <LayoutDashboard
+          <NAV_HOME.icon
             size={20}
             strokeWidth={2}
             className={cn(
               'shrink-0 transition-transform duration-200 group-hover:scale-105',
-              isActive('home') ? '' : 'text-text-secondary',
+              isActive(NAV_HOME.tab) ? '' : 'text-text-secondary',
             )}
           />
-          {!collapsed && <span className="truncate">Home</span>}
+          {!collapsed && <span className="truncate">{NAV_HOME.name}</span>}
 
           {/* Collapsed tooltip — ui.md §5: shadow-popover */}
           {collapsed && (
             <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-[12px] border border-border-default bg-surface-1 px-2.5 py-1.5 text-xs text-text-primary shadow-popover opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-50">
-              Home
+              {NAV_HOME.name}
             </span>
           )}
         </button>
@@ -269,7 +119,7 @@ export default function Sidebar({
 
               return (
                 <button
-                  key={item.name}
+                  key={item.tab}
                   onClick={() => setActiveTab(item.tab)}
                   className={cn(
                     itemBase,

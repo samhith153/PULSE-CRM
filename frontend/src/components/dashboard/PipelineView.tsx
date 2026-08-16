@@ -139,7 +139,7 @@ interface PipelineStage {
   probability: number;
 }
 
-export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {}) {
+export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () => void; openDealId?: string | number } = {}) {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,15 +179,6 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
 
   const stageNames = stages.map(s => s.name);
 
-  useEffect(() => {
-    const handleOpen = () => {
-      setForm({ title: '', company: '', value: 0, stage: stageNames[0] || 'New', priority: 'Medium', owner: '', closeDate: '' });
-      setIsAddModalOpen(true);
-    };
-    window.addEventListener('pulse-open-create-deal-modal', handleOpen);
-    return () => window.removeEventListener('pulse-open-create-deal-modal', handleOpen);
-  }, [stageNames]);
-
   const stageProbabilities: Record<string, number> = {};
   stages.forEach(s => { stageProbabilities[s.name] = s.probability / 100; });
 
@@ -200,9 +191,40 @@ export default function PipelineView({ onLoaded }: { onLoaded?: () => void } = {
   const [isEditingDeal, setIsEditingDeal] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
 
+  // Deep-link support: /dashboard/deals/[id] pre-selects the deal once loaded
   const [form, setForm] = useState({
     title: '', company: '', value: 0, stage: '', priority: 'Medium' as Deal['priority'], owner: '', closeDate: ''
   });
+
+  // and populates the edit form (same fields a row-click edit fills).
+  useEffect(() => {
+    if (openDealId == null) return;
+    const target = String(openDealId).replace(/^deal_/, '');
+    const found = deals.find(d => String(d.id) === target);
+    if (found) {
+      setSelectedDeal(found);
+      setForm({
+        title: found.title,
+        company: found.company,
+        value: Number(found.value) || 0,
+        stage: found.stage,
+        priority: found.priority,
+        owner: found.owner,
+        closeDate: found.closeDate,
+      });
+      setIsEditModalOpen(true);
+    }
+  }, [openDealId, deals]);
+
+  // Command palette "Create Deal" event (form/isAddModalOpen declared above)
+  useEffect(() => {
+    const handleOpen = () => {
+      setForm({ title: '', company: '', value: 0, stage: stageNames[0] || 'New', priority: 'Medium', owner: '', closeDate: '' });
+      setIsAddModalOpen(true);
+    };
+    window.addEventListener('pulse-open-create-deal-modal', handleOpen);
+    return () => window.removeEventListener('pulse-open-create-deal-modal', handleOpen);
+  }, [stageNames]);
 
   const [draggedId, setDraggedId] = useState<number | string | null>(null);
   const [pendingStageChange, setPendingStageChange] = useState<{

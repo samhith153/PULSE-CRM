@@ -21,7 +21,7 @@ const sidebarItems = [
   { id: 'release', label: 'Release Notes', icon: Bell },
 ];
 
-const contentMap: Record<string, { icon: React.ElementType; title: string; desc: string; href: string; color: string }[]> = {
+const contentMap: Record<string, { icon: React.ComponentType<any>; title: string; desc: string; href: string; color: string }[]> = {
   docs: [
     { icon: BookOpen, title: 'Getting Started Guide', desc: 'Set up Pulse CRM in 2 minutes. Install, seed, and start the API server.', href: '/features/dashboard', color: '#2563EB' },
     { icon: Code, title: 'REST API Reference', desc: '40+ endpoints. Full CRUD for leads, contacts, deals, companies.', href: '/features/dashboard', color: '#2563eb' },

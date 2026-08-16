@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Trash2, FileText, Download, UploadCloud, X, Calendar, User, Eye, Loader2 } from 'lucide-react';
+import { Plus, Search, Trash2, FileText, Download, UploadCloud, X, Calendar, User, Eye, Loader2, FileImage, FileSpreadsheet, Paperclip } from 'lucide-react';
 import { DocumentData, getDocuments, uploadDocument, deleteDocument, getDocumentDownloadUrl, getDocumentSignedUrl, getToken } from '@/utils/api';
 import { toast } from '@/lib/toast';
 
@@ -12,11 +12,11 @@ function formatSize(bytes: number): string {
 }
 
 function fileIcon(type: string) {
-  if (type?.includes('pdf')) return '📄';
-  if (type?.includes('word') || type?.includes('doc')) return '📝';
-  if (type?.includes('sheet') || type?.includes('excel') || type?.includes('xls')) return '📊';
-  if (type?.includes('image')) return '🖼️';
-  return '📎';
+  if (type?.includes('pdf')) return FileText;
+  if (type?.includes('word') || type?.includes('doc')) return FileText;
+  if (type?.includes('sheet') || type?.includes('excel') || type?.includes('xls')) return FileSpreadsheet;
+  if (type?.includes('image')) return FileImage;
+  return Paperclip;
 }
 
 const DOCUMENT_TYPES = ['SLA', 'Proposal', 'Contract', 'NDA'];

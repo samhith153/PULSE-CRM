@@ -544,6 +544,39 @@ body::before {
   font-feature-settings: "tnum" 1;
 }
 
+/* ── Theme-aware scrollbars ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) var(--surface-1);
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-1);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 99px;
+  border: 2px solid var(--surface-1);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-disabled);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+:root:not(.dark) ::-webkit-scrollbar-thumb {
+  background: #C4C6CE;
+}
+:root:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: #9498A3;
+}
+:root:not(.dark) * {
+  scrollbar-color: #C4C6CE var(--surface-1);
+}
+
 /* Balanced headings to avoid awkward orphan/widow lines */
 h1, h2, h3 {
   text-wrap: balance;
@@ -2115,8 +2148,17 @@ input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
 input:-webkit-autofill:active {
   -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0px 1000px rgba(255, 255, 255, 0.05) inset !important;
+  -webkit-box-shadow: 0 0 0px 1000px rgba(2, 6, 23, 0.92) inset !important;
   caret-color: #ffffff !important;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+/* ── Lead Management section (dark-styled block) ── */
+.lead-mgmt-section .overflow-hidden.rounded-xl:not(aside):not(aside *),
+.lead-mgmt-section .overflow-hidden.rounded-2xl:not(aside):not(aside *) {
+  background-color: var(--color-slate-950) !important;
+  box-shadow: var(--shadow-card) !important;
+  border: 1px solid var(--color-gray-800) !important;
+  transition: box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 

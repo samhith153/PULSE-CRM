@@ -1,5 +1,5 @@
-import DashboardShell from '@/components/dashboard/DashboardShell';
+import PipelineView from "@/components/dashboard/PipelineView";
 
 export default function DealsPage() {
-  return <DashboardShell requiredRole="sales_rep" defaultTab="deals" />;
+  return <PipelineView />;
 }

@@ -43,6 +43,8 @@ const EMPTY_CONTACTS: ContactItem[] = [];
 interface ContactsViewProps {
   onLoaded?: () => void;
   onTabChange?: (tab: string) => void;
+  /** Deep-link support: /dashboard/contacts/[id] pre-selects this contact. */
+  openContactId?: string | number;
   onComposeEmail?: (target: { 
     to: string; 
     name?: string; 
@@ -55,7 +57,7 @@ interface ContactsViewProps {
   }) => void;
 }
 
-export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: ContactsViewProps = {}) {
+export default function ContactsView({ onLoaded, onTabChange, onComposeEmail, openContactId }: ContactsViewProps = {}) {
   const router = useRouter();
   const [contacts, setContacts] = useState<ContactItem[]>(EMPTY_CONTACTS);
   const [loading, setLoading] = useState(true);
@@ -85,9 +87,13 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
         setContacts(data as any);
         setLoading(false);
         onLoaded?.();
+        // Deep-link id takes priority over the cross-page localStorage handoff.
         const storedId = localStorage.getItem('pulse-selected-contact-id');
-        if (storedId) {
-          const match = data.find((c: any) => String(c.id) === storedId);
+        const targetId = openContactId != null
+          ? String(openContactId).replace(/^contact_/, '')
+          : storedId;
+        if (targetId) {
+          const match = data.find((c: any) => String(c.id) === targetId);
           if (match) {
             setSelectedId(match.id);
             localStorage.removeItem('pulse-selected-contact-id');
@@ -98,7 +104,7 @@ export default function ContactsView({ onLoaded, onTabChange, onComposeEmail }: 
       if (!cancelled) setLoading(false);
     });
     return () => { cancelled = true; };
-  }, []);
+  }, [openContactId]);
 
   const active = selectedId ? contacts.find(c => c.id === selectedId) || null : null;
 

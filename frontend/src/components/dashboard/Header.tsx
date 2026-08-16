@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
-  Search, Bell, Plus, Menu,
-  TrendingUp, User, ShieldAlert, Settings, LogOut,
-  Sun, Moon, UserPlus, Mail, Zap
+  Search, Bell, Menu,
+  TrendingUp, User, LogOut,
+  Sun, Moon, UserPlus, Mail
 } from 'lucide-react';
 import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -15,7 +15,6 @@ import { cn } from '@/lib/utils';
 interface HeaderProps {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-  onNewReportClick: () => void;
   onTabChange?: (tab: string) => void;
   onOpenCommandPalette?: () => void;
   onSignOut?: () => void;
@@ -25,7 +24,6 @@ interface HeaderProps {
 export default function Header({
   collapsed,
   setCollapsed,
-  onNewReportClick,
   onTabChange,
   onOpenCommandPalette,
   onSignOut,
@@ -36,9 +34,13 @@ export default function Header({
   const [syncSeconds, setSyncSeconds] = useState(2);
   const [isSyncing, setIsSyncing] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>(
-    () => (typeof document !== 'undefined'
-      ? (document.documentElement.classList.contains('dark') ? 'dark' : 'light')
-      : 'dark')
+    () => {
+      if (typeof document === 'undefined') return 'light';
+      const stored = localStorage.getItem('pulse-crm-theme');
+      if (stored === 'light' || stored === 'dark') return stored;
+      // default to light if no preference, but respect current page theme
+      return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+    }
   );
 
   const notifRef = useRef<HTMLDivElement>(null);
@@ -53,8 +55,14 @@ export default function Header({
   const profileInitials = userInitials(currentUser?.full_name);
 
   useEffect(() => {
-    const savedTheme = (localStorage.getItem('pulse-crm-theme') as 'light' | 'dark') || 'dark';
-    setTheme(savedTheme);
+    function handleClickOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node))
+        setShowNotifications(false);
+      if (profileRef.current && !profileRef.current.contains(e.target as Node))
+        setShowProfileMenu(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -85,12 +93,15 @@ export default function Header({
   // Ctrl+K listener is handled in DashboardShell (parent) to avoid duplicates.
 
   const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setTheme(next);
-    localStorage.setItem('pulse-crm-theme', next);
-    document.documentElement.setAttribute('data-theme', next);
-    if (next === 'dark') document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('pulse-crm-theme', newTheme);
+    document.documentElement.setAttribute('data-theme', newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   };
 
   const btn = cn(

@@ -13,7 +13,9 @@ import {
   Check, 
   Bot, 
   User,
-  ArrowRight
+  ArrowRight,
+  Zap,
+  BarChart3
 } from 'lucide-react';
 import { getLeads, getDeals, Lead } from '@/utils/api';
 
@@ -351,16 +353,17 @@ Sales Manager, Pulse CRM`;
           {/* Quick Actions Shortcuts Selector */}
           <div className="px-4 py-2 border-t border-border-default flex space-x-2 overflow-x-auto shrink-0 bg-surface-2/40 scrollbar-none">
             {[
-              { label: '📊 Pipeline Health', text: 'Pipeline Health' },
-              { label: '⚡ Recommendations', text: 'Lead recommendations' },
-              { label: '📧 Draft Email', text: 'Draft follow-up email' }
+              { icon: BarChart3, label: 'Pipeline Health', text: 'Pipeline Health' },
+              { icon: Zap, label: 'Recommendations', text: 'Lead recommendations' },
+              { icon: Mail, label: 'Draft Email', text: 'Draft follow-up email' }
             ].map((btn) => (
               <button
                 key={btn.text}
                 onClick={() => triggerShortcut(btn.text)}
-                className="py-1 px-2.5 bg-surface-1 border border-border-default hover:border-accent-color hover:text-accent-color rounded-full text-[10px] font-bold transition whitespace-nowrap cursor-pointer "
+                className="py-1 px-2.5 bg-surface-1 border border-border-default hover:border-accent-color hover:text-accent-color rounded-full text-[10px] font-bold transition whitespace-nowrap cursor-pointer inline-flex items-center gap-1.5"
               >
-                {btn.label}
+                <btn.icon className="h-3 w-3 shrink-0" />
+                <span>{btn.label}</span>
               </button>
             ))}
           </div>

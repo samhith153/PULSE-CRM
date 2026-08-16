@@ -1,6 +1,6 @@
 ﻿import { toast } from '@/lib/toast';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').trim().replace(/\/+$/, '');
+export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').trim().replace(/\/+$/, '');
 const TOKEN_KEY = 'pulse-crm-token';
 const REFRESH_TOKEN_KEY = 'pulse-crm-refresh-token';
 
@@ -573,6 +573,7 @@ export interface WorkflowTaskItem {
   current_stage?: string | null;
   status: string;
   stall_count: number;
+  step_order?: number;
   due_at: string;
   completed_at?: string | null;
   created_at?: string;

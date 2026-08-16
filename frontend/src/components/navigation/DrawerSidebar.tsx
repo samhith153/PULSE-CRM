@@ -5,7 +5,7 @@ import SidebarItem from './SidebarItem';
 interface SidebarSection {
   id: string;
   label: string;
-  icon: React.ElementType;
+  icon: React.ComponentType<any>;
 }
 
 interface DrawerSidebarProps {

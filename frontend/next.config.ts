@@ -86,8 +86,14 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Legacy deep-link entry points, superseded by their /dashboard routes.
   async redirects() {
-    return [];
+    return [
+      { source: '/activities/:id*', destination: '/dashboard/activities/:id*', permanent: false },
+      { source: '/reports/admin', destination: '/dashboard/reports', permanent: false },
+      { source: '/reports/manager', destination: '/dashboard/reports', permanent: false },
+      { source: '/reports', destination: '/dashboard/reports', permanent: false },
+    ];
   },
 
   // Proxy API calls through the frontend origin (same-origin).
