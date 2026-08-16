@@ -17,7 +17,7 @@ import {
   Zap,
   BarChart3
 } from 'lucide-react';
-import { getLeads, getDeals, Lead } from '@/utils/api';
+import { getLeads, getDeals, getAuthHeaders, Lead } from '@/utils/api';
 
 interface DealItem {
   id: string;
@@ -167,20 +167,90 @@ Sales Manager, Pulse CRM`;
     }, 1500);
   };
 
-  const handleSendMessage = (textToSend: string) => {
-    if (!textToSend.trim()) return;
-
-    const userMessage: Message = {
+  const sendStreamingMessage = async (userText: string) => {
+    const userMsg: Message = {
       id: Math.random().toString(),
       sender: 'user',
-      text: textToSend,
+      text: userText,
       timestamp: new Date(),
       type: 'text'
     };
+    setMessages(prev => [...prev, userMsg]);
+    setIsTyping(true);
 
-    setMessages(prev => [...prev, userMessage]);
+    const aiMsgId = Math.random().toString();
+    setMessages(prev => [...prev, {
+      id: aiMsgId,
+      sender: 'ai',
+      text: '',
+      timestamp: new Date(),
+      type: 'text'
+    }]);
+
+    try {
+      const response = await fetch('/api/v1/assistant/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ message: userText }),
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.token) {
+                setMessages(prev => prev.map(m =>
+                  m.id === aiMsgId
+                    ? { ...m, text: m.text + data.token }
+                    : m
+                ));
+              }
+              if (data.error) {
+                setMessages(prev => prev.map(m =>
+                  m.id === aiMsgId
+                    ? { ...m, text: `Error: ${data.error}` }
+                    : m
+                ));
+              }
+            } catch {
+              // skip malformed JSON lines
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Stream error, falling back to simulation:', err);
+      // Remove the empty AI message, then fall back to simulation
+      setMessages(prev => prev.filter(m => m.id !== aiMsgId));
+      setIsTyping(false);
+      simulateBotReply(userText);
+      return;
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const handleSendMessage = (textToSend: string) => {
+    if (!textToSend.trim()) return;
     setInputValue('');
-    simulateBotReply(textToSend);
+    sendStreamingMessage(textToSend);
   };
 
   const triggerShortcut = (actionText: string) => {

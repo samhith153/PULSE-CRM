@@ -6,6 +6,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { DashboardLayoutProvider } from './DashboardLayoutContext';
@@ -221,7 +222,7 @@ export default function DashboardAppProvider({
     router.push('/login');
   }, [router]);
 
-  const value: DashboardAppContextValue = {
+  const value: DashboardAppContextValue = useMemo(() => ({
     authorized,
     userRole,
     activeTab,
@@ -243,7 +244,13 @@ export default function DashboardAppProvider({
     toggleCollapsed,
     dashboardData: dashboardOverview.data,
     refetchDashboard,
-  };
+  }), [
+    authorized, userRole, activeTab, navigateToTab, openEmailCompose,
+    composeTarget, consumeCompose, isReportModalOpen, openReportModal,
+    closeReportModal, isCommandPaletteOpen, openCommandPalette,
+    closeCommandPalette, isCustomizerOpen, openCustomizer, closeCustomizer,
+    signOut, collapsed, toggleCollapsed, dashboardOverview.data, refetchDashboard,
+  ]);
 
   return (
     <DashboardAppContext.Provider value={value}>

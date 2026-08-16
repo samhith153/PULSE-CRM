@@ -294,6 +294,51 @@ class ConversationIntelligenceService:
 
     # ── Row → ConversationItem ────────────────────────────────────────────────
 
+    def _build_item_from_row(self, row: dict, conv_type: str, sig: dict) -> ConversationItem:
+        """Build a ConversationItem from a row dict and pre-fetched signals (no DB calls)."""
+        text = (
+            (row.get("description") or "")
+            + " " + (row.get("body_preview") or "")
+            + " " + (row.get("title") or row.get("subject") or "")
+        )
+        buying  = _scan_buying(text)
+        objects_ = _scan_objections(text)
+        actions = _scan_actions(text)
+
+        eng_score, eng_comp = self._engagement_score(sig)
+        qua_score, qua_comp = self._quality_score(sig, buying, objects_, actions)
+        summary = self._build_summary(row, buying, objects_)
+        recs = self._recommendations(
+            eng_score, qua_score, buying, objects_, actions,
+            sig["days_since_last"],
+        )
+
+        return ConversationItem(
+            id=row["id"],
+            type=conv_type,
+            title=row.get("title") or row.get("subject") or conv_type,
+            date=row.get("created_at") or row.get("sent_at"),
+            owner=row.get("owner_name"),
+            owner_id=row.get("created_by") or row.get("owner_id"),
+            related_lead=row.get("lead_name"),
+            related_lead_id=row.get("lead_id"),
+            related_deal=row.get("deal_name"),
+            related_deal_id=row.get("deal_id"),
+            related_company=row.get("company_name"),
+            related_contact=(
+                f"{row.get('contact_first','')} {row.get('contact_last','')}".strip() or None
+            ),
+            summary=summary,
+            engagement_score=eng_score,
+            quality_score=qua_score,
+            health_status=_health_status(min(eng_score, qua_score)),
+            buying_signals=buying,
+            objections=objects_,
+            action_items=actions,
+            recommendations=recs,
+            description=row.get("description") or row.get("body_preview"),
+        )
+
     async def _to_item(self, row: dict, conv_type: str) -> ConversationItem:
         entity_id   = row.get("lead_id") or row.get("deal_id") or row.get("id")
         entity_type = "lead" if row.get("lead_id") else "deal" if row.get("deal_id") else "system"
@@ -376,7 +421,11 @@ class ConversationIntelligenceService:
         skip_email = conversation_type and conversation_type.lower() not in ("email",)
         skip_act   = conversation_type and conversation_type.lower() == "email"
 
-        items = []
+        # Fetch a bounded batch from each source instead of ALL rows.
+        # We fetch page_size * 3 to have enough for sorting + pagination after merge.
+        fetch_limit = page_size * 3
+
+        raw_items: list[tuple[dict, str]] = []
 
         if not skip_act:
             act_rows = await self.repo.fetch_activity_conversations(
@@ -384,16 +433,18 @@ class ConversationIntelligenceService:
                 conversation_type=conversation_type,
                 lead_id=lead_id, company_id=company_id, deal_id=deal_id,
                 date_from=date_from, date_to=date_to,
+                limit=fetch_limit,
             )
             for r in act_rows:
                 r["organization_id"] = org_id
-                items.append(await self._to_item(r, _conv_type(r["action"])))
+                raw_items.append((r, _conv_type(r["action"])))
 
         if not skip_email:
             email_rows = await self.repo.fetch_email_conversations(
                 org_id, user_id, team_ids,
                 lead_id=lead_id, company_id=company_id, deal_id=deal_id,
                 date_from=date_from, date_to=date_to,
+                limit=fetch_limit,
             )
             for r in email_rows:
                 r["organization_id"] = org_id
@@ -401,7 +452,29 @@ class ConversationIntelligenceService:
                 r["title"] = r.get("subject")
                 r["description"] = r.get("body_preview")
                 r["created_at"] = r.get("sent_at")
-                items.append(await self._to_item(r, "Email"))
+                raw_items.append((r, "Email"))
+
+        # Batch-fetch entity signals for all unique entities (eliminates N+1)
+        entities = []
+        for r, _ in raw_items:
+            eid = r.get("lead_id") or r.get("deal_id") or r.get("id")
+            if eid:
+                etype = "lead" if r.get("lead_id") else "deal" if r.get("deal_id") else "system"
+                entities.append((eid, etype))
+        unique_entities = list({eid: etype for eid, etype in entities}.items())
+        signals_map = await self.repo.get_entity_signals_batch(org_id, unique_entities)
+
+        # Build items with pre-fetched signals
+        items = []
+        for r, conv_type in raw_items:
+            entity_id = r.get("lead_id") or r.get("deal_id") or r.get("id")
+            sig = signals_map.get(entity_id, {
+                "calls": 0, "meetings": 0, "meetings_attended": 0,
+                "meetings_cancelled": 0, "notes": 0, "recent_acts": 0,
+                "email_total": 0, "email_replies": 0, "days_since_last": 999,
+                "last_activity_at": None,
+            })
+            items.append(self._build_item_from_row(r, conv_type, sig))
 
         items.sort(key=lambda x: x.date or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
 
@@ -424,15 +497,26 @@ class ConversationIntelligenceService:
         user_id, team_ids = await self._scope(user)
         org_id = user.organization_id
 
-        # Try activity first
-        act_rows = await self.repo.fetch_activity_conversations(org_id, user_id, team_ids)
-        row = next((r for r in act_rows if r["id"] == conversation_id), None)
+        # Try activity first — single-row fetch by ID (no full-table scan)
+        row = await self.repo.fetch_activity_conversation_by_id(
+            org_id, user_id, team_ids, conversation_id,
+        )
         if row:
             row["organization_id"] = org_id
-            item = await self._to_item(row, _conv_type(row["action"]))
+            entity_id = row.get("lead_id") or row.get("deal_id") or row.get("id")
+            entity_type = "lead" if row.get("lead_id") else "deal" if row.get("deal_id") else "system"
+            sig = await self.repo.get_entity_signals(org_id, entity_id, entity_type) if entity_id else {
+                "calls": 0, "meetings": 0, "meetings_attended": 0,
+                "meetings_cancelled": 0, "notes": 0, "recent_acts": 0,
+                "email_total": 0, "email_replies": 0, "days_since_last": 999,
+                "last_activity_at": None,
+            }
+            item = self._build_item_from_row(row, _conv_type(row["action"]), sig)
         else:
-            email_rows = await self.repo.fetch_email_conversations(org_id, user_id, team_ids)
-            row = next((r for r in email_rows if r["id"] == conversation_id), None)
+            # Try email — single-row fetch by ID
+            row = await self.repo.fetch_email_conversation_by_id(
+                org_id, user_id, team_ids, conversation_id,
+            )
             if not row:
                 from app.core.exceptions import NotFoundException
                 raise NotFoundException("Conversation", conversation_id)
@@ -441,7 +525,15 @@ class ConversationIntelligenceService:
             row["title"] = row.get("subject")
             row["description"] = row.get("body_preview")
             row["created_at"] = row.get("sent_at")
-            item = await self._to_item(row, "Email")
+            entity_id = row.get("lead_id") or row.get("deal_id") or row.get("id")
+            entity_type = "lead" if row.get("lead_id") else "deal" if row.get("deal_id") else "system"
+            sig = await self.repo.get_entity_signals(org_id, entity_id, entity_type) if entity_id else {
+                "calls": 0, "meetings": 0, "meetings_attended": 0,
+                "meetings_cancelled": 0, "notes": 0, "recent_acts": 0,
+                "email_total": 0, "email_replies": 0, "days_since_last": 999,
+                "last_activity_at": None,
+            }
+            item = self._build_item_from_row(row, "Email", sig)
 
         # Build timeline for entity
         entity_id = item.related_lead_id or item.related_deal_id

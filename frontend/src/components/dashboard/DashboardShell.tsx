@@ -5,11 +5,13 @@ import { useDashboardApp } from '@/components/dashboard/DashboardAppContext';
 import { useDashboardLayout } from '@/components/dashboard/DashboardLayoutContext';
 import Sidebar from '@/components/dashboard/Sidebar';
 import Header from '@/components/dashboard/Header';
-import ReportBuilderModal from '@/components/dashboard/ReportBuilderModal';
-import CommandPalette from '@/components/dashboard/CommandPalette';
-import AICopilotChat from '@/components/dashboard/AICopilotChat';
-import DashboardCustomizer from '@/components/dashboard/DashboardCustomizer';
+import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
+
+const ReportBuilderModal = dynamic(() => import('@/components/dashboard/ReportBuilderModal'), { ssr: false });
+const CommandPalette = dynamic(() => import('@/components/dashboard/CommandPalette'), { ssr: false });
+const AICopilotChat = dynamic(() => import('@/components/dashboard/AICopilotChat'), { ssr: false });
+const DashboardCustomizer = dynamic(() => import('@/components/dashboard/DashboardCustomizer'), { ssr: false });
 
 /**
  * Dashboard shell — the persistent chrome around every dashboard route.

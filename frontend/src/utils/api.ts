@@ -59,6 +59,42 @@ function cachedGet<T>(endpoint: string, ttlMs = _CACHE_TTL_MS): Promise<T> {
   return p;
 }
 
+// ── Entity list cache (leads, contacts, companies, deals) ──────────────────
+// These lists are fetched on every tab navigation. A short cache prevents
+// redundant refetches while keeping data fresh after mutations (which call
+// invalidateEntityCache).
+
+const _entityCache = new Map<string, { t: number; p: Promise<unknown> }>();
+const _ENTITY_CACHE_TTL_MS = 30_000; // 30 seconds
+
+function cachedEntityList<T>(endpoint: string, ttlMs = _ENTITY_CACHE_TTL_MS): Promise<T> {
+  const hit = _entityCache.get(endpoint);
+  if (hit && Date.now() - hit.t < ttlMs) return hit.p as Promise<T>;
+  const p = apiFetch<T>(endpoint);
+  _entityCache.set(endpoint, { t: Date.now(), p });
+  p.catch(() => {
+    if (_entityCache.get(endpoint)?.p === p) _entityCache.delete(endpoint);
+  });
+  return p;
+}
+
+/**
+ * Invalidate cached entity lists whose endpoint contains `pattern`.
+ * Called after create/update/delete mutations to ensure fresh data on
+ * the next navigation.
+ */
+export function invalidateEntityCache(pattern?: string): void {
+  if (!pattern) {
+    _entityCache.clear();
+    return;
+  }
+  for (const key of _entityCache.keys()) {
+    if (key.includes(pattern)) {
+      _entityCache.delete(key);
+    }
+  }
+}
+
 async function _tryRefresh(): Promise<boolean> {
   const rt = getRefreshToken();
   if (!rt) return false;
@@ -442,7 +478,7 @@ async function _apiFetchInner<T>(endpoint: string, options?: RequestInit, _retry
 
 // --- Leads API ---
 export async function getLeads(): Promise<Lead[]> {
-  const dbResult = await apiFetch<any>('/api/v1/leads');
+  const dbResult = await cachedEntityList<any>('/api/v1/leads');
   const items: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return items.map((dl: any) => ({
     ...dl,
@@ -459,28 +495,35 @@ export async function getLead(leadId: string): Promise<Lead> {
 }
 
 export async function createLead(leadData: Record<string, unknown>): Promise<Lead> {
-  return apiFetch<Lead>('/api/v1/leads', {
+  const result = await apiFetch<Lead>('/api/v1/leads', {
     method: 'POST',
     body: JSON.stringify(leadData)
   });
+  invalidateEntityCache('leads');
+  return result;
 }
 
 export async function updateLead(leadId: string, leadData: Record<string, unknown>): Promise<Lead> {
-  return apiFetch<Lead>(`/api/v1/leads/${leadId}`, {
+  const result = await apiFetch<Lead>(`/api/v1/leads/${leadId}`, {
     method: 'PUT',
     body: JSON.stringify(leadData)
   });
+  invalidateEntityCache('leads');
+  return result;
 }
 
 export async function updateLeadStatus(leadId: string, status: string, closeReason?: string): Promise<Lead> {
-  return apiFetch<Lead>(`/api/v1/leads/${leadId}/status`, {
+  const result = await apiFetch<Lead>(`/api/v1/leads/${leadId}/status`, {
     method: 'PATCH',
     body: JSON.stringify({ status, close_reason: closeReason || undefined })
   });
+  invalidateEntityCache('leads');
+  return result;
 }
 
 export async function deleteLead(leadId: string): Promise<void> {
   await apiFetch<void>(`/api/v1/leads/${leadId}`, { method: 'DELETE' });
+  invalidateEntityCache('leads');
 }
 
 // --- Recycle Bin (admin-only purge of soft-deleted leads) ---
@@ -708,7 +751,7 @@ export async function convertLead(
 
 // --- Contacts API ---
 export async function getContacts(): Promise<Contact[]> {
-  const dbResult = await apiFetch<any>('/api/v1/contacts');
+  const dbResult = await cachedEntityList<any>('/api/v1/contacts');
   const dbContacts: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbContacts.map((dc: any) => ({
     id: dc.id,
@@ -726,26 +769,31 @@ export async function getContacts(): Promise<Contact[]> {
 }
 
 export async function createContact(contactData: any): Promise<any> {
-  return apiFetch('/api/v1/contacts', {
+  const result = await apiFetch('/api/v1/contacts', {
     method: 'POST',
     body: JSON.stringify(contactData)
   });
+  invalidateEntityCache('contacts');
+  return result;
 }
 
 export async function updateContact(contactId: string | number, contactData: any): Promise<any> {
-  return apiFetch(`/api/v1/contacts/${contactId}`, {
+  const result = await apiFetch(`/api/v1/contacts/${contactId}`, {
     method: 'PUT',
     body: JSON.stringify(contactData)
   });
+  invalidateEntityCache('contacts');
+  return result;
 }
 
 export async function deleteContact(contactId: string | number): Promise<void> {
   await apiFetch(`/api/v1/contacts/${contactId}`, { method: 'DELETE' });
+  invalidateEntityCache('contacts');
 }
 
 // --- Companies API ---
 export async function getCompanies(): Promise<Company[]> {
-  const dbResult = await apiFetch<any>('/api/v1/companies');
+  const dbResult = await cachedEntityList<any>('/api/v1/companies');
   const dbCompanies: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbCompanies.map((dc, idx) => {
     return {
@@ -767,26 +815,33 @@ export async function getCompanies(): Promise<Company[]> {
 }
 
 export async function createCompany(companyData: any): Promise<any> {
-  return apiFetch('/api/v1/companies', {
+  const result = await apiFetch('/api/v1/companies', {
     method: 'POST',
     body: JSON.stringify(companyData)
   });
+  invalidateEntityCache('companies');
+  return result;
 }
 
 export async function updateCompany(companyId: string | number, companyData: any): Promise<any> {
-  return apiFetch(`/api/v1/companies/${companyId}`, {
+  const result = await apiFetch(`/api/v1/companies/${companyId}`, {
     method: 'PUT',
     body: JSON.stringify(companyData)
   });
+  invalidateEntityCache('companies');
+  return result;
 }
 
 export async function deleteCompany(companyId: string | number): Promise<void> {
   await apiFetch(`/api/v1/companies/${companyId}`, { method: 'DELETE' });
+  invalidateEntityCache('companies');
 }
 
 // --- Deals API ---
-export async function getDeals(): Promise<Deal[]> {
-  const dbResult = await apiFetch<any>('/api/v1/deals');
+export async function getDeals(forceRefresh = false): Promise<Deal[]> {
+  const dbResult = forceRefresh
+    ? await apiFetch<any>('/api/v1/deals?page_size=100')
+    : await cachedEntityList<any>('/api/v1/deals?page_size=100');
   const dbDeals: any[] = Array.isArray(dbResult) ? dbResult : (dbResult?.data ?? []);
   return dbDeals.map((dd) => ({
     ...dd,
@@ -805,7 +860,7 @@ export async function updateDealStage(
   stageId: string,
   closeReason?: string
 ): Promise<any> {
-  return apiFetch(`/api/v1/pipeline/move`, {
+  const result = await apiFetch(`/api/v1/pipeline/move`, {
     method: 'PATCH',
     body: JSON.stringify({
       deal_id: dealId,
@@ -813,24 +868,31 @@ export async function updateDealStage(
       ...(closeReason ? { close_reason: closeReason } : {}),
     }),
   });
+  invalidateEntityCache('deals');
+  return result;
 }
 
 export async function createDeal(dealData: any): Promise<any> {
-  return apiFetch('/api/v1/deals', {
+  const result = await apiFetch('/api/v1/deals', {
     method: 'POST',
     body: JSON.stringify(dealData)
   });
+  invalidateEntityCache('deals');
+  return result;
 }
 
 export async function updateDeal(dealId: string | number, dealData: any): Promise<any> {
-  return apiFetch(`/api/v1/deals/${dealId}`, {
+  const result = await apiFetch(`/api/v1/deals/${dealId}`, {
     method: 'PUT',
     body: JSON.stringify(dealData)
   });
+  invalidateEntityCache('deals');
+  return result;
 }
 
 export async function deleteDeal(dealId: string | number): Promise<void> {
   await apiFetch(`/api/v1/deals/${dealId}`, { method: 'DELETE' });
+  invalidateEntityCache('deals');
 }
 
 export async function getPipelineStages(): Promise<any[]> {

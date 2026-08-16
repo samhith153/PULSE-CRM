@@ -7,7 +7,7 @@ services:
     plan: free
     region: oregon
     buildCommand: pip install -r requirements.txt
-    startCommand: "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /api/v1/health
     rootDir: backend
     envVars:
@@ -128,6 +128,26 @@ services:
         value: uploads
       - key: MAX_UPLOAD_SIZE_BYTES
         value: "10485760"
+
+  # ── DB Migration (run manually after deploys with new migrations) ────────
+  - type: job
+    name: pulse-crm-migrate
+    runtime: python
+    repo: https://github.com/samhith153/PULSE-CRM
+    plan: free
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: "alembic upgrade head"
+    rootDir: backend
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
 
   # ── AI Service ───────────────────────────────────────────────────────────
   - type: web

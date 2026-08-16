@@ -92,8 +92,11 @@ class CompanyRepository(BaseRepository[Company]):
         search: Optional[str],
         page: int,
         page_size: int,
+        owner_id: Optional[UUID] = None,
     ) -> Tuple[List[Company], int]:
         stmt = self._base_query(organization_id)
+        if owner_id:
+            stmt = stmt.where(Company.owner_id == owner_id)
         if search:
             term = f"%{search.lower()}%"
             stmt = stmt.where(

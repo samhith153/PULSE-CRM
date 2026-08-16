@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from groq import Groq, GroqError
 
 from app.api.deps import CurrentUser, require_permission
@@ -286,4 +287,78 @@ Never include <script>, <img>, <a>, or any HTML elements in your response.
     return AssistantChatResponse(
         response=response_text,
         suggestions=suggestions,
+    )
+
+
+@router.post(
+    "/chat/stream",
+    status_code=status.HTTP_200_OK,
+    summary="Stream chat with PULSE Assistant (SSE)",
+)
+async def chat_stream(
+    payload: AssistantChatRequest,
+    current_user: CurrentUser,
+):
+    """Stream LLM response token-by-token via Server-Sent Events.
+
+    The existing /chat endpoint returns the full response at once.
+    This endpoint streams tokens as they are generated for lower perceived latency.
+    Falls back to the non-streaming path if streaming fails.
+    """
+    _load_knowledge_base()
+
+    client = _get_client()
+
+    context_str = _build_context_prompt(payload.user_role, payload.context)
+    kb_str = _format_knowledge_base()
+
+    system_message = f"""{_system_prompt}
+
+## User Context
+{context_str}
+
+## PULSE CRM Knowledge Base
+{kb_str}
+
+IMPORTANT: Respond in plain text only. Do NOT use HTML tags, markdown bold/italic,
+or any markup. Use natural paragraphs and bullet points with plain text formatting.
+Never include <script>, <img>, <a>, or any HTML elements in your response.
+"""
+
+    async def event_generator():
+        try:
+            # Use Groq's streaming mode via to_thread (sync SDK)
+            stream = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.chat.completions.create,
+                    model=settings.ASSISTANT_MODEL,
+                    messages=[
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": payload.message},
+                    ],
+                    temperature=0.3,
+                    max_tokens=800,
+                    stream=True,
+                ),
+                timeout=settings.AI_TIMEOUT + 5,
+            )
+            for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    token = chunk.choices[0].delta.content
+                    yield f"data: {json.dumps({'token': token})}\n\n"
+        except asyncio.TimeoutError:
+            yield f"data: {json.dumps({'error': 'AI response timed out'})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        finally:
+            yield f"data: {json.dumps({'done': True})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

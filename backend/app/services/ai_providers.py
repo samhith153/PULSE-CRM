@@ -80,6 +80,7 @@ class FeatureExtractionService:
                 "has_owner": bool(lead.owner_id),
                 "industry": lead.industry,
                 "current_crm": lead.current_crm,
+                "operational_system": lead.operational_systems,
                 "email_count": len(emails),
                 "read_email_count": sum(1 for email in emails if email.is_read),
                 "email_open_count": sum(getattr(email, "email_open_count", 0) for email in emails),
@@ -166,9 +167,62 @@ class RuleBasedScorer:
             score -= 8
             factors.append("No email engagement recorded yet.")
 
-        if values.get("current_crm"):
-            score += 5
-            factors.append("Current CRM data reveals migration potential.")
+        # ── Buying stage scoring (mirrors ai-service engagement_score.py) ──
+        _stage = str(values.get("current_stage") or "").strip().lower()
+        _stage_bonus = {
+            "new": 0, "contacted": 5, "qualified": 10,
+            "proposal_sent": 15, "negotiation": 20,
+            "won": 25, "lost": -15,
+        }.get(_stage, 0)
+        score += _stage_bonus
+        if _stage_bonus != 0:
+            factors.append(f"Buying stage '{_stage}' contributes {_stage_bonus:+d} points.")
+        elif _stage:
+            factors.append(f"Buying stage '{_stage}' has no special bonus.")
+
+        # ── Software gap: current CRM quality scoring (mirrors ai-service fit_score_rules.py) ──
+        _crm = str(values.get("current_crm") or "").strip().lower()
+        if not _crm or _crm in ("no crm", ""):
+            crm_score = 100
+            factors.append("No CRM in use — high migration potential (software gap score: 100).")
+        elif _crm in ("excel", "google sheets", "manual", "spreadsheets", "whatsapp"):
+            crm_score = 95
+            factors.append(f"Using '{_crm}' as CRM — extremely high migration potential (score: 95).")
+        elif "basic" in _crm:
+            crm_score = 80
+            factors.append(f"Using basic CRM '{_crm}' — strong migration potential (score: 80).")
+        elif _crm in ("hubspot", "zoho", "pipedrive", "freshsales", "close"):
+            crm_score = 60
+            factors.append(f"Using '{_crm}' — moderate migration potential (score: 60).")
+        elif _crm in ("salesforce", "dynamics", "oracle", "sap"):
+            crm_score = 30
+            factors.append(f"Using enterprise CRM '{_crm}' — lower migration potential (score: 30).")
+        elif "custom" in _crm:
+            crm_score = 15
+            factors.append(f"Using custom software — low migration potential (score: 15).")
+        else:
+            crm_score = 50
+            factors.append(f"Using '{_crm}' — moderate migration potential (score: 50).")
+        score += round(crm_score * 0.30)
+
+        # ── Operational system maturity scoring (mirrors ai-service fit_score_rules.py) ──
+        _ops = str(values.get("operational_system") or "").strip().lower()
+        if not _ops or "no structured" in _ops:
+            ops_score = 90
+            factors.append("No structured operational system — high opportunity (score: 90).")
+        elif _ops in ("excel", "google sheets", "manual", "spreadsheets"):
+            ops_score = 80
+            factors.append(f"Operational system is '{_ops}' — high opportunity (score: 80).")
+        elif _ops in ("crm", "erp", "structured business software"):
+            ops_score = 50
+            factors.append(f"Using structured '{_ops}' — moderate opportunity (score: 50).")
+        elif "custom" in _ops:
+            ops_score = 20
+            factors.append(f"Using custom operational software — lower opportunity (score: 20).")
+        else:
+            ops_score = 40
+            factors.append(f"Operational system '{_ops}' — moderate opportunity (score: 40).")
+        score += round(ops_score * 0.20)
 
         bounded = max(0, min(100, score))
         confidence = min(95, 45 + len(factors) * 7)

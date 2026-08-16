@@ -130,6 +130,7 @@ async def run_lead_assessment(
     created_by: UUID,
     trigger: str = "lead_updated",
     intent: Optional[str] = None,
+    lead_overrides: Optional[dict] = None,
 ) -> Optional[dict]:
     """
     End-to-end lead assessment: gather data → call ai-service → persist.
@@ -143,6 +144,10 @@ async def run_lead_assessment(
     trigger : str
         One of: lead_created, lead_updated, inbound_email,
         deal_stage_changed, daily_refresh
+    lead_overrides : dict, optional
+        Fresh field values from the just-applied update. When provided,
+        these are used instead of re-reading from DB (avoids stale reads
+        caused by the request session not yet committing).
 
     Returns
     -------
@@ -160,13 +165,24 @@ async def run_lead_assessment(
         return None
 
     # ── Fit data ────────────────────────────────────────────────
-    raw_data: dict = {
-        "lead_id": str(lead_id),
-        "employees": lead.employee_count,
-        "industry": lead.industry,
-        "current_crm": lead.current_crm,
-        "operational_system": lead.operational_systems,
-    }
+    # Use overrides when available (fresh data from the update call)
+    # to avoid the race condition where the PUT session hasn't committed yet.
+    if lead_overrides:
+        raw_data: dict = {
+            "lead_id": str(lead_id),
+            "employees": lead_overrides.get("employee_count") or lead.employee_count,
+            "industry": lead_overrides.get("industry") or lead.industry,
+            "current_crm": lead_overrides.get("current_crm") or lead.current_crm,
+            "operational_system": lead_overrides.get("operational_systems") or lead.operational_systems,
+        }
+    else:
+        raw_data = {
+            "lead_id": str(lead_id),
+            "employees": lead.employee_count,
+            "industry": lead.industry,
+            "current_crm": lead.current_crm,
+            "operational_system": lead.operational_systems,
+        }
 
     # ── Current stage (buying stage) ────────────────────────────────
     deal_repo = DealRepository(db)
@@ -226,8 +242,62 @@ async def run_lead_assessment(
         await ai_client.close()
 
     if not result:
-        logger.warning("[ASSESS_PIPELINE] AI service returned None for lead %s — raw payload was: %s", lead_id, raw_data)
-        return None
+        logger.warning("[ASSESS_PIPELINE] AI service unavailable for lead %s — falling back to local rule-based scoring", lead_id)
+        # Local fallback: use RuleBasedScorer when AI microservice is unreachable
+        try:
+            from app.services.ai_providers import RuleBasedScorer, FeatureExtractionService, FeatureSet
+            from app.models.lead import Lead as _Lead
+            from app.models.email import Email as _Email
+
+            local_scorer = RuleBasedScorer()
+            local_features = FeatureExtractionService()
+
+            # Fetch emails for feature extraction
+            email_svc = EmailStatsService(db)
+            email_stats_local = await email_svc.get_lead_email_stats(lead_id, organization_id)
+
+            # Build a minimal FeatureSet from lead fields
+            feature_values = {
+                "status": lead.status,
+                "source": lead.source,
+                "estimated_value": float(lead.estimated_value or 0),
+                "deal_value": deal_value or 0,
+                "has_company": bool(lead.company_id),
+                "has_contact": bool(lead.contact_id),
+                "has_owner": bool(lead.owner_id),
+                "industry": lead.industry,
+                "current_crm": lead.current_crm,
+                "operational_system": lead.operational_systems,
+                "current_stage": current_stage,
+                "email_count": email_stats_local["inbound_count"] + email_stats_local["initiated_count"],
+                "read_email_count": 0,
+                "email_open_count": 0,
+                "email_opened_no_reply_flag": False,
+            }
+            feature_set = FeatureSet(entity_type="lead", values=feature_values)
+            score_result = local_scorer.score_lead(lead, feature_set)
+
+            overall_score = score_result.score
+            # Tier logic (mirrors ai-service/app/rules/tier_rules.py)
+            if overall_score >= 70 and overall_score >= 70:
+                tier = "Critical"
+            elif overall_score >= 70 and overall_score >= 40:
+                tier = "High"
+            elif overall_score >= 40:
+                tier = "Medium"
+            else:
+                tier = "Low"
+            final_score = max(0, min(100, overall_score))
+
+            result = {
+                "fit": {"score": overall_score, "reasons": score_result.factors},
+                "engagement": {"score": overall_score, "reasons": ["Engagement computed locally (AI service unavailable)"]},
+                "overall": {"score": final_score, "tier": tier, "top_reasons": score_result.factors[:3]},
+            }
+            logger.info("[ASSESS_PIPELINE] Local fallback scoring: lead=%s score=%s tier=%s", lead_id, final_score, tier)
+        except Exception:
+            logger.exception("[ASSESS_PIPELINE] Local fallback scoring also failed for lead=%s", lead_id)
+            return None
 
     logger.info("[ASSESS_PIPELINE] AI service responded for lead=%s: fit=%s engagement=%s overall=%s tier=%s",
         lead_id,
@@ -253,6 +323,34 @@ async def run_lead_assessment(
         lead_id, organization_id, created_by, scores_data
     )
     logger.info("[ASSESS_PIPELINE] Lead scores upserted: id=%s", ls.id if ls else "None")
+
+    # ── Publish LEAD_SCORE_UPDATED SSE event ────────────────────
+    try:
+        from app.services.event_bus import event_bus as _sse_bus, EventEnvelope as _EE
+        from uuid import uuid4 as _uuid4
+        from datetime import datetime as _dt
+        asyncio.create_task(_sse_bus.publish(_EE(
+            event_id=_uuid4(),
+            organization_id=organization_id,
+            aggregate_type="lead",
+            aggregate_id=lead_id,
+            event_type="LEAD_SCORE_UPDATED",
+            topic="leads",
+            title="Lead Score Updated",
+            description=f"Score recomputed for lead {lead_id}",
+            payload={
+                "lead_id": str(lead_id),
+                "overall_score": scores_data["overall_score"],
+                "fit_score": scores_data["fit_score"],
+                "engagement_score": scores_data["engagement_score"],
+            },
+            source="ai_pipeline",
+            status="processed",
+            created_at=_dt.utcnow(),
+            actor_id=created_by,
+        )))
+    except Exception:
+        logger.debug("[ASSESS_PIPELINE] Failed to publish LEAD_SCORE_UPDATED SSE event", exc_info=True)
 
     # ── Persist ai_recommendation ───────────────────────────────
     rec = result.get("recommendation", {})
