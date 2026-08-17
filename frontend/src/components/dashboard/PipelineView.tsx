@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-
 import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR, invalidateEntityCache, getLeadScore } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import SkeletonLoader from './SkeletonLoader';

@@ -30,6 +30,39 @@ from app.utils.enums import DealStatus
 router = APIRouter()
 
 
+def _viewer_role(current_user) -> str:
+    """Resolve the caller's effective role (admin > manager > sales_rep)."""
+    roles = {ur.role.name for ur in current_user.user_roles if ur.role and ur.role.name}
+    if "admin" in roles:
+        return "admin"
+    if "manager" in roles:
+        return "manager"
+    return "sales_rep"
+
+
+async def _get_team_ids(db: AsyncSession, current_user) -> list[UUID] | None:
+    """Return user IDs for the manager's team, or None for admin (no filtering)."""
+    if _viewer_role(current_user) != "manager":
+        return None
+    stmt = (
+        select(User.id)
+        .select_from(User)
+        .join(UserRole, UserRole.user_id == User.id)
+        .join(Role, Role.id == UserRole.role_id)
+        .where(
+            User.manager_id == current_user.id,
+            User.organization_id == current_user.organization_id,
+            User.is_active.is_(True),
+            User.is_deleted.is_(False),
+            Role.name.in_(["sales_rep", "sales_representative"]),
+        )
+    )
+    result = await db.execute(stmt)
+    ids = [row[0] for row in result.all()]
+    ids.append(current_user.id)
+    return ids
+
+
 class RevenueByRep(BaseModel):
     rep_id: str
     rep_name: str
@@ -377,6 +410,7 @@ async def get_sales_performance(
 ) -> dict:
     org_id = current_user.organization_id
     start, end = _period_bounds(period)
+    team_ids = await _get_team_ids(db, current_user)
 
     stmt = (
         select(
@@ -394,6 +428,8 @@ async def get_sales_performance(
         .group_by(User.id, User.full_name)
         .order_by(func.coalesce(func.sum(Deal.amount), 0).desc())
     )
+    if team_ids is not None:
+        stmt = stmt.where(User.id.in_(team_ids))
     if rep_id:
         stmt = stmt.where(User.id == UUID(rep_id))
     result = await db.execute(stmt)
@@ -424,6 +460,8 @@ async def get_sales_performance(
         )
         .group_by(User.id, User.full_name)
     )
+    if team_ids is not None:
+        stmt = stmt.where(User.id.in_(team_ids))
     if rep_id:
         stmt = stmt.where(User.id == UUID(rep_id))
     result = await db.execute(stmt)
@@ -457,6 +495,8 @@ async def get_sales_performance(
             User.id.in_(rep_role_subq),
         )
     )
+    if team_ids is not None:
+        stmt = stmt.where(User.id.in_(team_ids))
     if rep_id:
         stmt = stmt.where(User.id == UUID(rep_id))
     result = await db.execute(stmt)
@@ -471,6 +511,8 @@ async def get_sales_performance(
         )
         .group_by(Deal.owner_id)
     )
+    if team_ids is not None:
+        stmt = stmt.where(Deal.owner_id.in_(team_ids))
     result = await db.execute(stmt)
     revenue_map = {str(r[0]): Decimal(str(r[1] or 0)) for r in result.all()}
 
@@ -523,15 +565,20 @@ async def get_pipeline_analytics(
     org_id = current_user.organization_id
     now = datetime.now(timezone.utc)
     start, _ = _period_bounds(period)
+    team_ids = await _get_team_ids(db, current_user)
+
+    deal_filter = and_(
+        Deal.pipeline_stage_id == PipelineStage.id, Deal.is_active.is_(True),
+        Deal.is_deleted.is_(False), Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
+    )
+    if team_ids is not None:
+        deal_filter = and_(deal_filter, Deal.owner_id.in_(team_ids))
 
     stmt = (
         select(PipelineStage.name, PipelineStage.slug, func.count(Deal.id),
                func.coalesce(func.sum(Deal.amount), 0))
         .select_from(PipelineStage)
-        .outerjoin(Deal, and_(
-            Deal.pipeline_stage_id == PipelineStage.id, Deal.is_active.is_(True),
-            Deal.is_deleted.is_(False), Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
-        ))
+        .outerjoin(Deal, deal_filter)
         .where(PipelineStage.organization_id == org_id)
         .group_by(PipelineStage.name, PipelineStage.slug, PipelineStage.sort_order)
         .order_by(PipelineStage.sort_order)
@@ -547,10 +594,16 @@ async def get_pipeline_analytics(
             total_value=val, percentage=_pct(val, total_pipeline_value),
         ))
 
+    activity_filter = and_(
+        ActivityTimeline.organization_id == org_id, ActivityTimeline.action == "stage_changed",
+        ActivityTimeline.created_at >= start,
+    )
+    if team_ids is not None:
+        activity_filter = and_(activity_filter, ActivityTimeline.created_by.in_(team_ids))
+
     stmt = (
         select(cast(ActivityTimeline.payload, String).label("payload"), func.count(ActivityTimeline.id))
-        .where(ActivityTimeline.organization_id == org_id, ActivityTimeline.action == "stage_changed",
-               ActivityTimeline.created_at >= start)
+        .where(activity_filter)
         .group_by(cast(ActivityTimeline.payload, String))
     )
     result = await db.execute(stmt)
@@ -574,11 +627,17 @@ async def get_pipeline_analytics(
         for k, v in sorted(conversion_counts.items(), key=lambda x: -x[1])
     ]
 
+    deal_filter2 = and_(
+        Deal.organization_id == org_id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
+        Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
+    )
+    if team_ids is not None:
+        deal_filter2 = and_(deal_filter2, Deal.owner_id.in_(team_ids))
+
     stmt = (
         select(Deal.id, Deal.name, Deal.amount, Deal.created_at, PipelineStage.name)
         .outerjoin(PipelineStage, Deal.pipeline_stage_id == PipelineStage.id)
-        .where(Deal.organization_id == org_id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-               Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]))
+        .where(deal_filter2)
     )
     result = await db.execute(stmt)
     open_deals = result.all()
@@ -630,19 +689,29 @@ async def get_team_performance(
     org_id = current_user.organization_id
     start, end = _period_bounds(period)
     prev_start, prev_end = _prev_period_bounds(period)
+    team_ids = await _get_team_ids(db, current_user)
 
     won_count = func.sum(case((Deal.status == DealStatus.WON.value, 1), else_=0))
     rep_scope = select(UserRole.user_id).join(Role, Role.id == UserRole.role_id).where(
         Role.name.in_(["sales_rep", "sales_representative"]),
     )
+    user_filter = and_(
+        User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False),
+        User.id.in_(rep_scope),
+    )
+    if team_ids is not None:
+        user_filter = and_(user_filter, User.id.in_(team_ids))
+
+    deal_join_filter = and_(
+        Deal.owner_id == User.id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
+        Deal.closed_at >= start, Deal.closed_at < end,
+    )
     stmt = (
         select(User.id, User.full_name, User.sales_quota,
                func.coalesce(func.sum(Deal.amount), 0), func.coalesce(won_count, 0), func.count(Deal.id))
         .select_from(User)
-        .outerjoin(Deal, and_(Deal.owner_id == User.id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-                              Deal.closed_at >= start, Deal.closed_at < end))
-        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False),
-               User.id.in_(rep_scope))
+        .outerjoin(Deal, deal_join_filter)
+        .where(user_filter)
         .group_by(User.id, User.full_name, User.sales_quota)
         .order_by(func.coalesce(func.sum(Deal.amount), 0).desc())
     )
@@ -651,11 +720,17 @@ async def get_team_performance(
     result = await db.execute(stmt)
     rows = result.all()
 
+    lost_filter = and_(
+        Deal.organization_id == org_id, Deal.status == DealStatus.LOST.value,
+        Deal.is_active.is_(True), Deal.is_deleted.is_(False),
+        Deal.closed_at >= start, Deal.closed_at < end,
+    )
+    if team_ids is not None:
+        lost_filter = and_(lost_filter, Deal.owner_id.in_(team_ids))
+
     lost_stmt = (
         select(Deal.owner_id, func.count(Deal.id))
-        .where(Deal.organization_id == org_id, Deal.status == DealStatus.LOST.value,
-               Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-               Deal.closed_at >= start, Deal.closed_at < end)
+        .where(lost_filter)
         .group_by(Deal.owner_id)
     )
     result = await db.execute(lost_stmt)
@@ -684,11 +759,17 @@ async def get_team_performance(
     curr_revenue = sum((e.revenue for e in leaderboard), Decimal("0"))
     curr_won = sum(e.deals_won for e in leaderboard)
 
+    prev_filter = and_(
+        Deal.organization_id == org_id, Deal.status == DealStatus.WON.value,
+        Deal.is_active.is_(True), Deal.is_deleted.is_(False),
+        Deal.closed_at >= prev_start, Deal.closed_at < prev_end,
+    )
+    if team_ids is not None:
+        prev_filter = and_(prev_filter, Deal.owner_id.in_(team_ids))
+
     prev_stmt = (
         select(func.coalesce(func.sum(Deal.amount), 0), func.count(Deal.id))
-        .where(Deal.organization_id == org_id, Deal.status == DealStatus.WON.value,
-               Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-               Deal.closed_at >= prev_start, Deal.closed_at < prev_end)
+        .where(prev_filter)
     )
     result = await db.execute(prev_stmt)
     prev_row = result.one()
@@ -728,19 +809,28 @@ async def get_activity_analytics(
     """
     org_id = current_user.organization_id
     start, _ = _period_bounds(period)
+    team_ids = await _get_team_ids(db, current_user)
 
     # ── Org-level totals (5 queries, one per activity type) ──────────────────
-    call_q = await db.execute(select(func.count(CrmCall.id)).where(
-        CrmCall.organization_id == org_id, CrmCall.is_active.is_(True), CrmCall.created_at >= start))
-    email_q = await db.execute(select(func.count(CrmEmail.id)).where(
-        CrmEmail.organization_id == org_id, CrmEmail.is_active.is_(True), CrmEmail.created_at >= start))
-    meeting_q = await db.execute(select(func.count(Meeting.id)).where(
-        Meeting.organization_id == org_id, Meeting.is_active.is_(True), Meeting.created_at >= start))
-    task_q = await db.execute(select(func.count(CrmTask.id)).where(
-        CrmTask.organization_id == org_id, CrmTask.is_active.is_(True), CrmTask.created_at >= start))
-    note_q = await db.execute(select(func.count(ActivityTimeline.id)).where(
-        ActivityTimeline.organization_id == org_id, ActivityTimeline.action == "note",
-        ActivityTimeline.created_at >= start))
+    call_filter = and_(CrmCall.organization_id == org_id, CrmCall.is_active.is_(True), CrmCall.created_at >= start)
+    email_filter = and_(CrmEmail.organization_id == org_id, CrmEmail.is_active.is_(True), CrmEmail.created_at >= start)
+    meeting_filter = and_(Meeting.organization_id == org_id, Meeting.is_active.is_(True), Meeting.created_at >= start)
+    task_filter = and_(CrmTask.organization_id == org_id, CrmTask.is_active.is_(True), CrmTask.created_at >= start)
+    note_filter = and_(ActivityTimeline.organization_id == org_id, ActivityTimeline.action == "note",
+                       ActivityTimeline.created_at >= start)
+
+    if team_ids is not None:
+        call_filter = and_(call_filter, CrmCall.owner_id.in_(team_ids))
+        email_filter = and_(email_filter, CrmEmail.owner_id.in_(team_ids))
+        meeting_filter = and_(meeting_filter, Meeting.owner_id.in_(team_ids))
+        task_filter = and_(task_filter, CrmTask.owner_id.in_(team_ids))
+        note_filter = and_(note_filter, ActivityTimeline.created_by.in_(team_ids))
+
+    call_q = await db.execute(select(func.count(CrmCall.id)).where(call_filter))
+    email_q = await db.execute(select(func.count(CrmEmail.id)).where(email_filter))
+    meeting_q = await db.execute(select(func.count(Meeting.id)).where(meeting_filter))
+    task_q = await db.execute(select(func.count(CrmTask.id)).where(task_filter))
+    note_q = await db.execute(select(func.count(ActivityTimeline.id)).where(note_filter))
 
     c = int(call_q.scalar() or 0)
     e = int(email_q.scalar() or 0)
@@ -751,41 +841,56 @@ async def get_activity_analytics(
 
     # ── Per-rep aggregates — 4 GROUP BY queries instead of 4×N ───────────────
     # Calls per rep
+    call_rep_filter = and_(CrmCall.organization_id == org_id, CrmCall.is_active.is_(True), CrmCall.created_at >= start)
+    if team_ids is not None:
+        call_rep_filter = and_(call_rep_filter, CrmCall.owner_id.in_(team_ids))
     calls_by_rep_q = await db.execute(
         select(CrmCall.owner_id, func.count(CrmCall.id).label("cnt"))
-        .where(CrmCall.organization_id == org_id, CrmCall.is_active.is_(True), CrmCall.created_at >= start)
+        .where(call_rep_filter)
         .group_by(CrmCall.owner_id)
     )
     calls_map: dict[str, int] = {str(r.owner_id): int(r.cnt or 0) for r in calls_by_rep_q.all() if r.owner_id}
 
     # Emails (CRM) per rep
+    email_rep_filter = and_(CrmEmail.organization_id == org_id, CrmEmail.is_active.is_(True), CrmEmail.created_at >= start)
+    if team_ids is not None:
+        email_rep_filter = and_(email_rep_filter, CrmEmail.owner_id.in_(team_ids))
     emails_by_rep_q = await db.execute(
         select(CrmEmail.owner_id, func.count(CrmEmail.id).label("cnt"))
-        .where(CrmEmail.organization_id == org_id, CrmEmail.is_active.is_(True), CrmEmail.created_at >= start)
+        .where(email_rep_filter)
         .group_by(CrmEmail.owner_id)
     )
     emails_map: dict[str, int] = {str(r.owner_id): int(r.cnt or 0) for r in emails_by_rep_q.all() if r.owner_id}
 
     # Meetings per rep
+    meeting_rep_filter = and_(Meeting.organization_id == org_id, Meeting.is_active.is_(True), Meeting.created_at >= start)
+    if team_ids is not None:
+        meeting_rep_filter = and_(meeting_rep_filter, Meeting.owner_id.in_(team_ids))
     meetings_by_rep_q = await db.execute(
         select(Meeting.owner_id, func.count(Meeting.id).label("cnt"))
-        .where(Meeting.organization_id == org_id, Meeting.is_active.is_(True), Meeting.created_at >= start)
+        .where(meeting_rep_filter)
         .group_by(Meeting.owner_id)
     )
     meetings_map: dict[str, int] = {str(r.owner_id): int(r.cnt or 0) for r in meetings_by_rep_q.all() if r.owner_id}
 
     # Tasks per rep
+    task_rep_filter = and_(CrmTask.organization_id == org_id, CrmTask.is_active.is_(True), CrmTask.created_at >= start)
+    if team_ids is not None:
+        task_rep_filter = and_(task_rep_filter, CrmTask.owner_id.in_(team_ids))
     tasks_by_rep_q = await db.execute(
         select(CrmTask.owner_id, func.count(CrmTask.id).label("cnt"))
-        .where(CrmTask.organization_id == org_id, CrmTask.is_active.is_(True), CrmTask.created_at >= start)
+        .where(task_rep_filter)
         .group_by(CrmTask.owner_id)
     )
     tasks_map: dict[str, int] = {str(r.owner_id): int(r.cnt or 0) for r in tasks_by_rep_q.all() if r.owner_id}
 
     # All users in org — single query
+    user_filter = and_(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False))
+    if team_ids is not None:
+        user_filter = and_(user_filter, User.id.in_(team_ids))
     users_q = await db.execute(
         select(User.id, User.full_name)
-        .where(User.organization_id == org_id, User.is_active.is_(True), User.is_deleted.is_(False))
+        .where(user_filter)
     )
     activity_by_rep: list[ActivityByRep] = []
     for user_id_val, name in users_q.all():
@@ -838,22 +943,27 @@ async def get_lead_analytics(
 ) -> dict:
     org_id = current_user.organization_id
     start, _ = _period_bounds(period)
+    team_ids = await _get_team_ids(db, current_user)
 
-    total_q = await db.execute(select(func.count(Lead.id)).where(
-        Lead.organization_id == org_id, Lead.is_active.is_(True), Lead.is_deleted.is_(False), Lead.created_at >= start))
+    base_filter = and_(
+        Lead.organization_id == org_id, Lead.is_active.is_(True), Lead.is_deleted.is_(False),
+        Lead.created_at >= start,
+    )
+    if team_ids is not None:
+        base_filter = and_(base_filter, Lead.owner_id.in_(team_ids))
+
+    total_q = await db.execute(select(func.count(Lead.id)).where(base_filter))
     total_leads = int(total_q.scalar() or 0)
 
-    converted_q = await db.execute(select(func.count(Lead.id)).where(
-        Lead.organization_id == org_id, Lead.is_active.is_(True), Lead.is_deleted.is_(False),
-        Lead.status == "converted", Lead.created_at >= start))
+    converted_filter = and_(base_filter, Lead.status == "converted")
+    converted_q = await db.execute(select(func.count(Lead.id)).where(converted_filter))
     total_converted = int(converted_q.scalar() or 0)
 
     stmt = (
         select(Lead.source, func.count(Lead.id),
                func.sum(case((Lead.status == "qualified", 1), else_=0)),
                func.sum(case((Lead.status == "converted", 1), else_=0)))
-        .where(Lead.organization_id == org_id, Lead.is_active.is_(True), Lead.is_deleted.is_(False),
-               Lead.created_at >= start)
+        .where(base_filter)
         .group_by(Lead.source).order_by(func.count(Lead.id).desc())
     )
     result = await db.execute(stmt)
@@ -871,8 +981,7 @@ async def get_lead_analytics(
     conversion_funnel = []
     for stage in funnel_stages:
         q = await db.execute(select(func.count(Lead.id)).where(
-            Lead.organization_id == org_id, Lead.is_active.is_(True), Lead.is_deleted.is_(False),
-            Lead.status == stage, Lead.created_at >= start))
+            and_(base_filter, Lead.status == stage)))
         cnt = int(q.scalar() or 0)
         conversion_funnel.append(ConversionFunnelStage(
             stage=stage, count=cnt, percentage=_pct(cnt, total_leads) if total_leads else Decimal("0"),
@@ -880,9 +989,13 @@ async def get_lead_analytics(
 
     now = datetime.now(timezone.utc)
     aging_buckets = {"New": 0, "7+ days": 0, "14+ days": 0, "30+ days": 0}
-    stmt = select(Lead.created_at).where(
+    aging_filter = and_(
         Lead.organization_id == org_id, Lead.is_active.is_(True), Lead.is_deleted.is_(False),
-        Lead.status.notin_(["won", "lost", "converted"]))
+        Lead.status.notin_(["won", "lost", "converted"]),
+    )
+    if team_ids is not None:
+        aging_filter = and_(aging_filter, Lead.owner_id.in_(team_ids))
+    stmt = select(Lead.created_at).where(aging_filter)
     result = await db.execute(stmt)
     for row in result.all():
         created = row[0]
@@ -922,14 +1035,21 @@ async def get_deal_analytics(
     start, end = _period_bounds(period)
     now = datetime.now(timezone.utc)
     prev_start, prev_end = _prev_period_bounds(period)
+    team_ids = await _get_team_ids(db, current_user)
+
+    won_filter = and_(
+        Deal.organization_id == org_id, Deal.status == DealStatus.WON.value,
+        Deal.is_active.is_(True), Deal.is_deleted.is_(False),
+        Deal.closed_at >= start, Deal.closed_at < end,
+    )
+    if team_ids is not None:
+        won_filter = and_(won_filter, Deal.owner_id.in_(team_ids))
 
     stmt = (
         select(Deal.id, Deal.name, Deal.amount, Deal.closed_at, User.full_name, Lead.created_at)
         .outerjoin(User, Deal.owner_id == User.id)
         .outerjoin(Lead, Deal.lead_id == Lead.id)
-        .where(Deal.organization_id == org_id, Deal.status == DealStatus.WON.value,
-               Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-               Deal.closed_at >= start, Deal.closed_at < end)
+        .where(won_filter)
         .order_by(desc(Deal.amount))
     )
     result = await db.execute(stmt)
@@ -946,12 +1066,18 @@ async def get_deal_analytics(
             amount=amt, close_date=closed.strftime("%Y-%m-%d") if closed else "", sales_cycle_days=cycle,
         ))
 
+    lost_filter = and_(
+        Deal.organization_id == org_id, Deal.status == DealStatus.LOST.value,
+        Deal.is_active.is_(True), Deal.is_deleted.is_(False),
+        Deal.closed_at >= start, Deal.closed_at < end,
+    )
+    if team_ids is not None:
+        lost_filter = and_(lost_filter, Deal.owner_id.in_(team_ids))
+
     stmt = (
         select(Deal.id, Deal.name, Deal.amount, Deal.closed_at, Deal.close_reason, User.full_name)
         .outerjoin(User, Deal.owner_id == User.id)
-        .where(Deal.organization_id == org_id, Deal.status == DealStatus.LOST.value,
-               Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-               Deal.closed_at >= start, Deal.closed_at < end)
+        .where(lost_filter)
         .order_by(desc(Deal.amount))
     )
     result = await db.execute(stmt)
@@ -977,10 +1103,14 @@ async def get_deal_analytics(
     ], key=lambda x: -x.count)
 
     curr_avg = total_won_value / len(won_deals) if won_deals else Decimal("0")
-    prev_stmt = select(func.coalesce(func.sum(Deal.amount), 0), func.count(Deal.id)).where(
+    prev_won_filter = and_(
         Deal.organization_id == org_id, Deal.status == DealStatus.WON.value,
         Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-        Deal.closed_at >= prev_start, Deal.closed_at < prev_end)
+        Deal.closed_at >= prev_start, Deal.closed_at < prev_end,
+    )
+    if team_ids is not None:
+        prev_won_filter = and_(prev_won_filter, Deal.owner_id.in_(team_ids))
+    prev_stmt = select(func.coalesce(func.sum(Deal.amount), 0), func.count(Deal.id)).where(prev_won_filter)
     result = await db.execute(prev_stmt)
     prev_row = result.one()
     prev_revenue = Decimal(str(prev_row[0] or 0))
@@ -991,15 +1121,21 @@ async def get_deal_analytics(
         change_pct=_pct(curr_avg - prev_avg, prev_avg) if prev_avg else Decimal("0"),
     )
 
+    closing_filter = and_(
+        Deal.organization_id == org_id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
+        Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
+        Deal.expected_close_date.isnot(None),
+        Deal.expected_close_date <= (now + timedelta(days=14)).date(),
+        Deal.expected_close_date >= now.date(),
+    )
+    if team_ids is not None:
+        closing_filter = and_(closing_filter, Deal.owner_id.in_(team_ids))
+
     stmt = (
         select(Deal.id, Deal.name, Deal.amount, Deal.expected_close_date, PipelineStage.name, User.full_name)
         .outerjoin(PipelineStage, Deal.pipeline_stage_id == PipelineStage.id)
         .outerjoin(User, Deal.owner_id == User.id)
-        .where(Deal.organization_id == org_id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-               Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
-               Deal.expected_close_date.isnot(None),
-               Deal.expected_close_date <= (now + timedelta(days=14)).date(),
-               Deal.expected_close_date >= now.date())
+        .where(closing_filter)
         .order_by(Deal.expected_close_date)
     )
     result = await db.execute(stmt)
@@ -1013,13 +1149,19 @@ async def get_deal_analytics(
             days_until=max(days_until, 0), stage=row[4] or "",
         ))
 
+    at_risk_filter = and_(
+        Deal.organization_id == org_id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
+        Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]), Deal.probability < 40,
+    )
+    if team_ids is not None:
+        at_risk_filter = and_(at_risk_filter, Deal.owner_id.in_(team_ids))
+
     stmt = (
         select(Deal.id, Deal.name, Deal.amount, Deal.probability, Deal.created_at,
                PipelineStage.name, User.full_name)
         .outerjoin(PipelineStage, Deal.pipeline_stage_id == PipelineStage.id)
         .outerjoin(User, Deal.owner_id == User.id)
-        .where(Deal.organization_id == org_id, Deal.is_active.is_(True), Deal.is_deleted.is_(False),
-               Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]), Deal.probability < 40)
+        .where(at_risk_filter)
         .order_by(Deal.probability)
     )
     result = await db.execute(stmt)

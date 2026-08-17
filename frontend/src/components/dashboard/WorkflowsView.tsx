@@ -1374,7 +1374,7 @@ export default function WorkflowsView({
             </button>
 
             {pickerOpen && (
-              <div className="absolute right-0 z-30 mt-1.5 w-full overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+              <div className="absolute right-0 z-30 mt-1.5 w-full overflow-x-hidden rounded-xl border border-border bg-card shadow-xl">
                 <div className="flex items-center gap-2 border-b border-border bg-secondary/40 p-2.5">
                   <Search className="h-3.5 w-3.5 text-muted-foreground" />
 
