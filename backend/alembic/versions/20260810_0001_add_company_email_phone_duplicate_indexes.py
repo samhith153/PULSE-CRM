@@ -24,7 +24,7 @@ def upgrade() -> None:
     """)
 
     op.execute("DROP INDEX IF EXISTS ux_companies_org_normalized_phone")
-    op.execute("""
+    op.execute(r"""
         CREATE UNIQUE INDEX ux_companies_org_normalized_phone
         ON companies (organization_id, regexp_replace(coalesce(phone, ''), '\D+', '', 'g'))
         WHERE is_deleted = false AND phone IS NOT NULL AND regexp_replace(phone, '\D+', '', 'g') <> ''
