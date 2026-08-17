@@ -412,6 +412,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
   const [callForm, setCallForm] = useState({ outcome: 'Spoke with Lead', notes: '' });
   const [meetingForm, setMeetingForm] = useState({ title: '', date: '', time: '', desc: '' });
   const [convertForm, setConvertForm] = useState({ industry: '', revenue: '', employeeCount: '', pipelineStageId: '' });
+  const [isConverting, setIsConverting] = useState(false);
   const [pipelineStages, setPipelineStages] = useState<{ id: string; name: string; slug: string }[]>([]);
 
   const getProgressPoints = (score: number) => {
@@ -473,12 +474,19 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
     }).catch(() => {});
 
     // Periodically refresh leads + recommendations (assessments run in background)
+    let lastLeadHash = '';
     const intervalId = window.setInterval(() => {
       getLeads().then(data => {
         const mapped = (data ?? []).map(backendToLocal);
         setLeads(mapped);
         const ids = mapped.map(l => l.id).filter(Boolean) as string[];
-        refreshRecommendations(ids);
+
+        // Only refresh recommendations if leads actually changed
+        const currentHash = ids.join(',');
+        if (currentHash !== lastLeadHash) {
+          lastLeadHash = currentHash;
+          refreshRecommendations(ids);
+        }
         // Clear scoring indicators for leads that now have scores
         setScoringLeadIds(prev => {
           if (prev.size === 0) return prev;
@@ -803,6 +811,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
   const handleConvertLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!convertingLeadId) return;
+    setIsConverting(true);
     try {
       const payload = {
         industry: convertForm.industry || undefined,
@@ -838,6 +847,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
       toast.error(err instanceof Error ? err.message : "Failed to convert lead. Please try again.");
       setIsConvertModalOpen(false);
       setConvertingLeadId(null);
+    } finally {
+      setIsConverting(false);
     }
   };
 
@@ -2865,9 +2876,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
           <div className="bg-surface-1 border border-border-default rounded-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
             <div className="px-5 py-3.5 border-b border-border-default flex justify-between items-center bg-surface-2">
               <h3 className="font-semibold text-text-primary text-sm">Convert Lead to Account & Deal</h3>
-              <button onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} className="text-text-muted hover:text-text-primary p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
+              <button onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); setIsConverting(false); }} className="text-text-muted hover:text-text-primary p-1 cursor-pointer"><X className="h-4.5 w-4.5" /></button>
             </div>
-            <form onSubmit={handleConvertLeadSubmit} className="p-5 space-y-4">
+            <form onSubmit={handleConvertLeadSubmit} className="p-5 space-y-4 relative">
+              {isConverting && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-surface-0/80 backdrop-blur-sm rounded-b-2xl">
+                  <Loader2 className="h-6 w-6 text-accent-color animate-spin mb-2" />
+                  <p className="text-xs font-semibold text-text-primary">Converting lead...</p>
+                </div>
+              )}
               <div>
                 <label className="block text-[9px] font-semibold text-text-primary uppercase tracking-wider mb-1">Industry</label>
                 <input 
@@ -2914,16 +2931,18 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
               <div className="pt-3 border-t border-border-default flex justify-end space-x-2.5">
                 <button 
                   type="button" 
-                  onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); }} 
+                  onClick={() => { setIsConvertModalOpen(false); setConvertingLeadId(null); setIsConverting(false); }}
                   className="px-4 py-1.5 border border-border-default rounded-lg text-xs font-semibold text-text-primary hover:bg-surface-2 cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                  disabled={isConverting}
+                  className="px-4 py-1.5 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold cursor-pointer transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
                 >
-                  Convert Lead
+                  {isConverting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {isConverting ? 'Converting...' : 'Convert Lead'}
                 </button>
               </div>
             </form>

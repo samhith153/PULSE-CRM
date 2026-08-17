@@ -15,7 +15,7 @@ depends_on = None
 
 def upgrade() -> None:
     op.execute("DROP INDEX IF EXISTS ux_companies_org_normalized_name")
-    op.execute("""
+    op.execute(r"""
         CREATE UNIQUE INDEX ux_companies_org_normalized_name
         ON companies (organization_id, regexp_replace(translate(lower(trim(name)), ' !"#$%&''()*+,-./:;<=>?@[\]^_`{|}~', ''), '\s+', ' ', 'g'))
         WHERE is_deleted = false
@@ -29,7 +29,7 @@ def upgrade() -> None:
     """)
 
     op.execute("DROP INDEX IF EXISTS ux_contacts_org_normalized_phone")
-    op.execute("""
+    op.execute(r"""
         CREATE UNIQUE INDEX ux_contacts_org_normalized_phone
         ON contacts (organization_id, regexp_replace(coalesce(phone, ''), '\D+', '', 'g'))
         WHERE is_deleted = false AND phone IS NOT NULL AND regexp_replace(phone, '\D+', '', 'g') <> ''
@@ -43,14 +43,14 @@ def upgrade() -> None:
     """)
 
     op.execute("DROP INDEX IF EXISTS ux_leads_org_normalized_phone")
-    op.execute("""
+    op.execute(r"""
         CREATE UNIQUE INDEX ux_leads_org_normalized_phone
         ON leads (organization_id, regexp_replace(coalesce(phone, ''), '\D+', '', 'g'))
         WHERE is_deleted = false AND phone IS NOT NULL AND regexp_replace(phone, '\D+', '', 'g') <> ''
     """)
 
     op.execute("DROP INDEX IF EXISTS ux_leads_org_company_normalized_title")
-    op.execute("""
+    op.execute(r"""
         CREATE UNIQUE INDEX ux_leads_org_company_normalized_title
         ON leads (organization_id, company_id, regexp_replace(translate(lower(trim(title)), ' !"#$%&''()*+,-./:;<=>?@[\]^_`{|}~', ''), '\s+', ' ', 'g'))
         WHERE is_deleted = false AND company_id IS NOT NULL
@@ -64,7 +64,7 @@ def upgrade() -> None:
     """)
 
     op.execute("DROP INDEX IF EXISTS ux_deals_org_normalized_name")
-    op.execute("""
+    op.execute(r"""
         CREATE UNIQUE INDEX ux_deals_org_normalized_name
         ON deals (organization_id, regexp_replace(translate(lower(trim(name)), ' !"#$%&''()*+,-./:;<=>?@[\]^_`{|}~', ''), '\s+', ' ', 'g'))
         WHERE is_deleted = false
@@ -78,14 +78,14 @@ def upgrade() -> None:
     """)
 
     op.execute("DROP INDEX IF EXISTS ux_users_normalized_phone")
-    op.execute("""
+    op.execute(r"""
         CREATE UNIQUE INDEX ux_users_normalized_phone
         ON users (regexp_replace(coalesce(phone, ''), '\D+', '', 'g'))
         WHERE is_deleted = false AND phone IS NOT NULL AND regexp_replace(phone, '\D+', '', 'g') <> ''
     """)
 
     op.execute("DROP INDEX IF EXISTS ux_organizations_normalized_name")
-    op.execute("""
+    op.execute(r"""
         CREATE UNIQUE INDEX ux_organizations_normalized_name
         ON organizations (regexp_replace(translate(lower(trim(name)), ' !"#$%&''()*+,-./:;<=>?@[\]^_`{|}~', ''), '\s+', ' ', 'g'))
         WHERE is_deleted = false
