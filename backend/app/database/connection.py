@@ -34,19 +34,17 @@ ssl_context = ssl.create_default_context()
 ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
-# Prefer the direct (session-mode) URL for the app engine.
-# DIRECT_URL bypasses the pooler and enables QueuePool connection reuse.
+# Prefer DIRECT_URL (or fall back to DATABASE_URL).
 #
-# Supabase exposes two endpoints:
-#   - DATABASE_URL  -> the pooler (transaction mode on :6543, or a "pooler"
-#                      hostname). PgBouncer multiplexes one backend connection
-#                      across many clients, so SQLAlchemy's QueuePool cannot
-#                      safely reuse connections here (transaction state leaks
-#                      between requests) — that is why the old code used
-#                      NullPool and opened a brand-new connection per request.
-#   - DIRECT_URL     -> a direct connection to the Postgres instance. QueuePool
-#                      works correctly here and reuses physical connections,
-#                      eliminating the 30-80ms connect tax on every request.
+# Supabase exposes three connection paths:
+#   - DATABASE_URL  -> transaction-mode pooler (:6543). PgBouncer multiplexes
+#                      connections; QueuePool and prepared statements are unsafe.
+#   - DIRECT_URL     -> session-mode pooler (:5432) or direct Postgres (:5432).
+#                      Session-mode pooler still uses PgBouncer (no prepared
+#                      statements). True direct connection supports everything.
+#                      NOTE: db.xxx.supabase.co is IPv6-only on free tier and
+#                      unreachable from Render, so on Render DIRECT_URL typically
+#                      points to the session-mode pooler instead.
 engine_url = (
     getattr(settings, "DIRECT_URL", None)
     or DATABASE_URL
@@ -66,12 +64,12 @@ connect_args = {}
 if "localhost" not in engine_url and "127.0.0.1" not in engine_url:
     connect_args["ssl"] = ssl_context
 
-# Detect the transaction-mode pooler. Only that path is incompatible with a
-# pooled engine; a direct connection (or session-mode pooler) is not.
-# If DIRECT_URL is explicitly configured, trust it as a direct connection
-# regardless of hostname (Supabase direct hosts still contain "pooler").
-_direct_url_configured = getattr(settings, "DIRECT_URL", None)
-_is_pooler = not _direct_url_configured and ("pooler" in engine_url or ":6543" in engine_url)
+# Detect pooler connections. PgBouncer (transaction/session mode) does not
+# support prepared statements, so we must set statement_cache_size = 0 and
+# use NullPool. Detection is based on the URL hostname, not which env var
+# was used — DIRECT_URL may point to a session pooler (port 5432) when the
+# true direct connection is unreachable (e.g. IPv6-only from Render).
+_is_pooler = "pooler" in engine_url or ":6543" in engine_url
 
 _pool_kwargs = dict(
     connect_args=connect_args,
