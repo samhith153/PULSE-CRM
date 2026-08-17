@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR, invalidateEntityCache } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import SkeletonLoader from './SkeletonLoader';
@@ -36,6 +37,7 @@ function StageDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [buttonRect, setButtonRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -78,15 +80,18 @@ function StageDropdown({
     <div className={`relative inline-block text-left w-full ${className}`} ref={dropdownRef}>
       <button
         type="button"
-        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+        onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); if (!isOpen) { setButtonRect(e.currentTarget.getBoundingClientRect()); } }}
         onKeyDown={handleKeyDown}
         className="w-full flex items-center justify-between gap-1.5 px-2 py-1 border border-border-default rounded-md text-[10px] bg-surface-1 text-text-primary hover:bg-surface-hover transition-colors cursor-pointer outline-none focus:ring-1 focus:ring-accent-color/30"
       >
         <span className="truncate font-semibold">{value}</span>
         <ChevronDown size={10} className={`text-text-secondary shrink-0 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
-      {isOpen && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-surface-1 border border-border-default rounded-xl shadow-lg p-1 max-h-48 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100">
+      {isOpen && buttonRect && createPortal(
+        <div
+          style={{ position: 'fixed', top: buttonRect.bottom + 4, left: buttonRect.left, width: buttonRect.width, zIndex: 9999 }}
+          className="bg-surface-1 border border-border-default rounded-xl shadow-lg p-1 max-h-48 overflow-y-auto custom-scrollbar flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100"
+        >
           {stages.map((st, idx) => {
             const isSelected = st === value;
             const isFocused = idx === focusedIndex;
@@ -109,7 +114,8 @@ function StageDropdown({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -228,6 +228,10 @@ async def batch_recommendations(
             if lead.status:
                 current_stage = lead.status.lower().replace(" ", "_")
 
+            # Auto-advance stage when outbound emails exist
+            if outbound_emails and current_stage in ("new", "new_lead"):
+                current_stage = "contacted"
+
             is_outbound = bool(outbound_emails and (not inbound_emails or outbound_emails[-1].sent_at >= inbound_emails[-1].sent_at))
 
             leads_payload.append({
@@ -250,6 +254,7 @@ async def batch_recommendations(
                 "email_follow_up_timing": latest_summary.get("follow_up_timing"),
                 "latest_email_subject": latest_email.subject if latest_email else None,
                 "latest_email_preview": latest_preview,
+                "outbound_email_count": stats.get("outbound_email_count", 0),
             })
 
         if leads_payload:

@@ -1393,7 +1393,7 @@ export default function WorkflowsView({
 
                 <div className="max-h-64 overflow-y-auto">
                   {filteredLeads.length ? (
-                    filteredLeads.map(
+                    filteredLeads.slice(0, 4).map(
                       (lead) => (
                         <button
                           key={lead.id}
@@ -1623,15 +1623,9 @@ export default function WorkflowsView({
           </p>
         </div>
       ) : (
-        <div className="mt-6 overflow-x-auto pb-2">
+        <div className="mt-6 pb-2">
           <div
-            className="flex min-w-max items-start"
-            style={{
-              minWidth: `${Math.max(
-                workflowSteps.length * 190,
-                760
-              )}px`,
-            }}
+            className="flex flex-wrap items-start justify-center gap-4"
           >
             {workflowSteps.map((step, index) => {
               const done = step.status === 'done';

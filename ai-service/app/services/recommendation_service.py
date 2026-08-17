@@ -199,9 +199,9 @@ def _build_reason(lead_features, action):
         reasons.append("No recent activity — lead is cold")
 
     if is_outbound:
-        reasons.append("Latest email from customer (inbound)")
-    else:
         reasons.append("Latest email from us (outbound)")
+    else:
+        reasons.append("Latest email from customer (inbound)")
 
     if latest_subject:
         reasons.append(f"Latest thread: \"{latest_subject}\"")
