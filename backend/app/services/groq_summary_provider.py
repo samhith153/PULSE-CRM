@@ -50,7 +50,7 @@ class GroqConversationSummaryProvider:
             response = await asyncio.wait_for(
                 asyncio.to_thread(
                     _client.chat.completions.create,
-                    model=settings.MODEL_NAME or "llama-3.1-8b-instant",
+                    model=settings.MODEL_NAME or settings.ASSISTANT_MODEL,
                     messages=[{"role": "user", "content": _PROMPT_TEMPLATE.format(thread_text=thread_text)}],
                     temperature=0.2,
                 ),

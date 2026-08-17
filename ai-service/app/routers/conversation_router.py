@@ -5,6 +5,7 @@ import json
 
 from fastapi import APIRouter, HTTPException
 
+from app.core.config import settings
 from app.schemas.conversation_schema import ConversationRequest, ConversationResponse, DraftEmailRequest, DraftEmailResponse
 from app.services.conversation_service import summarise_thread, generate_outreach_draft
 from app.utils.text_utils import parse_llm_json
@@ -69,7 +70,7 @@ async def draft_email(payload: DraftEmailRequest) -> DraftEmailResponse:
         return DraftEmailResponse(
             subject=result["subject"], 
             body=result["body"], 
-            model_version="llama-3.3-70b-versatile"
+            model_version=settings.LLM_MODEL
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc

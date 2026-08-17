@@ -139,7 +139,7 @@ class Settings(BaseSettings):
 
     # Assistant (Groq free tier)
     ASSISTANT_API_KEY: Optional[str] = None
-    ASSISTANT_MODEL: str = "llama-3.3-70b-versatile"
+    ASSISTANT_MODEL: str = "qwen/qwen3.6-27b"
 
     WEBHOOK_MAX_ATTEMPTS: int = 5
     WEBHOOK_TIMEOUT_SECONDS: int = 10

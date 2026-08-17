@@ -523,13 +523,19 @@ class EmailService:
         await self.db.commit()
 
         if direction == EmailDirection.INBOUND:
+            # Notify the Gmail connection owner so inbound email is always
+            # delivered to a real user even when synced via Pub/Sub (created_by=None).
+            recipient_id = connection.user_id if connection else created_by
             await self.events.record_event(
                 EventType.EMAIL_RECEIVED,
                 organization_id=organization_id,
-                actor_id=created_by,
+                actor_id=recipient_id,
                 aggregate_type="email",
                 aggregate_id=str(email.id),
                 source="gmail" if gmail_connection_id else "smtp",
+                topic="gmail" if gmail_connection_id else "smtp",
+                title=subject or "New Email Received",
+                description=body_preview,
                 payload={
                     "email_id": str(email.id),
                     "gmail_message_id": gmail_message_id,
@@ -538,6 +544,7 @@ class EmailService:
                     "body_preview": body_preview,
                     "external_entity_type": external_entity_type,
                     "external_entity_id": str(external_entity_id) if external_entity_id else None,
+                    "recipient_user_id": str(recipient_id) if recipient_id else None,
                 },
             )
             # Best-effort: never let an assessment failure break email storage.
