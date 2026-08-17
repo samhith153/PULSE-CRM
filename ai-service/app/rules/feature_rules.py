@@ -144,4 +144,13 @@ def build_lead_features(lead, now=None):
         "deal_value": lead.get("deal_value"),
         "inbound_thread": lead.get("inbound_thread"),
         "outbound_thread": lead.get("outbound_thread"),
+        "email_sentiment": lead.get("email_sentiment"),
+        "email_intent": lead.get("email_intent"),
+        "email_key_points": lead.get("email_key_points") or [],
+        "email_follow_up_suggestion": lead.get("email_follow_up_suggestion"),
+        "email_follow_up_timing": lead.get("email_follow_up_timing"),
+        "email_action_items": lead.get("email_action_items") or [],
+        "latest_email_subject": lead.get("latest_email_subject"),
+        "latest_email_preview": lead.get("latest_email_preview"),
+        "email_summaries": lead.get("email_summaries") or [],
     }

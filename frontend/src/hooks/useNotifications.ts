@@ -9,6 +9,7 @@ import {
   markNotificationRead,
   markAllNotificationsRead,
   dismissNotification,
+  dismissAllNotifications,
 } from '@/utils/api';
 
 export interface Notification {
@@ -187,5 +188,16 @@ export function useNotifications(pageSize = 20) {
     }
   }, [notifications, refresh]);
 
-  return { notifications, unreadCount, loading, refresh, refreshUnreadCount, markRead, markAllRead, dismiss };
+  const clearAll = useCallback(async () => {
+    setNotifications([]);
+    setUnreadCount(0);
+    try {
+      await dismissAllNotifications();
+    } catch (err: any) {
+      console.warn('[notifications] Failed to clear all:', err?.message || err);
+      await refresh();
+    }
+  }, [refresh]);
+
+  return { notifications, unreadCount, loading, refresh, refreshUnreadCount, markRead, markAllRead, dismiss, clearAll };
 }

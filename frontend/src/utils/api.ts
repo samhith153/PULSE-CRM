@@ -2102,6 +2102,10 @@ export async function dismissNotification(id: string): Promise<void> {
   await apiFetch(`/api/v1/notifications/${id}`, { method: 'DELETE' });
 }
 
+export async function dismissAllNotifications(): Promise<void> {
+  await apiFetch('/api/v1/notifications', { method: 'DELETE' });
+}
+
 // =============================================================================
 // EMAIL DRAFT API
 // =============================================================================

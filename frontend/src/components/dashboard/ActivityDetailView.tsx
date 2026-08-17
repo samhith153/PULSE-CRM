@@ -398,7 +398,7 @@ export default function ActivityDetailView({ id, onBack, onTabChange }: Activity
               )}
               <button 
                 onClick={() => setIsEditing(true)}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 border border-border bg-card hover:bg-secondary text-foreground rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-accent-color hover:bg-accent-color/90 text-white rounded-lg text-xs font-bold transition cursor-pointer shadow-sm"
               >
                 <Edit3 size={13} />
                 <span>Edit</span>

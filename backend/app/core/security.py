@@ -47,7 +47,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # ── Token Revocation Store ──────────────────────────────────────────────────
 # In-memory set of revoked JWT JTIs.  Survives for the process lifetime.
-# For multi-process deployments, swap this with Redis-backed storage.
 
 class _TokenRevocationStore:
     """Thread-safe in-memory store for revoked token JTIs."""

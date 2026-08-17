@@ -27,7 +27,6 @@ logger = get_logger(__name__)
 
 # In-memory state store (for CSRF protection)
 # NOTE: per-process memory — works for single-worker deployments.
-# For multi-worker production, swap for Redis/database.
 _oauth_states: Dict[str, float] = {}  # state -> created timestamp (monotonic)
 _OAUTH_STATE_TTL_SECONDS = 600  # 10 minutes
 

@@ -53,6 +53,15 @@ class LeadService:
                 "engagement_score": result["engagement_score"],
                 "last_contact_time": request.last_inbound_at,
                 "is_outbound": request.is_outbound or False,
+                "email_sentiment": request.email_sentiment,
+                "email_intent": request.email_intent,
+                "email_key_points": request.email_key_points,
+                "email_action_items": request.email_action_items,
+                "email_follow_up_suggestion": request.email_follow_up_suggestion,
+                "email_follow_up_timing": request.email_follow_up_timing,
+                "email_summaries": request.email_summaries,
+                "latest_email_subject": request.latest_email_subject,
+                "latest_email_preview": request.latest_email_preview,
             }
             rec_result = recommend(rec_raw)
 

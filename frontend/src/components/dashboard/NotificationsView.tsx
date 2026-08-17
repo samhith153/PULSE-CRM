@@ -49,7 +49,7 @@ function getIcon(type: string) {
 }
 
 export default function NotificationsView() {
-  const { notifications, unreadCount, loading, markAllRead, dismiss } = useNotifications(50);
+  const { notifications, unreadCount, loading, markAllRead, dismiss, clearAll } = useNotifications(50);
 
   return (
     <div className="space-y-6">
@@ -71,6 +71,15 @@ export default function NotificationsView() {
             >
               <CheckCheck className="h-4 w-4 mr-0.5 text-accent-color" />
               <span>Mark all as read</span>
+            </button>
+          )}
+          {notifications.length > 0 && (
+            <button 
+              onClick={clearAll}
+              className="inline-flex items-center space-x-1 px-3 py-1.5 border border-destructive/30 hover:border-destructive text-destructive hover:bg-destructive/5 text-xs font-semibold rounded-lg cursor-pointer"
+            >
+              <X className="h-4 w-4 mr-0.5" />
+              <span>Clear all</span>
             </button>
           )}
         </div>

@@ -54,6 +54,9 @@ class NotificationService:
             return notification
         return await self.repo.dismiss(notification)
 
+    async def dismiss_all(self, organization_id: UUID, user_id: UUID) -> int:
+        return await self.repo.dismiss_all(organization_id, user_id)
+
     async def create_for_user(
         self,
         organization_id: UUID,

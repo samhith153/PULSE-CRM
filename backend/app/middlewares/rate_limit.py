@@ -5,9 +5,6 @@
 
 A client can consume up to `burst` tokens in a single burst, then is limited to
 the sustained rate.  Tokens refill continuously between requests.
-
-When Redis is available, rate limits are enforced across all workers.
-Falls back to in-memory token buckets when Redis is unavailable.
 """
 from __future__ import annotations
 
@@ -23,13 +20,6 @@ from app.core.config import settings
 from app.schemas.common import ErrorResponse
 
 logger = logging.getLogger(__name__)
-
-# Try to import Redis limiter; gracefully degrade if redis package is missing
-try:
-    from app.core.rate_limiter import get_global_limiter, get_auth_limiter, get_pw_reset_limiter
-    _REDIS_AVAILABLE = True
-except Exception:
-    _REDIS_AVAILABLE = False
 
 
 class _TokenBucket:
@@ -115,28 +105,6 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         key = self._client_key(request)
 
-        # Try Redis-backed limiter first (works across workers)
-        if _REDIS_AVAILABLE:
-            try:
-                limiter = get_global_limiter()
-                if limiter:
-                    allowed, remaining = await limiter.check(key)
-                    if not allowed:
-                        content = ErrorResponse(
-                            error_code="RATE_LIMIT_EXCEEDED",
-                            message="Too many requests. Please slow down.",
-                            details=[],
-                            request_id=request.headers.get("x-request-id", "system"),
-                        ).model_dump()
-                        return JSONResponse(status_code=429, content=content)
-                    response = await call_next(request)
-                    response.headers["X-RateLimit-Limit"] = str(self.burst)
-                    response.headers["X-RateLimit-Remaining"] = str(remaining)
-                    return response
-            except Exception:
-                pass  # Fall through to in-memory
-
-        # Fallback: in-memory token bucket
         self._cleanup_stale_buckets()
         bucket = self._buckets[key]
 
@@ -230,32 +198,6 @@ class AuthRateLimitMiddleware(BaseHTTPMiddleware):
         path = request.url.path.rstrip("/")
         key = self._client_key(request)
 
-        # Try Redis-backed limiter first (works across workers)
-        if _REDIS_AVAILABLE:
-            try:
-                limiter = None
-                if path in _AUTH_PATHS:
-                    limiter = get_auth_limiter()
-                elif path in _PASSWORD_RESET_PATHS:
-                    limiter = get_pw_reset_limiter()
-
-                if limiter:
-                    allowed, remaining = await limiter.check(key)
-                    if not allowed:
-                        content = ErrorResponse(
-                            error_code="AUTH_RATE_LIMIT_EXCEEDED",
-                            message="Too many authentication attempts. Please wait before retrying.",
-                            details=[],
-                            request_id=request.headers.get("x-request-id", "system"),
-                        ).model_dump()
-                        response = JSONResponse(status_code=429, content=content)
-                        response.headers["Retry-After"] = "60"
-                        return response
-                    return await call_next(request)
-            except Exception:
-                pass  # Fall through to in-memory
-
-        # Fallback: in-memory token bucket
         self._cleanup_stale_buckets()
 
         bucket: _TokenBucket | None = None

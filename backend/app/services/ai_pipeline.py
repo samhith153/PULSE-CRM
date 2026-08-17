@@ -219,15 +219,67 @@ async def run_lead_assessment(
         raw_data["last_inbound_at"] = last_inbound.isoformat() if last_inbound else None
 
         # ── Intent ──────────────────────────────────────────────────────
-        # Use the intent passed from summarization (avoids race condition
-        # with uncommitted email rows). Fall back to DB query.
         if intent:
             raw_data["intent"] = intent
         else:
             intent = await _fetch_latest_intent(db, lead_id)
             raw_data["intent"] = intent
-        logger.info("[ASSESS_PIPELINE] lead=%s trigger=%s intent=%s inbound=%s initiated=%s last_inbound=%s",
-            lead_id, trigger, intent, email_stats["inbound_count"], email_stats["initiated_count"], last_inbound)
+
+        # ── Email summaries (sentiment, key points, follow-up) ──────────
+        summary_stmt = (
+            select(EmailSummary)
+            .join(Email, Email.thread_id == EmailSummary.thread_id)
+            .where(
+                Email.external_entity_id == lead_id,
+                Email.organization_id == organization_id,
+                Email.is_active.is_(True),
+            )
+            .order_by(Email.sent_at.desc())
+            .limit(5)
+        )
+        summary_result = await db.execute(summary_stmt)
+        recent_summaries = list(summary_result.scalars().all())
+
+        if recent_summaries:
+            latest = recent_summaries[0]
+            raw_data["email_sentiment"] = latest.sentiment
+            raw_data["email_intent"] = latest.intent
+            raw_data["email_key_points"] = latest.key_points or []
+            raw_data["email_action_items"] = latest.action_items or []
+            raw_data["email_follow_up_suggestion"] = latest.follow_up_suggestion
+            raw_data["email_follow_up_timing"] = latest.follow_up_timing
+            raw_data["email_summaries"] = [
+                {
+                    "sentiment": s.sentiment,
+                    "intent": s.intent,
+                    "key_points": s.key_points or [],
+                    "action_items": s.action_items or [],
+                    "follow_up_suggestion": s.follow_up_suggestion,
+                    "follow_up_timing": s.follow_up_timing,
+                    "summary": s.summary,
+                }
+                for s in recent_summaries
+            ]
+
+        # ── Latest email subject and preview ────────────────────────────
+        latest_email_stmt = (
+            select(Email)
+            .where(
+                Email.external_entity_id == lead_id,
+                Email.organization_id == organization_id,
+                Email.is_active.is_(True),
+            )
+            .order_by(Email.sent_at.desc())
+            .limit(1)
+        )
+        latest_email_result = await db.execute(latest_email_stmt)
+        latest_email = latest_email_result.scalar_one_or_none()
+        if latest_email:
+            raw_data["latest_email_subject"] = latest_email.subject
+            raw_data["latest_email_preview"] = (latest_email.body_preview or "")[:200]
+
+        logger.info("[ASSESS_PIPELINE] lead=%s trigger=%s intent=%s sentiment=%s inbound=%s initiated=%s last_inbound=%s",
+            lead_id, trigger, intent, raw_data.get("email_sentiment"), email_stats["inbound_count"], email_stats["initiated_count"], last_inbound)
     else:
         # Still include basic email stats for fit-only events
         email_svc = EmailStatsService(db)
