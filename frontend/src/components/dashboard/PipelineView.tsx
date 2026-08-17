@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR, invalidateEntityCache } from '@/utils/api';
+import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR, invalidateEntityCache, getLeadScore } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import SkeletonLoader from './SkeletonLoader';
 import { 
@@ -215,7 +215,7 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
     };
   }, []);
 
-  const addScoringId = (dealId: string | number) => {
+  const addScoringId = (dealId: string | number, leadId?: string | null) => {
     const id = String(dealId);
     setScoringIds(prev => new Set(prev).add(id));
     const existing = scoringTimersRef.current.get(id);
@@ -223,7 +223,39 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
     scoringTimersRef.current.set(id, setTimeout(() => {
       setScoringIds(prev => { const next = new Set(prev); next.delete(id); return next; });
       scoringTimersRef.current.delete(id);
-    }, 15_000));
+    }, 30_000));
+
+    if (!leadId) return;
+    const leadIdStr = String(leadId);
+    const previousScore = deals.find(d => String(d.id) === id)?.leadScore ?? null;
+
+    let attempt = 0;
+    const maxAttempts = 5;
+    const pollInterval = 3_000;
+
+    const poll = async () => {
+      attempt++;
+      try {
+        const scoreData = await getLeadScore(leadIdStr);
+        if (scoreData && scoreData.score != null && scoreData.score !== previousScore) {
+          setDeals(prev => prev.map(d =>
+            String(d.id) === id ? { ...d, leadScore: scoreData.score } : d
+          ));
+          setScoringIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+          const timer = scoringTimersRef.current.get(id);
+          if (timer) { clearTimeout(timer); scoringTimersRef.current.delete(id); }
+          return;
+        }
+      } catch {}
+      if (attempt < maxAttempts) {
+        setTimeout(poll, pollInterval);
+      } else {
+        setScoringIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+        const timer = scoringTimersRef.current.get(id);
+        if (timer) { clearTimeout(timer); scoringTimersRef.current.delete(id); }
+      }
+    };
+    setTimeout(poll, pollInterval);
   };
 
   const stageNames = stages.map(s => s.name);
@@ -528,7 +560,8 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
 
     try {
       await updateDealStage(draggedId, stageId);
-      addScoringId(draggedId);
+      const draggedDeal = deals.find(d => d.id === draggedId);
+      addScoringId(draggedId, draggedDeal?.leadId);
     } catch (err: any) {
       // Revert on failure
       if (originalStage) {
@@ -574,7 +607,8 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
 
     try {
       await updateDealStage(dealId, pendingStageChange.stageId, reason);
-      addScoringId(dealId);
+      const pendingDeal = deals.find(d => d.id === dealId);
+      addScoringId(dealId, pendingDeal?.leadId);
     } catch (err: any) {
       // Revert on failure
       if (originalStage) {
@@ -1094,14 +1128,14 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
                       <div className="text-[9px] mt-1 flex items-center gap-1">
                         <span className="text-text-muted">Lead:</span>
                         <span className="font-semibold text-text-primary truncate">{deal.leadName}</span>
-                        {deal.leadScore != null && (
+                        {deal.leadScore != null && !scoringIds.has(String(deal.id)) && (
                           <span className={`text-[8px] font-bold px-1 py-0.25 rounded ${
                             deal.leadScore >= 80 ? 'text-status-success bg-status-success/10' :
                             deal.leadScore >= 50 ? 'text-status-warning bg-status-warning/10' :
                             'text-text-muted bg-surface-2'
                           }`}>{deal.leadScore}%</span>
                         )}
-                        {deal.leadScore == null && scoringIds.has(String(deal.id)) && (
+                        {scoringIds.has(String(deal.id)) && (
                           <Loader2 className="h-2.5 w-2.5 animate-spin text-accent-color" />
                         )}
                       </div>
@@ -1181,7 +1215,7 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
                             )
                           );
                           updateDealStage(deal.id, stageId).then(() => {
-                            addScoringId(deal.id);
+                            addScoringId(deal.id, deal.leadId);
                           }).catch((err: any) => {
                             // Revert on failure
                             setDeals(prev =>
@@ -1351,14 +1385,14 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
                       <p className="text-[11px] font-semibold text-text-primary">{selectedDeal.leadName}</p>
                       {selectedDeal.leadEmail && <p className="text-[9px] text-text-muted mt-0.5">{selectedDeal.leadEmail}</p>}
                     </div>
-                    {selectedDeal.leadScore != null && (
+                    {selectedDeal.leadScore != null && !scoringIds.has(String(selectedDeal.id)) && (
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                         selectedDeal.leadScore >= 80 ? 'text-status-success bg-status-success/10' :
                         selectedDeal.leadScore >= 50 ? 'text-status-warning bg-status-warning/10' :
                         'text-text-muted bg-surface-2'
                       }`}>{selectedDeal.leadScore}%</span>
                     )}
-                    {selectedDeal.leadScore == null && scoringIds.has(String(selectedDeal.id)) && (
+                    {scoringIds.has(String(selectedDeal.id)) && (
                       <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-color" />
                     )}
                   </div>
