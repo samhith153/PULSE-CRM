@@ -32,7 +32,6 @@ def _normalize_inputs(lead):
         days = lead["days_since_last_outbound"]
         lead["last_outbound_date"] = datetime.now(timezone.utc) - timedelta(days=days)
 
-    # Parse last_contact_time if it's a string (ISO format)
     if lead.get("last_contact_time") and isinstance(lead["last_contact_time"], str):
         from datetime import datetime
         try:
@@ -66,6 +65,17 @@ def _normalize_inputs(lead):
 
     if lead.get("email"):
         lead["email"] = lead["email"].strip().lower()
+
+    if not lead.get("email_sentiment") and lead.get("email_summaries"):
+        summaries = lead["email_summaries"]
+        if isinstance(summaries, list) and summaries:
+            latest = summaries[-1]
+            lead["email_sentiment"] = latest.get("sentiment") if isinstance(latest, dict) else None
+            lead["email_intent"] = latest.get("intent") if isinstance(latest, dict) else None
+            lead["email_key_points"] = latest.get("key_points") if isinstance(latest, dict) else None
+            lead["email_follow_up_suggestion"] = latest.get("follow_up_suggestion") if isinstance(latest, dict) else None
+            lead["email_follow_up_timing"] = latest.get("follow_up_timing") if isinstance(latest, dict) else None
+            lead["email_action_items"] = latest.get("action_items") if isinstance(latest, dict) else None
 
     return lead
 
@@ -130,11 +140,54 @@ def _build_reason(lead_features, action):
     score = lead_features["engagement_score"]
     contact_time = lead_features["contact_time"]
     is_outbound = lead_features["is_outbound"]
-    subject = lead_features.get("subject")
     open_count = lead_features.get("open_count", 0)
     deal_value = lead_features.get("deal_value", 0)
     meeting_attendance = lead_features.get("meeting_attendance", 0)
     rep_workload = lead_features.get("rep_workload", 0.5)
+
+    sentiment = lead_features.get("email_sentiment")
+    email_intent = lead_features.get("email_intent")
+    key_points = lead_features.get("email_key_points") or []
+    follow_up = lead_features.get("email_follow_up_suggestion")
+    follow_up_timing = lead_features.get("email_follow_up_timing")
+    action_items = lead_features.get("email_action_items") or []
+    latest_subject = lead_features.get("latest_email_subject")
+    latest_preview = lead_features.get("latest_email_preview")
+
+    if sentiment:
+        sentiment_lower = sentiment.lower()
+        if sentiment_lower == "positive":
+            reasons.append(f"Customer sentiment is positive — email tone indicates interest")
+        elif sentiment_lower == "negative":
+            reasons.append(f"Customer sentiment is negative — may have concerns or objections")
+        else:
+            reasons.append(f"Customer sentiment is neutral")
+
+    if email_intent:
+        intent_map = {
+            "demo": "Customer requested a demo",
+            "buy": "Customer expressed buying intent",
+            "negotiate": "Customer is in negotiation mode",
+            "followup": "Customer is waiting for a follow-up",
+            "question": "Customer has an unresolved question",
+            "objection": "Customer raised an objection",
+            "proposal_request": "Customer requested a proposal",
+        }
+        intent_desc = intent_map.get(email_intent.lower(), f"Detected intent: {email_intent}")
+        reasons.append(intent_desc)
+
+    if key_points:
+        top_points = key_points[:3]
+        reasons.append(f"Key discussion points: {'; '.join(top_points)}")
+
+    if action_items:
+        reasons.append(f"{len(action_items)} action item(s) identified from email thread")
+
+    if follow_up:
+        reasons.append(f"AI-suggested follow-up: {follow_up}")
+
+    if follow_up_timing:
+        reasons.append(f"Recommended contact timing: {follow_up_timing}")
 
     if contact_time > 80:
         reasons.append("High intent — lead recently active")
@@ -150,20 +203,23 @@ def _build_reason(lead_features, action):
     else:
         reasons.append("Latest email from us (outbound)")
 
-    if subject:
-        reasons.append(f"Subject: {subject}")
+    if latest_subject:
+        reasons.append(f"Latest thread: \"{latest_subject}\"")
 
     if action == "Send follow-up email" and open_count > 3:
-        reasons.append("High open count suggests interest")
+        reasons.append("High open count suggests interest in our emails")
 
     if action == "Schedule a product demo" and score >= 60:
-        reasons.append("Strong engagement score")
+        reasons.append("Strong engagement score supports demo scheduling")
 
     if action == "Mark as stale" and contact_time < 20:
         reasons.append("Low contact time indicates disengagement")
 
     if action == "Follow up on proposal":
         reasons.append("Proposal has been sent — timely follow-up needed")
+
+    if not reasons:
+        reasons.append("Based on overall lead profile and engagement data")
 
     return reasons
 

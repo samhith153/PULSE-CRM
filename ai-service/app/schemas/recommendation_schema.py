@@ -29,6 +29,16 @@ class RecommendationRequest(BaseModel):
     inbound_thread: Optional[list] = None
     tags: Optional[List[str]] = None
     last_outbound_date: Optional[str] = None
+    last_contact_time: Optional[str] = None
+    email_summaries: Optional[List[Dict[str, Any]]] = None
+    email_sentiment: Optional[str] = None
+    email_intent: Optional[str] = None
+    email_key_points: Optional[List[str]] = None
+    email_follow_up_suggestion: Optional[str] = None
+    email_follow_up_timing: Optional[str] = None
+    email_action_items: Optional[List[str]] = None
+    latest_email_subject: Optional[str] = None
+    latest_email_preview: Optional[str] = None
     context: dict[str, Any] = Field(default_factory=dict)
 
 

@@ -288,6 +288,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
   const [recommendationsExpanded, setRecommendationsExpanded] = useState<Record<string, boolean>>({});
   const [recommendationLoading, setRecommendationLoading] = useState<Record<string, boolean>>({});
   const [recommendationError, setRecommendationError] = useState<Record<string, string>>({});
+  const [recommendationLoadingIds, setRecommendationLoadingIds] = useState<Set<string>>(new Set());
 
   const handleReadRecommendations = async (leadId: string) => {
     setRecommendationLoading(prev => ({ ...prev, [leadId]: true }));
@@ -429,13 +430,24 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
   // Helper: fetch recommendations for all leads
   const refreshRecommendations = (leadIds: string[]) => {
     if (leadIds.length === 0) return;
+    setRecommendationLoadingIds(prev => {
+      const next = new Set(prev);
+      leadIds.forEach(id => next.add(id));
+      return next;
+    });
     fetchBatchRecommendations(leadIds).then(res => {
       const recs: Record<string, string> = {};
       for (const [id, item] of Object.entries(res.recommendations || {})) {
         recs[id] = item.recommended_action || 'No recommendation available.';
       }
       setLeadRecommendations(recs);
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => {
+      setRecommendationLoadingIds(prev => {
+        const next = new Set(prev);
+        leadIds.forEach(id => next.delete(id));
+        return next;
+      });
+    });
   };
 
   useEffect(() => {
@@ -564,6 +576,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
 
   // Score-based priority view helpers — prefer real backend scores, fall back to heuristic
   const isScorePending = (lead: Lead) => lead.score == null || scoringLeadIds.has(String(lead.id));
+  const isRecommendationPending = (lead: Lead) => !leadRecommendations[lead.id] || recommendationLoadingIds.has(String(lead.id));
   const getEngagementScore = (lead: Lead): number | null => {
     if (lead.score == null) return null;
     if (lead.engagement_score != null) return lead.engagement_score;
@@ -1566,7 +1579,14 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                                 }`}>{getOverallScore(lead)}</span>
                                 )}
                               </td>
-                              <td className="py-3.5 px-2 text-[10px] text-text-muted max-w-[200px] truncate">{getAIRecommendation(lead)}</td>
+                              <td className="py-3.5 px-2 text-[10px] text-text-muted max-w-[200px] truncate">
+                                {isRecommendationPending(lead) ? (
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-accent-color">
+                                    <Loader2 className="animate-spin h-3 w-3" />
+                                    Loading…
+                                  </span>
+                                ) : getAIRecommendation(lead)}
+                              </td>
                               <td className="py-3.5 px-2 text-right pr-4">
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(lead.id); }}
@@ -1741,8 +1761,13 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                                 )}
                               </td>
                               <td className="py-3">
-                                <div className="text-[10px] text-text-muted font-bold max-w-[220px] truncate" title={getAIRecommendation(lead)}>
-                                  {getAIRecommendation(lead)}
+                                <div className="text-[10px] text-text-muted font-bold max-w-[220px] truncate" title={isRecommendationPending(lead) ? '' : getAIRecommendation(lead)}>
+                                  {isRecommendationPending(lead) ? (
+                                    <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-accent-color">
+                                      <Loader2 className="animate-spin h-3 w-3" />
+                                      Loading…
+                                    </span>
+                                  ) : getAIRecommendation(lead)}
                                 </div>
                               </td>
                             </>

@@ -89,6 +89,18 @@ async def mark_all_read(current_user: CurrentUser, db: DBSession) -> dict:
 
 
 @router.delete(
+    "",
+    response_model=StandardResponse[dict],
+    summary="Dismiss (hide) all notifications for the current user",
+    dependencies=[Depends(require_permission("notification:read"))],
+)
+async def dismiss_all_notifications(current_user: CurrentUser, db: DBSession) -> dict:
+    service = NotificationService(db)
+    dismissed = await service.dismiss_all(current_user.organization_id, current_user.id)
+    return {"success": True, "message": "All notifications dismissed.", "data": {"dismissed": dismissed}}
+
+
+@router.delete(
     "/{notification_id}",
     response_model=StandardResponse[NotificationResponse],
     summary="Dismiss (hide) a notification",

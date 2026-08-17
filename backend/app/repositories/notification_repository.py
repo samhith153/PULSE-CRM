@@ -89,5 +89,20 @@ class NotificationRepository(BaseRepository[Notification]):
         await self.db.refresh(notification)
         return notification
 
+    async def dismiss_all(self, organization_id: UUID, user_id: UUID) -> int:
+        now = datetime.now(timezone.utc)
+        stmt = (
+            update(Notification)
+            .where(
+                Notification.organization_id == organization_id,
+                Notification.user_id == user_id,
+                Notification.is_dismissed.is_(False),
+            )
+            .values(is_dismissed=True, dismissed_at=now)
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+        return result.rowcount or 0
+
     async def exists_for_event(self, source_event_id: UUID, user_id: UUID) -> bool:
         return await self.exists(source_event_id=source_event_id, user_id=user_id)

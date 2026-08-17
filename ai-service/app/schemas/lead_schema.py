@@ -40,6 +40,16 @@ class LeadAssessRequest(BaseModel):
     # ── Recommendation fields ───────────────────────────────────────────
     deal_value: Optional[float] = None
     tags: Optional[List[str]] = None
+    # ── Email context fields ────────────────────────────────────────────
+    email_sentiment: Optional[str] = None
+    email_intent: Optional[str] = None
+    email_key_points: Optional[List[str]] = None
+    email_action_items: Optional[List[str]] = None
+    email_follow_up_suggestion: Optional[str] = None
+    email_follow_up_timing: Optional[str] = None
+    email_summaries: Optional[List[Dict[str, Any]]] = None
+    latest_email_subject: Optional[str] = None
+    latest_email_preview: Optional[str] = None
     context: Dict[str, Any] = Field(default_factory=dict)
 
 

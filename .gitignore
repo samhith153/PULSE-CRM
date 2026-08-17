@@ -107,10 +107,6 @@ __pypackages__/
 # Celery stuff
 celerybeat-schedule
 celerybeat.pid
-# Redis
-*.rdb
-*.aof
-*.pid
 # RabbitMQ
 mnesia/
 rabbitmq/
