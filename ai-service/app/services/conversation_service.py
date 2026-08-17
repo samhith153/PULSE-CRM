@@ -234,7 +234,7 @@ async def summarise_thread(thread: Dict[str, Any]) -> str:
 
     response = await asyncio.wait_for(
         _get_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=settings.LLM_MODEL,
             messages=[
                 {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},
@@ -347,7 +347,7 @@ async def generate_outreach_draft(
 
     response = await asyncio.wait_for(
         _get_client().chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model=settings.LLM_MODEL,
             messages=[
                 {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
                 {"role": "user", "content": prompt},

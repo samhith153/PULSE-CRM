@@ -100,7 +100,7 @@ class EmailSummaryService:
             existing.draft_reply = result.get("draft_reply", existing.draft_reply)
             existing.follow_up_suggestion = result.get("follow_up_suggestion", existing.follow_up_suggestion)
             existing.follow_up_timing = result.get("follow_up_timing", existing.follow_up_timing)
-            existing.model_version = settings.MODEL_NAME or "llama-3.3-70b-versatile"
+            existing.model_version = settings.MODEL_NAME or settings.ASSISTANT_MODEL
             summary = existing
         else:
             summary = EmailSummary(
@@ -118,7 +118,7 @@ class EmailSummaryService:
                 follow_up_suggestion=result.get("follow_up_suggestion", "No follow-up suggested."),
                 follow_up_timing=result.get("follow_up_timing", "no_followup"),
                 processing_time_ms=0,
-                model_version=settings.MODEL_NAME or "llama-3.3-70b-versatile",
+                model_version=settings.MODEL_NAME or settings.ASSISTANT_MODEL,
             )
             self.db.add(summary)
 
@@ -371,7 +371,7 @@ async def _summarize_via_groq_direct(messages: list[dict]) -> Optional[dict]:
     try:
         response = await asyncio.wait_for(
             client.chat.completions.create(
-                model=settings.MODEL_NAME or "llama-3.3-70b-versatile",
+                model=settings.MODEL_NAME or settings.ASSISTANT_MODEL,
                 messages=[
                     {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
                     {"role": "user", "content": prompt},

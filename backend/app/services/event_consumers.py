@@ -45,6 +45,7 @@ class NotificationConsumer(EventConsumer):
         # Determine recipient: prefer envelope actor_id, fall back to payload keys
         recipient_id = (
             getattr(event, "actor_id", None)
+            or event.payload.get("recipient_user_id")
             or event.payload.get("actor_id")
             or event.payload.get("created_by")
         )

@@ -118,7 +118,7 @@ services:
       - key: ASSISTANT_API_KEY
         sync: false
       - key: ASSISTANT_MODEL
-        value: Qwen3.6 27B
+        value: qwen/qwen3.6-27b
       - key: OPENAI_API_KEY
         sync: false
       # ── Storage ──────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ services:
       - key: SUMMARIZATION_API_KEY
         sync: false
       - key: LLM_MODEL
-        value: Qwen3.6 27B
+        value: qwen/qwen3.6-27b
       - key: LLM_TEMPERATURE
         value: "0.3"
       - key: LLM_MAX_TOKENS
