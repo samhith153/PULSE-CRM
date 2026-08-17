@@ -1,484 +1,298 @@
-←[32mINFO←[0m:     Will watch for changes in these directories: ['C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend']
-←[32mINFO←[0m:     Uvicorn running on ←[1mhttp://0.0.0.0:8000←[0m (Press CTRL+C to quit)
-←[32mINFO←[0m:     Started reloader process [←[36m←[1m16176←[0m] using ←[36m←[1mStatReload←[0m
-←[32mINFO←[0m:     Started server process [←[36m2640←[0m]
-←[32mINFO←[0m:     Waiting for application startup.
-{"timestamp": "2026-08-16T19:46:02.234861+00:00", "level": "INFO", "logger": "app.main", "message": "Starting KALNET PULSE CRM v1.0.0 [development]", "module": "main", "function": "lifespan", "line": 243, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.235599+00:00", "level": "INFO", "logger": "app.main", "message": "Application starting", "module": "main", "function": "lifespan", "line": 249, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.235856+00:00", "level": "INFO", "logger": "app.main", "message": "Google Sign-In enabled (client_id=244027209407...tent.com)", "module": "main", "function": "lifespan", "line": 254, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.243698+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Adding job tentatively -- it will be properly scheduled when the scheduler starts", "module": "base", "function": "add_job", "line": 507, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.245525+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Adding job tentatively -- it will be properly scheduled when the scheduler starts", "module": "base", "function": "add_job", "line": 507, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.245959+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Adding job tentatively -- it will be properly scheduled when the scheduler starts", "module": "base", "function": "add_job", "line": 507, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.246305+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Adding job tentatively -- it will be properly scheduled when the scheduler starts", "module": "base", "function": "add_job", "line": 507, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.247884+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Added job \"daily_lead_assessment\" to job store \"default\"", "module": "base", "function": "_real_add_job", "line": 1092, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.248227+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Added job \"process_event_outbox\" to job store \"default\"", "module": "base", "function": "_real_add_job", "line": 1092, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.248837+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Added job \"refresh_gmail_watches\" to job store \"default\"", "module": "base", "function": "_real_add_job", "line": 1092, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.249972+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Added job \"keep_alive_ai_service\" to job store \"default\"", "module": "base", "function": "_real_add_job", "line": 1092, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:02.250428+00:00", "level": "INFO", "logger": "apscheduler.scheduler", "message": "Scheduler started", "module": "base", "function": "start", "line": 214, "request_id": "system"}
-←[32mINFO←[0m:     Application startup complete.
-{"timestamp": "2026-08-16T19:46:03.737053+00:00", "level": "INFO", "logger": "httpx", "message": "HTTP Request: GET http://localhost:8001/health \"HTTP/1.1 200 OK\"", "module": "_client", "function": "_send_single_request", "line": 1740, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:03.738956+00:00", "level": "INFO", "logger": "app.main", "message": "AI service reachable at http://localhost:8001", "module": "main", "function": "_check_ai_health", "line": 315, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:04.536682+00:00", "level": "INFO", "logger": "app.main", "message": "All 1 Gmail connection(s) decrypted OK with current key", "module": "main", "function": "_verify_gmail_tokens", "line": 299, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:05.549723+00:00", "level": "INFO", "logger": "httpx", "message": "HTTP Request: POST https://gmail.googleapis.com/gmail/v1/users/me/watch \"HTTP/1.1 200 OK\"", "module": "_client", "function": "_send_single_request", "line": 1740, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:05.551725+00:00", "level": "INFO", "logger": "app.services.email_service", "message": "Gmail watch refreshed for pulsecrmkalnet@gmail.com, historyId=14097", "module": "email_service", "function": "refresh_watch_for_all_connections", "line": 356, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:05.655619+00:00", "level": "INFO", "logger": "app.services.email_service", "message": "Gmail watch refresh: 1/1 connections refreshed", "module": "email_service", "function": "refresh_watch_for_all_connections", "line": 362, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:07.258087+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Running job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:12 IST)\" (scheduled at 2026-08-17 01:16:07.245257+05:30)", "module": "base", "function": "run_coroutine_job", "line": 179, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:07.634310+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:12 IST)\" executed successfully", "module": "base", "function": "run_coroutine_job", "line": 203, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:08.869884+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/auth/config 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/auth/config", "query": "", "status_code": 200, "duration_ms": 10.77, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61301 - "←[1mGET /api/v1/auth/config HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61301 - "←[1mOPTIONS /api/v1/auth/login HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:12.251838+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Running job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:17 IST)\" (scheduled at 2026-08-17 01:16:12.245257+05:30)", "module": "base", "function": "run_coroutine_job", "line": 179, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:12.593858+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:17 IST)\" executed successfully", "module": "base", "function": "run_coroutine_job", "line": 203, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:12.648916+00:00", "level": "INFO", "logger": "app.services.auth_service", "message": "User logged in", "module": "auth_service", "function": "login", "line": 154, "request_id": "55002c06-fb2d-4b85-ad73-b2b0bb4205dc", "user_id": "676f281f-a662-4ab0-8fac-c9c08499124e"}
-{"timestamp": "2026-08-16T19:46:13.205415+00:00", "level": "INFO", "logger": "app.services.event_service", "message": "Event outbox recorded", "module": "event_service", "function": "record_event", "line": 101, "request_id": "55002c06-fb2d-4b85-ad73-b2b0bb4205dc", "event_id": "29deb416-f39e-4d60-b4fc-ca754e6ea6d1", "event_type": "USER_LOGGED_IN", "aggregate_type": "user", "aggregate_id": "676f281f-a662-4ab0-8fac-c9c08499124e", "organization_id": "0c5628c5-b42e-47f6-a7c8-579b082bca03"}
-{"timestamp": "2026-08-16T19:46:13.309339+00:00", "level": "INFO", "logger": "http.access", "message": "POST /api/v1/auth/login 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "POST", "path": "/api/v1/auth/login", "query": "", "status_code": 200, "duration_ms": 2352.6, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61301 - "←[1mPOST /api/v1/auth/login HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61301 - "←[1mOPTIONS /api/v1/auth/me HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:14.058434+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/auth/me 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/auth/me", "query": "", "status_code": 200, "duration_ms": 727.25, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61301 - "←[1mGET /api/v1/auth/me HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61301 - "←[1mOPTIONS /api/v1/dashboard/me HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/notifications?page=1&page_size=10 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:15.044414+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/auth/me 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/auth/me", "query": "", "status_code": 200, "duration_ms": 1.99, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mGET /api/v1/auth/me HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/crm-activities?view=task&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/crm-activities?view=meeting&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/crm-activities?view=call&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/crm-activities?view=email&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/crm-activities?view=task&quick_tab=overdue&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/crm-activities?view=task&status=completed&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/deals HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/leads HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/activities?page_size=50 HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mOPTIONS /api/v1/stream/dashboard HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:16.193063+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/notifications 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/notifications", "query": "page=1&page_size=10", "status_code": 200, "duration_ms": 1036.99, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mGET /api/v1/notifications?page=1&page_size=10 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:16.223440+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/crm-activities 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/crm-activities", "query": "view=task&page_size=1", "status_code": 200, "duration_ms": 939.37, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61330 - "←[1mGET /api/v1/crm-activities?view=task&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:16.399214+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/crm-activities 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/crm-activities", "query": "view=meeting&page_size=1", "status_code": 200, "duration_ms": 1113.94, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61331 - "←[1mGET /api/v1/crm-activities?view=meeting&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:16.462013+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/crm-activities 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/crm-activities", "query": "view=call&page_size=1", "status_code": 200, "duration_ms": 1176.51, "client_ip": "127.0.0.1"}
-{"timestamp": "2026-08-16T19:46:16.462623+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/crm-activities 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/crm-activities", "query": "view=email&page_size=1", "status_code": 200, "duration_ms": 1117.5, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61332 - "←[1mGET /api/v1/crm-activities?view=call&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-←[32mINFO←[0m:     127.0.0.1:61335 - "←[1mGET /api/v1/crm-activities?view=email&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:17.124769+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/crm-activities 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/crm-activities", "query": "view=task&quick_tab=overdue&page_size=1", "status_code": 200, "duration_ms": 918.31, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mGET /api/v1/crm-activities?view=task&quick_tab=overdue&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:17.156638+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/stream/dashboard 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/stream/dashboard", "query": "", "status_code": 200, "duration_ms": 15.31, "client_ip": "127.0.0.1"}
-{"timestamp": "2026-08-16T19:46:17.178082+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/crm-activities 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/crm-activities", "query": "view=task&status=completed&page_size=1", "status_code": 200, "duration_ms": 940.43, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61330 - "←[1mGET /api/v1/crm-activities?view=task&status=completed&page_size=1 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:17.211081+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/auth/me 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/auth/me", "query": "", "status_code": 200, "duration_ms": 5.78, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61330 - "←[1mGET /api/v1/auth/me HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:17.255330+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Running job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:22 IST)\" (scheduled at 2026-08-17 01:16:17.245257+05:30)", "module": "base", "function": "run_coroutine_job", "line": 179, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:17.315171+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/activities 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/activities", "query": "page_size=50", "status_code": 200, "duration_ms": 820.77, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61335 - "←[1mGET /api/v1/activities?page_size=50 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:17.655465+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/dashboard/me 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/dashboard/me", "query": "", "status_code": 200, "duration_ms": 2875.28, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61301 - "←[1mGET /api/v1/dashboard/me HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:17.688749+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/leads 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/leads", "query": "", "status_code": 200, "duration_ms": 1195.38, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61332 - "←[1mGET /api/v1/leads HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:17.888686+00:00", "level": "INFO", "logger": "app.services.event_consumers", "message": "Event processed", "module": "event_consumers", "function": "handle", "line": 139, "request_id": "system", "event_id": "29deb416-f39e-4d60-b4fc-ca754e6ea6d1", "event_type": "USER_LOGGED_IN", "topic": "user", "organization_id": "0c5628c5-b42e-47f6-a7c8-579b082bca03"}
-←[32mINFO←[0m:     127.0.0.1:61317 - "←[1mGET /api/v1/stream/dashboard HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:17.979128+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/deals 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/deals", "query": "", "status_code": 200, "duration_ms": 1560.29, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61331 - "←[1mGET /api/v1/deals HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:18.049648+00:00", "level": "INFO", "logger": "app.main", "message": "Event outbox: processed 1 event(s).", "module": "main", "function": "process_event_outbox", "line": 47, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:18.057975+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:22 IST)\" executed successfully", "module": "base", "function": "run_coroutine_job", "line": 203, "request_id": "system"}
-←[32mINFO←[0m:     127.0.0.1:61331 - "←[1mOPTIONS /api/v1/pipeline/stages HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:19.406335+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/pipeline/stages 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/pipeline/stages", "query": "", "status_code": 200, "duration_ms": 364.18, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61331 - "←[1mGET /api/v1/pipeline/stages HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:22.253947+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Running job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:27 IST)\" (scheduled at 2026-08-17 01:16:22.245257+05:30)", "module": "base", "function": "run_coroutine_job", "line": 179, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:22.624231+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:27 IST)\" executed successfully", "module": "base", "function": "run_coroutine_job", "line": 203, "request_id": "system"}
-←[32mINFO←[0m:     127.0.0.1:61331 - "←[1mOPTIONS /api/v1/pipeline/move HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:22.829980+00:00", "level": "WARNING", "logger": "app.database.connection", "message": "Session rollback: InvalidRequestError: This session is provisioning a new connection; concurrent operations are not permitted (Background on this error at: https://sqlalche.me/e/20/isce)", "module": "connection", "function": "get_db", "line": 128, "request_id": "c42c6c5e-cc3f-47df-8691-c2df5e5c77bd"}
-{"timestamp": "2026-08-16T19:46:22.835578+00:00", "level": "ERROR", "logger": "exception_handler", "message": "Unexpected error on PATCH /api/v1/pipeline/move", "module": "exception_handler", "function": "generic_exception_handler", "line": 173, "request_id": "system", "exception": "  + Exception Group Traceback (most recent call last):\n  |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 76, in collapse_excgroups\n  |     yield\n  |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 186, in __call__\n  |     async with anyio.create_task_group() as task_group:\n  |                ~~~~~~~~~~~~~~~~~~~~~~~^^\n  |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\anyio\\_backends\\_asyncio.py\", line 815, in __aexit__\n  |     raise BaseExceptionGroup(\n  |         \"unhandled errors in a TaskGroup\", self._exceptions\n  |     ) from None\n  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)\n  +-+---------------- 1 ----------------\n    | Traceback (most recent call last):\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\errors.py\", line 165, in __call__\n    |     await self.app(scope, receive, _send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\cors.py\", line 93, in __call__\n    |     await self.simple_response(scope, receive, send, request_headers=headers)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\cors.py\", line 144, in simple_response\n    |     await self.app(scope, receive, send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    |     with collapse_excgroups():\n    |          ~~~~~~~~~~~~~~~~~~^^\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    |     self.gen.throw(value)\n    |     ~~~~~~~~~~~~~~^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    |     response = await self.dispatch_func(request, call_next)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\private_network.py\", line 19, in dispatch\n    |     response = await call_next(request)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    |     raise app_exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    |     await self.app(scope, receive_or_disconnect, send_no_error)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\gzip.py\", line 20, in __call__\n    |     await responder(scope, receive, send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\gzip.py\", line 39, in __call__\n    |     await self.app(scope, receive, self.send_with_gzip)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    |     with collapse_excgroups():\n    |          ~~~~~~~~~~~~~~~~~~^^\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    |     self.gen.throw(value)\n    |     ~~~~~~~~~~~~~~^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    |     response = await self.dispatch_func(request, call_next)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\rate_limit.py\", line 152, in dispatch\n    |     response = await call_next(request)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    |     raise app_exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    |     await self.app(scope, receive_or_disconnect, send_no_error)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    |     with collapse_excgroups():\n    |          ~~~~~~~~~~~~~~~~~~^^\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    |     self.gen.throw(value)\n    |     ~~~~~~~~~~~~~~^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    |     response = await self.dispatch_func(request, call_next)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\rate_limit.py\", line 278, in dispatch\n    |     return await call_next(request)\n    |            ^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    |     raise app_exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    |     await self.app(scope, receive_or_disconnect, send_no_error)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    |     with collapse_excgroups():\n    |          ~~~~~~~~~~~~~~~~~~^^\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    |     self.gen.throw(value)\n    |     ~~~~~~~~~~~~~~^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    |     response = await self.dispatch_func(request, call_next)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\rate_limit.py\", line 287, in dispatch\n    |     response = await call_next(request)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    |     raise app_exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    |     await self.app(scope, receive_or_disconnect, send_no_error)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    |     with collapse_excgroups():\n    |          ~~~~~~~~~~~~~~~~~~^^\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    |     self.gen.throw(value)\n    |     ~~~~~~~~~~~~~~^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    |     response = await self.dispatch_func(request, call_next)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\logging.py\", line 39, in dispatch\n    |     response = await call_next(request)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    |     raise app_exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    |     await self.app(scope, receive_or_disconnect, send_no_error)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    |     with collapse_excgroups():\n    |          ~~~~~~~~~~~~~~~~~~^^\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    |     self.gen.throw(value)\n    |     ~~~~~~~~~~~~~~^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    |     response = await self.dispatch_func(request, call_next)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\request_id.py\", line 21, in dispatch\n    |     response = await call_next(request)\n    |                ^^^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    |     raise app_exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    |     await self.app(scope, receive_or_disconnect, send_no_error)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\exceptions.py\", line 62, in __call__\n    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_exception_handler.py\", line 53, in wrapped_app\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_exception_handler.py\", line 42, in wrapped_app\n    |     await app(scope, receive, sender)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\fastapi\\middleware\\asyncexitstack.py\", line 18, in __call__\n    |     await self.app(scope, receive, send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\routing.py\", line 715, in __call__\n    |     await self.middleware_stack(scope, receive, send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\routing.py\", line 735, in app\n    |     await route.handle(scope, receive, send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\routing.py\", line 288, in handle\n    |     await self.app(scope, receive, send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\fastapi\\routing.py\", line 119, in app\n    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_exception_handler.py\", line 53, in wrapped_app\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_exception_handler.py\", line 42, in wrapped_app\n    |     await app(scope, receive, sender)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\fastapi\\routing.py\", line 101, in app\n    |     async with AsyncExitStack() as request_stack:\n    |                ~~~~~~~~~~~~~~^^\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 768, in __aexit__\n    |     raise exc\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 751, in __aexit__\n    |     cb_suppress = await cb(*exc_details)\n    |                   ^^^^^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 235, in __aexit__\n    |     await self.gen.athrow(value)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\database\\connection.py\", line 120, in get_db\n    |     async with AsyncSessionFactory() as session:\n    |                ~~~~~~~~~~~~~~~~~~~^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\ext\\asyncio\\session.py\", line 1070, in __aexit__\n    |     await asyncio.shield(task)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\ext\\asyncio\\session.py\", line 1015, in close\n    |     await greenlet_spawn(self.sync_session.close)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 190, in greenlet_spawn\n    |     result = context.switch(*args, **kwargs)\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\orm\\session.py\", line 2529, in close\n    |     self._close_impl(invalidate=False)\n    |     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\orm\\session.py\", line 2598, in _close_impl\n    |     transaction.close(invalidate)\n    |     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\n    |   File \"<string>\", line 2, in close\n    |   File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\orm\\state_changes.py\", line 119, in _go\n    |     raise sa_exc.IllegalStateChangeError(\n    |     ...<5 lines>...\n    |     )\n    | sqlalchemy.exc.IllegalStateChangeError: Method 'close()' can't be called here; method '_connection_for_bind()' is already in progress and this would cause an unexpected state change to <SessionTransactionState.CLOSED: 5> (Background on this error at: https://sqlalche.me/e/20/isce)\n    +------------------------------------\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\errors.py\", line 165, in __call__\n    await self.app(scope, receive, _send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\cors.py\", line 93, in __call__\n    await self.simple_response(scope, receive, send, request_headers=headers)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\cors.py\", line 144, in simple_response\n    await self.app(scope, receive, send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    with collapse_excgroups():\n         ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    raise exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    response = await self.dispatch_func(request, call_next)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\private_network.py\", line 19, in dispatch\n    response = await call_next(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    raise app_exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    await self.app(scope, receive_or_disconnect, send_no_error)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\gzip.py\", line 20, in __call__\n    await responder(scope, receive, send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\gzip.py\", line 39, in __call__\n    await self.app(scope, receive, self.send_with_gzip)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    with collapse_excgroups():\n         ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    raise exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    response = await self.dispatch_func(request, call_next)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\rate_limit.py\", line 152, in dispatch\n    response = await call_next(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    raise app_exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    await self.app(scope, receive_or_disconnect, send_no_error)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    with collapse_excgroups():\n         ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    raise exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    response = await self.dispatch_func(request, call_next)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\rate_limit.py\", line 278, in dispatch\n    return await call_next(request)\n           ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    raise app_exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    await self.app(scope, receive_or_disconnect, send_no_error)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    with collapse_excgroups():\n         ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    raise exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    response = await self.dispatch_func(request, call_next)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\rate_limit.py\", line 287, in dispatch\n    response = await call_next(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    raise app_exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    await self.app(scope, receive_or_disconnect, send_no_error)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    with collapse_excgroups():\n         ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    raise exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    response = await self.dispatch_func(request, call_next)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\logging.py\", line 39, in dispatch\n    response = await call_next(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    raise app_exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    await self.app(scope, receive_or_disconnect, send_no_error)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 185, in __call__\n    with collapse_excgroups():\n         ~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 162, in __exit__\n    self.gen.throw(value)\n    ~~~~~~~~~~~~~~^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_utils.py\", line 82, in collapse_excgroups\n    raise exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 187, in __call__\n    response = await self.dispatch_func(request, call_next)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\middlewares\\request_id.py\", line 21, in dispatch\n    response = await call_next(request)\n               ^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 163, in call_next\n    raise app_exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\base.py\", line 149, in coro\n    await self.app(scope, receive_or_disconnect, send_no_error)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\middleware\\exceptions.py\", line 62, in __call__\n    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\fastapi\\middleware\\asyncexitstack.py\", line 18, in __call__\n    await self.app(scope, receive, send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\routing.py\", line 715, in __call__\n    await self.middleware_stack(scope, receive, send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\routing.py\", line 735, in app\n    await route.handle(scope, receive, send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\routing.py\", line 288, in handle\n    await self.app(scope, receive, send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\fastapi\\routing.py\", line 119, in app\n    await wrap_app_handling_exceptions(app, request)(scope, receive, send)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_exception_handler.py\", line 53, in wrapped_app\n    raise exc\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\starlette\\_exception_handler.py\", line 42, in wrapped_app\n    await app(scope, receive, sender)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\fastapi\\routing.py\", line 101, in app\n    async with AsyncExitStack() as request_stack:\n               ~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 768, in __aexit__\n    raise exc\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 751, in __aexit__\n    cb_suppress = await cb(*exc_details)\n                  ^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\contextlib.py\", line 235, in __aexit__\n    await self.gen.athrow(value)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\app\\database\\connection.py\", line 120, in get_db\n    async with AsyncSessionFactory() as session:\n               ~~~~~~~~~~~~~~~~~~~^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\ext\\asyncio\\session.py\", line 1070, in __aexit__\n    await asyncio.shield(task)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\ext\\asyncio\\session.py\", line 1015, in close\n    await greenlet_spawn(self.sync_session.close)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\util\\_concurrency_py3k.py\", line 190, in greenlet_spawn\n    result = context.switch(*args, **kwargs)\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\orm\\session.py\", line 2529, in close\n    self._close_impl(invalidate=False)\n    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\orm\\session.py\", line 2598, in _close_impl\n    transaction.close(invalidate)\n    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^\n  File \"<string>\", line 2, in close\n  File \"C:\\Users\\Admin\\Documents\\GitHub\\PULSE-CRM\\backend\\pulsevenv\\Lib\\site-packages\\sqlalchemy\\orm\\state_changes.py\", line 119, in _go\n    raise sa_exc.IllegalStateChangeError(\n    ...<5 lines>...\n    )\nsqlalchemy.exc.IllegalStateChangeError: Method 'close()' can't be called here; method '_connection_for_bind()' is already in progress and this would cause an unexpected state change to <SessionTransactionState.CLOSED: 5> (Background on this error at: https://sqlalche.me/e/20/isce)"}
-←[32mINFO←[0m:     127.0.0.1:61331 - "←[1mPATCH /api/v1/pipeline/move HTTP/1.1←[0m" ←[91m500 Internal Server Error←[0m
-←[31mERROR←[0m:    Exception in ASGI application
-  + Exception Group Traceback (most recent call last):
-  |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 76, in collapse_excgroups
-  |     yield
-  |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 186, in __call__
-  |     async with anyio.create_task_group() as task_group:
-  |                ~~~~~~~~~~~~~~~~~~~~~~~^^
-  |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\anyio\_backends\_asyncio.py", line 815, in __aexit__
-  |     raise BaseExceptionGroup(
-  |         "unhandled errors in a TaskGroup", self._exceptions
-  |     ) from None
-  | ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
-  +-+---------------- 1 ----------------
-    | Traceback (most recent call last):
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 416, in run_asgi
-    |     result = await app(  # type: ignore[func-returns-value]
-    |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |         self.scope, self.receive, self.send
-    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |     )
-    |     ^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
-    |     return await self.app(scope, receive, send)
-    |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
-    |     await super().__call__(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\applications.py", line 113, in __call__
-    |     await self.middleware_stack(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    |     await self.app(scope, receive, _send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
-    |     await self.simple_response(scope, receive, send, request_headers=headers)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
-    |     await self.app(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    |     with collapse_excgroups():
-    |          ~~~~~~~~~~~~~~~~~~^^
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    |     self.gen.throw(value)
-    |     ~~~~~~~~~~~~~~^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    |     response = await self.dispatch_func(request, call_next)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\private_network.py", line 19, in dispatch
-    |     response = await call_next(request)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    |     raise app_exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    |     await self.app(scope, receive_or_disconnect, send_no_error)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\gzip.py", line 20, in __call__
-    |     await responder(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\gzip.py", line 39, in __call__
-    |     await self.app(scope, receive, self.send_with_gzip)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    |     with collapse_excgroups():
-    |          ~~~~~~~~~~~~~~~~~~^^
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    |     self.gen.throw(value)
-    |     ~~~~~~~~~~~~~~^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    |     response = await self.dispatch_func(request, call_next)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\rate_limit.py", line 152, in dispatch
-    |     response = await call_next(request)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    |     raise app_exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    |     await self.app(scope, receive_or_disconnect, send_no_error)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    |     with collapse_excgroups():
-    |          ~~~~~~~~~~~~~~~~~~^^
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    |     self.gen.throw(value)
-    |     ~~~~~~~~~~~~~~^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    |     response = await self.dispatch_func(request, call_next)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\rate_limit.py", line 278, in dispatch
-    |     return await call_next(request)
-    |            ^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    |     raise app_exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    |     await self.app(scope, receive_or_disconnect, send_no_error)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    |     with collapse_excgroups():
-    |          ~~~~~~~~~~~~~~~~~~^^
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    |     self.gen.throw(value)
-    |     ~~~~~~~~~~~~~~^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    |     response = await self.dispatch_func(request, call_next)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\rate_limit.py", line 287, in dispatch
-    |     response = await call_next(request)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    |     raise app_exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    |     await self.app(scope, receive_or_disconnect, send_no_error)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    |     with collapse_excgroups():
-    |          ~~~~~~~~~~~~~~~~~~^^
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    |     self.gen.throw(value)
-    |     ~~~~~~~~~~~~~~^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    |     response = await self.dispatch_func(request, call_next)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\logging.py", line 39, in dispatch
-    |     response = await call_next(request)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    |     raise app_exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    |     await self.app(scope, receive_or_disconnect, send_no_error)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    |     with collapse_excgroups():
-    |          ~~~~~~~~~~~~~~~~~~^^
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    |     self.gen.throw(value)
-    |     ~~~~~~~~~~~~~~^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    |     response = await self.dispatch_func(request, call_next)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\request_id.py", line 21, in dispatch
-    |     response = await call_next(request)
-    |                ^^^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    |     raise app_exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    |     await self.app(scope, receive_or_disconnect, send_no_error)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    |     await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    |     await app(scope, receive, sender)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
-    |     await self.app(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\routing.py", line 715, in __call__
-    |     await self.middleware_stack(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\routing.py", line 735, in app
-    |     await route.handle(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\routing.py", line 288, in handle
-    |     await self.app(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\fastapi\routing.py", line 119, in app
-    |     await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    |     raise exc
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    |     await app(scope, receive, sender)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\fastapi\routing.py", line 101, in app
-    |     async with AsyncExitStack() as request_stack:
-    |                ~~~~~~~~~~~~~~^^
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 768, in __aexit__
-    |     raise exc
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 751, in __aexit__
-    |     cb_suppress = await cb(*exc_details)
-    |                   ^^^^^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 235, in __aexit__
-    |     await self.gen.athrow(value)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\database\connection.py", line 120, in get_db
-    |     async with AsyncSessionFactory() as session:
-    |                ~~~~~~~~~~~~~~~~~~~^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1070, in __aexit__
-    |     await asyncio.shield(task)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1015, in close
-    |     await greenlet_spawn(self.sync_session.close)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 190, in greenlet_spawn
-    |     result = context.switch(*args, **kwargs)
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\orm\session.py", line 2529, in close
-    |     self._close_impl(invalidate=False)
-    |     ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\orm\session.py", line 2598, in _close_impl
-    |     transaction.close(invalidate)
-    |     ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
-    |   File "<string>", line 2, in close
-    |   File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 119, in _go
-    |     raise sa_exc.IllegalStateChangeError(
-    |     ...<5 lines>...
-    |     )
-    | sqlalchemy.exc.IllegalStateChangeError: Method 'close()' can't be called here; method '_connection_for_bind()' is already in progress and this would cause an unexpected state change to <SessionTransactionState.CLOSED: 5> (Background on this error at: https://sqlalche.me/e/20/isce)
-    +------------------------------------
-
-During handling of the above exception, another exception occurred:
-
+Using cached pyasn1-0.6.4-py3-none-any.whl (84 kB)
+Using cached pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 11.5 MB/s  0:00:00
+Using cached pyjwt-2.13.0-py3-none-any.whl (31 kB)
+Using cached requests_oauthlib-2.0.0-py2.py3-none-any.whl (24 kB)
+Using cached oauthlib-3.3.1-py3-none-any.whl (160 kB)
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+Using cached StrEnum-0.4.15-py3-none-any.whl (8.9 kB)
+Using cached typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+Using cached tzlocal-5.4.4-py3-none-any.whl (18 kB)
+Using cached yarl-1.24.5-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (110 kB)
+Using cached multidict-6.7.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (248 kB)
+Using cached propcache-0.5.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (61 kB)
+Using cached mako-1.4.1-py3-none-any.whl (80 kB)
+Using cached markupsafe-3.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (23 kB)
+Using cached pycparser-3.0-py3-none-any.whl (48 kB)
+Installing collected packages: strenum, passlib, websockets, urllib3, uritemplate, tzlocal, typing-extensions, structlog, sniffio, six, pyyaml, pytokens, python-multipart, python-dotenv, pyparsing, PyJWT, pygments, pyflakes, pycparser, pycodestyle, pyasn1, psycopg2-binary, protobuf, propcache, pluggy, platformdirs, pathspec, packaging, oauthlib, mypy-extensions, multidict, mccabe, MarkupSafe, librt, iniconfig, idna, hyperframe, httptools, hpack, h11, greenlet, dnspython, distro, coverage, colorama, click, charset_normalizer, certifi, bcrypt, asyncpg, ast-serialize, annotated-types, annotated-doc, aiosqlite, aiofiles, yarl, uvicorn, typing-inspection, sqlalchemy, rsa, requests, redis, pytest, pydantic-core, pyasn1-modules, proto-plus, mypy, Mako, httplib2, httpcore, h2, googleapis-common-protos, flake8, email-validator, ecdsa, deprecation, cffi, black, apscheduler, anyio, watchfiles, starlette, requests-oauthlib, python-jose, pytest-cov, pytest-asyncio, pydantic, httpx, cryptography, alembic, realtime, pydantic-settings, groq, google-auth, fastapi, supabase-functions, supabase-auth, storage3, postgrest, google-auth-oauthlib, google-auth-httplib2, google-api-core, supabase, google-api-python-client
+Successfully installed Mako-1.4.1 MarkupSafe-3.0.3 PyJWT-2.13.0 aiofiles-25.1.0 aiosqlite-0.22.1 alembic-1.19.1 annotated-doc-0.0.5 annotated-types-0.8.0 anyio-3.7.1 apscheduler-3.11.3 ast-serialize-0.8.0 asyncpg-0.31.0 bcrypt-4.3.0 black-26.5.1 certifi-2026.7.22 cffi-2.1.1 charset_normalizer-3.5.1 click-8.4.2 colorama-0.4.6 coverage-7.15.4 cryptography-50.0.0 deprecation-2.1.0 distro-1.9.0 dnspython-2.8.0 ecdsa-0.19.2 email-validator-2.3.0 fastapi-0.141.1 flake8-7.3.0 google-api-core-2.34.0 google-api-python-client-2.198.0 google-auth-2.56.3 google-auth-httplib2-0.4.1 google-auth-oauthlib-1.4.0 googleapis-common-protos-1.75.1 greenlet-3.5.5 groq-1.6.0 h11-0.16.0 h2-4.4.1 hpack-4.2.0 httpcore-1.0.9 httplib2-0.32.0 httptools-0.8.0 httpx-0.28.1 hyperframe-6.1.0 idna-3.18 iniconfig-2.3.0 librt-0.15.0 mccabe-0.7.0 multidict-6.7.1 mypy-2.3.1 mypy-extensions-1.1.0 oauthlib-3.3.1 packaging-26.3 passlib-1.7.4 pathspec-1.1.1 platformdirs-4.11.3 pluggy-1.6.0 postgrest-2.31.0 propcache-0.5.2 proto-plus-1.28.3 protobuf-7.35.1 psycopg2-binary-2.9.12 pyasn1-0.6.4 pyasn1-modules-0.4.2 pycodestyle-2.14.0 pycparser-3.0 pydantic-2.13.4 pydantic-core-2.46.4 pydantic-settings-2.15.0 pyflakes-3.4.0 pygments-2.21.0 pyparsing-3.3.2 pytest-9.1.1 pytest-asyncio-1.4.0 pytest-cov-7.1.0 python-dotenv-1.2.3 python-jose-3.5.0 python-multipart-0.0.32 pytokens-0.4.1 pyyaml-6.0.3 realtime-2.31.0 redis-5.3.1 requests-2.34.2 requests-oauthlib-2.0.0 rsa-4.9.1 six-1.17.0 sniffio-1.3.1 sqlalchemy-2.0.52 starlette-1.6.0 storage3-2.31.0 strenum-0.4.15 structlog-26.1.0 supabase-2.31.0 supabase-auth-2.31.0 supabase-functions-2.31.0 typing-extensions-4.16.0 typing-inspection-0.4.4 tzlocal-5.4.4 uritemplate-4.2.0 urllib3-2.7.0 uvicorn-0.52.3 watchfiles-1.2.0 websockets-15.0.1 yarl-1.24.5
+[notice] A new release of pip is available: 25.3 -> 26.2.1
+[notice] To update, run: pip install --upgrade pip
+==> Uploading build...
+==> Uploaded in 4.0s. Compression took 2.0s
+==> Build successful 🎉
+==> Deploying...
+==> Setting WEB_CONCURRENCY=1 by default, based on available CPUs in the instance
+==> Running 'alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT'
 Traceback (most recent call last):
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\uvicorn\protocols\http\h11_impl.py", line 416, in run_asgi
-    result = await app(  # type: ignore[func-returns-value]
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-        self.scope, self.receive, self.send
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/backend/alembic/env.py", line 72, in run
+    async with engine.connect() as conn:
+               ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/base.py", line 121, in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py", line 275, in start
+    await greenlet_spawn(self.sync_engine.connect)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py", line 3295, in connect
+    return self._connection_cls(self)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py", line 307, in _do_get
+    return self._create_connection()
+           ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 955, in connect
+    await_only(creator_fn(*arg, **kw)),
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connection.py", line 2443, in connect
+    return await connect_utils._connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<22 lines>...
     )
     ^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\uvicorn\middleware\proxy_headers.py", line 63, in __call__
-    return await self.app(scope, receive, send)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\fastapi\applications.py", line 1160, in __call__
-    await super().__call__(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\applications.py", line 113, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\errors.py", line 187, in __call__
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\errors.py", line 165, in __call__
-    await self.app(scope, receive, _send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\cors.py", line 93, in __call__
-    await self.simple_response(scope, receive, send, request_headers=headers)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\cors.py", line 144, in simple_response
-    await self.app(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    with collapse_excgroups():
-         ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    self.gen.throw(value)
-    ~~~~~~~~~~~~~~^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\private_network.py", line 19, in dispatch
-    response = await call_next(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    raise app_exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\gzip.py", line 20, in __call__
-    await responder(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\gzip.py", line 39, in __call__
-    await self.app(scope, receive, self.send_with_gzip)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    with collapse_excgroups():
-         ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    self.gen.throw(value)
-    ~~~~~~~~~~~~~~^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\rate_limit.py", line 152, in dispatch
-    response = await call_next(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    raise app_exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    with collapse_excgroups():
-         ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    self.gen.throw(value)
-    ~~~~~~~~~~~~~~^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\rate_limit.py", line 278, in dispatch
-    return await call_next(request)
-           ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    raise app_exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    with collapse_excgroups():
-         ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    self.gen.throw(value)
-    ~~~~~~~~~~~~~~^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\rate_limit.py", line 287, in dispatch
-    response = await call_next(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    raise app_exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    with collapse_excgroups():
-         ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    self.gen.throw(value)
-    ~~~~~~~~~~~~~~^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\logging.py", line 39, in dispatch
-    response = await call_next(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    raise app_exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 185, in __call__
-    with collapse_excgroups():
-         ~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 162, in __exit__
-    self.gen.throw(value)
-    ~~~~~~~~~~~~~~^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_utils.py", line 82, in collapse_excgroups
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 187, in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\middlewares\request_id.py", line 21, in dispatch
-    response = await call_next(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 163, in call_next
-    raise app_exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\base.py", line 149, in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\middleware\exceptions.py", line 62, in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\fastapi\middleware\asyncexitstack.py", line 18, in __call__
-    await self.app(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\routing.py", line 715, in __call__
-    await self.middleware_stack(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\routing.py", line 735, in app
-    await route.handle(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\routing.py", line 288, in handle
-    await self.app(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\fastapi\routing.py", line 119, in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_exception_handler.py", line 53, in wrapped_app
-    raise exc
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\starlette\_exception_handler.py", line 42, in wrapped_app
-    await app(scope, receive, sender)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\fastapi\routing.py", line 101, in app
-    async with AsyncExitStack() as request_stack:
-               ~~~~~~~~~~~~~~^^
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 768, in __aexit__
-    raise exc
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 751, in __aexit__
-    cb_suppress = await cb(*exc_details)
-                  ^^^^^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\AppData\Local\Python\pythoncore-3.14-64\Lib\contextlib.py", line 235, in __aexit__
-    await self.gen.athrow(value)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\app\database\connection.py", line 120, in get_db
-    async with AsyncSessionFactory() as session:
-               ~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1070, in __aexit__
-    await asyncio.shield(task)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 1015, in close
-    await greenlet_spawn(self.sync_session.close)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 190, in greenlet_spawn
-    result = context.switch(*args, **kwargs)
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\orm\session.py", line 2529, in close
-    self._close_impl(invalidate=False)
-    ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\orm\session.py", line 2598, in _close_impl
-    transaction.close(invalidate)
-    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
-  File "<string>", line 2, in close
-  File "C:\Users\Admin\Documents\GitHub\PULSE-CRM\backend\pulsevenv\Lib\site-packages\sqlalchemy\orm\state_changes.py", line 119, in _go
-    raise sa_exc.IllegalStateChangeError(
-    ...<5 lines>...
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 1249, in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+    ...<2 lines>...
     )
-sqlalchemy.exc.IllegalStateChangeError: Method 'close()' can't be called here; method '_connection_for_bind()' is already in progress and this would cause an unexpected state change to <SessionTransactionState.CLOSED: 5> (Background on this error at: https://sqlalche.me/e/20/isce)
-{"timestamp": "2026-08-16T19:46:25.723634+00:00", "level": "INFO", "logger": "http.access", "message": "GET /api/v1/notifications 200", "module": "logging", "function": "dispatch", "line": 43, "request_id": "system", "method": "GET", "path": "/api/v1/notifications", "query": "page=1&page_size=10", "status_code": 200, "duration_ms": 454.92, "client_ip": "127.0.0.1"}
-←[32mINFO←[0m:     127.0.0.1:61348 - "←[1mGET /api/v1/notifications?page=1&page_size=10 HTTP/1.1←[0m" ←[32m200 OK←[0m
-{"timestamp": "2026-08-16T19:46:27.246630+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Running job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:32 IST)\" (scheduled at 2026-08-17 01:16:27.245257+05:30)", "module": "base", "function": "run_coroutine_job", "line": 179, "request_id": "system"}
-{"timestamp": "2026-08-16T19:46:27.539378+00:00", "level": "INFO", "logger": "apscheduler.executors.default", "message": "Job \"process_event_outbox (trigger: interval[0:00:05], next run at: 2026-08-17 01:16:32 IST)\" executed successfully", "module": "base", "function": "run_coroutine_job", "line": 203, "request_id": "system"}
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 1218, in _connect
+    conn = await _connect_addr(
+           ^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 1050, in _connect_addr
+    return await __connect_addr(params, False, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 1099, in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 969, in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        host, port)
+        ^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/base_events.py", line 1119, in create_connection
+    infos = await self._ensure_resolved(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (host, port), family=family,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        type=socket.SOCK_STREAM, proto=proto, flags=flags, loop=self)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/base_events.py", line 1505, in _ensure_resolved
+    return await loop.getaddrinfo(host, port, family=family, type=type,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                  proto=proto, flags=flags)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/base_events.py", line 936, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        None, getaddr_func, host, port, family, type, proto, flags)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/concurrent/futures/thread.py", line 86, in run
+    result = ctx.run(self.task)
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/concurrent/futures/thread.py", line 73, in run
+    return fn(*args, **kwargs)
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/socket.py", line 983, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+Traceback (most recent call last):
+  File "/opt/render/project/src/.venv/bin/alembic", line 7, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/alembic/config.py", line 1039, in main
+    CommandLine(prog=prog).main(argv=argv)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/alembic/config.py", line 1029, in main
+    self.run_cmd(cfg, options)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/alembic/config.py", line 963, in run_cmd
+    fn(
+    ~~^
+        config,
+        ^^^^^^^
+        *[getattr(options, k, None) for k in positional],
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        **{k: getattr(options, k, None) for k in kwarg},
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/alembic/command.py", line 487, in upgrade
+    script.run_env()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/alembic/script/base.py", line 550, in run_env
+    util.load_python_file(self.dir, "env.py")
+    ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/alembic/util/pyfiles.py", line 114, in load_python_file
+    module = load_module_py(module_id, path)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/alembic/util/pyfiles.py", line 132, in load_module_py
+    spec.loader.exec_module(module)  # type: ignore
+    ~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "<frozen importlib._bootstrap_external>", line 759, in exec_module
+  File "<frozen importlib._bootstrap>", line 491, in _call_with_frames_removed
+  File "/opt/render/project/src/backend/alembic/env.py", line 89, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/runners.py", line 204, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/runners.py", line 127, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/base_events.py", line 719, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/backend/alembic/env.py", line 72, in run
+    async with engine.connect() as conn:
+               ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/base.py", line 121, in __aenter__
+    return await self.start(is_ctxmanager=True)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/ext/asyncio/engine.py", line 275, in start
+    await greenlet_spawn(self.sync_engine.connect)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 201, in greenlet_spawn
+    result = context.throw(*sys.exc_info())
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py", line 3295, in connect
+    return self._connection_cls(self)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py", line 144, in __init__
+    self._dbapi_connection = engine.raw_connection()
+                             ~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/base.py", line 3319, in raw_connection
+    return self.pool.connect()
+           ~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+    return _ConnectionFairy._checkout(self)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+    fairy = _ConnectionRecord.checkout(pool)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+    rec = pool._do_get()
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/impl.py", line 307, in _do_get
+    return self._create_connection()
+           ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+    return _ConnectionRecord(self)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+    self.__connect()
+    ~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+    with util.safe_reraise():
+         ~~~~~~~~~~~~~~~~~^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/langhelpers.py", line 122, in __exit__
+    raise exc_value.with_traceback(exc_tb)
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+    self.dbapi_connection = connection = pool._invoke_creator(self)
+                                         ~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+    return dialect.connect(*cargs_tup, **cparams)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+    return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+           ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/dialects/postgresql/asyncpg.py", line 955, in connect
+    await_only(creator_fn(*arg, **kw)),
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 132, in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/sqlalchemy/util/_concurrency_py3k.py", line 196, in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connection.py", line 2443, in connect
+    return await connect_utils._connect(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<22 lines>...
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 1249, in _connect
+    raise last_error or exceptions.TargetServerAttributeNotMatched(
+    ...<2 lines>...
+    )
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 1218, in _connect
+    conn = await _connect_addr(
+           ^^^^^^^^^^^^^^^^^^^^
+    ...<6 lines>...
+    )
+    ^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 1050, in _connect_addr
+    return await __connect_addr(params, False, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 1099, in __connect_addr
+    tr, pr = await connector
+             ^^^^^^^^^^^^^^^
+  File "/opt/render/project/src/.venv/lib/python3.14/site-packages/asyncpg/connect_utils.py", line 969, in _create_ssl_connection
+    tr, pr = await loop.create_connection(
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        host, port)
+        ^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/base_events.py", line 1119, in create_connection
+    infos = await self._ensure_resolved(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        (host, port), family=family,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        type=socket.SOCK_STREAM, proto=proto, flags=flags, loop=self)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/base_events.py", line 1505, in _ensure_resolved
+    return await loop.getaddrinfo(host, port, family=family, type=type,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                                  proto=proto, flags=flags)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/asyncio/base_events.py", line 936, in getaddrinfo
+    return await self.run_in_executor(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        None, getaddr_func, host, port, family, type, proto, flags)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/concurrent/futures/thread.py", line 86, in run
+    result = ctx.run(self.task)
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/concurrent/futures/thread.py", line 73, in run
+    return fn(*args, **kwargs)
+  File "/opt/render/project/python/Python-3.14.3/lib/python3.14/socket.py", line 983, in getaddrinfo
+    for res in _socket.getaddrinfo(host, port, family, type, proto, flags):
+               ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+socket.gaierror: [Errno -2] Name or service not known
+==> Exited with status 1
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+==> Running 'alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT'

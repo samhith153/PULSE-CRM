@@ -32,17 +32,19 @@ async def _run_assessment_in_background(
     lead_id: UUID,
     organization_id: UUID,
     created_by: UUID,
+    stage_slug: Optional[str] = None,
 ) -> None:
     """Run AI assessment after the response is sent (fire-and-forget)."""
     from app.database.connection import AsyncSessionFactory
     from app.services.ai_pipeline import run_lead_assessment
 
-    logger.info("[PIPELINE] Starting background assessment for lead=%s org=%s", lead_id, organization_id)
+    logger.info("[PIPELINE] Starting background assessment for lead=%s org=%s stage_slug=%s", lead_id, organization_id, stage_slug)
     async with AsyncSessionFactory() as session:
         try:
             result = await run_lead_assessment(
                 session, lead_id, organization_id, created_by,
                 trigger="deal_stage_changed",
+                stage_override=stage_slug,
             )
             if result is None:
                 logger.warning("[PIPELINE] Background assessment returned None for lead=%s (lead not found or AI unavailable)", lead_id)
@@ -199,9 +201,19 @@ async def move_deal(
         payload.stage_id,
         payload.close_reason,
     )
+    await db.flush()
     if deal.lead_id:
+        from sqlalchemy import select
+        from app.models.pipeline import PipelineStage
+        stage_stmt = select(PipelineStage.slug).where(
+            PipelineStage.id == payload.stage_id,
+            PipelineStage.organization_id == current_user.organization_id,
+        )
+        stage_result = await db.execute(stage_stmt)
+        stage_slug = stage_result.scalar_one_or_none()
         background_tasks.add_task(
             _run_assessment_in_background,
             deal.lead_id, current_user.organization_id, current_user.id,
+            stage_slug=stage_slug,
         )
     return {"success": True, "message": "Deal moved."}

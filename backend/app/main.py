@@ -79,15 +79,14 @@ async def keep_alive_ai_service():
     """
     try:
         import httpx
-        async with httpx.AsyncClient(timeout=5.0) as hc:
+        async with httpx.AsyncClient(timeout=10.0) as hc:
             resp = await hc.get(f"{settings.AI_SERVICE_URL}/health")
             if resp.status_code == 200:
-                logger.debug("AI keep-alive: OK")
+                logger.debug("AI keep-alive: OK (%s)", settings.AI_SERVICE_URL)
             else:
-                logger.debug("AI keep-alive: %d", resp.status_code)
+                logger.warning("AI keep-alive: %d from %s", resp.status_code, settings.AI_SERVICE_URL)
     except Exception as exc:
-        # Expected when the service is mid-spin-down — nothing to worry about
-        logger.debug("AI keep-alive failed (service may be waking up): %s", exc)
+        logger.warning("AI keep-alive failed (service may be waking up): %s", exc)
 
 
 async def daily_lead_assessment():
@@ -258,7 +257,7 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(daily_lead_assessment, "cron", hour=0, minute=0)
     scheduler.add_job(process_event_outbox, "interval", seconds=5, max_instances=1, misfire_grace_time=60)
     scheduler.add_job(refresh_gmail_watches, "interval", hours=6, max_instances=1, misfire_grace_time=300)
-    scheduler.add_job(keep_alive_ai_service, "interval", minutes=10, max_instances=1, misfire_grace_time=300)
+    scheduler.add_job(keep_alive_ai_service, "interval", minutes=8, max_instances=1, misfire_grace_time=300)
     scheduler.start()
 
     # ── Background startup tasks (non-blocking) ──────────────────────────────
@@ -309,14 +308,20 @@ async def lifespan(app: FastAPI):
     async def _check_ai_health():
         try:
             import httpx
-            async with httpx.AsyncClient(timeout=5.0) as hc:
+            async with httpx.AsyncClient(timeout=15.0) as hc:
                 resp = await hc.get(f"{settings.AI_SERVICE_URL}/health")
                 if resp.status_code == 200:
                     logger.info("AI service reachable at %s", settings.AI_SERVICE_URL)
                 else:
-                    logger.warning("AI service returned %d at %s — scoring/recommendations may fail", resp.status_code, settings.AI_SERVICE_URL)
+                    logger.warning(
+                        "AI service returned %d at %s — scoring/recommendations may use local fallback",
+                        resp.status_code, settings.AI_SERVICE_URL,
+                    )
         except Exception as exc:
-            logger.warning("AI service NOT reachable at %s — scoring/recommendations will be unavailable: %s", settings.AI_SERVICE_URL, exc)
+            logger.warning(
+                "AI service NOT reachable at %s — scoring/recommendations will use local fallback: %s",
+                settings.AI_SERVICE_URL, exc,
+            )
 
     # Fire-and-forget: all run concurrently, app is ready immediately
     asyncio.create_task(_bootstrap_rbac())

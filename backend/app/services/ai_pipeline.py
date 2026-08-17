@@ -28,6 +28,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.ai import AIRecommendation
 from app.models.email_summary import EmailSummary
@@ -131,6 +132,7 @@ async def run_lead_assessment(
     trigger: str = "lead_updated",
     intent: Optional[str] = None,
     lead_overrides: Optional[dict] = None,
+    stage_override: Optional[str] = None,
 ) -> Optional[dict]:
     """
     End-to-end lead assessment: gather data → call ai-service → persist.
@@ -188,6 +190,10 @@ async def run_lead_assessment(
     deal_repo = DealRepository(db)
     deal = await deal_repo.get_by_lead_id_in_org(lead_id, organization_id)
     current_stage = _derive_current_stage(lead, deal)
+    if stage_override:
+        from app.utils.stage_maps import PIPELINE_STAGE_MAP
+        current_stage = PIPELINE_STAGE_MAP.get(stage_override.lower(), stage_override.lower())
+        logger.info("[ASSESS_PIPELINE] Stage overridden to '%s' for lead=%s", current_stage, lead_id)
     raw_data["current_stage"] = current_stage
 
     # ── Deal value ──────────────────────────────────────────────
@@ -294,7 +300,12 @@ async def run_lead_assessment(
         await ai_client.close()
 
     if not result:
-        logger.warning("[ASSESS_PIPELINE] AI service unavailable for lead %s — falling back to local rule-based scoring", lead_id)
+        logger.warning(
+            "[ASSESS_PIPELINE] AI service UNAVAILABLE for lead %s — "
+            "falling back to local rule-based scoring. "
+            "Check AI_SERVICE_URL and verify %s is running.",
+            lead_id, settings.AI_SERVICE_URL,
+        )
         # Local fallback: use RuleBasedScorer when AI microservice is unreachable
         try:
             from app.services.ai_providers import RuleBasedScorer, FeatureExtractionService, FeatureSet
@@ -331,9 +342,9 @@ async def run_lead_assessment(
 
             overall_score = score_result.score
             # Tier logic (mirrors ai-service/app/rules/tier_rules.py)
-            if overall_score >= 70 and overall_score >= 70:
+            if overall_score >= 90:
                 tier = "Critical"
-            elif overall_score >= 70 and overall_score >= 40:
+            elif overall_score >= 70:
                 tier = "High"
             elif overall_score >= 40:
                 tier = "Medium"
@@ -381,7 +392,7 @@ async def run_lead_assessment(
         from app.services.event_bus import event_bus as _sse_bus, EventEnvelope as _EE
         from uuid import uuid4 as _uuid4
         from datetime import datetime as _dt
-        asyncio.create_task(_sse_bus.publish(_EE(
+        await _sse_bus.publish(_EE(
             event_id=_uuid4(),
             organization_id=organization_id,
             aggregate_type="lead",
@@ -400,7 +411,7 @@ async def run_lead_assessment(
             status="processed",
             created_at=_dt.utcnow(),
             actor_id=created_by,
-        )))
+        ))
     except Exception:
         logger.debug("[ASSESS_PIPELINE] Failed to publish LEAD_SCORE_UPDATED SSE event", exc_info=True)
 
@@ -444,23 +455,25 @@ async def run_lead_assessment(
         )
     # ── Persist feature_vectors (audit only) ────────────────────────
     fv_repo = FeatureVectorRepository(db)
+    fit_features = result.get("fit", {}).get("features", {})
+    eng_features = result.get("engagement", {}).get("features", {})
     fv_features = {
         # Fit scores
-        "company_size_score": result["fit"]["features"].get("company_size_score"),
-        "industry_complexity_score": result["fit"]["features"].get("industry_complexity_score"),
-        "software_gap_score": result["fit"]["features"].get("software_gap_score"),
-        "operational_system_score": result["fit"]["features"].get("operational_system_score"),
-        "customization_potential_score": result["fit"]["features"].get("customization_potential_score"),
+        "company_size_score": fit_features.get("company_size_score"),
+        "industry_complexity_score": fit_features.get("industry_complexity_score"),
+        "software_gap_score": fit_features.get("software_gap_score"),
+        "operational_system_score": fit_features.get("operational_system_score"),
+        "customization_potential_score": fit_features.get("customization_potential_score"),
         # Engagement scores (audit)
-        "buying_stage_score": result["engagement"]["features"].get("buying_stage_score"),
-        "ai_intent_category_score": result["engagement"]["features"].get("intent_score"),
-        "customer_initiative_score": result["engagement"]["features"].get("initiative_score"),
-        "engagement_decay_penalty": result["engagement"]["features"].get("decay_penalty"),
+        "buying_stage_score": eng_features.get("buying_stage_score"),
+        "ai_intent_category_score": eng_features.get("intent_score"),
+        "customer_initiative_score": eng_features.get("initiative_score"),
+        "engagement_decay_penalty": eng_features.get("decay_penalty"),
         # Email stats (audit)
         "inbound_count": email_stats["inbound_count"],
         "initiated_count": email_stats["initiated_count"],
         "last_inbound_at": email_stats.get("last_inbound_at"),
-        "days_since_last_inbound": result["engagement"]["features"].get("days_since_last_inbound"),
+        "days_since_last_inbound": eng_features.get("days_since_last_inbound"),
         "intent": intent,
         # Audit metadata
         "assessment_trigger": trigger,

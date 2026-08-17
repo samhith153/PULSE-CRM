@@ -2028,7 +2028,12 @@ export async function getLeadMeetings(leadId: string): Promise<LeadPanelMeeting[
 export async function getLeadScore(leadId: string): Promise<{ score: number; fit_score: number; engagement_score: number } | null> {
   try {
     const result = await apiFetch<any>(`/api/v1/lead-scores/leads/${leadId}`);
-    return result ?? null;
+    if (!result) return null;
+    return {
+      score: result.overall_score ?? result.score ?? 0,
+      fit_score: result.fit_score ?? 0,
+      engagement_score: result.engagement_score ?? 0,
+    };
   } catch {
     return null;
   }
