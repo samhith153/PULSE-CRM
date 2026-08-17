@@ -743,10 +743,15 @@ export async function convertLead(
   leadId: string,
   payload: { industry?: string; revenue?: number; employee_count?: number; pipeline_stage_id?: string }
 ): Promise<any> {
-  return apiFetch(`/api/v1/leads/${leadId}/convert`, {
+  const result = await apiFetch(`/api/v1/leads/${leadId}/convert`, {
     method: 'POST',
     body: JSON.stringify(payload)
   });
+  invalidateEntityCache('deals');
+  invalidateEntityCache('companies');
+  invalidateEntityCache('contacts');
+  invalidateEntityCache('leads');
+  return result;
 }
 
 // --- Contacts API ---
