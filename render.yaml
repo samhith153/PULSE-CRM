@@ -110,7 +110,7 @@ services:
       - key: AI_TIMEOUT
         value: "30"
       - key: AI_SERVICE_URL
-        value: http://pulse-crm-ai.onrender.com
+        value: https://pulse-crm-ai.onrender.com
       - key: AI_SERVICE_TIMEOUT
         value: "30.0"
       - key: GROQ_API_KEY
@@ -118,7 +118,7 @@ services:
       - key: ASSISTANT_API_KEY
         sync: false
       - key: ASSISTANT_MODEL
-        value: llama-3.3-70b-versatile
+        value: Qwen3.6 27B
       - key: OPENAI_API_KEY
         sync: false
       # ── Storage ──────────────────────────────────────────────────────────
@@ -168,7 +168,7 @@ services:
       - key: SUMMARIZATION_API_KEY
         sync: false
       - key: LLM_MODEL
-        value: llama-3.3-70b-versatile
+        value: Qwen3.6 27B
       - key: LLM_TEMPERATURE
         value: "0.3"
       - key: LLM_MAX_TOKENS
