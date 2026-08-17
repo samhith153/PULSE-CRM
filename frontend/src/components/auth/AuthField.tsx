@@ -35,10 +35,17 @@ export function AuthField({ label, error, toggleable, labelAction, className, ..
           type={toggleable ? (show ? "text" : "password") : props.type}
           className={cn(
             "h-[52px] w-full rounded-2xl bg-transparent px-4 text-[15px] text-white outline-none placeholder:text-white/35",
+            "autofill:bg-transparent autofill:text-white",
             toggleable && "pr-11",
             className,
           )}
-          style={{ caretColor: "#ffffff" } as React.CSSProperties}
+          style={{
+            caretColor: "#ffffff",
+            boxShadow: "0 0 0 1000px rgba(2,6,23,0.5) inset",
+            WebkitBoxShadow: "0 0 0 1000px rgba(2,6,23,0.5) inset",
+            WebkitTextFillColor: "#ffffff",
+            transition: "background-color 5000s ease-in-out 0s",
+          } as React.CSSProperties}
         />
         {toggleable && (
           <button

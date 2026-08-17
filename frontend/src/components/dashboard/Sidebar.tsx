@@ -20,7 +20,7 @@ interface SidebarProps {
 /* Nav data (sections, items, icons, tab keys) lives in lib/dashboard-nav.ts —
    the single source of truth shared with the command palette. */
 
-export default function Sidebar({
+export default React.memo(function Sidebar({
   activeTab,
   setActiveTab,
   collapsed,
@@ -192,4 +192,4 @@ export default function Sidebar({
       </div>
     </aside>
   );
-}
+});

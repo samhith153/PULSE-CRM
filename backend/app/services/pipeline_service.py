@@ -329,10 +329,8 @@ class PipelineService:
         stage_id: UUID,
         close_reason: Optional[str] = None,
     ) -> Deal:
-        deal_result, stage_result = await asyncio.gather(
-            self.deal_repo.get_active_by_id(deal_id, organization_id),
-            self.repo.get_active_by_id(stage_id, organization_id),
-        )
+        deal_result = await self.deal_repo.get_active_by_id(deal_id, organization_id)
+        stage_result = await self.repo.get_active_by_id(stage_id, organization_id)
         if not deal_result:
             raise NotFoundException("Deal", deal_id)
         if not stage_result:
@@ -368,10 +366,6 @@ class PipelineService:
             topic="pipeline",
         )
 
-        # Trigger unified assessment as a background task (fire-and-forget)
-        # so the API response is returned immediately.
-        if deal.lead_id:
-            _enqueue_move_assessment(deal.lead_id, organization_id, created_by)
         return deal
 
     async def list_deals_by_stage(

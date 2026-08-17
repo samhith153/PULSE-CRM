@@ -62,7 +62,7 @@ async def list_companies(
     search: Optional[str] = Query(default=None),
 ) -> dict:
     svc = CompanyService(db)
-    companies, total = await svc.list(current_user.organization_id, search, page, page_size)
+    companies, total = await svc.list(current_user.organization_id, search, page, page_size, user=current_user)
     paginated = PaginatedResponse.create(
         data=[CompanyResponse.from_company(c) for c in companies],
         total=total,

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { getDashboardStreamUrl, getToken } from '@/utils/api';
+import { getDashboardStreamUrl, getToken, invalidateEntityCache } from '@/utils/api';
 
 interface UseCrmStreamOptions {
   /** Called whenever a LEAD_SCORE_UPDATED or DEAL_AT_RISK SSE event arrives. */
@@ -45,14 +45,38 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
     function handleMessage(raw: string) {
       try {
         const data = JSON.parse(raw);
-        if (data?.type === 'LEAD_SCORE_UPDATED' || data?.type === 'DEAL_AT_RISK') {
+        const eventType = data?.event_type || data?.type;
+        if (eventType === 'LEAD_SCORE_UPDATED') {
+          // Dispatch granular event so individual components can update locally
+          const payload = data?.payload || {};
+          if (typeof window !== 'undefined' && payload.lead_id) {
+            window.dispatchEvent(new CustomEvent('pulse-lead-score-updated', {
+              detail: { lead_id: payload.lead_id, score: payload.overall_score }
+            }));
+          }
           // Debounce: coalesce rapid events into a single re-fetch (500ms window)
           if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
           debounceTimerRef.current = setTimeout(() => {
             onInvalidateRef.current?.();
+            invalidateEntityCache('leads');
+            invalidateEntityCache('deals');
             debounceTimerRef.current = null;
           }, 500);
-        } else if (data?.type === 'NOTIFICATION_CREATED') {
+        } else if (eventType === 'DEAL_AT_RISK') {
+          // Dispatch granular event for deal updates
+          const payload = data?.payload || {};
+          if (typeof window !== 'undefined' && payload.deal_id) {
+            window.dispatchEvent(new CustomEvent('pulse-deal-at-risk', {
+              detail: { deal_id: payload.deal_id }
+            }));
+          }
+          if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+          debounceTimerRef.current = setTimeout(() => {
+            onInvalidateRef.current?.();
+            invalidateEntityCache('deals');
+            debounceTimerRef.current = null;
+          }, 500);
+        } else if (eventType === 'NOTIFICATION_CREATED') {
           // Notify the useNotifications hook to refresh immediately
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('pulse-notification-created', { detail: data }));

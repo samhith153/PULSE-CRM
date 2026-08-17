@@ -21,7 +21,7 @@ interface HeaderProps {
   userRole: 'sales_rep' | 'manager' | 'admin';
 }
 
-export default function Header({
+export default React.memo(function Header({
   collapsed,
   setCollapsed,
   onTabChange,
@@ -53,31 +53,6 @@ export default function Header({
   const profileName = currentUser?.full_name || 'User';
   const profileEmail = currentUser?.email || '';
   const profileInitials = userInitials(currentUser?.full_name);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node))
-        setShowNotifications(false);
-      if (profileRef.current && !profileRef.current.contains(e.target as Node))
-        setShowProfileMenu(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setSyncSeconds((prev) => {
-        if (prev >= 14) {
-          setIsSyncing(true);
-          setTimeout(() => setIsSyncing(false), 1200);
-          return 0;
-        }
-        return prev + 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -237,4 +212,4 @@ export default function Header({
       </div>
     </header>
   );
-}
+});

@@ -2723,7 +2723,12 @@ class DashboardService:
         )
 
         # -- Query 6: User Assigned Quota Target (Widget 5) --------------------
-        user_quota_stmt = select(User.sales_quota).where(User.id == user_id)
+        user_quota_stmt = select(User.sales_quota).where(
+            User.id == user_id,
+            User.organization_id == organization_id,
+            User.is_active.is_(True),
+            User.is_deleted.is_(False),
+        )
 
         # -- Query 6b: Current-period target set by the manager (if any) -------
         # Manager-assigned targets from the sales_targets table take priority
@@ -2818,19 +2823,36 @@ class DashboardService:
             .limit(10)
         )
 
-        # Execute all queries sequentially to avoid concurrent-operations error on a single AsyncSession.
-        # asyncio.gather on a single session raises "concurrent operations are not permitted".
-        res_open_deals = await self.db.execute(open_deals_stmt)
-        res_untouched = await self.db.execute(untouched_deals_stmt)
-        res_calls = await self.db.execute(calls_today_stmt)
-        res_leads = await self.db.execute(leads_assigned_stmt)
-        res_closed_won = await self.db.execute(closed_won_stmt)
-        res_user_quota = await self.db.execute(user_quota_stmt)
-        res_rep_target = await self.db.execute(rep_target_stmt)
-        res_tasks = await self.db.execute(open_tasks_stmt)
-        res_priority_queue = await self.db.execute(priority_queue_stmt)
-        res_deals_at_risk = await self.db.execute(deals_at_risk_stmt)
-        res_meetings_today = await self.db.execute(meetings_today_stmt)
+        # Provision the session connection up-front so the concurrent gather below
+        # uses an already-checked-out connection (asyncpg race guard).
+        await self.db.connection()
+
+        # Run all independent DB queries concurrently
+        (
+            res_open_deals,
+            res_untouched,
+            res_calls,
+            res_leads,
+            res_closed_won,
+            res_user_quota,
+            res_rep_target,
+            res_tasks,
+            res_priority_queue,
+            res_deals_at_risk,
+            res_meetings_today,
+        ) = await asyncio.gather(
+            self.db.execute(open_deals_stmt),
+            self.db.execute(untouched_deals_stmt),
+            self.db.execute(calls_today_stmt),
+            self.db.execute(leads_assigned_stmt),
+            self.db.execute(closed_won_stmt),
+            self.db.execute(user_quota_stmt),
+            self.db.execute(rep_target_stmt),
+            self.db.execute(open_tasks_stmt),
+            self.db.execute(priority_queue_stmt),
+            self.db.execute(deals_at_risk_stmt),
+            self.db.execute(meetings_today_stmt),
+        )
 
         # -- Parse KPI Results -------------------------------------------------
         open_deals_count = int(res_open_deals.scalar_one() or 0)

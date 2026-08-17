@@ -16,6 +16,7 @@ from app.models.company import Company
 from app.models.contact import Contact
 from app.models.deal import Deal
 from app.models.lead import Lead
+from app.models.user import User
 from app.repositories.company_repository import CompanyRepository
 from app.repositories.activity_repository import ActivityTimelineRepository
 from app.services.timeline_engine_service import TimelineEngineService
@@ -32,6 +33,16 @@ class CompanyService:
         self.db = db
         self.repo = CompanyRepository(db)
         self.timeline = TimelineEngineService(db)
+
+    # ── RBAC helpers (same pattern as LeadService) ────────────────────────────
+
+    def _has_elevated_access(self, user: User) -> bool:
+        roles = {ur.role.name for ur in user.user_roles if ur.role}
+        return bool({"admin", "manager"}.intersection(roles))
+
+    def _scoped_owner_id(self, user: User) -> Optional[UUID]:
+        """Returns owner_id filter for non-elevated users (sales_rep sees own only)."""
+        return None if self._has_elevated_access(user) else user.id
 
     # ─────────────────────────────────────────────────────────────────────────
     # CRUD
@@ -60,6 +71,7 @@ class CompanyService:
             **data,
             organization_id=organization_id,
             created_by=created_by,
+            owner_id=data.get("owner_id") or created_by,
         )
         await self.timeline.company_created(organization_id, created_by, company.id, company.name)
         logger.info("Company created", extra={"company_id": str(company.id)})
@@ -71,8 +83,10 @@ class CompanyService:
         search: Optional[str],
         page: int,
         page_size: int,
+        user: Optional[User] = None,
     ) -> Tuple[List[Company], int]:
-        return await self.repo.list_by_organization(organization_id, search, page, page_size)
+        owner_id = self._scoped_owner_id(user) if user else None
+        return await self.repo.list_by_organization(organization_id, search, page, page_size, owner_id=owner_id)
 
     async def get(self, company_id: UUID, organization_id: UUID) -> Company:
         company = await self.repo.get_active_by_id(company_id, organization_id)

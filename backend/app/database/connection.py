@@ -35,6 +35,7 @@ ssl_context.check_hostname = False
 ssl_context.verify_mode = ssl.CERT_NONE
 
 # Prefer the direct (session-mode) URL for the app engine.
+# DIRECT_URL bypasses the pooler and enables QueuePool connection reuse.
 #
 # Supabase exposes two endpoints:
 #   - DATABASE_URL  -> the pooler (transaction mode on :6543, or a "pooler"
@@ -47,8 +48,8 @@ ssl_context.verify_mode = ssl.CERT_NONE
 #                      works correctly here and reuses physical connections,
 #                      eliminating the 30-80ms connect tax on every request.
 engine_url = (
-    DATABASE_URL
-    or getattr(settings, "DIRECT_URL", None)
+    getattr(settings, "DIRECT_URL", None)
+    or DATABASE_URL
 )
 
 # ------------------------------------------------------------------
@@ -67,7 +68,10 @@ if "localhost" not in engine_url and "127.0.0.1" not in engine_url:
 
 # Detect the transaction-mode pooler. Only that path is incompatible with a
 # pooled engine; a direct connection (or session-mode pooler) is not.
-_is_pooler = "pooler" in engine_url or ":6543" in engine_url
+# If DIRECT_URL is explicitly configured, trust it as a direct connection
+# regardless of hostname (Supabase direct hosts still contain "pooler").
+_direct_url_configured = getattr(settings, "DIRECT_URL", None)
+_is_pooler = not _direct_url_configured and ("pooler" in engine_url or ":6543" in engine_url)
 
 _pool_kwargs = dict(
     connect_args=connect_args,

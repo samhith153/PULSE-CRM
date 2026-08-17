@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR } from '@/utils/api';
+import { getDeals, updateDealStage, createDeal, updateDeal, deleteDeal, getPipelineStages, formatINR, invalidateEntityCache } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import SkeletonLoader from './SkeletonLoader';
 import { 
@@ -143,8 +143,12 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
   const [deals, setDeals] = useState<Deal[]>([]);
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [scoringIds, setScoringIds] = useState<Set<string>>(new Set());
+  const dealsRef = useRef<Deal[]>([]);
+  const scoringTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
+    invalidateEntityCache('deals');
     Promise.all([getPipelineStages(), getDeals()]).then(([stagesData, dealsData]) => {
       const sortedStages = (Array.isArray(stagesData) ? stagesData : []).sort((a: any, b: any) => a.sort_order - b.sort_order);
       setStages(sortedStages);
@@ -176,6 +180,51 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
       onLoaded?.();
     });
   }, []);
+
+  useEffect(() => {
+    dealsRef.current = deals;
+  }, [deals]);
+
+  useEffect(() => {
+    const handleScoreUpdate = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      const leadId = detail.lead_id;
+      const score = detail.score;
+      if (leadId == null) return;
+      setDeals(prev => prev.map(d =>
+        d.leadId === leadId ? { ...d, leadScore: score } : d
+      ));
+      setScoringIds(prev => {
+        const next = new Set(prev);
+        dealsRef.current.forEach(d => {
+          if (d.leadId === leadId) {
+            const id = String(d.id);
+            next.delete(id);
+            const timer = scoringTimersRef.current.get(id);
+            if (timer) { clearTimeout(timer); scoringTimersRef.current.delete(id); }
+          }
+        });
+        return next;
+      });
+    };
+    window.addEventListener('pulse-lead-score-updated', handleScoreUpdate);
+    return () => {
+      window.removeEventListener('pulse-lead-score-updated', handleScoreUpdate);
+      scoringTimersRef.current.forEach(t => clearTimeout(t));
+      scoringTimersRef.current.clear();
+    };
+  }, []);
+
+  const addScoringId = (dealId: string | number) => {
+    const id = String(dealId);
+    setScoringIds(prev => new Set(prev).add(id));
+    const existing = scoringTimersRef.current.get(id);
+    if (existing) clearTimeout(existing);
+    scoringTimersRef.current.set(id, setTimeout(() => {
+      setScoringIds(prev => { const next = new Set(prev); next.delete(id); return next; });
+      scoringTimersRef.current.delete(id);
+    }, 15_000));
+  };
 
   const stageNames = stages.map(s => s.name);
 
@@ -479,6 +528,7 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
 
     try {
       await updateDealStage(draggedId, stageId);
+      addScoringId(draggedId);
     } catch (err: any) {
       // Revert on failure
       if (originalStage) {
@@ -524,6 +574,7 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
 
     try {
       await updateDealStage(dealId, pendingStageChange.stageId, reason);
+      addScoringId(dealId);
     } catch (err: any) {
       // Revert on failure
       if (originalStage) {
@@ -1050,6 +1101,9 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
                             'text-text-muted bg-surface-2'
                           }`}>{deal.leadScore}%</span>
                         )}
+                        {deal.leadScore == null && scoringIds.has(String(deal.id)) && (
+                          <Loader2 className="h-2.5 w-2.5 animate-spin text-accent-color" />
+                        )}
                       </div>
                     )}
 
@@ -1126,7 +1180,9 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
                                 : d
                             )
                           );
-                          updateDealStage(deal.id, stageId).catch((err: any) => {
+                          updateDealStage(deal.id, stageId).then(() => {
+                            addScoringId(deal.id);
+                          }).catch((err: any) => {
                             // Revert on failure
                             setDeals(prev =>
                               prev.map(d =>
@@ -1301,6 +1357,9 @@ export default function PipelineView({ onLoaded, openDealId }: { onLoaded?: () =
                         selectedDeal.leadScore >= 50 ? 'text-status-warning bg-status-warning/10' :
                         'text-text-muted bg-surface-2'
                       }`}>{selectedDeal.leadScore}%</span>
+                    )}
+                    {selectedDeal.leadScore == null && scoringIds.has(String(selectedDeal.id)) && (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-accent-color" />
                     )}
                   </div>
                 </div>

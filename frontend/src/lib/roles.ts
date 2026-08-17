@@ -19,17 +19,17 @@ export const ROLE_HOME: Record<Role, string> = {
 export const ROLE_TABS: Record<Role, Set<string>> = {
   sales_rep: new Set([
     'home', 'leads', 'contacts', 'companies', 'deals', 'activities', 'emails',
-    'tasks', 'calendar', 'workflows', 'ai insights', 'reports', 'documents',
+    'calendar', 'workflows', 'ai insights', 'reports', 'documents',
     'settings', 'profile', 'notifications', 'integrations',
   ]),
   manager: new Set([
     'home', 'my team', 'targets', 'team pipeline', 'leads', 'companies',
     'contacts', 'reports', 'forecast', 'team performance', 'activities',
-    'ai insights', 'documents', 'settings', 'notifications', 'tasks',
+    'ai insights', 'documents', 'settings', 'notifications',
     'calendar', 'profile', 'integrations',
   ]),
   admin: new Set([
-    'home', 'leads', 'contacts', 'companies', 'deals', 'activities', 'tasks',
+    'home', 'leads', 'contacts', 'companies', 'deals', 'activities',
     'calendar', 'ai insights', 'reports', 'settings', 'profile', 'notifications',
     'forecast', 'team performance', 'team pipeline', 'teams', 'users',
     'roles & permissions', 'integrations', 'ai models', 'automation',

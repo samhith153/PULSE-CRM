@@ -10,6 +10,7 @@ import CompaniesTable from './CompaniesTable';
 import CompanyDetailPanel from './CompanyDetailPanel';
 import { AddCompanyModal, EditCompanyModal, AddContactModal } from './modals';
 import { revalidateCompanies } from '@/lib/api-server-actions';
+import { getCompanies } from '@/utils/api';
 import type { UICompany } from '@/lib/api-server';
 
 interface CompaniesClientProps {
@@ -54,6 +55,18 @@ export default function CompaniesClient({
     window.addEventListener('pulse-open-create-company-modal', handleOpen);
     return () => window.removeEventListener('pulse-open-create-company-modal', handleOpen);
   }, []);
+
+  // Client-side data fetch when no initial data provided (server component can't access auth)
+  useEffect(() => {
+    if (initialCompanies.length > 0) return;
+    let cancelled = false;
+    getCompanies()
+      .then((data) => {
+        if (!cancelled) setCompanies(data as unknown as UICompany[]);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [initialCompanies.length]);
 
   const active = selectedId ? companies.find(c => c.id === selectedId) || null : null;
 

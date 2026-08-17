@@ -3,10 +3,13 @@ Pipeline routes.
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, status
+
+logger = logging.getLogger(__name__)
 
 from app.api.deps import CurrentUser, DBSession, require_permission
 from app.schemas.common import PaginatedResponse, StandardResponse
@@ -33,14 +36,22 @@ async def _run_assessment_in_background(
     """Run AI assessment after the response is sent (fire-and-forget)."""
     from app.database.connection import AsyncSessionFactory
     from app.services.ai_pipeline import run_lead_assessment
+
+    logger.info("[PIPELINE] Starting background assessment for lead=%s org=%s", lead_id, organization_id)
     async with AsyncSessionFactory() as session:
         try:
-            await run_lead_assessment(
+            result = await run_lead_assessment(
                 session, lead_id, organization_id, created_by,
                 trigger="deal_stage_changed",
             )
+            if result is None:
+                logger.warning("[PIPELINE] Background assessment returned None for lead=%s (lead not found or AI unavailable)", lead_id)
+            else:
+                overall = result.get("overall", {}).get("score") if isinstance(result, dict) else None
+                logger.info("[PIPELINE] Background assessment succeeded for lead=%s — score=%s", lead_id, overall)
             await session.commit()
         except Exception:
+            logger.exception("[PIPELINE] Background assessment FAILED for lead=%s", lead_id)
             await session.rollback()
 
 

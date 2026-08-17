@@ -285,6 +285,15 @@ function ActivitiesListContent({ onSelectActivity, onTabChange }: { onSelectActi
     return () => window.removeEventListener('pulse-open-create-meeting-modal', handleOpenCreateMeeting);
   }, []);
 
+  // Listen for command palette "Create Task" event — opens the Log New Task form
+  useEffect(() => {
+    const handleOpenCreateTask = () => {
+      setActiveFormType('task');
+    };
+    window.addEventListener('pulse-open-create-task-modal', handleOpenCreateTask);
+    return () => window.removeEventListener('pulse-open-create-task-modal', handleOpenCreateTask);
+  }, []);
+
   const relatedIds = () => ({
     related_entity_type: relatedName ? relatedType : undefined,
     related_lead_id:    relatedType === 'lead'    && relatedLeadId    ? relatedLeadId    : undefined,

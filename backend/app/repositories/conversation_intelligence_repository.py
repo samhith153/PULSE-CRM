@@ -45,6 +45,133 @@ class ConversationIntelligenceRepository:
 
     # ── Fetch activity-based conversations ───────────────────────────────────
 
+    async def fetch_activity_conversation_by_id(
+        self,
+        organization_id: UUID,
+        user_id: Optional[UUID],
+        team_ids: Optional[list[UUID]],
+        conversation_id: UUID,
+    ) -> Optional[dict[str, Any]]:
+        """Fetch a single activity conversation by ID (no full-table scan)."""
+        owner_alias = aliased(User, name="owner_u")
+
+        stmt = (
+            select(
+                ActivityTimeline.id,
+                ActivityTimeline.action,
+                ActivityTimeline.title,
+                ActivityTimeline.description,
+                ActivityTimeline.created_at,
+                ActivityTimeline.entity_type,
+                ActivityTimeline.entity_id,
+                ActivityTimeline.created_by,
+                ActivityTimeline.payload,
+                owner_alias.full_name.label("owner_name"),
+                Lead.id.label("lead_id"),
+                Lead.title.label("lead_name"),
+                LeadScore.overall_score.label("lead_score"),
+                Deal.id.label("deal_id"),
+                Deal.name.label("deal_name"),
+                Deal.amount.label("deal_amount"),
+                Deal.probability,
+                Company.name.label("company_name"),
+                Contact.first_name.label("contact_first"),
+                Contact.last_name.label("contact_last"),
+            )
+            .outerjoin(owner_alias, owner_alias.id == ActivityTimeline.created_by)
+            .outerjoin(
+                Lead,
+                (Lead.id == ActivityTimeline.entity_id)
+                & (ActivityTimeline.entity_type == "lead"),
+            )
+            .outerjoin(LeadScore, LeadScore.lead_id == Lead.id)
+            .outerjoin(
+                Deal,
+                (Deal.id == ActivityTimeline.entity_id)
+                & (ActivityTimeline.entity_type == "deal"),
+            )
+            .outerjoin(Company, Company.id == Lead.company_id)
+            .outerjoin(Contact, Contact.id == Lead.contact_id)
+            .where(
+                ActivityTimeline.organization_id == organization_id,
+                ActivityTimeline.id == conversation_id,
+                ActivityTimeline.action.in_(
+                    _CALL_ACTIONS + _MEETING_ACTIONS + _NOTE_ACTIONS
+                ),
+            )
+        )
+        stmt = self._rbac(stmt, ActivityTimeline.created_by, user_id, team_ids)
+        stmt = stmt.limit(1)
+
+        result = await self.db.execute(stmt)
+        row = result.mappings().first()
+        return dict(row) if row else None
+
+    async def fetch_email_conversation_by_id(
+        self,
+        organization_id: UUID,
+        user_id: Optional[UUID],
+        team_ids: Optional[list[UUID]],
+        conversation_id: UUID,
+    ) -> Optional[dict[str, Any]]:
+        """Fetch a single email conversation by ID (no full-table scan)."""
+        owner_alias = aliased(User, name="owner_e")
+        from app.models.email import GmailConnection
+
+        stmt = (
+            select(
+                Email.id,
+                Email.subject,
+                Email.direction,
+                Email.sender,
+                Email.receiver,
+                Email.body_preview,
+                Email.sent_at,
+                Email.is_read,
+                Email.external_entity_type,
+                Email.external_entity_id,
+                Lead.id.label("lead_id"),
+                Lead.title.label("lead_name"),
+                Deal.id.label("deal_id"),
+                Deal.name.label("deal_name"),
+                Deal.amount.label("deal_amount"),
+                Company.name.label("company_name"),
+                GmailConnection.user_id.label("owner_id"),
+                owner_alias.full_name.label("owner_name"),
+            )
+            .outerjoin(
+                GmailConnection,
+                GmailConnection.id == Email.gmail_connection_id,
+            )
+            .outerjoin(owner_alias, owner_alias.id == GmailConnection.user_id)
+            .outerjoin(
+                Lead,
+                (Lead.id == Email.external_entity_id)
+                & (Email.external_entity_type == "lead"),
+            )
+            .outerjoin(
+                Deal,
+                (Deal.id == Email.external_entity_id)
+                & (Email.external_entity_type == "deal"),
+            )
+            .outerjoin(Company, Company.id == Lead.company_id)
+            .where(
+                Email.organization_id == organization_id,
+                Email.id == conversation_id,
+            )
+        )
+        if user_id is not None and team_ids is None:
+            stmt = stmt.where(GmailConnection.user_id == user_id)
+        elif team_ids is not None:
+            stmt = stmt.where(GmailConnection.user_id.in_(team_ids))
+        stmt = stmt.limit(1)
+
+        result = await self.db.execute(stmt)
+        row = result.mappings().first()
+        return dict(row) if row else None
+
+    # ── Fetch email conversations ─────────────────────────────────────────────
+
     async def fetch_activity_conversations(
         self,
         organization_id: UUID,
@@ -57,6 +184,8 @@ class ConversationIntelligenceRepository:
         deal_id: Optional[UUID] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> list[dict[str, Any]]:
         owner_alias = aliased(User, name="owner_u")
 
@@ -134,6 +263,10 @@ class ConversationIntelligenceRepository:
             stmt = stmt.where(ActivityTimeline.created_at <= date_to)
 
         stmt = stmt.order_by(ActivityTimeline.created_at.desc())
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        if offset is not None:
+            stmt = stmt.offset(offset)
         result = await self.db.execute(stmt)
         rows = result.mappings().all()
         return [dict(r) for r in rows]
@@ -151,6 +284,8 @@ class ConversationIntelligenceRepository:
         deal_id: Optional[UUID] = None,
         date_from: Optional[datetime] = None,
         date_to: Optional[datetime] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
     ) -> list[dict[str, Any]]:
         owner_alias = aliased(User, name="owner_e")
         conn_alias  = aliased(User, name="conn_u")
@@ -218,6 +353,10 @@ class ConversationIntelligenceRepository:
             stmt = stmt.where(Email.sent_at <= date_to)
 
         stmt = stmt.order_by(Email.sent_at.desc())
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        if offset is not None:
+            stmt = stmt.offset(offset)
         result = await self.db.execute(stmt)
         return [dict(r) for r in result.mappings().all()]
 
@@ -308,6 +447,96 @@ class ConversationIntelligenceRepository:
             "days_since_last": days_since_last,
             "last_activity_at": last_at,
         }
+
+    # ── Summary aggregations ──────────────────────────────────────────────────
+
+    async def get_entity_signals_batch(
+        self,
+        organization_id: UUID,
+        entities: list[tuple[UUID, str]],
+    ) -> dict[UUID, dict[str, Any]]:
+        """
+        Batch-fetch aggregated signals for multiple entities in fewer queries.
+        Returns a dict mapping entity_id -> signals dict.
+        """
+        if not entities:
+            return {}
+
+        now = datetime.now(timezone.utc)
+        week_ago = now - timedelta(days=7)
+
+        # Collect entity IDs by type
+        lead_ids = [eid for eid, etype in entities if etype == "lead"]
+        deal_ids = [eid for eid, etype in entities if etype == "deal"]
+        all_ids = [eid for eid, _ in entities]
+
+        result: dict[UUID, dict[str, Any]] = {}
+        empty_sig = {
+            "calls": 0, "meetings": 0, "meetings_attended": 0,
+            "meetings_cancelled": 0, "notes": 0, "recent_acts": 0,
+            "email_total": 0, "email_replies": 0, "days_since_last": 999,
+            "last_activity_at": None,
+        }
+        for eid in all_ids:
+            result[eid] = dict(empty_sig)
+
+        if not all_ids:
+            return result
+
+        # Batch activity counts using a single GROUP BY query
+        act_stmt = (
+            select(
+                ActivityTimeline.entity_id,
+                func.count().filter(ActivityTimeline.action.in_(_CALL_ACTIONS)).label("calls"),
+                func.count().filter(ActivityTimeline.action.in_(_MEETING_ACTIONS)).label("meetings"),
+                func.count().filter(ActivityTimeline.action == "meeting_cancelled").label("meetings_cancelled"),
+                func.count().filter(ActivityTimeline.action.in_(_NOTE_ACTIONS)).label("notes"),
+                func.count().filter(ActivityTimeline.created_at >= week_ago).label("recent_acts"),
+                func.max(ActivityTimeline.created_at).label("last_act_at"),
+            )
+            .where(
+                ActivityTimeline.organization_id == organization_id,
+                ActivityTimeline.entity_id.in_(all_ids),
+            )
+            .group_by(ActivityTimeline.entity_id)
+        )
+        act_result = await self.db.execute(act_stmt)
+        for row in act_result:
+            eid = row.entity_id
+            if eid in result:
+                result[eid]["calls"] = int(row.calls or 0)
+                result[eid]["meetings"] = int(row.meetings or 0)
+                result[eid]["meetings_cancelled"] = int(row.meetings_cancelled or 0)
+                result[eid]["meetings_attended"] = max(0, int(row.meetings or 0) - int(row.meetings_cancelled or 0))
+                result[eid]["notes"] = int(row.notes or 0)
+                result[eid]["recent_acts"] = int(row.recent_acts or 0)
+                last_at = row.last_act_at
+                if last_at:
+                    result[eid]["last_activity_at"] = last_at
+                    result[eid]["days_since_last"] = max(0, (now - (last_at.replace(tzinfo=timezone.utc) if last_at.tzinfo is None else last_at)).days)
+
+        # Batch email counts using a single GROUP BY query
+        if all_ids:
+            email_stmt = (
+                select(
+                    Email.external_entity_id,
+                    func.count(Email.id).label("email_total"),
+                    func.count(Email.id).filter(Email.direction == "inbound").label("email_replies"),
+                )
+                .where(
+                    Email.organization_id == organization_id,
+                    Email.external_entity_id.in_(all_ids),
+                )
+                .group_by(Email.external_entity_id)
+            )
+            email_result = await self.db.execute(email_stmt)
+            for row in email_result:
+                eid = row.external_entity_id
+                if eid in result:
+                    result[eid]["email_total"] = int(row.email_total or 0)
+                    result[eid]["email_replies"] = int(row.email_replies or 0)
+
+        return result
 
     # ── Summary aggregations ──────────────────────────────────────────────────
 

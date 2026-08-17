@@ -40,7 +40,13 @@ VALID_TRANSITIONS: dict[LeadStatus, list[LeadStatus]] = {
 _lead_ai_tasks: set[asyncio.Task] = set()
 
 
-async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:
+async def _lead_ai_compute(
+    lead_id: UUID,
+    organization_id: UUID,
+    created_by: UUID,
+    trigger: str = "lead_updated",
+    lead_overrides: Optional[dict] = None,
+) -> None:
     """Run unified assessment pipeline in a fresh DB session, off the request path."""
     from app.core.concurrency import assessment_semaphore
     from app.database.connection import AsyncSessionFactory
@@ -54,7 +60,10 @@ async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUI
             async with assessment_semaphore:
                 async with AsyncSessionFactory() as db:
                     try:
-                        result = await run_lead_assessment(db, lead_id, organization_id, created_by, trigger=trigger)
+                        result = await run_lead_assessment(
+                            db, lead_id, organization_id, created_by,
+                            trigger=trigger, lead_overrides=lead_overrides,
+                        )
                     except Exception as exc:
                         logger.warning(
                             "Background AI assessment failed for lead %s (attempt %d): %s",
@@ -74,12 +83,21 @@ async def _lead_ai_compute(lead_id: UUID, organization_id: UUID, created_by: UUI
         except Exception as exc:
             logger.warning("Background AI session failed for lead %s: %s", lead_id, exc)
             return
-    logger.warning("[ASSESS_BG] lead %s assessment skipped after %d attempts (race condition)", lead_id, _MAX_RETRIES)
+    logger.warning("[ASSESS_BG] lead %s assessment failed after %d attempts — score not updated (AI service may be unreachable)", lead_id, _MAX_RETRIES)
 
 
-def _enqueue_lead_ai(lead_id: UUID, organization_id: UUID, created_by: UUID, trigger: str = "lead_updated") -> None:
+def _enqueue_lead_ai(
+    lead_id: UUID,
+    organization_id: UUID,
+    created_by: UUID,
+    trigger: str = "lead_updated",
+    lead_overrides: Optional[dict] = None,
+) -> None:
     """Fire-and-forget assessment; does NOT block the caller."""
-    task = asyncio.create_task(_lead_ai_compute(lead_id, organization_id, created_by, trigger=trigger))
+    task = asyncio.create_task(_lead_ai_compute(
+        lead_id, organization_id, created_by,
+        trigger=trigger, lead_overrides=lead_overrides,
+    ))
     _lead_ai_tasks.add(task)
     task.add_done_callback(_lead_ai_tasks.discard)
 
@@ -249,8 +267,20 @@ class LeadService:
                 payload={"lead_id": str(lead.id), "changes": list(update_data.keys())},
                 topic="lead",
             )
+        # Build overrides from the just-applied update so the background
+        # scoring task uses the fresh data (the DB session may not have
+        # committed yet when the task opens its own session).
+        _fit_fields = ("industry", "employee_count", "current_crm", "operational_systems",
+                       "estimated_value", "company_name", "source", "status")
+        lead_overrides: dict = {"lead_id": str(lead.id)}
+        for field_name in _fit_fields:
+            if field_name in update_data:
+                lead_overrides[field_name] = update_data[field_name]
+            elif hasattr(lead, field_name):
+                lead_overrides[field_name] = getattr(lead, field_name, None)
         # Fire-and-forget: unified assessment pipeline
-        _enqueue_lead_ai(lead.id, user.organization_id, lead.created_by, trigger="lead_updated")
+        _enqueue_lead_ai(lead.id, user.organization_id, lead.created_by,
+                         trigger="lead_updated", lead_overrides=lead_overrides)
         return await self.get(lead_id, user)
 
     async def update_status(
@@ -444,6 +474,7 @@ class LeadService:
                                 annual_revenue=str(revenue) if revenue is not None else None,
                                 organization_id=organization_id,
                                 created_by=created_by,
+                                owner_id=lead.owner_id or created_by,
                             )
                             company_id = company.id
                         except IntegrityError:

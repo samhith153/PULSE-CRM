@@ -474,6 +474,26 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
     return () => window.clearInterval(intervalId);
   }, []);
 
+  // Listen for real-time lead score updates via SSE
+  useEffect(() => {
+    const handleScoreUpdate = (e: Event) => {
+      const { lead_id } = (e as CustomEvent).detail || {};
+      if (!lead_id) return;
+      getLeads().then(data => {
+        const mapped = (data ?? []).map(backendToLocal);
+        setLeads(mapped);
+        setScoringLeadIds(prev => {
+          if (!prev.has(lead_id)) return prev;
+          const next = new Set(prev);
+          next.delete(lead_id);
+          return next;
+        });
+      }).catch(() => {});
+    };
+    window.addEventListener('pulse-lead-score-updated', handleScoreUpdate);
+    return () => window.removeEventListener('pulse-lead-score-updated', handleScoreUpdate);
+  }, []);
+
   // Get currently active lead object
   const activeLead = selectedLeadId ? leads.find(l => l.id === selectedLeadId) || null : null;
 
@@ -666,6 +686,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
     e.preventDefault();
     setIsEditingLead(true);
     if (!activeLead) return;
+    const preEditScore = activeLead.score;
     const newStatusBackend = STATUS_MAP[leadForm.status as string] || leadForm.status;
     const oldStatusBackend = STATUS_MAP[activeLead.status] || activeLead.status;
     const statusChanged = newStatusBackend !== oldStatusBackend;
@@ -679,6 +700,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
       industry: leadForm.industry || undefined,
       location: leadForm.location || undefined,
       employee_count: leadForm.numberOfEmployees ? parseInt(leadForm.numberOfEmployees, 10) || undefined : undefined,
+      current_crm: leadForm.currentCRM || undefined,
+      operational_systems: leadForm.operationalSystem || undefined,
       notes: leadForm.notes || undefined,
     };
     try {
@@ -696,7 +719,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
       let editAttempts = 0;
       const editPollId = window.setInterval(async () => {
         editAttempts++;
-        if (editAttempts > 8) {
+        if (editAttempts > 20) {
           window.clearInterval(editPollId);
           setScoringLeadIds(prev => { const n = new Set(prev); n.delete(editId); return n; });
           return;
@@ -706,7 +729,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
           const mapped = (refreshed ?? []).map(backendToLocal);
           setLeads(mapped);
           const r = mapped.find(l => String(l.id) === editId);
-          if (r && r.score > 0) {
+          if (r && r.score !== preEditScore) {
             window.clearInterval(editPollId);
             setScoringLeadIds(prev => { const n = new Set(prev); n.delete(editId); return n; });
           }
