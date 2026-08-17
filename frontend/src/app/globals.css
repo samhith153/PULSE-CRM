@@ -695,55 +695,55 @@ input, select, textarea {
   }
 }
 
-.border-slate-100,
-.border-slate-200,
-.border-slate-300,
-.divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--border) !important;
 }
 
-.text-slate-300,
-.text-slate-350,
-.text-slate-400,
-.text-slate-500,
-.text-slate-550,
-.text-slate-650 {
+.dark .text-slate-300,
+.dark .text-slate-350,
+.dark .text-slate-400,
+.dark .text-slate-500,
+.dark .text-slate-550,
+.dark .text-slate-650 {
   color: var(--muted-foreground) !important;
 }
 
-.text-slate-600,
-.text-slate-700,
-.text-slate-800,
-.text-slate-900,
-.text-slate-950 {
+.dark .text-slate-600,
+.dark .text-slate-700,
+.dark .text-slate-800,
+.dark .text-slate-900,
+.dark .text-slate-950 {
   color: var(--foreground) !important;
 }
 
-input,
-select,
-textarea {
+.dark input,
+.dark select,
+.dark textarea {
   background-color: var(--card) !important;
   color: var(--foreground) !important;
   border-color: var(--border) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
+.dark input::placeholder,
+.dark textarea::placeholder {
   color: var(--muted-foreground) !important;
 }
 
-aside {
+.dark aside {
   background-color: var(--sidebar) !important;
   border-color: var(--sidebar-border) !important;
 }
 
-header {
+.dark header {
   background-color: var(--card) !important;
   border-color: var(--border) !important;
 }
 
-.shadow-xl,
-.shadow-2xl {
+.dark .shadow-xl,
+.dark .shadow-2xl {
   background-color: var(--card) !important;
   border-color: var(--border) !important;
 }
@@ -2138,19 +2138,18 @@ a:hover { color: var(--accent-hover); }
 }
 
 /* ── Browser autofill overrides (dark login fields) ── */
-@-webkit-keyframes autofill {
-  from { background-color: transparent; }
-  to { background-color: transparent; }
-}
-
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
+input:-webkit-autofill:active,
+input[data-autofill] {
   -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0px 1000px rgba(2, 6, 23, 0.92) inset !important;
+  box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.92) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.92) inset !important;
   caret-color: #ffffff !important;
-  transition: background-color 5000s ease-in-out 0s;
+  background-color: rgba(2, 6, 23, 0.92) !important;
+  background-image: none !important;
+  color: #ffffff !important;
 }
 
 /* ── Lead Management section (dark-styled block) ── */

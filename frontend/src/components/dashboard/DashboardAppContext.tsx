@@ -166,9 +166,6 @@ export default function DashboardAppProvider({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-        const tag = (e.target as HTMLElement)?.tagName;
-        const isEditable = (e.target as HTMLElement)?.isContentEditable;
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || isEditable) return;
         e.preventDefault();
         setIsCommandPaletteOpen(prev => !prev);
       }

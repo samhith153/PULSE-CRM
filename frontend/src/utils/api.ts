@@ -1481,35 +1481,6 @@ export async function sendAssistantChatMessage(message: string, context?: Record
   });
 }
 
-// --- Tasks API ---
-export async function getTasks(params?: { status?: string; lead_id?: string; deal_id?: string }): Promise<any[]> {
-  const query = new URLSearchParams();
-  if (params?.status) query.append('status', params.status);
-  if (params?.lead_id) query.append('lead_id', params.lead_id);
-  if (params?.deal_id) query.append('deal_id', params.deal_id);
-  const qStr = query.toString();
-  const res = await apiFetch<any>(`/api/v1/tasks${qStr ? `?${qStr}` : ''}`);
-  return Array.isArray(res) ? res : (res?.data ?? []);
-}
-
-export async function createTask(taskData: any): Promise<any> {
-  return apiFetch('/api/v1/tasks', {
-    method: 'POST',
-    body: JSON.stringify(taskData)
-  });
-}
-
-export async function updateTask(taskId: string, taskData: any): Promise<any> {
-  return apiFetch(`/api/v1/tasks/${taskId}`, {
-    method: 'PUT',
-    body: JSON.stringify(taskData)
-  });
-}
-
-export async function deleteTask(taskId: string): Promise<void> {
-  await apiFetch<void>(`/api/v1/tasks/${taskId}`, { method: 'DELETE' });
-}
-
 // --- Calendar & Meetings API ---
 export async function getCalendarEvents(start?: string, end?: string): Promise<any[]> {
   const query = new URLSearchParams();

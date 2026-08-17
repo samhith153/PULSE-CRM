@@ -41,7 +41,6 @@ export const TAB_TO_PATH: Record<string, string> = {
   deals: 'deals',
   activities: 'activities',
   emails: 'emails',
-  tasks: 'tasks',
   calendar: 'calendar',
   workflows: 'workflows',
   'ai insights': 'ai-insights',
@@ -252,7 +251,6 @@ export const NAV_SECTIONS: Record<Role, NavSection[]> = {
 
 /** Extra destinations surfaced in the command palette (not in the sidebar). */
 export const NAV_EXTRA_ITEMS: NavItem[] = [
-  { tab: 'tasks', name: 'Tasks', icon: FileText },
   { tab: 'calendar', name: 'Calendar', icon: Calendar },
   { tab: 'profile', name: 'Profile', icon: User },
 ];

@@ -179,9 +179,11 @@ export default function ActivitySummaryCard({ onTabChange, dashboardData }: Acti
                 key={item.filter}
                 onClick={() => {
                   if (item.filter === 'today-tasks') {
-                    onTabChange?.('tasks');
+                    router.push('?tab=today-tasks&type=task');
+                    onTabChange?.('activities');
                   } else if (item.filter === 'overdue-tasks') {
-                    onTabChange?.('tasks');
+                    router.push('?tab=overdue-tasks&type=task');
+                    onTabChange?.('activities');
                   } else if (item.filter === 'pending-calls') {
                     router.push('?tab=pending-calls&type=call');
                     onTabChange?.('activities');
