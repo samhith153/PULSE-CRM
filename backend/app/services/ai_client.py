@@ -91,11 +91,12 @@ class AIClient:
         stripped = body.lstrip()
         return stripped.startswith("<") and ("<html" in stripped.lower() or "<!doctype" in stripped.lower())
 
-    async def _post(self, path: str, payload: dict, retries: int = 2) -> Optional[dict]:
+    async def _post(self, path: str, payload: dict, retries: int = 4) -> Optional[dict]:
         """POST JSON to the AI service and return parsed JSON or None on failure.
 
         Retries up to *retries* times when the AI service returns an HTML
         wake-up page (Render free-tier spin-down) or a transient error.
+        Backoff is aggressive to accommodate Render cold starts (30-90s).
         """
         last_exc: Exception | None = None
         for attempt in range(retries + 1):
@@ -116,9 +117,11 @@ class AIClient:
                         path, attempt + 1, retries + 1,
                     )
                     if attempt < retries:
-                        await asyncio.sleep(3 * (attempt + 1))  # 3s, 6s backoff
+                        wait = min(10 * (attempt + 1), 60)  # 10s, 20s, 30s, 40s, capped at 60s
+                        logger.info("[AI_CLIENT] Waiting %ds for AI service to wake up…", wait)
+                        await asyncio.sleep(wait)
                         continue
-                    logger.error("[AI_CLIENT] HTML wake-up page after %d retries from %s", retries, path)
+                    logger.error("[AI_CLIENT] HTML wake-up page after %d retries from %s — AI service unreachable", retries, path)
                     return None
 
                 return response.json()
@@ -130,13 +133,13 @@ class AIClient:
                     path, self.base_url, attempt + 1, retries + 1, type(exc).__name__,
                 )
                 if attempt < retries:
-                    await asyncio.sleep(3 * (attempt + 1))
+                    wait = min(10 * (attempt + 1), 60)
+                    await asyncio.sleep(wait)
                     continue
                 return None
 
             except ValueError as exc:
                 last_exc = exc
-                # Log the first 500 chars of the response body for debugging
                 body_preview = ""
                 try:
                     body_preview = response.text[:500]  # type: ignore[assignment]
@@ -147,7 +150,8 @@ class AIClient:
                     path, type(exc).__name__, body_preview,
                 )
                 if attempt < retries:
-                    await asyncio.sleep(3 * (attempt + 1))
+                    wait = min(10 * (attempt + 1), 60)
+                    await asyncio.sleep(wait)
                     continue
                 return None
 

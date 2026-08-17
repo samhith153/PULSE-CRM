@@ -28,6 +28,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.models.ai import AIRecommendation
 from app.models.email_summary import EmailSummary
@@ -247,7 +248,12 @@ async def run_lead_assessment(
         await ai_client.close()
 
     if not result:
-        logger.warning("[ASSESS_PIPELINE] AI service unavailable for lead %s — falling back to local rule-based scoring", lead_id)
+        logger.warning(
+            "[ASSESS_PIPELINE] AI service UNAVAILABLE for lead %s — "
+            "falling back to local rule-based scoring. "
+            "Check AI_SERVICE_URL and verify %s is running.",
+            lead_id, settings.AI_SERVICE_URL,
+        )
         # Local fallback: use RuleBasedScorer when AI microservice is unreachable
         try:
             from app.services.ai_providers import RuleBasedScorer, FeatureExtractionService, FeatureSet

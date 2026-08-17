@@ -110,7 +110,7 @@ services:
       - key: AI_TIMEOUT
         value: "30"
       - key: AI_SERVICE_URL
-        value: http://pulse-crm-ai.onrender.com
+        value: https://pulse-crm-ai.onrender.com
       - key: AI_SERVICE_TIMEOUT
         value: "30.0"
       - key: GROQ_API_KEY
