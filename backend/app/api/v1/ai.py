@@ -109,6 +109,7 @@ async def batch_recommendations(
     from app.models.lead import Lead
     from app.models.email import Email
     from app.models.email_summary import EmailSummary
+    from app.models.lead_score import LeadScore
     from app.models.deal import Deal
     from app.repositories.lead_repository import LeadRepository
     from app.services.ai_client import AIClient
@@ -128,6 +129,17 @@ async def batch_recommendations(
             leads[str(lid)] = lead
 
     batch_email_stats = await email_stats_svc.batch_get_lead_email_stats(uuid_ids, org_id)
+
+    # Batch-fetch lead scores
+    score_map: dict[str, int] = {}
+    if uuid_ids:
+        score_stmt = select(LeadScore).where(
+            LeadScore.organization_id == org_id,
+            LeadScore.lead_id.in_(uuid_ids),
+        )
+        score_result = await db.execute(score_stmt)
+        for ls in score_result.scalars().all():
+            score_map[str(ls.lead_id)] = ls.overall_score or 0
 
     email_summaries_by_lead: dict[str, list[dict]] = {}
     all_emails = []
@@ -220,11 +232,11 @@ async def batch_recommendations(
 
             leads_payload.append({
                 "lead_id": lid_str,
-                "score": float(lead.score) if lead.score else None,
-                "engagement_score": float(lead.score) if lead.score else None,
+                "score": float(score_map.get(lid_str, 0)),
+                "engagement_score": float(score_map.get(lid_str, 0)),
                 "current_stage": current_stage,
                 "deal_value": deal_amount,
-                "tags": lead.tags if hasattr(lead, "tags") else None,
+                "tags": getattr(lead, "tags", None),
                 "days_since_last_outbound": stats.get("days_since_last_outbound"),
                 "is_outbound": is_outbound,
                 "outbound_thread": [outbound_subject, 0] if outbound_subject else None,
