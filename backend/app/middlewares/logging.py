@@ -16,6 +16,10 @@ logger = get_logger("http.access")
 
 _SENSITIVE_PARAM_RE = re.compile(r"(token|password|secret|key|access_token)", re.IGNORECASE)
 
+# Render probes its healthCheckPath every few seconds; skip logging those
+# requests so the platform's liveness pings don't clutter the logs.
+_HEALTH_PATHS = {"/api/v1/health", "/health", "/api/health"}
+
 
 def _redact_query(query: str) -> str:
     """Redact sensitive query parameters (e.g. JWT tokens) before logging."""
@@ -39,6 +43,10 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         duration_ms = round((time.perf_counter() - start) * 1000, 2)
+
+        if request.url.path in _HEALTH_PATHS:
+            response.headers["X-Response-Time"] = f"{duration_ms}ms"
+            return response
 
         logger.info(
             "%s %s %s",
