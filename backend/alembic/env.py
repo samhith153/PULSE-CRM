@@ -3,6 +3,7 @@
 import asyncio
 import ssl
 from logging.config import fileConfig
+from urllib.parse import urlparse, urlunparse, parse_qs, urlencode
 
 import app.models
 from alembic import context
@@ -47,6 +48,15 @@ def run_migrations_offline():
 
 async def run():
     migration_url = getattr(settings, "DIRECT_URL", None) or settings.DATABASE_URL
+
+    # Strip query params that asyncpg doesn't understand (e.g. sslmode).
+    # asyncpg uses its own `ssl` connect_arg instead.
+    _parsed = urlparse(migration_url)
+    _query_params = parse_qs(_parsed.query, keep_blank_values=True)
+    _asyncpg_rejects = {"sslmode"}
+    _filtered = {k: v for k, v in _query_params.items() if k.lower() not in _asyncpg_rejects}
+    migration_url = urlunparse(_parsed._replace(query=urlencode(_filtered, doseq=True)))
+
     connect_args = {}
     connect_args["statement_cache_size"] = 0
     if migration_url.startswith("postgresql") and "localhost" not in migration_url and "127.0.0.1" not in migration_url:
