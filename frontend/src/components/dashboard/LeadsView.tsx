@@ -4,7 +4,7 @@ import { toast } from '@/lib/toast';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SkeletonLoader from './SkeletonLoader';
-import { Lead as BackendLead, getLeads, createLead, updateLead, updateLeadStatus, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
+import { Lead as BackendLead, getLeads, getLead, createLead, updateLead, updateLeadStatus, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -62,7 +62,7 @@ function backendToLocal(b: BackendLead): Lead {
     company: b.company_name || '',
     email: b.contact_email || '',
     phone: b.contact_phone || '',
-    score: b.score ?? 0,
+    score: b.score ?? null,
     fit_score: b.fit_score ?? null,
     engagement_score: b.engagement_score ?? null,
     fitReasons: b.fit_reasons ?? [],
@@ -163,13 +163,22 @@ interface MeetingItem {
   desc: string;
 }
 
+function PendingScoreCell({ center, withLabel }: { center?: boolean; withLabel?: boolean }) {
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/5 text-accent-color ${center ? 'mx-auto justify-center' : ''}`}>
+      <Loader2 className="animate-spin h-3 w-3" />
+      {withLabel ? 'Scoring' : ''}
+    </span>
+  );
+}
+
 interface Lead {
   id: string;
   name: string;
   company: string;
   email: string;
   phone: string;
-  score: number;
+  score: number | null;
   fit_score: number | null;
   engagement_score: number | null;
   fitReasons: string[];
@@ -465,7 +474,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
           let changed = false;
           for (const id of prev) {
             const lead = mapped.find(l => String(l.id) === id);
-            if (lead && lead.score > 0) { next.delete(id); changed = true; }
+            if (lead && lead.score != null && lead.score > 0) { next.delete(id); changed = true; }
           }
           return changed ? next : prev;
         });
@@ -554,7 +563,9 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
   };
 
   // Score-based priority view helpers — prefer real backend scores, fall back to heuristic
-  const getEngagementScore = (lead: Lead) => {
+  const isScorePending = (lead: Lead) => lead.score == null || scoringLeadIds.has(String(lead.id));
+  const getEngagementScore = (lead: Lead): number | null => {
+    if (lead.score == null) return null;
     if (lead.engagement_score != null) return lead.engagement_score;
     let score = 0;
     if (lead.emails && lead.emails.length > 0) {
@@ -569,14 +580,18 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
     return Math.min(score, 100);
   };
 
-  const getFitScore = (lead: Lead) => {
+  const getFitScore = (lead: Lead): number | null => {
+    if (lead.score == null) return null;
     const fit = lead.fit_score ?? lead.score;
     return Number(fit) || 0;
   };
 
-  const getOverallScore = (lead: Lead) => {
+  const getOverallScore = (lead: Lead): number | null => {
     if (lead.score != null) return lead.score;
-    return Math.round(getFitScore(lead) * 0.6 + getEngagementScore(lead) * 0.4);
+    if (lead.fit_score != null || lead.engagement_score != null) {
+      return Math.round((getFitScore(lead) ?? 0) * 0.6 + (getEngagementScore(lead) ?? 0) * 0.4);
+    }
+    return null;
   };
 
   // Filtered Leads list
@@ -661,14 +676,12 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
             return;
           }
           try {
-            const refreshed = await getLeads();
-            const mapped = (refreshed ?? []).map(backendToLocal);
-            setLeads(mapped);
-            const updated = mapped.find(l => String(l.id) === newId);
-            if (updated && updated.score > 0) {
+            const updated = await getLead(newId);
+            if (updated && updated.score != null) {
+              setLeads(prev => prev.map(l => l.id === newId ? backendToLocal(updated) : l));
               window.clearInterval(pollId);
               setScoringLeadIds(prev => { const n = new Set(prev); n.delete(newId); return n; });
-              toast.success(`Lead scored: ${updated.score}% — ${updated.priorityTier || 'N/A'} priority`);
+              toast.success(`Lead scored: ${updated.score}% — ${updated.priority || 'N/A'} priority`);
             }
           } catch { /* retry next tick */ }
         }, 3000);
@@ -1530,22 +1543,28 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                             <>
                               <td className="py-3.5 px-2 font-bold truncate" title={lead.company}>{lead.company}</td>
                               <td className="py-3.5 px-2 text-center">
+                                {isScorePending(lead) ? <PendingScoreCell center /> : (
                                 <span className={`text-xs font-extrabold tabular-nums ${
-                                  getFitScore(lead) >= 80 ? 'text-status-success-text' :
-                                  getFitScore(lead) >= 60 ? 'text-status-warning-text' : 'text-destructive'
+                                  (getFitScore(lead) ?? 0) >= 80 ? 'text-status-success-text' :
+                                  (getFitScore(lead) ?? 0) >= 60 ? 'text-status-warning-text' : 'text-destructive'
                                 }`}>{getFitScore(lead)}</span>
+                                )}
                               </td>
                               <td className="py-3.5 px-2 text-center">
+                                {isScorePending(lead) ? <PendingScoreCell center /> : (
                                 <span className={`text-xs font-extrabold tabular-nums ${
-                                  getEngagementScore(lead) >= 30 ? 'text-status-success-text' :
-                                  getEngagementScore(lead) >= 15 ? 'text-status-warning-text' : 'text-destructive'
+                                  (getEngagementScore(lead) ?? 0) >= 30 ? 'text-status-success-text' :
+                                  (getEngagementScore(lead) ?? 0) >= 15 ? 'text-status-warning-text' : 'text-destructive'
                                 }`}>{getEngagementScore(lead)}</span>
+                                )}
                               </td>
                               <td className="py-3.5 px-2 text-center">
+                                {isScorePending(lead) ? <PendingScoreCell center /> : (
                                 <span className={`text-xs font-extrabold tabular-nums px-1.5 py-0.5 rounded ${
-                                  getOverallScore(lead) >= 70 ? 'bg-status-success-text/10 text-status-success-text' :
-                                  getOverallScore(lead) >= 40 ? 'bg-status-warning-text/10 text-status-warning-text' : 'bg-destructive/10 text-destructive'
+                                  (getOverallScore(lead) ?? 0) >= 70 ? 'bg-status-success-text/10 text-status-success-text' :
+                                  (getOverallScore(lead) ?? 0) >= 40 ? 'bg-status-warning-text/10 text-status-warning-text' : 'bg-destructive/10 text-destructive'
                                 }`}>{getOverallScore(lead)}</span>
+                                )}
                               </td>
                               <td className="py-3.5 px-2 text-[10px] text-text-muted max-w-[200px] truncate">{getAIRecommendation(lead)}</td>
                               <td className="py-3.5 px-2 text-right pr-4">
@@ -1570,15 +1589,12 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                               </td>
                               <td className="py-3.5 px-2 font-bold truncate" title={lead.name}>{lead.name}</td>
                               <td className="py-3.5 px-2 text-center font-bold tabular-nums">
-                                {scoringLeadIds.has(String(lead.id)) ? (
-                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border border-accent-color/20 bg-accent-color/5 text-accent-color">
-                                    <Loader2 className="animate-spin h-3 w-3" />
-                                    Scoring
-                                  </span>
+                                {isScorePending(lead) ? (
+                                  <PendingScoreCell withLabel />
                                 ) : (
                                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border tabular-nums inline-block ${
-                                    lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
-                                    lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' :
+                                    (lead.score ?? 0) >= 80 ? 'text-status-success-text bg-status-success-text/10 border-status-success-text/10' :
+                                    (lead.score ?? 0) >= 60 ? 'text-status-warning-text bg-status-warning-text/10 border-status-warning-text/10' :
                                     'text-destructive bg-destructive/10 border-destructive/10'
                                   }`}>
                                     {lead.score != null ? `${lead.score}%` : '—'}
@@ -1695,8 +1711,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                                 </div>
                               </td>
                               <td className="py-3 text-center">
-                                {scoringLeadIds.has(String(lead.id)) ? (
-                                  <Loader2 className="animate-spin h-3.5 w-3.5 text-accent-color mx-auto" />
+                                {isScorePending(lead) ? (
+                                  <PendingScoreCell center />
                                 ) : (
                                   <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/10 text-accent-color">
                                     {getFitScore(lead)}%
@@ -1704,8 +1720,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                                 )}
                               </td>
                               <td className="py-3 text-center">
-                                {scoringLeadIds.has(String(lead.id)) ? (
-                                  <Loader2 className="animate-spin h-3.5 w-3.5 text-text-muted mx-auto" />
+                                {isScorePending(lead) ? (
+                                  <PendingScoreCell center />
                                 ) : (
                                   <span className="text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-surface-2 text-text-primary">
                                     {getEngagementScore(lead)}%
@@ -1713,15 +1729,12 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                                 )}
                               </td>
                               <td className="py-3 text-center">
-                                {scoringLeadIds.has(String(lead.id)) ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/5 text-accent-color">
-                                    <Loader2 className="animate-spin h-3 w-3" />
-                                    Scoring
-                                  </span>
+                                {isScorePending(lead) ? (
+                                  <PendingScoreCell center withLabel />
                                 ) : (
                                   <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                                    lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10' :
-                                    lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
+                                    (lead.score ?? 0) >= 80 ? 'text-status-success-text bg-status-success-text/10' :
+                                    (lead.score ?? 0) >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
                                   }`}>
                                     {lead.score}%
                                   </span>
@@ -1739,15 +1752,12 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                                 <div className="font-extrabold text-text-primary">{lead.name}</div>
                               </td>
                               <td className="py-3 text-center">
-                                {scoringLeadIds.has(String(lead.id)) ? (
-                                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold px-1.5 py-0.5 rounded bg-accent-color/5 text-accent-color">
-                                    <Loader2 className="animate-spin h-3 w-3" />
-                                    Scoring
-                                  </span>
+                                {isScorePending(lead) ? (
+                                  <PendingScoreCell withLabel />
                                 ) : (
                                   <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded tabular-nums ${
-                                    lead.score >= 80 ? 'text-status-success-text bg-status-success-text/10' :
-                                    lead.score >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
+                                    (lead.score ?? 0) >= 80 ? 'text-status-success-text bg-status-success-text/10' :
+                                    (lead.score ?? 0) >= 60 ? 'text-status-warning-text bg-status-warning-text/10' : 'text-destructive bg-destructive/10'
                                   }`}>
                                     {lead.score}
                                   </span>
@@ -1933,21 +1943,28 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                           <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Lead Scoring</span>
                         </div>
                         <div className="p-4 space-y-3">
-                          {[
-                            { label: 'Overall Score', value: activeLead.score, color: activeLead.score >= 80 ? 'var(--status-success-text)' : activeLead.score >= 60 ? 'var(--status-warning-text)' : 'var(--status-danger-text)' },
-                            { label: 'Fit Score', value: activeLead.fit_score ?? 0, color: 'var(--accent-color)' },
-                            { label: 'Engagement Score', value: activeLead.engagement_score ?? 0, color: 'var(--chart-1)' },
-                          ].map(s => (
-                            <div key={s.label}>
-                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-semibold text-text-muted">{s.label}</span>
-                                <span className="text-xs font-bold tabular-nums" style={{ color: s.color }}>{s.value}%</span>
-                              </div>
-                              <div className="h-1.5 rounded-full overflow-hidden bg-surface-2">
-                                <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.value}%`, background: s.color }} />
-                              </div>
+                          {isScorePending(activeLead) ? (
+                            <div className="flex items-center justify-center gap-2 py-3 rounded-lg bg-accent-color/5 text-accent-color text-xs font-semibold">
+                              <Loader2 className="animate-spin h-4 w-4" />
+                              Scoring lead, please wait...
                             </div>
-                          ))}
+                          ) : (
+                            [
+                              { label: 'Overall Score', value: activeLead.score, color: (activeLead.score ?? 0) >= 80 ? 'var(--status-success-text)' : (activeLead.score ?? 0) >= 60 ? 'var(--status-warning-text)' : 'var(--status-danger-text)' },
+                              { label: 'Fit Score', value: getFitScore(activeLead), color: 'var(--accent-color)' },
+                              { label: 'Engagement Score', value: getEngagementScore(activeLead), color: 'var(--chart-1)' },
+                            ].map(s => (
+                              <div key={s.label}>
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs font-semibold text-text-muted">{s.label}</span>
+                                  <span className="text-xs font-bold tabular-nums" style={{ color: s.color }}>{s.value ?? 0}%</span>
+                                </div>
+                                <div className="h-1.5 rounded-full overflow-hidden bg-surface-2">
+                                  <div className="h-full rounded-full transition-all duration-500" style={{ width: `${s.value ?? 0}%`, background: s.color }} />
+                                </div>
+                              </div>
+                            ))
+                          )}
                           <div className="flex items-center justify-between pt-1">
                             <span className="text-xs font-semibold text-text-muted">Priority Tier</span>
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
@@ -2208,14 +2225,20 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                             <h5 className="text-[9px] font-bold uppercase tracking-wider mb-3 flex items-center gap-1 text-text-muted">
                               <TrendingUp className="h-3.5 w-3.5 text-accent-color" />Lead Score Progression
                             </h5>
+                            {isScorePending(activeLead) ? (
+                              <div className="flex items-center justify-center gap-2 h-40 text-accent-color text-xs font-semibold">
+                                <Loader2 className="animate-spin h-4 w-4" />
+                                Waiting for score...
+                              </div>
+                            ) : (
                             <div className="w-full h-40 relative">
                               <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
                                 <line x1="0" y1="90" x2="300" y2="90" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3,3" />
                                 <line x1="0" y1="50" x2="300" y2="50" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3,3" />
                                 <line x1="0" y1="10" x2="300" y2="10" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3,3" />
-                                <path d={getProgressPoints(activeLead.score).areaPath} fill="url(#purpleGradMax)" opacity="0.2" />
-                                <path d={getProgressPoints(activeLead.score).path} fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" />
-                                {getProgressPoints(activeLead.score).points.map((p, idx) => (
+                                <path d={getProgressPoints(activeLead.score ?? 0).areaPath} fill="url(#purpleGradMax)" opacity="0.2" />
+                                <path d={getProgressPoints(activeLead.score ?? 0).path} fill="none" stroke="var(--accent-color)" strokeWidth="2.5" strokeLinecap="round" />
+                                {getProgressPoints(activeLead.score ?? 0).points.map((p, idx) => (
                                   <circle key={idx} cx={p.x} cy={p.y} r="4" fill="var(--accent-color)" stroke="var(--text-on-primary)" strokeWidth="1.5" />
                                 ))}
                                 <defs>
@@ -2229,6 +2252,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                                 <span>Start</span><span>Midpoint</span><span>Today ({activeLead.score})</span>
                               </div>
                             </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -2311,7 +2335,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                     <div className="space-y-2.5 text-[10px] font-semibold">
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Fit Score</span>
-                        <span className="font-semibold text-text-primary">{activeLead.fit_score ?? 0}%</span>
+                        {isScorePending(activeLead) ? <PendingScoreCell /> : <span className="font-semibold text-text-primary">{getFitScore(activeLead)}%</span>}
                       </div>
                       {activeLead.fitReasons.length > 0 && (
                         <div className="reason-subtext">
@@ -2323,7 +2347,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                       <div className="border-t border-border-default" />
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Engagement Score</span>
-                        <span className="font-semibold text-text-primary">{activeLead.engagement_score ?? 0}%</span>
+                        {isScorePending(activeLead) ? <PendingScoreCell /> : <span className="font-semibold text-text-primary">{getEngagementScore(activeLead)}%</span>}
                       </div>
                       {activeLead.engagementReasons.length > 0 && (
                         <div className="reason-subtext">
@@ -2335,9 +2359,11 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                       <div className="border-t border-border-default" />
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Overall Score</span>
+                        {isScorePending(activeLead) ? <PendingScoreCell /> : (
                         <span className={`font-semibold tabular-nums ${
-                          activeLead.score >= 80 ? 'text-status-success-text' : activeLead.score >= 60 ? 'text-status-warning-text' : 'text-destructive'
+                          (activeLead.score ?? 0) >= 80 ? 'text-status-success-text' : (activeLead.score ?? 0) >= 60 ? 'text-status-warning-text' : 'text-destructive'
                         }`}>{activeLead.score}%</span>
+                        )}
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-text-muted">Tier</span>
@@ -2556,6 +2582,12 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                             <TrendingUp className="h-3.5 w-3.5 text-accent-color" />
                             <span>Lead Progression & Score Trend</span>
                           </h5>
+                          {isScorePending(activeLead) ? (
+                            <div className="flex items-center justify-center gap-2 h-32 text-accent-color text-xs font-semibold">
+                              <Loader2 className="animate-spin h-4 w-4" />
+                              Waiting for score...
+                            </div>
+                          ) : (
                           <div className="w-full h-32 relative">
                             <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
                               <line x1="0" y1="90" x2="300" y2="90" stroke="var(--border-default)" strokeWidth="1" strokeDasharray="3,3" />
@@ -2563,23 +2595,23 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                               <line x1="0" y1="10" x2="300" y2="10" stroke="var(--border-strong)" strokeWidth="1" strokeDasharray="3,3" />
                               
                               <path
-                                d={getProgressPoints(activeLead.score).areaPath}
+                                d={getProgressPoints(activeLead.score ?? 0).areaPath}
                                 fill="url(#purpleGradLeads)"
                                 opacity="0.15"
                               />
                               
                               <path
-                                d={getProgressPoints(activeLead.score).path}
+                                d={getProgressPoints(activeLead.score ?? 0).path}
                                 fill="none"
                                 stroke="var(--accent-color)"
                                 strokeWidth="2.5"
                                 strokeLinecap="round"
                               />
                               
-                              {getProgressPoints(activeLead.score).points.map((p, idx) => (
+                              {getProgressPoints(activeLead.score ?? 0).points.map((p, idx) => (
                                 <circle key={idx} cx={p.x} cy={p.y} r="4" fill="var(--accent-color)" stroke="var(--text-on-primary)" strokeWidth="1.5" />
                               ))}
-       
+      
                               <defs>
                                 <linearGradient id="purpleGradLeads" x1="0%" y1="0%" x2="0%" y2="100%">
                                   <stop offset="0%" stopColor="var(--accent-color)" />
@@ -2594,6 +2626,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                               <span>Today (Score: {activeLead.score})</span>
                             </div>
                           </div>
+                          )}
                         </div>
                       </div>
                     )}
