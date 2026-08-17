@@ -1,6 +1,8 @@
 """PULSE AI Service - FastAPI application factory."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -9,6 +11,20 @@ from app.routers.conversation_router import router as conversation_router
 from app.routers.lead_router import router as lead_router
 from app.routers.recommendation_router import router as recommendation_router
 from app.routers.rising_interest_router import router as rising_interest_router
+
+
+class _HealthAccessFilter(logging.Filter):
+    """Suppress uvicorn access-log lines for Render's health-check pings.
+
+    Render probes /health every few seconds; that interval is fixed by the
+    platform and cannot be configured, so we drop those log lines instead.
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return '"/health' not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(_HealthAccessFilter())
 
 
 def create_app() -> FastAPI:

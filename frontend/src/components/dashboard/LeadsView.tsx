@@ -2109,7 +2109,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
 
                       {/* Quick Action Buttons */}
                       <div className="grid grid-cols-3 gap-2">
-                        <button onClick={() => { router.push(`?compose=${encodeURIComponent(activeLead.email)}`); onTabChange?.('emails'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } })); }, 150); }}
+                        <button onClick={() => { if (onComposeEmail && activeLead.email) { onComposeEmail({ to: activeLead.email, name: activeLead.name, company: activeLead.company, designation: activeLead.jobTitle, externalEntityType: 'lead', externalEntityId: String(activeLead.id) }); } else { router.push(`?compose=${encodeURIComponent(activeLead.email)}`); onTabChange?.('emails'); setTimeout(() => { window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } })); }, 150); } }}
                           className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-semibold border border-border-default bg-surface-1 hover:bg-accent-color/10 hover:border-accent-color hover:text-accent-color text-text-primary cursor-pointer transition">
                           <Mail className="h-4 w-4" /><span>Email</span>
                         </button>
@@ -2403,11 +2403,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                 <div className="grid grid-cols-3 gap-2 mt-4">
                   <button 
                     onClick={() => {
-                      router.push(`?compose=${encodeURIComponent(activeLead.email)}`);
-                      onTabChange?.('emails');
-                      setTimeout(() => {
-                        window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } }));
-                      }, 150);
+                      if (onComposeEmail && activeLead.email) {
+                        onComposeEmail({ to: activeLead.email, name: activeLead.name, company: activeLead.company, designation: activeLead.jobTitle, externalEntityType: 'lead', externalEntityId: String(activeLead.id) });
+                      } else {
+                        router.push(`?compose=${encodeURIComponent(activeLead.email)}`);
+                        onTabChange?.('emails');
+                        setTimeout(() => {
+                          window.dispatchEvent(new CustomEvent('pulse-compose-email', { detail: { to: activeLead.email } }));
+                        }, 150);
+                      }
                     }}
                     className="inline-flex items-center justify-center space-x-1 py-1.5 border border-border-default hover:bg-surface-2 rounded-lg text-[10px] font-semibold text-text-muted cursor-pointer transition-colors"
                   >
