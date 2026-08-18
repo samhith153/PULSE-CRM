@@ -24,6 +24,8 @@ import {
 } from '@/utils/api';
 import { toast } from '@/lib/toast';
 import { cn } from '@/utils/cn';
+import ChartTooltip from './ChartTooltip';
+import { useChartTooltip } from '@/hooks/use-chart-tooltip';
 
 /* ═══════════════════════════════════════════════════════════════════
    Helpers
@@ -101,6 +103,8 @@ function PeriodPill({ value, onChange }: { value: string; onChange: (v: string) 
 function SVLineChart({ current, previous, labels, height = 160 }: {
   current: number[]; previous: number[]; labels: string[]; height?: number;
 }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ label: string; current: number; previous: number }>();
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const all = [...current, ...previous];
   const max = Math.max(...all, 1);
   const W = 500; const pad = { t: 10, b: 24, l: 36, r: 12 };
@@ -130,41 +134,65 @@ function SVLineChart({ current, previous, labels, height = 160 }: {
   }
 
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} className="w-full" style={{ height }} preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="mg-lg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#3D5AFE" stopOpacity="0.12" />
-          <stop offset="100%" stopColor="#3D5AFE" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      {/* grid */}
-      {ticks.map(t => (
-        <g key={t.r}>
-          <line x1={pad.l} y1={yOf(t.v)} x2={W - pad.r} y2={yOf(t.v)} stroke="var(--border-subtle)" strokeWidth="1" />
-          <text x={pad.l - 4} y={yOf(t.v) + 3} textAnchor="end" fontSize="9" fill="var(--text-muted)" fontFamily="inherit">
-            {fmtTick(t.v)}
-          </text>
-        </g>
-      ))}
-      {/* area */}
-      {areaD && <path d={areaD} fill="url(#mg-lg)" />}
-      {/* prev line */}
-      {pPts.length > 1 && (
-        <polyline points={polyPts(pPts)} fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeDasharray="4 3" />
+    <div ref={containerRef} className="relative">
+      <svg viewBox={`0 0 ${W} ${height}`} className="w-full" style={{ height }} preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="mg-lg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3D5AFE" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#3D5AFE" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* grid */}
+        {ticks.map(t => (
+          <g key={t.r}>
+            <line x1={pad.l} y1={yOf(t.v)} x2={W - pad.r} y2={yOf(t.v)} stroke="var(--border-subtle)" strokeWidth="1" />
+            <text x={pad.l - 4} y={yOf(t.v) + 3} textAnchor="end" fontSize="9" fill="var(--text-muted)" fontFamily="inherit">
+              {fmtTick(t.v)}
+            </text>
+          </g>
+        ))}
+        {/* area */}
+        {areaD && <path d={areaD} fill="url(#mg-lg)" />}
+        {/* prev line */}
+        {pPts.length > 1 && (
+          <polyline points={polyPts(pPts)} fill="none" stroke="var(--border-strong)" strokeWidth="1.5" strokeDasharray="4 3" />
+        )}
+        {/* curr line */}
+        {cPts.length > 1 && (
+          <polyline points={polyPts(cPts)} fill="none" stroke="#3D5AFE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        )}
+        {/* dots on current */}
+        {cPts.map((p, i) => {
+          const emp = i === hoverIdx;
+          return (
+            <circle key={i} cx={p.x} cy={p.y} r={emp ? 4.5 : 3} fill="#3D5AFE" stroke="#fff" strokeWidth="1.5"
+              className="cursor-pointer"
+              onMouseEnter={(e) => { setHoverIdx(i); show(e, { label: labels[i] || String(i), current: current[i], previous: previous[i] ?? 0 }); }}
+              onMouseMove={(e) => show(e, { label: labels[i] || String(i), current: current[i], previous: previous[i] ?? 0 })}
+              onMouseLeave={() => { setHoverIdx(null); hide(); }} />
+          );
+        })}
+        {/* invisible hover zones */}
+        {cPts.map((p, i) => (
+          <rect key={`hz-${i}`} x={xOf(i) - iW / Math.max(n, 1) / 2} y={pad.t} width={iW / Math.max(n, 1)} height={iH}
+            fill="transparent" className="cursor-pointer"
+            onMouseEnter={(e) => { setHoverIdx(i); show(e, { label: labels[i] || String(i), current: current[i], previous: previous[i] ?? 0 }); }}
+            onMouseMove={(e) => show(e, { label: labels[i] || String(i), current: current[i], previous: previous[i] ?? 0 })}
+            onMouseLeave={() => { setHoverIdx(null); hide(); }} />
+        ))}
+        {/* x labels */}
+        {labels.map((l, i) => (
+          <text key={i} x={xOf(i)} y={height - 4} textAnchor="middle" fontSize="9" fill="var(--text-muted)" fontFamily="inherit">{l}</text>
+        ))}
+      </svg>
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={tip.data.label}
+          rows={[
+            { label: 'This Quarter', value: fmtCurrency(tip.data.current), color: '#3D5AFE' },
+            { label: 'Last Quarter', value: fmtCurrency(tip.data.previous), color: 'var(--border-strong)' },
+          ]} />
       )}
-      {/* curr line */}
-      {cPts.length > 1 && (
-        <polyline points={polyPts(cPts)} fill="none" stroke="#3D5AFE" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      )}
-      {/* dots on current */}
-      {cPts.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={3} fill="#3D5AFE" stroke="#fff" strokeWidth="1.5" />
-      ))}
-      {/* x labels */}
-      {labels.map((l, i) => (
-        <text key={i} x={xOf(i)} y={height - 4} textAnchor="middle" fontSize="9" fill="var(--text-muted)" fontFamily="inherit">{l}</text>
-      ))}
-    </svg>
+    </div>
   );
 }
 
@@ -175,6 +203,8 @@ function SVGroupedDealsChart({ data, height = 160 }: {
   data: { name: string; won: number; lost: number; open: number }[];
   height?: number;
 }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ name: string; won: number; lost: number; open: number; key: string; color: string }>();
+  const [hoverKey, setHoverKey] = useState<string | null>(null);
   const maxV = Math.max(...data.flatMap(d => [d.won, d.lost, d.open]), 1);
   const W = 500; const pad = { t: 10, b: 24, l: 32, r: 8 };
   const iW = W - pad.l - pad.r; const iH = height - pad.t - pad.b;
@@ -189,42 +219,58 @@ function SVGroupedDealsChart({ data, height = 160 }: {
   }
 
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} className="w-full" style={{ height }} preserveAspectRatio="none">
-      {ticks.map(r => {
-        const y = pad.t + iH - r * iH;
-        return (
-          <g key={r}>
-            <line x1={pad.l} y1={y} x2={W - pad.r} y2={y} stroke="var(--border-subtle)" strokeWidth="1" />
-            {(
-              <text x={pad.l - 3} y={y + 3} textAnchor="end" fontSize="9" fill="var(--text-muted)" fontFamily="inherit">
-                {fmtTick(maxV * r)}
-              </text>
-            )}
-          </g>
-        );
-      })}
-      {data.map((d, gi) => {
-        const cx = pad.l + gi * groupW + groupW / 2;
-        const bars = [
-          { v: d.won, c: '#3DA35D' },
-          { v: d.lost, c: '#E5484D' },
-          { v: d.open, c: '#3D5AFE' },
-        ];
-        const totalW = bars.length * bw + (bars.length - 1) * gap;
-        return (
-          <g key={gi}>
-            {bars.map((b, bi) => {
-              const bh = Math.max(3, (b.v / maxV) * iH);
-              const bx = cx - totalW / 2 + bi * (bw + gap);
-              return (
-                <rect key={bi} x={bx} y={pad.t + iH - bh} width={bw} height={bh} rx={2} fill={b.c} />
-              );
-            })}
-            <text x={cx} y={height - 4} textAnchor="middle" fontSize="9" fill="var(--text-muted)" fontFamily="inherit">{d.name}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <div ref={containerRef} className="relative">
+      <svg viewBox={`0 0 ${W} ${height}`} className="w-full" style={{ height }} preserveAspectRatio="none">
+        {ticks.map(r => {
+          const y = pad.t + iH - r * iH;
+          return (
+            <g key={r}>
+              <line x1={pad.l} y1={y} x2={W - pad.r} y2={y} stroke="var(--border-subtle)" strokeWidth="1" />
+              {(
+                <text x={pad.l - 3} y={y + 3} textAnchor="end" fontSize="9" fill="var(--text-muted)" fontFamily="inherit">
+                  {fmtTick(maxV * r)}
+                </text>
+              )}
+            </g>
+          );
+        })}
+        {data.map((d, gi) => {
+          const cx = pad.l + gi * groupW + groupW / 2;
+          const bars = [
+            { v: d.won, c: '#3DA35D', k: 'Won' },
+            { v: d.lost, c: '#E5484D', k: 'Lost' },
+            { v: d.open, c: '#3D5AFE', k: 'Open' },
+          ];
+          const totalW = bars.length * bw + (bars.length - 1) * gap;
+          return (
+            <g key={gi}>
+              {bars.map((b, bi) => {
+                const bh = Math.max(3, (b.v / maxV) * iH);
+                const bx = cx - totalW / 2 + bi * (bw + gap);
+                const k = `${gi}-${bi}`;
+                return (
+                  <rect key={bi} x={bx} y={pad.t + iH - bh} width={bw} height={bh} rx={2} fill={b.c}
+                    opacity={hoverKey !== null && hoverKey !== k ? 0.5 : 1}
+                    className="cursor-pointer transition-opacity duration-100"
+                    onMouseEnter={(e) => { setHoverKey(k); show(e, { name: d.name, won: d.won, lost: d.lost, open: d.open, key: b.k, color: b.c }); }}
+                    onMouseMove={(e) => show(e, { name: d.name, won: d.won, lost: d.lost, open: d.open, key: b.k, color: b.c })}
+                    onMouseLeave={() => { setHoverKey(null); hide(); }} />
+                );
+              })}
+              <text x={cx} y={height - 4} textAnchor="middle" fontSize="9" fill="var(--text-muted)" fontFamily="inherit">{d.name}</text>
+            </g>
+          );
+        })}
+      </svg>
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={`${tip.data.name} · ${tip.data.key}`}
+          rows={[
+            { label: 'Won', value: String(tip.data.won), color: '#3DA35D' },
+            { label: 'Lost', value: String(tip.data.lost), color: '#E5484D' },
+            { label: 'Open', value: String(tip.data.open), color: '#3D5AFE' },
+          ]} />
+      )}
+    </div>
   );
 }
 
@@ -234,15 +280,19 @@ function SVGroupedDealsChart({ data, height = 160 }: {
 const STAGE_COLORS = ['#3D5AFE', '#3D5AFE', '#8FA6F2', '#F59E0B', '#5FD4C4'];
 
 function StageFunnel({ stages }: { stages: { stage: string; count: number; value: number }[] }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ stage: string; count: number; value: number; color: string }>();
   const maxCount = Math.max(...stages.map(s => s.count), 1);
   return (
-    <div className="flex flex-col gap-2.5">
+    <div ref={containerRef} className="relative flex flex-col gap-2.5">
       {stages.map((s, i) => {
         const widthPct = Math.max(20, (s.count / maxCount) * 100);
         return (
           <div key={s.stage} className="flex items-center gap-2 text-[11px]">
             <span className="w-[70px] shrink-0 text-right text-text-muted font-medium truncate">{s.stage}</span>
-            <div className="flex-1 h-6 bg-[var(--surface-2)] rounded overflow-hidden">
+            <div className="flex-1 h-6 bg-[var(--surface-2)] rounded overflow-hidden cursor-pointer"
+              onMouseEnter={(e) => show(e, { stage: s.stage, count: s.count, value: s.value, color: STAGE_COLORS[i % STAGE_COLORS.length] })}
+              onMouseMove={(e) => show(e, { stage: s.stage, count: s.count, value: s.value, color: STAGE_COLORS[i % STAGE_COLORS.length] })}
+              onMouseLeave={hide}>
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${widthPct}%` }}
@@ -254,6 +304,13 @@ function StageFunnel({ stages }: { stages: { stage: string; count: number; value
           </div>
         );
       })}
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={tip.data.stage}
+          rows={[
+            { label: 'Deals', value: String(tip.data.count), color: tip.data.color },
+            { label: 'Value', value: fmtCurrency(tip.data.value), color: '#3D5AFE' },
+          ]} />
+      )}
     </div>
   );
 }
@@ -390,6 +447,8 @@ function TypeBadge({ type }: { type: string }) {
    Spark mini-chart (matches manager home page exactly)
 ═══════════════════════════════════════════════════════════════════ */
 function Spark({ values, white = false }: { values: number[]; white?: boolean }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ value: number; pct: string }>();
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   if (values.length < 2) return null;
   const max = Math.max(...values, 1);
   const min = Math.min(...values, 0);
@@ -410,15 +469,34 @@ function Spark({ values, white = false }: { values: number[]; white?: boolean })
   const areaPath = `${linePath} L ${coords[n - 1].x.toFixed(1)} 40 L 0 40 Z`;
   const stroke = white ? 'rgba(255,255,255,0.9)' : 'var(--status-success-text)';
   const fill   = white ? 'rgba(255,255,255,0.15)' : 'rgba(61,163,93,0.1)';
-
+  const handleMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const s = e.currentTarget.getBoundingClientRect();
+    const rel = ((e.clientX - s.left) / s.width) * 100;
+    const idx = Math.max(0, Math.min(n - 1, Math.round((rel / 100) * (n - 1))));
+    setHoverIdx(idx);
+    const pct = Math.round(((values[idx] - min) / range) * 100);
+    show(e, { value: values[idx], pct: `${pct}%` });
+  };
   return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-9 w-full overflow-visible" aria-hidden>
-      <motion.path d={areaPath} fill={fill}
-        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }} />
-      <motion.path d={linePath} fill="none" stroke={stroke} strokeWidth="1.8"
-        vectorEffect="non-scaling-stroke"
-        initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: 'easeOut' }} />
-    </svg>
+    <div ref={containerRef} className="relative">
+      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-9 w-full overflow-visible" aria-hidden
+        onMouseEnter={handleMove} onMouseMove={handleMove} onMouseLeave={() => { setHoverIdx(null); hide(); }}>
+        <motion.path d={areaPath} fill={fill}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }} />
+        <motion.path d={linePath} fill="none" stroke={stroke} strokeWidth="1.8"
+          vectorEffect="non-scaling-stroke"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: 'easeOut' }} />
+        {hoverIdx !== null && (
+          <motion.circle cx={coords[hoverIdx].x} cy={coords[hoverIdx].y} r="3"
+            fill={white ? '#fff' : '#3DA35D'} stroke={white ? 'rgba(0,0,0,0.25)' : '#fff'} strokeWidth="1"
+            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.15 }} />
+        )}
+      </svg>
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={`P${hoverIdx !== null ? hoverIdx + 1 : ''}`}
+          rows={[{ label: 'Revenue', value: fmtCurrency(tip.data.value), color: white ? '#fff' : '#3DA35D' }]} />
+      )}
+    </div>
   );
 }
 
