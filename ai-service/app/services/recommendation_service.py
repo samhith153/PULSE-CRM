@@ -60,6 +60,9 @@ def _normalize_inputs(lead):
     if lead.get("open_count") is None and lead.get("outbound_thread"):
         lead["open_count"] = len(lead["outbound_thread"])
 
+    if lead.get("outbound_email_count") is not None and lead["outbound_email_count"] > 0:
+        lead["open_count"] = lead["outbound_email_count"]
+
     if lead.get("is_replied") is None:
         lead["is_replied"] = lead.get("inbound_thread") and len(lead["inbound_thread"]) > 0
 

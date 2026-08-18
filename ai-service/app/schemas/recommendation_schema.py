@@ -39,6 +39,7 @@ class RecommendationRequest(BaseModel):
     email_action_items: Optional[List[str]] = None
     latest_email_subject: Optional[str] = None
     latest_email_preview: Optional[str] = None
+    outbound_email_count: Optional[int] = None
     context: dict[str, Any] = Field(default_factory=dict)
 
 
