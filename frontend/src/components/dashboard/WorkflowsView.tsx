@@ -1393,7 +1393,7 @@ export default function WorkflowsView({
 
                 <div className="max-h-64 overflow-y-auto overflow-x-hidden">
                   {filteredLeads.length ? (
-                    filteredLeads.slice(0, 4).map(
+                    filteredLeads.map(
                       (lead) => (
                         <button
                           key={lead.id}
