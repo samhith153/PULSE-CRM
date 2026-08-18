@@ -141,6 +141,8 @@ async def batch_recommendations(
         if lead:
             leads[str(lid)] = lead
 
+    TERMINAL_STATUSES = {"converted", "won", "lost"}
+
     batch_email_stats = await email_stats_svc.batch_get_lead_email_stats(uuid_ids, org_id)
 
     # Batch-fetch lead scores
@@ -214,6 +216,16 @@ async def batch_recommendations(
                 "outbound_email_count": 0, "last_inbound_at": None,
                 "days_since_last_outbound": None,
             })
+
+            lead_status = (lead.status or "").lower().replace(" ", "_")
+            if lead_status in TERMINAL_STATUSES:
+                items[lid_str] = AIBatchRecommendationItem(
+                    lead_id=UUID(lid_str),
+                    recommended_action="Lead has been converted to a deal." if lead_status == "converted" else f"Lead is in {lead_status} stage.",
+                    reason="Lead is in a terminal stage. No further actions needed.",
+                    current_stage=lead_status,
+                )
+                continue
 
             deal_amount = None
             if deal_repo is None:

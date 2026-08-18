@@ -612,6 +612,20 @@ export interface WorkflowTask {
 export interface LeadWorkflowResponse {
   current_task: WorkflowTaskItem | null;
   history: WorkflowTaskItem[];
+  planned_steps: PlannedWorkflowStep[];
+  total_steps: number;
+  completed_steps: number;
+  progress_percent: number;
+  is_recovery: boolean;
+}
+
+export interface PlannedWorkflowStep {
+  action_type: string;
+  current_stage?: string | null;
+  reasoning?: string[];
+  priority?: string | null;
+  score?: number | null;
+  kind?: 'stage' | 'action';
 }
 
 /**
@@ -667,6 +681,11 @@ export async function getLeadWorkflow(
     return {
       current_task: null,
       history: [],
+      planned_steps: [],
+      total_steps: 0,
+      completed_steps: 0,
+      progress_percent: 0,
+      is_recovery: false,
     };
   }
 
@@ -677,6 +696,13 @@ export async function getLeadWorkflow(
     history: Array.isArray(data?.history)
       ? data.history
       : [],
+    planned_steps: Array.isArray(data?.planned_steps)
+      ? data.planned_steps
+      : [],
+    total_steps: Number(data?.total_steps) || 0,
+    completed_steps: Number(data?.completed_steps) || 0,
+    progress_percent: Number(data?.progress_percent) || 0,
+    is_recovery: Boolean(data?.is_recovery),
   };
 }
 

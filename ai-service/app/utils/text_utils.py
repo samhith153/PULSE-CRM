@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any, Dict
 
 
+def strip_thinking_tags(text: str) -> str:
+    """Remove <think>...</think> blocks emitted by some LLMs before JSON."""
+    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+
+
 def clean_json_block(text: str) -> str:
-    """Strip markdown code fences and surrounding whitespace from an LLM JSON response."""
-    cleaned = text.strip()
+    """Strip thinking tags, markdown code fences, and surrounding whitespace from an LLM JSON response."""
+    cleaned = strip_thinking_tags(text)
     if cleaned.startswith("```json"):
         cleaned = cleaned[7:]
     elif cleaned.startswith("```"):

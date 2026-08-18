@@ -6,13 +6,17 @@ Uses Groq LLM to generate lead conversation summaries.
 
 import asyncio
 import json
+import logging
 import os
+import re
 from typing import Dict, Any, List
 from datetime import datetime
 
 from groq import AsyncGroq
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 _groq_client = None
@@ -162,7 +166,7 @@ Return ONLY valid JSON in this exact format:
 
 def parse_response(response_text: str) -> Dict[str, Any]:
     try:
-        cleaned = response_text.strip()
+        cleaned = _strip_thinking_tags(response_text)
         if cleaned.startswith("```json"):
             cleaned = cleaned[7:]
         if cleaned.startswith("```"):
@@ -240,7 +244,7 @@ async def summarise_thread(thread: Dict[str, Any]) -> str:
                 {"role": "user", "content": prompt},
             ],
             temperature=0.3,
-            max_tokens=1500,
+            max_completion_tokens=1500,
             timeout=settings.LLM_TIMEOUT,
         ),
         timeout=settings.LLM_TIMEOUT + 5,
@@ -303,9 +307,15 @@ Return ONLY valid JSON in this exact format:
     return prompt
 
 
+def _strip_thinking_tags(text: str) -> str:
+    """Remove <think>...</think> blocks that some models emit before/around JSON."""
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    return cleaned.strip()
+
+
 def parse_draft_response(response_text: str) -> Dict[str, str]:
     try:
-        cleaned = response_text.strip()
+        cleaned = _strip_thinking_tags(response_text)
         if cleaned.startswith("```json"):
             cleaned = cleaned[7:]
         if cleaned.startswith("```"):
@@ -314,14 +324,30 @@ def parse_draft_response(response_text: str) -> Dict[str, str]:
             cleaned = cleaned[:-3]
         cleaned = cleaned.strip()
 
+        logger.info("[DRAFT] Cleaned response for parsing (first 300 chars): %s", cleaned[:300])
+
+        if not cleaned:
+            logger.warning("[DRAFT] Empty response after stripping thinking tags")
+            return {
+                "subject": "Following up",
+                "body": "Unable to generate a draft. Please write your message here.",
+            }
+
         data = json.loads(cleaned)
         subject = str(data.get("subject", "")).strip() or "Following up"
-        body = str(data.get("body", "")).strip() or "Unable to generate a draft. Please write your message here."
+        body = str(data.get("body", "")).strip()
+
+        if not body:
+            logger.warning("[DRAFT] JSON parsed but body is empty. Keys: %s", list(data.keys()))
+            body = "Unable to generate a draft. Please write your message here."
+
         return {"subject": subject, "body": body}
-    except (json.JSONDecodeError, ValueError):
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning("[DRAFT] JSON parse failed: %s | raw (first 300): %s", e, response_text[:300])
+        fallback = _strip_thinking_tags(response_text)
         return {
             "subject": "Following up",
-            "body": response_text.strip()[:600] if response_text else "Unable to generate a draft. Please write your message here.",
+            "body": fallback.strip()[:600] if fallback else "Unable to generate a draft. Please write your message here.",
         }
 
 
@@ -349,11 +375,11 @@ async def generate_outreach_draft(
         _get_client().chat.completions.create(
             model=settings.LLM_MODEL,
             messages=[
-                {"role": "system", "content": "You are an AI sales assistant. Return ONLY valid JSON."},
+                {"role": "system", "content": "You are an AI sales assistant for PULSE CRM. Return ONLY valid JSON with no commentary."},
                 {"role": "user", "content": prompt},
             ],
             temperature=0.4,
-            max_tokens=350,
+            max_completion_tokens=1024,
             timeout=settings.LLM_TIMEOUT,
         ),
         timeout=settings.LLM_TIMEOUT + 5,

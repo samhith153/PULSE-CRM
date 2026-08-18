@@ -49,10 +49,10 @@ class Settings(BaseSettings):
     # ── LLM (Conversation AI) ─────────────────────────────────────────────
     LLM_API_KEY: Optional[str] = None
     SUMMARIZATION_API_KEY: Optional[str] = None  # alias read from global .env
-    LLM_MODEL: str = "qwen/qwen3.6-27b"
+    LLM_MODEL: str = "openai/gpt-oss-120b"
     LLM_TEMPERATURE: float = 0.3
     LLM_MAX_TOKENS: int = 800
-    LLM_TIMEOUT: int = 30
+    LLM_TIMEOUT: int = 60
     MIN_CONFIDENCE_THRESHOLD: float = 0.3
     MAX_RETRIES: int = 1
 

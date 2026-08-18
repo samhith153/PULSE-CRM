@@ -200,12 +200,10 @@ export default function WorkflowsView({
   type PlannedWorkflowStep = {
     action_type: string;
     current_stage?: string | null;
-    reasoning?: string | null;
+    reasoning?: string[] | null;
     priority?: string | null;
     score?: number | null;
     status?: string;
-    // Backend now sends this explicitly. Optional so older API
-    // responses (before this field existed) don't break the type.
     kind?: 'stage' | 'action';
   };
 
@@ -502,24 +500,24 @@ export default function WorkflowsView({
     : [],
 
   planned_steps: Array.isArray(
-    (result as any)?.planned_steps
+    result?.planned_steps
   )
-    ? (result as any).planned_steps
+    ? result.planned_steps
     : [],
 
   total_steps:
     Number(
-      (result as any)?.total_steps
+      result?.total_steps
     ) || 0,
 
   completed_steps:
     Number(
-      (result as any)?.completed_steps
+      result?.completed_steps
     ) || 0,
 
   progress_percent:
     Number(
-      (result as any)?.progress_percent
+      result?.progress_percent
     ) || 0,
 });
         }
@@ -796,7 +794,8 @@ export default function WorkflowsView({
     const completedTasks = [...workflow.history]
       .filter(
         (task) =>
-          task.status === 'completed'
+          task.status === 'completed' ||
+          task.status === 'superseded'
       )
       .sort(
         (a, b) =>
@@ -1125,7 +1124,8 @@ export default function WorkflowsView({
   const aiActionsCount = useMemo(() => {
     const completed = workflow.history.filter(
       (task) =>
-        task.status === 'completed'
+        task.status === 'completed' ||
+        task.status === 'superseded'
     ).length;
 
     /*

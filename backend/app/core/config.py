@@ -130,7 +130,7 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
     SCORING_PROVIDER: str = "rule_based"
-    AI_TIMEOUT: int = 30
+    AI_TIMEOUT: int = 60
 
     # PULSE AI microservice (separate deployment). The backend calls this
     # service over HTTP for lead scoring, recommendations, and summarization.
@@ -139,7 +139,7 @@ class Settings(BaseSettings):
 
     # Assistant (Groq free tier)
     ASSISTANT_API_KEY: Optional[str] = None
-    ASSISTANT_MODEL: str = "qwen/qwen3.6-27b"
+    ASSISTANT_MODEL: str = "openai/gpt-oss-120b"
 
     WEBHOOK_MAX_ATTEMPTS: int = 5
     WEBHOOK_TIMEOUT_SECONDS: int = 10
