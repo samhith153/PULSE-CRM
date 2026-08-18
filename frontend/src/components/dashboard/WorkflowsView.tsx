@@ -594,8 +594,8 @@ export default function WorkflowsView({
     );
 
   const leadHealth =
-    recItem?.current_score ??
     selectedLead?.score ??
+    recItem?.current_score ??
     null;
 
   const isWon =

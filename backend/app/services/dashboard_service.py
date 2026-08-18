@@ -2622,14 +2622,34 @@ class DashboardService:
             Deal.status == "open",
         )
 
-        # -- Query 2: Untouched Deals Count (KPI 2 - Stalled > 5 days) ----------
-        untouched_deals_stmt = select(func.count(Deal.id)).where(
-            Deal.owner_id == user_id,
-            Deal.organization_id == organization_id,
-            Deal.is_active.is_(True),
-            Deal.is_deleted.is_(False),
-            Deal.status == "open",
-            Deal.updated_at <= stalled_date,
+        # -- Query 2: Untouched Deals Count (KPI 2 - No activity in > 5 days) --
+        latest_deal_activity_subq = (
+            select(
+                ActivityTimeline.entity_id.label("deal_id"),
+                func.max(ActivityTimeline.created_at).label("last_activity_at"),
+            )
+            .where(
+                ActivityTimeline.organization_id == organization_id,
+                ActivityTimeline.entity_type == "deal",
+                ActivityTimeline.is_active.is_(True),
+            )
+            .group_by(ActivityTimeline.entity_id)
+            .subquery()
+        )
+        untouched_deals_stmt = (
+            select(func.count(Deal.id))
+            .outerjoin(latest_deal_activity_subq, latest_deal_activity_subq.c.deal_id == Deal.id)
+            .where(
+                Deal.owner_id == user_id,
+                Deal.organization_id == organization_id,
+                Deal.is_active.is_(True),
+                Deal.is_deleted.is_(False),
+                Deal.status == "open",
+                or_(
+                    latest_deal_activity_subq.c.last_activity_at.is_(None),
+                    latest_deal_activity_subq.c.last_activity_at <= stalled_date,
+                ),
+            )
         )
 
         # -- Query 3: Calls Today Count (KPI 3) ---------------------------------
@@ -2723,8 +2743,9 @@ class DashboardService:
 
         # -- Query 9: Deals at Risk - Stalled, Low Probability, Negative or High Value (Widget 4) ---
         deals_at_risk_stmt = (
-            select(Deal)
+            select(Deal, latest_deal_activity_subq.c.last_activity_at.label("last_activity_at"))
             .options(selectinload(Deal.company), selectinload(Deal.owner))
+            .outerjoin(latest_deal_activity_subq, latest_deal_activity_subq.c.deal_id == Deal.id)
             .where(
                 Deal.owner_id == user_id,
                 Deal.organization_id == organization_id,
@@ -2732,13 +2753,14 @@ class DashboardService:
                 Deal.is_deleted.is_(False),
                 Deal.status == "open",
                 or_(
-                    Deal.updated_at <= stalled_date,
+                    latest_deal_activity_subq.c.last_activity_at.is_(None),
+                    latest_deal_activity_subq.c.last_activity_at <= stalled_date,
                     Deal.amount >= Decimal("50000.00"),
                     Deal.probability < 30,
                     Deal.sentiment == "negative",
                 ),
             )
-            .order_by(Deal.updated_at.asc())
+            .order_by(latest_deal_activity_subq.c.last_activity_at.asc().nulls_first())
             .limit(5)
         )
 
@@ -2877,10 +2899,12 @@ class DashboardService:
         ]
 
         # -- Parse Deals at Risk -----------------------------------------------
-        at_risk_rows = res_deals_at_risk.scalars().all()
+        at_risk_rows = res_deals_at_risk.all()
         deals_at_risk = []
-        for deal in at_risk_rows:
-            stalled_days = (now - deal.updated_at).days if deal.updated_at else 5
+        for row in at_risk_rows:
+            deal = row[0]
+            last_activity_at = row[1]
+            stalled_days = (now - last_activity_at).days if last_activity_at else 5
             deal_amount = Decimal(str(deal.amount or 0))
             deal_probability = getattr(deal, "probability", 50) or 0
             deal_sentiment = getattr(deal, "sentiment", None)

@@ -429,33 +429,14 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
   };
 
   // Helper: fetch recommendations for all leads
-  const refreshRecommendations = (leadIds: string[], leadData?: Lead[]) => {
-    const TERMINAL_STATUSES = new Set(['converted', 'won', 'lost']);
-    const lookup = leadData || leads;
-
-    // Immediately set terminal leads so they don't stay in loading state
-    const terminalRecs: Record<string, string> = {};
-    for (const id of leadIds) {
-      const lead = lookup.find(l => l.id === id);
-      if (lead && TERMINAL_STATUSES.has((lead.status || '').toLowerCase())) {
-        terminalRecs[id] = 'Lead is in a terminal stage.';
-      }
-    }
-    if (Object.keys(terminalRecs).length > 0) {
-      setLeadRecommendations(prev => ({ ...prev, ...terminalRecs }));
-    }
-
-    const activeIds = leadIds.filter(id => {
-      const lead = lookup.find(l => l.id === id);
-      return lead && !TERMINAL_STATUSES.has((lead.status || '').toLowerCase());
-    });
-    if (activeIds.length === 0) return;
+  const refreshRecommendations = (leadIds: string[]) => {
+    if (leadIds.length === 0) return;
     setRecommendationLoadingIds(prev => {
       const next = new Set(prev);
-      activeIds.forEach(id => next.add(id));
+      leadIds.forEach(id => next.add(id));
       return next;
     });
-    fetchBatchRecommendations(activeIds).then(res => {
+    fetchBatchRecommendations(leadIds).then(res => {
       const recs: Record<string, string> = {};
       for (const [id, item] of Object.entries(res.recommendations || {})) {
         recs[id] = item.recommended_action || 'No recommendation available.';
@@ -464,7 +445,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
     }).catch(() => {}).finally(() => {
       setRecommendationLoadingIds(prev => {
         const next = new Set(prev);
-        activeIds.forEach(id => next.delete(id));
+        leadIds.forEach(id => next.delete(id));
         return next;
       });
     });
@@ -475,7 +456,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
       const mapped = (data ?? []).map(backendToLocal);
       setLeads(mapped);
       const ids = mapped.map(l => l.id).filter(Boolean) as string[];
-      refreshRecommendations(ids, mapped);
+      refreshRecommendations(ids);
     }).finally(() => {
       setLoading(false);
       onLoaded?.();
@@ -512,7 +493,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
         prevLeadsMap = Object.fromEntries(mapped.map(l => [l.id, { score: l.score, status: l.status }]));
 
         if (changedIds.length > 0) {
-          refreshRecommendations(changedIds, mapped);
+          refreshRecommendations(changedIds);
         }
         // Clear scoring indicators for leads that now have scores
         setScoringLeadIds(prev => {
@@ -544,7 +525,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
           next.delete(lead_id);
           return next;
         });
-        refreshRecommendations([lead_id], mapped);
+        refreshRecommendations([lead_id]);
       }).catch(() => {});
     };
     window.addEventListener('pulse-lead-score-updated', handleScoreUpdate);
@@ -700,7 +681,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
         const refreshed = await getLeads();
         const mapped = (refreshed ?? []).map(backendToLocal);
         setLeads(mapped);
-        refreshRecommendations([created.id], mapped);
+        refreshRecommendations([created.id]);
       } catch {
         const newLead: Lead = {
           ...backendToLocal(created),
