@@ -79,6 +79,22 @@ function cachedEntityList<T>(endpoint: string, ttlMs = _ENTITY_CACHE_TTL_MS): Pr
 }
 
 /**
+ * Invalidate cached GET responses whose endpoint contains `pattern`.
+ * Targets the dashboard/KPI/AI cache (`_getCache`).
+ */
+export function invalidateGetCache(pattern?: string): void {
+  if (!pattern) {
+    _getCache.clear();
+    return;
+  }
+  for (const key of _getCache.keys()) {
+    if (key.includes(pattern)) {
+      _getCache.delete(key);
+    }
+  }
+}
+
+/**
  * Invalidate cached entity lists whose endpoint contains `pattern`.
  * Called after create/update/delete mutations to ensure fresh data on
  * the next navigation.
@@ -93,6 +109,15 @@ export function invalidateEntityCache(pattern?: string): void {
       _entityCache.delete(key);
     }
   }
+}
+
+/**
+ * Invalidate both entity and dashboard/KPI caches.
+ * Useful for SSE events that affect both entity lists and summary data.
+ */
+export function invalidateAllCaches(pattern?: string): void {
+  invalidateEntityCache(pattern);
+  invalidateGetCache(pattern);
 }
 
 async function _tryRefresh(): Promise<boolean> {

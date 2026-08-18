@@ -5,11 +5,14 @@ real models later without changing the public API.
 """
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timezone
 from typing import AsyncIterator
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, status
+
+logger = logging.getLogger(__name__)
 from fastapi.responses import StreamingResponse
 
 from app.api.deps import CurrentUser, DBSession, require_permission
@@ -258,7 +261,25 @@ async def batch_recommendations(
             })
 
         if leads_payload:
+            stages_sent = [p.get("current_stage") for p in leads_payload]
+            logger.info("AI batch request: %d leads, stages=%s", len(leads_payload), stages_sent)
             batch_result = await ai_client.batch_recommend(leads_payload)
+            if batch_result:
+                recs_map = batch_result.get("recommendations", {})
+                has_recs = sum(1 for v in recs_map.values() if v.get("recommendations"))
+                logger.info(
+                    "AI batch result: %d leads, %d with recommendations, %d without",
+                    len(recs_map),
+                    has_recs,
+                    len(recs_map) - has_recs,
+                )
+                for lid, rd in list(recs_map.items())[:1]:
+                    logger.info(
+                        "AI batch sample lead=%s stage=%s recs_count=%d keys=%s",
+                        lid, rd.get("stage"), len(rd.get("recommendations", [])), list(rd.keys()),
+                    )
+            else:
+                logger.warning("AI batch_recommend returned None for %d leads", len(leads_payload))
         else:
             batch_result = None
 

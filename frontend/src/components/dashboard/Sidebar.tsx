@@ -1,18 +1,20 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { ChevronsUpDown, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useCurrentUser, userInitials } from '@/hooks/useCurrentUser';
 import { resolveImageUrl } from '@/utils/api';
-import { NAV_HOME, getNavSections } from '@/lib/dashboard-nav';
+import { NAV_HOME, getNavSections, tabToPath } from '@/lib/dashboard-nav';
+import type { Role } from '@/lib/roles';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   collapsed: boolean;
-  userRole: 'sales_rep' | 'manager' | 'admin';
+  userRole: Role;
   currentUser?: { full_name: string; email: string; avatar_url: string | null; job_title: string | null } | null;
 }
 
@@ -28,12 +30,19 @@ export default React.memo(function Sidebar({
 }: SidebarProps) {
   const sections = getNavSections(userRole);
   const { user: currentUser } = useCurrentUser();
+  const router = useRouter();
   const profileName = currentUser?.full_name || 'User';
   const profileRoleLabel = userRole === 'admin' ? 'Administrator' : userRole === 'manager' ? 'Sales Manager' : 'Sales Representative';
   const profileInitials = userInitials(currentUser?.full_name);
 
   const isActive = (tab: string) =>
     activeTab.toLowerCase() === tab.toLowerCase();
+
+  // Prefetch route chunks on hover for instant navigation feel
+  const prefetchTab = useCallback((tab: string) => {
+    const path = tabToPath(tab, userRole);
+    router.prefetch(path);
+  }, [router, userRole]);
 
   /* ui.md §6: Nav item — height 44px, --radius-md, icon 20px + label 14px/500 */
   const itemBase = cn(
@@ -77,6 +86,7 @@ export default React.memo(function Sidebar({
         {/* Home — ui.md §6: icon 20px */}
         <button
           onClick={() => setActiveTab(NAV_HOME.tab)}
+          onMouseEnter={() => prefetchTab(NAV_HOME.tab)}
           className={cn(
             itemBase,
             collapsed ? 'justify-center px-2' : '',
@@ -121,6 +131,7 @@ export default React.memo(function Sidebar({
                 <button
                   key={item.tab}
                   onClick={() => setActiveTab(item.tab)}
+                  onMouseEnter={() => prefetchTab(item.tab)}
                   className={cn(
                     itemBase,
                     collapsed ? 'justify-center px-2' : '',
@@ -154,6 +165,7 @@ export default React.memo(function Sidebar({
         <button
           type="button"
           onClick={() => setActiveTab('profile')}
+          onMouseEnter={() => prefetchTab('profile')}
           className={cn(
             'w-full flex items-center gap-3 rounded-[12px] p-3',
             'text-left transition-colors duration-150 cursor-pointer',
