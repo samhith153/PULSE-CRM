@@ -308,10 +308,7 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
   // If dashboardData from the unified endpoint is already available, we skip
   // the individual API calls entirely. Falls back to separate requests otherwise.
   const loadStats = () => {
-    // If unified dashboard data is already seeded, skip redundant fetches
-    if (dashboardData) return;
-
-    setStatsLoading(true);
+    if (!dashboardData) setStatsLoading(true);
     Promise.all([
       getDeals().catch(() => [] as any[]),
       getLeads().catch(() => [] as any[]),
@@ -380,6 +377,8 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
       setLeadsListState(dashboardData.leads);
       const activeLeads = dashboardData.leads.filter((l: any) => l.status !== 'Converted' && l.status !== 'Lost');
       setLeadsCount(activeLeads.length);
+    } else if (dashboardData.kpis?.leads_assigned != null) {
+      setLeadsCount(dashboardData.kpis.leads_assigned);
     }
     // Wire meetings from backend
     if (dashboardData.meetings_today?.length) {

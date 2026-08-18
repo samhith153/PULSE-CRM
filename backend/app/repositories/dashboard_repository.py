@@ -256,7 +256,7 @@ class DashboardRepository:
             str(status or "").lower(): int(count or 0)
             for status, count in (await self.db.execute(stmt)).all()
         }
-        denominator = max(sum(counts.get(status, 0) for status in stages[0][1]), 1)
+        denominator = max(sum(counts.get(status, 0) for _, statuses in stages for status in statuses), 1)
         rows = []
         for label, statuses in stages:
             count = sum(counts.get(status, 0) for status in statuses)
