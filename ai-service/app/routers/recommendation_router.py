@@ -1,7 +1,11 @@
 """Recommendation routes."""
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, HTTPException
+
+logger = logging.getLogger(__name__)
 
 from app.schemas.recommendation_schema import (
     BatchRecommendationRequest,
@@ -41,7 +45,13 @@ async def batch_recommendations(payload: BatchRecommendationRequest) -> BatchRec
         try:
             result = recommend(_request_to_dict(lead))
             results[lead.lead_id] = RecommendationResponse(**result)
-        except Exception:  # noqa: BLE001
+        except Exception as exc:  # noqa: BLE001
+            logger.exception(
+                "recommend() failed for lead %s (stage=%s): %s",
+                lead.lead_id,
+                lead.buying_stage or lead.current_stage,
+                exc,
+            )
             results[lead.lead_id] = RecommendationResponse(
                 lead_id=lead.lead_id,
                 stage=lead.buying_stage or lead.current_stage or "New Lead",

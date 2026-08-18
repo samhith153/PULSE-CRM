@@ -85,27 +85,48 @@ class DashboardService:
             result = await self.db.execute(stmt)
             return int(result.scalar_one() or 0)
 
-        total_users = await count(User)
-        total_companies = await count(Company)
-        total_contacts = await count(Contact)
-        total_leads = await count(Lead)
-        total_deals = await count(Deal)
-        won_deals = await count(Deal, Deal.status == DealStatus.WON.value)
-        lost_deals = await count(Deal, Deal.status == DealStatus.LOST.value)
+        # Pre-provision connection for concurrent queries (asyncpg race guard)
+        await self.db.connection()
 
-        revenue = await self._sum_deal_amount(organization_id, Deal.status == DealStatus.WON.value)
-        monthly_revenue = await self._monthly_revenue(organization_id, months=6)
+        # All 16 queries are independent — run concurrently
+        (
+            total_users,
+            total_companies,
+            total_contacts,
+            total_leads,
+            total_deals,
+            won_deals,
+            lost_deals,
+            revenue,
+            monthly_revenue,
+            converted_leads,
+            activity_count,
+            email_count,
+            recent_activity_count,
+            recent_email_count,
+            pipeline_board,
+            top_sales_reps,
+        ) = await asyncio.gather(
+            count(User),
+            count(Company),
+            count(Contact),
+            count(Lead),
+            count(Deal),
+            count(Deal, Deal.status == DealStatus.WON.value),
+            count(Deal, Deal.status == DealStatus.LOST.value),
+            self._sum_deal_amount(organization_id, Deal.status == DealStatus.WON.value),
+            self._monthly_revenue(organization_id, months=6),
+            self._count_leads_by_status(organization_id, Lead.status == "converted"),
+            self._count_rows(ActivityTimeline, organization_id),
+            self._count_rows(Email, organization_id),
+            self._count_rows(ActivityTimeline, organization_id, ActivityTimeline.created_at >= thirty_days_ago),
+            self._count_rows(Email, organization_id, Email.created_at >= thirty_days_ago),
+            self.pipeline_service.get_board(organization_id),
+            self._top_sales_representatives(organization_id),
+        )
 
-        lead_conversion_rate = self._percentage(await self._count_leads_by_status(organization_id, Lead.status == "converted"), total_leads)
+        lead_conversion_rate = self._percentage(converted_leads, total_leads)
         deal_win_rate = self._percentage(won_deals, won_deals + lost_deals)
-
-        activity_count = await self._count_rows(ActivityTimeline, organization_id)
-        email_count = await self._count_rows(Email, organization_id)
-        recent_activity_count = await self._count_rows(ActivityTimeline, organization_id, ActivityTimeline.created_at >= thirty_days_ago)
-        recent_email_count = await self._count_rows(Email, organization_id, Email.created_at >= thirty_days_ago)
-
-        pipeline_board = await self.pipeline_service.get_board(organization_id)
-        top_sales_reps = await self._top_sales_representatives(organization_id)
 
         return DashboardSummaryResponse(
             organization_id=organization_id,
@@ -1976,75 +1997,7 @@ class DashboardService:
             r = await self.db.execute(select(func.count(ActivityTimeline.id)).where(*conds))
             return int(r.scalar_one() or 0)
 
-        # -- 1. Total Revenue --------------------------------------------------
-        total_revenue = await _deal_sum(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= period_start,
-            Deal.closed_at < now,
-        )
-        prev_revenue = await _deal_sum(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= prev_start,
-            Deal.closed_at < prev_end,
-        )
-        rev_growth = _growth(total_revenue, prev_revenue)
-
-        revenue_stat = RepRevenueStat(
-            total=total_revenue,
-            previous_period=prev_revenue,
-            growth_pct=rev_growth if rev_growth is not None else Decimal("0"),
-        )
-
-        # -- 2. Won Deals ------------------------------------------------------
-        won_deals = await _deal_count(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= period_start,
-            Deal.closed_at < now,
-        )
-        prev_won = await _deal_count(
-            Deal.status == DealStatus.WON.value,
-            Deal.closed_at >= prev_start,
-            Deal.closed_at < prev_end,
-        )
-        won_growth = _growth(won_deals, prev_won)
-
-       
-        won_deals_stat = RepWonDealsStat(
-            count=won_deals,
-            previous_period=prev_won,
-            growth_pct=won_growth if won_growth is not None else Decimal("0"),
-        )
-
-        # -- 3. Win Rate -------------------------------------------------------
-        lost_deals = await _deal_count(
-            Deal.status == DealStatus.LOST.value,
-            Deal.closed_at >= period_start,
-            Deal.closed_at < now,
-        )
-        win_rate = self._percentage(
-            won_deals,
-            won_deals + lost_deals
-        )
-        prev_lost = await _deal_count(
-            Deal.status == DealStatus.LOST.value,
-            Deal.closed_at >= prev_start,
-            Deal.closed_at < prev_end,
-        )
-
-        prev_win_rate = self._percentage(
-            prev_won,
-            prev_won + prev_lost
-        )
-
-        win_rate_growth = win_rate - prev_win_rate
-
-        win_rate_stat = RepWinRateStat(
-            win_rate=win_rate,
-            previous_win_rate=prev_win_rate,
-            growth_pct=win_rate_growth if win_rate_growth is not None else Decimal("0"),
-        )
-
-        # -- 4. Average Deal Size ----------------------------------------------
+        # -- Average Deal Size statements ------------------------------------
         avg_stmt = select(
             func.coalesce(func.avg(Deal.amount), 0)
         ).where(
@@ -2054,7 +2007,6 @@ class DashboardService:
                 Deal.closed_at < now,
             )
         )
-        avg_deal_size = Decimal(str((await self.db.execute(avg_stmt)).scalar_one() or 0))
         prev_avg_stmt = select(func.coalesce(func.avg(Deal.amount), 0)).where(
             *_rep_deals(
                 Deal.status == DealStatus.WON.value,
@@ -2062,16 +2014,8 @@ class DashboardService:
                 Deal.closed_at < prev_end,
             )
         )
-        prev_avg = Decimal(str((await self.db.execute(prev_avg_stmt)).scalar_one() or 0))
-        avg_growth = _growth(avg_deal_size, prev_avg)
 
-        avg_deal_size_stat = RepAvgDealSizeStat(
-            avg_deal_value=avg_deal_size,
-            previous_avg=prev_avg,
-            growth_pct=avg_growth if avg_growth is not None else Decimal("0"),
-        )
-
-        # -- 5. Average Sales Cycle --------------------------------------------
+        # -- Average Sales Cycle statements ----------------------------------
         cycle_stmt = (
             select(
                 func.coalesce(
@@ -2094,7 +2038,6 @@ class DashboardService:
                 Deal.closed_at < now,
             )
         )
-        avg_cycle = Decimal(str((await self.db.execute(cycle_stmt)).scalar_one() or 0))
         prev_cycle_stmt = (
             select(
                 func.coalesce(
@@ -2116,7 +2059,100 @@ class DashboardService:
                 Deal.closed_at < prev_end,
             )
         )
-        prev_cycle = Decimal(str((await self.db.execute(prev_cycle_stmt)).scalar_one() or 0))
+
+        # -- 1. Total Revenue --------------------------------------------------
+        # -- 2. Won Deals ------------------------------------------------------
+        # -- 3. Win Rate -------------------------------------------------------
+        # -- 4. Average Deal Size ----------------------------------------------
+        # -- 5. Average Sales Cycle --------------------------------------------
+        # Pre-provision connection for concurrent queries (asyncpg race guard)
+        await self.db.connection()
+
+        # All 10 queries below are independent — run concurrently
+        (
+            total_revenue,
+            prev_revenue,
+            won_deals,
+            prev_won,
+            lost_deals,
+            prev_lost,
+            avg_deal_size,
+            prev_avg,
+            avg_cycle,
+            prev_cycle,
+        ) = await asyncio.gather(
+            _deal_sum(
+                Deal.status == DealStatus.WON.value,
+                Deal.closed_at >= period_start,
+                Deal.closed_at < now,
+            ),
+            _deal_sum(
+                Deal.status == DealStatus.WON.value,
+                Deal.closed_at >= prev_start,
+                Deal.closed_at < prev_end,
+            ),
+            _deal_count(
+                Deal.status == DealStatus.WON.value,
+                Deal.closed_at >= period_start,
+                Deal.closed_at < now,
+            ),
+            _deal_count(
+                Deal.status == DealStatus.WON.value,
+                Deal.closed_at >= prev_start,
+                Deal.closed_at < prev_end,
+            ),
+            _deal_count(
+                Deal.status == DealStatus.LOST.value,
+                Deal.closed_at >= period_start,
+                Deal.closed_at < now,
+            ),
+            _deal_count(
+                Deal.status == DealStatus.LOST.value,
+                Deal.closed_at >= prev_start,
+                Deal.closed_at < prev_end,
+            ),
+            self.db.execute(avg_stmt),
+            self.db.execute(prev_avg_stmt),
+            self.db.execute(cycle_stmt),
+            self.db.execute(prev_cycle_stmt),
+        )
+
+        avg_deal_size = Decimal(str(avg_deal_size.scalar_one() or 0))
+        prev_avg = Decimal(str(prev_avg.scalar_one() or 0))
+        avg_cycle = Decimal(str(avg_cycle.scalar_one() or 0))
+        prev_cycle = Decimal(str(prev_cycle.scalar_one() or 0))
+
+        rev_growth = _growth(total_revenue, prev_revenue)
+        won_growth = _growth(won_deals, prev_won)
+        avg_growth = _growth(avg_deal_size, prev_avg)
+
+        win_rate = self._percentage(won_deals, won_deals + lost_deals)
+        prev_win_rate = self._percentage(prev_won, prev_won + prev_lost)
+        win_rate_growth = win_rate - prev_win_rate
+
+        revenue_stat = RepRevenueStat(
+            total=total_revenue,
+            previous_period=prev_revenue,
+            growth_pct=rev_growth if rev_growth is not None else Decimal("0"),
+        )
+
+        won_deals_stat = RepWonDealsStat(
+            count=won_deals,
+            previous_period=prev_won,
+            growth_pct=won_growth if won_growth is not None else Decimal("0"),
+        )
+
+        win_rate_stat = RepWinRateStat(
+            win_rate=win_rate,
+            previous_win_rate=prev_win_rate,
+            growth_pct=win_rate_growth if win_rate_growth is not None else Decimal("0"),
+        )
+
+        avg_deal_size_stat = RepAvgDealSizeStat(
+            avg_deal_value=avg_deal_size,
+            previous_avg=prev_avg,
+            growth_pct=avg_growth if avg_growth is not None else Decimal("0"),
+        )
 
         avg_sales_cycle_stat = RepAvgSalesCycleStat(
             avg_days=avg_cycle,
@@ -2127,167 +2163,107 @@ class DashboardService:
 
         # -- 6. Revenue Trend -------------------------------------------------
         # The chart follows the selected report period.
+        # Build list of (period_label, start, end) tuples, then query all concurrently.
         revenue_trend: list[RepRevenuePoint] = []
 
+        trend_specs: list[tuple[str, datetime, datetime]] = []
+
         if period == "week":
-            # Last 7 completed/current days.
             for offset in range(6, -1, -1):
                 day_start = (now - timedelta(days=offset)).replace(
-                    hour=0,
-                    minute=0,
-                    second=0,
-                    microsecond=0,
+                    hour=0, minute=0, second=0, microsecond=0,
                 )
                 day_end = day_start + timedelta(days=1)
-
-                # Do not allow future time in today's point.
                 effective_end = min(day_end, now)
-
-                day_rev = await _deal_sum(
-                    Deal.status == DealStatus.WON.value,
-                    Deal.closed_at >= day_start,
-                    Deal.closed_at < effective_end,
-                )
-
-                revenue_trend.append(
-                    RepRevenuePoint(
-                        period=day_start.strftime("%a"),
-                        revenue=day_rev,
-                    )
-                )
+                trend_specs.append((day_start.strftime("%a"), day_start, effective_end))
 
         elif period == "quarter":
-            # Four quarters: current quarter + previous 3.
             current_quarter_month = ((now.month - 1) // 3) * 3 + 1
             current_quarter_start = now.replace(
-                month=current_quarter_month,
-                day=1,
-                hour=0,
-                minute=0,
-                second=0,
-                microsecond=0,
+                month=current_quarter_month, day=1,
+                hour=0, minute=0, second=0, microsecond=0,
             )
-
             for offset in range(3, -1, -1):
                 quarter_start_month = current_quarter_start.month - (offset * 3)
                 quarter_year = current_quarter_start.year
-
                 while quarter_start_month <= 0:
                     quarter_start_month += 12
                     quarter_year -= 1
-
-                quarter_start = datetime(
-                    quarter_year,
-                    quarter_start_month,
-                    1,
-                    tzinfo=timezone.utc,
-                )
-
+                quarter_start = datetime(quarter_year, quarter_start_month, 1, tzinfo=timezone.utc)
                 next_month = quarter_start_month + 3
                 next_year = quarter_year
-
                 while next_month > 12:
                     next_month -= 12
                     next_year += 1
-
-                quarter_end = datetime(
-                    next_year,
-                    next_month,
-                    1,
-                    tzinfo=timezone.utc,
-                )
-
+                quarter_end = datetime(next_year, next_month, 1, tzinfo=timezone.utc)
                 effective_end = min(quarter_end, now)
-
-                quarter_rev = await _deal_sum(
-                    Deal.status == DealStatus.WON.value,
-                    Deal.closed_at >= quarter_start,
-                    Deal.closed_at < effective_end,
-                )
-
-                revenue_trend.append(
-                    RepRevenuePoint(
-                        period=f"Q{((quarter_start.month - 1) // 3) + 1} {quarter_start.year}",
-                        revenue=quarter_rev,
-                    )
-                )
+                trend_specs.append((f"Q{((quarter_start.month - 1) // 3) + 1} {quarter_start.year}", quarter_start, effective_end))
 
         elif period == "year":
-            # Last 5 years.
             for offset in range(4, -1, -1):
                 year_value = now.year - offset
-
-                year_start = datetime(
-                    year_value,
-                    1,
-                    1,
-                    tzinfo=timezone.utc,
-                )
-
-                year_end = datetime(
-                    year_value + 1,
-                    1,
-                    1,
-                    tzinfo=timezone.utc,
-                )
-
+                year_start = datetime(year_value, 1, 1, tzinfo=timezone.utc)
+                year_end = datetime(year_value + 1, 1, 1, tzinfo=timezone.utc)
                 effective_end = min(year_end, now)
-
-                year_rev = await _deal_sum(
-                    Deal.status == DealStatus.WON.value,
-                    Deal.closed_at >= year_start,
-                    Deal.closed_at < effective_end,
-                )
-
-                revenue_trend.append(
-                    RepRevenuePoint(
-                        period=str(year_value),
-                        revenue=year_rev,
-                    )
-                )
+                trend_specs.append((str(year_value), year_start, effective_end))
 
         else:
-            # Monthly = existing 12-month behaviour.
             for offset in range(11, -1, -1):
                 start, end = self._month_bounds(now, offset)
-
                 effective_end = min(end, now)
+                trend_specs.append((start.strftime("%Y-%m"), start, effective_end))
 
-                m_rev = await _deal_sum(
-                    Deal.status == DealStatus.WON.value,
-                    Deal.closed_at >= start,
-                    Deal.closed_at < effective_end,
-                )
+        # Run all trend queries concurrently
+        trend_results = await asyncio.gather(*[
+            _deal_sum(
+                Deal.status == DealStatus.WON.value,
+                Deal.closed_at >= start,
+                Deal.closed_at < end,
+            )
+            for _, start, end in trend_specs
+        ])
 
-                revenue_trend.append(
-                    RepRevenuePoint(
-                        period=start.strftime("%Y-%m"),
-                        revenue=m_rev,
-                    )
-                )
+        revenue_trend = [
+            RepRevenuePoint(period=label, revenue=rev)
+            for label, rev in zip([s[0] for s in trend_specs], trend_results)
+        ]
 
         # -- 7. Deals by Stage -------------------------------------------------
+        # -- 8. Deals by Source ------------------------------------------------
+        # -- 9. Revenue by Company Size ----------------------------------------
+        # -- 10. Activity Heatmap (last 90 days) -------------------------------
+        # -- 11. My Performance Row --------------------------------------------
+        # -- 12. Activity Overview (current vs previous month) -----------------
+        # -- 13. Key Metrics ---------------------------------------------------
+        # -- 14. Recent Reports ------------------------------------------------
+        # All remaining queries are independent — run concurrently
+        call_actions = ["call", "call_logged"]
+        email_actions = ["email_sent", "email"]
+        meeting_actions = ["meeting", "meeting_scheduled"]
+        task_actions = ["task_completed", "task"]
+        note_actions = ["note"]
+        all_actions = call_actions + email_actions + meeting_actions + task_actions + note_actions
+        ninety_days_ago = now - timedelta(days=90)
+        size_buckets = [
+            ("1-10", 1, 10),
+            ("11-50", 11, 50),
+            ("51-200", 51, 200),
+            ("201-1000", 201, 1000),
+            ("1000+", 1001, 10_000_000),
+        ]
+        heatmap_actions = {
+            "call": ["call", "call_logged"],
+            "email": ["email_sent", "email_received", "email"],
+            "meeting": ["meeting", "meeting_scheduled"],
+            "task": ["task_completed", "task"],
+            "note": ["note"],
+        }
+
         stage_stmt = (
             select(Deal.status, func.count(Deal.id), func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0))
             .where(*_rep_deals(Deal.created_at >= period_start))
             .group_by(Deal.status)
         )
-        stage_rows = (await self.db.execute(stage_stmt)).all()
-        total_rep_deals = sum(int(r[1] or 0) for r in stage_rows) or 1
-        deals_by_stage: list[RepDealByStage] = []
-        for row in stage_rows:
-            stage_count = int(row[1] or 0)
-            won_in_stage = stage_count if str(row[0]) == DealStatus.WON.value else 0
-            deals_by_stage.append(
-                RepDealByStage(
-                    stage=str(row[0]),
-                    count=stage_count,
-                    percentage=self._percentage(stage_count, total_rep_deals),
-                    conversion_rate=self._percentage(won_in_stage, max(stage_count, 1)),
-                )
-            )
-
-        # -- 8. Deals by Source ------------------------------------------------
         source_stmt = (
             select(
                 Lead.source,
@@ -2300,30 +2276,9 @@ class DashboardService:
             .group_by(Lead.source)
             .order_by(func.count(Deal.id).desc())
         )
-        source_rows = (await self.db.execute(source_stmt)).all()
-        total_src = sum(int(r[1] or 0) for r in source_rows) or 1
-        deals_by_source = [
-            RepDealBySource(
-                source=str(r[0] or "Unknown"),
-                count=int(r[1] or 0),
-                percentage=self._percentage(int(r[1] or 0), total_src),
-                revenue=Decimal(str(r[2] or 0)),
-            )
-            for r in source_rows
-        ]
-
-        # -- 9. Revenue by Company Size ----------------------------------------
-        size_buckets = [
-            ("1-10", 1, 10),
-            ("11-50", 11, 50),
-            ("51-200", 51, 200),
-            ("201-1000", 201, 1000),
-            ("1000+", 1001, 10_000_000),
-        ]
-        total_won_rev = total_revenue or Decimal("1")
-        rev_by_size: list[RepRevenueByCompanySize] = []
-        for label, low, high in size_buckets:
-            bucket_stmt = (
+        bucket_stmts = [
+            (
+                label,
                 select(func.coalesce(func.sum(func.coalesce(Deal.value, Deal.amount, 0)), 0))
                 .select_from(Deal)
                 .outerjoin(Company, Deal.company_id == Company.id)
@@ -2333,28 +2288,13 @@ class DashboardService:
                     Company.employee_count <= high,
                 )
             )
-            bucket_rev = Decimal(str((await self.db.execute(bucket_stmt)).scalar_one() or 0))
-            rev_by_size.append(
-                RepRevenueByCompanySize(
-                    size_bucket=label,
-                    revenue=bucket_rev,
-                    percentage=self._percentage(int(bucket_rev), int(total_won_rev)),
-                )
-            )
-
-        # -- 10. Activity Heatmap (last 90 days) -------------------------------
-        ninety_days_ago = now - timedelta(days=90)
-        heatmap_actions = {
-            "call": ["call", "call_logged"],
-            "email": ["email_sent", "email_received", "email"],
-            "meeting": ["meeting", "meeting_scheduled"],
-            "task": ["task_completed", "task"],
-            "note": ["note"],
-        }
-        activity_heatmap: list[RepActivityHeatmapPoint] = []
+            for label, low, high in size_buckets
+        ]
+        heatmap_stmts = []
         for act_type, actions in heatmap_actions.items():
             day_expr = func.date_trunc("day", ActivityTimeline.created_at)
-            heatmap_stmt = (
+            heatmap_stmts.append((
+                act_type,
                 select(
                     day_expr.label("day"),
                     func.count(ActivityTimeline.id),
@@ -2368,21 +2308,7 @@ class DashboardService:
                 )
                 .group_by(day_expr)
                 .order_by(day_expr)
-            )
-            rows = (await self.db.execute(heatmap_stmt)).all()
-            for day_ts, cnt in rows:
-                count = int(cnt or 0)
-                intensity = "low" if count <= 2 else "medium" if count <= 5 else "high"
-                activity_heatmap.append(
-                    RepActivityHeatmapPoint(
-                        date=day_ts.strftime("%Y-%m-%d") if hasattr(day_ts, "strftime") else str(day_ts)[:10],
-                        activity_type=act_type,
-                        count=count,
-                        intensity=intensity,
-                    )
-                )
-
-        # -- 11. My Performance Row --------------------------------------------
+            ))
         my_stmt = (
             select(
                 User.id,
@@ -2410,7 +2336,134 @@ class DashboardService:
             )
             .group_by(User.id, User.full_name)
         )
-        my_row = (await self.db.execute(my_stmt)).one_or_none()
+        report_stmt = (
+            select(ActivityTimeline)
+            .where(
+                ActivityTimeline.organization_id == organization_id,
+                ActivityTimeline.is_active.is_(True),
+                ActivityTimeline.action == "report_generated",
+            )
+            .order_by(ActivityTimeline.created_at.desc())
+            .limit(10)
+        )
+
+        # Build the gather list: stage, source, 5 company-size buckets, 5 heatmap types,
+        # my performance, 5 current activity counts, 5 prev activity counts,
+        # open deals, pipeline value, deals created, deals lost, activities logged,
+        # prev pipeline, prev deals created, prev activities, recent reports
+        gather_coros = [
+            self.db.execute(stage_stmt),
+            self.db.execute(source_stmt),
+        ]
+        gather_coros.extend(self.db.execute(stmt) for _, stmt in bucket_stmts)
+        gather_coros.extend(self.db.execute(stmt) for _, stmt in heatmap_stmts)
+        gather_coros.append(self.db.execute(my_stmt))
+        gather_coros.extend([
+            _activity_count(email_actions, period_start, now),
+            _activity_count(call_actions, period_start, now),
+            _activity_count(meeting_actions, period_start, now),
+            _activity_count(task_actions, period_start, now),
+            _activity_count(note_actions, period_start, now),
+            _activity_count(email_actions, prev_start, prev_end),
+            _activity_count(call_actions, prev_start, prev_end),
+            _activity_count(meeting_actions, prev_start, prev_end),
+            _activity_count(task_actions, prev_start, prev_end),
+            _deal_count(Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])),
+            _deal_sum(Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])),
+            _deal_count(Deal.created_at >= period_start, Deal.created_at < now),
+            _deal_count(Deal.status == DealStatus.LOST.value, Deal.closed_at >= period_start, Deal.closed_at < now),
+            _activity_count(all_actions, period_start, now),
+            _deal_sum(Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]), Deal.created_at >= prev_start, Deal.created_at < prev_end),
+            _deal_count(Deal.created_at >= prev_start, Deal.created_at < prev_end),
+            _activity_count(all_actions, prev_start, prev_end),
+            self.db.execute(report_stmt),
+        ])
+
+        gather_results = await asyncio.gather(*gather_coros)
+
+        # Unpack results
+        idx = 0
+        stage_rows = gather_results[idx].all(); idx += 1
+        source_rows = gather_results[idx].all(); idx += 1
+        bucket_revs = [gather_results[idx + i] for i in range(len(size_buckets))]; idx += len(size_buckets)
+        heatmap_results = [gather_results[idx + i] for i in range(len(heatmap_actions))]; idx += len(heatmap_actions)
+        my_row = gather_results[idx].one_or_none(); idx += 1
+        emails_cur = gather_results[idx]; idx += 1
+        calls_cur = gather_results[idx]; idx += 1
+        meetings_cur = gather_results[idx]; idx += 1
+        tasks_cur = gather_results[idx]; idx += 1
+        notes_cur = gather_results[idx]; idx += 1
+        emails_prev = gather_results[idx]; idx += 1
+        calls_prev = gather_results[idx]; idx += 1
+        meetings_prev = gather_results[idx]; idx += 1
+        tasks_prev = gather_results[idx]; idx += 1
+        open_deals = gather_results[idx]; idx += 1
+        pipeline_value = gather_results[idx]; idx += 1
+        deals_created_current = gather_results[idx]; idx += 1
+        deals_lost_current = gather_results[idx]; idx += 1
+        activities_logged_current = gather_results[idx]; idx += 1
+        prev_pipeline = gather_results[idx]; idx += 1
+        prev_deals_created = gather_results[idx]; idx += 1
+        prev_activities = gather_results[idx]; idx += 1
+        report_rows = gather_results[idx].scalars().all(); idx += 1
+
+        # Process stage results
+        total_rep_deals = sum(int(r[1] or 0) for r in stage_rows) or 1
+        deals_by_stage: list[RepDealByStage] = []
+        for row in stage_rows:
+            stage_count = int(row[1] or 0)
+            won_in_stage = stage_count if str(row[0]) == DealStatus.WON.value else 0
+            deals_by_stage.append(
+                RepDealByStage(
+                    stage=str(row[0]),
+                    count=stage_count,
+                    percentage=self._percentage(stage_count, total_rep_deals),
+                    conversion_rate=self._percentage(won_in_stage, max(stage_count, 1)),
+                )
+            )
+
+        # Process source results
+        total_src = sum(int(r[1] or 0) for r in source_rows) or 1
+        deals_by_source = [
+            RepDealBySource(
+                source=str(r[0] or "Unknown"),
+                count=int(r[1] or 0),
+                percentage=self._percentage(int(r[1] or 0), total_src),
+                revenue=Decimal(str(r[2] or 0)),
+            )
+            for r in source_rows
+        ]
+
+        # Process company size bucket results
+        total_won_rev = total_revenue or Decimal("1")
+        rev_by_size: list[RepRevenueByCompanySize] = []
+        for i, (label, _, _) in enumerate(size_buckets):
+            bucket_rev = Decimal(str(bucket_revs[i].scalar_one() or 0))
+            rev_by_size.append(
+                RepRevenueByCompanySize(
+                    size_bucket=label,
+                    revenue=bucket_rev,
+                    percentage=self._percentage(int(bucket_rev), int(total_won_rev)),
+                )
+            )
+
+        # Process heatmap results
+        activity_heatmap: list[RepActivityHeatmapPoint] = []
+        for i, (act_type, _) in enumerate(heatmap_actions.items()):
+            rows = heatmap_results[i]
+            for day_ts, cnt in rows:
+                count = int(cnt or 0)
+                intensity = "low" if count <= 2 else "medium" if count <= 5 else "high"
+                activity_heatmap.append(
+                    RepActivityHeatmapPoint(
+                        date=day_ts.strftime("%Y-%m-%d") if hasattr(day_ts, "strftime") else str(day_ts)[:10],
+                        activity_type=act_type,
+                        count=count,
+                        intensity=intensity,
+                    )
+                )
+
+        # Process my performance row
         team_performance = []
         if my_row:
             team_performance.append(
@@ -2423,48 +2476,7 @@ class DashboardService:
                 )
             )
 
-        # -- 12. Activity Overview (current vs previous month) -----------------
-        call_actions = ["call", "call_logged"]
-        email_actions = ["email_sent", "email"]
-        meeting_actions = ["meeting", "meeting_scheduled"]
-        task_actions = ["task_completed", "task"]
-        note_actions = ["note"]
-
-        emails_cur = await _activity_count(
-            email_actions,
-            period_start,
-            now,
-        )
-
-        calls_cur = await _activity_count(
-            call_actions,
-            period_start,
-            now,
-        )
-
-        meetings_cur = await _activity_count(
-            meeting_actions,
-            period_start,
-            now,
-        )
-
-        tasks_cur = await _activity_count(
-            task_actions,
-            period_start,
-            now,
-        )
-
-        notes_cur = await _activity_count(
-            note_actions,
-            period_start,
-            now,
-        )
-
-        emails_prev = await _activity_count(email_actions, prev_start, prev_end)
-        calls_prev = await _activity_count(call_actions, prev_start, prev_end)
-        meetings_prev = await _activity_count(meeting_actions, prev_start, prev_end)
-        tasks_prev = await _activity_count(task_actions, prev_start, prev_end)
-
+        # Process activity overview
         activity_overview = RepActivityOverview(
             emails_sent=emails_cur,
             calls_made=calls_cur,
@@ -2477,74 +2489,13 @@ class DashboardService:
             tasks_growth_pct=self._percentage(tasks_cur - tasks_prev, max(tasks_prev, 1)),
         )
 
-        # -- 13. Key Metrics ---------------------------------------------------
-        open_deals = await _deal_count(
-            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
-        )
-        pipeline_value = await _deal_sum(
-            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value])
-        )
-        deals_created_current = await _deal_count(
-            Deal.created_at >= period_start,
-            Deal.created_at < now,
-        )
-        deals_lost = await _deal_count(
-            Deal.status == DealStatus.LOST.value,
-            Deal.closed_at >= period_start,
-            Deal.closed_at < now,
-        )
-        activities_logged = await _activity_count(
-            list(call_actions + email_actions + meeting_actions + task_actions + note_actions),
-            period_start,
-            now,
-        )
-
-        prev_pipeline = await _deal_sum(
-            Deal.status.notin_([DealStatus.WON.value, DealStatus.LOST.value]),
-            Deal.created_at >= prev_start,
-            Deal.created_at < prev_end,
-        )
-        prev_deals_created = await _deal_count(
-            Deal.created_at >= prev_start,
-            Deal.created_at < prev_end,
-        )
-        prev_activities = await _activity_count(
-            list(call_actions + email_actions + meeting_actions + task_actions + note_actions),
-            prev_start,
-            prev_end,
-        )
-
-        # Use the selected report period for Key Metrics.
-        deals_created_current = await _deal_count(
-            Deal.created_at >= period_start,
-            Deal.created_at < now,
-        )
-
-        deals_lost_current = await _deal_count(
-            Deal.status == DealStatus.LOST.value,
-            Deal.closed_at >= period_start,
-            Deal.closed_at < now,
-        )
-
-        activities_logged_current = await _activity_count(
-            list(
-                call_actions
-                + email_actions
-                + meeting_actions
-                + task_actions
-                + note_actions
-            ),
-            period_start,
-            now,
-        )
-
+        # Process key metrics
         key_metrics = RepKeyMetrics(
             open_deals=open_deals,
             pipeline_value=pipeline_value,
             deals_created=deals_created_current,
             deals_lost=deals_lost_current,
             activities_logged=activities_logged_current,
-
             pipeline_value_growth_pct=(
                 self._percentage(
                     int(pipeline_value - prev_pipeline),
@@ -2553,7 +2504,6 @@ class DashboardService:
                 if prev_pipeline
                 else Decimal("0")
             ),
-
             deals_created_growth_pct=(
                 self._percentage(
                     deals_created_current - prev_deals_created,
@@ -2562,7 +2512,6 @@ class DashboardService:
                 if prev_deals_created
                 else Decimal("0")
             ),
-
             activities_growth_pct=(
                 self._percentage(
                     activities_logged_current - prev_activities,
@@ -2573,19 +2522,7 @@ class DashboardService:
             ),
         )
 
-
-        # -- 14. Recent Reports (from ActivityTimeline with action=report) -----
-        report_stmt = (
-            select(ActivityTimeline)
-            .where(
-                ActivityTimeline.organization_id == organization_id,
-                ActivityTimeline.is_active.is_(True),
-                ActivityTimeline.action == "report_generated",
-            )
-            .order_by(ActivityTimeline.created_at.desc())
-            .limit(10)
-        )
-        report_rows = (await self.db.execute(report_stmt)).scalars().all()
+        # Process recent reports
         recent_reports = [
             RepRecentReport(
                 report_name=row.title,

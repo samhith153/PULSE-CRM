@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { getDashboardStreamUrl, getToken, invalidateEntityCache } from '@/utils/api';
+import { getDashboardStreamUrl, getToken, invalidateEntityCache, invalidateGetCache } from '@/utils/api';
 
 interface UseCrmStreamOptions {
   /** Called whenever a LEAD_SCORE_UPDATED or DEAL_AT_RISK SSE event arrives. */
@@ -60,6 +60,7 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
             onInvalidateRef.current?.();
             invalidateEntityCache('leads');
             invalidateEntityCache('deals');
+            invalidateGetCache();
             debounceTimerRef.current = null;
           }, 500);
         } else if (eventType === 'DEAL_AT_RISK') {
@@ -74,6 +75,7 @@ export function useCrmStream({ onInvalidate, enabled = true }: UseCrmStreamOptio
           debounceTimerRef.current = setTimeout(() => {
             onInvalidateRef.current?.();
             invalidateEntityCache('deals');
+            invalidateGetCache();
             debounceTimerRef.current = null;
           }, 500);
         } else if (eventType === 'NOTIFICATION_CREATED') {
