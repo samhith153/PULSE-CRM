@@ -441,7 +441,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
       for (const [id, item] of Object.entries(res.recommendations || {})) {
         recs[id] = item.recommended_action || 'No recommendation available.';
       }
-      setLeadRecommendations(recs);
+      setLeadRecommendations(prev => ({ ...prev, ...recs }));
     }).catch(() => {}).finally(() => {
       setRecommendationLoadingIds(prev => {
         const next = new Set(prev);
@@ -475,17 +475,25 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
 
     // Periodically refresh leads + recommendations (assessments run in background)
     let lastLeadHash = '';
+    let prevLeadsMap: Record<string, { score: number | null; status: string }> = {};
     const intervalId = window.setInterval(() => {
       getLeads().then(data => {
         const mapped = (data ?? []).map(backendToLocal);
         setLeads(mapped);
         const ids = mapped.map(l => l.id).filter(Boolean) as string[];
 
-        // Only refresh recommendations if leads actually changed
-        const currentHash = ids.join(',');
-        if (currentHash !== lastLeadHash) {
-          lastLeadHash = currentHash;
-          refreshRecommendations(ids);
+        // Only refresh recommendations for leads that actually changed
+        const changedIds: string[] = [];
+        for (const l of mapped) {
+          const prev = prevLeadsMap[l.id];
+          if (!prev || prev.score !== l.score || prev.status !== l.status) {
+            changedIds.push(l.id);
+          }
+        }
+        prevLeadsMap = Object.fromEntries(mapped.map(l => [l.id, { score: l.score, status: l.status }]));
+
+        if (changedIds.length > 0) {
+          refreshRecommendations(changedIds);
         }
         // Clear scoring indicators for leads that now have scores
         setScoringLeadIds(prev => {
@@ -517,6 +525,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
           next.delete(lead_id);
           return next;
         });
+        refreshRecommendations([lead_id]);
       }).catch(() => {});
     };
     window.addEventListener('pulse-lead-score-updated', handleScoreUpdate);
@@ -672,8 +681,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
         const refreshed = await getLeads();
         const mapped = (refreshed ?? []).map(backendToLocal);
         setLeads(mapped);
-        const ids = mapped.map(l => l.id).filter(Boolean) as string[];
-        refreshRecommendations(ids);
+        refreshRecommendations([created.id]);
       } catch {
         const newLead: Lead = {
           ...backendToLocal(created),

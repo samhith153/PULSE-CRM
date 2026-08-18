@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Bell, 
   UserPlus, 
@@ -15,6 +15,8 @@ import {
   FileText,
   TrendingUp,
   ShieldAlert,
+  MoreHorizontal,
+  Trash2,
 } from 'lucide-react';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
 
@@ -50,6 +52,20 @@ function getIcon(type: string) {
 
 export default function NotificationsView() {
   const { notifications, unreadCount, loading, markAllRead, dismiss, clearAll } = useNotifications(50);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [menuOpen]);
 
   return (
     <div className="space-y-6">
@@ -64,24 +80,39 @@ export default function NotificationsView() {
             </p>
           </div>
           
-          {unreadCount > 0 && (
-            <button 
-              onClick={markAllRead}
-              className="inline-flex items-center space-x-1 px-3 py-1.5 border border-border-default hover:border-border-default text-text-primary hover:bg-surface-2 text-xs font-semibold rounded-lg cursor-pointer"
-            >
-              <CheckCheck className="h-4 w-4 mr-0.5 text-accent-color" />
-              <span>Mark all as read</span>
-            </button>
-          )}
-          {notifications.length > 0 && (
-            <button 
-              onClick={clearAll}
-              className="inline-flex items-center space-x-1 px-3 py-1.5 border border-destructive/30 hover:border-destructive text-destructive hover:bg-destructive/5 text-xs font-semibold rounded-lg cursor-pointer"
-            >
-              <X className="h-4 w-4 mr-0.5" />
-              <span>Clear all</span>
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <button 
+                onClick={markAllRead}
+                className="inline-flex items-center space-x-1 px-3 py-1.5 border border-border-default hover:border-border-default text-text-primary hover:bg-surface-2 text-xs font-semibold rounded-lg cursor-pointer"
+              >
+                <CheckCheck className="h-4 w-4 mr-0.5 text-accent-color" />
+                <span>Mark all as read</span>
+              </button>
+            )}
+            {notifications.length > 0 && (
+              <div className="relative" ref={menuRef}>
+                <button 
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="inline-flex items-center justify-center p-1.5 border border-border-default hover:border-border-default text-text-muted hover:text-text-primary hover:bg-surface-2 text-xs rounded-lg cursor-pointer"
+                  aria-label="More options"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+                {menuOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-44 bg-surface-1 border border-border-default rounded-xl shadow-lg py-1 z-50">
+                    <button
+                      onClick={() => { clearAll(); setMenuOpen(false); }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/5 cursor-pointer"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Clear all</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Notifications Feed list */}

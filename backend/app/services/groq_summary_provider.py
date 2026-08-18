@@ -4,6 +4,7 @@ on the standalone ai/summarization test app's config, models, or agent.
 """
 import asyncio
 import json
+import re
 from groq import Groq
 
 from app.core.config import settings
@@ -53,6 +54,7 @@ class GroqConversationSummaryProvider:
                     model=settings.MODEL_NAME or settings.ASSISTANT_MODEL,
                     messages=[{"role": "user", "content": _PROMPT_TEMPLATE.format(thread_text=thread_text)}],
                     temperature=0.2,
+                    max_completion_tokens=2048,
                 ),
                 timeout=settings.AI_TIMEOUT + 5,
             )
@@ -63,7 +65,8 @@ class GroqConversationSummaryProvider:
                 metadata={"email_count": len(emails), "error": "timeout"},
             )
         raw = response.choices[0].message.content.strip()
-        cleaned = raw.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        cleaned = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+        cleaned = cleaned.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
 
         try:
             data = json.loads(cleaned)

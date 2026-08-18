@@ -6,6 +6,7 @@ microservice and persists the results to the email_summaries table.
 from __future__ import annotations
 
 import json
+import re
 from typing import Optional
 from uuid import UUID
 
@@ -377,7 +378,7 @@ async def _summarize_via_groq_direct(messages: list[dict]) -> Optional[dict]:
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.3,
-                max_tokens=1500,
+                max_completion_tokens=1500,
             ),
             timeout=(settings.AI_TIMEOUT or 30) + 5,
         )
@@ -385,7 +386,8 @@ async def _summarize_via_groq_direct(messages: list[dict]) -> Optional[dict]:
         await client.close()
 
     raw_text = response.choices[0].message.content.strip()
-    cleaned = raw_text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+    cleaned = re.sub(r"<think>.*?</think>", "", raw_text, flags=re.DOTALL).strip()
+    cleaned = cleaned.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
 
     try:
         data = json.loads(cleaned)

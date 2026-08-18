@@ -325,8 +325,24 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
       const openDeals = dealsList.filter((d: any) => d.status !== 'Won' && d.status !== 'Lost' && d.status !== 'Closed');
       setOpenDealsCount(openDeals.length);
 
-      // Calculate My Untouched Deals
-      setUntouchedDealsCount(Math.max(0, openDeals.length - 2));
+      // Calculate My Untouched Deals - count open deals with no deal activity in 5+ days
+      const fiveDaysAgo = new Date();
+      fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+      const dealActivityDates = new Map<string, Date>();
+      activitiesList.forEach((a: any) => {
+        if (a.entity_type === 'deal' && a.entity_id && a.created_at) {
+          const existing = dealActivityDates.get(a.entity_id);
+          const created = new Date(a.created_at);
+          if (!existing || created > existing) {
+            dealActivityDates.set(a.entity_id, created);
+          }
+        }
+      });
+      const untouchedDeals = openDeals.filter((d: any) => {
+        const lastActivity = dealActivityDates.get(d.id);
+        return !lastActivity || lastActivity < fiveDaysAgo;
+      });
+      setUntouchedDealsCount(untouchedDeals.length);
 
       // Calculate My Calls Today
       const todayStr = new Date().toISOString().slice(0, 10);
@@ -357,10 +373,14 @@ export default function HomeView({ onTabChange, dashboardData }: HomeViewProps) 
     if (kpis) {
       setOpenDealsCount(kpis.open_deals ?? null);
       setCallsTodayCount(kpis.calls_today ?? null);
-      setUntouchedDealsCount(null); // backend doesn't expose this yet
+      setUntouchedDealsCount(dashboardData.kpis?.untouched_deals ?? null);
     }
     if (dashboardData.deals) setDeals(dashboardData.deals);
-    if (dashboardData.leads) setLeadsListState(dashboardData.leads);
+    if (dashboardData.leads) {
+      setLeadsListState(dashboardData.leads);
+      const activeLeads = dashboardData.leads.filter((l: any) => l.status !== 'Converted' && l.status !== 'Lost');
+      setLeadsCount(activeLeads.length);
+    }
     // Wire meetings from backend
     if (dashboardData.meetings_today?.length) {
       setMeetings(dashboardData.meetings_today.map((m: any, i: number) => ({

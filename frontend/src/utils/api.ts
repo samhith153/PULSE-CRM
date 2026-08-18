@@ -79,6 +79,22 @@ function cachedEntityList<T>(endpoint: string, ttlMs = _ENTITY_CACHE_TTL_MS): Pr
 }
 
 /**
+ * Invalidate cached GET responses whose endpoint contains `pattern`.
+ * Targets the dashboard/KPI/AI cache (`_getCache`).
+ */
+export function invalidateGetCache(pattern?: string): void {
+  if (!pattern) {
+    _getCache.clear();
+    return;
+  }
+  for (const key of _getCache.keys()) {
+    if (key.includes(pattern)) {
+      _getCache.delete(key);
+    }
+  }
+}
+
+/**
  * Invalidate cached entity lists whose endpoint contains `pattern`.
  * Called after create/update/delete mutations to ensure fresh data on
  * the next navigation.
@@ -93,6 +109,15 @@ export function invalidateEntityCache(pattern?: string): void {
       _entityCache.delete(key);
     }
   }
+}
+
+/**
+ * Invalidate both entity and dashboard/KPI caches.
+ * Useful for SSE events that affect both entity lists and summary data.
+ */
+export function invalidateAllCaches(pattern?: string): void {
+  invalidateEntityCache(pattern);
+  invalidateGetCache(pattern);
 }
 
 async function _tryRefresh(): Promise<boolean> {
@@ -587,6 +612,20 @@ export interface WorkflowTask {
 export interface LeadWorkflowResponse {
   current_task: WorkflowTaskItem | null;
   history: WorkflowTaskItem[];
+  planned_steps: PlannedWorkflowStep[];
+  total_steps: number;
+  completed_steps: number;
+  progress_percent: number;
+  is_recovery: boolean;
+}
+
+export interface PlannedWorkflowStep {
+  action_type: string;
+  current_stage?: string | null;
+  reasoning?: string[];
+  priority?: string | null;
+  score?: number | null;
+  kind?: 'stage' | 'action';
 }
 
 /**
@@ -642,6 +681,11 @@ export async function getLeadWorkflow(
     return {
       current_task: null,
       history: [],
+      planned_steps: [],
+      total_steps: 0,
+      completed_steps: 0,
+      progress_percent: 0,
+      is_recovery: false,
     };
   }
 
@@ -652,6 +696,13 @@ export async function getLeadWorkflow(
     history: Array.isArray(data?.history)
       ? data.history
       : [],
+    planned_steps: Array.isArray(data?.planned_steps)
+      ? data.planned_steps
+      : [],
+    total_steps: Number(data?.total_steps) || 0,
+    completed_steps: Number(data?.completed_steps) || 0,
+    progress_percent: Number(data?.progress_percent) || 0,
+    is_recovery: Boolean(data?.is_recovery),
   };
 }
 
