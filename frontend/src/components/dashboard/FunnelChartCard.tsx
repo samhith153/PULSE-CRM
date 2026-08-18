@@ -38,12 +38,12 @@ export default function FunnelChartCard({ leads = [], deals = [], className = ''
     const raw = [newLeads, contacted, qualified, proposals, won];
 
     const names = ['New Leads', 'Contacted', 'Qualified', 'Proposals', 'Won'];
-    const top   = raw[0] || 1;
+    const total = raw.reduce((a, b) => a + b, 0) || 1;
 
     return names.map((name, i) => ({
       name,
       count: raw[i],
-      pct: Math.round((raw[i] / top) * 100),
+      pct: Math.round((raw[i] / total) * 100),
       conversionFromPrev: i > 0 ? Math.round((raw[i] / Math.max(raw[i - 1], 1)) * 100) : 100,
     }));
   }, [leads, deals]);
