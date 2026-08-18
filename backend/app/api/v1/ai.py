@@ -41,6 +41,16 @@ from app.services.ai_service import AIService
 
 router = APIRouter(dependencies=[Depends(require_permission("ai:access"))])
 
+# Map deal pipeline stage slugs to the AI service's stage keys
+_DEAL_SLUG_TO_AI_STAGE = {
+    "new": "new",
+    "qualified": "qualified",
+    "proposal": "proposal_sent",
+    "negotiation": "negotiation",
+    "won": "closed_won",
+    "lost": "closed_lost",
+}
+
 
 @router.get("/stream", summary="Stream AI events")
 async def stream_events(current_user: CurrentUser) -> StreamingResponse:
@@ -227,8 +237,13 @@ async def batch_recommendations(
             summaries = email_summaries_by_lead.get(lid_str, [])
             latest_summary = summaries[-1] if summaries else {}
 
+            # Prefer the deal's actual pipeline stage over lead.status
+            # (lead.status may be stale or mapped incorrectly, e.g. "converted")
             current_stage = "new"
-            if lead.status:
+            if deal and deal.pipeline_stage and deal.pipeline_stage.slug:
+                slug = deal.pipeline_stage.slug.lower().replace(" ", "_")
+                current_stage = _DEAL_SLUG_TO_AI_STAGE.get(slug, slug)
+            elif lead.status:
                 current_stage = lead.status.lower().replace(" ", "_")
 
             # Auto-advance stage when outbound emails exist
@@ -246,7 +261,7 @@ async def batch_recommendations(
                 "tags": getattr(lead, "tags", None),
                 "days_since_last_outbound": stats.get("days_since_last_outbound"),
                 "is_outbound": is_outbound,
-                "outbound_thread": [outbound_subject, 0] if outbound_subject else None,
+                "outbound_thread": [outbound_subject, stats.get("outbound_email_count", 0)] if outbound_subject else None,
                 "inbound_thread": [inbound_subject] if inbound_subject else None,
                 "last_contact_time": stats.get("last_inbound_at").isoformat() if stats.get("last_inbound_at") else None,
                 "email_sentiment": latest_summary.get("sentiment"),

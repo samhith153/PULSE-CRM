@@ -482,7 +482,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
         const ids = mapped.map(l => l.id).filter(Boolean) as string[];
 
         // Only refresh recommendations if leads actually changed
-        const currentHash = ids.join(',');
+        const currentHash = mapped.map(l => `${l.id}:${l.score}:${l.status}`).join(',');
         if (currentHash !== lastLeadHash) {
           lastLeadHash = currentHash;
           refreshRecommendations(ids);
