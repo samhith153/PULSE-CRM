@@ -28,7 +28,8 @@ class UserRepository(BaseRepository[User]):
                 selectinload(User.user_roles)
                 .selectinload(UserRole.role)
                 .selectinload(Role.role_permissions)
-                .selectinload(RolePermission.permission)
+                .selectinload(RolePermission.permission),
+                selectinload(User.manager),
             )
             .where(User.is_deleted == False)
         )
