@@ -8,6 +8,8 @@ import {
   Activity, CheckSquare, Layers, MoreHorizontal,
 } from 'lucide-react';
 import { getSalesRepDashboard, type SalesRepDashboardData, asNumber } from '@/utils/api';
+import ChartTooltip from './ChartTooltip';
+import { useChartTooltip } from '@/hooks/use-chart-tooltip';
 
 type Period = 'week' | 'month' | 'quarter' | 'year';
 export type ReportPeriod = Period;
@@ -61,8 +63,11 @@ function PP({ val, set }: { val: Period; set: (v: Period) => void }) {
 
 /* Sparkline */
 function Spark({ vals, white = false, color = '#3D5AFE' }: { vals: number[]; white?: boolean; color?: string }) {
-  if (vals.length < 2) return null;
-  const mx = Math.max(...vals, 1), mn = Math.min(...vals, 0), rng = mx - mn || 1, n = vals.length;
+  const { containerRef, tip, show, hide } = useChartTooltip<{ value: number; label: string }>();
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  const n = vals.length;
+  if (n < 2) return null;
+  const mx = Math.max(...vals, 1), mn = Math.min(...vals, 0), rng = mx - mn || 1;
   const pts = vals.map((v, i) => ({ x: (i / (n - 1)) * 100, y: 34 - ((v - mn) / rng) * 30 + 2 }));
   let ln = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
   for (let i = 0; i < n - 1; i++) {
@@ -72,13 +77,39 @@ function Spark({ vals, white = false, color = '#3D5AFE' }: { vals: number[]; whi
   const ar = `${ln} L ${pts[n-1].x.toFixed(1)} 40 L 0 40 Z`;
   const stroke = white ? 'rgba(255,255,255,0.9)' : color;
   const fill   = white ? 'rgba(255,255,255,0.15)' : `${color}20`;
+  const handleMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const s = e.currentTarget.getBoundingClientRect();
+    const rel = ((e.clientX - s.left) / s.width) * 100;
+    const idx = Math.max(0, Math.min(n - 1, Math.round((rel / 100) * (n - 1))));
+    setHoverIdx(idx);
+    show(e, { value: vals[idx], label: `P${idx + 1}` });
+  };
   return (
-    <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-10 w-full overflow-visible" aria-hidden>
-      <motion.path d={ar} fill={fill} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} />
-      <motion.path d={ln} fill="none" stroke={stroke} strokeWidth="1.8" vectorEffect="non-scaling-stroke"
-        initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: 'easeOut' }} />
-    </svg>
+    <div ref={containerRef} className="relative">
+      <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-10 w-full overflow-visible" aria-hidden
+        onMouseEnter={handleMove} onMouseMove={handleMove} onMouseLeave={() => { setHoverIdx(null); hide(); }}>
+        <motion.path d={ar} fill={fill} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} />
+        <motion.path d={ln} fill="none" stroke={stroke} strokeWidth="1.8" vectorEffect="non-scaling-stroke"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.9, ease: 'easeOut' }} />
+        {hoverIdx !== null && (
+          <motion.circle cx={pts[hoverIdx].x} cy={pts[hoverIdx].y} r="3" fill={white ? '#fff' : color}
+            stroke={white ? 'rgba(0,0,0,0.25)' : '#fff'} strokeWidth="1"
+            initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ duration: 0.15 }} />
+        )}
+      </svg>
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={tip.data.label}
+          rows={[{ label: 'Value', value: fmtShort(tip.data.value), color }]} />
+      )}
+    </div>
   );
+}
+
+function fmtShort(v: number) {
+  if (Math.abs(v) >= 1e7) return `${(v/1e7).toFixed(2)}Cr`;
+  if (Math.abs(v) >= 1e5) return `${(v/1e5).toFixed(1)}L`;
+  if (Math.abs(v) >= 1e3) return `${(v/1e3).toFixed(1)}K`;
+  return String(v);
 }
 
 /* KPI hero card */
@@ -117,6 +148,7 @@ function RevenueTrend({ trend, period, onPeriod }: {
   trend: { period: string; revenue: any }[];
   period: Period; onPeriod: (p: Period) => void;
 }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ label: string; value: number }>();
   const rawVals = trend.map(t => asNumber(t.revenue) || 0);
   const nonZero = rawVals.filter(v => v > 0);
   const displayVals = rawVals;
@@ -159,7 +191,7 @@ function RevenueTrend({ trend, period, onPeriod }: {
 
       {/* Chart */}
       <div className="mt-4 flex gap-4">
-        <div className="flex-1 relative">
+        <div ref={containerRef} className="flex-1 relative">
           {/* Y-axis ticks */}
           <div className="absolute left-0 top-0 bottom-6 flex flex-col justify-between text-[9px] text-muted-foreground pr-2 w-10">
             {[1, 0.75, 0.5, 0.25, 0].map(r => (
@@ -172,11 +204,16 @@ function RevenueTrend({ trend, period, onPeriod }: {
               const h = Math.max(6, (v / displayMax) * 140);
               const isLast = i === displayVals.length - 1;
               return (
-                <div key={i} className="flex flex-1 flex-col items-center">
+                <div key={i}
+                  className="flex flex-1 flex-col items-center"
+                  onMouseEnter={(e) => show(e, { label: displayLbls[i] || String(i), value: v })}
+                  onMouseMove={(e) => show(e, { label: displayLbls[i] || String(i), value: v })}
+                  onMouseLeave={hide}
+                >
                   <motion.div
                     initial={{ height: 0 }} animate={{ height: h }}
                     transition={{ duration: 0.6, ease: [0.22,1,0.36,1], delay: i * 0.04 }}
-                    className={`w-full max-w-[28px] rounded-t-md ${isLast ? 'bg-accent-color shadow-sm' : 'bg-accent-color/40 hover:bg-accent-color/60'} transition-colors`}
+                    className={`w-full max-w-[28px] rounded-t-md ${isLast ? 'bg-accent-color shadow-sm' : 'bg-accent-color/40 hover:bg-accent-color/60'} transition-colors cursor-pointer`}
                   />
                 </div>
               );
@@ -188,6 +225,10 @@ function RevenueTrend({ trend, period, onPeriod }: {
               <span key={i} className="flex-1 text-center text-[9px] text-muted-foreground truncate">{l}</span>
             ))}
           </div>
+          {tip && (
+            <ChartTooltip x={tip.x} y={tip.y} title={tip.data.label}
+              rows={[{ label: 'Revenue', value: fmtCur(tip.data.value), color: '#3D5AFE' }]} />
+          )}
         </div>
 
         {/* Right summary */}
@@ -212,6 +253,7 @@ function DealsBySource({ src, period, onPeriod, km }: {
   period: Period; onPeriod: (p: Period) => void;
   km: { open_deals: number; deals_created: number; deals_lost: number; activities_logged: number };
 }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ name: string; count: number; pct: number; revenue: any }>();
   const total = src.reduce((s, x) => s + Number(x.count || 0), 0) || 3;
   const items = src;
   const R = 56, CIRC = 2 * Math.PI * R;
@@ -237,7 +279,7 @@ function DealsBySource({ src, period, onPeriod, km }: {
       </div>
 
       {/* Donut + legend */}
-      <div className="flex items-center gap-5">
+      <div ref={containerRef} className="relative flex items-center gap-5">
         <div className="relative shrink-0" style={{ width: 130, height: 130 }}>
           <svg className="size-full -rotate-90" viewBox="0 0 160 160">
             <circle cx="80" cy="80" r={R} fill="none" stroke="var(--surface-2)" strokeWidth="18" />
@@ -246,7 +288,11 @@ function DealsBySource({ src, period, onPeriod, km }: {
                 stroke={seg.color} strokeWidth="18"
                 strokeDasharray={`${seg.dash} ${CIRC}`} strokeDashoffset={seg.off}
                 initial={{ strokeDashoffset: CIRC }} animate={{ strokeDashoffset: seg.off }}
-                transition={{ duration: 1, ease: [0.22,1,0.36,1], delay: i * 0.08 }} />
+                transition={{ duration: 1, ease: [0.22,1,0.36,1], delay: i * 0.08 }}
+                className="cursor-pointer transition-[stroke-width] duration-150 hover:stroke-[22]"
+                onMouseEnter={(e) => show(e, { name: seg.source, count: Number(seg.count), pct: (Number(seg.count) / total) * 100, revenue: seg.revenue })}
+                onMouseMove={(e) => show(e, { name: seg.source, count: Number(seg.count), pct: (Number(seg.count) / total) * 100, revenue: seg.revenue })}
+                onMouseLeave={hide} />
             ))}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -256,7 +302,10 @@ function DealsBySource({ src, period, onPeriod, km }: {
         </div>
         <div className="flex-1 space-y-2.5">
           {segs.map((seg, i) => (
-            <div key={i} className="flex items-center justify-between">
+            <div key={i} className="flex items-center justify-between cursor-default"
+              onMouseEnter={(e) => show(e, { name: seg.source, count: Number(seg.count), pct: (Number(seg.count) / total) * 100, revenue: seg.revenue })}
+              onMouseMove={(e) => show(e, { name: seg.source, count: Number(seg.count), pct: (Number(seg.count) / total) * 100, revenue: seg.revenue })}
+              onMouseLeave={hide}>
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
                 <span className="text-[11px] text-muted-foreground truncate max-w-[90px]">{seg.source}</span>
@@ -265,6 +314,14 @@ function DealsBySource({ src, period, onPeriod, km }: {
             </div>
           ))}
         </div>
+        {tip && (
+          <ChartTooltip x={tip.x} y={tip.y} title={tip.data.name}
+            rows={[
+              { label: 'Deals', value: String(tip.data.count), color: '#3D5AFE' },
+              { label: 'Share', value: `${tip.data.pct.toFixed(1)}%`, color: '#F59E0B' },
+              { label: 'Revenue', value: fmtCur(asNumber(tip.data.revenue)), color: '#3DA35D' },
+            ]} />
+        )}
       </div>
 
       {/* Bottom key metrics strip */}
@@ -285,6 +342,7 @@ const STAGE_COLORS = ['#6C63FF','#7B74FF','#8A8BFF','#99AAFF','#4BD08B'];
 const STAGE_FILLS  = ['bg-[#6C63FF]','bg-[#7B74FF]','bg-[#8A8BFF]','bg-[#99AAFF]','bg-[#4BD08B]'];
 
 function DealsByStage({ stages }: { stages: { stage: string; count: number; percentage: any; conversion_rate: any }[] }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ stage: string; count: number; pct: number; conv: number; color: string }>();
   const items = stages;
   const totalDeals = items.reduce((s, x) => s + x.count, 0);
   const wonItem    = items.find(x => x.stage.toLowerCase().includes('won'));
@@ -308,7 +366,7 @@ function DealsByStage({ stages }: { stages: { stage: string; count: number; perc
         </span>
       </div>
 
-      <div className="flex gap-4">
+      <div ref={containerRef} className="relative flex gap-4">
         {/* Funnel SVG */}
         <div className="shrink-0">
           <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} style={{ width: SVG_W, height: SVG_H }}>
@@ -317,11 +375,17 @@ function DealsByStage({ stages }: { stages: { stage: string; count: number; perc
               const hw1 = hw(i), hw2 = i < n - 1 ? hw(i + 1) : minHW;
               const cx = SVG_W / 2;
               const d = `M ${cx-hw1} ${y1} L ${cx+hw1} ${y1} L ${cx+hw2} ${y2} L ${cx-hw2} ${y2} Z`;
+              const pct = asNumber(items[i].percentage) || Math.round((items[i].count / maxCount) * 100);
+              const conv = asNumber(items[i].conversion_rate) || pct;
               return (
                 <motion.path key={i} d={d} fill={STAGE_COLORS[i]} fillOpacity={0.85}
                   initial={{ opacity: 0, scaleX: 0 }} animate={{ opacity: 1, scaleX: 1 }}
                   transition={{ duration: 0.5, ease: [0.22,1,0.36,1], delay: i * 0.07 }}
-                  style={{ transformOrigin: `${cx}px center` }} />
+                  style={{ transformOrigin: `${cx}px center` }}
+                  className="cursor-pointer hover:fill-opacity-100"
+                  onMouseEnter={(e) => show(e, { stage: items[i].stage, count: items[i].count, pct, conv, color: STAGE_COLORS[i] })}
+                  onMouseMove={(e) => show(e, { stage: items[i].stage, count: items[i].count, pct, conv, color: STAGE_COLORS[i] })}
+                  onMouseLeave={hide} />
               );
             })}
           </svg>
@@ -346,6 +410,14 @@ function DealsByStage({ stages }: { stages: { stage: string; count: number; perc
             );
           })}
         </div>
+        {tip && (
+          <ChartTooltip x={tip.x} y={tip.y} title={tip.data.stage}
+            rows={[
+              { label: 'Deals', value: String(tip.data.count), color: tip.data.color },
+              { label: 'Share', value: `${tip.data.pct.toFixed(1)}%`, color: '#F59E0B' },
+              { label: 'Conversion', value: `${tip.data.conv.toFixed(1)}%`, color: '#4BD08B' },
+            ]} />
+        )}
       </div>
 
       {/* Summary footer */}
@@ -423,6 +495,7 @@ function SalesReportArea({ trend, period, onPeriod }: {
   trend: { period: string; revenue: any }[];
   period: Period; onPeriod: (p: Period) => void;
 }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ label: string; value: number }>();
   const vals  = trend.map(t => asNumber(t.revenue) || 0);
   const dv    = vals;
   const mx    = Math.max(...dv, 1);
@@ -449,7 +522,7 @@ function SalesReportArea({ trend, period, onPeriod }: {
         <PP val={period} set={onPeriod} />
       </div>
 
-      <div className="relative">
+      <div ref={containerRef} className="relative">
         {/* Y-axis labels */}
         <div className="absolute left-0 top-0 h-[140px] flex flex-col justify-between text-[9px] text-muted-foreground w-8">
           {pcts.slice().reverse().map(p => <span key={p} className="text-right">{p}%</span>)}
@@ -460,7 +533,12 @@ function SalesReportArea({ trend, period, onPeriod }: {
             const h = Math.max(8, (v / mx) * 128);
             const isLast = i === dv.length - 1;
             return (
-              <div key={i} className="flex flex-1 flex-col items-center relative">
+              <div key={i}
+                className="flex flex-1 flex-col items-center relative"
+                onMouseEnter={(e) => show(e, { label: lbls[i] || String(i), value: v })}
+                onMouseMove={(e) => show(e, { label: lbls[i] || String(i), value: v })}
+                onMouseLeave={hide}
+              >
                 {isLast && ovf && (
                   <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-2 py-1 text-[9px] font-bold text-foreground whitespace-nowrap shadow-sm text-center">
                     Target overflow<br/>by {fmtPct(((v-avg)/avg)*100)} profit
@@ -469,8 +547,8 @@ function SalesReportArea({ trend, period, onPeriod }: {
                 <motion.div
                   initial={{ height: 0 }} animate={{ height: h }}
                   transition={{ duration: 0.6, ease:[0.22,1,0.36,1], delay: i*0.05 }}
-                  className={`w-full max-w-[28px] rounded-t-md ${
-                    i < 2 ? 'bg-[#3DA35D]/70' : i < 4 ? 'bg-accent-color/70' : 'bg-accent-color shadow-sm'
+                  className={`w-full max-w-[28px] rounded-t-md cursor-pointer ${
+                    i < 2 ? 'bg-[#3DA35D]/70 hover:bg-[#3DA35D]' : i < 4 ? 'bg-accent-color/70 hover:bg-accent-color' : 'bg-accent-color shadow-sm hover:bg-accent-color/80'
                   } transition-colors`}
                 />
               </div>
@@ -483,6 +561,10 @@ function SalesReportArea({ trend, period, onPeriod }: {
             <span key={i} className="flex-1 text-center text-[9px] text-muted-foreground">{l}</span>
           ))}
         </div>
+        {tip && (
+          <ChartTooltip x={tip.x} y={tip.y} title={tip.data.label}
+            rows={[{ label: 'Revenue', value: fmtCur(tip.data.value), color: '#3D5AFE' }]} />
+        )}
         {/* Bottom stat */}
         <div className="ml-10 mt-3 pl-2">
           <p className="text-[11px] text-muted-foreground">Per unit sales</p>
@@ -500,6 +582,7 @@ function SalesActivity({ src, period, onPeriod }: {
   src: { source: string; count: number; percentage: any }[];
   period: Period; onPeriod: (p: Period) => void;
 }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ name: string; count: number; pct: number }>();
   const items = src.slice(0, 3);
   const total = items.reduce((s, x) => s + Number(x.count || 0), 0) || 100;
   const R = 52, CIRC = 2 * Math.PI * R;
@@ -517,7 +600,7 @@ function SalesActivity({ src, period, onPeriod }: {
         <h2 className="text-[14px] font-bold text-foreground">Sales Activity</h2>
         <PP val={period} set={onPeriod} />
       </div>
-      <div className="flex items-center gap-6">
+      <div ref={containerRef} className="relative flex items-center gap-6">
         {/* Donut */}
         <div className="relative shrink-0" style={{ width: 130, height: 130 }}>
           <svg className="size-full -rotate-90" viewBox="0 0 160 160">
@@ -527,7 +610,11 @@ function SalesActivity({ src, period, onPeriod }: {
                 stroke={seg.color} strokeWidth="20"
                 strokeDasharray={`${seg.dash} ${CIRC}`} strokeDashoffset={seg.off}
                 initial={{ strokeDashoffset: CIRC }} animate={{ strokeDashoffset: seg.off }}
-                transition={{ duration: 1, ease: [0.22,1,0.36,1], delay: i * 0.1 }} />
+                transition={{ duration: 1, ease: [0.22,1,0.36,1], delay: i * 0.1 }}
+                className="cursor-pointer transition-[stroke-width] duration-150 hover:stroke-[24]"
+                onMouseEnter={(e) => show(e, { name: seg.source, count: Number(seg.count), pct: (Number(seg.count) / total) * 100 })}
+                onMouseMove={(e) => show(e, { name: seg.source, count: Number(seg.count), pct: (Number(seg.count) / total) * 100 })}
+                onMouseLeave={hide} />
             ))}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -538,7 +625,10 @@ function SalesActivity({ src, period, onPeriod }: {
         {/* Legend */}
         <div className="flex-1 space-y-3">
           {segs.map((seg, i) => (
-            <div key={i} className="flex items-center justify-between">
+            <div key={i} className="flex items-center justify-between cursor-default"
+              onMouseEnter={(e) => show(e, { name: seg.source, count: Number(seg.count), pct: (Number(seg.count) / total) * 100 })}
+              onMouseMove={(e) => show(e, { name: seg.source, count: Number(seg.count), pct: (Number(seg.count) / total) * 100 })}
+              onMouseLeave={hide}>
               <div className="flex items-center gap-2">
                 <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
                 <span className="text-[11px] text-muted-foreground">{seg.source}</span>
@@ -547,6 +637,13 @@ function SalesActivity({ src, period, onPeriod }: {
             </div>
           ))}
         </div>
+        {tip && (
+          <ChartTooltip x={tip.x} y={tip.y} title={tip.data.name}
+            rows={[
+              { label: 'Activities', value: String(tip.data.count), color: '#3D5AFE' },
+              { label: 'Share', value: `${tip.data.pct.toFixed(1)}%`, color: '#F59E0B' },
+            ]} />
+        )}
       </div>
     </div>
   );
@@ -679,6 +776,7 @@ function RecentActivities({ acts }: { acts: { id: string; title?: string; action
 
 /* ═══ Performance Over Time dual-axis line chart ════════════ */
 function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ label: string; revenue: number; won: number }>();
   const [timeframe, setTimeframe] = useState('YTD');
   const timeframeOptions = ['Year to Date', 'Last 6 Months', 'This Quarter', 'This Month'];
   const tfKey = (label: string) => label === 'Year to Date' ? 'YTD' : label.toLowerCase().replace(/\s+/g, '');
@@ -772,6 +870,7 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
         </div>
       </div>
 
+      <div ref={containerRef} className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }} preserveAspectRatio="none">
         <defs>
           <linearGradient id="pot-rev-grad" x1="0" y1="0" x2="0" y2="1">
@@ -808,13 +907,34 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
           initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 1.2, ease: 'easeOut', delay: 0.1 }} />
         {/* Dots on revenue line */}
         {revPts.map((p, i) => (
-          <circle key={i} cx={p.x} cy={p.y} r={2.5} fill="#3D5AFE" stroke="white" strokeWidth="1.5" />
+          <circle key={i} cx={p.x} cy={p.y} r={3.5} fill="#3D5AFE" stroke="white" strokeWidth="1.5"
+            className="cursor-pointer"
+            pointerEvents="all"
+            onMouseEnter={(e) => show(e, { label: lbls[i] || String(i), revenue: rv[i], won: wv[i] })}
+            onMouseMove={(e) => show(e, { label: lbls[i] || String(i), revenue: rv[i], won: wv[i] })}
+            onMouseLeave={hide} />
+        ))}
+        {/* Invisible hover zones */}
+        {revPts.map((p, i) => (
+          <rect key={`hz-${i}`} x={xOf(i)-iW/Math.max(n,1)/2} y={padT} width={iW/Math.max(n,1)} height={iH}
+            fill="transparent" className="cursor-pointer"
+            onMouseEnter={(e) => show(e, { label: lbls[i] || String(i), revenue: rv[i], won: wv[i] })}
+            onMouseMove={(e) => show(e, { label: lbls[i] || String(i), revenue: rv[i], won: wv[i] })}
+            onMouseLeave={hide} />
         ))}
         {/* X labels */}
         {lbls.map((l, i) => (
           <text key={i} x={xOf(i)} y={H-4} textAnchor="middle" fontSize="8" fill="var(--text-muted)" fontFamily="inherit">{l}</text>
         ))}
       </svg>
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={tip.data.label}
+          rows={[
+            { label: 'Revenue', value: fmtCur(tip.data.revenue), color: '#3D5AFE' },
+            { label: 'Deals Won', value: String(tip.data.won), color: '#3DA35D' },
+          ]} />
+      )}
+      </div>
     </div>
   );
 }

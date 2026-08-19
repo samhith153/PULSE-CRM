@@ -19,6 +19,8 @@ import {
   type DealAnalyticsReport,
   type AdminDashboardData,
 } from '@/utils/api';
+import ChartTooltip from './ChartTooltip';
+import { useChartTooltip } from '@/hooks/use-chart-tooltip';
 
 const COLORS = ['var(--lime)', 'var(--brand-soft)', 'var(--brand)', 'var(--status-warning-text)', 'var(--accent-color)', 'var(--chart-5)', 'var(--chart-5)', 'var(--status-success-text)'];
 
@@ -37,36 +39,47 @@ function fmtPct(n: number) { return `${Number(n || 0).toFixed(1)}%`; }
 
 /* ── Custom SVG Bar Chart ───────────────────────────────────────────── */
 function SVBarChart({ data, height = 260 }: { data: { name: string; value: number }[]; height?: number }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ name: string; value: number }>();
   const maxValue = Math.max(...data.map(d => d.value), 1);
   return (
-    <div style={{ height }} className="flex items-end justify-between gap-2 border-b border-border-default px-2 pb-2">
+    <div ref={containerRef} style={{ height }} className="relative flex items-end justify-between gap-2 border-b border-border-default px-2 pb-2">
       {data.map((d, i) => {
         const barHeight = Math.max(8, (d.value / maxValue) * (height - 40));
         return (
-          <div key={d.name} className="flex flex-1 flex-col items-center">
+          <div key={d.name} className="flex flex-1 flex-col items-center cursor-default"
+            onMouseEnter={(e) => show(e, d)}
+            onMouseMove={(e) => show(e, d)}
+            onMouseLeave={hide}>
             <motion.div
               initial={{ height: 0 }}
               animate={{ height: barHeight }}
               transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: i * 0.05 }}
               className="w-full max-w-[48px] rounded-t-lg"
               style={{ backgroundColor: COLORS[i % COLORS.length] }}
-              title={`${d.name}: ${fmtCurrency(d.value)}`}
             />
             <span className="mt-2 text-[10px] font-semibold text-text-muted truncate max-w-[60px] text-center">{d.name}</span>
           </div>
         );
       })}
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={tip.data.name}
+          rows={[{ label: 'Value', value: fmtCurrency(tip.data.value), color: COLORS[0] }]} />
+      )}
     </div>
   );
 }
 
 /* ── Custom SVG Horizontal Bar Chart ────────────────────────────────── */
 function SVHorizontalBarChart({ data, height = 260 }: { data: { name: string; value: number }[]; height?: number }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ name: string; value: number }>();
   const maxValue = Math.max(...data.map(d => d.value), 1);
   return (
-    <div style={{ height }} className="flex flex-col justify-between overflow-hidden">
+    <div ref={containerRef} style={{ height }} className="relative flex flex-col justify-between overflow-hidden">
       {data.map((d, i) => (
-        <div key={d.name} className="flex items-center gap-3">
+        <div key={d.name} className="flex items-center gap-3 cursor-default"
+          onMouseEnter={(e) => show(e, d)}
+          onMouseMove={(e) => show(e, d)}
+          onMouseLeave={hide}>
           <span className="w-[80px] text-[11px] font-semibold text-text-muted truncate text-right">{d.name}</span>
           <div className="flex-1 h-6 bg-muted rounded-full overflow-hidden">
             <motion.div
@@ -80,18 +93,24 @@ function SVHorizontalBarChart({ data, height = 260 }: { data: { name: string; va
           <span className="w-[50px] text-[11px] font-bold text-text-primary tabular-nums text-right">{d.value.toFixed(1)}%</span>
         </div>
       ))}
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={tip.data.name}
+          rows={[{ label: 'Share', value: `${tip.data.value.toFixed(1)}%`, color: COLORS[0] }]} />
+      )}
     </div>
   );
 }
 
 /* ── Custom SVG Grouped Bar Chart ───────────────────────────────────── */
 function SVGroupedBarChart({ data, height = 260 }: { data: { name: string; calls: number; emails: number; meetings: number; tasks: number }[]; height?: number }) {
+  const { containerRef, tip, show, hide } = useChartTooltip<{ name: string; key: string; value: number; color: string }>();
   const allValues = data.flatMap(d => [d.calls, d.emails, d.meetings, d.tasks]);
   const maxValue = Math.max(...allValues, 1);
   const barColors = ['var(--status-success-text)', 'var(--accent-color)', 'var(--status-warning-text)', 'var(--chart-5)'];
+  const barKeys = ['Calls', 'Emails', 'Meetings', 'Tasks'];
 
   return (
-    <div style={{ height }} className="flex items-end justify-between gap-2 border-b border-border-default px-2 pb-2">
+    <div ref={containerRef} style={{ height }} className="relative flex items-end justify-between gap-2 border-b border-border-default px-2 pb-2">
       {data.map((d, i) => {
         const values = [d.calls, d.emails, d.meetings, d.tasks];
         return (
@@ -103,8 +122,11 @@ function SVGroupedBarChart({ data, height = 260 }: { data: { name: string; calls
                   initial={{ height: 0 }}
                   animate={{ height: `${(v / maxValue) * 100}%` }}
                   transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: i * 0.03 + j * 0.02 }}
-                  className="w-2 rounded-t-sm"
+                  className="w-2 rounded-t-sm cursor-pointer"
                   style={{ backgroundColor: barColors[j] }}
+                  onMouseEnter={(e) => show(e, { name: d.name, key: barKeys[j], value: v, color: barColors[j] })}
+                  onMouseMove={(e) => show(e, { name: d.name, key: barKeys[j], value: v, color: barColors[j] })}
+                  onMouseLeave={hide}
                 />
               ))}
             </div>
@@ -112,6 +134,10 @@ function SVGroupedBarChart({ data, height = 260 }: { data: { name: string; calls
           </div>
         );
       })}
+      {tip && (
+        <ChartTooltip x={tip.x} y={tip.y} title={`${tip.data.name} · ${tip.data.key}`}
+          rows={[{ label: tip.data.key, value: String(tip.data.value), color: tip.data.color }]} />
+      )}
     </div>
   );
 }
