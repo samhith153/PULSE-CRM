@@ -144,18 +144,25 @@ function KpiCard({ title, value, sub, delta, up, spark, icon: Icon, hero = false
 }
 
 /* ═══ Revenue Trend bar chart ════════════════════════════════════ */
-function RevenueTrend({ trend, period, onPeriod }: {
-  trend: { period: string; revenue: any }[];
-  period: Period; onPeriod: (p: Period) => void;
-}) {
+function RevenueTrend() {
+  const [period, setPeriod] = useState<Period>('month');
+  const [trend, setTrend] = useState<{ period: string; revenue: any }[]>([]);
+  const [loading, setLoading] = useState(true);
   const { containerRef, tip, show, hide } = useChartTooltip<{ label: string; value: number }>();
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getSalesRepDashboard(period)
+      .then(d => { if (!cancelled) { setTrend(d?.revenue_trend || []); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period]);
+
   const rawVals = trend.map(t => asNumber(t.revenue) || 0);
-  const nonZero = rawVals.filter(v => v > 0);
   const displayVals = rawVals;
   const displayMax  = Math.max(...displayVals, 1);
   const total = rawVals.reduce((s,v) => s + v, 0);
-  const vals = displayVals;
-  const maxV = displayMax;
   const growth = (displayVals.length > 1 && displayVals[displayVals.length - 2] > 0
         ? ((displayVals[displayVals.length-1] - displayVals[displayVals.length-2]) / displayVals[displayVals.length-2]) * 100 : 0);
   const labels = trend.map(t => {
@@ -186,9 +193,13 @@ function RevenueTrend({ trend, period, onPeriod }: {
             {growth >= 0 ? '+' : ''}{growth.toFixed(1)}% vs last period
           </span>
         </div>
-        <PP val={period} set={onPeriod} />
+        <PP val={period} set={setPeriod} />
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center h-[200px]"><Loader2 className="size-4 animate-spin text-accent-color" /></div>
+      ) : (
+      <>
       {/* Chart */}
       <div className="mt-4 flex gap-4">
         <div ref={containerRef} className="flex-1 relative">
@@ -241,6 +252,8 @@ function RevenueTrend({ trend, period, onPeriod }: {
           <p className="mt-1 text-[10px] text-muted-foreground">{displayVals.length} periods tracked</p>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -248,12 +261,28 @@ function RevenueTrend({ trend, period, onPeriod }: {
 /* ═══ Deals by Source donut ══════════════════════════════════════ */
 const SRC_COLORS = ['#3DA35D','#3D5AFE','#F59E0B','#E5484D','#8FA6F2'];
 
-function DealsBySource({ src, period, onPeriod, km }: {
-  src: { source: string; count: number; percentage: any; revenue: any }[];
-  period: Period; onPeriod: (p: Period) => void;
-  km: { open_deals: number; deals_created: number; deals_lost: number; activities_logged: number };
-}) {
+function DealsBySource() {
+  const [period, setPeriod] = useState<Period>('month');
+  const [src, setSrc] = useState<{ source: string; count: number; percentage: any; revenue: any }[]>([]);
+  const [km, setKm] = useState({ open_deals: 0, deals_created: 0, deals_lost: 0, activities_logged: 0 });
+  const [loading, setLoading] = useState(true);
   const { containerRef, tip, show, hide } = useChartTooltip<{ name: string; count: number; pct: number; revenue: any }>();
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getSalesRepDashboard(period)
+      .then(d => {
+        if (!cancelled) {
+          setSrc(d?.deals_by_source || []);
+          const m = d?.key_metrics;
+          setKm({ open_deals: m?.open_deals||0, deals_created: m?.deals_created||0, deals_lost: m?.deals_lost||0, activities_logged: m?.activities_logged||0 });
+          setLoading(false);
+        }
+      })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period]);
   const total = src.reduce((s, x) => s + Number(x.count || 0), 0) || 3;
   const items = src;
   const R = 56, CIRC = 2 * Math.PI * R;
@@ -275,9 +304,13 @@ function DealsBySource({ src, period, onPeriod, km }: {
     <div className="card-surface p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-[14px] font-bold text-foreground">Deals by Source</h2>
-        <PP val={period} set={onPeriod} />
+        <PP val={period} set={setPeriod} />
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center h-[200px]"><Loader2 className="size-4 animate-spin text-accent-color" /></div>
+      ) : (
+      <>
       {/* Donut + legend */}
       <div ref={containerRef} className="relative flex items-center gap-5">
         <div className="relative shrink-0" style={{ width: 130, height: 130 }}>
@@ -333,6 +366,8 @@ function DealsBySource({ src, period, onPeriod, km }: {
           </div>
         ))}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -405,7 +440,7 @@ function DealsByStage({ stages }: { stages: { stage: string; count: number; perc
                     transition={{ duration: 0.7, ease: [0.22,1,0.36,1], delay: i * 0.06 }} />
                 </div>
                 <span className="w-8 text-right font-bold text-foreground tabular-nums">{s.count}</span>
-                <span className="w-9 text-right font-bold tabular-nums" style={{ color: STAGE_COLORS[i] }}>{conv}%</span>
+                <span className="w-9 text-right font-bold tabular-nums" style={{ color: STAGE_COLORS[i] }}>{conv.toFixed(1)}%</span>
               </div>
             );
           })}
@@ -491,11 +526,20 @@ function KeyMetrics({ km }: { km: { open_deals: number; pipeline_value: any; dea
 }
 
 /* ═══ Sales Report Area bar chart ══════════════════════════════ */
-function SalesReportArea({ trend, period, onPeriod }: {
-  trend: { period: string; revenue: any }[];
-  period: Period; onPeriod: (p: Period) => void;
-}) {
+function SalesReportArea() {
+  const [period, setPeriod] = useState<Period>('month');
+  const [trend, setTrend] = useState<{ period: string; revenue: any }[]>([]);
+  const [loading, setLoading] = useState(true);
   const { containerRef, tip, show, hide } = useChartTooltip<{ label: string; value: number }>();
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getSalesRepDashboard(period)
+      .then(d => { if (!cancelled) { setTrend(d?.revenue_trend || []); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period]);
   const vals  = trend.map(t => asNumber(t.revenue) || 0);
   const dv    = vals;
   const mx    = Math.max(...dv, 1);
@@ -519,9 +563,13 @@ function SalesReportArea({ trend, period, onPeriod }: {
             <MoveUpRight className="size-2.5" />+{Math.abs(growth).toFixed(1)}% vs last years
           </span>
         </div>
-        <PP val={period} set={onPeriod} />
+        <PP val={period} set={setPeriod} />
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center h-[200px]"><Loader2 className="size-4 animate-spin text-accent-color" /></div>
+      ) : (
+      <>
       <div ref={containerRef} className="relative">
         {/* Y-axis labels */}
         <div className="absolute left-0 top-0 h-[140px] flex flex-col justify-between text-[9px] text-muted-foreground w-8">
@@ -539,8 +587,8 @@ function SalesReportArea({ trend, period, onPeriod }: {
                 onMouseMove={(e) => show(e, { label: lbls[i] || String(i), value: v })}
                 onMouseLeave={hide}
               >
-                {isLast && ovf && (
-                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-2 py-1 text-[9px] font-bold text-foreground whitespace-nowrap shadow-sm text-center">
+                {isLast && ovf && tip && tip.data.label === lbls[i] && (
+                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-2 py-1 text-[9px] font-bold text-foreground whitespace-nowrap shadow-sm text-center pointer-events-none">
                     Target overflow<br/>by {fmtPct(((v-avg)/avg)*100)} profit
                   </div>
                 )}
@@ -571,6 +619,8 @@ function SalesReportArea({ trend, period, onPeriod }: {
           <p className="text-[18px] font-extrabold text-foreground tabular-nums">{fmtCur(perUnit)}</p>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -578,11 +628,20 @@ function SalesReportArea({ trend, period, onPeriod }: {
 /* ═══ Sales Activity donut ════════════════════════════════════ */
 const ACT_COLORS = ['#3D5AFE','#E5484D','#3DA35D'];
 
-function SalesActivity({ src, period, onPeriod }: {
-  src: { source: string; count: number; percentage: any }[];
-  period: Period; onPeriod: (p: Period) => void;
-}) {
+function SalesActivity() {
+  const [period, setPeriod] = useState<Period>('month');
+  const [src, setSrc] = useState<{ source: string; count: number; percentage: any }[]>([]);
+  const [loading, setLoading] = useState(true);
   const { containerRef, tip, show, hide } = useChartTooltip<{ name: string; count: number; pct: number }>();
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getSalesRepDashboard(period)
+      .then(d => { if (!cancelled) { setSrc(d?.deals_by_source || []); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period]);
   const items = src.slice(0, 3);
   const total = items.reduce((s, x) => s + Number(x.count || 0), 0) || 100;
   const R = 52, CIRC = 2 * Math.PI * R;
@@ -598,8 +657,12 @@ function SalesActivity({ src, period, onPeriod }: {
     <div className="card-surface p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-[14px] font-bold text-foreground">Sales Activity</h2>
-        <PP val={period} set={onPeriod} />
+        <PP val={period} set={setPeriod} />
       </div>
+      {loading ? (
+        <div className="flex items-center justify-center h-[200px]"><Loader2 className="size-4 animate-spin text-accent-color" /></div>
+      ) : (
+      <>
       <div ref={containerRef} className="relative flex items-center gap-6">
         {/* Donut */}
         <div className="relative shrink-0" style={{ width: 130, height: 130 }}>
@@ -645,6 +708,8 @@ function SalesActivity({ src, period, onPeriod }: {
             ]} />
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -668,10 +733,20 @@ function stageBadge(stage: string) {
   );
 }
 
-function TopDeals({ deals, period, onPeriod }: {
-  deals: any[];
-  period: Period; onPeriod: (p: Period) => void;
-}) {
+function TopDeals() {
+  const [period, setPeriod] = useState<Period>('month');
+  const [deals, setDeals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getSalesRepDashboard(period)
+      .then(d => { if (!cancelled) { setDeals((d as any)?.top_deals || []); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period]);
+
   const rows = deals.slice(0, 5).map(d => ({
         id: d.id || d.deal_id,
         company: d.company_name || d.company || '—',
@@ -684,8 +759,12 @@ function TopDeals({ deals, period, onPeriod }: {
     <div className="card-surface p-5 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="min-w-0 text-[14px] font-bold text-foreground">Top Deals</h2>
-        <PP val={period} set={onPeriod} />
+        <PP val={period} set={setPeriod} />
       </div>
+      {loading ? (
+        <div className="flex items-center justify-center h-[200px]"><Loader2 className="size-4 animate-spin text-accent-color" /></div>
+      ) : (
+      <>
       <div className="overflow-x-auto">
         <table className="w-full text-[11px]">
           <thead>
@@ -711,6 +790,8 @@ function TopDeals({ deals, period, onPeriod }: {
       <button className="mt-3 flex items-center gap-1 text-[11px] font-bold text-accent-color hover:underline">
         View all deals <ChevronRight className="size-3" />
       </button>
+      </>
+      )}
     </div>
   );
 }
@@ -775,11 +856,23 @@ function RecentActivities({ acts }: { acts: { id: string; title?: string; action
 }
 
 /* ═══ Performance Over Time dual-axis line chart ════════════ */
-function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) {
+function PerfOverTime() {
+  const [period, setPeriod] = useState<Period>('month');
+  const [trend, setTrend] = useState<{ period: string; revenue: any }[]>([]);
+  const [loading, setLoading] = useState(true);
   const { containerRef, tip, show, hide } = useChartTooltip<{ label: string; revenue: number; won: number }>();
   const [timeframe, setTimeframe] = useState('YTD');
   const timeframeOptions = ['Year to Date', 'Last 6 Months', 'This Quarter', 'This Month'];
   const tfKey = (label: string) => label === 'Year to Date' ? 'YTD' : label.toLowerCase().replace(/\s+/g, '');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    getSalesRepDashboard(period)
+      .then(d => { if (!cancelled) { setTrend(d?.revenue_trend || []); setLoading(false); } })
+      .catch(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [period]);
 
   const parsePeriod = (p: string): Date | null => {
     if (/^\d{4}-\d{2}$/.test(p)) return new Date(p.replace('-', '/') + '/01');
@@ -853,7 +946,8 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
     <div className="card-surface p-5 min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="min-w-0 text-[14px] font-bold text-foreground">Performance Over Time</h2>
-        <div className="flex flex-wrap items-center gap-4 whitespace-nowrap text-[10px] shrink-0">
+        <div className="flex flex-wrap items-center gap-3 whitespace-nowrap text-[10px] shrink-0">
+          <PP val={period} set={setPeriod} />
           <span className="flex items-center gap-1.5 text-accent-color font-semibold">
             <span className="h-0.5 w-4 rounded-full bg-accent-color inline-block" /> Revenue
           </span>
@@ -870,6 +964,10 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
         </div>
       </div>
 
+      {loading ? (
+        <div className="flex items-center justify-center h-[300px]"><Loader2 className="size-4 animate-spin text-accent-color" /></div>
+      ) : (
+      <>
       <div ref={containerRef} className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: H }} preserveAspectRatio="none">
         <defs>
@@ -935,6 +1033,8 @@ function PerfOverTime({ trend }: { trend: { period: string; revenue: any }[] }) 
           ]} />
       )}
       </div>
+      </>
+      )}
     </div>
   );
 }
@@ -1014,6 +1114,7 @@ export default function ReportsView() {
           <p className="mt-0.5 text-[12px] text-muted-foreground">Performance overview backed by live data.</p>
         </div>
         <div className="flex items-center gap-3">
+          <PP val={period} set={setPeriod} />
           <button onClick={handleExport}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-2 cursor-pointer">
             <Upload className="size-3.5" /> Export
@@ -1051,9 +1152,8 @@ export default function ReportsView() {
 
       {/* Revenue Trend + Deals by Source */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[7fr_5fr]">
-        <RevenueTrend trend={trend} period={period} onPeriod={setPeriod} />
-        <DealsBySource src={data.deals_by_source || []} period={period} onPeriod={setPeriod}
-          km={{ open_deals: km?.open_deals||0, deals_created: km?.deals_created||0, deals_lost: km?.deals_lost||0, activities_logged: km?.activities_logged||0 }} />
+        <RevenueTrend />
+        <DealsBySource />
       </div>
 
       {/* Deals by Stage + Key Metrics */}
@@ -1064,18 +1164,18 @@ export default function ReportsView() {
 
       {/* Sales Report Area + Sales Activity */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[7fr_5fr]">
-        <SalesReportArea trend={trend} period={period} onPeriod={setPeriod} />
-        <SalesActivity src={data.deals_by_source?.slice(0,3) || []} period={period} onPeriod={setPeriod} />
+        <SalesReportArea />
+        <SalesActivity />
       </div>
 
       {/* Top Deals + Recent Activities */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[7fr_5fr]">
-        <TopDeals deals={(data as any).top_deals || []} period={period} onPeriod={setPeriod} />
+        <TopDeals />
         <RecentActivities acts={acts} />
       </div>
 
       {/* Performance Over Time */}
-      <PerfOverTime trend={trend} />
+      <PerfOverTime />
 
       {/* Footer */}
       <p className="text-center text-[10px] text-muted-foreground pt-2">

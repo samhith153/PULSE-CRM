@@ -30,32 +30,48 @@ class EventWorker:
         processed = 0
         async with self.session_factory() as db:
             repository = EventRepository(db)
-            for event in await repository.list_pending(limit=batch_size):
+            pending_events = await repository.list_pending(limit=batch_size)
+            for event in pending_events:
+                event_id = event.id
                 try:
-                    await self._dispatch_outbox_event(db, event)
-                    await repository.mark_processed(event)
+                    envelope = self._to_envelope(event)
+                    # Phase 1: run consumers (flushes notification rows, timeline, etc.)
+                    consumers = [
+                        TimelineProjectionConsumer(db),
+                        NotificationConsumer(db),
+                        EmailProjectionConsumer(),
+                        LoggingConsumer(),
+                    ]
+                    for consumer in consumers:
+                        await consumer.handle(envelope)
+                    # Commit BEFORE publishing SSE so the frontend query can see the rows
+                    await db.commit()
+                    # Phase 2: publish to event bus (SSE push + subscribers)
+                    await self.bus.publish(envelope)
+                    # Mark processed (re-fetch after commit since session was reset)
+                    fresh = await repository.get_by_id(event_id)
+                    if fresh:
+                        await repository.mark_processed(fresh)
+                        await db.commit()
                     processed += 1
                 except Exception as exc:
-                    await repository.mark_retry(event, str(exc), max_attempts=self.max_attempts)
-            await db.commit()
+                    try:
+                        await db.rollback()
+                    except Exception:
+                        pass
+                    try:
+                        fresh = await repository.get_by_id(event_id)
+                        if fresh:
+                            await repository.mark_retry(fresh, str(exc), max_attempts=self.max_attempts)
+                            await db.commit()
+                    except Exception:
+                        pass
         return processed
 
     async def run_forever(self, sleep_seconds: float = 1.0) -> None:  # pragma: no cover - loop helper
         while True:
             await self.run_once()
             await asyncio.sleep(sleep_seconds)
-
-    async def _dispatch_outbox_event(self, db: AsyncSession, event: EventOutbox) -> None:
-        envelope = self._to_envelope(event)
-        consumers = [
-            TimelineProjectionConsumer(db),
-            NotificationConsumer(db),
-            EmailProjectionConsumer(),
-            LoggingConsumer(),
-        ]
-        for consumer in consumers:
-            await consumer.handle(envelope)
-        await self.bus.publish(envelope)
 
     def _to_envelope(self, event: EventOutbox) -> EventEnvelope:
         payload = dict(event.payload or {})
