@@ -539,8 +539,8 @@ function SalesReportArea({ trend, period, onPeriod }: {
                 onMouseMove={(e) => show(e, { label: lbls[i] || String(i), value: v })}
                 onMouseLeave={hide}
               >
-                {isLast && ovf && (
-                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-2 py-1 text-[9px] font-bold text-foreground whitespace-nowrap shadow-sm text-center">
+                {isLast && ovf && tip && tip.data.label === lbls[i] && (
+                  <div className="absolute -top-9 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-2 py-1 text-[9px] font-bold text-foreground whitespace-nowrap shadow-sm text-center pointer-events-none">
                     Target overflow<br/>by {fmtPct(((v-avg)/avg)*100)} profit
                   </div>
                 )}
