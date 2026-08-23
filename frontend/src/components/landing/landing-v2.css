@@ -1,0 +1,177 @@
+/* ═══════════════════════════════════════════════════════════
+   Pulse Landing v2 — "Signal Instrument" design system.
+   Scoped under .pl-root so the marketing site carries a
+   forced-dark identity independent of the app theme.
+   ═══════════════════════════════════════════════════════════ */
+
+.pl-root {
+  --pl-bg: #04060b;
+  --pl-bg-2: #070a12;
+  --pl-panel: #090d15;
+  --pl-panel-2: #0c1322;
+  --pl-line: rgba(255, 255, 255, 0.08);
+  --pl-line-strong: rgba(255, 255, 255, 0.16);
+  --pl-text: #eaf0f6;
+  --pl-muted: #8f9cb0;
+  --pl-dim: #5a6478;
+  --pl-mint: #00e599;
+  --pl-blue: #4da3ff;
+  --pl-hot: #ff6b4a;
+  --pl-amber: #ffb454;
+
+  background-color: var(--pl-bg);
+  color: var(--pl-text);
+}
+
+/* Expose pl-* tokens as Tailwind color utilities (bg-pl-mint, text-pl-muted, …) */
+@theme inline {
+  --color-pl-mint: var(--pl-mint);
+  --color-pl-blue: var(--pl-blue);
+  --color-pl-hot: var(--pl-hot);
+  --color-pl-amber: var(--pl-amber);
+  --color-pl-text: var(--pl-text);
+  --color-pl-muted: var(--pl-muted);
+  --color-pl-dim: var(--pl-dim);
+  --color-pl-line: var(--pl-line);
+  --color-pl-panel: var(--pl-panel);
+  --color-pl-panel2: var(--pl-panel-2);
+  --color-pl-bg: var(--pl-bg);
+}
+
+/* ── Blueprint grids & masks ── */
+.pl-grid {
+  background-image:
+    linear-gradient(to right, rgba(148, 163, 184, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.055) 1px, transparent 1px);
+  background-size: 46px 46px;
+}
+.pl-grid-fade {
+  -webkit-mask-image: radial-gradient(ellipse 90% 72% at 50% 0%, black 22%, transparent 76%);
+  mask-image: radial-gradient(ellipse 90% 72% at 50% 0%, black 22%, transparent 76%);
+}
+.pl-mask-x {
+  -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+.pl-mask-b {
+  -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent);
+  mask-image: linear-gradient(to bottom, black 55%, transparent);
+}
+
+.pl-display { letter-spacing: -0.035em; }
+
+/* ── Motion ── */
+@keyframes pl-ecg-sweep {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: -100; }
+}
+.pl-ecg-sweep { animation: pl-ecg-sweep 7s linear infinite; }
+
+@keyframes pl-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+.pl-blink { animation: pl-blink 1.5s ease-in-out infinite; }
+
+@keyframes pl-pulse-ring {
+  0%   { transform: scale(0.55); opacity: 0.75; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+.pl-pulse-ring { animation: pl-pulse-ring 2.6s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+
+@keyframes pl-float-y {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.pl-float-y { animation: pl-float-y 7s ease-in-out infinite; }
+.pl-float-y-late { animation: pl-float-y 8.5s ease-in-out -3.2s infinite; }
+
+@keyframes pl-spin-slow { to { transform: rotate(360deg); } }
+.pl-spin-slow { animation: pl-spin-slow 18s linear infinite; }
+.pl-spin-rev { animation: pl-spin-slow 26s linear infinite reverse; }
+
+@keyframes pl-feed-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+.pl-feed-in { animation: pl-feed-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+@keyframes pl-glow-breathe {
+  0%, 100% { opacity: 0.5; }
+  50%      { opacity: 1; }
+}
+.pl-glow-breathe { animation: pl-glow-breathe 4.5s ease-in-out infinite; }
+
+@keyframes pl-orbit {
+  from { transform: rotate(0deg) translateX(var(--pl-r, 120px)) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(var(--pl-r, 120px)) rotate(-360deg); }
+}
+.pl-orbit { animation: pl-orbit var(--pl-dur, 20s) linear infinite; }
+
+/* ── Surfaces & controls ── */
+.pl-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.008));
+  border: 1px solid var(--pl-line);
+  border-radius: 20px;
+}
+.pl-card-hover {
+  transition: border-color 0.25s ease, box-shadow 0.25s ease,
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pl-card-hover:hover {
+  border-color: var(--pl-line-strong);
+  transform: translateY(-3px);
+  box-shadow: 0 30px 70px -35px rgba(0, 0, 0, 0.85);
+}
+
+.pl-btn-primary {
+  background: var(--pl-mint);
+  color: #03130c;
+  box-shadow: 0 12px 40px -12px rgba(0, 229, 153, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+.pl-btn-primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 16px 48px -12px rgba(0, 229, 153, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.pl-btn-ghost {
+  border: 1px solid var(--pl-line-strong);
+  color: var(--pl-text);
+  background: rgba(255, 255, 255, 0.02);
+  transition: border-color 0.2s ease, background-color 0.2s ease,
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.pl-btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-1px);
+}
+
+/* hero keyword gradient */
+.pl-grad-text {
+  background: linear-gradient(92deg, #00e599 0%, #4da3ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.pl-no-scroll-x { scrollbar-width: none; -ms-overflow-style: none; }
+.pl-no-scroll-x::-webkit-scrollbar { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pl-ecg-sweep,
+  .pl-blink,
+  .pl-pulse-ring,
+  .pl-float-y,
+  .pl-float-y-late,
+  .pl-spin-slow,
+  .pl-spin-rev,
+  .pl-feed-in,
+  .pl-glow-breathe,
+  .pl-orbit {
+    animation: none !important;
+  }
+}

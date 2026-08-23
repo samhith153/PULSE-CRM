@@ -1,62 +1,59 @@
+"use client";
+
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 
-const PHRASES = [
-  "close more deals",
-  "never miss a follow-up",
-  "convert faster",
-  "beat their quota",
-];
+const DEFAULT_PHRASES = ["action.", "priority.", "revenue.", "momentum."];
 
-const LONGEST = PHRASES.reduce((a, b) => (b.length > a.length ? b : a), PHRASES[0]);
+const HOLD_MS = 2600;
 
-const HOLD_MS = 2300;
+type CyclingPhraseProps = {
+  className?: string;
+  phrases?: string[];
+  interval?: number;
+};
 
-export function CyclingPhrase({ className }: { className?: string }) {
+export function CyclingPhrase({ className, phrases = DEFAULT_PHRASES, interval }: CyclingPhraseProps) {
   const [index, setIndex] = useState(0);
   const reduceMotion = useReducedMotion();
+  const hold = interval ?? HOLD_MS;
+  const longest = phrases.reduce((a, b) => (b.length > a.length ? b : a), phrases[0]);
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setIndex((i) => (i + 1) % PHRASES.length);
-    }, HOLD_MS + 800);
+      setIndex((i) => (i + 1) % phrases.length);
+    }, hold + 750);
     return () => window.clearInterval(id);
-  }, []);
+  }, [phrases.length, hold]);
 
   return (
-    <span className={`relative inline-block align-top ${className ?? ""}`}>
+    <span className={`relative inline-block align-baseline ${className ?? ""}`}>
       {/* invisible spacer reserves space for the longest phrase */}
       <span aria-hidden className="invisible whitespace-nowrap">
-        {LONGEST}
+        {longest}
       </span>
-
-      <span className="absolute inset-0 flex items-center justify-center">
+      <span className="absolute inset-0 flex items-start justify-start">
         <AnimatePresence initial={false}>
           <motion.span
-            key={PHRASES[index]}
+            key={phrases[index]}
             initial={
               reduceMotion
                 ? { opacity: 0 }
-                : { opacity: 0, filter: "blur(10px) drop-shadow(0 0 14px oklch(0.8168 0.1193 205.31 / 0.6)) drop-shadow(0 0 32px oklch(0.5124 0.209 274.64 / 0.35))", scale: 1.05, y: 6 }
+                : { opacity: 0, y: "0.35em", filter: "blur(8px)" }
             }
-            animate={
-              reduceMotion
-                ? { opacity: 1 }
-                : { opacity: 1, filter: "blur(0px) drop-shadow(0 0 14px oklch(0.8168 0.1193 205.31 / 0.6)) drop-shadow(0 0 32px oklch(0.5124 0.209 274.64 / 0.35))", scale: 1, y: 0 }
-            }
+            animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={
               reduceMotion
                 ? { opacity: 0 }
-                : { opacity: 0, filter: "blur(8px) drop-shadow(0 0 14px oklch(0.8168 0.1193 205.31 / 0.6)) drop-shadow(0 0 32px oklch(0.5124 0.209 274.64 / 0.35))", scale: 0.97, y: -6 }
+                : { opacity: 0, y: "-0.3em", filter: "blur(6px)" }
             }
-            transition={{ duration: reduceMotion ? 0.3 : 0.8, ease: [0.42, 0, 0.58, 1] }}
-            className="absolute whitespace-nowrap cycling-glow"
+            transition={{ duration: reduceMotion ? 0.3 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+            className="pl-grad-text whitespace-nowrap"
           >
-            {PHRASES[index]}
+            {phrases[index]}
           </motion.span>
         </AnimatePresence>
       </span>
-      
     </span>
   );
 }

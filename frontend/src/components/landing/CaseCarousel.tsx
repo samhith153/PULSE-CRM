@@ -1,5 +1,6 @@
-import { useReveal } from "@/hooks/use-reveal";
+"use client";
 
+import { useReveal } from "@/hooks/use-reveal";
 
 const cases = [
   {
@@ -19,7 +20,7 @@ const cases = [
   {
     company: "Lumen Software",
     rep: "Priya Nandra, RevOps Lead",
-    stat: "₹2.1Cr added pipeline",
+    stat: "$2.1M added pipeline",
     quote:
       "The recommendations surfaced deals we'd written off. Two of them became our largest renewals.",
   },
@@ -37,17 +38,20 @@ export function CaseCarousel() {
   const loop = [...cases, ...cases];
 
   return (
-    <section className="overflow-hidden bg-background py-24 md:py-32">
+    <section className="overflow-hidden py-24 md:py-32">
       <div ref={ref} className="mx-auto max-w-7xl px-6">
-        <div className="reveal" data-visible={visible}>
-          <h2 className="min-w-0 text-3xl leading-tight font-bold tracking-tight md:text-[2.5rem]">
+        <div className="reveal flex flex-wrap items-end justify-between gap-4" data-visible={visible}>
+          <h2 className="pl-display min-w-0 text-3xl font-bold tracking-tight text-white md:text-[2.5rem]">
             Teams closing more with Pulse
           </h2>
+          <p className="font-mono text-[11px] font-semibold tracking-[0.24em] text-pl-dim">
+            FIELD RESULTS · REAL PIPELINES
+          </p>
         </div>
       </div>
 
       <div
-        className="reveal group mt-10 [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]"
+        className="pl-mask-x reveal group mt-12"
         data-visible={visible}
         style={{ transitionDelay: "100ms" }}
       >
@@ -55,15 +59,20 @@ export function CaseCarousel() {
           {loop.map((c, i) => (
             <article
               key={`${c.company}-${i}`}
-              className="w-[86vw] shrink-0 rounded-3xl border border-border bg-surface-warm p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-float sm:w-[46vw] lg:w-[26rem]"
+              className="pl-card pl-card-hover w-[86vw] shrink-0 p-7 sm:w-[46vw] lg:w-[26rem]"
             >
-              <p className="grad-blue-purple bg-clip-text text-2xl font-bold text-transparent">
-                {c.stat}
+              <p className="pl-grad-text font-mono text-xl font-bold tracking-tight">{c.stat}</p>
+              <p className="mt-5 min-h-[7rem] text-[15px] leading-relaxed text-white/85">
+                &ldquo;{c.quote}&rdquo;
               </p>
-              <p className="mt-5 text-base leading-relaxed text-ink">"{c.quote}"</p>
-              <div className="mt-8 border-t border-border pt-5">
-                <p className="text-sm font-semibold">{c.company}</p>
-                <p className="text-sm text-muted-foreground">{c.rep}</p>
+              <div className="mt-6 flex items-center gap-3 border-t border-white/[0.07] pt-5">
+                <span className="grid size-9 place-items-center rounded-lg border border-white/[0.09] bg-white/[0.03] font-mono text-xs font-bold text-pl-mint">
+                  {c.company.slice(0, 1)}
+                </span>
+                <span>
+                  <span className="block text-sm font-semibold text-white">{c.company}</span>
+                  <span className="block text-xs text-pl-muted">{c.rep}</span>
+                </span>
               </div>
             </article>
           ))}
@@ -72,4 +81,3 @@ export function CaseCarousel() {
     </section>
   );
 }
-

@@ -1,7 +1,9 @@
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowRight, RefreshCw } from "lucide-react";
 import { useReveal } from "@/hooks/use-reveal";
-import { PillButton } from "@/components/landing/PillButton";
+import { cn } from "@/lib/utils";
 
 type Step = {
   letter: string;
@@ -96,13 +98,14 @@ export function FrameworkSection() {
   const [inView, setInView] = useState(false);
   const [paused, setPaused] = useState(false);
 
-  // pause the timer while the section is out of view
+  /* pause the timer while the section is out of view */
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
-    const io = new IntersectionObserver((entries) => setInView(entries[0]?.isIntersecting ?? false), {
-      threshold: 0.25,
-    });
+    const io = new IntersectionObserver(
+      (entries) => setInView(entries[0]?.isIntersecting ?? false),
+      { threshold: 0.25 },
+    );
     io.observe(el);
     return () => io.disconnect();
   }, []);
@@ -111,7 +114,10 @@ export function FrameworkSection() {
 
   useEffect(() => {
     if (!running) return;
-    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+    if (
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    )
       return;
     let frame = 0;
     const start = performance.now() - progress * DURATION;
@@ -130,12 +136,12 @@ export function FrameworkSection() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, active]);
 
-  // resume auto-advance a few seconds after a manual pick
+  /* resume auto-advance a few seconds after a manual pick */
   useEffect(() => {
     if (!paused) return;
     const id = setTimeout(() => setPaused(false), 6000);
     return () => clearTimeout(id);
-  }, [paused, active]);
+  }, [paused]);
 
   const pick = useCallback((i: number) => {
     setActive(i);
@@ -149,33 +155,36 @@ export function FrameworkSection() {
     <section
       ref={sectionRef}
       id="pulse-framework"
-      className="relative overflow-hidden bg-secondary py-24 md:py-32"
+      className="relative overflow-hidden border-y border-white/[0.06] bg-[#060910] py-24 md:py-32"
     >
       {/* decorative diagonal watermark */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.05]"
+        className="pointer-events-none absolute inset-0 opacity-[0.04]"
         style={{
           backgroundImage:
-            "repeating-linear-gradient(135deg, var(--ink) 0px, var(--ink) 1px, transparent 1px, transparent 22px)",
+            "repeating-linear-gradient(135deg, #eaf0f6 0px, #eaf0f6 1px, transparent 1px, transparent 22px)",
         }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-24 right-[-6rem] h-[28rem] w-[28rem] rotate-12 rounded-[4rem] border border-ink/[0.06]"
+        className="pointer-events-none absolute -top-24 right-[-6rem] h-[28rem] w-[28rem] rotate-12 rounded-[4rem] border border-white/[0.05]"
       />
 
       <div ref={ref} className="relative mx-auto max-w-7xl px-6">
         {/* header */}
         <div className="reveal mx-auto max-w-2xl text-center" data-visible={visible}>
           <div className="flex items-center justify-center gap-3">
-            <span className="h-px w-8 bg-brand-cyan" />
-            <span className="text-xs font-medium tracking-[0.22em] text-muted-foreground uppercase">
-              Proprietary Framework
+            <span className="h-px w-8 bg-pl-mint/70" aria-hidden />
+            <span className="font-mono text-[11px] font-semibold tracking-[0.26em] text-pl-dim">
+              THE PULSE FRAMEWORK
             </span>
+            <span className="h-px w-8 bg-pl-mint/70" aria-hidden />
           </div>
-          <h2 className="mt-5 text-4xl font-bold tracking-tight md:text-6xl">PULSE</h2>
-          <p className="mt-4 text-lg leading-relaxed text-muted-foreground">
+          <h2 className="pl-display mt-5 text-5xl font-bold tracking-tight text-white md:text-7xl">
+            PULSE
+          </h2>
+          <p className="mt-4 text-lg leading-relaxed text-pl-muted">
             Five operating motions that turn cold leads into closed deals, every week.
           </p>
         </div>
@@ -185,7 +194,7 @@ export function FrameworkSection() {
           <div className="reveal relative" data-visible={visible}>
             <div
               aria-hidden
-              className="absolute top-8 bottom-16 left-[3.05rem] w-px bg-border md:left-[3.3rem]"
+              className="absolute top-8 bottom-16 left-[3.05rem] w-px bg-white/[0.07] md:left-[3.3rem]"
             />
             <ul className="relative space-y-1">
               {STEPS.map((s, i) => {
@@ -196,35 +205,41 @@ export function FrameworkSection() {
                       type="button"
                       onClick={() => pick(i)}
                       aria-current={isActive}
-                      className={`relative flex w-full items-center gap-4 rounded-2xl px-4 py-3.5 text-left transition-all duration-400 ease-out ${
-                        isActive ? "bg-background shadow-float" : "hover:bg-background/60"
-                      }`}
+                      className={cn(
+                        "relative flex w-full items-center gap-4 rounded-2xl border px-4 py-3.5 text-left transition-all duration-400 ease-out",
+                        isActive
+                          ? "border-white/[0.09] bg-white/[0.04]"
+                          : "border-transparent hover:bg-white/[0.02]",
+                      )}
                     >
-                      <span className="w-6 shrink-0 text-xs tracking-widest text-muted-foreground tabular-nums">
+                      <span className="w-6 shrink-0 font-mono text-xs tracking-widest text-pl-dim tabular-nums">
                         {String(i + 1).padStart(2, "0")}
                       </span>
                       <span
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold transition-all duration-400 ease-out ${
+                        className={cn(
+                          "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-base font-bold transition-all duration-400 ease-out",
                           isActive
-                            ? "bg-brand-blue text-background shadow-nav"
-                            : "border border-border bg-background text-ink/70"
-                        }`}
+                            ? "bg-pl-mint text-[#03130c] shadow-[0_0_28px_-6px_rgba(0,229,153,0.65)]"
+                            : "border border-white/[0.1] text-white/55",
+                        )}
                       >
                         {s.letter}
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-base font-semibold tracking-tight">{s.title}</span>
-                        <span className="mt-0.5 block text-[11px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
+                        <span className="block text-base font-semibold tracking-tight text-white">
+                          {s.title}
+                        </span>
+                        <span className="mt-0.5 block font-mono text-[10px] font-medium tracking-[0.2em] text-pl-dim uppercase">
                           {s.kicker}
                         </span>
                       </span>
                       {isActive && (
                         <span
                           aria-hidden
-                          className="absolute right-4 bottom-2 left-16 h-0.5 overflow-hidden rounded-full bg-border/70"
+                          className="absolute right-4 bottom-2 left-16 h-0.5 overflow-hidden rounded-full bg-white/[0.08]"
                         >
                           <span
-                            className="block h-full rounded-full bg-brand-blue"
+                            className="block h-full rounded-full bg-gradient-to-r from-pl-mint to-pl-blue"
                             style={{
                               width: `${Math.round(progress * 100)}%`,
                               transition: paused ? "width 300ms ease-out" : "none",
@@ -238,34 +253,39 @@ export function FrameworkSection() {
               })}
             </ul>
 
-            <div className="mt-8 flex items-center gap-2 pl-4 text-[11px] font-medium tracking-[0.18em] text-muted-foreground uppercase">
-              <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            <div className="mt-8 flex items-center gap-2 pl-4 font-mono text-[10px] font-medium tracking-[0.22em] text-pl-dim uppercase">
+              <RefreshCw className="size-3.5" aria-hidden />
               The cycle repeats, every week
             </div>
           </div>
 
           {/* right: detail card */}
           <div className="reveal" data-visible={visible} style={{ transitionDelay: "120ms" }}>
-            <div className="rounded-3xl bg-background p-7 shadow-float md:p-10">
+            <div className="pl-card rounded-3xl p-7 shadow-[0_50px_120px_-45px_rgba(0,0,0,0.9)] md:p-10">
               <div key={active} className="framework-swap">
                 <div className="flex items-center gap-4">
-                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-blue text-xl font-bold text-background">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-pl-mint to-pl-blue text-xl font-bold text-[#03130c]">
                     {step.letter}
                   </span>
                   <div className="min-w-0">
-                    <h3 className="text-2xl font-bold tracking-tight uppercase">{step.title}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <h3 className="text-2xl font-bold tracking-tight text-white uppercase">
+                      {step.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-pl-muted">
                       {step.category} · {step.tagline}
                     </p>
                   </div>
                 </div>
 
-                <p className="mt-6 text-base leading-relaxed text-ink/80">{step.body}</p>
+                <p className="mt-6 text-base leading-relaxed text-pl-muted">{step.body}</p>
 
                 <ul className="mt-7 grid gap-x-8 gap-y-3 sm:grid-cols-2">
                   {step.bullets.map((b) => (
-                    <li key={b} className="flex gap-2.5 text-sm leading-relaxed text-ink/75">
-                      <span aria-hidden className="mt-2 h-1.5 w-1.5 shrink-0 rounded-[2px] bg-brand-cyan" />
+                    <li key={b} className="flex gap-2.5 text-sm leading-relaxed text-white/80">
+                      <span
+                        aria-hidden
+                        className="mt-2 size-1.5 shrink-0 rounded-[2px] bg-pl-mint"
+                      />
                       {b}
                     </li>
                   ))}
@@ -274,10 +294,13 @@ export function FrameworkSection() {
             </div>
 
             <div className="mt-8 flex justify-center lg:justify-start">
-              <PillButton variant="outline" size="md" className="group">
+              <button
+                type="button"
+                className="pl-btn-ghost arrow-nudge inline-flex h-11 items-center gap-2 rounded-full px-6 text-sm font-semibold"
+              >
                 Learn more about PULSE
-                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5" />
-              </PillButton>
+                <ArrowRight className="size-4" />
+              </button>
             </div>
           </div>
         </div>

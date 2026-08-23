@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useReveal } from "@/hooks/use-reveal";
 
@@ -14,7 +16,6 @@ const consensus = "/landing/logos/consensus.svg";
 const cartesia = "/landing/logos/cartesia.svg";
 
 type Logo = { src: string; alt: string };
-
 type Segment = Logo[];
 
 const segments: Segment[] = [
@@ -67,16 +68,17 @@ function LogoSegment({ logos, offset }: { logos: Logo[]; offset: number }) {
 
   return (
     <div
-      className="group relative flex h-24 items-center justify-center overflow-hidden px-6"
+      className="group relative flex h-20 items-center justify-center overflow-hidden px-6 md:h-24"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
+      {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         key={current.alt}
         src={current.src}
         alt={current.alt}
         loading="lazy"
-        className="absolute h-7 w-auto max-w-[80%] object-contain opacity-45 grayscale transition-[opacity,filter] duration-300 group-hover:opacity-100 group-hover:grayscale-0 md:h-8"
+        className="absolute h-6 w-auto max-w-[80%] object-contain opacity-40 grayscale brightness-0 invert transition-[opacity,filter] duration-300 group-hover:opacity-90 md:h-7"
         style={{ animation: "logo-slot-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both" }}
       />
     </div>
@@ -87,19 +89,23 @@ export function LogoClusters() {
   const { ref, visible } = useReveal<HTMLDivElement>(0.1);
 
   return (
-    <section className="border-y border-cream-border bg-background">
+    <section className="border-y border-white/[0.06] bg-[#05070d]">
       <div
         ref={ref}
-        className="reveal mx-auto grid max-w-[1400px] grid-cols-2 divide-x divide-cream-border sm:grid-cols-3 lg:grid-cols-5"
+        className="reveal mx-auto grid max-w-[1400px] grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
         data-visible={visible}
       >
-        <div className="col-span-2 flex h-24 items-center px-8 sm:col-span-1">
-          <p className="max-w-[15rem] text-[0.95rem] leading-snug font-medium text-ink">
-            Trusted by fast-growing companies around the world.
+        <div className="col-span-2 flex h-16 items-center px-6 sm:col-span-1 md:h-24 md:px-8">
+          <p className="font-mono text-[10.5px] leading-relaxed font-medium tracking-[0.2em] text-pl-dim">
+            TRUSTED BY FAST-GROWING TEAMS
           </p>
         </div>
         {segments.map((logos, i) => (
-          <LogoSegment key={logos[0].alt} logos={logos} offset={i} />
+          <LogoSegment
+            key={logos[0].alt}
+            logos={logos}
+            offset={i}
+          />
         ))}
       </div>
     </section>

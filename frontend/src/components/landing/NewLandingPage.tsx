@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { SiteHeader } from "./SiteHeader";
+import "./landing-v2.css";
+import { LandingNav } from "./LandingNav";
 import { Hero } from "./Hero";
 import { LogoClusters } from "./LogoClusters";
 import { DarkBand } from "./DarkBand";
@@ -18,23 +19,17 @@ interface NewLandingPageProps {
   onLogin: (role: "representative" | "manager" | "admin") => void;
 }
 
+/**
+ * Pulse landing — "Signal Instrument" edition.
+ * Forced-dark marketing shell; all app functionality (auth modal,
+ * navigation routes, CTAs) is preserved exactly.
+ */
 export default function NewLandingPage({ onLogin }: NewLandingPageProps) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<"signin" | "signup">("signup");
-
-  const openSignUp = () => {
-    setAuthModalMode("signup");
-    setIsAuthModalOpen(true);
-  };
-
-  const openSignIn = () => {
-    setAuthModalMode("signin");
-    setIsAuthModalOpen(true);
-  };
 
   return (
-    <div className="min-h-screen bg-background text-foreground antialiased">
-      <SiteHeader />
+    <div className="pl-root min-h-screen antialiased">
+      <LandingNav />
       <main>
         <Hero />
         <LogoClusters />
@@ -51,7 +46,7 @@ export default function NewLandingPage({ onLogin }: NewLandingPageProps) {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        defaultMode={authModalMode}
+        defaultMode="signup"
         onSuccess={() => {
           setIsAuthModalOpen(false);
           const role = (localStorage.getItem("pulse-crm-role") as any) || "manager";

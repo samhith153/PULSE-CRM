@@ -1,4 +1,6 @@
-// Brand icons were removed from lucide-react in v1.x, so these are inlined SVGs.
+"use client";
+
+/* Brand icons were removed from lucide-react in v1.x, so these are inlined SVGs. */
 function GithubIcon({ size = 15 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -42,53 +44,83 @@ const socials = [XTwitterIcon, LinkedinIcon, GithubIcon, YoutubeIcon];
 
 export function SiteFooter() {
   return (
-    <footer className="relative overflow-hidden bg-ink text-primary-foreground">
-      <div aria-hidden className="pointer-events-none absolute inset-0 footer-grid" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 footer-grid-fine" />
-      <div className="relative mx-auto max-w-7xl px-6 py-20">
-        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
-          {groups.map((g) => (
-            <div key={g.title}>
-              <p className="text-sm font-semibold">{g.title}</p>
-              <ul className="mt-4 space-y-3">
-                {g.links.map((l) => (
-                  <li key={l}>
-                    <a
-                      href="#"
-                      className="text-sm text-primary-foreground/60 transition-colors hover:text-primary-foreground"
-                    >
-                      {l}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+    <footer className="relative overflow-hidden border-t border-white/[0.07] bg-[#03050a]">
+      <div aria-hidden className="pl-grid pointer-events-none absolute inset-0 opacity-70 pl-mask-b" />
+
+      <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-10">
+        {/* top row: brand + link groups */}
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+          <div>
+            <span className="flex items-center gap-2.5">
+              <span className="grid size-8 place-items-center rounded-lg bg-pl-mint text-[#03130c]">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="size-4"
+                  aria-hidden
+                >
+                  <path d="M2 12h4l2.5-6 3.5 12 3-8 2 2h5" />
+                </svg>
+              </span>
+              <span className="flex items-baseline gap-1.5 text-lg font-bold tracking-tight text-white">
+                Pulse
+                <span className="font-mono text-[10px] font-medium tracking-[0.22em] text-pl-dim">
+                  CRM
+                </span>
+              </span>
+            </span>
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-pl-muted">
+              Every customer signal, scored into action. The AI-native CRM for teams that refuse to
+              let a deal go cold.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-10 sm:grid-cols-4">
+            {groups.map((g) => (
+              <div key={g.title}>
+                <p className="font-mono text-[10px] font-semibold tracking-[0.24em] text-pl-dim uppercase">
+                  {g.title}
+                </p>
+                <ul className="mt-4 space-y-3">
+                  {g.links.map((l) => (
+                    <li key={l}>
+                      <a
+                        href="#"
+                        className="text-sm text-white/55 transition-colors hover:text-white"
+                      >
+                        {l}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         </div>
 
+        {/* giant wordmark */}
         <div aria-hidden className="pointer-events-none mt-16 select-none">
-          <span className="footer-wordmark block text-center text-[22vw] font-extrabold leading-[0.78] tracking-tight">
+          <span className="footer-wordmark block text-center text-[22vw] leading-[0.78] font-extrabold tracking-tight">
             Pulse
           </span>
         </div>
 
-        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-6 border-t border-primary-foreground/10 pt-8 sm:flex sm:justify-between">
-          <div className="flex min-w-0 items-center gap-4">
-            <span className="flex items-center gap-1 text-lg font-bold">
-              Pulse
-              <span className="grad-blue-purple mt-2 size-1.5 shrink-0 rounded-full" />
-            </span>
-            <span className="truncate text-xs text-primary-foreground/50">
-              © {new Date().getFullYear()} Pulse CRM, Inc.
-            </span>
-          </div>
+        {/* bottom bar */}
+        <div className="mt-6 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-6 border-t border-white/[0.07] pt-8 sm:flex sm:justify-between">
+          <p className="truncate text-xs text-pl-dim">
+            © {new Date().getFullYear()} Pulse CRM, Inc. All rights reserved.
+          </p>
           <div className="flex shrink-0 gap-2">
             {socials.map((Icon, i) => (
               <a
                 key={i}
                 href="#"
                 aria-label="Social link"
-                className="grid size-9 place-items-center rounded-full border border-primary-foreground/15 text-primary-foreground/70 transition-all duration-200 hover:-translate-y-0.5 hover:text-primary-foreground"
+                className="grid size-9 place-items-center rounded-full border border-white/[0.1] text-white/60 transition-all duration-200 hover:-translate-y-0.5 hover:border-pl-mint/40 hover:text-pl-mint"
               >
                 <Icon size={15} />
               </a>
