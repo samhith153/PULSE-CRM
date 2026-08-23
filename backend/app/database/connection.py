@@ -64,27 +64,39 @@ connect_args = {}
 if "localhost" not in engine_url and "127.0.0.1" not in engine_url:
     connect_args["ssl"] = ssl_context
 
-# Detect pooler connections. PgBouncer (transaction/session mode) does not
-# support prepared statements, so we must set statement_cache_size = 0 and
-# use NullPool. Detection is based on the URL hostname, not which env var
-# was used — DIRECT_URL may point to a session pooler (port 5432) when the
-# true direct connection is unreachable (e.g. IPv6-only from Render).
-_is_pooler = "pooler" in engine_url or ":6543" in engine_url
+# Detect the connection path. Three cases:
+#
+# 1. Transaction-mode pooler (:6543): PgBouncer multiplexes server connections
+#    per transaction, so a client-side pool cannot reuse them — use NullPool.
+# 2. Session-mode pooler (:5432 with "pooler" in host): PgBouncer pins one
+#    server connection per client session, so QueuePool reuse IS safe. Only
+#    prepared statements must stay disabled (PgBouncer compatibility). This
+#    avoids a fresh TCP+TLS handshake on every connection checkout.
+# 3. Direct connection: QueuePool + asyncpg's prepared-statement cache.
+#
+# Detection is based on the URL hostname/port, not which env var was used —
+# DIRECT_URL may point to a session pooler when the direct db host is
+# unreachable (e.g. IPv6-only from Render).
+_is_transaction_pooler = ":6543" in engine_url
+_is_session_pooler = ("pooler" in engine_url) and not _is_transaction_pooler
 
 _pool_kwargs = dict(
     connect_args=connect_args,
     echo=False,
     pool_pre_ping=True,
 )
-if _is_pooler:
-    # Transaction-mode pooler: disable asyncpg's prepared-statement cache and
-    # connection reuse (NullPool) — the pooler multiplexes connections for us.
+if _is_transaction_pooler:
     connect_args["statement_cache_size"] = 0
     _pool_kwargs["poolclass"] = NullPool
+elif _is_session_pooler:
+    connect_args["statement_cache_size"] = 0
+    _pool_kwargs.update(
+        pool_size=settings.DATABASE_POOL_SIZE,
+        max_overflow=settings.DATABASE_MAX_OVERFLOW,
+        pool_recycle=settings.DATABASE_POOL_RECYCLE,
+        pool_timeout=settings.DATABASE_POOL_TIMEOUT,
+    )
 else:
-    # Direct/session-mode connection: QueuePool reuses physical connections and
-    # asyncpg's prepared-statement cache (default 256) avoids re-parsing
-    # repeated queries. pool_recycle guards against stale connections.
     connect_args["statement_cache_size"] = 256
     _pool_kwargs.update(
         pool_size=settings.DATABASE_POOL_SIZE,
@@ -101,9 +113,14 @@ AsyncSessionFactory = async_sessionmaker(
 )
 AsyncSessionLocal = AsyncSessionFactory
 
+_pool_mode = (
+    "Null (transaction pooler)" if _is_transaction_pooler
+    else "Queue (session pooler)" if _is_session_pooler
+    else "Queue (direct)"
+)
 logger.info(
     "DB engine using %s pool for URL host=%s",
-    "Null" if _is_pooler else "Queue",
+    _pool_mode,
     urlparse(engine_url).hostname,
 )
 
