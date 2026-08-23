@@ -32,12 +32,51 @@ class NotificationRepository(BaseRepository[Notification]):
         page_size: int,
         include_dismissed: bool = False,
         unread_only: bool = False,
-    ) -> Tuple[List[Notification], int]:
+    ) -> Tuple[List[Notification], int, int]:
+        """Return (items, total_matching_filter, unread_count) in ONE roundtrip.
+
+        Uses COUNT(*) OVER() for the paginated total and a scalar subquery for
+        the user's unread count, so the list endpoint costs a single DB query
+        instead of three (count + page + unread) — significant when the app
+        and database are in different regions.
+        """
         stmt = self._base_query(organization_id, user_id, include_dismissed)
         if unread_only:
             stmt = stmt.where(Notification.is_read.is_(False))
-        stmt = stmt.order_by(Notification.created_at.desc(), Notification.id.desc())
-        return await self.get_paginated(stmt, page, page_size)
+
+        unread_subq = (
+            select(func.count())
+            .select_from(Notification)
+            .where(
+                Notification.organization_id == organization_id,
+                Notification.user_id == user_id,
+                Notification.is_read.is_(False),
+                Notification.is_dismissed.is_(False),
+            )
+            .scalar_subquery()
+        )
+
+        offset = (page - 1) * page_size
+        result = await self.db.execute(
+            stmt.add_columns(
+                func.count().over().label("total"),
+                unread_subq.label("unread_count"),
+            )
+            .order_by(Notification.created_at.desc(), Notification.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        rows = result.all()
+
+        if not rows:
+            # Out-of-range page (no rows): compute counts with one extra query.
+            total_result = await self.db.execute(
+                select(func.count()).select_from(stmt.subquery())
+            )
+            return [], int(total_result.scalar_one() or 0), await self.count_unread(organization_id, user_id)
+
+        items = [row[0] for row in rows]
+        return items, int(rows[0].total), int(rows[0].unread_count or 0)
 
     async def count_unread(self, organization_id: UUID, user_id: UUID) -> int:
         stmt = select(func.count()).select_from(Notification).where(

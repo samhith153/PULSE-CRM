@@ -23,7 +23,10 @@ export interface Notification {
   entity_id: string | null;
 }
 
-const POLL_INTERVAL_MS = 10_000;
+// Lightweight badge check cadence. The full notification list is refreshed
+// only on mount, on SSE events, when the unread count rises, or when the tab
+// becomes visible again — keeping background DB load minimal.
+const POLL_INTERVAL_MS = 15_000;
 
 function toNotification(n: NotificationData): Notification {
   return {
@@ -119,17 +122,21 @@ export function useNotifications(pageSize = 20) {
   const refreshUnreadCount = useCallback(async () => {
     try {
       const count = await getUnreadNotificationCount();
-      if (mounted.current) {
-        if (initialLoadDone.current && count > prevUnreadRef.current) {
-          playNotificationSound();
-        }
+      if (!mounted.current) return;
+      const increased = initialLoadDone.current && count > prevUnreadRef.current;
+      setUnreadCount(count);
+      if (increased) {
+        // New notification arrived: delegate to refresh(), whose
+        // unread-increase check fires the chime + toast and updates the
+        // full list in one pass (event-driven, not polled).
+        await refresh();
+      } else {
         prevUnreadRef.current = count;
-        setUnreadCount(count);
       }
     } catch (err: any) {
       console.warn('[notifications] Failed to refresh unread count:', err?.message || err);
     }
-  }, []);
+  }, [refresh]);
 
   // Listen for real-time NOTIFICATION_CREATED events via the SSE stream
   useEffect(() => {
@@ -147,12 +154,23 @@ export function useNotifications(pageSize = 20) {
   useEffect(() => {
     mounted.current = true;
     refresh();
-    const interval = setInterval(refresh, POLL_INTERVAL_MS);
+    const interval = setInterval(() => {
+      // Skip background polling while the tab is hidden; catch up on return.
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      refreshUnreadCount();
+    }, POLL_INTERVAL_MS);
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        refresh();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
     return () => {
       mounted.current = false;
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [refresh]);
+  }, [refresh, refreshUnreadCount]);
 
   const markRead = useCallback(async (id: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)));
