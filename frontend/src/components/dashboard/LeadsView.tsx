@@ -207,6 +207,75 @@ function mapColumn(header: string): keyof ParsedLead | null {
   return COLUMN_ALIASES[normalized] || null;
 }
 
+function extractFieldsFromRawText(text: string, defaultLead: ParsedLead): ParsedLead {
+  const lead = { ...defaultLead };
+
+  const nameMatch = text.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/);
+  if (nameMatch) lead.name = nameMatch[1];
+
+  const email = extractEmailFromText(text);
+  if (email) {
+    lead.email = email;
+    if (!lead.name) lead.name = extractNameFromEmail(email);
+    if (!lead.company) lead.company = extractCompanyFromEmail(email);
+  }
+
+  const phone = extractPhoneFromText(text);
+  if (phone) lead.phone = phone;
+
+  for (const [keyword, val] of Object.entries(STATUS_KEYWORDS)) {
+    if (text.toLowerCase().includes(keyword)) { lead.status = val; break; }
+  }
+
+  for (const [keyword, val] of Object.entries(PRIORITY_KEYWORDS)) {
+    if (text.toLowerCase().includes(keyword)) { lead.priority = val; break; }
+  }
+
+  for (const [keyword, val] of Object.entries(SOURCE_KEYWORDS)) {
+    if (text.toLowerCase().includes(keyword)) { lead.source = val; break; }
+  }
+
+  if (!lead.name) {
+    const nameMatch = text.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/);
+    if (nameMatch) lead.name = nameMatch[1];
+  }
+
+  const knownWords = new Set([
+    ...Object.keys(STATUS_KEYWORDS),
+    ...Object.keys(PRIORITY_KEYWORDS),
+    ...Object.keys(SOURCE_KEYWORDS),
+    'san', 'ca', 'ny', 'tx', 'fl', 'il', 'uk', 'it', 'ai', 'usa',
+    'cso', 'cto', 'ceo', 'cfo', 'coo', 'vp', 'director', 'head', 'manager',
+    'officer', 'chief', 'president', 'founder', 'lead', 'sr', 'jr',
+    'fda', 'compliance', 'requirements', 'multi', 'location', 'retailer',
+    'startup', 'funding', 'series', 'pilot', 'program', 'discussion',
+    'enterprise', 'license', 'integration', 'analysis', 'competitive',
+  ]);
+
+  const tokens = text.split(/\s+/);
+  const nameParts = lead.name ? lead.name.split(/\s+/) : [];
+  const nonEmailPhoneTokens = tokens.filter(t =>
+    !t.includes('@') &&
+    !t.match(/^[\+]?[\d\s\-\(\)]{7,20}$/) &&
+    !knownWords.has(t.toLowerCase()) &&
+    !nameParts.includes(t)
+  );
+
+  if (nonEmailPhoneTokens.length > 0 && !lead.company) {
+    lead.company = nonEmailPhoneTokens[0];
+  }
+
+  if (nonEmailPhoneTokens.length > 1 && !lead.industry) {
+    lead.industry = nonEmailPhoneTokens[1];
+  }
+
+  if (nonEmailPhoneTokens.length > 2 && !lead.location) {
+    lead.location = nonEmailPhoneTokens.slice(2).join(' ');
+  }
+
+  return lead;
+}
+
 function parseLeadCSV(text: string): ParsedLead[] {
   const lines = text.split(/\r?\n/).filter((l: string) => l.trim());
   if (lines.length < 2) return [];
@@ -231,6 +300,11 @@ function parseLeadCSV(text: string): ParsedLead[] {
     headers.forEach((h: string, i: number) => {
       raw[h] = cleanQuotedValue(values[i] || '');
     });
+
+    const filledCount = Object.values(raw).filter(v => v.trim()).length;
+    if (filledCount <= 2 && line.includes(' ')) {
+      return extractFieldsFromRawText(line, defaultLead);
+    }
 
     const lead = { ...defaultLead };
 
