@@ -4,7 +4,7 @@ import { toast } from '@/lib/toast';
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SkeletonLoader from './SkeletonLoader';
-import { Lead as BackendLead, getLeads, getLead, createLead, updateLead, updateLeadStatus, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl } from '@/utils/api';
+import { Lead as BackendLead, getLeads, getLead, createLead, updateLead, updateLeadStatus, deleteLead as apiDeleteLead, convertLead, sendGmailEmail, getGmailStatus, getEmails, getPipelineStages, fetchBatchRecommendations, fetchLeadRecommendation, resolveImageUrl, bulkCreateLeads, toBackendLeadPayload } from '@/utils/api';
 import { 
   Search, 
   Filter, 
@@ -37,7 +37,8 @@ import {
   Minimize2,
   Loader2,
   RefreshCw,
-  Eye
+  Eye,
+  Download
 } from 'lucide-react';
 
 // Mapping helpers
@@ -47,6 +48,305 @@ const STATUS_MAP: Record<string, string> = {
 const STATUS_UNMAP: Record<string, Lead['status']> = {
   'new': 'New', 'contacted': 'Contacted', 'qualified': 'Qualified', 'converted': 'Converted', 'lost': 'Lost',
 };
+
+// Simple CSV parser
+/* ── Smart CSV Parser ──────────────────────────────────────────────────
+ * Handles unstructured lead data: varying column names, missing fields,
+ * mixed delimiters, quoted values, combined name+company, emails-as-names,
+ * and inconsistent formatting.
+ */
+
+const COLUMN_ALIASES: Record<string, keyof ParsedLead> = {
+  name: 'name', 'full name': 'name', 'contact name': 'name', 'lead name': 'name',
+  prospect: 'name', contact: 'name', 'first name': 'name', 'last name': 'name',
+  'company name': 'company', company: 'company', org: 'company', organization: 'company',
+  'company/org': 'company', employer: 'company',
+  email: 'email', 'email address': 'email', 'contact email': 'email', 'e mail': 'email',
+  phone: 'phone', 'phone number': 'phone', 'contact phone': 'phone', mobile: 'phone',
+  tel: 'phone', telephone: 'phone', cell: 'phone',
+  industry: 'industry', sector: 'industry', vertical: 'industry',
+  location: 'location', city: 'location', address: 'location', region: 'location',
+  'work location': 'location', country: 'location', 'office location': 'location',
+  source: 'source', 'lead source': 'source', 'how did they find us': 'source', channel: 'source',
+  status: 'status', 'lead status': 'status', stage: 'status', state: 'status',
+  priority: 'priority', 'lead priority': 'priority', urgency: 'priority', rank: 'priority',
+  notes: 'notes', 'lead notes': 'notes', comments: 'notes', description: 'notes',
+  details: 'notes', 'additional info': 'notes', 'internal notes': 'notes',
+  'job title': 'jobTitle', title: 'jobTitle', role: 'jobTitle', position: 'jobTitle',
+  designation: 'jobTitle', 'job role': 'jobTitle',
+  'number of employees': 'numberOfEmployees', employees: 'numberOfEmployees', headcount: 'numberOfEmployees',
+  'current crm': 'currentCRM', crm: 'currentCRM', 'existing crm': 'currentCRM',
+  'operational system': 'operationalSystem', 'ops system': 'operationalSystem', systems: 'operationalSystem',
+};
+
+type ParsedLead = {
+  name: string; jobTitle: string; email: string; phone: string; company: string;
+  industry: string; location: string; numberOfEmployees: string; source: string;
+  currentCRM: string; operationalSystem: string; status: string; priority: string;
+  notes: string; owner: string;
+};
+
+const STATUS_KEYWORDS: Record<string, string> = {
+  new: 'New', fresh: 'New', inbound: 'New', raw: 'New',
+  contacted: 'Contacted', called: 'Contacted', emailed: 'Contacted', reached: 'Contacted',
+  qualified: 'Qualified', vetted: 'Qualified', scored: 'Qualified', approved: 'Qualified',
+  converted: 'Converted', won: 'Converted', closed: 'Converted', deal: 'Converted',
+  lost: 'Lost', churned: 'Lost', rejected: 'Lost', declined: 'Lost', dead: 'Lost',
+};
+
+const PRIORITY_KEYWORDS: Record<string, string> = {
+  critical: 'Critical', urgent: 'Critical', asap: 'Critical', p0: 'Critical',
+  high: 'High', important: 'High', hot: 'High', p1: 'High',
+  medium: 'Medium', normal: 'Medium', standard: 'Medium', p2: 'Medium', mid: 'Medium',
+  low: 'Low', minor: 'Low', cold: 'Low', p3: 'Low', lukewarm: 'Low',
+};
+
+const SOURCE_KEYWORDS: Record<string, string> = {
+  referral: 'referral', referred: 'referral', word: 'referral',
+  linkedin: 'linkedin', li: 'linkedin', social: 'linkedin',
+  website: 'website', web: 'website', organic: 'website', search: 'website', seo: 'website',
+  event: 'trade_show', conference: 'trade_show', trade: 'trade_show', expo: 'trade_show',
+  webinar: 'inbound', seminar: 'inbound', workshop: 'inbound',
+  partner: 'partner', channel: 'partner', reseller: 'partner',
+  ads: 'social_media', paid: 'social_media', ppc: 'social_media', facebook: 'social_media', google: 'social_media',
+  email: 'email_campaign', cold: 'email_campaign', outreach: 'email_campaign', campaign: 'email_campaign',
+  api: 'api', integration: 'api',
+};
+
+function normalizeStatus(raw: string): string {
+  const lower = raw.toLowerCase().trim();
+  return STATUS_KEYWORDS[lower] || (raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase());
+}
+
+function normalizePriority(raw: string): string {
+  const lower = raw.toLowerCase().trim();
+  return PRIORITY_KEYWORDS[lower] || 'Medium';
+}
+
+function normalizeSource(raw: string): string {
+  const lower = raw.toLowerCase().trim();
+  for (const [key, val] of Object.entries(SOURCE_KEYWORDS)) {
+    if (lower.includes(key)) return val;
+  }
+  return raw;
+}
+
+function extractNameFromEmail(email: string): string {
+  const local = email.split('@')[0] || '';
+  return local
+    .replace(/[._-]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function extractCompanyFromEmail(email: string): string {
+  const domain = email.split('@')[1] || '';
+  const base = domain.split('.')[0] || '';
+  if (['gmail', 'yahoo', 'hotmail', 'outlook', 'aol', 'icloud', 'mail', 'email'].includes(base.toLowerCase())) return '';
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+function cleanQuotedValue(val: string): string {
+  return val.replace(/^["']{1,2}|["']{1,2}$/g, '').trim();
+}
+
+function extractPhoneFromText(text: string): string {
+  const phoneMatch = text.match(/[\+]?[\d\s\-\(\)\.]{7,20}/);
+  return phoneMatch ? phoneMatch[0].trim() : '';
+}
+
+function extractEmailFromText(text: string): string {
+  const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
+  return emailMatch ? emailMatch[0].trim() : '';
+}
+
+function detectDelimiter(lines: string[]): string {
+  const first = lines[0] || '';
+  const semicolons = (first.match(/;/g) || []).length;
+  const tabs = (first.match(/\t/g) || []).length;
+  const pipes = (first.match(/\|/g) || []).length;
+  if (semicolons > 1) return ';';
+  if (tabs > 1) return '\t';
+  if (pipes > 1) return '|';
+  return ',';
+}
+
+function smartSplitLine(line: string, delimiter: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  let quoteChar = '';
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (inQuotes) {
+      if (ch === quoteChar && line[i + 1] === quoteChar) {
+        current += ch;
+        i++;
+      } else if (ch === quoteChar) {
+        inQuotes = false;
+      } else {
+        current += ch;
+      }
+    } else if (ch === '"' || ch === "'") {
+      inQuotes = true;
+      quoteChar = ch;
+    } else if (ch === delimiter) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
+}
+
+function mapColumn(header: string): keyof ParsedLead | null {
+  const normalized = header.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
+  return COLUMN_ALIASES[normalized] || null;
+}
+
+function parseLeadCSV(text: string): ParsedLead[] {
+  const lines = text.split(/\r?\n/).filter((l: string) => l.trim());
+  if (lines.length < 2) return [];
+
+  const delimiter = detectDelimiter(lines);
+  const headers = smartSplitLine(lines[0], delimiter);
+
+  if (headers.length < 2) {
+    return parseSpaceDelimited(text);
+  }
+
+  const defaultLead: ParsedLead = {
+    name: '', jobTitle: '', email: '', phone: '', company: '',
+    industry: '', location: '', numberOfEmployees: '', source: '',
+    currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium',
+    notes: '', owner: 'Sarah Johnson',
+  };
+
+  return lines.slice(1).map((line: string) => {
+    const values = smartSplitLine(line, delimiter);
+    const raw: Record<string, string> = {};
+    headers.forEach((h: string, i: number) => {
+      raw[h] = cleanQuotedValue(values[i] || '');
+    });
+
+    const lead = { ...defaultLead };
+
+    const mapped: Record<string, string> = {};
+    for (const [header, value] of Object.entries(raw)) {
+      if (!value) continue;
+      const field = mapColumn(header);
+      if (field) {
+        mapped[field] = (mapped[field] || '') ? mapped[field] + ' ' + value : value;
+      }
+    }
+
+    for (const [field, value] of Object.entries(mapped)) {
+      const f = field as keyof ParsedLead;
+      if (f === 'status') {
+        lead.status = normalizeStatus(value);
+      } else if (f === 'priority') {
+        lead.priority = normalizePriority(value);
+      } else if (f === 'source') {
+        lead.source = normalizeSource(value);
+      } else {
+        (lead as any)[f] = cleanQuotedValue(value);
+      }
+    }
+
+    if (!lead.name && mapped.email) {
+      lead.name = extractNameFromEmail(mapped.email);
+    }
+
+    if (!lead.company && mapped.email) {
+      lead.company = extractCompanyFromEmail(mapped.email);
+    }
+
+    if (!lead.name) {
+      const combined = Object.values(raw).join(' ');
+      const foundEmail = extractEmailFromText(combined);
+      if (foundEmail && !lead.email) {
+        lead.email = foundEmail;
+        lead.name = extractNameFromEmail(foundEmail);
+        if (!lead.company) lead.company = extractCompanyFromEmail(foundEmail);
+      }
+    }
+
+    if (!lead.phone) {
+      const combined = Object.values(raw).join(' ');
+      const foundPhone = extractPhoneFromText(combined);
+      if (foundPhone) lead.phone = foundPhone;
+    }
+
+    if (!lead.name) {
+      const combined = Object.values(raw).filter(v => v && !v.includes('@') && !v.match(/^\+?[\d\s\-\(\)]+$/)).join(' ');
+      const nameMatch = combined.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,3})/);
+      if (nameMatch) lead.name = nameMatch[1];
+    }
+
+    if (!lead.company && lead.name) {
+      const combined = Object.values(raw).join(' ');
+      const companyPatterns = [
+        /(?:at|@|for|from|w\/)\s+([A-Z][A-Za-z&\s]+?)(?:\s*,|\s*$)/,
+        /\b([A-Z][A-Za-z]{2,}(?:\s+(?:Corp|Inc|LLC|Ltd|Co|Group|Solutions|Technologies|Tech|Labs|IO|AI|Inc\.)))/,
+      ];
+      for (const pattern of companyPatterns) {
+        const match = combined.match(pattern);
+        if (match && match[1]) {
+          lead.company = match[1].trim();
+          break;
+        }
+      }
+    }
+
+    if (!lead.notes) {
+      const allValues = Object.values(raw);
+      const longTexts = allValues.filter(v => v.length > 30 && !v.includes('@'));
+      if (longTexts.length > 0) {
+        lead.notes = longTexts.join('; ');
+      }
+    }
+
+    return lead;
+  }).filter((lead: ParsedLead) => lead.name || lead.email);
+}
+
+function parseSpaceDelimited(text: string): ParsedLead[] {
+  const lines = text.split(/\r?\n/).filter((l: string) => l.trim());
+  if (lines.length < 2) return [];
+
+  const defaultLead: ParsedLead = {
+    name: '', jobTitle: '', email: '', phone: '', company: '',
+    industry: '', location: '', numberOfEmployees: '', source: '',
+    currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium',
+    notes: '', owner: 'Sarah Johnson',
+  };
+
+  return lines.slice(1).map((line: string) => {
+    const lead = { ...defaultLead };
+    const parts = line.trim().split(/\s{2,}/);
+    if (parts.length >= 6) {
+      const nameOrEmail = parts[0];
+      if (nameOrEmail.includes('@')) {
+        lead.email = nameOrEmail;
+        lead.name = extractNameFromEmail(nameOrEmail);
+      } else {
+        lead.name = nameOrEmail;
+      }
+      const email = parts.find((p: string) => p.includes('@'));
+      if (email) lead.email = email;
+      const phone = parts.find((p: string) => p.match(/^[\+]?[\d\s\-\(\)]{7,20}$/));
+      if (phone) lead.phone = phone;
+      const nonEmailParts = parts.filter((p: string) => !p.includes('@') && !p.match(/^[\+]?[\d\s\-\(\)]{7,20}$/) && p !== lead.name);
+      if (nonEmailParts.length > 0) lead.company = nonEmailParts[0] || '';
+      if (nonEmailParts.length > 1) lead.industry = nonEmailParts[1] || '';
+      if (nonEmailParts.length > 2) lead.location = nonEmailParts[2] || '';
+    }
+    return lead;
+  }).filter((lead: ParsedLead) => lead.name || lead.email);
+}
 const SOURCE_MAP: Record<string, string> = {
   'Website': 'website', 'Referral': 'referral', 'LinkedIn': 'linkedin',
   'Cold Email': 'email_campaign', 'Event': 'trade_show', 'Webinar': 'inbound',
@@ -235,6 +535,10 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
     return 'list';
   });
   const [isCreatingFullPage, setIsCreatingFullPage] = useState(false);
+  const [importLeadModalOpen, setImportLeadModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
 
   // NEW: Listen for the Command Palette search click to open a specific lead
   useEffect(() => {
@@ -1395,8 +1699,8 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
 
         </form>
       </div>
-    );
-  }
+);
+}
 
   return (
     <SkeletonLoader isLoading={loading} layout="table">
@@ -1454,7 +1758,7 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                 </button>
               </div>
 
-              {selectedIds.size > 0 && (
+              {selectedIds.size > 0 && viewMode === 'list' && (
                 <button 
                   onClick={handleDeleteSelectedLeads}
                   className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-status-danger-text hover:bg-status-danger-text/90 text-text-on-primary rounded-lg text-xs font-semibold transition-colors cursor-pointer mr-2"
@@ -1464,7 +1768,15 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                 </button>
               )}
 
-              <button 
+              <button
+                onClick={() => setImportLeadModalOpen(true)}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-accent-color hover:bg-accent-color/90 text-text-on-primary rounded-lg text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+              >
+                <Download className="h-3.5 w-3.5" strokeWidth={2.25} />
+                <span>Import Leads</span>
+              </button>
+
+              <button
                 onClick={() => {
                   setLeadForm({ name: '', jobTitle: '', email: '', phone: '', company: '', industry: '', location: '', numberOfEmployees: '', source: '', currentCRM: '', operationalSystem: '', status: 'New', priority: 'Medium', owner: 'Sarah Johnson', notes: '' });
                   setIsCreatingFullPage(true);
@@ -1667,10 +1979,12 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
                                   <button
                                     onClick={(e) => { e.stopPropagation(); setSelectedLeadId(lead.id); }}
                                     className="text-text-muted/50 hover:text-accent-color transition-colors p-1"
-                                    title="View"
-                                  >
+title="View"
+                                >
+                                  {viewMode !== 'list' && (
                                     <Eye className="h-3.5 w-3.5" />
-                                  </button>
+                                  )}
+                                </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(lead.id); }}
                                     className="text-text-muted/50 hover:text-destructive transition-colors p-1"
@@ -2990,6 +3304,82 @@ export default function LeadsView({ onLoaded, onTabChange, onComposeEmail, openL
         </div>
       )}
     </div>
+
+    {/* Import Leads Modal */}
+    {importLeadModalOpen && (
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div className="bg-surface-1 rounded-2xl p-6 w-full max-w-lg border border-border-default">
+          <h2 className="text-text-primary text-xl font-bold mb-4">Import Leads</h2>
+          {importError && (
+            <div className="bg-status-danger-text/10 text-status-danger-text border border-status-danger-text/20 rounded p-3 mb-4">
+              {importError}
+            </div>
+          )}
+          <div className="mb-4">
+            <label className="block text-text-muted text-sm mb-2">CSV File</label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                if (!f.name.endsWith('.csv')) {
+                  setImportError('Please select a CSV file');
+                  return;
+                }
+                setImportFile(f);
+                setImportError(null);
+              }}
+              className="w-full px-3 py-2 border border-border-default rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-color"
+            />
+            {importFile && <p className="text-xs text-text-muted mt-1">Selected: {importFile.name}</p>}
+          </div>
+          <button
+            onClick={async () => {
+              if (!importFile) return;
+              setImporting(true);
+              setImportError(null);
+              try {
+                const text = await importFile.text();
+                const leads = parseLeadCSV(text);
+                let imported = 0;
+                let skipped = 0;
+                for (const lead of leads) {
+                  try {
+                    await createLead(toBackendLeadPayload(lead));
+                    imported++;
+                  } catch (rowErr: any) {
+                    skipped++;
+                  }
+                }
+                setImporting(false);
+                const msg = skipped > 0
+                  ? `${imported} leads imported, ${skipped} skipped (duplicates or validation errors)`
+                  : `${imported} leads imported successfully`;
+                toast.success(msg, { title: 'Import Complete' });
+                setImportLeadModalOpen(false);
+                setImportFile(null);
+              } catch (err: any) {
+                setImportError(err?.message || 'Failed to import leads');
+                setImporting(false);
+              }
+            }}
+            disabled={importing || !importFile}
+            className="w-full px-3 py-2 bg-accent-color hover:bg-accent-color/90 text-surface-0 rounded-lg text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
+          >
+            {importing ? (
+              <span className="inline-flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Importing...</span>
+            ) : 'Import Leads'}
+          </button>
+          <button
+            onClick={() => { setImportLeadModalOpen(false); setImportFile(null); setImportError(null); }}
+            className="mt-4 w-full px-3 py-1.5 border border-border-default rounded-lg text-xs font-semibold text-text-primary hover:bg-surface-2 cursor-pointer transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
     </SkeletonLoader>
   );
 }
