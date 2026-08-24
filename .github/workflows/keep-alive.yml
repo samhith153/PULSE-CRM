@@ -1,0 +1,26 @@
+name: Keep-Alive Ping
+
+on:
+  schedule:
+    # Every 14 minutes to prevent Render free-tier spin-down (spins down after 15 min idle)
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping backend health endpoint
+        run: |
+          echo "Pinging https://pulse-crm-backend.onrender.com/api/v1/health/ping ..."
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            --max-time 30 \
+            https://pulse-crm-backend.onrender.com/api/v1/health/ping)
+          echo "Response HTTP code: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
+            echo "Backend is alive!"
+          else
+            echo "WARNING: Backend returned HTTP $HTTP_CODE"
+            exit 1
+          fi
