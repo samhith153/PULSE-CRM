@@ -26,10 +26,9 @@ class NotificationService:
         page_size: int,
         unread_only: bool = False,
     ) -> Tuple[List[Notification], int, int]:
-        items, total = await self.repo.list_for_user(
+        items, total, unread_count = await self.repo.list_for_user(
             organization_id, user_id, page, page_size, unread_only=unread_only
         )
-        unread_count = await self.repo.count_unread(organization_id, user_id)
         return items, total, unread_count
 
     async def unread_count(self, organization_id: UUID, user_id: UUID) -> int:

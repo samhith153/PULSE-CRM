@@ -1,26 +1,18 @@
-name: Keep-Alive Ping
+name: Keep Render Backend Warm
+
+# Render free-tier web services spin down after ~15 minutes without inbound
+# HTTP traffic; waking them costs 30-60s on the next request. This schedule
+# pings the health endpoint every 10 minutes so the backend (and, via its own
+# internal AI keep-alive job, the ai-service) stays warm.
 
 on:
   schedule:
-    # Every 14 minutes to prevent Render free-tier spin-down (spins down after 15 min idle)
-    - cron: '*/14 * * * *'
+    - cron: "*/10 * * * *"
   workflow_dispatch:
 
 jobs:
   ping:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
     steps:
-      - name: Ping backend health endpoint
-        run: |
-          echo "Pinging https://pulse-crm-backend.onrender.com/api/v1/health/ping ..."
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            --max-time 30 \
-            https://pulse-crm-backend.onrender.com/api/v1/health/ping)
-          echo "Response HTTP code: $HTTP_CODE"
-          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 400 ]; then
-            echo "Backend is alive!"
-          else
-            echo "WARNING: Backend returned HTTP $HTTP_CODE"
-            exit 1
-          fi
+      - name: Ping health endpoint
+        run: curl -fsS --max-time 30 https://pulse-crm-backend.onrender.com/api/v1/health || true
