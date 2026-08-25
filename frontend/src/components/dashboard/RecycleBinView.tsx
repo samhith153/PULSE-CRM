@@ -4,11 +4,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
+  CheckSquare,
   Loader2,
   RefreshCw,
   Search,
   Trash2,
   Users,
+  Square,
 } from 'lucide-react';
 import {
   getDeletedLeads,
@@ -34,6 +36,8 @@ export default function RecycleBinView() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [purgeBusy, setPurgeBusy] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleteBusy, setBulkDeleteBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -98,6 +102,52 @@ export default function RecycleBinView() {
     } finally {
       setPurgeBusy(false);
     }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === leads.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(leads.map((l) => l.id)));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleDeleteSelected = async () => {
+    const confirmed = window.confirm(
+      `Permanently delete ${selectedIds.size} selected lead(s)? This cannot be undone.`
+    );
+    if (!confirmed) return;
+    setBulkDeleteBusy(true);
+    let deleted = 0;
+    let failed = 0;
+    for (const id of selectedIds) {
+      try {
+        await permanentlyDeleteLead(id);
+        deleted++;
+      } catch {
+        failed++;
+      }
+    }
+    setSelectedIds(new Set());
+    if (failed > 0) {
+      toast.success(`${deleted} deleted, ${failed} failed.`);
+    } else {
+      toast.success(`${deleted} lead(s) permanently deleted.`);
+    }
+    setBulkDeleteBusy(false);
+    load();
   };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -165,6 +215,22 @@ export default function RecycleBinView() {
             )}
             Purge All ({total})
           </button>
+
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              disabled={bulkDeleteBusy}
+              className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-status-danger/25 bg-status-danger/10 px-4 text-xs font-bold text-status-danger hover:bg-status-danger/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {bulkDeleteBusy ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="h-3.5 w-3.5" />
+              )}
+              Delete Selected ({selectedIds.size})
+            </button>
+          )}
         </div>
       </div>
 
@@ -207,6 +273,15 @@ export default function RecycleBinView() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-border-default bg-surface-2/50 text-[10px] uppercase font-semibold text-text-muted">
+                <th className="py-3 px-4 w-10">
+                  <button onClick={toggleSelectAll} className="cursor-pointer" title="Select all">
+                    {selectedIds.size === leads.length && leads.length > 0 ? (
+                      <CheckSquare className="h-4 w-4 text-accent-color" />
+                    ) : (
+                      <Square className="h-4 w-4 text-text-muted" />
+                    )}
+                  </button>
+                </th>
                 <th className="py-3 px-4">Lead</th>
                 <th className="py-3 px-4">Company</th>
                 <th className="py-3 px-4">Owner</th>
@@ -219,6 +294,15 @@ export default function RecycleBinView() {
               {!loading &&
                 leads.map((lead) => (
                   <tr key={lead.id} className="hover:bg-surface-2/40 transition-colors">
+                    <td className="py-3 px-4">
+                      <button onClick={() => toggleSelectOne(lead.id)} className="cursor-pointer" title="Select">
+                        {selectedIds.has(lead.id) ? (
+                          <CheckSquare className="h-4 w-4 text-accent-color" />
+                        ) : (
+                          <Square className="h-4 w-4 text-text-muted" />
+                        )}
+                      </button>
+                    </td>
                     <td className="py-3 px-4">
                       <p className="font-semibold text-text-primary truncate max-w-[220px]">
                         {lead.title || lead.contact_name || 'Untitled lead'}
