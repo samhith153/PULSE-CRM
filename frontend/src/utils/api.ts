@@ -528,6 +528,87 @@ export async function createLead(leadData: Record<string, unknown>): Promise<Lea
   return result;
 }
 
+const VALID_SOURCES = new Set([
+  'website', 'referral', 'cold_call', 'email_campaign', 'social_media',
+  'linkedin', 'trade_show', 'partner', 'inbound', 'cold_outreach',
+  'campaign', 'other',
+]);
+
+const VALID_STATUSES = new Set([
+  'new', 'contacted', 'qualified', 'proposal_sent', 'negotiation',
+  'won', 'lost', 'converted',
+]);
+
+const SOURCE_MAP: Record<string, string> = {
+  website: 'website', web: 'website', organic: 'website', seo: 'website',
+  referral: 'referral', referred: 'referral',
+  cold_call: 'cold_call', cold: 'cold_call', call: 'cold_call',
+  email_campaign: 'email_campaign', email: 'email_campaign', outreach: 'email_campaign', campaign: 'email_campaign',
+  social_media: 'social_media', ads: 'social_media', paid: 'social_media', ppc: 'social_media', facebook: 'social_media', google: 'social_media',
+  linkedin: 'linkedin', li: 'linkedin', social: 'linkedin',
+  trade_show: 'trade_show', event: 'trade_show', conference: 'trade_show', expo: 'trade_show',
+  partner: 'partner', channel: 'partner', reseller: 'partner',
+  inbound: 'inbound', webinar: 'inbound', seminar: 'inbound',
+  cold_outreach: 'cold_outreach',
+  other: 'other',
+};
+
+export function toBackendLeadPayload(frontend: Record<string, unknown>): Record<string, unknown> {
+  const raw = (frontend as any).name ?? frontend.title ?? '';
+  const title = typeof raw === 'string' ? raw.trim() : String(raw).trim();
+  const sourceRaw = typeof frontend.source === 'string' ? frontend.source.toLowerCase().trim() : 'other';
+  const source = SOURCE_MAP[sourceRaw] || (VALID_SOURCES.has(sourceRaw) ? sourceRaw : 'other');
+  const statusRaw = typeof frontend.status === 'string' ? frontend.status.toLowerCase().trim() : 'new';
+  const status = VALID_STATUSES.has(statusRaw) ? statusRaw : 'new';
+
+  const payload: Record<string, unknown> = {
+    title,
+    source,
+    status,
+  };
+
+  const fieldMap: [string, string][] = [
+    ['description', 'description'],
+    ['company', 'company_name'],
+    ['jobTitle', 'job_title'],
+    ['email', 'email'],
+    ['phone', 'phone'],
+    ['industry', 'industry'],
+    ['location', 'location'],
+    ['currentCRM', 'current_crm'],
+    ['operationalSystem', 'operational_systems'],
+    ['notes', 'notes'],
+  ];
+
+  for (const [feKey, beKey] of fieldMap) {
+    const val = frontend[feKey];
+    if (val !== undefined && val !== null && val !== '') {
+      payload[beKey] = val;
+    }
+  }
+
+  const empRaw = frontend.numberOfEmployees;
+  if (empRaw !== undefined && empRaw !== null && empRaw !== '') {
+    const num = Number(empRaw);
+    if (!isNaN(num) && num >= 0) {
+      payload.employee_count = num;
+    }
+  }
+
+  return payload;
+}
+
+export async function bulkCreateLeads(leadDataList: Record<string, unknown>[]): Promise<Lead[]> {
+  const results: Lead[] = [];
+  for (const leadData of leadDataList) {
+    const payload = toBackendLeadPayload(leadData);
+    if (!payload.title) continue;
+    const result = await createLead(payload);
+    results.push(result);
+  }
+  return results;
+}
+
 export async function updateLead(leadId: string, leadData: Record<string, unknown>): Promise<Lead> {
   const result = await apiFetch<Lead>(`/api/v1/leads/${leadId}`, {
     method: 'PUT',
