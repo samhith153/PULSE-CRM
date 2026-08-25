@@ -37,7 +37,6 @@ export default function RecycleBinView() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [purgeBusy, setPurgeBusy] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkDeleteBusy, setBulkDeleteBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -86,19 +85,41 @@ export default function RecycleBinView() {
     }
   };
 
-  const handlePurgeAll = async () => {
+  const handlePurge = async () => {
+    const hasSelection = selectedIds.size > 0;
+    const count = hasSelection ? selectedIds.size : total;
     const confirmed = window.confirm(
-      `Permanently delete ALL ${total} soft-deleted lead(s)? This cannot be undone.`
+      `Permanently delete ${hasSelection ? `${count} selected` : `ALL ${count}`} soft-deleted lead(s)? This cannot be undone.`
     );
     if (!confirmed) return;
     setPurgeBusy(true);
     try {
-      const result = await purgeDeletedLeads();
-      toast.success(`Purged ${result.purged ?? total} soft-deleted lead(s).`);
-      setLeads([]);
-      setTotal(0);
+      if (hasSelection) {
+        let deleted = 0;
+        let failed = 0;
+        for (const id of selectedIds) {
+          try {
+            await permanentlyDeleteLead(id);
+            deleted++;
+          } catch {
+            failed++;
+          }
+        }
+        setSelectedIds(new Set());
+        if (failed > 0) {
+          toast.success(`${deleted} deleted, ${failed} failed.`);
+        } else {
+          toast.success(`${deleted} lead(s) permanently deleted.`);
+        }
+      } else {
+        const result = await purgeDeletedLeads();
+        toast.success(`Purged ${result.purged ?? total} soft-deleted lead(s).`);
+        setLeads([]);
+        setTotal(0);
+      }
+      load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to purge leads.');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete leads.');
     } finally {
       setPurgeBusy(false);
     }
@@ -122,32 +143,6 @@ export default function RecycleBinView() {
       }
       return next;
     });
-  };
-
-  const handleDeleteSelected = async () => {
-    const confirmed = window.confirm(
-      `Permanently delete ${selectedIds.size} selected lead(s)? This cannot be undone.`
-    );
-    if (!confirmed) return;
-    setBulkDeleteBusy(true);
-    let deleted = 0;
-    let failed = 0;
-    for (const id of selectedIds) {
-      try {
-        await permanentlyDeleteLead(id);
-        deleted++;
-      } catch {
-        failed++;
-      }
-    }
-    setSelectedIds(new Set());
-    if (failed > 0) {
-      toast.success(`${deleted} deleted, ${failed} failed.`);
-    } else {
-      toast.success(`${deleted} lead(s) permanently deleted.`);
-    }
-    setBulkDeleteBusy(false);
-    load();
   };
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -204,8 +199,8 @@ export default function RecycleBinView() {
 
           <button
             type="button"
-            onClick={handlePurgeAll}
-            disabled={purgeBusy || total === 0}
+            onClick={handlePurge}
+            disabled={purgeBusy || (total === 0 && selectedIds.size === 0)}
             className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-border-default bg-surface-1 px-4 text-xs font-semibold text-text-primary transition-colors hover:bg-surface-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {purgeBusy ? (
@@ -213,24 +208,8 @@ export default function RecycleBinView() {
             ) : (
               <Trash2 className="h-3.5 w-3.5" />
             )}
-            Purge All ({total})
+            {selectedIds.size > 0 ? `Purge Selected (${selectedIds.size})` : `Purge All (${total})`}
           </button>
-
-          {selectedIds.size > 0 && (
-            <button
-              type="button"
-              onClick={handleDeleteSelected}
-              disabled={bulkDeleteBusy}
-              className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-status-danger/25 bg-status-danger/10 px-4 text-xs font-bold text-status-danger hover:bg-status-danger/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {bulkDeleteBusy ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Trash2 className="h-3.5 w-3.5" />
-              )}
-              Delete Selected ({selectedIds.size})
-            </button>
-          )}
         </div>
       </div>
 
